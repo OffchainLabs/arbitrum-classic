@@ -24,6 +24,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
@@ -59,12 +60,12 @@ type Challenge struct {
 	builderCon *ethbridgecontracts.Challenge
 }
 
-func NewChallenge(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend) (*Challenge, error) {
+func NewChallenge(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend, callOpts bind.CallOpts) (*Challenge, error) {
 	builderCon, err := ethbridgecontracts.NewChallenge(address, builder)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	watcher, err := NewChallengeWatcher(address, fromBlock, client)
+	watcher, err := NewChallengeWatcher(address, fromBlock, client, callOpts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

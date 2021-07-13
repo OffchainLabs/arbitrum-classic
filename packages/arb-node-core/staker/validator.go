@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -39,12 +40,13 @@ func NewValidator(
 	wallet *ethbridge.ValidatorWallet,
 	fromBlock int64,
 	validatorUtilsAddress common.Address,
+	callOpts bind.CallOpts,
 ) (*Validator, error) {
 	builder, err := ethbridge.NewBuilderBackend(wallet)
 	if err != nil {
 		return nil, err
 	}
-	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), fromBlock, client, builder)
+	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), fromBlock, client, builder, callOpts)
 	_ = rollup
 	if err != nil {
 		return nil, err
@@ -69,6 +71,7 @@ func NewValidator(
 		validatorUtilsAddress.ToEthAddress(),
 		wallet.RollupAddress().ToEthAddress(),
 		client,
+		callOpts,
 	)
 	if err != nil {
 		return nil, err

@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -49,6 +50,8 @@ type Staker struct {
 	activeChallenge *challenge.Challenger
 	strategy        Strategy
 	fromBlock       int64
+	baseCallOpts    bind.CallOpts
+	auth            *ethbridge.TransactAuth
 }
 
 func NewStaker(
@@ -59,15 +62,19 @@ func NewStaker(
 	fromBlock int64,
 	validatorUtilsAddress common.Address,
 	strategy Strategy,
+	callOpts bind.CallOpts,
+	auth *ethbridge.TransactAuth,
 ) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
-	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress)
+	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress, callOpts)
 	if err != nil {
 		return nil, nil, err
 	}
 	return &Staker{
-		Validator: val,
-		strategy:  strategy,
-		fromBlock: fromBlock,
+		Validator:    val,
+		strategy:     strategy,
+		fromBlock:    fromBlock,
+		baseCallOpts: callOpts,
+		auth:         auth,
 	}, val.delayedBridge, nil
 }
 
@@ -82,7 +89,7 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 			tx, err := s.Act(ctx)
 			if err == nil && tx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
-				_, err = ethbridge.WaitForReceiptWithResults(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking")
+				_, err = ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking", s.auth)
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
 					logger.Info().Str("hash", tx.Hash().String()).Msg("Successfully executed transaction")
@@ -213,7 +220,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 	if s.activeChallenge == nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
 		logger.Warn().Str("challenge", info.CurrentChallenge.String()).Msg("Entered challenge")
 
-		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.fromBlock, s.client, s.builder)
+		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.fromBlock, s.client, s.builder, s.baseCallOpts)
 		if err != nil {
 			return err
 		}

@@ -51,24 +51,32 @@ const (
 )
 
 type ChallengeWatcher struct {
-	con       *ethbridgecontracts.Challenge
-	address   ethcommon.Address
-	fromBlock int64
-	client    ethutils.EthClient
+	con          *ethbridgecontracts.Challenge
+	address      ethcommon.Address
+	fromBlock    int64
+	client       ethutils.EthClient
+	baseCallOpts bind.CallOpts
 }
 
-func NewChallengeWatcher(address ethcommon.Address, fromBlock int64, client ethutils.EthClient) (*ChallengeWatcher, error) {
+func NewChallengeWatcher(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, callOpts bind.CallOpts) (*ChallengeWatcher, error) {
 	con, err := ethbridgecontracts.NewChallenge(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return &ChallengeWatcher{
-		con:       con,
-		address:   address,
-		fromBlock: fromBlock,
-		client:    client,
+		con:          con,
+		address:      address,
+		fromBlock:    fromBlock,
+		client:       client,
+		baseCallOpts: callOpts,
 	}, nil
+}
+
+func (c *ChallengeWatcher) getCallOpts(ctx context.Context) *bind.CallOpts {
+	opts := c.baseCallOpts
+	opts.Context = ctx
+	return &opts
 }
 
 func (c *ChallengeWatcher) Address() common.Address {
@@ -76,7 +84,7 @@ func (c *ChallengeWatcher) Address() common.Address {
 }
 
 func (c *ChallengeWatcher) Turn(ctx context.Context) (ChallengeTurn, error) {
-	rawTurn, err := c.con.Turn(&bind.CallOpts{Context: ctx})
+	rawTurn, err := c.con.Turn(c.getCallOpts(ctx))
 	if err != nil {
 		return 0, errors.WithStack(err)
 	}
@@ -84,7 +92,7 @@ func (c *ChallengeWatcher) Turn(ctx context.Context) (ChallengeTurn, error) {
 }
 
 func (c *ChallengeWatcher) Asserter(ctx context.Context) (common.Address, error) {
-	asserter, err := c.con.Asserter(&bind.CallOpts{Context: ctx})
+	asserter, err := c.con.Asserter(c.getCallOpts(ctx))
 	if err != nil {
 		return common.Address{}, errors.WithStack(err)
 	}
@@ -92,7 +100,7 @@ func (c *ChallengeWatcher) Asserter(ctx context.Context) (common.Address, error)
 }
 
 func (c *ChallengeWatcher) Challenger(ctx context.Context) (common.Address, error) {
-	challenger, err := c.con.Challenger(&bind.CallOpts{Context: ctx})
+	challenger, err := c.con.Challenger(c.getCallOpts(ctx))
 	if err != nil {
 		return common.Address{}, errors.WithStack(err)
 	}
@@ -100,7 +108,7 @@ func (c *ChallengeWatcher) Challenger(ctx context.Context) (common.Address, erro
 }
 
 func (c *ChallengeWatcher) CurrentResponder(ctx context.Context) (common.Address, error) {
-	responder, err := c.con.CurrentResponder(&bind.CallOpts{Context: ctx})
+	responder, err := c.con.CurrentResponder(c.getCallOpts(ctx))
 	if err != nil {
 		return common.Address{}, errors.WithStack(err)
 	}
@@ -108,7 +116,7 @@ func (c *ChallengeWatcher) CurrentResponder(ctx context.Context) (common.Address
 }
 
 func (c *ChallengeWatcher) ChallengeState(ctx context.Context) (common.Hash, error) {
-	challengeState, err := c.con.ChallengeState(&bind.CallOpts{Context: ctx})
+	challengeState, err := c.con.ChallengeState(c.getCallOpts(ctx))
 	if err != nil {
 		return common.Hash{}, errors.WithStack(err)
 	}

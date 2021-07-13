@@ -20,6 +20,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
@@ -83,7 +84,7 @@ func (m *Monitor) StartInboxReader(
 	healthChan chan nodehealth.Log,
 	sequencerFeed chan broadcaster.BroadcastFeedMessage,
 ) (*InboxReader, error) {
-	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), fromBlock, ethClient)
+	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), fromBlock, ethClient, bind.CallOpts{})
 	if err != nil {
 		return nil, err
 	}
