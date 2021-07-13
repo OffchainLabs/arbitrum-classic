@@ -60,12 +60,19 @@ async function createRollup(): Promise<{
   rollupCon: Rollup
   blockCreated: number
 }> {
-  const ChallengeFactory = await deployments.get('ChallengeFactory')
-  const RollupCreatorNoProxy = (await ethers.getContractFactory(
-    'RollupCreatorNoProxy'
-  )) as RollupCreatorNoProxy__factory
-  const rollupCreator = await RollupCreatorNoProxy.deploy(
-    ChallengeFactory.address,
+  const rollupConfig: [
+    BytesLike,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    string,
+    string,
+    string,
+    BigNumberish,
+    BigNumberish,
+    BytesLike
+  ] = [
     initialVmState,
     confirmationPeriodBlocks,
     0,
@@ -76,11 +83,33 @@ async function createRollup(): Promise<{
     await accounts[1].getAddress(), // sequencer
     sequencerDelayBlocks,
     sequencerDelaySeconds,
-    '0x'
-  )
+    '0x',
+  ]
 
-  const receipt = await (rollupCreator.deployTransaction as TransactionResponse).wait()
-  if (receipt.logs == undefined) {
+  let receipt
+  let rollupCreator
+
+  if (process.env['ROLLUP_DEBUG'] === '1') {
+    // this deploys the rollup contracts without proxies to facilitate debugging
+    const ChallengeFactory = await deployments.get('ChallengeFactory')
+    const RollupCreatorNoProxy = (await ethers.getContractFactory(
+      'RollupCreatorNoProxy'
+    )) as RollupCreatorNoProxy__factory
+    rollupCreator = await RollupCreatorNoProxy.deploy(
+      ChallengeFactory.address,
+      ...rollupConfig
+    )
+    receipt = await rollupCreator.deployTransaction.wait()
+  } else {
+    rollupCreator = await ethers.getContractAt(
+      'RollupCreator',
+      (await deployments.get('RollupCreator')).address
+    )
+    const createRollupTx = await rollupCreator.createRollup(...rollupConfig)
+    receipt = await createRollupTx.wait()
+  }
+
+  if (!receipt.logs) {
     throw Error('expected receipt to have logs')
   }
 

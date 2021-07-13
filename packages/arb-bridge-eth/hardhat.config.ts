@@ -199,6 +199,7 @@ const config = {
   },
   mocha: {
     timeout: 0,
+    bail: true,
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],
