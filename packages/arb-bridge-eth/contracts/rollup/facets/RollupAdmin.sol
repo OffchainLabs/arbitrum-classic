@@ -306,7 +306,6 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
 
         // the msg.sender does not necessarily have a deposit
         stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
-        // TODO: should we instead confirm the node in this same function?
 
         emit OwnerFunctionCalled(23);
     }
