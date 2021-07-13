@@ -54,8 +54,8 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     address public stakeToken;
     uint256 public minimumAssertionPeriod;
 
-    uint256 public sequencerInboxMaxDelayBlocks;
-    uint256 public sequencerInboxMaxDelaySeconds;
+    uint256 public STORAGE_GAP_1;
+    uint256 public STORAGE_GAP_2;
     uint256 public challengeExecutionBisectionDegree;
 
     address[] internal facets;
@@ -96,9 +96,69 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     event StakerReassigned(address indexed staker, uint256 newNode);
     event NodesDestroyed(uint256 indexed startNode, uint256 indexed endNode);
     event OwnerFunctionCalled(uint256 indexed id);
+
+    struct StakeOnNewNodeFrame {
+        uint256 sequencerBatchEnd;
+        bytes32 sequencerBatchAcc;
+        uint256 currentInboxSize;
+        INode node;
+        bytes32 executionHash;
+        INode prevNode;
+    }
+
+    function createNewNode(
+        RollupLib.Assertion memory assertion,
+        uint256 deadlineBlock,
+        uint256 sequencerBatchEnd,
+        bytes32 sequencerBatchAcc,
+        uint256 prevNode,
+        bytes32 prevHash,
+        bool hasSibling
+    ) internal returns (bytes32, StakeOnNewNodeFrame memory) {
+        StakeOnNewNodeFrame memory frame;
+        frame.currentInboxSize = sequencerBridge.messageCount();
+        frame.prevNode = getNode(prevNode);
+        {
+            uint256 nodeNum = latestNodeCreated() + 1;
+            frame.executionHash = RollupLib.executionHash(assertion);
+
+            frame.sequencerBatchEnd = sequencerBatchEnd;
+            frame.sequencerBatchAcc = sequencerBatchAcc;
+
+            rollupEventBridge.nodeCreated(nodeNum, prevNode, deadlineBlock, msg.sender);
+
+            frame.node = INode(
+                nodeFactory.createNode(
+                    RollupLib.stateHash(assertion.afterState),
+                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
+                    RollupLib.confirmHash(assertion),
+                    prevNode,
+                    deadlineBlock
+                )
+            );
+        }
+
+        bytes32 nodeHash =
+            RollupLib.nodeHash(hasSibling, prevHash, frame.executionHash, frame.sequencerBatchAcc);
+
+        nodeCreated(frame.node, nodeHash);
+        frame.prevNode.childCreated(latestNodeCreated());
+
+        return (nodeHash, frame);
+    }
 }
 
 contract Rollup is RollupBase {
+    constructor() public Cloneable() Pausable() {
+        // constructor is used so logic contract can't be init'ed
+        confirmPeriodBlocks = 1;
+        require(isInit(), "CONSTRUCTOR_NOT_INIT");
+    }
+
+    function isInit() internal view returns (bool) {
+        return confirmPeriodBlocks != 0;
+    }
+
     // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, arbGasSpeedLimitPerBlock, baseStake ]
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
@@ -110,8 +170,8 @@ contract Rollup is RollupBase {
         address[6] calldata connectedContracts,
         address[2] calldata _facets,
         uint256[2] calldata sequencerInboxParams
-    ) external {
-        require(confirmPeriodBlocks == 0, "ALREADY_INIT");
+    ) public {
+        require(!isInit(), "ALREADY_INIT");
         require(_rollupParams[0] != 0, "BAD_CONF_PERIOD");
 
         delayedBridge = IBridge(connectedContracts[0]);
@@ -145,8 +205,8 @@ contract Rollup is RollupBase {
         minimumAssertionPeriod = 75;
         challengeExecutionBisectionDegree = 400;
 
-        sequencerInboxMaxDelayBlocks = sequencerInboxParams[0];
-        sequencerInboxMaxDelaySeconds = sequencerInboxParams[1];
+        sequencerBridge.setMaxDelayBlocks(sequencerInboxParams[0]);
+        sequencerBridge.setMaxDelaySeconds(sequencerInboxParams[1]);
 
         // facets[0] == admin, facets[1] == user
         facets = _facets;
@@ -158,6 +218,27 @@ contract Rollup is RollupBase {
         require(success, "FAIL_INIT_FACET");
 
         emit RollupCreated(_machineHash);
+        require(isInit(), "INITIALIZE_NOT_INIT");
+    }
+
+    function postUpgradeInit(address newAdminFacet) external {
+        // this upgrade moves the delay blocks and seconds tracking to the sequencer inbox
+        // because of that we need to update the admin facet logic to allow the owner to set
+        // these values in the sequencer inbox
+
+        uint256 oldDelayBlocks = STORAGE_GAP_1;
+        uint256 oldDelaySeconds = STORAGE_GAP_2;
+
+        require(oldDelayBlocks == 6545, "ALREADY_POST_INIT");
+        require(oldDelaySeconds == 86400, "ALREADY_POST_INIT");
+
+        sequencerBridge.setMaxDelayBlocks(oldDelayBlocks);
+        sequencerBridge.setMaxDelaySeconds(oldDelaySeconds);
+
+        STORAGE_GAP_1 = 0;
+        STORAGE_GAP_2 = 0;
+
+        facets[0] = newAdminFacet;
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {

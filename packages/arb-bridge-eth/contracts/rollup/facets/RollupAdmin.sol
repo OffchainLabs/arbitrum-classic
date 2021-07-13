@@ -162,7 +162,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         external
         override
     {
-        sequencerInboxMaxDelayBlocks = newSequencerInboxMaxDelayBlocks;
+        ISequencerInbox(sequencerBridge).setMaxDelayBlocks(newSequencerInboxMaxDelayBlocks);
         emit OwnerFunctionCalled(14);
     }
 
@@ -174,7 +174,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         external
         override
     {
-        sequencerInboxMaxDelaySeconds = newSequencerInboxMaxDelaySeconds;
+        ISequencerInbox(sequencerBridge).setMaxDelaySeconds(newSequencerInboxMaxDelaySeconds);
         emit OwnerFunctionCalled(15);
     }
 
@@ -240,5 +240,109 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     function upgradeBeacon(address beacon, address newImplementation) external override {
         UpgradeableBeacon(beacon).upgradeTo(newImplementation);
         emit OwnerFunctionCalled(20);
+    }
+
+    function forceResolveChallenge(address[] memory stakerA, address[] memory stakerB)
+        external
+        override
+        whenPaused
+    {
+        require(stakerA.length == stakerB.length, "WRONG_LENGTH");
+        for (uint256 i = 0; i < stakerA.length; i++) {
+            address chall = inChallenge(stakerA[i], stakerB[i]);
+
+            require(address(0) != chall, "NOT_IN_CHALL");
+            clearChallenge(stakerA[i]);
+            clearChallenge(stakerB[i]);
+
+            IChallenge(chall).clearChallenge();
+        }
+        emit OwnerFunctionCalled(21);
+    }
+
+    function forceRefundStaker(address[] memory staker) external override whenPaused {
+        for (uint256 i = 0; i < staker.length; i++) {
+            withdrawStaker(staker[i]);
+        }
+        emit OwnerFunctionCalled(22);
+    }
+
+    function forceCreateNode(
+        bytes32 expectedNodeHash,
+        bytes32[3][2] calldata assertionBytes32Fields,
+        uint256[4][2] calldata assertionIntFields,
+        uint256 beforeProposedBlock,
+        uint256 beforeInboxMaxCount,
+        uint256 prevNode,
+        uint256 sequencerBatchEnd,
+        bytes32 sequencerBatchAcc
+    ) external override whenPaused {
+        require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
+
+        RollupLib.Assertion memory assertion =
+            RollupLib.decodeAssertion(
+                assertionBytes32Fields,
+                assertionIntFields,
+                beforeProposedBlock,
+                beforeInboxMaxCount,
+                sequencerBridge.messageCount()
+            );
+
+        uint256 deadlineBlock =
+            max(block.number.add(confirmPeriodBlocks), getNode(prevNode).deadlineBlock());
+
+        (bytes32 nodeHash, ) =
+            createNewNode(
+                assertion,
+                deadlineBlock,
+                sequencerBatchEnd,
+                sequencerBatchAcc,
+                prevNode,
+                getNodeHash(prevNode),
+                false
+            );
+
+        require(expectedNodeHash == nodeHash, "NOT_EXPECTED_HASH");
+
+        // the msg.sender does not necessarily have a deposit
+        stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
+        // TODO: should we instead confirm the node in this same function?
+
+        emit OwnerFunctionCalled(23);
+    }
+
+    function forceConfirmNode(
+        uint256 nodeNum,
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
+    ) external override whenPaused {
+        bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
+
+        INode node = getNode(nodeNum);
+
+        require(
+            node.confirmData() ==
+                RollupLib.confirmHash(
+                    beforeSendAcc,
+                    afterSendAcc,
+                    afterLogAcc,
+                    afterSendCount,
+                    afterLogCount
+                ),
+            "CONFIRM_DATA"
+        );
+        // processes outgoing messages without node.requirePastDeadline();
+        outbox.processOutgoingMessages(sendsData, sendLengths);
+
+        confirmLatestNode();
+
+        rollupEventBridge.nodeConfirmed(latestConfirmed());
+
+        emit NodeConfirmed(nodeNum, afterSendAcc, afterSendCount, afterLogAcc, afterLogCount);
+        emit OwnerFunctionCalled(24);
     }
 }
