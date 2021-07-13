@@ -118,11 +118,12 @@ const config = {
   networks: {
     hardhat: {
       chainId: 1337,
+      throwOnTransactionFailures: true,
       allowUnlimitedContractSize: true,
       accounts: {
-        accountsBalance: '10000000000000000000000000',
+        accountsBalance: '1000000000000000000000000000',
       },
-      blockGasLimit: 20000000,
+      blockGasLimit: 200000000,
       // mining: {
       //   auto: false,
       //   interval: 1000,
