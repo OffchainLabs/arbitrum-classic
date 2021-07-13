@@ -217,7 +217,7 @@ contract RollupCore is IRollupCore {
         _firstUnresolvedNode++;
     }
 
-    /// @notice Confirm the next unresolved node (forced?)
+    // TODO fix/ change to confirmNode( nodeNum)
     function confirmLatestNode() internal {
         destroyNode(_latestConfirmed);
         // uint256 latestNode = _latestNodeCreated;
