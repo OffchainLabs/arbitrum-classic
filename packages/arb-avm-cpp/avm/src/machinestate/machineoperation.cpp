@@ -1061,15 +1061,18 @@ void wasm_compile(MachineState& m) {
 }
 
 void wasm_run(MachineState& m) {
-    m.stack.prepForMod(3);
-    auto len = assumeInt64(assumeInt(m.stack[0]));
-    Buffer& md = assumeBuffer(m.stack[1]);
-    WasmCodePoint& wasmcp = assumeWasm(m.stack[2]);
-    auto res = wasmcp.runner->run_wasm(md, len);
-    // std::cerr << "got result " << value(res.buffer) << " len " << res.buffer_len << " " << int(res.buffer.get(0)) << "\n";
+    std::cerr << "wasm run\n";
+    m.stack.prepForMod(4);
+    value arg = m.stack[0];
+    auto len = assumeInt64(assumeInt(m.stack[1]));
+    Buffer& md = assumeBuffer(m.stack[2]);
+    WasmCodePoint& wasmcp = assumeWasm(m.stack[3]);
+    auto res = wasmcp.runner->run_wasm(md, len, arg);
+    std::cerr << "got result " << value(res.buffer) << " len " << res.buffer_len << " " << int(res.buffer.get(0)) << "\n";
     // std::cerr << "got result " << value(res.buffer) << " len " << res.buffer_len << " in " << len << "\n";
     
     Tuple tpl = Tuple(res.buffer, res.buffer_len);
+    m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();

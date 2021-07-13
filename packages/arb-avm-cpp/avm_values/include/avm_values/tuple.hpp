@@ -42,6 +42,7 @@ struct WasmResult {
 class WasmRunner {
    public:
     virtual WasmResult run_wasm(Buffer buf, uint64_t len) = 0;
+    virtual WasmResult run_wasm(Buffer buf, uint64_t len, value v) = 0;
 };
 
 struct WasmCodePoint {

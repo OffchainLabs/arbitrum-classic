@@ -42,6 +42,7 @@ struct RunWasm : WasmRunner {
     void init(wasm_byte_vec_t wasm);
 
     virtual WasmResult run_wasm(Buffer buf, uint64_t len);
+    virtual WasmResult run_wasm(Buffer buf, uint64_t len, value v);
 
 };
 

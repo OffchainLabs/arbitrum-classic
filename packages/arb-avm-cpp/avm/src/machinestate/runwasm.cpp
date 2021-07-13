@@ -5,7 +5,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <wasmer/wasmer.hh>
+// #include <wasmer/wasmer.hh>
+#include <wasmer/wasmer.h>
 // #include <wasmtime.h>
 
 wasm_trap_t* cb_get_length(void* env,
@@ -183,6 +184,101 @@ wasm_trap_t* cb_rvec(void* env,
     return NULL;
 }
 
+wasm_trap_t* cb_tuplebytes(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t* results) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+    uint64_t idx;
+    uint64_t ptr;
+    std::cerr << "tuplebytes...\n";
+/*
+    if (args->data[0].kind == WASM_I32) {
+        auto mem = (uint8_t*)wasm_memory_data(dta->memory);
+        ptr = args->data[0].of.i32;
+        idx = args->data[1].of.i32;
+
+        auto immed = *dta->immed;
+        auto t = std::get_if<Tuple>(&immed);
+        auto buf = t->get_element(idx);
+        auto num = std::get_if<uint256_t>(&buf);
+
+        std::vector<uint8_t> buffer;
+        marshal_uint256_t(*num, buffer);
+
+        for (int i = 0; i < 32; i++) {
+            mem[ptr+i] = buffer[i];
+        }
+    }*/
+    return NULL;
+}
+
+wasm_trap_t* cb_tuple2bytes(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t* results) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+    uint64_t idx2;
+    uint64_t idx;
+    uint64_t ptr;
+    std::cerr << "tuple2bytes...\n";
+/*
+    if (args->data[0].kind == WASM_I32) {
+        auto mem = (uint8_t*)wasm_memory_data(dta->memory);
+        ptr = args->data[0].of.i32;
+        idx = args->data[1].of.i32;
+        idx2 = args->data[2].of.i32;
+
+        auto immed = *dta->immed;
+        auto t = std::get_if<Tuple>(&immed);
+        auto t1 = t->get_element(idx);
+        auto t2 = std::get_if<Tuple>(&t1);
+        auto buf = t2->get_element(idx2);
+        auto num = std::get_if<uint256_t>(&buf);
+
+        std::vector<uint8_t> buffer;
+        marshal_uint256_t(*num, buffer);
+
+        for (int i = 0; i < 32; i++) {
+            mem[ptr+i] = buffer[i];
+        }
+    }*/
+    return NULL;
+}
+
+wasm_trap_t* cb_tuple2buffer(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t* results) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+    uint64_t idx2;
+    uint64_t idx;
+    uint64_t ptr;
+    uint64_t len;
+    std::cerr << "tuple2buffer...\n";
+
+/*
+    if (args->data[0].kind == WASM_I32) {
+        auto mem = (uint8_t*)wasm_memory_data(dta->memory);
+        ptr = args->data[0].of.i32;
+        idx = args->data[1].of.i32;
+        idx2 = args->data[2].of.i32;
+        len = args->data[3].of.i32;
+
+        auto immed = *dta->immed;
+        auto t = std::get_if<Tuple>(&immed);
+        auto t1 = t->get_element(idx);
+        auto t2 = std::get_if<Tuple>(&t1);
+        auto buf = t2->get_element(idx2);
+        std::cerr << "is it buffer?\n";
+        auto buffer = std::get_if<Buffer>(&buf);
+        std::cerr << "is it buffer?\n";
+
+        for (int i = 0; i < len; i++) {
+            mem[ptr+i] = buffer->get(i);
+        }
+        std::cerr << "??????\n";
+    } */
+    return NULL;
+}
+
 wasm_trap_t* cb_wvec(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t* results) {
@@ -190,7 +286,7 @@ wasm_trap_t* cb_wvec(void* env,
     uint64_t offset;
     uint64_t ptr;
     uint64_t len;
-    // printf("write buf...\n");
+    std::cerr << "write vec...\n";
 
     if (args->data[0].kind == WASM_I32) {
         auto mem = (uint8_t*)wasm_memory_data(dta->memory);
@@ -202,14 +298,18 @@ wasm_trap_t* cb_wvec(void* env,
         for (int i = 0; i < len; i++) {
             bytes.push_back(mem[ptr+i]);
             if ((offset+i) % 32 == 31) {
-                // std::cerr << "offset " << offset << " i " << i << " size " << bytes.size() << "\n";
-                b = b.set_many(offset + i + 1 - bytes.size(), bytes);
+                auto loc = offset + i + 1 - bytes.size();
+                std::cerr << "offset " << offset << " i " << i << " size " << bytes.size() << " loc " << loc << "\n";
+                b = b.set_many(loc, bytes);
                 bytes.clear();
             }
         }
-        b = b.set_many(offset + len - bytes.size(), bytes);
+        auto loc = offset + len - bytes.size();
+        std::cerr << "offset " << offset << " size " << bytes.size() << " loc " << loc << "\n";
+        if (bytes.size() > 0) b = b.set_many(loc, bytes);
         dta->buffer = b;
     }
+    std::cerr << "wrote vec...\n";
     return NULL;
 }
 
@@ -289,7 +389,10 @@ RunWasm::RunWasm(std::vector<uint8_t> &buf) {
 
 void RunWasm::init(wasm_byte_vec_t wasm) {
     // printf("Initializing... ????\n");
-    wasm_engine_t* engine = wasm_engine_new();
+    wasm_config_t* config = wasm_config_new();
+    wasm_config_set_compiler(config, CRANELIFT);
+    // wasm_config_set_compiler(config, SINGLEPASS);
+    wasm_engine_t* engine = wasm_engine_new_with_config(config);
     assert(engine != NULL);
     // printf("Initialized...%x \n", engine);
 
@@ -357,6 +460,8 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
     // printf("Creating write extra callback...\n");
     wasm_func_t* callback_func5 = wasm_func_new_with_env(
         store, callback_type_setbuf, cb_write_extra, (void*)env, NULL);
+    wasm_func_t* callback_tuplebytes = wasm_func_new_with_env(
+        store, callback_type_setbuf, cb_tuplebytes, (void*)env, NULL);
     wasm_functype_delete(callback_type_setbuf);
 
     wasm_functype_t* callback_type_rvec =
@@ -365,7 +470,18 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         store, callback_type_setbuf, cb_rvec, (void*)env, NULL);
     wasm_func_t* callback_func_wvec = wasm_func_new_with_env(
         store, callback_type_setbuf, cb_wvec, (void*)env, NULL);
+    wasm_func_t* callback_tuple2bytes = wasm_func_new_with_env(
+        store, callback_type_setbuf, cb_tuple2bytes, (void*)env, NULL);
     wasm_functype_delete(callback_type_rvec);
+
+    wasm_valtype_t* ps[4] = {wasm_valtype_new_i32(), wasm_valtype_new_i32(), wasm_valtype_new_i32(), wasm_valtype_new_i32()};
+    wasm_valtype_vec_t params, results;
+    wasm_valtype_vec_new(&params, 4, ps);
+    wasm_valtype_vec_new_empty(&results);
+    wasm_functype_t* callback_type_tuple2buffer = wasm_functype_new(&params, &results);
+    wasm_func_t* callback_func_tuple2buffer = wasm_func_new_with_env(
+        store, callback_type_tuple2buffer, cb_tuple2buffer, (void*)env, NULL);
+    wasm_functype_delete(callback_type_tuple2buffer);
 
     // printf("Instantiating module...\n");
 
@@ -407,6 +523,12 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
             imports[i] = wasm_func_as_extern(callback_func_rvec);
         } else if (str.find("wvec") != std::string::npos) {
             imports[i] = wasm_func_as_extern(callback_func_wvec);
+        } else if (str.find("tuplebytes") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_tuplebytes);
+        } else if (str.find("tuple2bytes") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_tuple2bytes);
+        } else if (str.find("tuple2buffer") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func_tuple2buffer);
         } else {
             imports[i] = wasm_func_as_extern(callback_func2);
         }
@@ -463,11 +585,43 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len) {
     data->immed = std::make_shared<value>(0);
     data->insn = std::make_shared<std::vector<Operation>>();
 
-    // std::cerr << "Running wasm\n";
+    std::cerr << "Running wasm\n";
     if (wasm_func_call(run, &args_vec, &results_vec)) {
         std::cerr << "Error running wasm\n";
     }
-    // std::cerr << "Ran wasm\n";
+    std::cerr << "Ran wasm\n";
+
+    return {data->buffer_len, data->buffer, data->extra, data->gas_left, data->immed, data->insn, data->table};
+
+}
+
+WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len, value v) {
+    data->buffer = buf;
+    data->buffer_len = len;
+    wasm_val_t arg_params[1];
+    arg_params[0].kind = WASM_I64;
+    arg_params[0].of.i64 = 123;
+    wasm_val_vec_t args_vec;
+    wasm_val_vec_new_empty(&args_vec);
+
+    wasm_val_t res_params[1];
+    wasm_val_vec_t results_vec;
+    res_params[0].kind = WASM_I32;
+    res_params[0].of.i64 = 123;
+    wasm_val_vec_new(&results_vec, 1, res_params);
+
+    data->gas_left = 1000000;
+    data->extra.resize(0);
+
+    data->table = std::vector<std::pair<uint64_t, uint64_t>>();
+    data->immed = std::make_shared<value>(v);
+    data->insn = std::make_shared<std::vector<Operation>>();
+
+    std::cerr << "Running wasm\n";
+    if (wasm_func_call(run, &args_vec, &results_vec)) {
+        std::cerr << "Error running wasm\n";
+    }
+    std::cerr << "Ran wasm\n";
 
     return {data->buffer_len, data->buffer, data->extra, data->gas_left, data->immed, data->insn, data->table};
 

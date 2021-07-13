@@ -322,7 +322,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::WASM_COMPILE,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::WASM_RUN,
-         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
 
         {OpCode::ECRECOVER,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
