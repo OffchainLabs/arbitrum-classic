@@ -104,7 +104,7 @@ const main = async () => {
   await beaconProxyFactory.deployed()
   console.log(`beacon proxyfactory at ${beaconProxyFactory.address}`)
 
-  const cloneableProxyHash = await beaconProxyFactory.cloneableProxyHash()
+  const cloneableProxyHash = await beaconProxyFactory.CLONABLE_PROXY_HASH()
 
   const L2ERC20Gateway = (
     await ethers.getContractFactory('L2ERC20Gateway')
