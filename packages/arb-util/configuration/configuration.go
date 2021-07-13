@@ -21,10 +21,11 @@ import (
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/providers/s3"
 	"github.com/mitchellh/mapstructure"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
@@ -84,6 +85,7 @@ type Aggregator struct {
 type RPC struct {
 	Addr string `koanf:"addr"`
 	Port string `koanf:"port"`
+	Path string `koanf:"path"`
 }
 
 type S3 struct {
@@ -103,6 +105,7 @@ type Sequencer struct {
 type WS struct {
 	Addr string `koanf:"addr"`
 	Port string `koanf:"port"`
+	Path string `koanf:"path"`
 }
 
 type Node struct {
@@ -185,6 +188,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
+	f.String("node.rpc.path", "/", "RPC path")
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
@@ -192,7 +196,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
-
+	f.String("node.ws.path", "/", "websocket path")
 	return ParseNonRelay(ctx, f)
 }
 
@@ -304,7 +308,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 		}
 	}
 
-	out, wallet, err := endCommonParse(f, k)
+	if err := applyOverrides(f, k); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	out, wallet, err := endCommonParse(k)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -378,7 +386,7 @@ func ParseRelay() (*Config, error) {
 		return nil, err
 	}
 
-	out, _, err := endCommonParse(f, k)
+	out, _, err := endCommonParse(k)
 	if err != nil {
 		return nil, err
 	}
@@ -455,40 +463,48 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 		return nil, errors.Wrap(err, "error loading environment variables")
 	}
 
+	if err := applyOverrides(f, k); err != nil {
+		return nil, err
+	}
+
+	return k, nil
+}
+
+func applyOverrides(f *flag.FlagSet, k *koanf.Koanf) error {
 	// Load configuration file from S3 if setup
-	err = loadS3Variables(k)
-	if err != nil {
-		return nil, errors.Wrap(err, "error loading S3 settings")
+	if err := loadS3Variables(k); err != nil {
+		return errors.Wrap(err, "error loading S3 settings")
 	}
 
 	// Local config file overrides S3 config file
 	configFile := k.String("conf.file")
 	if len(configFile) > 0 {
-		if err = k.Load(file.Provider(configFile), json.Parser()); err != nil {
-			return nil, errors.Wrap(err, "error loading config file")
+		if err := k.Load(file.Provider(configFile), json.Parser()); err != nil {
+			return errors.Wrap(err, "error loading config file")
 		}
 	}
 
 	// Config string overrides any config file
 	configString := k.String("conf.string")
 	if len(configString) > 0 {
-		if err = k.Load(rawbytes.Provider([]byte(configString)), nil); err != nil {
-			return nil, errors.Wrap(err, "error loading config")
+		if err := k.Load(rawbytes.Provider([]byte(configString)), nil); err != nil {
+			return errors.Wrap(err, "error loading config")
 		}
 	}
 
 	// Command line overrides config file or config string
-	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
-		return nil, errors.Wrap(err, "error loading config")
+	// Will be applied again after chain specific overrides
+	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+		return errors.Wrap(err, "error loading config")
 	}
 
 	// Environment variables overrides config files or command line options
-	err = loadEnvironmentVariables(k)
-	if err != nil {
-		return nil, errors.Wrap(err, "error loading environment variables")
+	// Will be applied again after chain specific overrides
+	if err := loadEnvironmentVariables(k); err != nil {
+		return errors.Wrap(err, "error loading environment variables")
 	}
 
-	return k, nil
+	return nil
 }
 
 func loadEnvironmentVariables(k *koanf.Koanf) error {
@@ -519,7 +535,7 @@ func loadS3Variables(k *koanf.Koanf) error {
 	return nil
 }
 
-func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
+func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	var out Config
 	decoderConfig := mapstructure.DecoderConfig{
 		ErrorUnused: true,
