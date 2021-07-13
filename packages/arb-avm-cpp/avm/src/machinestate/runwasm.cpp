@@ -190,8 +190,8 @@ wasm_trap_t* cb_tuplebytes(void* env,
     WasmEnvData* dta = (WasmEnvData*)env;
     uint64_t idx;
     uint64_t ptr;
-    std::cerr << "tuplebytes...\n";
-/*
+    // std::cerr << "tuplebytes...\n";
+
     if (args->data[0].kind == WASM_I32) {
         auto mem = (uint8_t*)wasm_memory_data(dta->memory);
         ptr = args->data[0].of.i32;
@@ -208,7 +208,7 @@ wasm_trap_t* cb_tuplebytes(void* env,
         for (int i = 0; i < 32; i++) {
             mem[ptr+i] = buffer[i];
         }
-    }*/
+    }
     return NULL;
 }
 
@@ -219,8 +219,8 @@ wasm_trap_t* cb_tuple2bytes(void* env,
     uint64_t idx2;
     uint64_t idx;
     uint64_t ptr;
-    std::cerr << "tuple2bytes...\n";
-/*
+    // std::cerr << "tuple2bytes...\n";
+
     if (args->data[0].kind == WASM_I32) {
         auto mem = (uint8_t*)wasm_memory_data(dta->memory);
         ptr = args->data[0].of.i32;
@@ -240,7 +240,7 @@ wasm_trap_t* cb_tuple2bytes(void* env,
         for (int i = 0; i < 32; i++) {
             mem[ptr+i] = buffer[i];
         }
-    }*/
+    }
     return NULL;
 }
 
@@ -252,9 +252,8 @@ wasm_trap_t* cb_tuple2buffer(void* env,
     uint64_t idx;
     uint64_t ptr;
     uint64_t len;
-    std::cerr << "tuple2buffer...\n";
+    // std::cerr << "tuple2buffer...\n";
 
-/*
     if (args->data[0].kind == WASM_I32) {
         auto mem = (uint8_t*)wasm_memory_data(dta->memory);
         ptr = args->data[0].of.i32;
@@ -267,15 +266,12 @@ wasm_trap_t* cb_tuple2buffer(void* env,
         auto t1 = t->get_element(idx);
         auto t2 = std::get_if<Tuple>(&t1);
         auto buf = t2->get_element(idx2);
-        std::cerr << "is it buffer?\n";
         auto buffer = std::get_if<Buffer>(&buf);
-        std::cerr << "is it buffer?\n";
 
         for (int i = 0; i < len; i++) {
             mem[ptr+i] = buffer->get(i);
         }
-        std::cerr << "??????\n";
-    } */
+    }
     return NULL;
 }
 
@@ -286,7 +282,7 @@ wasm_trap_t* cb_wvec(void* env,
     uint64_t offset;
     uint64_t ptr;
     uint64_t len;
-    std::cerr << "write vec...\n";
+    // std::cerr << "write vec...\n";
 
     if (args->data[0].kind == WASM_I32) {
         auto mem = (uint8_t*)wasm_memory_data(dta->memory);
@@ -299,17 +295,16 @@ wasm_trap_t* cb_wvec(void* env,
             bytes.push_back(mem[ptr+i]);
             if ((offset+i) % 32 == 31) {
                 auto loc = offset + i + 1 - bytes.size();
-                std::cerr << "offset " << offset << " i " << i << " size " << bytes.size() << " loc " << loc << "\n";
+                // std::cerr << "offset " << offset << " i " << i << " size " << bytes.size() << " loc " << loc << "\n";
                 b = b.set_many(loc, bytes);
                 bytes.clear();
             }
         }
         auto loc = offset + len - bytes.size();
-        std::cerr << "offset " << offset << " size " << bytes.size() << " loc " << loc << "\n";
+        // std::cerr << "offset " << offset << " size " << bytes.size() << " loc " << loc << "\n";
         if (bytes.size() > 0) b = b.set_many(loc, bytes);
         dta->buffer = b;
     }
-    std::cerr << "wrote vec...\n";
     return NULL;
 }
 
@@ -617,11 +612,11 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len, value v) {
     data->immed = std::make_shared<value>(v);
     data->insn = std::make_shared<std::vector<Operation>>();
 
-    std::cerr << "Running wasm\n";
+    // std::cerr << "Running wasm\n";
     if (wasm_func_call(run, &args_vec, &results_vec)) {
         std::cerr << "Error running wasm\n";
     }
-    std::cerr << "Ran wasm\n";
+    // std::cerr << "Ran wasm\n";
 
     return {data->buffer_len, data->buffer, data->extra, data->gas_left, data->immed, data->insn, data->table};
 
