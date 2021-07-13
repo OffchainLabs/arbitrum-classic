@@ -61,14 +61,6 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         return RollupBase(rollup).sequencerInboxMaxDelaySeconds();
     }
 
-    function getLastDelayedAcc() internal view returns (bytes32) {
-        bytes32 acc = 0;
-        if (totalDelayedMessagesRead > 0) {
-            acc = delayedInbox.inboxAccs(totalDelayedMessagesRead - 1);
-        }
-        return acc;
-    }
-
     function forceInclusion(
         uint256 _totalDelayedMessagesRead,
         uint8 kind,

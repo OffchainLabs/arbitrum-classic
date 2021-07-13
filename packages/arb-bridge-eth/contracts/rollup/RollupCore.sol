@@ -27,6 +27,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 contract RollupCore is IRollupCore {
     using SafeMath for uint256;
 
+    // Stakers become Zombies after losing a challenge
     struct Zombie {
         address stakerAddress;
         uint256 latestStakedNode;
@@ -203,18 +204,6 @@ contract RollupCore is IRollupCore {
         return _nodeHashes[index];
     }
 
-    function resetNodeHash(uint256 index) internal {
-        _nodeHashes[index] = 0;
-    }
-
-    /**
-     * @notice Update the latest node created
-     * @param newLatestNodeCreated New value for the latest node created
-     */
-    function updateLatestNodeCreated(uint256 newLatestNodeCreated) internal {
-        _latestNodeCreated = newLatestNodeCreated;
-    }
-
     /// @notice Reject the next unresolved node
     function rejectNextNode() internal {
         destroyNode(_firstUnresolvedNode);
@@ -226,14 +215,6 @@ contract RollupCore is IRollupCore {
         destroyNode(_latestConfirmed);
         _latestConfirmed = _firstUnresolvedNode;
         _firstUnresolvedNode++;
-    }
-
-    /// @notice Confirm the next unresolved node
-    function confirmLatestNode() internal {
-        destroyNode(_latestConfirmed);
-        uint256 latestNode = _latestNodeCreated;
-        _latestConfirmed = latestNode;
-        _firstUnresolvedNode = latestNode + 1;
     }
 
     /**
@@ -248,7 +229,7 @@ contract RollupCore is IRollupCore {
             stakerIndex,
             _latestConfirmed,
             depositAmount,
-            address(0),
+            address(0), // new staker is not in challenge
             true
         );
         _lastStakeBlock = block.number;
