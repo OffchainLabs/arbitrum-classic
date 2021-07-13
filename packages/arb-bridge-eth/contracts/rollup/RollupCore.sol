@@ -217,16 +217,16 @@ contract RollupCore is IRollupCore {
         _firstUnresolvedNode++;
     }
 
-    /// @notice Confirm the next unresolved node
+    /// @notice Confirm the next unresolved node (forced?)
     function confirmLatestNode() internal {
         destroyNode(_latestConfirmed);
-        uint256 latestNode = _latestNodeCreated;
-        _latestConfirmed = latestNode;
-        _firstUnresolvedNode = latestNode + 1;
+        // uint256 latestNode = _latestNodeCreated;
+        _latestConfirmed = _latestNodeCreated;
+        _firstUnresolvedNode = _latestNodeCreated + 1;
     }
 
     /**
-     * @notice Create a new stake
+     * @notice Create a new stake at latest confirmed node
      * @param stakerAddress Address of the new staker
      * @param depositAmount Stake amount of the new staker
      */

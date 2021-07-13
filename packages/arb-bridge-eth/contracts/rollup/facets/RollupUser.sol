@@ -132,8 +132,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     }
 
     /**
-     * @notice Move stake onto an existing node
-     * @param nodeNum Inbox of the node to move stake to. This must by a child of the node the staker is currently staked on
+     * @notice Move stake onto existing child node
+     * @param nodeNum Index of the node to move stake to. This must by a child of the node the staker is currently staked on
      * @param nodeHash Node hash of nodeNum (protects against reorgs)
      */
     function stakeOnExistingNode(uint256 nodeNum, bytes32 nodeHash)
@@ -144,17 +144,23 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         require(isStaked(msg.sender), "NOT_STAKED");
 
         require(getNodeHash(nodeNum) == nodeHash, "NODE_REORG");
-        require(nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated());
+        require(
+            nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated(),
+            "NODE_NUM_OUT_OF_RANGE"
+        );
         INode node = getNode(nodeNum);
         require(latestStakedNode(msg.sender) == node.prev(), "NOT_STAKED_PREV");
         stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
     }
 
     /**
-     * @notice Move stake onto a new node
+     * @notice Create a new node and move stake onto it
      * @param expectedNodeHash The hash of the node being created (protects against reorgs)
      * @param assertionBytes32Fields Assertion data for creating
      * @param assertionIntFields Assertion data for creating
+     * @param beforeProposedBlock Block number at previous assertion
+     @ @param beforeInboxMaxCount Inbox count at previous assertion 
+     @ @param sequencerBatchProof Proof data to ensure tip of inbox after assertion is included in a batch
      */
     function stakeOnNewNode(
         bytes32 expectedNodeHash,
@@ -185,13 +191,13 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             bytes32 sequencerBatchAcc;
             uint256 deadlineBlock;
             {
-                // frame.executionHash = RollupLib.executionHash(assertion);
                 // Make sure the previous state is correct against the node being built on
                 require(
                     RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
                     "PREV_STATE_HASH"
                 );
 
+                // Insure inbox tip after assertion is included in a sequencer-inbox batch
                 (sequencerBatchEnd, sequencerBatchAcc) = sequencerBridge
                     .proveBatchContainsSequenceNumber(
                     sequencerBatchProof,
@@ -258,6 +264,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                     hasSibling
                 );
             }
+            // Replay protect (revert on reorgs)
             require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
             stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
         }
@@ -679,7 +686,6 @@ contract ERC20RollupUserFacet is AbsRollupUserFacet {
         returns (uint256)
     {
         uint256 amount = withdrawFunds(msg.sender);
-        // Note: This is an unsafe external call and could be used for reentrency
         // This is safe because it occurs after all checks and effects
         require(IERC20(stakeToken).transfer(destination, amount), "TRANSFER_FAILED");
         return amount;
