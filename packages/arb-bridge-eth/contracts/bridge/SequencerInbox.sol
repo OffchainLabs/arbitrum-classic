@@ -383,7 +383,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
 
     /**
      * @notice Show that given messageCount falls inside of some batch and prove/return inboxAcc state. This is used to ensure that the creation of new nodes are replay protected to the state of the inbox, thereby ensuring their validity/invalidy can't be modified upon reorging the inbox contents.
-     * @dev (wrapper for proveBatchContainsSequenceNumber for sementics)
+     * @dev (wrapper in leiu of proveBatchContainsSequenceNumber for sementics)
      * @return (message count at end of target batch, inbox hash as of target batch)
      */
     function proveInboxContainsMessage(bytes calldata proof, uint256 _messageCount)
@@ -392,13 +392,21 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         override
         returns (uint256, bytes32)
     {
-        return this.proveBatchContainsSequenceNumber(proof, _messageCount);
+        return proveInboxContainsMessageImp(proof, _messageCount);
     }
 
     function proveBatchContainsSequenceNumber(bytes calldata proof, uint256 _messageCount)
         external
         view
         override
+        returns (uint256, bytes32)
+    {
+        return proveInboxContainsMessageImp(proof, _messageCount);
+    }
+
+    function proveInboxContainsMessageImp(bytes calldata proof, uint256 _messageCount)
+        internal
+        view
         returns (uint256, bytes32)
     {
         if (_messageCount == 0) {
