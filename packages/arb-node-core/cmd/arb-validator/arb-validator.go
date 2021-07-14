@@ -170,7 +170,7 @@ func startup() error {
 		}
 	}
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, l1Client, auth, config.GasPriceUrl)
+	valAuth, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config.GasPriceUrl, false)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
