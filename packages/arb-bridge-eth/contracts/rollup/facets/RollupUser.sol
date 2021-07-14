@@ -18,33 +18,50 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
 
     /**
      * @notice Reject the next unresolved node
-     * @param stakerAddress Example staker staked on sibling
+     * @param stakerAddress Example staker staked on sibling, used to prove a node is on an unconfirmable branch and can be rejected
      */
     function rejectNextNode(address stakerAddress) external onlyValidator whenNotPaused {
         requireUnresolvedExists();
-        uint256 latest = latestConfirmed();
-        uint256 firstUnresolved = firstUnresolvedNode();
-        INode node = getNode(firstUnresolved);
-        if (node.prev() == latest) {
-            // Confirm that the example staker is staked on a sibling node
+        uint256 latestConfirmedNodeNum = latestConfirmed();
+        uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
+        INode firstUnresolvedNode = getNode(firstUnresolved);
+
+        if (firstUnresolvedNode.prev() == latestConfirmedNodeNum) {
+            /**If the first unresolved node is a child of the latest confirmed node, to prove it can be rejected, we show:
+             * a) Its deadline has expired
+             * b) *Some* staker is staked on a sibling
+
+             * The following three checks are sufficient to prove b:
+            */
+
+            // 1.  StakerAddress is indeed a staker
             require(isStaked(stakerAddress), "NOT_STAKED");
+
+            // 2. Staker's latest staked node hasn't been resolved; this proves that staker's latest staked node can't be a parent of firstUnresolvedNode
             requireUnresolved(latestStakedNode(stakerAddress));
-            require(!node.stakers(stakerAddress), "STAKED_ON_TARGET");
+
+            // 3. staker isn't staked on first unresolved node; this proves staker's latest staked can't be a child of firstUnresolvedNode (recall staking on node requires staking on all of its parents)
+            require(!firstUnresolvedNode.stakers(stakerAddress), "STAKED_ON_TARGET");
+            // If a staker is staked on a node that is neither a child nor a parent of firstUnresolvedNode, it must be a sibling, QED
 
             // Verify the block's deadline has passed
-            node.requirePastDeadline();
+            firstUnresolvedNode.requirePastDeadline();
 
-            getNode(latest).requirePastChildConfirmDeadline();
+            getNode(latestConfirmedNodeNum).requirePastChildConfirmDeadline();
 
             removeOldZombies(0);
 
             // Verify that no staker is staked on this node
-            require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
+            require(
+                firstUnresolvedNode.stakerCount() == countStakedZombies(firstUnresolvedNode),
+                "HAS_STAKERS"
+            );
         }
+        // Simpler case: if the first unreseolved node doesn't point to the last confirmed node, another branch was confirmed and can simply reject it outright
         rejectNextNode();
-        rollupEventBridge.nodeRejected(firstUnresolved);
+        rollupEventBridge.nodeRejected(firstUnresolvedNodeNum);
 
-        emit NodeRejected(firstUnresolved);
+        emit NodeRejected(firstUnresolvedNodeNum);
     }
 
     /**
