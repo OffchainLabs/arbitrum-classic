@@ -27,15 +27,20 @@ import "../rollup/Rollup.sol";
 import "./Messages.sol";
 
 contract SequencerInbox is ISequencerInbox, Cloneable {
+    // Sequencer-Inbox state accumulator
     bytes32[] public override inboxAccs;
+
+    // Number of messages included in the sequencer-inbox; tracked seperately from inboxAccs since multiple messages can be included in a single inboxAcc update (i.e., many messages in a batch, many batches in a single inboxAccs update, etc)
     uint256 public override messageCount;
 
+    // count of messages read from the delayedInbox
     uint256 public totalDelayedMessagesRead;
 
     IBridge public delayedInbox;
     address public sequencer;
     address public rollup;
 
+    // Window in which only the Sequencer can update the Inbox; this delay is what allows the Sequencer to give receipts with sub-blocktime latency.
     uint256 public override maxDelayBlocks;
     uint256 public override maxDelaySeconds;
 
@@ -69,6 +74,10 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         emit MaxDelaySecondsUpdated(newMaxDelaySeconds);
     }
 
+    /**
+     * @notice Move messages from the delayed inbox into the Sequencer inbox. Callable by any address. Necessary iff Sequencer hasn't included them before delay period expired.
+     */
+
     function forceInclusion(
         uint256 _totalDelayedMessagesRead,
         uint8 kind,
@@ -91,6 +100,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                     gasPriceL1,
                     messageDataHash
                 );
+            // Can only force-include after the Sequencer-only window has expired.
             require(l1BlockAndTimestamp[0] + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
             require(l1BlockAndTimestamp[1] + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
 
@@ -152,6 +162,14 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         );
     }
 
+    /**
+     * @notice Sequencer adds a batch to inbox.
+     * @param transactions concatenated bytes of L2 messages
+     * @param lengths length of each txn in transctions (for parsing)
+     * @param sectionsMetadata Each consists of [numItems, l1BlockNumber, l1Timestamp, newTotalDelayedMessagesRead, newDelayedAcc]
+     * @param afterAcc Expected inbox hash after batch is added
+     * @dev sectionsMetadata lets the sequencer delineate new l1Block numbers and l1Timestamps within a given batch; this lets the sequencer minimize the number of batches created (and thus amortizing cost) while still giving timely receipts
+     */
     function addSequencerL2Batch(
         bytes calldata transactions,
         uint256[] calldata lengths,
@@ -221,12 +239,12 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                     dataOffset,
                     lengths,
                     processedItems,
-                    numItems, // num items
+                    numItems,
                     prefixHash,
                     runningCount,
                     runningAcc
                 );
-                processedItems += numItems; // num items
+                processedItems += numItems;
             }
 
             uint256 newTotalDelayedMessagesRead = sectionsMetadata[i + 3];
@@ -236,6 +254,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                 totalDelayedMessagesRead >= 1 || sectionsMetadata[i] == 0,
                 "MUST_DELAYED_INIT_START"
             );
+            // Sequencer decides how many messages (if any) to include from the delayed inbox
             if (newTotalDelayedMessagesRead > totalDelayedMessagesRead) {
                 (runningAcc, runningCount) = includeDelayedMessages(
                     runningAcc,
@@ -332,12 +351,18 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         return (acc, count);
     }
 
+    /**
+     * @notice Proof message count as of provided inbox state hash
+     * @param proof proof data
+     * @param offset offset for parsing proof data
+     * @param inboxAcc target inbox state hash
+     */
     function proveSeqBatchMsgCount(
         bytes calldata proof,
         uint256 offset,
-        bytes32 acc
+        bytes32 inboxAcc
     ) internal pure returns (uint256, uint256) {
-        uint256 endCount;
+        uint256 endMessageCount;
 
         bytes32 buildingAcc;
         uint256 seqNum;
@@ -350,41 +375,60 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         buildingAcc = keccak256(
             abi.encodePacked(buildingAcc, seqNum, messageHeaderHash, messageDataHash)
         );
-        endCount = seqNum + 1;
-        require(buildingAcc == acc, "BATCH_ACC");
+        endMessageCount = seqNum + 1;
+        require(buildingAcc == inboxAcc, "BATCH_ACC");
 
-        return (offset, endCount);
+        return (offset, endMessageCount);
     }
 
-    function proveBatchContainsSequenceNumber(bytes calldata proof, uint256 inboxCount)
+    /**
+     * @notice Show that given messageCount falls inside of some batch and prove/return inboxAcc state. This is used to ensure that the creation of new nodes are replay protected to the state of the inbox, thereby ensuring their validity/invalidy can't be modified upon reorging the inbox contents.
+     * @dev (wrapper for proveBatchContainsSequenceNumber for sementics)
+     * @return (message count at end of target batch, inbox hash as of target batch)
+     */
+    function proveInboxContainsMessage(bytes calldata proof, uint256 _messageCount)
         external
         view
         override
         returns (uint256, bytes32)
     {
-        if (inboxCount == 0) {
+        return this.proveBatchContainsSequenceNumber(proof, _messageCount);
+    }
+
+    function proveBatchContainsSequenceNumber(bytes calldata proof, uint256 _messageCount)
+        external
+        view
+        override
+        returns (uint256, bytes32)
+    {
+        if (_messageCount == 0) {
             return (0, 0);
         }
 
-        (uint256 offset, uint256 seqBatchNum) = Marshaling.deserializeInt(proof, 0);
-        uint256 lastBatchCount = 0;
-        if (seqBatchNum > 0) {
-            (offset, lastBatchCount) = proveSeqBatchMsgCount(
+        (uint256 offset, uint256 targetInboxStateIndex) = Marshaling.deserializeInt(proof, 0);
+
+        uint256 messageCountAsOfPreviousInboxState = 0;
+        if (targetInboxStateIndex > 0) {
+            (offset, messageCountAsOfPreviousInboxState) = proveSeqBatchMsgCount(
                 proof,
                 offset,
-                inboxAccs[seqBatchNum - 1]
+                inboxAccs[targetInboxStateIndex - 1]
             );
-            lastBatchCount++;
+            messageCountAsOfPreviousInboxState++;
         }
 
-        bytes32 seqBatchAcc = inboxAccs[seqBatchNum];
-        uint256 thisBatchCount;
-        (offset, thisBatchCount) = proveSeqBatchMsgCount(proof, offset, seqBatchAcc);
+        bytes32 targetInboxState = inboxAccs[targetInboxStateIndex];
+        uint256 messageCountAsOfTargetInboxState;
+        (offset, messageCountAsOfTargetInboxState) = proveSeqBatchMsgCount(
+            proof,
+            offset,
+            targetInboxState
+        );
 
-        require(inboxCount > lastBatchCount, "BATCH_START");
-        require(inboxCount <= thisBatchCount, "BATCH_END");
+        require(_messageCount > messageCountAsOfPreviousInboxState, "BATCH_START");
+        require(_messageCount <= messageCountAsOfTargetInboxState, "BATCH_END");
 
-        return (thisBatchCount, seqBatchAcc);
+        return (messageCountAsOfTargetInboxState, targetInboxState);
     }
 
     function getInboxAccsLength() external view override returns (uint256) {

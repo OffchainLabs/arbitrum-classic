@@ -68,6 +68,11 @@ interface ISequencerInbox {
 
     function getInboxAccsLength() external view returns (uint256);
 
+    function proveInboxContainsMessage(bytes calldata proof, uint256 inboxCount)
+        external
+        view
+        returns (uint256, bytes32);
+
     function proveBatchContainsSequenceNumber(bytes calldata proof, uint256 inboxCount)
         external
         view

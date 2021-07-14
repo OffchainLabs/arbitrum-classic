@@ -215,8 +215,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                 );
 
                 // Insure inbox tip after assertion is included in a sequencer-inbox batch and return inbox acc; this gives replay protection against the state of the inbox
-                (sequencerBatchEnd, sequencerBatchAcc) = sequencerBridge
-                    .proveBatchContainsSequenceNumber(
+                (sequencerBatchEnd, sequencerBatchAcc) = sequencerBridge.proveInboxContainsMessage(
                     sequencerBatchProof,
                     assertion.afterState.inboxCount
                 );
