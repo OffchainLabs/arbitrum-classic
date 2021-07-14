@@ -40,7 +40,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     address public sequencer;
     address public rollup;
 
-    // Window in which only the Sequencer can update the Inbox; this delay is what allows the Sequencer to give receipts with sub-blocktime latency.
+    // Window in which only the Sequencer can update the Inbox; this delay is what allows the Sequencer to gives receipts with sub-blocktime latency.
     uint256 public override maxDelayBlocks;
     uint256 public override maxDelaySeconds;
 
