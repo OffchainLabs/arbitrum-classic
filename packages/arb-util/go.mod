@@ -3,7 +3,7 @@ module github.com/offchainlabs/arbitrum/packages/arb-util
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.10.3
+	github.com/ethereum/go-ethereum v1.10.4
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.0.4
