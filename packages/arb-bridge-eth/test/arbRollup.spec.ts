@@ -550,6 +550,18 @@ describe('ArbRollup', () => {
 
     expect(adminNodeNum.toNumber()).to.equal(node2Num.toNumber() + 1)
 
+    await rollupAdmin.forceCreateNode(
+      newNodeHash,
+      assertion.bytes32Fields(),
+      assertion.intFields(),
+      prevNode.afterState.proposedBlock,
+      prevNode.afterState.inboxMaxCount,
+      prevLatestConfirmed,
+      1,
+      zerobytes32
+    )
+    const postLatestCreated = await rollup.rollup.latestNodeCreated()
+
     const sends: Array<BytesLike> = []
     const messageData = ethers.utils.concat(sends)
     const messageLengths = sends.map(msg => msg.length)
@@ -565,6 +577,7 @@ describe('ArbRollup', () => {
     )
 
     const postLatestConfirmed = await rollup.rollup.latestConfirmed()
+    expect(postLatestCreated).to.equal(adminNodeNum.add(1))
     expect(postLatestConfirmed).to.equal(adminNodeNum)
 
     await rollupAdmin.resume()

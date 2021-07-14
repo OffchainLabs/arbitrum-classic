@@ -338,9 +338,8 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         // processes outgoing messages without node.requirePastDeadline();
         outbox.processOutgoingMessages(sendsData, sendLengths);
 
-        confirmLatestNode();
-
-        rollupEventBridge.nodeConfirmed(latestConfirmed());
+        confirmNode(nodeNum);
+        rollupEventBridge.nodeConfirmed(nodeNum);
 
         emit NodeConfirmed(nodeNum, afterSendAcc, afterSendCount, afterLogAcc, afterLogCount);
         emit OwnerFunctionCalled(24);
