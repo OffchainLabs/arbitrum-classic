@@ -477,7 +477,7 @@ describe('ArbRollup', () => {
     )
     const node2Num = await rollup.rollup.latestNodeCreated()
 
-    const tx = rollup.createChallenge(
+    const tx = await rollup.createChallenge(
       await accounts[8].getAddress(),
       node1Num,
       await accounts[1].getAddress(),
@@ -485,7 +485,7 @@ describe('ArbRollup', () => {
       node1,
       node2
     )
-    const receipt = await (await tx).wait()
+    const receipt = await tx.wait()
     const ev = rollup.rollup.interface.parseLog(
       receipt.logs![receipt.logs!.length - 1]
     )
@@ -504,6 +504,17 @@ describe('ArbRollup', () => {
       )
     ).to.be.revertedWith('Pausable: not paused')
 
+    await expect(
+      rollup.createChallenge(
+        await accounts[8].getAddress(),
+        node1Num,
+        await accounts[1].getAddress(),
+        node2Num,
+        node1,
+        node2
+      )
+    ).to.be.revertedWith('IN_CHAL')
+
     await rollupAdmin.pause()
 
     await rollupAdmin.forceResolveChallenge(
@@ -514,6 +525,17 @@ describe('ArbRollup', () => {
     // challenge should have been destroyed
     const postCode = await ethers.provider.getCode(challenge.address)
     expect(postCode).to.equal('0x')
+
+    const challengeA = await rollupAdmin.currentChallenge(
+      await accounts[8].getAddress()
+    )
+    const challengeB = await rollupAdmin.currentChallenge(
+      await accounts[1].getAddress()
+    )
+    const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
+
+    expect(challengeA).to.equal(ZERO_ADDR)
+    expect(challengeB).to.equal(ZERO_ADDR)
 
     await rollupAdmin.forceRefundStaker([
       await accounts[8].getAddress(),

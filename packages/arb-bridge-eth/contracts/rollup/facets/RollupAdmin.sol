@@ -304,7 +304,6 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
 
         require(expectedNodeHash == nodeHash, "NOT_EXPECTED_HASH");
 
-        // the msg.sender does not necessarily have a deposit
         stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
 
         emit OwnerFunctionCalled(23);
