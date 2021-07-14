@@ -24,7 +24,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         requireUnresolvedExists();
         uint256 latestConfirmedNodeNum = latestConfirmed();
         uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
-        INode firstUnresolvedNode = getNode(firstUnresolved);
+        INode firstUnresolvedNode = getNode(firstUnresolvedNodeNum);
 
         if (firstUnresolvedNode.prev() == latestConfirmedNodeNum) {
             /**If the first unresolved node is a child of the latest confirmed node, to prove it can be rejected, we show:
@@ -177,7 +177,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @param assertionIntFields Assertion data for creating
      * @param beforeProposedBlock Block number at previous assertion
      @ @param beforeInboxMaxCount Inbox count at previous assertion 
-     @ @param sequencerBatchProof Proof data to ensure tip of inbox after assertion is included in a batch
+     @ @param sequencerBatchProof Proof data for ensuring expected state of inbox (used in Nodehash to protect against reorgs)
      */
     function stakeOnNewNode(
         bytes32 expectedNodeHash,
@@ -214,7 +214,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                     "PREV_STATE_HASH"
                 );
 
-                // Insure inbox tip after assertion is included in a sequencer-inbox batch
+                // Insure inbox tip after assertion is included in a sequencer-inbox batch and return inbox acc; this gives replay protection against the state of the inbox
                 (sequencerBatchEnd, sequencerBatchAcc) = sequencerBridge
                     .proveBatchContainsSequenceNumber(
                     sequencerBatchProof,
@@ -361,14 +361,17 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         INode node1 = getNode(nodeNums[0]);
         INode node2 = getNode(nodeNums[1]);
 
+        // ensure nodes staked on the same parent (and thus in conflict)
         require(node1.prev() == node2.prev(), "DIFF_PREV");
 
+        // ensure both stakers aren't currently in challenge
         requireUnchallengedStaker(stakers[0]);
         requireUnchallengedStaker(stakers[1]);
 
         require(node1.stakers(stakers[0]), "STAKER1_NOT_STAKED");
         require(node2.stakers(stakers[1]), "STAKER2_NOT_STAKED");
 
+        // Check param data against challenge hash
         require(
             node1.challengeHash() ==
                 RollupLib.challengeRootHash(
@@ -389,12 +392,15 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             "CHAL_HASH2"
         );
 
+        // Calculate upper limit for allowed node proposal time:
         uint256 commonEndTime =
-            node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks).add(
-                getNode(node1.prev()).firstChildBlock()
+            getNode(node1.prev())
+                .firstChildBlock() // Dispute start: dispute timer for a node starts when its first child is created
+                .add(
+                node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
             );
         if (commonEndTime < proposedTimes[1]) {
-            // The second node was created too late to be challenged.
+            // The 2nd node was created too late; loses challenge automatically.
             completeChallengeImpl(stakers[0], stakers[1]);
             return;
         }
