@@ -223,17 +223,13 @@ contract RollupCore is IRollupCore {
 
     /// @notice Confirm the next unresolved node
     function confirmNextNode() internal {
-        destroyNode(_latestConfirmed);
-        _latestConfirmed = _firstUnresolvedNode;
-        _firstUnresolvedNode++;
+        confirmNode(_firstUnresolvedNode);
     }
 
-    /// @notice Confirm the next unresolved node
-    function confirmLatestNode() internal {
+    function confirmNode(uint256 nodeNum) internal {
         destroyNode(_latestConfirmed);
-        uint256 latestNode = _latestNodeCreated;
-        _latestConfirmed = latestNode;
-        _firstUnresolvedNode = latestNode + 1;
+        _latestConfirmed = nodeNum;
+        _firstUnresolvedNode = nodeNum + 1;
     }
 
     /**
