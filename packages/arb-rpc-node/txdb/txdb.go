@@ -24,8 +24,6 @@ import (
 	"time"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	lru "github.com/hashicorp/golang-lru"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -36,6 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/blockcache"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
@@ -62,7 +61,7 @@ type TxDB struct {
 	pendingLogsFeed event.Feed
 	blockProcFeed   event.Feed
 
-	snapshotCache *lru.Cache
+	snapshotCache *blockcache.BlockCache
 }
 
 func New(
@@ -72,7 +71,7 @@ func New(
 	updateFrequency time.Duration,
 	dbConfig *configuration.Database,
 ) (*TxDB, <-chan error, error) {
-	snapshotCache, err := lru.New(dbConfig.BlockCacheSize)
+	snapshotCache, err := blockcache.New(dbConfig.BlockCacheSize, dbConfig.BlockCacheExpire)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -161,10 +160,6 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 
 func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	logger.Info().Int("count", len(avmLogs)).Msg("deleting logs")
-	oldHeight, err := db.BlockCount()
-	if err != nil {
-		return err
-	}
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
 	var reorgBlockHeight uint64
 	blockReceiptFound := false
@@ -212,10 +207,7 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 			return err
 		}
 
-		for i := oldHeight; i > reorgBlockHeight; i-- {
-			db.snapshotCache.Remove(i)
-		}
-		db.snapshotCache.Remove(reorgBlockHeight)
+		db.snapshotCache.Reorg(reorgBlockHeight)
 	}
 
 	return nil
@@ -464,9 +456,9 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
-	cachedSnap, found := db.snapshotCache.Get(info.Header.Number.Uint64())
-	if found {
-		return cachedSnap.(*snapshot.Snapshot), nil
+	_, cachedSnap := db.snapshotCache.Get(info.Header.Number.Uint64())
+	if cachedSnap != nil {
+		return cachedSnap, nil
 	}
 	if !db.allowSlowLookup {
 		// Not in memory cache, so give up
@@ -484,7 +476,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if err != nil {
 		return nil, err
 	}
-	db.snapshotCache.Add(info.Header.Number.Uint64(), snap)
+	db.snapshotCache.Add(info.Header, snap)
 	return snap, nil
 }
 
