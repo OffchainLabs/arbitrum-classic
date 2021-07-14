@@ -128,6 +128,10 @@ const config = {
       //   auto: false,
       //   interval: 1000,
       // },
+      forking: {
+        url: 'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY'],
+        enabled: process.env['SHOULD_FORK'] === '1',
+      },
     },
     local_development: {
       url: 'http://127.0.0.1:7545',
