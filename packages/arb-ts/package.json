@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "0.0.26",
+  "version": "0.0.27",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -37,6 +37,7 @@
     "@ethersproject/bytes": "^5.0.8",
     "@types/promise-poller": "^1.7.0",
     "@uniswap/token-lists": "^1.0.0-beta.24",
+    "dotenv": "^10.0.0",
     "ethers": "^5.0.24"
   },
   "resolutions": {
@@ -54,7 +55,6 @@
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",
     "chalk": "^4.1.0",
-    "dot-env": "^0.0.1",
     "ethereum-waffle": "^2.3.0",
     "install-peers-cli": "^2.2.0",
     "mocha": "^7.2.0",
