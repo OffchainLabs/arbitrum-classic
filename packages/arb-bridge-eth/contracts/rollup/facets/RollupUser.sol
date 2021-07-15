@@ -254,7 +254,12 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                     sequencerBatchAcc,
                     prevNodeNum,
                     lastHash,
-                    hasSibling
+                    hasSibling,
+                    NewNodeDependencies({
+                        sequencerInbox: sequencerBridge,
+                        rollupEventBridge: rollupEventBridge,
+                        nodeFactory: nodeFactory
+                    })
                 );
             }
             require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
