@@ -299,7 +299,12 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
                 sequencerBatchAcc,
                 prevNode,
                 getNodeHash(prevNode),
-                false
+                false,
+                NewNodeDependencies({
+                    sequencerInbox: sequencerBridge,
+                    rollupEventBridge: rollupEventBridge,
+                    nodeFactory: nodeFactory
+                })
             );
 
         require(expectedNodeHash == nodeHash, "NOT_EXPECTED_HASH");
