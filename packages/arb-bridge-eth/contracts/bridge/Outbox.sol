@@ -34,7 +34,6 @@ contract Outbox is IOutbox, Cloneable {
 
     struct OutboxEntry {
         bytes32 root;
-        uint256 numRemaining;
         mapping(bytes32 => bool) spentOutput;
     }
 
@@ -101,7 +100,7 @@ contract Outbox is IOutbox, Cloneable {
             uint256 numInBatch = data.toUint(33);
             bytes32 outputRoot = data.toBytes32(65);
 
-            OutboxEntry memory newOutboxEntry = OutboxEntry(outputRoot, numInBatch);
+            OutboxEntry memory newOutboxEntry = OutboxEntry(outputRoot);
 
             uint256 outboxEntryIndex = outboxEntries.length;
             outboxEntries.push(newOutboxEntry);
@@ -189,11 +188,6 @@ contract Outbox is IOutbox, Cloneable {
         require(calcRoot == outboxEntry.root, "BAD_ROOT");
 
         outboxEntry.spentOutput[uniqueKey] = true;
-        outboxEntry.numRemaining--;
-
-        if (outboxEntry.numRemaining == 0) {
-            delete outboxEntries[outboxEntryIndex];
-        }
     }
 
     function executeBridgeCall(
@@ -247,7 +241,11 @@ contract Outbox is IOutbox, Cloneable {
         return MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
     }
 
-    function outboxEntriesLength() public view returns (uint256) {
+    function outboxEntriesLength() external view returns (uint256) {
         return outboxEntries.length;
+    }
+
+    function outboxEntryExists(uint256 outboxEntryIndex) external view returns (bool) {
+        return outboxEntries[outboxEntryIndex].root != bytes32(0);
     }
 }
