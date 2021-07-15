@@ -267,8 +267,8 @@ contract RollupCore is IRollupCore {
         Staker storage staker1 = _stakerMap[stakerAddress1];
         Staker storage staker2 = _stakerMap[stakerAddress2];
         address challenge = staker1.currentChallenge;
-        require(challenge == staker2.currentChallenge, "IN_CHAL");
         require(challenge != address(0), "NO_CHAL");
+        require(challenge == staker2.currentChallenge, "DIFF_IN_CHAL");
         return challenge;
     }
 
@@ -479,7 +479,6 @@ contract RollupCore is IRollupCore {
         nodeCreated(frame.node, nodeHash);
 
         targets.rollupEventBridge.nodeCreated(nodeNum, prevNode, deadlineBlock, msg.sender);
-        require(nodeNum == latestNodeCreated(), "NODE_NOT_CREATED");
 
         return (nodeHash, frame);
     }

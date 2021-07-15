@@ -531,6 +531,27 @@ describe('ArbRollup', () => {
     const parsedEv = (ev as any) as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
     challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+
+    await expect(
+      rollup.rollup.completeChallenge(
+        await accounts[1].getAddress(),
+        await accounts[3].getAddress()
+      )
+    ).to.be.revertedWith('NO_CHAL')
+
+    await expect(
+      rollup.rollup.completeChallenge(
+        await accounts[8].getAddress(),
+        await accounts[1].getAddress()
+      )
+    ).to.be.revertedWith('DIFF_IN_CHAL')
+
+    await expect(
+      rollup.rollup.completeChallenge(
+        await accounts[8].getAddress(),
+        await accounts[2].getAddress()
+      )
+    ).to.be.revertedWith('WRONG_SENDER')
   })
 
   it('challenger should reply in challenge', async function () {
@@ -703,7 +724,7 @@ describe('ArbRollup', () => {
       zerobytes32
     )
 
-    await rollupAdmin.forceCreateNode(
+    const forceCreateTx = await rollupAdmin.forceCreateNode(
       newNodeHash,
       assertion.bytes32Fields(),
       assertion.intFields(),
@@ -713,6 +734,8 @@ describe('ArbRollup', () => {
       1,
       zerobytes32
     )
+    const forceCreateReceipt = await forceCreateTx.wait()
+
     const adminNodeNum = await rollup.rollup.latestNodeCreated()
     const midLatestConfirmed = await rollup.rollup.latestConfirmed()
     expect(midLatestConfirmed.toNumber()).to.equal(6)
@@ -749,6 +772,61 @@ describe('ArbRollup', () => {
     expect(postLatestCreated).to.equal(adminNodeNum.add(1))
     expect(postLatestConfirmed).to.equal(adminNodeNum)
 
+    prevNode = new Node(
+      assertion,
+      forceCreateReceipt.blockNumber,
+      assertion.afterState.inboxCount,
+      newNodeHash
+    )
     await rollupAdmin.resume()
+
+    // should create node after resuming
+
+    await tryAdvanceChain(minimumAssertionPeriod)
+
+    await rollup
+      .connect(accounts[1])
+      .newStake({ value: await rollup.currentRequiredStake() })
+
+    const { node } = await makeSimpleNode(rollup.connect(accounts[1]), prevNode)
+  })
+
+  it('should not allow node to be re initialized', async function () {
+    const Node = await ethers.getContractFactory('Node')
+    const node = await Node.deploy()
+
+    await expect(
+      node.initialize(ZERO_ADDR, zerobytes32, zerobytes32, zerobytes32, 0, 0)
+    ).to.be.revertedWith('ROLLUP_ADDR')
+
+    await node.initialize(
+      await accounts[0].getAddress(),
+      zerobytes32,
+      zerobytes32,
+      zerobytes32,
+      0,
+      0
+    )
+
+    await expect(
+      node.initialize(
+        rollup.rollup.address,
+        zerobytes32,
+        zerobytes32,
+        zerobytes32,
+        0,
+        0
+      )
+    ).to.be.revertedWith('ALREADY_INIT')
+
+    await expect(
+      node.connect(accounts[1]).addStaker(await accounts[1].getAddress())
+    ).to.be.revertedWith('ROLLUP_ONLY')
+
+    node.connect(accounts[0]).addStaker(await accounts[1].getAddress())
+
+    await expect(
+      node.connect(accounts[0]).addStaker(await accounts[1].getAddress())
+    ).to.be.revertedWith('ALREADY_STAKED')
   })
 })
