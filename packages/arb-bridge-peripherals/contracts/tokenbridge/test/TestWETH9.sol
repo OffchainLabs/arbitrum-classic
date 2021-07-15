@@ -4,6 +4,7 @@ pragma solidity ^0.6.11;
 
 import "../libraries/IWETH9.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 
 contract TestWETH9 is ERC20, IWETH9 {
     constructor(string memory name_, string memory symbol_) public ERC20(name_, symbol_) {}
