@@ -42,13 +42,15 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
         address l2CustomTokenAddress,
         uint256 maxSubmissionCost,
         uint256 maxGas,
-        uint256 gasPriceBid
+        uint256 gasPriceBid,
+        address creditBackAddress
     ) public override {
         L1CustomGateway(bridge).registerTokenToL2(
             l2CustomTokenAddress,
             maxGas,
             gasPriceBid,
-            maxSubmissionCost
+            maxSubmissionCost,
+            creditBackAddress
         );
     }
 }

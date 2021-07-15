@@ -29,9 +29,10 @@ interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
   maxGas?: BigNumber
   gasPriceBid?: BigNumber
-  maxSubmissionPriceIncreaseRatio?: BigNumber
+  maxSubmissionPricePercentIncrease?: BigNumber
 }
 
+const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
  */
@@ -171,15 +172,16 @@ export class Bridge {
    */
   public async depositETH(
     value: BigNumber,
-    _maxSubmissionPriceIncreaseRatio?: BigNumber,
+    _maxSubmissionPricePercentIncrease?: BigNumber,
     overrides?: PayableOverrides
   ) {
-    const maxSubmissionPriceIncreaseRatio =
-      _maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
+    const maxSubmissionPricePercentIncrease =
+      _maxSubmissionPricePercentIncrease || DEFAULT_SUBMISSION_PERCENT_INCREASE
 
-    const maxSubmissionPrice = (await this.l2Bridge.getTxnSubmissionPrice(0))[0]
-      .mul(maxSubmissionPriceIncreaseRatio)
-      .div(BigNumber.from(10))
+    const maxSubmissionPrice = BridgeHelper.percentIncrease(
+      (await this.l2Bridge.getTxnSubmissionPrice(0))[0],
+      maxSubmissionPricePercentIncrease
+    )
 
     return this.l1Bridge.depositETH(value, maxSubmissionPrice, overrides)
   }
@@ -229,14 +231,16 @@ export class Bridge {
       '0x'
     )
 
-    const maxSubmissionPriceIncreaseRatio =
-      retryableGasArgs.maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
+    const maxSubmissionPricePercentIncrease =
+      retryableGasArgs.maxSubmissionPricePercentIncrease ||
+      DEFAULT_SUBMISSION_PERCENT_INCREASE
 
-    const maxSubmissionPrice = (
-      await this.l2Bridge.getTxnSubmissionPrice(depositCalldata.length - 2)
-    )[0]
-      .mul(maxSubmissionPriceIncreaseRatio)
-      .div(BigNumber.from(10))
+    const maxSubmissionPrice = BridgeHelper.percentIncrease(
+      (
+        await this.l2Bridge.getTxnSubmissionPrice(depositCalldata.length - 2)
+      )[0],
+      maxSubmissionPricePercentIncrease
+    )
 
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
@@ -245,20 +249,22 @@ export class Bridge {
 
     const l2Dest = await l1Gateway.counterpartGateway()
 
-    const maxGas = (
-      await nodeInterface.estimateRetryableTicket(
-        expectedL1GatewayAddress,
-        ethers.utils.parseEther('0.05').add(estimateGasCallValue),
-        l2Dest,
-        estimateGasCallValue,
-        maxSubmissionPrice,
-        sender,
-        sender,
-        0,
-        0,
-        depositCalldata
-      )
-    )[0]
+    const maxGas =
+      retryableGasArgs.maxGas ||
+      (
+        await nodeInterface.estimateRetryableTicket(
+          expectedL1GatewayAddress,
+          ethers.utils.parseEther('0.05').add(estimateGasCallValue),
+          l2Dest,
+          estimateGasCallValue,
+          maxSubmissionPrice,
+          sender,
+          sender,
+          0,
+          0,
+          depositCalldata
+        )
+      )[0]
 
     // calculate required forwarding gas
     let ethDeposit = overrides && (await overrides.value)
@@ -433,7 +439,9 @@ export class Bridge {
       inboxSeqNum[0],
       this.l2Provider
     )
-    const redemptionRec = await this.l1Provider.getTransactionReceipt(
+    console.log(`Ensuring txn hasn't been redeemed:`)
+
+    const redemptionRec = await this.l2Provider.getTransactionReceipt(
       redemptionTxHash
     )
     if (redemptionRec && redemptionRec.status === 1) {
@@ -441,7 +449,7 @@ export class Bridge {
         `Can't cancel retryable, it's already been redeemed: ${redemptionTxHash}`
       )
     }
-
+    console.log(`Hasn't been redeemed yet, calling cancel now`)
     return this.l2Bridge.arbRetryableTx.cancel(redemptionTxHash)
   }
 

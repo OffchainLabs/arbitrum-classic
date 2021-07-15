@@ -89,7 +89,7 @@ export const instantiateBridgeWithRandomWallet = () => {
   prettyLog(
     `Generated wallet, pk: ${testPk} address: ${new Wallet(testPk).address} `
   )
-  return instantiateBridge(testPk)
+  return instantiateBridge(testPk, testPk)
 }
 
 const _preFundedWallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
