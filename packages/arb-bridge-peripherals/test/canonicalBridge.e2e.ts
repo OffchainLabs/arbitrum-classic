@@ -66,7 +66,7 @@ describe('Bridge peripherals end-to-end', () => {
       'BeaconProxyFactory'
     )
     const beaconProxyFactory = await BeaconProxyFactory.deploy()
-    const cloneableProxyHash = await beaconProxyFactory.CLONABLE_PROXY_HASH()
+    const cloneableProxyHash = await beaconProxyFactory.cloneableProxyHash()
 
     await beaconProxyFactory.initialize(beacon.address)
 
