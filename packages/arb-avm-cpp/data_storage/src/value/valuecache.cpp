@@ -78,15 +78,14 @@ void ValueCache::nextCache() {
     caches[saving_cache_index].clear();
 }
 
-void ValueCache::maybeInitializeFrom(const ValueCache& other) {
-    if (saving_cache_index == 0 && !caches.empty() && caches.back().empty() &&
-        !other.caches.empty()) {
-        caches[saving_cache_index] = other.caches[0];
-        for (size_t i = 1; i < other.caches.size(); i++) {
-            for (const auto& kv : other.caches[i]) {
-                caches[saving_cache_index][kv.first] = kv.second;
-            }
-        }
-        nextCache();
+void ValueCache::initializeFrom(const ValueCache& other) {
+    if (caches.empty() || other.caches.empty()) {
+        return;
     }
+    for (size_t i = 0; i < other.caches.size(); i++) {
+        const auto& other_cache = other.caches[i];
+        caches[saving_cache_index].insert(other_cache.begin(),
+                                          other_cache.end());
+    }
+    nextCache();
 }

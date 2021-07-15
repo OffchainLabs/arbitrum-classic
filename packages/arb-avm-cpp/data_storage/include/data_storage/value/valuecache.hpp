@@ -48,7 +48,7 @@ class ValueCache {
     void nextCache();
     // If this cache is empty, copy all values from other into the first slot of
     // this.
-    void maybeInitializeFrom(const ValueCache& other);
+    void initializeFrom(const ValueCache& other);
 };
 
 #endif /* valuecache_hpp */

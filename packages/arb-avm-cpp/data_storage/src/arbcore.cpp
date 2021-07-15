@@ -390,8 +390,8 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                                 use_latest) {
                                 std::lock_guard<std::mutex> guard(
                                     execution_cursor_value_cache_mutex);
-                                execution_cursor_value_cache
-                                    .maybeInitializeFrom(cache);
+                                execution_cursor_value_cache.initializeFrom(
+                                    cache);
                             }
                         }
                         break;
