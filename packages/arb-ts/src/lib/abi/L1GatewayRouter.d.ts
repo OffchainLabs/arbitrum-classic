@@ -37,7 +37,7 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
     'owner()': FunctionFragment
     'router()': FunctionFragment
     'setDefaultGateway(address,uint256,uint256,uint256)': FunctionFragment
-    'setGateway(address,uint256,uint256,uint256)': FunctionFragment
+    'setGateway(address,uint256,uint256,uint256,address)': FunctionFragment
     'setGateways(address[],address[],uint256,uint256,uint256)': FunctionFragment
     'setOwner(address)': FunctionFragment
     'updateWhitelistSource(address)': FunctionFragment
@@ -94,7 +94,7 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'setGateway',
-    values: [string, BigNumberish, BigNumberish, BigNumberish]
+    values: [string, BigNumberish, BigNumberish, BigNumberish, string]
   ): string
   encodeFunctionData(
     functionFragment: 'setGateways',
@@ -328,11 +328,12 @@ export class L1GatewayRouter extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    setGateway(
+    'setGateway(address,uint256,uint256,uint256,address)'(
       _gateway: string,
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
@@ -525,11 +526,12 @@ export class L1GatewayRouter extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  setGateway(
+  'setGateway(address,uint256,uint256,uint256,address)'(
     _gateway: string,
     _maxGas: BigNumberish,
     _gasPriceBid: BigNumberish,
     _maxSubmissionCost: BigNumberish,
+    _creditBackAddress: string,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
@@ -722,11 +724,12 @@ export class L1GatewayRouter extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    setGateway(
+    'setGateway(address,uint256,uint256,uint256,address)'(
       _gateway: string,
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -960,11 +963,12 @@ export class L1GatewayRouter extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    setGateway(
+    'setGateway(address,uint256,uint256,uint256,address)'(
       _gateway: string,
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
@@ -1163,11 +1167,12 @@ export class L1GatewayRouter extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    setGateway(
+    'setGateway(address,uint256,uint256,uint256,address)'(
       _gateway: string,
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
