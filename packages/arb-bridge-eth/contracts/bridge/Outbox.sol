@@ -185,7 +185,7 @@ contract Outbox is IOutbox, Cloneable {
         // a unique leaf. The path itself is not enough since the path length to different
         // leaves could potentially be different
         bytes32 uniqueKey = keccak256(abi.encodePacked(path, proof.length));
-        uint256 numRemaining = outbox.spendOutput(calcRoot, uniqueKey); // external calls to outbox exteries are all trusted
+        uint256 numRemaining = outbox.spendOutput(calcRoot, uniqueKey); // external calls to outbox entries are all trusted
 
         if (numRemaining == 0) {
             outbox.destroy();

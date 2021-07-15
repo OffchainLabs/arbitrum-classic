@@ -40,7 +40,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
 
     address public override activeOutbox;
 
-    // Accumulate of state of the delayed inbox. Each element represents the inclusion of a new message
+    // Accumulator for delayed inbox; tail represents hash of the current state; each element represents the inclusion of a new message.
     bytes32[] public override inboxAccs;
 
     function initialize() external initializer {
