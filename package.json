@@ -50,6 +50,10 @@
       "packages/arb-bridge-peripherals",
       "packages/arb-ts",
       "packages/arb-os/contracts"
+    ],
+    "nohoist": [
+      "**/@openzeppelin/contracts",
+      "**/@openzeppelin/contracts-upgradeable"
     ]
   },
   "devDependencies": {
