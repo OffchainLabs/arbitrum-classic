@@ -127,11 +127,6 @@ contract Node is Cloneable, INode {
         latestChildNumber = number;
     }
 
-    function resetChildren() external override onlyRollup {
-        firstChildBlock = 0;
-        latestChildNumber = 0;
-    }
-
     function newChildConfirmDeadline(uint256 deadline) external override onlyRollup {
         noChildConfirmedBeforeBlock = deadline;
     }

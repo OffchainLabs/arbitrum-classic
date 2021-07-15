@@ -34,7 +34,6 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
     uint8 internal constant CONFIRM_NODE_EVENT = 1;
     uint8 internal constant REJECT_NODE_EVENT = 2;
     uint8 internal constant STAKE_CREATED_EVENT = 3;
-    uint8 internal constant CLAIM_NODE_EVENT = 4;
 
     IBridge bridge;
     address rollup;
@@ -107,17 +106,6 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
                 nodeNum,
                 block.number
             )
-        );
-    }
-
-    function claimNode(uint256 nodeNum, address staker) external onlyRollup {
-        Rollup r = Rollup(payable(rollup));
-        INode node = r.getNode(nodeNum);
-        require(node.stakers(staker), "NOT_STAKED");
-        IRollupUser(address(r)).requireUnresolved(nodeNum);
-
-        deliverToBridge(
-            abi.encodePacked(CLAIM_NODE_EVENT, nodeNum, uint256(uint160(bytes20(staker))))
         );
     }
 

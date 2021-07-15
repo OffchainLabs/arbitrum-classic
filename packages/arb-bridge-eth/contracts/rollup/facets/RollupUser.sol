@@ -399,7 +399,6 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
 
     /**
      * @notice Inform the rollup that the challenge between the given stakers is completed
-     * @dev completeChallenge isn't pausable since in flight challenges should be allowed to complete or else they could be forced to timeout
      * @param winningStaker Address of the winning staker
      * @param losingStaker Address of the losing staker
      */
@@ -408,7 +407,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         override
         whenNotPaused
     {
-        // Only the challenge contract can declare winners and losers
+        // Only the challenge contract can call this to declare the winner and loser
         require(msg.sender == inChallenge(winningStaker, losingStaker), "WRONG_SENDER");
 
         completeChallengeImpl(winningStaker, losingStaker);
@@ -462,7 +461,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @notice Remove any zombies whose latest stake is earlier than the first unresolved node
      * @param startIndex Index in the zombie list to start removing zombies from (to limit the cost of this transaction)
      */
-    function removeOldZombies(uint256 startIndex) public {
+    function removeOldZombies(uint256 startIndex) public onlyValidator whenNotPaused {
         uint256 currentZombieCount = zombieCount();
         uint256 firstUnresolved = firstUnresolvedNode();
         for (uint256 i = startIndex; i < currentZombieCount; i++) {

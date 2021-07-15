@@ -47,7 +47,8 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     }
 
     /**
-     * @notice Pause interaction with the rollup contract
+     * @notice Pause interaction with the rollup contract.
+     * The time spent paused is not incremented in the rollup's timing for node validation.
      */
     function pause() external override {
         _pause();

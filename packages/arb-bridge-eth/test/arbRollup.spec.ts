@@ -503,7 +503,7 @@ describe('ArbRollup', () => {
         challengedNode.checkTime(arbGasSpeedLimitPerBlock) +
         1
     )
-    await challenge.timeout()
+    await challenge.connect(accounts[1]).timeout()
   })
 
   it('confirm first staker node', async function () {

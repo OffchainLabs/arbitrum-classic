@@ -36,8 +36,6 @@ interface INode {
 
     function childCreated(uint256) external;
 
-    function resetChildren() external;
-
     function newChildConfirmDeadline(uint256 deadline) external;
 
     function stateHash() external view returns (bytes32);
