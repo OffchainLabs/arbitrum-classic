@@ -23,9 +23,9 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         requireUnresolvedExists();
         uint256 latestConfirmedNodeNum = latestConfirmed();
         uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
-        INode firstUnresolvedNode = getNode(firstUnresolvedNodeNum);
+        INode firstUnresolvedNode_ = getNode(firstUnresolvedNodeNum);
 
-        if (firstUnresolvedNode.prev() == latestConfirmedNodeNum) {
+        if (firstUnresolvedNode_.prev() == latestConfirmedNodeNum) {
             /**If the first unresolved node is a child of the latest confirmed node, to prove it can be rejected, we show:
              * a) Its deadline has expired
              * b) *Some* staker is staked on a sibling
@@ -40,11 +40,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             requireUnresolved(latestStakedNode(stakerAddress));
 
             // 3. staker isn't staked on first unresolved node; this proves staker's latest staked can't be a child of firstUnresolvedNode (recall staking on node requires staking on all of its parents)
-            require(!firstUnresolvedNode.stakers(stakerAddress), "STAKED_ON_TARGET");
+            require(!firstUnresolvedNode_.stakers(stakerAddress), "STAKED_ON_TARGET");
             // If a staker is staked on a node that is neither a child nor a parent of firstUnresolvedNode, it must be a sibling, QED
 
             // Verify the block's deadline has passed
-            firstUnresolvedNode.requirePastDeadline();
+            firstUnresolvedNode_.requirePastDeadline();
 
             getNode(latestConfirmedNodeNum).requirePastChildConfirmDeadline();
 
@@ -52,7 +52,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
 
             // Verify that no staker is staked on this node
             require(
-                firstUnresolvedNode.stakerCount() == countStakedZombies(firstUnresolvedNode),
+                firstUnresolvedNode_.stakerCount() == countStakedZombies(firstUnresolvedNode_),
                 "HAS_STAKERS"
             );
         }
