@@ -58,7 +58,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             );
         }
         // Simpler case: if the first unreseolved node doesn't point to the last confirmed node, another branch was confirmed and can simply reject it outright
-        rejectNextNode();
+        _rejectNextNode();
         rollupEventBridge.nodeRejected(firstUnresolvedNodeNum);
 
         emit NodeRejected(firstUnresolvedNodeNum);
@@ -118,9 +118,10 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             "CONFIRM_DATA"
         );
 
-        outbox.processOutgoingMessages(sendsData, sendLengths);
+        outbox.processOutgoingMessages(sendsData, sendLengths); // trusted external call
 
-        confirmNextNode();
+        confirmNextNode(); // trusted external call
+        // (no state vars overlap in two above calls)
 
         rollupEventBridge.nodeConfirmed(firstUnresolved);
 
@@ -415,7 +416,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                 commonEndTime.sub(proposedTimes[1]),
                 sequencerBridge,
                 delayedBridge
-            );
+            ); // trusted external call
 
         challengeStarted(stakers[0], stakers[1], challengeAddress);
 

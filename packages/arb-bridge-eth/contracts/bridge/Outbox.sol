@@ -103,7 +103,7 @@ contract Outbox is IOutbox, Cloneable {
             bytes32 outputRoot = data.toBytes32(65);
 
             address clone = address(new BeaconProxy(address(beacon), ""));
-            OutboxEntry(clone).initialize(outputRoot, numInBatch);
+            OutboxEntry(clone).initialize(outputRoot, numInBatch); // OutboxEntry operations are trusted
             uint256 outboxIndex = outboxes.length;
             outboxes.push(OutboxEntry(clone));
             emit OutboxEntryCreated(batchNum, outboxIndex, outputRoot, numInBatch);
@@ -111,7 +111,7 @@ contract Outbox is IOutbox, Cloneable {
     }
 
     /**
-     * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired and
+     * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired
      * @param outboxIndex Index of OutboxEntry in outboxes array
      * @param proof Merkle proof of message inclusion in outbox entry
      * @param index Merkle path to message
@@ -158,7 +158,7 @@ contract Outbox is IOutbox, Cloneable {
         _l2Block = uint128(l2Block);
         _l1Block = uint128(l1Block);
         _timestamp = uint128(l2Timestamp);
-
+        // set and reset vars around execution so they remain valid during call
         executeBridgeCall(destAddr, amount, calldataForL1);
 
         _sender = currentSender;
@@ -185,7 +185,7 @@ contract Outbox is IOutbox, Cloneable {
         // a unique leaf. The path itself is not enough since the path length to different
         // leaves could potentially be different
         bytes32 uniqueKey = keccak256(abi.encodePacked(path, proof.length));
-        uint256 numRemaining = outbox.spendOutput(calcRoot, uniqueKey);
+        uint256 numRemaining = outbox.spendOutput(calcRoot, uniqueKey); // external calls to outbox exteries are all trusted
 
         if (numRemaining == 0) {
             outbox.destroy();

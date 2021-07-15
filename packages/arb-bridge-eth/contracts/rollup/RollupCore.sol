@@ -205,7 +205,7 @@ contract RollupCore is IRollupCore {
     }
 
     /// @notice Reject the next unresolved node
-    function rejectNextNode() internal {
+    function _rejectNextNode() internal {
         destroyNode(_firstUnresolvedNode);
         _firstUnresolvedNode++;
     }
