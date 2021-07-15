@@ -60,12 +60,19 @@ async function createRollup(): Promise<{
   rollupCon: Rollup
   blockCreated: number
 }> {
-  const ChallengeFactory = await deployments.get('ChallengeFactory')
-  const RollupCreatorNoProxy = (await ethers.getContractFactory(
-    'RollupCreatorNoProxy'
-  )) as RollupCreatorNoProxy__factory
-  const rollupCreator = await RollupCreatorNoProxy.deploy(
-    ChallengeFactory.address,
+  const rollupConfig: [
+    BytesLike,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    string,
+    string,
+    string,
+    BigNumberish,
+    BigNumberish,
+    BytesLike
+  ] = [
     initialVmState,
     confirmationPeriodBlocks,
     0,
@@ -76,11 +83,33 @@ async function createRollup(): Promise<{
     await accounts[1].getAddress(), // sequencer
     sequencerDelayBlocks,
     sequencerDelaySeconds,
-    '0x'
-  )
+    '0x',
+  ]
 
-  const receipt = await (rollupCreator.deployTransaction as TransactionResponse).wait()
-  if (receipt.logs == undefined) {
+  let receipt
+  let rollupCreator
+
+  if (process.env['ROLLUP_DEBUG'] === '1') {
+    // this deploys the rollup contracts without proxies to facilitate debugging
+    const ChallengeFactory = await deployments.get('ChallengeFactory')
+    const RollupCreatorNoProxy = (await ethers.getContractFactory(
+      'RollupCreatorNoProxy'
+    )) as RollupCreatorNoProxy__factory
+    rollupCreator = await RollupCreatorNoProxy.deploy(
+      ChallengeFactory.address,
+      ...rollupConfig
+    )
+    receipt = await rollupCreator.deployTransaction.wait()
+  } else {
+    rollupCreator = await ethers.getContractAt(
+      'RollupCreator',
+      (await deployments.get('RollupCreator')).address
+    )
+    const createRollupTx = await rollupCreator.createRollup(...rollupConfig)
+    receipt = await createRollupTx.wait()
+  }
+
+  if (!receipt.logs) {
     throw Error('expected receipt to have logs')
   }
 
@@ -448,7 +477,7 @@ describe('ArbRollup', () => {
     )
     const node2Num = await rollup.rollup.latestNodeCreated()
 
-    const tx = rollup.createChallenge(
+    const tx = await rollup.createChallenge(
       await accounts[8].getAddress(),
       node1Num,
       await accounts[1].getAddress(),
@@ -456,7 +485,7 @@ describe('ArbRollup', () => {
       node1,
       node2
     )
-    const receipt = await (await tx).wait()
+    const receipt = await tx.wait()
     const ev = rollup.rollup.interface.parseLog(
       receipt.logs![receipt.logs!.length - 1]
     )
@@ -475,6 +504,17 @@ describe('ArbRollup', () => {
       )
     ).to.be.revertedWith('Pausable: not paused')
 
+    await expect(
+      rollup.createChallenge(
+        await accounts[8].getAddress(),
+        node1Num,
+        await accounts[1].getAddress(),
+        node2Num,
+        node1,
+        node2
+      )
+    ).to.be.revertedWith('IN_CHAL')
+
     await rollupAdmin.pause()
 
     await rollupAdmin.forceResolveChallenge(
@@ -485,6 +525,17 @@ describe('ArbRollup', () => {
     // challenge should have been destroyed
     const postCode = await ethers.provider.getCode(challenge.address)
     expect(postCode).to.equal('0x')
+
+    const challengeA = await rollupAdmin.currentChallenge(
+      await accounts[8].getAddress()
+    )
+    const challengeB = await rollupAdmin.currentChallenge(
+      await accounts[1].getAddress()
+    )
+    const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
+
+    expect(challengeA).to.equal(ZERO_ADDR)
+    expect(challengeB).to.equal(ZERO_ADDR)
 
     await rollupAdmin.forceRefundStaker([
       await accounts[8].getAddress(),
@@ -521,6 +572,18 @@ describe('ArbRollup', () => {
 
     expect(adminNodeNum.toNumber()).to.equal(node2Num.toNumber() + 1)
 
+    await rollupAdmin.forceCreateNode(
+      newNodeHash,
+      assertion.bytes32Fields(),
+      assertion.intFields(),
+      prevNode.afterState.proposedBlock,
+      prevNode.afterState.inboxMaxCount,
+      prevLatestConfirmed,
+      1,
+      zerobytes32
+    )
+    const postLatestCreated = await rollup.rollup.latestNodeCreated()
+
     const sends: Array<BytesLike> = []
     const messageData = ethers.utils.concat(sends)
     const messageLengths = sends.map(msg => msg.length)
@@ -536,6 +599,7 @@ describe('ArbRollup', () => {
     )
 
     const postLatestConfirmed = await rollup.rollup.latestConfirmed()
+    expect(postLatestCreated).to.equal(adminNodeNum.add(1))
     expect(postLatestConfirmed).to.equal(adminNodeNum)
 
     await rollupAdmin.resume()

@@ -21,6 +21,9 @@ pragma solidity ^0.6.11;
 import "./INode.sol";
 import "./IRollupCore.sol";
 import "./RollupLib.sol";
+import "./INodeFactory.sol";
+import "./RollupEventBridge.sol";
+import "../bridge/interfaces/ISequencerInbox.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -212,17 +215,13 @@ contract RollupCore is IRollupCore {
 
     /// @notice Confirm the next unresolved node
     function confirmNextNode() internal {
-        destroyNode(_latestConfirmed);
-        _latestConfirmed = _firstUnresolvedNode;
-        _firstUnresolvedNode++;
+        confirmNode(_firstUnresolvedNode);
     }
 
-    // TODO fix/ change to confirmNode( nodeNum)
-    function confirmLatestNode() internal {
+    function confirmNode(uint256 nodeNum) internal {
         destroyNode(_latestConfirmed);
-        // uint256 latestNode = _latestNodeCreated;
-        _latestConfirmed = _latestNodeCreated;
-        _firstUnresolvedNode = _latestNodeCreated + 1;
+        _latestConfirmed = nodeNum;
+        _firstUnresolvedNode = nodeNum + 1;
     }
 
     /**
@@ -415,5 +414,62 @@ contract RollupCore is IRollupCore {
 
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a > b ? a : b;
+    }
+
+    struct StakeOnNewNodeFrame {
+        uint256 sequencerBatchEnd;
+        bytes32 sequencerBatchAcc;
+        uint256 currentInboxSize;
+        INode node;
+        bytes32 executionHash;
+        INode prevNode;
+    }
+
+    struct NewNodeDependencies {
+        ISequencerInbox sequencerInbox;
+        RollupEventBridge rollupEventBridge;
+        INodeFactory nodeFactory;
+    }
+
+    function createNewNode(
+        RollupLib.Assertion memory assertion,
+        uint256 deadlineBlock,
+        uint256 sequencerBatchEnd,
+        bytes32 sequencerBatchAcc,
+        uint256 prevNode,
+        bytes32 prevHash,
+        bool hasSibling,
+        NewNodeDependencies memory targets
+    ) internal returns (bytes32, StakeOnNewNodeFrame memory) {
+        StakeOnNewNodeFrame memory frame;
+        {
+            frame.currentInboxSize = targets.sequencerInbox.messageCount();
+            frame.prevNode = getNode(prevNode);
+            frame.executionHash = RollupLib.executionHash(assertion);
+
+            frame.sequencerBatchEnd = sequencerBatchEnd;
+            frame.sequencerBatchAcc = sequencerBatchAcc;
+
+            frame.node = INode(
+                targets.nodeFactory.createNode(
+                    RollupLib.stateHash(assertion.afterState),
+                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
+                    RollupLib.confirmHash(assertion),
+                    prevNode,
+                    deadlineBlock
+                )
+            );
+        }
+        uint256 nodeNum = latestNodeCreated() + 1;
+        frame.prevNode.childCreated(nodeNum);
+
+        bytes32 nodeHash =
+            RollupLib.nodeHash(hasSibling, prevHash, frame.executionHash, frame.sequencerBatchAcc);
+        nodeCreated(frame.node, nodeHash);
+
+        targets.rollupEventBridge.nodeCreated(nodeNum, prevNode, deadlineBlock, msg.sender);
+        require(nodeNum == latestNodeCreated(), "NODE_NOT_CREATED");
+
+        return (nodeHash, frame);
     }
 }

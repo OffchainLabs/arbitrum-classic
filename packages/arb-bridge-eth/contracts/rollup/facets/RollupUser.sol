@@ -8,7 +8,6 @@ import "./IRollupFacets.sol";
 abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
 
-    // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
 
     modifier onlyValidator {
@@ -278,7 +277,12 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                     sequencerBatchAcc,
                     prevNodeNum,
                     lastHash,
-                    hasSibling
+                    hasSibling,
+                    NewNodeDependencies({
+                        sequencerInbox: sequencerBridge,
+                        rollupEventBridge: rollupEventBridge,
+                        nodeFactory: nodeFactory
+                    })
                 );
             }
             // Replay protect (revert on reorgs)

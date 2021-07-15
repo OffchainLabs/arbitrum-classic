@@ -299,14 +299,17 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
                 sequencerBatchAcc,
                 prevNode,
                 getNodeHash(prevNode),
-                false
+                false,
+                NewNodeDependencies({
+                    sequencerInbox: sequencerBridge,
+                    rollupEventBridge: rollupEventBridge,
+                    nodeFactory: nodeFactory
+                })
             );
 
         require(expectedNodeHash == nodeHash, "NOT_EXPECTED_HASH");
 
-        // the msg.sender does not necessarily have a deposit
         stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
-        // TODO: should we instead confirm the node in this same function?
 
         emit OwnerFunctionCalled(23);
     }
@@ -338,9 +341,8 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         // processes outgoing messages without node.requirePastDeadline();
         outbox.processOutgoingMessages(sendsData, sendLengths);
 
-        confirmLatestNode();
-
-        rollupEventBridge.nodeConfirmed(latestConfirmed());
+        confirmNode(nodeNum);
+        rollupEventBridge.nodeConfirmed(nodeNum);
 
         emit NodeConfirmed(nodeNum, afterSendAcc, afterSendCount, afterLogAcc, afterLogCount);
         emit OwnerFunctionCalled(24);

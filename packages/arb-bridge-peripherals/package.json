@@ -26,7 +26,7 @@
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.0.0",
     "ethers": "^5.0.24",
-    "hardhat": "^2.0.7",
+    "hardhat": "^2.4.3",
     "sol2uml": "^1.1.25",
     "ts-node": "^9.1.1",
     "typechain": "^4.0.0",
