@@ -48,6 +48,7 @@ const arbGasSpeedLimitPerBlock = 1000000
 const minimumAssertionPeriod = 75
 const sequencerDelayBlocks = 15
 const sequencerDelaySeconds = 900
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
 
 let rollup: RollupContract
 let rollupAdmin: Contract
@@ -56,25 +57,26 @@ let challenge: Challenge
 // let assertionInfo: Assertion
 let accounts: Signer[]
 
-async function createRollup(): Promise<{
-  rollupCon: Rollup
-  blockCreated: number
-}> {
-  const rollupConfig: [
-    BytesLike,
-    BigNumberish,
-    BigNumberish,
-    BigNumberish,
-    BigNumberish,
-    string,
-    string,
-    string,
-    BigNumberish,
-    BigNumberish,
-    BytesLike
-  ] = [
+type RollupConfig = [
+  BytesLike,
+  BigNumberish,
+  BigNumberish,
+  BigNumberish,
+  BigNumberish,
+  string,
+  string,
+  string,
+  BigNumberish,
+  BigNumberish,
+  BytesLike
+]
+
+async function getDefaultConfig(
+  _confirmationPeriodBlocks = confirmationPeriodBlocks
+): Promise<RollupConfig> {
+  return [
     initialVmState,
-    confirmationPeriodBlocks,
+    _confirmationPeriodBlocks,
     0,
     arbGasSpeedLimitPerBlock,
     stakeRequirement,
@@ -85,11 +87,21 @@ async function createRollup(): Promise<{
     sequencerDelaySeconds,
     '0x',
   ]
+}
+
+async function createRollup(
+  shouldDebug = process.env['ROLLUP_DEBUG'] === '1',
+  rollupConfig?: RollupConfig
+): Promise<{
+  rollupCon: Rollup
+  blockCreated: number
+}> {
+  if (!rollupConfig) rollupConfig = await getDefaultConfig()
 
   let receipt
   let rollupCreator
 
-  if (process.env['ROLLUP_DEBUG'] === '1') {
+  if (shouldDebug) {
     // this deploys the rollup contracts without proxies to facilitate debugging
     const ChallengeFactory = await deployments.get('ChallengeFactory')
     const RollupCreatorNoProxy = (await ethers.getContractFactory(
@@ -241,6 +253,142 @@ describe('ArbRollup', () => {
       prevNode.afterState.hash(),
       'initial confirmed node should have set initial state'
     )
+  })
+
+  it('should always init logic contract', async function () {
+    const RollupTester = await ethers.getContractFactory('Rollup')
+
+    await expect(RollupTester.deploy(0)).to.be.revertedWith(
+      'CONSTRUCTOR_NOT_INIT'
+    )
+  })
+
+  it('should not be able to use invalid init param', async function () {
+    // set confirm period blocks to 0
+    const config = await getDefaultConfig(0)
+    await expect(createRollup(true, config)).to.be.revertedWith(
+      'INITIALIZE_NOT_INIT'
+    )
+  })
+
+  it('should only initialize once', async function () {
+    const RollupDispatch = await ethers.getContractFactory('Rollup')
+    const rollupDispatch = RollupDispatch.attach(rollup.rollup.address)
+
+    await expect(
+      rollupDispatch.initialize(
+        initialVmState,
+        [0, 0, 0, 0],
+        ZERO_ADDR,
+        ZERO_ADDR,
+        zerobytes32,
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR],
+        [0, 0]
+      )
+    ).to.be.revertedWith('ALREADY_INIT')
+  })
+
+  it('should validate facets in initialization', async function () {
+    const rollupCreator = await ethers.getContractAt(
+      'RollupCreator',
+      (await deployments.get('RollupCreator')).address
+    )
+    const rollupLogic = await rollupCreator.rollupTemplate()
+
+    const TransparentProxy = await ethers.getContractFactory(
+      'TransparentUpgradeableProxy'
+    )
+    let freshRollup = await TransparentProxy.deploy(
+      rollupLogic,
+      await accounts[9].getAddress(),
+      '0x'
+    )
+    freshRollup = (await ethers.getContractFactory('Rollup')).attach(
+      freshRollup.address
+    )
+
+    await expect(
+      freshRollup.initialize(
+        initialVmState,
+        [0, 0, 0, 0],
+        ZERO_ADDR,
+        ZERO_ADDR,
+        zerobytes32,
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR],
+        [0, 0]
+      )
+    ).to.be.revertedWith('FACET_0_NOT_CONTRACT')
+
+    const adminFacet = await (
+      await ethers.getContractFactory('RollupAdminFacet')
+    ).deploy()
+
+    await expect(
+      freshRollup.initialize(
+        initialVmState,
+        [0, 0, 0, 0],
+        ZERO_ADDR,
+        ZERO_ADDR,
+        zerobytes32,
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [adminFacet.address, ZERO_ADDR],
+        [0, 0]
+      )
+    ).to.be.revertedWith('FACET_1_NOT_CONTRACT')
+
+    await expect(
+      freshRollup.initialize(
+        initialVmState,
+        [0, 0, 0, 0],
+        ZERO_ADDR,
+        ZERO_ADDR,
+        zerobytes32,
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [adminFacet.address, adminFacet.address],
+        [0, 0]
+      )
+    ).to.be.revertedWith('FAIL_INIT_FACET')
+  })
+
+  it('should assign facets correctly', async function () {
+    const expectedAdmin = (await deployments.get('RollupAdminFacet')).address
+    const expectedUser = (await deployments.get('RollupUserFacet')).address
+
+    const RollupDispatch = await ethers.getContractFactory('Rollup')
+    const rollupDispatch = RollupDispatch.attach(rollup.rollup.address)
+
+    const actualFacets = await rollupDispatch.getFacets()
+
+    expect(actualFacets[0]).to.equal(expectedAdmin)
+    expect(actualFacets[1]).to.equal(expectedUser)
+  })
+
+  it('should validate facets during dispatch', async function () {
+    await expect(
+      accounts[1].sendTransaction({
+        to: rollup.rollup.address,
+        data: '0x',
+      })
+    ).to.be.revertedWith('NO_FUNC_SIG')
+
+    const RollupDispatch = await ethers.getContractFactory('Rollup')
+    const rollupDispatch = RollupDispatch.attach(rollup.rollup.address)
+    const initialFacets = await rollupDispatch.getFacets()
+
+    // we set the user facet to address(0)
+    await rollupAdmin.setFacets(initialFacets[0], ZERO_ADDR)
+
+    await expect(
+      accounts[1].sendTransaction({
+        to: rollup.rollup.address,
+        data: '0x123123123123',
+      })
+    ).to.be.revertedWith('TARGET_NOT_CONTRACT')
+
+    // reset user facet to original value
+    await rollupAdmin.setFacets(initialFacets[0], initialFacets[1])
   })
 
   it('should place stake', async function () {
@@ -532,7 +680,6 @@ describe('ArbRollup', () => {
     const challengeB = await rollupAdmin.currentChallenge(
       await accounts[1].getAddress()
     )
-    const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
 
     expect(challengeA).to.equal(ZERO_ADDR)
     expect(challengeB).to.equal(ZERO_ADDR)

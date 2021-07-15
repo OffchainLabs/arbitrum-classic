@@ -154,9 +154,9 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
 contract Rollup is Proxy, RollupBase {
     using Address for address;
 
-    constructor() public Cloneable() Pausable() {
+    constructor(uint256 _confirmPeriodBlocks) public Cloneable() Pausable() {
         // constructor is used so logic contract can't be init'ed
-        confirmPeriodBlocks = 1;
+        confirmPeriodBlocks = _confirmPeriodBlocks;
         require(isInit(), "CONSTRUCTOR_NOT_INIT");
     }
 
@@ -177,7 +177,15 @@ contract Rollup is Proxy, RollupBase {
         uint256[2] calldata sequencerInboxParams
     ) public {
         require(!isInit(), "ALREADY_INIT");
-        require(_rollupParams[0] != 0, "BAD_CONF_PERIOD");
+
+        // calls initialize method in user facet
+        require(_facets[0].isContract(), "FACET_0_NOT_CONTRACT");
+        require(_facets[1].isContract(), "FACET_1_NOT_CONTRACT");
+        (bool success, ) =
+            _facets[1].delegatecall(
+                abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
+            );
+        require(success, "FAIL_INIT_FACET");
 
         delayedBridge = IBridge(connectedContracts[0]);
         sequencerBridge = ISequencerInbox(connectedContracts[1]);
@@ -215,13 +223,6 @@ contract Rollup is Proxy, RollupBase {
 
         // facets[0] == admin, facets[1] == user
         facets = _facets;
-
-        require(_facets[1].isContract(), "FACET_NOT_CONTRACT");
-        (bool success, ) =
-            _facets[1].delegatecall(
-                abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
-            );
-        require(success, "FAIL_INIT_FACET");
 
         emit RollupCreated(_machineHash);
         require(isInit(), "INITIALIZE_NOT_INIT");

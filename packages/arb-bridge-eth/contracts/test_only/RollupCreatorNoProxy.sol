@@ -36,7 +36,7 @@ import "../rollup/facets/RollupAdmin.sol";
 import "../libraries/Whitelist.sol";
 
 contract RollupTester is Rollup {
-    constructor() public Rollup() {
+    constructor() public Rollup(1) {
         // this undoes the proxy safety from the main rollup contract
         // to enable hardhat traces / debugging
         confirmPeriodBlocks = 0;
