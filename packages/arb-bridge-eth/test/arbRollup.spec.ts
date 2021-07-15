@@ -393,7 +393,16 @@ describe('ArbRollup', () => {
 
   it('should place stake', async function () {
     const stake = await rollup.currentRequiredStake()
-    await rollup.newStake({ value: stake })
+    const tx = await rollup.newStake({ value: stake })
+    const receipt = await tx.wait()
+
+    const staker = await rollup.rollup.getStakerAddress(0)
+    expect(staker.toLowerCase()).to.equal(
+      (await accounts[8].getAddress()).toLowerCase()
+    )
+
+    const blockCreated = await rollup.rollup.lastStakeBlock()
+    expect(blockCreated).to.equal(receipt.blockNumber)
   })
 
   it('should place stake on new node', async function () {
@@ -592,18 +601,65 @@ describe('ArbRollup', () => {
     await rollup.confirmNextNode(zerobytes32, 0, [], zerobytes32, 0)
   })
 
-  it('can add stake', async function () {
+  it('should add and remove stakes correctly', async function () {
+    /*
+      RollupUser functions that alter stake and their respective Core logic
+
+      user: newStake
+      core: createNewStake
+
+      user: addToDeposit
+      core: increaseStakeBy
+
+      user: reduceDeposit
+      core: reduceStakeTo
+
+      user: returnOldDeposit
+      core: withdrawStaker
+
+      user: withdrawStakerFunds
+      core: withdrawFunds
+    */
+
+    const initialStake = await rollup.rollup.amountStaked(
+      await accounts[2].getAddress()
+    )
+
+    await rollup.connect(accounts[2]).reduceDeposit(initialStake)
+
+    await expect(
+      rollup.connect(accounts[2]).reduceDeposit(initialStake.add(1))
+    ).to.be.revertedWith('TOO_LITTLE_STAKE')
+
     await rollup
       .connect(accounts[2])
       .addToDeposit(await accounts[2].getAddress(), { value: 5 })
-  })
 
-  it('can reduce stake', async function () {
     await rollup.connect(accounts[2]).reduceDeposit(5)
-  })
 
-  it('returns stake to staker', async function () {
-    await rollup.returnOldDeposit(await accounts[2].getAddress())
+    const prevBalance = await accounts[2].getBalance()
+    const prevWithdrawablefunds = await rollup.rollup.withdrawableFunds(
+      await accounts[2].getAddress()
+    )
+
+    const tx = await rollup.rollup
+      .connect(accounts[2])
+      .withdrawStakerFunds(await accounts[2].getAddress(), { gasPrice: 0 })
+    await tx.wait()
+
+    const postBalance = await accounts[2].getBalance()
+    const postWithdrawablefunds = await rollup.rollup.withdrawableFunds(
+      await accounts[2].getAddress()
+    )
+
+    expect(postWithdrawablefunds).to.equal(0)
+    expect(postBalance).to.equal(prevBalance.add(prevWithdrawablefunds))
+
+    // this gets deposit and removes staker
+    await rollup.rollup
+      .connect(accounts[2])
+      .returnOldDeposit(await accounts[2].getAddress())
+    // all stake is now removed
   })
 
   it('should pause the contracts then resume', async function () {

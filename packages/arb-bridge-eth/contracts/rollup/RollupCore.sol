@@ -206,18 +206,6 @@ contract RollupCore is IRollupCore {
         return _nodeHashes[index];
     }
 
-    function resetNodeHash(uint256 index) internal {
-        _nodeHashes[index] = 0;
-    }
-
-    /**
-     * @notice Update the latest node created
-     * @param newLatestNodeCreated New value for the latest node created
-     */
-    function updateLatestNodeCreated(uint256 newLatestNodeCreated) internal {
-        _latestNodeCreated = newLatestNodeCreated;
-    }
-
     /// @notice Reject the next unresolved node
     function rejectNextNode() internal {
         destroyNode(_firstUnresolvedNode);
