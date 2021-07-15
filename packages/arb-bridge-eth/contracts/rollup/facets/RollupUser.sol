@@ -340,7 +340,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     }
 
     /**
-     * @notice Start a challenge between the given stakers over the node created by the first staker assuming that the two are staked on conflicting nodes
+     * @notice Start a challenge between the given stakers over the node created by the first staker assuming that the two are staked on conflicting nodes. N.B.: challenge creator must be *a* staker, but not necessarily one of the two in the challenge.
      * @param stakers Stakers engaged in the challenge. The first staker should be staked on the first node
      * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
      * @param executionHashes Challenge related data for the two nodes
