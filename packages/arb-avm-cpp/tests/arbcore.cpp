@@ -219,12 +219,12 @@ TEST_CASE("ArbCore tests") {
         }
         REQUIRE(logs_count == logs.size());
 
-        auto cursor = arbCore->getExecutionCursor(0, value_cache);
+        auto cursor = arbCore->getExecutionCursor(0);
         REQUIRE(cursor.status.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used == 0);
 
-        auto advanceStatus = arbCore->advanceExecutionCursor(
-            *cursor.data, 100, false, value_cache);
+        auto advanceStatus =
+            arbCore->advanceExecutionCursor(*cursor.data, 100, false);
         REQUIRE(advanceStatus.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
 
@@ -267,7 +267,6 @@ TEST_CASE("ArbCore tests") {
  */
 TEST_CASE("ArbCore inbox") {
     DBDeleter deleter;
-    ValueCache value_cache{1, 0};
 
     ArbStorage storage(dbpath);
     REQUIRE(
@@ -294,7 +293,7 @@ TEST_CASE("ArbCore inbox") {
     auto position = arbCore->getSideloadPosition(*tx, 1);
     REQUIRE(position.status.ok());
 
-    auto cursor = arbCore->getExecutionCursor(position.data, value_cache);
+    auto cursor = arbCore->getExecutionCursor(position.data);
     REQUIRE(cursor.status.ok());
     REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
     REQUIRE(cursor.data->getOutput().arb_gas_used <= position.data);
@@ -303,7 +302,7 @@ TEST_CASE("ArbCore inbox") {
     REQUIRE(cursor_machine_hash.has_value());
 
     auto cursor_machine =
-        arbCore->takeExecutionCursorMachine(*cursor.data.get(), value_cache);
+        arbCore->takeExecutionCursorMachine(*cursor.data.get());
     REQUIRE(cursor_machine);
     REQUIRE(cursor_machine_hash.value() == cursor_machine->hash());
 
@@ -325,9 +324,8 @@ TEST_CASE("ArbCore backwards reorg") {
     waitForDelivery(arbCore);
     REQUIRE(arbCore->messageEntryInsertedCount().data == 0);
 
-    ValueCache value_cache{2, 0};
     auto maxGas = std::numeric_limits<uint256_t>::max();
-    auto initialState = arbCore->getExecutionCursor(maxGas, value_cache);
+    auto initialState = arbCore->getExecutionCursor(maxGas);
     REQUIRE(initialState.status.ok());
     REQUIRE(initialState.data->getTotalMessagesRead() == 0);
 
@@ -343,7 +341,7 @@ TEST_CASE("ArbCore backwards reorg") {
                                      std::nullopt));
     waitForDelivery(arbCore);
 
-    auto newState = arbCore->getExecutionCursor(maxGas, value_cache);
+    auto newState = arbCore->getExecutionCursor(maxGas);
     REQUIRE(newState.status.ok());
     REQUIRE(newState.data->getTotalMessagesRead() == 1);
 
@@ -352,7 +350,7 @@ TEST_CASE("ArbCore backwards reorg") {
         std::vector<std::vector<unsigned char>>(), 0));
     waitForDelivery(arbCore);
 
-    auto reorgState = arbCore->getExecutionCursor(maxGas, value_cache);
+    auto reorgState = arbCore->getExecutionCursor(maxGas);
     REQUIRE(reorgState.status.ok());
     REQUIRE(reorgState.data->getTotalMessagesRead() == 0);
     REQUIRE(reorgState.data->machineHash() == initialState.data->machineHash());

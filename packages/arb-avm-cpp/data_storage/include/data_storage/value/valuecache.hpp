@@ -46,6 +46,9 @@ class ValueCache {
     void maybeSave(value val);
     std::optional<value> loadIfExists(const uint256_t& hash);
     void nextCache();
+    // If this cache is empty, copy all values from other into the first slot of
+    // this.
+    void maybeInitializeFrom(const ValueCache& other);
 };
 
 #endif /* valuecache_hpp */

@@ -66,7 +66,7 @@ TEST_CASE("ARBOS test vectors") {
 
             ArbStorage storage(dbpath);
             REQUIRE(storage.initialize(arb_os_path).ok());
-            auto mach = storage.getInitialMachine(value_cache);
+            auto mach = storage.getInitialMachine();
             MachineExecutionConfig config;
             config.inbox_messages = messages;
             mach->machine_state.context = AssertionContext(config);

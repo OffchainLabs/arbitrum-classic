@@ -52,7 +52,8 @@ constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
     : data_storage(std::move(data_storage_)),
-      code(std::make_shared<Code>(getNextSegmentID(data_storage))) {
+      code(std::make_shared<Code>(getNextSegmentID(data_storage))),
+      execution_cursor_value_cache(16, 0) {
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
     }
@@ -384,6 +385,14 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                         if (std::holds_alternative<rocksdb::Status>(setup)) {
                             setup = getMachineUsingStateKeys<MachineThread>(
                                 tx, checkpoint, cache);
+                            if (std::holds_alternative<
+                                    std::unique_ptr<MachineThread>>(setup) &&
+                                use_latest) {
+                                std::lock_guard<std::mutex> guard(
+                                    execution_cursor_value_cache_mutex);
+                                execution_cursor_value_cache
+                                    .maybeInitializeFrom(cache);
+                            }
                         }
                         break;
                     } catch (const std::exception& e) {
@@ -1530,8 +1539,7 @@ uint256_t ArbCore::machineMessagesRead() {
 }
 
 ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
-    uint256_t total_gas_used,
-    ValueCache& cache) {
+    uint256_t total_gas_used) {
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {
         ReadSnapshotTransaction tx(data_storage);
@@ -1548,7 +1556,7 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     }
 
     auto status = advanceExecutionCursorImpl(*execution_cursor, total_gas_used,
-                                             false, 10, cache);
+                                             false, 10);
 
     if (!status.ok()) {
         std::cerr << "Couldn't advance execution machine" << std::endl;
@@ -1560,8 +1568,7 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
 rocksdb::Status ArbCore::advanceExecutionCursor(
     ExecutionCursor& execution_cursor,
     uint256_t max_gas,
-    bool go_over_gas,
-    ValueCache& cache) {
+    bool go_over_gas) {
     auto gas_target = execution_cursor.getOutput().arb_gas_used + max_gas;
     {
         ReadSnapshotTransaction tx(data_storage);
@@ -1593,7 +1600,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     }
 
     return advanceExecutionCursorImpl(execution_cursor, gas_target, go_over_gas,
-                                      10, cache);
+                                      10);
 }
 
 MachineState& resolveExecutionVariant(std::unique_ptr<Machine>& mach) {
@@ -1606,40 +1613,37 @@ MachineStateKeys& resolveExecutionVariant(MachineStateKeys& mach) {
 
 std::unique_ptr<Machine>& ArbCore::resolveExecutionCursorMachine(
     const ReadTransaction& tx,
-    ExecutionCursor& execution_cursor,
-    ValueCache& cache) const {
+    ExecutionCursor& execution_cursor) {
     if (std::holds_alternative<MachineStateKeys>(execution_cursor.machine)) {
+        std::lock_guard<std::mutex> guard(execution_cursor_value_cache_mutex);
         auto machine_state_keys =
             std::get<MachineStateKeys>(execution_cursor.machine);
-        execution_cursor.machine =
-            getMachineUsingStateKeys<Machine>(tx, machine_state_keys, cache);
+        execution_cursor.machine = getMachineUsingStateKeys<Machine>(
+            tx, machine_state_keys, execution_cursor_value_cache);
+        execution_cursor_value_cache.nextCache();
     }
     return std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
 }
 
 std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachineImpl(
     const ReadTransaction& tx,
-    ExecutionCursor& execution_cursor,
-    ValueCache& cache) const {
-    auto mach =
-        std::move(resolveExecutionCursorMachine(tx, execution_cursor, cache));
+    ExecutionCursor& execution_cursor) {
+    auto mach = std::move(resolveExecutionCursorMachine(tx, execution_cursor));
     execution_cursor.machine = MachineStateKeys{mach->machine_state};
     return mach;
 }
 
 std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachine(
-    ExecutionCursor& execution_cursor,
-    ValueCache& cache) const {
+    ExecutionCursor& execution_cursor) {
     ReadSnapshotTransaction tx(data_storage);
-    return takeExecutionCursorMachineImpl(tx, execution_cursor, cache);
+    return takeExecutionCursorMachineImpl(tx, execution_cursor);
 }
 
 rocksdb::Status ArbCore::advanceExecutionCursorImpl(
     ExecutionCursor& execution_cursor,
     uint256_t total_gas_used,
     bool go_over_gas,
-    size_t message_group_size,
-    ValueCache& cache) {
+    size_t message_group_size) {
     auto handle_reorg = true;
     size_t reorg_attempts = 0;
     while (handle_reorg) {
@@ -1670,7 +1674,7 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 ReadSnapshotTransaction tx(data_storage);
 
                 auto& mach =
-                    resolveExecutionCursorMachine(tx, execution_cursor, cache);
+                    resolveExecutionCursorMachine(tx, execution_cursor);
 
                 uint256_t gas_used = execution_cursor.getOutput().arb_gas_used;
                 if (gas_used == total_gas_used) {
@@ -2655,8 +2659,7 @@ rocksdb::Status ArbCore::deleteSideloadsStartingAt(
 }
 
 ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
-    const uint256_t& block_number,
-    ValueCache& cache) {
+    const uint256_t& block_number) {
     // Check the cache
     {
         std::shared_lock<std::shared_mutex> lock(sideload_cache_mutex);
@@ -2691,10 +2694,9 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
             std::get<ExecutionCursor>(closest_checkpoint));
     }
 
-    auto status = advanceExecutionCursorImpl(*execution_cursor, gas_target,
-                                             false, 10, cache);
+    auto status =
+        advanceExecutionCursorImpl(*execution_cursor, gas_target, false, 10);
 
     ReadSnapshotTransaction tx(data_storage);
-    return {status,
-            takeExecutionCursorMachineImpl(tx, *execution_cursor, cache)};
+    return {status, takeExecutionCursorMachineImpl(tx, *execution_cursor)};
 }
