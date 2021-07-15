@@ -53,7 +53,7 @@ constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
     : data_storage(std::move(data_storage_)),
       code(std::make_shared<Code>(getNextSegmentID(data_storage))),
-      execution_cursor_value_cache(16, 0) {
+      execution_cursor_value_cache(4, 0) {
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
     }
