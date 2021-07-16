@@ -219,7 +219,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
 
-	staker, _, err := NewStaker(ctx, mon.Core, client, val, 0, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
+	staker, _, err := NewStaker(ctx, mon.Core, client, val, 0, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth)
 	test.FailIfError(t, err)
 
 	staker.Validator.GasThreshold = big.NewInt(0)
@@ -267,7 +267,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	faultyCore := challenge.NewFaultyCore(mon.Core, faultConfig)
 
-	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, 0, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
+	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, 0, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, val2Auth)
 	test.FailIfError(t, err)
 
 	faultyStaker.Validator.GasThreshold = big.NewInt(0)

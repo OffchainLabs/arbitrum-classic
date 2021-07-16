@@ -188,7 +188,7 @@ func TestSequencerBatcher(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, 0, client)
+	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, 0, client, bind.CallOpts{})
 	test.FailIfError(t, err)
 
 	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
