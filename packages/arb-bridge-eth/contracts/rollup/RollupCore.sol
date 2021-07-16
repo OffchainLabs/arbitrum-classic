@@ -225,14 +225,62 @@ contract RollupCore is IRollupCore {
     }
 
     /// @notice Confirm the next unresolved node
-    function confirmNextNode() internal {
-        confirmNode(_firstUnresolvedNode);
+    function confirmNextNode(
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount,
+        IOutbox outbox,
+        RollupEventBridge rollupEventBridge
+    ) internal {
+        confirmNode(
+            _firstUnresolvedNode,
+            beforeSendAcc,
+            sendsData,
+            sendLengths,
+            afterSendCount,
+            afterLogAcc,
+            afterLogCount,
+            outbox,
+            rollupEventBridge
+        );
     }
 
-    function confirmNode(uint256 nodeNum) internal {
+    function confirmNode(
+        uint256 nodeNum,
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount,
+        IOutbox outbox,
+        RollupEventBridge rollupEventBridge
+    ) internal {
+        bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
+
+        INode node = getNode(nodeNum);
+        require(
+            node.confirmData() ==
+                RollupLib.confirmHash(
+                    beforeSendAcc,
+                    afterSendAcc,
+                    afterLogAcc,
+                    afterSendCount,
+                    afterLogCount
+                ),
+            "CONFIRM_DATA"
+        );
+        outbox.processOutgoingMessages(sendsData, sendLengths);
+
         destroyNode(_latestConfirmed);
         _latestConfirmed = nodeNum;
         _firstUnresolvedNode = nodeNum + 1;
+
+        rollupEventBridge.nodeConfirmed(nodeNum);
+        emit NodeConfirmed(nodeNum, afterSendAcc, afterSendCount, afterLogAcc, afterLogCount);
     }
 
     /**

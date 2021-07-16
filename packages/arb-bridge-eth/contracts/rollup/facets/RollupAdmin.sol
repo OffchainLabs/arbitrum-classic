@@ -322,28 +322,18 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         bytes32 afterLogAcc,
         uint256 afterLogCount
     ) external override whenPaused {
-        bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
-
-        INode node = getNode(nodeNum);
-
-        require(
-            node.confirmData() ==
-                RollupLib.confirmHash(
-                    beforeSendAcc,
-                    afterSendAcc,
-                    afterLogAcc,
-                    afterSendCount,
-                    afterLogCount
-                ),
-            "CONFIRM_DATA"
+        // this skips deadline, staker and zombie validation
+        confirmNode(
+            nodeNum,
+            beforeSendAcc,
+            sendsData,
+            sendLengths,
+            afterSendCount,
+            afterLogAcc,
+            afterLogCount,
+            outbox,
+            rollupEventBridge
         );
-        // processes outgoing messages without node.requirePastDeadline();
-        outbox.processOutgoingMessages(sendsData, sendLengths);
-
-        confirmNode(nodeNum);
-        rollupEventBridge.nodeConfirmed(nodeNum);
-
-        emit NodeConfirmed(nodeNum, afterSendAcc, afterSendCount, afterLogAcc, afterLogCount);
         emit OwnerFunctionCalled(24);
     }
 }

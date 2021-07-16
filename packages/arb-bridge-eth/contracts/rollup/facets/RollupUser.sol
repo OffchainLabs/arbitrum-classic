@@ -66,8 +66,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
 
-        uint256 firstUnresolved = firstUnresolvedNode();
-        INode node = getNode(firstUnresolved);
+        INode node = getNode(firstUnresolvedNode());
 
         // Verify the block's deadline has passed
         node.requirePastDeadline();
@@ -85,31 +84,15 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             "NOT_ALL_STAKED"
         );
 
-        bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
-        require(
-            node.confirmData() ==
-                RollupLib.confirmHash(
-                    beforeSendAcc,
-                    afterSendAcc,
-                    afterLogAcc,
-                    afterSendCount,
-                    afterLogCount
-                ),
-            "CONFIRM_DATA"
-        );
-
-        outbox.processOutgoingMessages(sendsData, sendLengths);
-
-        confirmNextNode();
-
-        rollupEventBridge.nodeConfirmed(firstUnresolved);
-
-        emit NodeConfirmed(
-            firstUnresolved,
-            afterSendAcc,
+        confirmNextNode(
+            beforeSendAcc,
+            sendsData,
+            sendLengths,
             afterSendCount,
             afterLogAcc,
-            afterLogCount
+            afterLogCount,
+            outbox,
+            rollupEventBridge
         );
     }
 
