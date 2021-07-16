@@ -206,18 +206,6 @@ contract RollupCore is IRollupCore {
         return _nodeHashes[index];
     }
 
-    function resetNodeHash(uint256 index) internal {
-        _nodeHashes[index] = 0;
-    }
-
-    /**
-     * @notice Update the latest node created
-     * @param newLatestNodeCreated New value for the latest node created
-     */
-    function updateLatestNodeCreated(uint256 newLatestNodeCreated) internal {
-        _latestNodeCreated = newLatestNodeCreated;
-    }
-
     /// @notice Reject the next unresolved node
     function rejectNextNode() internal {
         destroyNode(_firstUnresolvedNode);
@@ -315,8 +303,8 @@ contract RollupCore is IRollupCore {
         Staker storage staker1 = _stakerMap[stakerAddress1];
         Staker storage staker2 = _stakerMap[stakerAddress2];
         address challenge = staker1.currentChallenge;
-        require(challenge == staker2.currentChallenge, "IN_CHAL");
         require(challenge != address(0), "NO_CHAL");
+        require(challenge == staker2.currentChallenge, "DIFF_IN_CHAL");
         return challenge;
     }
 
