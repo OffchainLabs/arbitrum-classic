@@ -279,6 +279,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     ) external override whenPaused {
         require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
 
+        // The admin does not need to prove against the sequencer bridge
         RollupLib.Assertion memory assertion =
             RollupLib.decodeAssertion(
                 assertionBytes32Fields,
@@ -288,27 +289,25 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
                 sequencerBridge.messageCount()
             );
 
-        uint256 deadlineBlock =
-            max(block.number.add(confirmPeriodBlocks), getNode(prevNode).deadlineBlock());
+        createNewNode(
+            assertion,
+            assertionBytes32Fields,
+            assertionIntFields,
+            CreateNodeDataFrame({
+                sequencerBatchEnd: sequencerBatchEnd,
+                sequencerBatchAcc: sequencerBatchAcc,
+                arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
+                confirmPeriodBlocks: confirmPeriodBlocks,
+                minimumAssertionPeriod: minimumAssertionPeriod,
+                prevNode: prevNode,
+                sequencerInbox: sequencerBridge,
+                rollupEventBridge: rollupEventBridge,
+                nodeFactory: nodeFactory
+            }),
+            expectedNodeHash
+        );
 
-        (bytes32 nodeHash, ) =
-            createNewNode(
-                assertion,
-                deadlineBlock,
-                sequencerBatchEnd,
-                sequencerBatchAcc,
-                prevNode,
-                getNodeHash(prevNode),
-                false,
-                NewNodeDependencies({
-                    sequencerInbox: sequencerBridge,
-                    rollupEventBridge: rollupEventBridge,
-                    nodeFactory: nodeFactory
-                })
-            );
-
-        require(expectedNodeHash == nodeHash, "NOT_EXPECTED_HASH");
-
+        // this does not validate msg.sender as a staker
         stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
 
         emit OwnerFunctionCalled(23);

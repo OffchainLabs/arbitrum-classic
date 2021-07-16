@@ -549,15 +549,19 @@ describe('ArbRollup', () => {
         arbGasSpeedLimitPerBlock
     )
 
-    const newNodeHash = nodeHash(
-      false,
-      prevNode.nodeHash,
-      assertion.executionHash(),
-      zerobytes32
-    )
+    const hasSibling = true
+    const newNodeHash = async () =>
+      nodeHash(
+        hasSibling,
+        await rollup.rollup.getNodeHash(
+          await rollup.rollup.latestNodeCreated()
+        ),
+        assertion.executionHash(),
+        zerobytes32
+      )
 
     await rollupAdmin.forceCreateNode(
-      newNodeHash,
+      await newNodeHash(),
       assertion.bytes32Fields(),
       assertion.intFields(),
       prevNode.afterState.proposedBlock,
@@ -573,7 +577,7 @@ describe('ArbRollup', () => {
     expect(adminNodeNum.toNumber()).to.equal(node2Num.toNumber() + 1)
 
     await rollupAdmin.forceCreateNode(
-      newNodeHash,
+      await newNodeHash(),
       assertion.bytes32Fields(),
       assertion.intFields(),
       prevNode.afterState.proposedBlock,

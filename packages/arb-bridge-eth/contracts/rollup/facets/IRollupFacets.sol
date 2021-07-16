@@ -36,6 +36,8 @@ interface IRollupUser {
 }
 
 interface IRollupAdmin {
+    event OwnerFunctionCalled(uint256 indexed id);
+
     /**
      * @notice Add a contract authorized to put messages into this rollup's inbox
      * @param _outbox Outbox contract to add
