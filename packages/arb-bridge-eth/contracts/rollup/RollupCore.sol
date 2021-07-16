@@ -214,14 +214,62 @@ contract RollupCore is IRollupCore {
     }
 
     /// @notice Confirm the next unresolved node
-    function confirmNextNode() internal {
-        confirmNode(_firstUnresolvedNode);
+    function confirmNextNode(
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount,
+        IOutbox outbox,
+        RollupEventBridge rollupEventBridge
+    ) internal {
+        confirmNode(
+            _firstUnresolvedNode,
+            beforeSendAcc,
+            sendsData,
+            sendLengths,
+            afterSendCount,
+            afterLogAcc,
+            afterLogCount,
+            outbox,
+            rollupEventBridge
+        );
     }
 
-    function confirmNode(uint256 nodeNum) internal {
+    function confirmNode(
+        uint256 nodeNum,
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount,
+        IOutbox outbox,
+        RollupEventBridge rollupEventBridge
+    ) internal {
+        bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
+
+        INode node = getNode(nodeNum);
+        require(
+            node.confirmData() ==
+                RollupLib.confirmHash(
+                    beforeSendAcc,
+                    afterSendAcc,
+                    afterLogAcc,
+                    afterSendCount,
+                    afterLogCount
+                ),
+            "CONFIRM_DATA"
+        );
+        outbox.processOutgoingMessages(sendsData, sendLengths);
+
         destroyNode(_latestConfirmed);
         _latestConfirmed = nodeNum;
         _firstUnresolvedNode = nodeNum + 1;
+
+        rollupEventBridge.nodeConfirmed(nodeNum);
+        emit NodeConfirmed(nodeNum, afterSendAcc, afterSendCount, afterLogAcc, afterLogCount);
     }
 
     /**
@@ -412,64 +460,153 @@ contract RollupCore is IRollupCore {
         _nodes[nodeNum] = INode(0);
     }
 
+    function nodeDeadline(
+        uint256 arbGasSpeedLimitPerBlock,
+        uint256 gasUsed,
+        uint256 confirmPeriodBlocks,
+        INode prevNode
+    ) internal view returns (uint256 deadlineBlock) {
+        // Set deadline rounding up to the nearest block
+        uint256 checkTime =
+            gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
+
+        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(
+            checkTime
+        );
+
+        uint256 olderSibling = prevNode.latestChildNumber();
+        if (olderSibling != 0) {
+            deadlineBlock = max(deadlineBlock, getNode(olderSibling).deadlineBlock());
+        }
+        return deadlineBlock;
+    }
+
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a > b ? a : b;
     }
 
     struct StakeOnNewNodeFrame {
-        uint256 sequencerBatchEnd;
-        bytes32 sequencerBatchAcc;
         uint256 currentInboxSize;
         INode node;
         bytes32 executionHash;
         INode prevNode;
+        bytes32 lastHash;
+        bool hasSibling;
+        uint256 deadlineBlock;
+        uint256 gasUsed;
+        uint256 sequencerBatchEnd;
+        bytes32 sequencerBatchAcc;
     }
 
-    struct NewNodeDependencies {
+    struct CreateNodeDataFrame {
+        uint256 prevNode;
+        uint256 confirmPeriodBlocks;
+        uint256 arbGasSpeedLimitPerBlock;
         ISequencerInbox sequencerInbox;
         RollupEventBridge rollupEventBridge;
         INodeFactory nodeFactory;
     }
 
+    // TODO: Configure this value based on the cost of sends and add test
+    uint8 internal constant MAX_SEND_COUNT = 100;
+
     function createNewNode(
         RollupLib.Assertion memory assertion,
-        uint256 deadlineBlock,
-        uint256 sequencerBatchEnd,
-        bytes32 sequencerBatchAcc,
-        uint256 prevNode,
-        bytes32 prevHash,
-        bool hasSibling,
-        NewNodeDependencies memory targets
-    ) internal returns (bytes32, StakeOnNewNodeFrame memory) {
-        StakeOnNewNodeFrame memory frame;
+        bytes32[3][2] calldata assertionBytes32Fields,
+        uint256[4][2] calldata assertionIntFields,
+        bytes calldata sequencerBatchProof,
+        CreateNodeDataFrame memory inputDataFrame,
+        bytes32 expectedNodeHash
+    ) internal returns (bytes32 newNodeHash) {
+        StakeOnNewNodeFrame memory memoryFrame;
         {
-            frame.currentInboxSize = targets.sequencerInbox.messageCount();
-            frame.prevNode = getNode(prevNode);
-            frame.executionHash = RollupLib.executionHash(assertion);
+            // validate data
+            memoryFrame.gasUsed = RollupLib.assertionGasUsed(assertion);
+            memoryFrame.prevNode = getNode(inputDataFrame.prevNode);
+            memoryFrame.currentInboxSize = inputDataFrame.sequencerInbox.messageCount();
 
-            frame.sequencerBatchEnd = sequencerBatchEnd;
-            frame.sequencerBatchAcc = sequencerBatchAcc;
+            // Make sure the previous state is correct against the node being built on
+            require(
+                RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.stateHash(),
+                "PREV_STATE_HASH"
+            );
 
-            frame.node = INode(
-                targets.nodeFactory.createNode(
+            // Ensure that the assertion doesn't read past the end of the current inbox
+            require(
+                assertion.afterState.inboxCount <= memoryFrame.currentInboxSize,
+                "INBOX_PAST_END"
+            );
+
+            (memoryFrame.sequencerBatchEnd, memoryFrame.sequencerBatchAcc) = inputDataFrame
+                .sequencerInbox
+                .proveBatchContainsSequenceNumber(
+                sequencerBatchProof,
+                assertion.afterState.inboxCount
+            );
+        }
+
+        {
+            memoryFrame.executionHash = RollupLib.executionHash(assertion);
+
+            memoryFrame.deadlineBlock = nodeDeadline(
+                inputDataFrame.arbGasSpeedLimitPerBlock,
+                memoryFrame.gasUsed,
+                inputDataFrame.confirmPeriodBlocks,
+                memoryFrame.prevNode
+            );
+
+            memoryFrame.hasSibling = memoryFrame.prevNode.latestChildNumber() > 0;
+            // here we don't use ternacy operator to remain compatible with slither
+            if (memoryFrame.hasSibling) {
+                memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.latestChildNumber());
+            } else {
+                memoryFrame.lastHash = getNodeHash(inputDataFrame.prevNode);
+            }
+
+            memoryFrame.node = INode(
+                inputDataFrame.nodeFactory.createNode(
                     RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
+                    RollupLib.challengeRoot(assertion, memoryFrame.executionHash, block.number),
                     RollupLib.confirmHash(assertion),
-                    prevNode,
-                    deadlineBlock
+                    inputDataFrame.prevNode,
+                    memoryFrame.deadlineBlock
                 )
             );
         }
-        uint256 nodeNum = latestNodeCreated() + 1;
-        frame.prevNode.childCreated(nodeNum);
 
-        bytes32 nodeHash =
-            RollupLib.nodeHash(hasSibling, prevHash, frame.executionHash, frame.sequencerBatchAcc);
-        nodeCreated(frame.node, nodeHash);
+        {
+            uint256 nodeNum = latestNodeCreated() + 1;
+            memoryFrame.prevNode.childCreated(nodeNum);
 
-        targets.rollupEventBridge.nodeCreated(nodeNum, prevNode, deadlineBlock, msg.sender);
-        require(nodeNum == latestNodeCreated(), "NODE_NOT_CREATED");
+            newNodeHash = RollupLib.nodeHash(
+                memoryFrame.hasSibling,
+                memoryFrame.lastHash,
+                memoryFrame.executionHash,
+                memoryFrame.sequencerBatchAcc
+            );
+            require(newNodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
 
-        return (nodeHash, frame);
+            nodeCreated(memoryFrame.node, newNodeHash);
+            inputDataFrame.rollupEventBridge.nodeCreated(
+                nodeNum,
+                inputDataFrame.prevNode,
+                memoryFrame.deadlineBlock,
+                msg.sender
+            );
+        }
+
+        emit NodeCreated(
+            latestNodeCreated(),
+            getNodeHash(inputDataFrame.prevNode),
+            newNodeHash,
+            memoryFrame.executionHash,
+            memoryFrame.currentInboxSize,
+            memoryFrame.sequencerBatchEnd,
+            memoryFrame.sequencerBatchAcc,
+            assertionBytes32Fields,
+            assertionIntFields
+        );
+
+        return newNodeHash;
     }
 }

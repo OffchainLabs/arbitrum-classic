@@ -138,6 +138,15 @@ library RollupLib {
             );
     }
 
+    function assertionGasUsed(RollupLib.Assertion memory assertion)
+        internal
+        pure
+        returns (uint256)
+    {
+        require(assertion.afterState.gasUsed > assertion.beforeState.gasUsed, "GAS_USED_UNDERFLOW");
+        return assertion.afterState.gasUsed - assertion.beforeState.gasUsed;
+    }
+
     function challengeRoot(
         Assertion memory assertion,
         bytes32 assertionExecHash,
