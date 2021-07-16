@@ -160,7 +160,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             // Verify that assertion meets the minimum Delta time requirement
             require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
 
-            uint256 gasUsed = assertionGasUsed(assertion);
+            uint256 gasUsed = RollupLib.assertionGasUsed(assertion);
             // Minimum size requirements: each assertion must satisfy either
             require(
                 // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum

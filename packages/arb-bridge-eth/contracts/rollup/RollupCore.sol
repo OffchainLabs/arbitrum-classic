@@ -471,14 +471,6 @@ contract RollupCore is IRollupCore {
         _nodes[nodeNum] = INode(0);
     }
 
-    function assertionGasUsed(RollupLib.Assertion memory assertion)
-        internal
-        pure
-        returns (uint256)
-    {
-        return assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
-    }
-
     function nodeDeadline(
         uint256 arbGasSpeedLimitPerBlock,
         uint256 gasUsed,
@@ -540,7 +532,7 @@ contract RollupCore is IRollupCore {
         StakeOnNewNodeFrame memory memoryFrame;
         {
             // validate data
-            memoryFrame.gasUsed = assertionGasUsed(assertion);
+            memoryFrame.gasUsed = RollupLib.assertionGasUsed(assertion);
             memoryFrame.prevNode = getNode(inputDataFrame.prevNode);
             memoryFrame.currentInboxSize = inputDataFrame.sequencerInbox.messageCount();
 

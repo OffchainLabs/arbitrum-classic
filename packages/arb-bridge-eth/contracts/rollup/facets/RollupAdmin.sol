@@ -305,9 +305,6 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
             expectedNodeHash
         );
 
-        // this does not validate msg.sender as a staker
-        stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
-
         emit OwnerFunctionCalled(23);
     }
 
