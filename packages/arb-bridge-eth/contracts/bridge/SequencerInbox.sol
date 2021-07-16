@@ -400,7 +400,6 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     function proveBatchContainsSequenceNumber(bytes calldata proof, uint256 _messageCount)
         external
         view
-        override
         returns (uint256, bytes32)
     {
         return proveInboxContainsMessageImp(proof, _messageCount);
