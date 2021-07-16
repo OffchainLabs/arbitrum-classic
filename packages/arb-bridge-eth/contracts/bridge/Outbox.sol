@@ -171,7 +171,7 @@ contract Outbox is IOutbox, Cloneable {
         uint256 path,
         bytes32 item
     ) internal {
-        require(proof.length <= 256, "PROOF_TOO_LONG");
+        require(proof.length < 256, "PROOF_TOO_LONG");
         require(path < 2**proof.length, "PATH_NOT_MINIMAL");
 
         // Hash the leaf an extra time to prove it's a leaf
