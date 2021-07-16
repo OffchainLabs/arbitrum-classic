@@ -251,6 +251,7 @@ contract RollupCore is IRollupCore {
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
 
         INode node = getNode(nodeNum);
+        // Replay protect:
         require(
             node.confirmData() ==
                 RollupLib.confirmHash(
@@ -262,6 +263,8 @@ contract RollupCore is IRollupCore {
                 ),
             "CONFIRM_DATA"
         );
+
+        // trusted external call to outbox
         outbox.processOutgoingMessages(sendsData, sendLengths);
 
         destroyNode(_latestConfirmed);
@@ -536,13 +539,10 @@ contract RollupCore is IRollupCore {
                 assertion.afterState.inboxCount <= memoryFrame.currentInboxSize,
                 "INBOX_PAST_END"
             );
-
+            // Insure inbox tip after assertion is included in a sequencer-inbox batch and return inbox acc; this gives replay protection against the state of the inbox
             (memoryFrame.sequencerBatchEnd, memoryFrame.sequencerBatchAcc) = inputDataFrame
                 .sequencerInbox
-                .proveBatchContainsSequenceNumber(
-                sequencerBatchProof,
-                assertion.afterState.inboxCount
-            );
+                .proveInboxContainsMessage(sequencerBatchProof, assertion.afterState.inboxCount);
         }
 
         {
