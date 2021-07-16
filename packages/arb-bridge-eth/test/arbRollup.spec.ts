@@ -455,7 +455,7 @@ describe('ArbRollup', () => {
     await rollupAdmin.resume()
   })
 
-  it('should allow admin to truncate nodes', async function () {
+  it('should allow admin to alter rollup while paused', async function () {
     const prevLatestConfirmed = await rollup.rollup.latestConfirmed()
     expect(prevLatestConfirmed.toNumber()).to.equal(6)
     // prevNode is prevLatestConfirmed
@@ -532,7 +532,7 @@ describe('ArbRollup', () => {
     const challengeB = await rollupAdmin.currentChallenge(
       await accounts[1].getAddress()
     )
-    const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
+    const ZERO_ADDR = ethers.constants.AddressZero
 
     expect(challengeA).to.equal(ZERO_ADDR)
     expect(challengeB).to.equal(ZERO_ADDR)
