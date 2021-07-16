@@ -263,7 +263,8 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
 
     function forceRefundStaker(address[] memory staker) external override whenPaused {
         for (uint256 i = 0; i < staker.length; i++) {
-            withdrawStaker(staker[i]);
+            reduceStakeTo(staker[i], 0);
+            turnIntoZombie(staker[i]);
         }
         emit OwnerFunctionCalled(22);
     }
@@ -272,14 +273,14 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         bytes32 expectedNodeHash,
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[4][2] calldata assertionIntFields,
+        bytes calldata sequencerBatchProof,
         uint256 beforeProposedBlock,
         uint256 beforeInboxMaxCount,
-        uint256 prevNode,
-        uint256 sequencerBatchEnd,
-        bytes32 sequencerBatchAcc
+        uint256 prevNode
     ) external override whenPaused {
         require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
 
+        // The admin does not need to prove against the sequencer bridge
         RollupLib.Assertion memory assertion =
             RollupLib.decodeAssertion(
                 assertionBytes32Fields,
@@ -289,28 +290,21 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
                 sequencerBridge.messageCount()
             );
 
-        uint256 deadlineBlock =
-            max(block.number.add(confirmPeriodBlocks), getNode(prevNode).deadlineBlock());
-
-        (bytes32 nodeHash, ) =
-            createNewNode(
-                assertion,
-                deadlineBlock,
-                sequencerBatchEnd,
-                sequencerBatchAcc,
-                prevNode,
-                getNodeHash(prevNode),
-                false,
-                NewNodeDependencies({
-                    sequencerInbox: sequencerBridge,
-                    rollupEventBridge: rollupEventBridge,
-                    nodeFactory: nodeFactory
-                })
-            );
-
-        require(expectedNodeHash == nodeHash, "NOT_EXPECTED_HASH");
-
-        stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
+        createNewNode(
+            assertion,
+            assertionBytes32Fields,
+            assertionIntFields,
+            sequencerBatchProof,
+            CreateNodeDataFrame({
+                arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
+                confirmPeriodBlocks: confirmPeriodBlocks,
+                prevNode: prevNode,
+                sequencerInbox: sequencerBridge,
+                rollupEventBridge: rollupEventBridge,
+                nodeFactory: nodeFactory
+            }),
+            expectedNodeHash
+        );
 
         emit OwnerFunctionCalled(23);
     }
@@ -324,28 +318,18 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         bytes32 afterLogAcc,
         uint256 afterLogCount
     ) external override whenPaused {
-        bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
-
-        INode node = getNode(nodeNum);
-
-        require(
-            node.confirmData() ==
-                RollupLib.confirmHash(
-                    beforeSendAcc,
-                    afterSendAcc,
-                    afterLogAcc,
-                    afterSendCount,
-                    afterLogCount
-                ),
-            "CONFIRM_DATA"
+        // this skips deadline, staker and zombie validation
+        confirmNode(
+            nodeNum,
+            beforeSendAcc,
+            sendsData,
+            sendLengths,
+            afterSendCount,
+            afterLogAcc,
+            afterLogCount,
+            outbox,
+            rollupEventBridge
         );
-        // processes outgoing messages without node.requirePastDeadline();
-        outbox.processOutgoingMessages(sendsData, sendLengths);
-
-        confirmNode(nodeNum);
-        rollupEventBridge.nodeConfirmed(nodeNum);
-
-        emit NodeConfirmed(nodeNum, afterSendAcc, afterSendCount, afterLogAcc, afterLogCount);
         emit OwnerFunctionCalled(24);
     }
 }

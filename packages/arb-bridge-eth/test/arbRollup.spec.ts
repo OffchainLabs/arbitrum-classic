@@ -42,13 +42,13 @@ const initialVmState =
 const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
 const stakeRequirement = 10
-const stakeToken = '0x0000000000000000000000000000000000000000'
+const stakeToken = ethers.constants.AddressZero
 const confirmationPeriodBlocks = 100
 const arbGasSpeedLimitPerBlock = 1000000
 const minimumAssertionPeriod = 75
 const sequencerDelayBlocks = 15
 const sequencerDelaySeconds = 900
-const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
+const ZERO_ADDR = ethers.constants.AddressZero
 
 let rollup: RollupContract
 let rollupAdmin: Contract
@@ -680,7 +680,7 @@ describe('ArbRollup', () => {
     await rollupAdmin.resume()
   })
 
-  it('should allow admin to truncate nodes', async function () {
+  it('should allow admin to alter rollup while paused', async function () {
     const prevLatestConfirmed = await rollup.rollup.latestConfirmed()
     expect(prevLatestConfirmed.toNumber()).to.equal(6)
     // prevNode is prevLatestConfirmed
@@ -773,22 +773,25 @@ describe('ArbRollup', () => {
         arbGasSpeedLimitPerBlock
     )
 
-    const newNodeHash = nodeHash(
-      false,
-      prevNode.nodeHash,
-      assertion.executionHash(),
-      zerobytes32
-    )
+    const hasSibling = true
+    const newNodeHash = async () =>
+      nodeHash(
+        hasSibling,
+        await rollup.rollup.getNodeHash(
+          await rollup.rollup.latestNodeCreated()
+        ),
+        assertion.executionHash(),
+        zerobytes32
+      )
 
     const forceCreateTx = await rollupAdmin.forceCreateNode(
-      newNodeHash,
+      await newNodeHash(),
       assertion.bytes32Fields(),
       assertion.intFields(),
+      '0x',
       prevNode.afterState.proposedBlock,
       prevNode.afterState.inboxMaxCount,
-      prevLatestConfirmed,
-      1,
-      zerobytes32
+      prevLatestConfirmed
     )
     const forceCreateReceipt = await forceCreateTx.wait()
 
@@ -799,15 +802,15 @@ describe('ArbRollup', () => {
     expect(adminNodeNum.toNumber()).to.equal(node2Num.toNumber() + 1)
 
     await rollupAdmin.forceCreateNode(
-      newNodeHash,
+      await newNodeHash(),
       assertion.bytes32Fields(),
       assertion.intFields(),
+      '0x',
       prevNode.afterState.proposedBlock,
       prevNode.afterState.inboxMaxCount,
-      prevLatestConfirmed,
-      1,
-      zerobytes32
+      prevLatestConfirmed
     )
+
     const postLatestCreated = await rollup.rollup.latestNodeCreated()
 
     const sends: Array<BytesLike> = []
@@ -832,7 +835,7 @@ describe('ArbRollup', () => {
       assertion,
       forceCreateReceipt.blockNumber,
       assertion.afterState.inboxCount,
-      newNodeHash
+      await newNodeHash()
     )
     await rollupAdmin.resume()
 
