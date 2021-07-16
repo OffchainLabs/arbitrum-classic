@@ -120,11 +120,12 @@ jobs:
             yarn typechain
             yarn test:ci
           working_directory: /home/user/project/packages/arb-bridge-eth
-      - run:
-          name: slither arb-bridge-eth
-          command: |
-            yarn slither
-          working_directory: /home/user/project/packages/arb-bridge-eth
+      # TODO
+      # - run:
+      #     name: slither arb-bridge-eth
+      #     command: |
+      #       yarn slither
+      #     working_directory: /home/user/project/packages/arb-bridge-eth
       - store_test_results:
           path: *test-path
 
