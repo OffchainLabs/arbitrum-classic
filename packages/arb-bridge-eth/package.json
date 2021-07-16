@@ -36,7 +36,8 @@
     "docker:build:geth": "docker build -t arb-bridge-eth-geth -f geth.Dockerfile .",
     "docker:geth": "rm -rf deployments/parity && ./scripts/launch-geth",
     "verify": "hardhat etherscan-verify --api-key $(dotenv -p ETHERSCAN_API_KEY)",
-    "typechain": "hardhat typechain"
+    "typechain": "hardhat typechain",
+    "slither": "slither . --hardhat-artifacts-directory build/contracts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "3.4.0",

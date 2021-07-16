@@ -15,33 +15,50 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
 
     /**
      * @notice Reject the next unresolved node
-     * @param stakerAddress Example staker staked on sibling
+     * @param stakerAddress Example staker staked on sibling, used to prove a node is on an unconfirmable branch and can be rejected
      */
     function rejectNextNode(address stakerAddress) external onlyValidator whenNotPaused {
         requireUnresolvedExists();
-        uint256 latest = latestConfirmed();
-        uint256 firstUnresolved = firstUnresolvedNode();
-        INode node = getNode(firstUnresolved);
-        if (node.prev() == latest) {
-            // Confirm that the example staker is staked on a sibling node
+        uint256 latestConfirmedNodeNum = latestConfirmed();
+        uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
+        INode firstUnresolvedNode_ = getNode(firstUnresolvedNodeNum);
+
+        if (firstUnresolvedNode_.prev() == latestConfirmedNodeNum) {
+            /**If the first unresolved node is a child of the latest confirmed node, to prove it can be rejected, we show:
+             * a) Its deadline has expired
+             * b) *Some* staker is staked on a sibling
+
+             * The following three checks are sufficient to prove b:
+            */
+
+            // 1.  StakerAddress is indeed a staker
             require(isStaked(stakerAddress), "NOT_STAKED");
+
+            // 2. Staker's latest staked node hasn't been resolved; this proves that staker's latest staked node can't be a parent of firstUnresolvedNode
             requireUnresolved(latestStakedNode(stakerAddress));
-            require(!node.stakers(stakerAddress), "STAKED_ON_TARGET");
+
+            // 3. staker isn't staked on first unresolved node; this proves staker's latest staked can't be a child of firstUnresolvedNode (recall staking on node requires staking on all of its parents)
+            require(!firstUnresolvedNode_.stakers(stakerAddress), "STAKED_ON_TARGET");
+            // If a staker is staked on a node that is neither a child nor a parent of firstUnresolvedNode, it must be a sibling, QED
 
             // Verify the block's deadline has passed
-            node.requirePastDeadline();
+            firstUnresolvedNode_.requirePastDeadline();
 
-            getNode(latest).requirePastChildConfirmDeadline();
+            getNode(latestConfirmedNodeNum).requirePastChildConfirmDeadline();
 
             removeOldZombies(0);
 
             // Verify that no staker is staked on this node
-            require(node.stakerCount() == countStakedZombies(node), "HAS_STAKERS");
+            require(
+                firstUnresolvedNode_.stakerCount() == countStakedZombies(firstUnresolvedNode_),
+                "HAS_STAKERS"
+            );
         }
-        rejectNextNode();
-        rollupEventBridge.nodeRejected(firstUnresolved);
+        // Simpler case: if the first unreseolved node doesn't point to the last confirmed node, another branch was confirmed and can simply reject it outright
+        _rejectNextNode();
+        rollupEventBridge.nodeRejected(firstUnresolvedNodeNum);
 
-        emit NodeRejected(firstUnresolved);
+        emit NodeRejected(firstUnresolvedNodeNum);
     }
 
     /**
@@ -112,8 +129,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     }
 
     /**
-     * @notice Move stake onto an existing node
-     * @param nodeNum Inbox of the node to move stake to. This must by a child of the node the staker is currently staked on
+     * @notice Move stake onto existing child node
+     * @param nodeNum Index of the node to move stake to. This must by a child of the node the staker is currently staked on
      * @param nodeHash Node hash of nodeNum (protects against reorgs)
      */
     function stakeOnExistingNode(uint256 nodeNum, bytes32 nodeHash)
@@ -124,17 +141,23 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         require(isStaked(msg.sender), "NOT_STAKED");
 
         require(getNodeHash(nodeNum) == nodeHash, "NODE_REORG");
-        require(nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated());
+        require(
+            nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated(),
+            "NODE_NUM_OUT_OF_RANGE"
+        );
         INode node = getNode(nodeNum);
         require(latestStakedNode(msg.sender) == node.prev(), "NOT_STAKED_PREV");
         stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
     }
 
     /**
-     * @notice Move stake onto a new node
+     * @notice Create a new node and move stake onto it
      * @param expectedNodeHash The hash of the node being created (protects against reorgs)
      * @param assertionBytes32Fields Assertion data for creating
      * @param assertionIntFields Assertion data for creating
+     * @param beforeProposedBlock Block number at previous assertion
+     @ @param beforeInboxMaxCount Inbox count at previous assertion 
+     @ @param sequencerBatchProof Proof data for ensuring expected state of inbox (used in Nodehash to protect against reorgs)
      */
     function stakeOnNewNode(
         bytes32 expectedNodeHash,
@@ -236,7 +259,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     }
 
     /**
-     * @notice Start a challenge between the given stakers over the node created by the first staker assuming that the two are staked on conflicting nodes
+     * @notice Start a challenge between the given stakers over the node created by the first staker assuming that the two are staked on conflicting nodes. N.B.: challenge creator does not necessarily need to be one of the two asserters.
      * @param stakers Stakers engaged in the challenge. The first staker should be staked on the first node
      * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
      * @param executionHashes Challenge related data for the two nodes
@@ -257,14 +280,17 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         INode node1 = getNode(nodeNums[0]);
         INode node2 = getNode(nodeNums[1]);
 
+        // ensure nodes staked on the same parent (and thus in conflict)
         require(node1.prev() == node2.prev(), "DIFF_PREV");
 
+        // ensure both stakers aren't currently in challenge
         requireUnchallengedStaker(stakers[0]);
         requireUnchallengedStaker(stakers[1]);
 
         require(node1.stakers(stakers[0]), "STAKER1_NOT_STAKED");
         require(node2.stakers(stakers[1]), "STAKER2_NOT_STAKED");
 
+        // Check param data against challenge hash
         require(
             node1.challengeHash() ==
                 RollupLib.challengeRootHash(
@@ -285,12 +311,15 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             "CHAL_HASH2"
         );
 
+        // Calculate upper limit for allowed node proposal time:
         uint256 commonEndTime =
-            node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks).add(
-                getNode(node1.prev()).firstChildBlock()
+            getNode(node1.prev())
+                .firstChildBlock() // Dispute start: dispute timer for a node starts when its first child is created
+                .add(
+                node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
             );
         if (commonEndTime < proposedTimes[1]) {
-            // The second node was created too late to be challenged.
+            // The 2nd node was created too late; loses challenge automatically.
             completeChallengeImpl(stakers[0], stakers[1]);
             return;
         }
@@ -306,7 +335,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                 commonEndTime.sub(proposedTimes[1]),
                 sequencerBridge,
                 delayedBridge
-            );
+            ); // trusted external call
 
         challengeStarted(stakers[0], stakers[1], challengeAddress);
 
@@ -357,19 +386,19 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     {
         require(zombieNum <= zombieCount(), "NO_SUCH_ZOMBIE");
         address zombieStakerAddress = zombieAddress(zombieNum);
-        uint256 latestStakedNode = zombieLatestStakedNode(zombieNum);
+        uint256 latestNodeStaked = zombieLatestStakedNode(zombieNum);
         uint256 nodesRemoved = 0;
         uint256 firstUnresolved = firstUnresolvedNode();
-        while (latestStakedNode >= firstUnresolved && nodesRemoved < maxNodes) {
-            INode node = getNode(latestStakedNode);
+        while (latestNodeStaked >= firstUnresolved && nodesRemoved < maxNodes) {
+            INode node = getNode(latestNodeStaked);
             node.removeStaker(zombieStakerAddress);
-            latestStakedNode = node.prev();
+            latestNodeStaked = node.prev();
             nodesRemoved++;
         }
-        if (latestStakedNode < firstUnresolved) {
+        if (latestNodeStaked < firstUnresolved) {
             removeZombie(zombieNum);
         } else {
-            zombieUpdateLatestStakedNode(zombieNum, latestStakedNode);
+            zombieUpdateLatestStakedNode(zombieNum, latestNodeStaked);
         }
     }
 
@@ -400,10 +429,10 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function currentRequiredStake(
         uint256 _blockNumber,
         uint256 _firstUnresolvedNodeNum,
-        uint256 _latestNodeCreated
+        uint256 _latestCreatedNode
     ) internal view returns (uint256) {
         // If there are no unresolved nodes, then you can use the base stake
-        if (_firstUnresolvedNodeNum - 1 == _latestNodeCreated) {
+        if (_firstUnresolvedNodeNum - 1 == _latestCreatedNode) {
             return baseStake;
         }
         uint256 firstUnresolvedDeadline = getNode(_firstUnresolvedNodeNum).deadlineBlock();
@@ -447,9 +476,9 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function requiredStake(
         uint256 blockNumber,
         uint256 firstUnresolvedNodeNum,
-        uint256 latestNodeCreated
-    ) public view returns (uint256) {
-        return currentRequiredStake(blockNumber, firstUnresolvedNodeNum, latestNodeCreated);
+        uint256 latestCreatedNode
+    ) external view returns (uint256) {
+        return currentRequiredStake(blockNumber, firstUnresolvedNodeNum, latestCreatedNode);
     }
 
     function currentRequiredStake() public view returns (uint256) {
@@ -542,7 +571,6 @@ contract RollupUserFacet is AbsRollupUserFacet {
         returns (uint256)
     {
         uint256 amount = withdrawFunds(msg.sender);
-        // Note: This is an unsafe external call and could be used for reentrency
         // This is safe because it occurs after all checks and effects
         destination.transfer(amount);
         return amount;
@@ -599,7 +627,6 @@ contract ERC20RollupUserFacet is AbsRollupUserFacet {
         returns (uint256)
     {
         uint256 amount = withdrawFunds(msg.sender);
-        // Note: This is an unsafe external call and could be used for reentrency
         // This is safe because it occurs after all checks and effects
         require(IERC20(stakeToken).transfer(destination, amount), "TRANSFER_FAILED");
         return amount;

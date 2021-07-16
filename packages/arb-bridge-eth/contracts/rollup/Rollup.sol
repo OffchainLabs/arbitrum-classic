@@ -195,7 +195,7 @@ contract Rollup is Proxy, RollupBase {
      * together with Open Zeppelin's proxy
      */
 
-    function getFacets() public view returns (address, address) {
+    function getFacets() external view returns (address, address) {
         return (getAdminFacet(), getUserFacet());
     }
 
