@@ -784,8 +784,9 @@ describe('ArbRollup', () => {
         zerobytes32
       )
 
-    const forceCreateTx = await rollupAdmin.forceCreateNode(
-      await newNodeHash(),
+    const forceNode1Hash = await newNodeHash()
+    const forceCreateTx1 = await rollupAdmin.forceCreateNode(
+      forceNode1Hash,
       assertion.bytes32Fields(),
       assertion.intFields(),
       '0x',
@@ -793,7 +794,13 @@ describe('ArbRollup', () => {
       prevNode.afterState.inboxMaxCount,
       prevLatestConfirmed
     )
-    const forceCreateReceipt = await forceCreateTx.wait()
+    const forceCreateReceipt1 = await forceCreateTx1.wait()
+    const forceCreatedNode1 = new Node(
+      assertion,
+      forceCreateReceipt1.blockNumber,
+      assertion.afterState.inboxCount,
+      forceNode1Hash
+    )
 
     const adminNodeNum = await rollup.rollup.latestNodeCreated()
     const midLatestConfirmed = await rollup.rollup.latestConfirmed()
@@ -831,17 +838,25 @@ describe('ArbRollup', () => {
     expect(postLatestCreated).to.equal(adminNodeNum.add(1))
     expect(postLatestConfirmed).to.equal(adminNodeNum)
 
-    prevNode = new Node(
-      assertion,
-      forceCreateReceipt.blockNumber,
-      assertion.afterState.inboxCount,
-      await newNodeHash()
-    )
     await rollupAdmin.resume()
 
     // should create node after resuming
 
+    prevNode = forceCreatedNode1
+
     await tryAdvanceChain(minimumAssertionPeriod)
+
+    await expect(
+      rollup
+        .connect(accounts[1])
+        .newStake({ value: await rollup.currentRequiredStake() })
+    ).to.be.revertedWith('STAKER_IS_ZOMBIE')
+
+    await expect(
+      makeSimpleNode(rollup.connect(accounts[1]), prevNode)
+    ).to.be.revertedWith('NOT_STAKED')
+
+    await rollup.rollup.connect(accounts[1]).removeOldZombies(0)
 
     await rollup
       .connect(accounts[1])
