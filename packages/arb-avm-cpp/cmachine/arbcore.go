@@ -485,8 +485,13 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	return true, nil
 }
 
-func (ac *ArbCore) GetMachineForSideload(blockNumber uint64) (machine.Machine, error) {
-	cMachine := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber))
+func (ac *ArbCore) GetMachineForSideload(blockNumber uint64, allowSlowLookup bool) (machine.Machine, error) {
+	allowSlowLookupInt := 0
+	if allowSlowLookup {
+		allowSlowLookupInt = 1
+	}
+
+	cMachine := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber), C.int(allowSlowLookupInt))
 
 	if cMachine == nil {
 		return nil, errors.Errorf("error getting machine for sideload")

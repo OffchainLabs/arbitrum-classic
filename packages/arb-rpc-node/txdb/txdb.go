@@ -464,7 +464,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 		// Not in memory cache, so give up
 		return nil, errors.New("block not in cache")
 	}
-	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
+	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64(), db.allowSlowLookup)
 	if err != nil || mach == nil {
 		return nil, err
 	}

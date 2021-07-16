@@ -21,24 +21,29 @@ type BlockCache struct {
 	oldestHeight uint64
 }
 
-func New(size int, expiration time.Duration) (*BlockCache, error) {
+func New(initialSize int, expiration time.Duration) (*BlockCache, error) {
 	return &BlockCache{
 		expiration: expiration,
-		cache:      make(map[uint64]*record, size),
+		cache:      make(map[uint64]*record, initialSize),
 	}, nil
 }
 
-// EmptyCache removes all entries from cache preserving nextHeight
+// emptyCacheNoLock removes all entries
 func (bc *BlockCache) emptyCacheNoLock() {
 	bc.cache = make(map[uint64]*record, len(bc.cache))
-	bc.oldestHeight = bc.nextHeight
+	bc.oldestHeight = 0
+	bc.nextHeight = 0
 }
 
 // reorgNoLock removes all obsolete blocks up to and including nextHeight
 func (bc *BlockCache) reorgNoLock(nextHeight uint64) {
-	if bc.nextHeight == 0 || nextHeight <= bc.oldestHeight {
-		// Nothing to remove or remove everything
-		bc.nextHeight = nextHeight
+	if bc.nextHeight == 0 {
+		// Nothing to remove
+		return
+	}
+
+	if nextHeight <= bc.oldestHeight {
+		// Remove everything
 		bc.emptyCacheNoLock()
 		return
 	}
@@ -58,19 +63,19 @@ func (bc *BlockCache) reorgNoLock(nextHeight uint64) {
 
 // deleteExpiredNoLock deletes all expired log entries
 func (bc *BlockCache) deleteExpiredNoLock() {
-	expirationTime := bc.expiredTimestamp()
+	expired := bc.expiredTimestamp()
 	for bc.oldestHeight < bc.nextHeight {
 		if record, exists := bc.cache[bc.oldestHeight]; exists {
-			if record.Header.Time > expirationTime {
+			if record.Header.Time > expired {
 				// Rest of blocks are not expired
 				break
 			}
 
 			// Block has expired
 			delete(bc.cache, bc.oldestHeight)
-			bc.oldestHeight++
-			continue
 		}
+
+		bc.oldestHeight++
 	}
 }
 
@@ -99,6 +104,11 @@ func (bc *BlockCache) Add(header *types.Header, value *snapshot.Snapshot) {
 		Snapshot: value,
 	}
 	bc.nextHeight = height + 1
+
+	if len(bc.cache) == 1 {
+		// Reset oldest height
+		bc.oldestHeight = height
+	}
 }
 
 // Get returns snapshot at requested height

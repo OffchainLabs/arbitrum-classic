@@ -16,21 +16,27 @@ func TestBlockCacheAdd(t *testing.T) {
 	}
 
 	// Test that expired block is not added
-	cache.Add(&types.Header{Number: big.NewInt(0), Time: uint64(time.Now().Add(expiration * -1).Unix())}, &snapshot.Snapshot{})
+	cache.Add(&types.Header{
+		Number: big.NewInt(0),
+		Time:   uint64(time.Now().Add(expiration * -1).Unix())},
+		&snapshot.Snapshot{})
 
 	if len(cache.cache) != 0 {
 		t.Error("expired block was incorrectly added to cache")
 	}
+
+	// Test that non-expired block is added
+	cache.Add(&types.Header{Number: big.NewInt(0), Time: uint64(time.Now().Unix())}, &snapshot.Snapshot{})
+
+	if len(cache.cache) != 1 {
+		t.Error("non-expired block was not added to cache")
+	}
 }
 
 func TestBlockCacheGet(t *testing.T) {
-	cache, err := New(10, 10*time.Second)
+	cache, err := New(10, 3*time.Second)
 	if err != nil {
 		t.Fatalf("error creating new block cache: %s\n", err.Error())
-	}
-
-	if len(cache.cache) != 0 {
-		t.Fatalf("cache size %v does not equal 0\n", len(cache.cache))
 	}
 
 	cache.Add(&types.Header{Number: big.NewInt(42), Time: uint64(time.Now().Unix())}, &snapshot.Snapshot{})
@@ -173,20 +179,8 @@ func TestBlockCacheReorg(t *testing.T) {
 		t.Fatalf("nextHeight %v does not equal 0\n", cache.nextHeight)
 	}
 
-	// Test adding below current oldestHeight with empty cache
 	cache.Add(&types.Header{Number: big.NewInt(40), Time: uint64(time.Now().Unix())}, &snapshot.Snapshot{})
-
-	if len(cache.cache) != 1 {
-		t.Fatalf("cache size %v does not equal 1\n", len(cache.cache))
-	}
-
-	if cache.oldestHeight != 40 {
-		t.Fatalf("oldestHeight %v  does not equal 40\n", cache.oldestHeight)
-	}
-
-	if cache.nextHeight != 41 {
-		t.Fatalf("nextHeight %v does not equal 41\n", cache.nextHeight)
-	}
+	cache.Add(&types.Header{Number: big.NewInt(42), Time: uint64(time.Now().Unix())}, &snapshot.Snapshot{})
 
 	// Test implicit reorg to value below current oldest
 	cache.Add(&types.Header{Number: big.NewInt(39), Time: uint64(time.Now().Unix())}, &snapshot.Snapshot{})
@@ -204,8 +198,9 @@ func TestBlockCacheReorg(t *testing.T) {
 	}
 
 }
+
 func TestBlockCacheExpire(t *testing.T) {
-	expiration := 3 * time.Second
+	expiration := 2 * time.Second
 	cache, err := New(10, expiration)
 	if err != nil {
 		t.Fatalf("error creating new block cache: %s\n", err.Error())

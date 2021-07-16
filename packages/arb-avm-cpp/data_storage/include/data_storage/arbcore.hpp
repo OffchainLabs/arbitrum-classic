@@ -378,7 +378,8 @@ class ArbCore {
     // Public sideload interaction
     ValueResult<std::unique_ptr<Machine>> getMachineForSideload(
         const uint256_t& block_number,
-        ValueCache& cache);
+        ValueCache& cache,
+        bool allow_slow_lookup);
 
     ValueResult<uint256_t> getSideloadPosition(ReadTransaction& tx,
                                                const uint256_t& block_number);

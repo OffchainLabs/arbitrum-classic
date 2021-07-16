@@ -55,8 +55,6 @@ class MachineExecutionConfig {
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
-    Assertion runImpl();
-
    public:
     MachineState machine_state;
 

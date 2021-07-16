@@ -2656,7 +2656,8 @@ rocksdb::Status ArbCore::deleteSideloadsStartingAt(
 
 ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
     const uint256_t& block_number,
-    ValueCache& cache) {
+    ValueCache& cache,
+    bool allow_slow_lookup) {
     // Check the cache
     {
         std::shared_lock<std::shared_mutex> lock(sideload_cache_mutex);
@@ -2668,6 +2669,11 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
             return {rocksdb::Status::OK(),
                     std::make_unique<Machine>(*it->second)};
         }
+    }
+
+    if (!allow_slow_lookup) {
+        // Don't try to query database
+        return {rocksdb::Status::NotFound(), std::unique_ptr<Machine>(nullptr)};
     }
 
     uint256_t gas_target;

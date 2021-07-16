@@ -46,6 +46,7 @@ add_executable(
 		main.cpp
         messagestore.cpp
 		opcodes.cpp
+		sideloadcache.cpp
 		value.cpp
         valuecache.cpp)
 
