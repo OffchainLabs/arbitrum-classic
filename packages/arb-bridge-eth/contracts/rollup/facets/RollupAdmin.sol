@@ -51,6 +51,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
      */
     function pause() external override {
         _pause();
+        blockPauseStart = uint128(block.number);
         emit OwnerFunctionCalled(3);
     }
 
@@ -59,6 +60,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
      */
     function resume() external override {
         _unpause();
+        blockPauseEnd = uint128(block.number);
         emit OwnerFunctionCalled(4);
     }
 

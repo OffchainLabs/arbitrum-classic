@@ -61,6 +61,10 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     address[] internal facets;
 
     mapping(address => bool) isValidator;
+
+    // if paused, this is block when paused. else the time spent paused last time
+    uint128 public blockPauseStart;
+    uint128 public blockPauseEnd;
 }
 
 contract Rollup is RollupBase {

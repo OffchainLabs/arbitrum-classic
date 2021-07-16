@@ -24,6 +24,8 @@ import "../../bridge/interfaces/IOutbox.sol";
 interface IRollupUser {
     function initialize(address _stakeToken) external;
 
+    function blocksSpentPaused() external view returns (uint256);
+
     function completeChallenge(address winningStaker, address losingStaker) external;
 
     function returnOldDeposit(address stakerAddress) external;

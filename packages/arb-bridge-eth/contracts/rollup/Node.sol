@@ -139,14 +139,17 @@ contract Node is Cloneable, INode {
     /**
      * @notice Check whether the current block number has met or passed the node's deadline
      */
-    function requirePastDeadline() external view override {
-        require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
+    function requirePastDeadline(uint256 blocksSpentPaused) external view override {
+        require(block.number >= deadlineBlock.add(blocksSpentPaused), "BEFORE_DEADLINE");
     }
 
     /**
      * @notice Check whether the current block number has met or passed deadline for children of this node to be confirmed
      */
-    function requirePastChildConfirmDeadline() external view override {
-        require(block.number >= noChildConfirmedBeforeBlock, "CHILD_TOO_RECENT");
+    function requirePastChildConfirmDeadline(uint256 blocksSpentPaused) external view override {
+        require(
+            block.number >= noChildConfirmedBeforeBlock.add(blocksSpentPaused),
+            "CHILD_TOO_RECENT"
+        );
     }
 }

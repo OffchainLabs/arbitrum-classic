@@ -13,6 +13,17 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         _;
     }
 
+    function blocksSpentPaused() public view override returns (uint256) {
+        uint256 _blockPauseStart = uint256(blockPauseStart);
+        uint256 _blockPauseEnd = uint256(blockPauseEnd);
+
+        if (_blockPauseStart > _blockPauseEnd) {
+            return 0;
+        } else {
+            return _blockPauseEnd - _blockPauseStart;
+        }
+    }
+
     /**
      * @notice Reject the next unresolved node
      * @param stakerAddress Example staker staked on sibling
@@ -29,9 +40,9 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             require(!node.stakers(stakerAddress), "STAKED_ON_TARGET");
 
             // Verify the block's deadline has passed
-            node.requirePastDeadline();
+            node.requirePastDeadline(blocksSpentPaused());
 
-            getNode(latest).requirePastChildConfirmDeadline();
+            getNode(latest).requirePastChildConfirmDeadline(blocksSpentPaused());
 
             removeOldZombies(0);
 
@@ -69,12 +80,12 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         INode node = getNode(firstUnresolvedNode());
 
         // Verify the block's deadline has passed
-        node.requirePastDeadline();
+        node.requirePastDeadline(blocksSpentPaused());
 
         // Check that prev is latest confirmed
         require(node.prev() == latestConfirmed(), "INVALID_PREV");
 
-        getNode(latestConfirmed()).requirePastChildConfirmDeadline();
+        getNode(latestConfirmed()).requirePastChildConfirmDeadline(blocksSpentPaused());
 
         removeOldZombies(0);
 
@@ -286,9 +297,12 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         );
 
         uint256 commonEndTime =
-            node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks).add(
-                getNode(node1.prev()).firstChildBlock()
-            );
+            node1
+                .deadlineBlock()
+                .sub(proposedTimes[0])
+                .add(extraChallengeTimeBlocks)
+                .add(getNode(node1.prev()).firstChildBlock())
+                .add(blocksSpentPaused());
         if (commonEndTime < proposedTimes[1]) {
             // The second node was created too late to be challenged.
             completeChallengeImpl(stakers[0], stakers[1]);
@@ -407,7 +421,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         if (_firstUnresolvedNodeNum - 1 == _latestNodeCreated) {
             return baseStake;
         }
-        uint256 firstUnresolvedDeadline = getNode(_firstUnresolvedNodeNum).deadlineBlock();
+        uint256 firstUnresolvedDeadline =
+            getNode(_firstUnresolvedNodeNum).deadlineBlock().add(blocksSpentPaused());
         if (_blockNumber < firstUnresolvedDeadline) {
             return baseStake;
         }

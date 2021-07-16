@@ -100,7 +100,9 @@ contract ValidatorUtils {
         if (inOrder) {
             // Verify the block's deadline has passed
             require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
-            rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
+            rollup.getNode(node.prev()).requirePastChildConfirmDeadline(
+                IRollupUser(address(rollup)).blocksSpentPaused()
+            );
 
             // Verify that no staker is staked on this node
             require(
@@ -122,8 +124,9 @@ contract ValidatorUtils {
         INode node = rollup.getNode(firstUnresolved);
 
         // Verify the block's deadline has passed
-        node.requirePastDeadline();
-        rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
+        uint256 blocksPaused = IRollupUser(address(rollup)).blocksSpentPaused();
+        node.requirePastDeadline(blocksPaused);
+        rollup.getNode(node.prev()).requirePastChildConfirmDeadline(blocksPaused);
 
         // Check that prev is latest confirmed
         require(node.prev() == rollup.latestConfirmed(), "INVALID_PREV");
