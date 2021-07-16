@@ -105,6 +105,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         );
 
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
+
+        // Replay protect
         require(
             node.confirmData() ==
                 RollupLib.confirmHash(
