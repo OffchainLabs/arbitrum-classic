@@ -455,7 +455,7 @@ describe('ArbRollup', () => {
     await rollupAdmin.resume()
   })
 
-  it('should allow admin to truncate nodes', async function () {
+  it('should allow admin to alter rollup while paused', async function () {
     const prevLatestConfirmed = await rollup.rollup.latestConfirmed()
     expect(prevLatestConfirmed.toNumber()).to.equal(6)
     // prevNode is prevLatestConfirmed
@@ -532,7 +532,7 @@ describe('ArbRollup', () => {
     const challengeB = await rollupAdmin.currentChallenge(
       await accounts[1].getAddress()
     )
-    const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
+    const ZERO_ADDR = ethers.constants.AddressZero
 
     expect(challengeA).to.equal(ZERO_ADDR)
     expect(challengeB).to.equal(ZERO_ADDR)
@@ -549,22 +549,25 @@ describe('ArbRollup', () => {
         arbGasSpeedLimitPerBlock
     )
 
-    const newNodeHash = nodeHash(
-      false,
-      prevNode.nodeHash,
-      assertion.executionHash(),
-      zerobytes32
-    )
+    const hasSibling = true
+    const newNodeHash = async () =>
+      nodeHash(
+        hasSibling,
+        await rollup.rollup.getNodeHash(
+          await rollup.rollup.latestNodeCreated()
+        ),
+        assertion.executionHash(),
+        zerobytes32
+      )
 
     await rollupAdmin.forceCreateNode(
-      newNodeHash,
+      await newNodeHash(),
       assertion.bytes32Fields(),
       assertion.intFields(),
+      '0x',
       prevNode.afterState.proposedBlock,
       prevNode.afterState.inboxMaxCount,
-      prevLatestConfirmed,
-      1,
-      zerobytes32
+      prevLatestConfirmed
     )
     const adminNodeNum = await rollup.rollup.latestNodeCreated()
     const midLatestConfirmed = await rollup.rollup.latestConfirmed()
@@ -573,14 +576,13 @@ describe('ArbRollup', () => {
     expect(adminNodeNum.toNumber()).to.equal(node2Num.toNumber() + 1)
 
     await rollupAdmin.forceCreateNode(
-      newNodeHash,
+      await newNodeHash(),
       assertion.bytes32Fields(),
       assertion.intFields(),
+      '0x',
       prevNode.afterState.proposedBlock,
       prevNode.afterState.inboxMaxCount,
-      prevLatestConfirmed,
-      1,
-      zerobytes32
+      prevLatestConfirmed
     )
     const postLatestCreated = await rollup.rollup.latestNodeCreated()
 

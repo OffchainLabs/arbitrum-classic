@@ -36,6 +36,8 @@ interface IRollupUser {
 }
 
 interface IRollupAdmin {
+    event OwnerFunctionCalled(uint256 indexed id);
+
     /**
      * @notice Add a contract authorized to put messages into this rollup's inbox
      * @param _outbox Outbox contract to add
@@ -191,11 +193,10 @@ interface IRollupAdmin {
         bytes32 expectedNodeHash,
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[4][2] calldata assertionIntFields,
+        bytes calldata sequencerBatchProof,
         uint256 beforeProposedBlock,
         uint256 beforeInboxMaxCount,
-        uint256 prevNode,
-        uint256 sequencerBatchEnd,
-        bytes32 sequencerBatchAcc
+        uint256 prevNode
     ) external;
 
     function forceConfirmNode(
