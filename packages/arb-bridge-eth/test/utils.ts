@@ -10,7 +10,7 @@ export async function initializeAccounts(): Promise<Signer[]> {
     const account = ethers.Wallet.createRandom().connect(provider)
     accounts.push(account)
     const tx = await account0.sendTransaction({
-      value: ethers.utils.parseEther('1.0'),
+      value: ethers.utils.parseEther('10000.0'),
       to: await account.getAddress(),
     })
     await tx.wait()

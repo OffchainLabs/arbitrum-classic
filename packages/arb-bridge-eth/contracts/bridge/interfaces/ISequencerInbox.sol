@@ -49,6 +49,12 @@ interface ISequencerInbox {
     );
 
     event SequencerAddressUpdated(address newAddress);
+    event MaxDelayBlocksUpdated(uint256 newValue);
+    event MaxDelaySecondsUpdated(uint256 newValue);
+
+    function setMaxDelayBlocks(uint256 newMaxDelayBlocks) external;
+
+    function setMaxDelaySeconds(uint256 newMaxDelaySeconds) external;
 
     function setSequencer(address newSequencer) external;
 

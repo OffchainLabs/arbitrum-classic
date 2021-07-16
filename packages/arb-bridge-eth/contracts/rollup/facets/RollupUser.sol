@@ -8,9 +8,6 @@ import "./IRollupFacets.sol";
 abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
 
-    // TODO: Configure this value based on the cost of sends
-    uint8 internal constant MAX_SEND_COUNT = 100;
-
     modifier onlyValidator {
         require(isValidator[msg.sender], "NOT_VALIDATOR");
         _;
@@ -69,8 +66,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
 
-        uint256 firstUnresolved = firstUnresolvedNode();
-        INode node = getNode(firstUnresolved);
+        INode node = getNode(firstUnresolvedNode());
 
         // Verify the block's deadline has passed
         node.requirePastDeadline();
@@ -88,31 +84,15 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             "NOT_ALL_STAKED"
         );
 
-        bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
-        require(
-            node.confirmData() ==
-                RollupLib.confirmHash(
-                    beforeSendAcc,
-                    afterSendAcc,
-                    afterLogAcc,
-                    afterSendCount,
-                    afterLogCount
-                ),
-            "CONFIRM_DATA"
-        );
-
-        outbox.processOutgoingMessages(sendsData, sendLengths);
-
-        confirmNextNode();
-
-        rollupEventBridge.nodeConfirmed(firstUnresolved);
-
-        emit NodeConfirmed(
-            firstUnresolved,
-            afterSendAcc,
+        confirmNextNode(
+            beforeSendAcc,
+            sendsData,
+            sendLengths,
             afterSendCount,
             afterLogAcc,
-            afterLogCount
+            afterLogCount,
+            outbox,
+            rollupEventBridge
         );
     }
 
@@ -150,15 +130,6 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
     }
 
-    struct StakeOnNewNodeFrame {
-        uint256 sequencerBatchEnd;
-        bytes32 sequencerBatchAcc;
-        uint256 currentInboxSize;
-        INode node;
-        bytes32 executionHash;
-        INode prevNode;
-    }
-
     /**
      * @notice Move stake onto a new node
      * @param expectedNodeHash The hash of the node being created (protects against reorgs)
@@ -175,154 +146,53 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     ) external onlyValidator whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
-        uint256 prevNodeNum = latestStakedNode(msg.sender);
-        StakeOnNewNodeFrame memory frame;
-        {
-            INode prevNode = getNode(prevNodeNum);
-            uint256 currentInboxSize = sequencerBridge.messageCount();
-
-            RollupLib.Assertion memory assertion =
-                RollupLib.decodeAssertion(
-                    assertionBytes32Fields,
-                    assertionIntFields,
-                    beforeProposedBlock,
-                    beforeInboxMaxCount,
-                    currentInboxSize
-                );
-
-            uint256 sequencerBatchEnd;
-            bytes32 sequencerBatchAcc;
-            uint256 deadlineBlock;
-            {
-                // frame.executionHash = RollupLib.executionHash(assertion);
-                // Make sure the previous state is correct against the node being built on
-                require(
-                    RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
-                    "PREV_STATE_HASH"
-                );
-
-                (sequencerBatchEnd, sequencerBatchAcc) = sequencerBridge
-                    .proveBatchContainsSequenceNumber(
-                    sequencerBatchProof,
-                    assertion.afterState.inboxCount
-                );
-
-                uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
-                // Verify that assertion meets the minimum Delta time requirement
-                require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
-
-                uint256 gasUsed = assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
-                // Minimum size requirements: each assertion must satisfy either
-                require(
-                    // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-                    assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
-                        // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                        gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
-                        assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
-                        MAX_SEND_COUNT,
-                    "TOO_SMALL"
-                );
-
-                // Don't allow an assertion to use above a maximum amount of gas
-                require(
-                    gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4),
-                    "TOO_LARGE"
-                );
-
-                {
-                    // Set deadline rounding up to the nearest block
-                    uint256 checkTime =
-                        gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
-                    deadlineBlock = max(
-                        block.number.add(confirmPeriodBlocks),
-                        prevNode.deadlineBlock()
-                    )
-                        .add(checkTime);
-                    uint256 olderSibling = prevNode.latestChildNumber();
-                    if (olderSibling != 0) {
-                        deadlineBlock = max(deadlineBlock, getNode(olderSibling).deadlineBlock());
-                    }
-                }
-                // Ensure that the assertion doesn't read past the end of the current inbox
-                require(assertion.afterState.inboxCount <= currentInboxSize, "INBOX_PAST_END");
-            }
-
-            bytes32 nodeHash;
-            {
-                bytes32 lastHash;
-                bool hasSibling = prevNode.latestChildNumber() > 0;
-                if (hasSibling) {
-                    lastHash = getNodeHash(prevNode.latestChildNumber());
-                } else {
-                    lastHash = getNodeHash(prevNodeNum);
-                }
-
-                (nodeHash, frame) = createNewNode(
-                    assertion,
-                    deadlineBlock,
-                    sequencerBatchEnd,
-                    sequencerBatchAcc,
-                    prevNodeNum,
-                    lastHash,
-                    hasSibling
-                );
-            }
-            require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
-            stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
-        }
-
-        emit NodeCreated(
-            latestNodeCreated(),
-            getNodeHash(prevNodeNum),
-            expectedNodeHash,
-            frame.executionHash,
-            frame.currentInboxSize,
-            frame.sequencerBatchEnd,
-            frame.sequencerBatchAcc,
-            assertionBytes32Fields,
-            assertionIntFields
-        );
-    }
-
-    function createNewNode(
-        RollupLib.Assertion memory assertion,
-        uint256 deadlineBlock,
-        uint256 sequencerBatchEnd,
-        bytes32 sequencerBatchAcc,
-        uint256 prevNode,
-        bytes32 prevHash,
-        bool hasSibling
-    ) internal returns (bytes32, StakeOnNewNodeFrame memory) {
-        StakeOnNewNodeFrame memory frame;
-        frame.currentInboxSize = sequencerBridge.messageCount();
-        frame.prevNode = getNode(prevNode);
-        {
-            uint256 nodeNum = latestNodeCreated() + 1;
-            frame.executionHash = RollupLib.executionHash(assertion);
-
-            frame.sequencerBatchEnd = sequencerBatchEnd;
-            frame.sequencerBatchAcc = sequencerBatchAcc;
-
-            rollupEventBridge.nodeCreated(nodeNum, prevNode, deadlineBlock, msg.sender);
-
-            frame.node = INode(
-                nodeFactory.createNode(
-                    RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
-                    RollupLib.confirmHash(assertion),
-                    prevNode,
-                    deadlineBlock
-                )
+        RollupLib.Assertion memory assertion =
+            RollupLib.decodeAssertion(
+                assertionBytes32Fields,
+                assertionIntFields,
+                beforeProposedBlock,
+                beforeInboxMaxCount,
+                sequencerBridge.messageCount()
             );
+
+        {
+            uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
+            // Verify that assertion meets the minimum Delta time requirement
+            require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
+
+            uint256 gasUsed = RollupLib.assertionGasUsed(assertion);
+            // Minimum size requirements: each assertion must satisfy either
+            require(
+                // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
+                assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
+                    // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
+                    gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
+                    assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
+                    MAX_SEND_COUNT,
+                "TOO_SMALL"
+            );
+
+            // Don't allow an assertion to use above a maximum amount of gas
+            require(gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
         }
 
-        bytes32 nodeHash =
-            RollupLib.nodeHash(hasSibling, prevHash, frame.executionHash, frame.sequencerBatchAcc);
+        createNewNode(
+            assertion,
+            assertionBytes32Fields,
+            assertionIntFields,
+            sequencerBatchProof,
+            CreateNodeDataFrame({
+                arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
+                confirmPeriodBlocks: confirmPeriodBlocks,
+                prevNode: latestStakedNode(msg.sender),
+                sequencerInbox: sequencerBridge,
+                rollupEventBridge: rollupEventBridge,
+                nodeFactory: nodeFactory
+            }),
+            expectedNodeHash
+        );
 
-        nodeCreated(frame.node, nodeHash);
-        frame.prevNode.childCreated(latestNodeCreated());
-
-        return (nodeHash, frame);
+        stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
     }
 
     /**

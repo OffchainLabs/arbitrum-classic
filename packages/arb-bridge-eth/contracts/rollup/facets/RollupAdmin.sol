@@ -162,7 +162,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         external
         override
     {
-        sequencerInboxMaxDelayBlocks = newSequencerInboxMaxDelayBlocks;
+        ISequencerInbox(sequencerBridge).setMaxDelayBlocks(newSequencerInboxMaxDelayBlocks);
         emit OwnerFunctionCalled(14);
     }
 
@@ -174,7 +174,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         external
         override
     {
-        sequencerInboxMaxDelaySeconds = newSequencerInboxMaxDelaySeconds;
+        ISequencerInbox(sequencerBridge).setMaxDelaySeconds(newSequencerInboxMaxDelaySeconds);
         emit OwnerFunctionCalled(15);
     }
 
@@ -242,80 +242,93 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         emit OwnerFunctionCalled(20);
     }
 
-    /*
-    function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external override whenPaused {
-        require(stackerA.length == stackerB.length, "WRONG_LENGTH");
-        for (uint256 i = 0; i < stackerA.length; i++) {
-            address chall = inChallenge(stackerA[i], stackerB[i]);
+    function forceResolveChallenge(address[] memory stakerA, address[] memory stakerB)
+        external
+        override
+        whenPaused
+    {
+        require(stakerA.length == stakerB.length, "WRONG_LENGTH");
+        for (uint256 i = 0; i < stakerA.length; i++) {
+            address chall = inChallenge(stakerA[i], stakerB[i]);
 
             require(address(0) != chall, "NOT_IN_CHALL");
-            clearChallenge(stackerA[i]);
-            clearChallenge(stackerB[i]);
+            clearChallenge(stakerA[i]);
+            clearChallenge(stakerB[i]);
 
             IChallenge(chall).clearChallenge();
         }
+        emit OwnerFunctionCalled(21);
     }
 
-    function forceRefundStaker(address[] memory stacker) external override whenPaused {
-        for (uint256 i = 0; i < stacker.length; i++) {
-            withdrawStaker(stacker[i]);
+    function forceRefundStaker(address[] memory staker) external override whenPaused {
+        for (uint256 i = 0; i < staker.length; i++) {
+            reduceStakeTo(staker[i], 0);
+            turnIntoZombie(staker[i]);
         }
+        emit OwnerFunctionCalled(22);
     }
 
     function forceCreateNode(
         bytes32 expectedNodeHash,
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[4][2] calldata assertionIntFields,
+        bytes calldata sequencerBatchProof,
         uint256 beforeProposedBlock,
         uint256 beforeInboxMaxCount,
-        uint256 prevNode,
-        uint256 deadlineBlock,
-        uint256 sequencerBatchEnd,
-        bytes32 sequencerBatchAcc
+        uint256 prevNode
     ) external override whenPaused {
         require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
 
+        // The admin does not need to prove against the sequencer bridge
         RollupLib.Assertion memory assertion =
-                RollupLib.decodeAssertion(
-                    assertionBytes32Fields,
-                    assertionIntFields,
-                    beforeProposedBlock,
-                    beforeInboxMaxCount,
-                    sequencerBridge.messageCount()
-                );
-
-        bytes32 nodeHash =
-            _newNode(
-                assertion,
-                deadlineBlock,
-                sequencerBatchEnd,
-                sequencerBatchAcc,
-                prevNode,
-                getNodeHash(prevNode),
-                false
+            RollupLib.decodeAssertion(
+                assertionBytes32Fields,
+                assertionIntFields,
+                beforeProposedBlock,
+                beforeInboxMaxCount,
+                sequencerBridge.messageCount()
             );
-        // TODO: should we add a stake?
-        
-        require(expectedNodeHash == nodeHash, "NOT_EXPECTED_HASH");
+
+        createNewNode(
+            assertion,
+            assertionBytes32Fields,
+            assertionIntFields,
+            sequencerBatchProof,
+            CreateNodeDataFrame({
+                arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
+                confirmPeriodBlocks: confirmPeriodBlocks,
+                prevNode: prevNode,
+                sequencerInbox: sequencerBridge,
+                rollupEventBridge: rollupEventBridge,
+                nodeFactory: nodeFactory
+            }),
+            expectedNodeHash
+        );
+
+        emit OwnerFunctionCalled(23);
     }
 
     function forceConfirmNode(
+        uint256 nodeNum,
+        bytes32 beforeSendAcc,
         bytes calldata sendsData,
-        uint256[] calldata sendLengths
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
     ) external override whenPaused {
-        outbox.processOutgoingMessages(sendsData, sendLengths);
-
-        confirmLatestNode();
-
-        rollupEventBridge.nodeConfirmed(latestConfirmed());
-
-        // emit NodeConfirmed(
-        //     firstUnresolved,
-        //     afterSendAcc,
-        //     afterSendCount,
-        //     afterLogAcc,
-        //     afterLogCount
-        // );
+        // this skips deadline, staker and zombie validation
+        confirmNode(
+            nodeNum,
+            beforeSendAcc,
+            sendsData,
+            sendLengths,
+            afterSendCount,
+            afterLogAcc,
+            afterLogCount,
+            outbox,
+            rollupEventBridge
+        );
+        emit OwnerFunctionCalled(24);
     }
-    */
 }

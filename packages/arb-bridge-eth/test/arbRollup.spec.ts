@@ -16,7 +16,7 @@
 
 /* eslint-env node, mocha */
 import { ethers, deployments, run } from 'hardhat'
-import { Signer, BigNumberish } from 'ethers'
+import { Signer, BigNumberish, Contract, BytesLike } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { TransactionResponse } from '@ethersproject/providers'
 import { assert, expect } from 'chai'
@@ -34,6 +34,7 @@ import {
   NodeState,
   Assertion,
   RollupContract,
+  nodeHash,
 } from './rolluplib'
 
 const initialVmState =
@@ -49,6 +50,7 @@ const sequencerDelayBlocks = 15
 const sequencerDelaySeconds = 900
 
 let rollup: RollupContract
+let rollupAdmin: Contract
 let challenge: Challenge
 // let rollupTester: RollupTester
 // let assertionInfo: Assertion
@@ -58,12 +60,19 @@ async function createRollup(): Promise<{
   rollupCon: Rollup
   blockCreated: number
 }> {
-  const ChallengeFactory = await deployments.get('ChallengeFactory')
-  const RollupCreatorNoProxy = (await ethers.getContractFactory(
-    'RollupCreatorNoProxy'
-  )) as RollupCreatorNoProxy__factory
-  const rollupCreator = await RollupCreatorNoProxy.deploy(
-    ChallengeFactory.address,
+  const rollupConfig: [
+    BytesLike,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    BigNumberish,
+    string,
+    string,
+    string,
+    BigNumberish,
+    BigNumberish,
+    BytesLike
+  ] = [
     initialVmState,
     confirmationPeriodBlocks,
     0,
@@ -74,11 +83,33 @@ async function createRollup(): Promise<{
     await accounts[1].getAddress(), // sequencer
     sequencerDelayBlocks,
     sequencerDelaySeconds,
-    '0x'
-  )
+    '0x',
+  ]
 
-  const receipt = await (rollupCreator.deployTransaction as TransactionResponse).wait()
-  if (receipt.logs == undefined) {
+  let receipt
+  let rollupCreator
+
+  if (process.env['ROLLUP_DEBUG'] === '1') {
+    // this deploys the rollup contracts without proxies to facilitate debugging
+    const ChallengeFactory = await deployments.get('ChallengeFactory')
+    const RollupCreatorNoProxy = (await ethers.getContractFactory(
+      'RollupCreatorNoProxy'
+    )) as RollupCreatorNoProxy__factory
+    rollupCreator = await RollupCreatorNoProxy.deploy(
+      ChallengeFactory.address,
+      ...rollupConfig
+    )
+    receipt = await rollupCreator.deployTransaction.wait()
+  } else {
+    rollupCreator = await ethers.getContractAt(
+      'RollupCreator',
+      (await deployments.get('RollupCreator')).address
+    )
+    const createRollupTx = await rollupCreator.createRollup(...rollupConfig)
+    receipt = await createRollupTx.wait()
+  }
+
+  if (!receipt.logs) {
     throw Error('expected receipt to have logs')
   }
 
@@ -95,8 +126,8 @@ async function createRollup(): Promise<{
     await ethers.getContractFactory('RollupAdminFacet')
   ).connect(accounts[0])
 
-  const rollupAdminCon = RollupAdmin.attach(parsedEv.args.rollupAddress)
-  await rollupAdminCon.setValidator(
+  rollupAdmin = RollupAdmin.attach(parsedEv.args.rollupAddress)
+  await rollupAdmin.setValidator(
     [
       await accounts[1].getAddress(),
       await accounts[2].getAddress(),
@@ -404,5 +435,175 @@ describe('ArbRollup', () => {
 
   it('returns stake to staker', async function () {
     await rollup.returnOldDeposit(await accounts[2].getAddress())
+  })
+
+  it('should pause the contracts then resume', async function () {
+    const prevIsPaused = await rollup.rollup.paused()
+    expect(prevIsPaused).to.equal(false)
+
+    await rollupAdmin.pause()
+
+    const postIsPaused = await rollup.rollup.paused()
+    expect(postIsPaused).to.equal(true)
+
+    await expect(
+      rollup
+        .connect(accounts[2])
+        .addToDeposit(await accounts[2].getAddress(), { value: 5 })
+    ).to.be.revertedWith('Pausable: paused')
+
+    await rollupAdmin.resume()
+  })
+
+  it('should allow admin to alter rollup while paused', async function () {
+    const prevLatestConfirmed = await rollup.rollup.latestConfirmed()
+    expect(prevLatestConfirmed.toNumber()).to.equal(6)
+    // prevNode is prevLatestConfirmed
+    prevNode = challengerNode
+
+    const stake = await rollup.currentRequiredStake()
+
+    await rollup.newStake({ value: stake })
+    const { node: node1 } = await makeSimpleNode(rollup, prevNode)
+    const node1Num = await rollup.rollup.latestNodeCreated()
+
+    await tryAdvanceChain(minimumAssertionPeriod)
+
+    await rollup.connect(accounts[1]).newStake({ value: stake })
+    const { node: node2 } = await makeSimpleNode(
+      rollup.connect(accounts[1]),
+      prevNode,
+      node1
+    )
+    const node2Num = await rollup.rollup.latestNodeCreated()
+
+    const tx = await rollup.createChallenge(
+      await accounts[8].getAddress(),
+      node1Num,
+      await accounts[1].getAddress(),
+      node2Num,
+      node1,
+      node2
+    )
+    const receipt = await tx.wait()
+    const ev = rollup.rollup.interface.parseLog(
+      receipt.logs![receipt.logs!.length - 1]
+    )
+    expect(ev.name).to.equal('RollupChallengeStarted')
+    const parsedEv = (ev as any) as { args: { challengeContract: string } }
+    const Challenge = await ethers.getContractFactory('Challenge')
+    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+
+    const preCode = await ethers.provider.getCode(challenge.address)
+    expect(preCode).to.not.equal('0x')
+
+    await expect(
+      rollupAdmin.forceResolveChallenge(
+        [await accounts[8].getAddress()],
+        [await accounts[1].getAddress()]
+      )
+    ).to.be.revertedWith('Pausable: not paused')
+
+    await expect(
+      rollup.createChallenge(
+        await accounts[8].getAddress(),
+        node1Num,
+        await accounts[1].getAddress(),
+        node2Num,
+        node1,
+        node2
+      )
+    ).to.be.revertedWith('IN_CHAL')
+
+    await rollupAdmin.pause()
+
+    await rollupAdmin.forceResolveChallenge(
+      [await accounts[8].getAddress()],
+      [await accounts[1].getAddress()]
+    )
+
+    // challenge should have been destroyed
+    const postCode = await ethers.provider.getCode(challenge.address)
+    expect(postCode).to.equal('0x')
+
+    const challengeA = await rollupAdmin.currentChallenge(
+      await accounts[8].getAddress()
+    )
+    const challengeB = await rollupAdmin.currentChallenge(
+      await accounts[1].getAddress()
+    )
+    const ZERO_ADDR = ethers.constants.AddressZero
+
+    expect(challengeA).to.equal(ZERO_ADDR)
+    expect(challengeB).to.equal(ZERO_ADDR)
+
+    await rollupAdmin.forceRefundStaker([
+      await accounts[8].getAddress(),
+      await accounts[1].getAddress(),
+    ])
+
+    const block = await ethers.provider.getBlock('latest')
+    const assertion = makeSimpleAssertion(
+      prevNode.afterState,
+      (block.number - prevNode.afterState.proposedBlock + 1) *
+        arbGasSpeedLimitPerBlock
+    )
+
+    const hasSibling = true
+    const newNodeHash = async () =>
+      nodeHash(
+        hasSibling,
+        await rollup.rollup.getNodeHash(
+          await rollup.rollup.latestNodeCreated()
+        ),
+        assertion.executionHash(),
+        zerobytes32
+      )
+
+    await rollupAdmin.forceCreateNode(
+      await newNodeHash(),
+      assertion.bytes32Fields(),
+      assertion.intFields(),
+      '0x',
+      prevNode.afterState.proposedBlock,
+      prevNode.afterState.inboxMaxCount,
+      prevLatestConfirmed
+    )
+    const adminNodeNum = await rollup.rollup.latestNodeCreated()
+    const midLatestConfirmed = await rollup.rollup.latestConfirmed()
+    expect(midLatestConfirmed.toNumber()).to.equal(6)
+
+    expect(adminNodeNum.toNumber()).to.equal(node2Num.toNumber() + 1)
+
+    await rollupAdmin.forceCreateNode(
+      await newNodeHash(),
+      assertion.bytes32Fields(),
+      assertion.intFields(),
+      '0x',
+      prevNode.afterState.proposedBlock,
+      prevNode.afterState.inboxMaxCount,
+      prevLatestConfirmed
+    )
+    const postLatestCreated = await rollup.rollup.latestNodeCreated()
+
+    const sends: Array<BytesLike> = []
+    const messageData = ethers.utils.concat(sends)
+    const messageLengths = sends.map(msg => msg.length)
+
+    await rollupAdmin.forceConfirmNode(
+      adminNodeNum,
+      zerobytes32,
+      messageData,
+      messageLengths,
+      0,
+      zerobytes32,
+      0
+    )
+
+    const postLatestConfirmed = await rollup.rollup.latestConfirmed()
+    expect(postLatestCreated).to.equal(adminNodeNum.add(1))
+    expect(postLatestConfirmed).to.equal(adminNodeNum)
+
+    await rollupAdmin.resume()
   })
 })
