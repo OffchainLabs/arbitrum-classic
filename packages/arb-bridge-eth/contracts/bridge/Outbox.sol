@@ -251,11 +251,6 @@ contract Outbox is IOutbox, Cloneable {
     }
 
     // bad semantic method, here to preserve interface compatability with OldOutbox.
-    function outboxes(uint256 outboxEntryIndex) external view returns (OutboxEntry) {
-        return outboxEntries[outboxEntryIndex];
-    }
-
-    // bad semantic method, here to preserve interface compatability with OldOutbox.
     function outboxesLength() public view returns (uint256) {
         return outboxEntries.length;
     }
