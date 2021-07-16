@@ -104,7 +104,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             require(l1BlockAndTimestamp[0] + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
             require(l1BlockAndTimestamp[1] + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
 
-            // Ensure that the penultimate message on the delayed queue was the last delayed message added to the sequencer queue
+            // Verify that message hash represents the last message sequence of delayed message to be included
             bytes32 prevDelayedAcc = 0;
             if (_totalDelayedMessagesRead > 1) {
                 prevDelayedAcc = delayedInbox.inboxAccs(_totalDelayedMessagesRead - 2);
@@ -396,6 +396,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         return proveInboxContainsMessageImp(proof, _messageCount);
     }
 
+    // deprecated in favor of proveInboxContainsMessage
     function proveBatchContainsSequenceNumber(bytes calldata proof, uint256 _messageCount)
         external
         view

@@ -251,7 +251,7 @@ contract RollupCore is IRollupCore {
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
 
         INode node = getNode(nodeNum);
-        // Replay protect:
+        // Authenticate data against node's confirm data pre-image
         require(
             node.confirmData() ==
                 RollupLib.confirmHash(

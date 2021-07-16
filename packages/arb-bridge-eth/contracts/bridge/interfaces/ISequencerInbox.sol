@@ -72,9 +72,4 @@ interface ISequencerInbox {
         external
         view
         returns (uint256, bytes32);
-
-    function proveBatchContainsSequenceNumber(bytes calldata proof, uint256 inboxCount)
-        external
-        view
-        returns (uint256, bytes32);
 }
