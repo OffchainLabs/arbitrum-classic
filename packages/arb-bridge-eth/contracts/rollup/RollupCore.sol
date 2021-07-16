@@ -513,11 +513,11 @@ contract RollupCore is IRollupCore {
         bool hasSibling;
         uint256 deadlineBlock;
         uint256 gasUsed;
+        uint256 sequencerBatchEnd;
+        bytes32 sequencerBatchAcc;
     }
 
     struct CreateNodeDataFrame {
-        uint256 sequencerBatchEnd;
-        bytes32 sequencerBatchAcc;
         uint256 prevNode;
         uint256 confirmPeriodBlocks;
         uint256 arbGasSpeedLimitPerBlock;
@@ -533,6 +533,7 @@ contract RollupCore is IRollupCore {
         RollupLib.Assertion memory assertion,
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[4][2] calldata assertionIntFields,
+        bytes calldata sequencerBatchProof,
         CreateNodeDataFrame memory inputDataFrame,
         bytes32 expectedNodeHash
     ) internal returns (bytes32 newNodeHash) {
@@ -553,6 +554,13 @@ contract RollupCore is IRollupCore {
             require(
                 assertion.afterState.inboxCount <= memoryFrame.currentInboxSize,
                 "INBOX_PAST_END"
+            );
+
+            (memoryFrame.sequencerBatchEnd, memoryFrame.sequencerBatchAcc) = inputDataFrame
+                .sequencerInbox
+                .proveBatchContainsSequenceNumber(
+                sequencerBatchProof,
+                assertion.afterState.inboxCount
             );
         }
 
@@ -593,7 +601,7 @@ contract RollupCore is IRollupCore {
                 memoryFrame.hasSibling,
                 memoryFrame.lastHash,
                 memoryFrame.executionHash,
-                inputDataFrame.sequencerBatchAcc
+                memoryFrame.sequencerBatchAcc
             );
             require(newNodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
 
@@ -612,8 +620,8 @@ contract RollupCore is IRollupCore {
             newNodeHash,
             memoryFrame.executionHash,
             memoryFrame.currentInboxSize,
-            inputDataFrame.sequencerBatchEnd,
-            inputDataFrame.sequencerBatchAcc,
+            memoryFrame.sequencerBatchEnd,
+            memoryFrame.sequencerBatchAcc,
             assertionBytes32Fields,
             assertionIntFields
         );

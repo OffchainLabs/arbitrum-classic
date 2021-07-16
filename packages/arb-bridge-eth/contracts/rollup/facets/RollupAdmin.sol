@@ -272,11 +272,10 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         bytes32 expectedNodeHash,
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[4][2] calldata assertionIntFields,
+        bytes calldata sequencerBatchProof,
         uint256 beforeProposedBlock,
         uint256 beforeInboxMaxCount,
-        uint256 prevNode,
-        uint256 sequencerBatchEnd,
-        bytes32 sequencerBatchAcc
+        uint256 prevNode
     ) external override whenPaused {
         require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
 
@@ -294,9 +293,8 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
             assertion,
             assertionBytes32Fields,
             assertionIntFields,
+            sequencerBatchProof,
             CreateNodeDataFrame({
-                sequencerBatchEnd: sequencerBatchEnd,
-                sequencerBatchAcc: sequencerBatchAcc,
                 arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
                 confirmPeriodBlocks: confirmPeriodBlocks,
                 prevNode: prevNode,

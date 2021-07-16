@@ -564,11 +564,10 @@ describe('ArbRollup', () => {
       await newNodeHash(),
       assertion.bytes32Fields(),
       assertion.intFields(),
+      '0x',
       prevNode.afterState.proposedBlock,
       prevNode.afterState.inboxMaxCount,
-      prevLatestConfirmed,
-      1,
-      zerobytes32
+      prevLatestConfirmed
     )
     const adminNodeNum = await rollup.rollup.latestNodeCreated()
     const midLatestConfirmed = await rollup.rollup.latestConfirmed()
@@ -580,11 +579,10 @@ describe('ArbRollup', () => {
       await newNodeHash(),
       assertion.bytes32Fields(),
       assertion.intFields(),
+      '0x',
       prevNode.afterState.proposedBlock,
       prevNode.afterState.inboxMaxCount,
-      prevLatestConfirmed,
-      1,
-      zerobytes32
+      prevLatestConfirmed
     )
     const postLatestCreated = await rollup.rollup.latestNodeCreated()
 

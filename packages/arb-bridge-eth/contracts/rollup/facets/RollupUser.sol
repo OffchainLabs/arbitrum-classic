@@ -155,12 +155,6 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                 sequencerBridge.messageCount()
             );
 
-        (uint256 sequencerBatchEnd, bytes32 sequencerBatchAcc) =
-            sequencerBridge.proveBatchContainsSequenceNumber(
-                sequencerBatchProof,
-                assertion.afterState.inboxCount
-            );
-
         {
             uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
             // Verify that assertion meets the minimum Delta time requirement
@@ -186,9 +180,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             assertion,
             assertionBytes32Fields,
             assertionIntFields,
+            sequencerBatchProof,
             CreateNodeDataFrame({
-                sequencerBatchEnd: sequencerBatchEnd,
-                sequencerBatchAcc: sequencerBatchAcc,
                 arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
                 confirmPeriodBlocks: confirmPeriodBlocks,
                 prevNode: latestStakedNode(msg.sender),
