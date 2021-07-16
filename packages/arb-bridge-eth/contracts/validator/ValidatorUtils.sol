@@ -22,6 +22,7 @@ pragma experimental ABIEncoderV2;
 
 import "../rollup/Rollup.sol";
 import "../challenge/IChallenge.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract ValidatorUtils {
     enum ConfirmType { NONE, VALID, INVALID }
@@ -97,12 +98,14 @@ contract ValidatorUtils {
         IRollupUser(address(rollup)).requireUnresolvedExists();
         INode node = rollup.getNode(rollup.firstUnresolvedNode());
         bool inOrder = node.prev() == rollup.latestConfirmed();
+        uint256 blocksSpentPaused = IRollupUser(address(rollup)).blocksSpentPaused();
         if (inOrder) {
             // Verify the block's deadline has passed
-            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
-            rollup.getNode(node.prev()).requirePastChildConfirmDeadline(
-                IRollupUser(address(rollup)).blocksSpentPaused()
+            require(
+                block.number >= SafeMath.add(node.deadlineBlock(), blocksSpentPaused),
+                "BEFORE_DEADLINE"
             );
+            rollup.getNode(node.prev()).requirePastChildConfirmDeadline(blocksSpentPaused);
 
             // Verify that no staker is staked on this node
             require(
