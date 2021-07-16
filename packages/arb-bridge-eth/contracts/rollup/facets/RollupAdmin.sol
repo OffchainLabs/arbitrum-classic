@@ -262,7 +262,8 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
 
     function forceRefundStaker(address[] memory staker) external override whenPaused {
         for (uint256 i = 0; i < staker.length; i++) {
-            withdrawStaker(staker[i]);
+            reduceStakeTo(staker[i], 0);
+            turnIntoZombie(staker[i]);
         }
         emit OwnerFunctionCalled(22);
     }
@@ -298,7 +299,6 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
                 sequencerBatchAcc: sequencerBatchAcc,
                 arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
                 confirmPeriodBlocks: confirmPeriodBlocks,
-                minimumAssertionPeriod: minimumAssertionPeriod,
                 prevNode: prevNode,
                 sequencerInbox: sequencerBridge,
                 rollupEventBridge: rollupEventBridge,

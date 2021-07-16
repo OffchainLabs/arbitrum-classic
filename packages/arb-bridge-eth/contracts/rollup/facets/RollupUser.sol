@@ -161,6 +161,27 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                 assertion.afterState.inboxCount
             );
 
+        {
+            uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
+            // Verify that assertion meets the minimum Delta time requirement
+            require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
+
+            uint256 gasUsed = assertionGasUsed(assertion);
+            // Minimum size requirements: each assertion must satisfy either
+            require(
+                // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
+                assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
+                    // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
+                    gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
+                    assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
+                    MAX_SEND_COUNT,
+                "TOO_SMALL"
+            );
+
+            // Don't allow an assertion to use above a maximum amount of gas
+            require(gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
+        }
+
         createNewNode(
             assertion,
             assertionBytes32Fields,
@@ -170,7 +191,6 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                 sequencerBatchAcc: sequencerBatchAcc,
                 arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
                 confirmPeriodBlocks: confirmPeriodBlocks,
-                minimumAssertionPeriod: minimumAssertionPeriod,
                 prevNode: latestStakedNode(msg.sender),
                 sequencerInbox: sequencerBridge,
                 rollupEventBridge: rollupEventBridge,

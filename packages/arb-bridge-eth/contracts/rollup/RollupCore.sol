@@ -521,7 +521,6 @@ contract RollupCore is IRollupCore {
         uint256 prevNode;
         uint256 confirmPeriodBlocks;
         uint256 arbGasSpeedLimitPerBlock;
-        uint256 minimumAssertionPeriod;
         ISequencerInbox sequencerInbox;
         RollupEventBridge rollupEventBridge;
         INodeFactory nodeFactory;
@@ -544,33 +543,10 @@ contract RollupCore is IRollupCore {
             memoryFrame.prevNode = getNode(inputDataFrame.prevNode);
             memoryFrame.currentInboxSize = inputDataFrame.sequencerInbox.messageCount();
 
-            // frame.executionHash = RollupLib.executionHash(assertion);
             // Make sure the previous state is correct against the node being built on
             require(
                 RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.stateHash(),
                 "PREV_STATE_HASH"
-            );
-
-            uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
-            // Verify that assertion meets the minimum Delta time requirement
-            require(timeSinceLastNode >= inputDataFrame.minimumAssertionPeriod, "TIME_DELTA");
-
-            uint256 gasUsed = assertionGasUsed(assertion);
-            // Minimum size requirements: each assertion must satisfy either
-            require(
-                // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-                assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
-                    // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                    gasUsed >= timeSinceLastNode.mul(inputDataFrame.arbGasSpeedLimitPerBlock) ||
-                    assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
-                    MAX_SEND_COUNT,
-                "TOO_SMALL"
-            );
-
-            // Don't allow an assertion to use above a maximum amount of gas
-            require(
-                gasUsed <= timeSinceLastNode.mul(inputDataFrame.arbGasSpeedLimitPerBlock).mul(4),
-                "TOO_LARGE"
             );
 
             // Ensure that the assertion doesn't read past the end of the current inbox
