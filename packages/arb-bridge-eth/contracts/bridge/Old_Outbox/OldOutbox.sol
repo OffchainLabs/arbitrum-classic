@@ -18,24 +18,21 @@
 
 pragma solidity ^0.6.11;
 
-import "./interfaces/IOutbox.sol";
-import "./interfaces/IBridge.sol";
+import "./OutboxEntry.sol";
 
-import "./Messages.sol";
-import "../libraries/MerkleLib.sol";
-import "../libraries/BytesLib.sol";
-import "../libraries/Cloneable.sol";
+import "../interfaces/IOutbox.sol";
+import "../interfaces/IBridge.sol";
+
+import "../Messages.sol";
+import "../../libraries/MerkleLib.sol";
+import "../../libraries/BytesLib.sol";
+import "../../libraries/Cloneable.sol";
 
 import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
-contract Outbox is IOutbox, Cloneable {
+contract OldOutbox is IOutbox, Cloneable {
     using BytesLib for bytes;
-
-    struct OutboxEntry {
-        bytes32 root;
-        mapping(bytes32 => bool) spentOutput;
-    }
 
     bytes1 internal constant MSG_ROOT = 0;
 
@@ -44,7 +41,8 @@ contract Outbox is IOutbox, Cloneable {
     address public rollup;
     IBridge public bridge;
 
-    OutboxEntry[] public outboxEntries;
+    UpgradeableBeacon public beacon;
+    OutboxEntry[] public outboxes;
 
     // Note, these variables are set and then wiped during a single transaction.
     // Therefore their values don't need to be maintained, and their slots will
@@ -53,12 +51,16 @@ contract Outbox is IOutbox, Cloneable {
     uint128 internal _l2Block;
     uint128 internal _l1Block;
     uint128 internal _timestamp;
-    uint128 public constant OUTBOX_VERSION = 1;
+    uint128 public constant OUTBOX_VERSION = 0;
 
     function initialize(address _rollup, IBridge _bridge) external {
         require(rollup == address(0), "ALREADY_INIT");
         rollup = _rollup;
         bridge = _bridge;
+
+        address outboxEntryTemplate = address(new OutboxEntry());
+        beacon = new UpgradeableBeacon(outboxEntryTemplate);
+        beacon.transferOwnership(_rollup);
     }
 
     /// @notice When l2ToL1Sender returns a nonzero address, the message was originated by an L2 account
@@ -101,17 +103,17 @@ contract Outbox is IOutbox, Cloneable {
             uint256 numInBatch = data.toUint(33);
             bytes32 outputRoot = data.toBytes32(65);
 
-            OutboxEntry memory newOutboxEntry = OutboxEntry(outputRoot);
-
-            uint256 outboxEntryIndex = outboxEntries.length;
-            outboxEntries.push(newOutboxEntry);
-            emit OutboxEntryCreated(batchNum, outboxEntryIndex, outputRoot, numInBatch);
+            address clone = address(new BeaconProxy(address(beacon), ""));
+            OutboxEntry(clone).initialize(outputRoot, numInBatch);
+            uint256 outboxIndex = outboxes.length;
+            outboxes.push(OutboxEntry(clone));
+            emit OutboxEntryCreated(batchNum, outboxIndex, outputRoot, numInBatch);
         }
     }
 
     /**
      * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired and
-     * @param outboxEntryIndex Index of OutboxEntry in outboxEntries array
+     * @param outboxIndex Index of OutboxEntry in outboxes array
      * @param proof Merkle proof of message inclusion in outbox entry
      * @param index Merkle path to message
      * @param l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)
@@ -123,7 +125,7 @@ contract Outbox is IOutbox, Cloneable {
      * @param calldataForL1 abi-encoded L1 message data
      */
     function executeTransaction(
-        uint256 outboxEntryIndex,
+        uint256 outboxIndex,
         bytes32[] calldata proof,
         uint256 index,
         address l2Sender,
@@ -145,8 +147,8 @@ contract Outbox is IOutbox, Cloneable {
                 calldataForL1
             );
 
-        recordOutputAsSpent(outboxEntryIndex, proof, index, userTx);
-        emit OutBoxTransactionExecuted(destAddr, l2Sender, outboxEntryIndex, index);
+        spendOutput(outboxIndex, proof, index, userTx);
+        emit OutBoxTransactionExecuted(destAddr, l2Sender, outboxIndex, index);
 
         address currentSender = _sender;
         uint128 currentL2Block = _l2Block;
@@ -166,8 +168,8 @@ contract Outbox is IOutbox, Cloneable {
         _timestamp = currentTimestamp;
     }
 
-    function recordOutputAsSpent(
-        uint256 outboxEntryIndex,
+    function spendOutput(
+        uint256 outboxIndex,
         bytes32[] memory proof,
         uint256 path,
         bytes32 item
@@ -177,18 +179,19 @@ contract Outbox is IOutbox, Cloneable {
 
         // Hash the leaf an extra time to prove it's a leaf
         bytes32 calcRoot = calculateMerkleRoot(proof, path, item);
-        OutboxEntry storage outboxEntry = outboxEntries[outboxEntryIndex];
-        require(outboxEntry.root != bytes32(0), "NO_OUTBOX_ENTRY");
+        OutboxEntry outbox = outboxes[outboxIndex];
+        require(address(outbox) != address(0), "NO_OUTBOX");
 
         // With a minimal path, the pair of path and proof length should always identify
         // a unique leaf. The path itself is not enough since the path length to different
         // leaves could potentially be different
         bytes32 uniqueKey = keccak256(abi.encodePacked(path, proof.length));
+        uint256 numRemaining = outbox.spendOutput(calcRoot, uniqueKey);
 
-        require(!outboxEntry.spentOutput[uniqueKey], "ALREADY_SPENT");
-        require(calcRoot == outboxEntry.root, "BAD_ROOT");
-
-        outboxEntry.spentOutput[uniqueKey] = true;
+        if (numRemaining == 0) {
+            outbox.destroy();
+            outboxes[outboxIndex] = OutboxEntry(address(0));
+        }
     }
 
     function executeBridgeCall(
@@ -242,21 +245,7 @@ contract Outbox is IOutbox, Cloneable {
         return MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
     }
 
-    function outboxEntriesLength() external view returns (uint256) {
-        return outboxEntries.length;
-    }
-
-    function outboxEntryExists(uint256 outboxEntryIndex) external view returns (bool) {
-        return outboxEntries[outboxEntryIndex].root != bytes32(0);
-    }
-
-    // bad semantic method, here to preserve interface compatability with OldOutbox.
-    function outboxes(uint256 outboxEntryIndex) external view returns (OutboxEntry) {
-        return outboxEntries[outboxEntryIndex];
-    }
-
-    // bad semantic method, here to preserve interface compatability with OldOutbox.
     function outboxesLength() public view returns (uint256) {
-        return outboxEntries.length;
+        return outboxes.length;
     }
 }
