@@ -46,7 +46,8 @@ struct ValueBeingParsed {
 constexpr uint64_t tupleInlineNumerator = 7;
 constexpr uint64_t tupleInlineDenominator = 8;
 bool shouldInlineTuple(const Tuple& tuple) {
-    return (::hash(tuple) % tupleInlineDenominator) < tupleInlineNumerator;
+    return (::hash(tuple) % tupleInlineDenominator) < tupleInlineNumerator ||
+           tuple.tuple_size() == 0;
 }
 
 namespace {
@@ -73,42 +74,62 @@ T parseBuffer(const char* buf, int& len) {
 }
 
 ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
-    ParsedTupValVector return_vector{};
-    for (uint8_t i = 0; i < count; i++) {
+    if (count == 0) {
+        return ParsedTupValVector();
+    }
+    std::vector<std::pair<ParsedTupValVector, uint8_t>> tuple_stack(
+        1, std::make_pair(ParsedTupValVector(), count));
+    while (true) {
         auto value_type = static_cast<ValueTypes>(*buf);
         ++buf;
+        ParsedTupVal val;
 
         switch (value_type) {
             case BUFFER: {
                 int len = 0;
                 auto res = parseBuffer<ParsedTupVal>(buf, len);
-                return_vector.push_back(res);
+                val = res;
                 buf += len;
                 break;
             }
             case NUM: {
-                return_vector.emplace_back(deserializeUint256t(buf));
+                val = deserializeUint256t(buf);
                 break;
             }
             case CODE_POINT_STUB: {
-                return_vector.emplace_back(deserializeCodePointStub(buf));
+                val = deserializeCodePointStub(buf);
                 break;
             }
             case HASH_PRE_IMAGE: {
-                return_vector.emplace_back(ValueHash{deserializeUint256t(buf)});
+                val = ValueHash{deserializeUint256t(buf)};
                 break;
             }
             default: {
-                if (value_type - TUPLE > 8) {
+                auto inner_count = value_type - TUPLE;
+                if (inner_count > 8) {
                     throw std::runtime_error(
                         "can't get tuple value with invalid type");
                 }
-                return_vector.emplace_back(
-                    parseTupleData(buf, value_type - TUPLE));
+                if (inner_count == 0) {
+                    val = ParsedTupValVector();
+                } else {
+                    tuple_stack.push_back(
+                        std::make_pair(ParsedTupValVector(), inner_count));
+                    continue;
+                }
             }
         }
+        tuple_stack.back().first.push_back(val);
+        while (tuple_stack.back().first.size() >= tuple_stack.back().second) {
+            ParsedTupValVector created_tup =
+                std::move(tuple_stack.back().first);
+            tuple_stack.pop_back();
+            if (tuple_stack.empty()) {
+                return created_tup;
+            }
+            tuple_stack.back().first.push_back(created_tup);
+        }
     }
-    return return_vector;
 }
 
 std::vector<value> serializeValue(const uint256_t& val,
