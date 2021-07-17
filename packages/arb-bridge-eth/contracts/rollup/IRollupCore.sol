@@ -63,8 +63,13 @@ interface IRollupCore {
         uint256 challengedNode
     );
 
-    event StakerReassigned(address indexed staker, uint256 newNode);
-    event NodesDestroyed(uint256 indexed startNode, uint256 indexed endNode);
+    event UserStakeUpdated(address indexed user, uint256 initialBalance, uint256 finalBalance);
+
+    event UserWithdrawableFundsUpdated(
+        address indexed user,
+        uint256 initialBalance,
+        uint256 finalBalance
+    );
 
     function getNode(uint256 nodeNum) external view returns (INode);
 

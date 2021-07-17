@@ -291,6 +291,7 @@ contract RollupCore is IRollupCore {
             true
         );
         _lastStakeBlock = block.number;
+        emit UserStakeUpdated(stakerAddress, 0, depositAmount);
     }
 
     /**
@@ -343,7 +344,10 @@ contract RollupCore is IRollupCore {
      */
     function increaseStakeBy(address stakerAddress, uint256 amountAdded) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        staker.amountStaked = staker.amountStaked.add(amountAdded);
+        uint256 initialStaked = staker.amountStaked;
+        uint256 finalStaked = initialStaked.add(amountAdded);
+        staker.amountStaked = finalStaked;
+        emit UserStakeUpdated(stakerAddress, initialStaked, finalStaked);
     }
 
     /**
@@ -358,7 +362,11 @@ contract RollupCore is IRollupCore {
         require(target <= current, "TOO_LITTLE_STAKE");
         uint256 amountWithdrawn = current.sub(target);
         staker.amountStaked = target;
-        _withdrawableFunds[stakerAddress] = _withdrawableFunds[stakerAddress].add(amountWithdrawn);
+        uint256 initialWithdrawable = _withdrawableFunds[stakerAddress];
+        uint256 finalWithdrawable = initialWithdrawable.add(amountWithdrawn);
+        _withdrawableFunds[stakerAddress] = finalWithdrawable;
+        emit UserStakeUpdated(stakerAddress, current, target);
+        emit UserWithdrawableFundsUpdated(stakerAddress, initialWithdrawable, finalWithdrawable);
         return amountWithdrawn;
     }
 
@@ -396,10 +404,13 @@ contract RollupCore is IRollupCore {
      */
     function withdrawStaker(address stakerAddress) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        _withdrawableFunds[stakerAddress] = _withdrawableFunds[stakerAddress].add(
-            staker.amountStaked
-        );
+        uint256 initialStaked = staker.amountStaked;
+        uint256 initialWithdrawable = _withdrawableFunds[stakerAddress];
+        uint256 finalWithdrawable = initialWithdrawable.add(initialStaked);
+        _withdrawableFunds[stakerAddress] = finalWithdrawable;
         deleteStaker(stakerAddress);
+        emit UserStakeUpdated(stakerAddress, initialStaked, 0);
+        emit UserWithdrawableFundsUpdated(stakerAddress, initialWithdrawable, finalWithdrawable);
     }
 
     /**
@@ -430,6 +441,7 @@ contract RollupCore is IRollupCore {
     function withdrawFunds(address owner) internal returns (uint256) {
         uint256 amount = _withdrawableFunds[owner];
         _withdrawableFunds[owner] = 0;
+        emit UserWithdrawableFundsUpdated(owner, amount, 0);
         return amount;
     }
 
