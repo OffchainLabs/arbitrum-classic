@@ -24,6 +24,7 @@ package cmachine
 import "C"
 import (
 	"runtime"
+	"time"
 	"unsafe"
 
 	"github.com/pkg/errors"
@@ -37,11 +38,12 @@ type ArbStorage struct {
 	c unsafe.Pointer
 }
 
-func NewArbStorage(dbPath string) (*ArbStorage, error) {
+func NewArbStorage(dbPath string, blockCoreExpire time.Duration) (*ArbStorage, error) {
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
 
-	cArbStorage := C.createArbStorage(cDbPath)
+	cacheExpirationSeconds := int(blockCoreExpire.Seconds())
+	cArbStorage := C.createArbStorage(cDbPath, C.int(cacheExpirationSeconds))
 
 	if cArbStorage == nil {
 		return nil, errors.Errorf("error creating ArbStorage %v", dbPath)

@@ -94,11 +94,13 @@ func startup() error {
 	blockCacheSize := *fs.Int("block-cache-size", 100, "number of recently used blocks to hold in memory")
 	//fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
+	blockCoreExpire := fs.Duration("database.block-core-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore memory cache")
 	//go http.ListenAndServe("localhost:6060", nil)
 
 	dbConfig := configuration.Database{
 		AllowSlowLookup: true,
 		BlockCacheSize:  blockCacheSize,
+		BlockCoreExpire: *blockCoreExpire,
 	}
 
 	err := fs.Parse(os.Args[1:])
@@ -227,7 +229,7 @@ func startup() error {
 		}
 	}()
 
-	mon, err := monitor.NewMonitor(dbPath, arbosPath)
+	mon, err := monitor.NewMonitor(dbPath, arbosPath, *blockCoreExpire)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}

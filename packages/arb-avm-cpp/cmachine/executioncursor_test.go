@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestExecutionCursor(t *testing.T) {
@@ -36,7 +37,7 @@ func TestExecutionCursor(t *testing.T) {
 		}
 	}()
 
-	arbStorage, err := NewArbStorage(dePath)
+	arbStorage, err := NewArbStorage(dePath, 20*time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -42,6 +42,7 @@ type Database struct {
 	AllowSlowLookup  bool          `koanf:"allow-slow-lookup"`
 	BlockCacheSize   int           `koanf:"block-cache-size"`
 	BlockCacheExpire time.Duration `koanf:"block-cache-expire"`
+	BlockCoreExpire  time.Duration `koanf:"block-core-expire"`
 }
 
 type FeedInput struct {
@@ -224,7 +225,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 
 	f.Bool("database.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
 	f.Int("database.block-cache-size", 1000, "number of L2 blocks to hold in memory cache")
-	f.Duration("database.block-cache-expire", 20*time.Minute, "length of time to hold L2 blocks im memory cache")
+	f.Duration("database.block-cache-expire", 20*time.Minute, "length of time to hold L2 blocks in memory cache")
+	f.Duration("database.block-core-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore memory cache")
 
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")

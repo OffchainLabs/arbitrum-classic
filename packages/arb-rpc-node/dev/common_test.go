@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -79,6 +80,7 @@ func NewTestDevNode(
 	params protocol.ChainParams,
 	owner common.Address,
 	config []message.ChainConfigOption,
+	blockCoreExpire time.Duration,
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
 	agg := common.RandAddress()
@@ -102,6 +104,7 @@ func NewTestDevNode(
 		chainId,
 		agg,
 		0,
+		blockCoreExpire,
 	)
 	test.FailIfError(t, err)
 	initMsg, err := message.NewInitMessage(params, owner, config)

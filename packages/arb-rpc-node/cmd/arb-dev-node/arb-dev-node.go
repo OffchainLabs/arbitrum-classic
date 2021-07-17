@@ -28,6 +28,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"time"
 
 	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -102,6 +103,7 @@ func startup() error {
 	initialL1Height := fs.Uint64("l1height", 0, "initial l1 height")
 	rollupStr := fs.String("rollup", "", "address of rollup contract")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
+	blockCoreExpire := fs.Duration("database.block-core-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore memory cache")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -183,6 +185,7 @@ func startup() error {
 		chainId,
 		agg,
 		*initialL1Height,
+		*blockCoreExpire,
 	)
 	if err != nil {
 		return err

@@ -67,7 +67,7 @@ std::unique_ptr<Machine> SideloadCache::get(uint256_t height) {
     return std::make_unique<Machine>(*it->second.machine);
 }
 
-void SideloadCache::SideloadCache::reorg(uint256_t next_height) {
+void SideloadCache::reorg(uint256_t next_height) {
     std::lock_guard<std::mutex> guard(mutex);
 
     reorgNoLock(next_height);

@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestMachineCreation(t *testing.T) {
@@ -40,7 +41,7 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	arbStorage, err := NewArbStorage(dePath)
+	arbStorage, err := NewArbStorage(dePath, 20*time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}

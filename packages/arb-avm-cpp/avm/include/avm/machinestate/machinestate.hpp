@@ -150,6 +150,7 @@ struct MachineState {
     Status state{Status::Extensive};
     CodePointRef pc{0, 0};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
+    uint256_t last_inbox_timestamp{0};
 
     MachineOutput output;
 

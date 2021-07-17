@@ -134,7 +134,7 @@ TEST_CASE("ArbCore tests") {
     for (const auto& filename : files) {
         INFO("Testing " << filename);
 
-        ArbStorage storage(dbpath);
+        ArbStorage storage(dbpath, 60 * 20);
         REQUIRE(storage.initialize(arb_os_path).ok());
         auto arbCore = storage.getArbCore();
         REQUIRE(arbCore->startThread());
@@ -269,7 +269,7 @@ TEST_CASE("ArbCore inbox") {
     DBDeleter deleter;
     ValueCache value_cache{1, 0};
 
-    ArbStorage storage(dbpath);
+    ArbStorage storage(dbpath, 60 * 20);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
             .ok());
@@ -312,7 +312,7 @@ TEST_CASE("ArbCore inbox") {
 }
 
 TEST_CASE("ArbCore backwards reorg") {
-    ArbStorage storage(dbpath);
+    ArbStorage storage(dbpath, 60 * 20);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
             .ok());

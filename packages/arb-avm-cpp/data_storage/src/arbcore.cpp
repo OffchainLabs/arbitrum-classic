@@ -18,7 +18,6 @@
 
 #include <avm/inboxmessage.hpp>
 #include <avm/machinethread.hpp>
-#include <data_storage/aggregator.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/readsnapshottransaction.hpp>
 #include <data_storage/readwritetransaction.hpp>
@@ -50,9 +49,11 @@ constexpr uint256_t checkpoint_load_gas_cost = 1'000'000'000;
 constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 }  // namespace
 
-ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
+ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
+                 int32_t cache_expiration_seconds)
     : data_storage(std::move(data_storage_)),
-      code(std::make_shared<Code>(getNextSegmentID(data_storage))) {
+      code(std::make_shared<Code>(getNextSegmentID(data_storage))),
+      sideload_cache(cache_expiration_seconds) {
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
     }
@@ -295,8 +296,8 @@ rocksdb::Status ArbCore::saveAssertion(ReadWriteTransaction& tx,
         return status;
     }
 
-    if (assertion.sideloadBlockNumber) {
-        status = saveSideloadPosition(tx, *assertion.sideloadBlockNumber,
+    if (assertion.sideload_block_number) {
+        status = saveSideloadPosition(tx, *assertion.sideload_block_number,
                                       arb_gas_used);
         if (!status.ok()) {
             return status;
@@ -744,27 +745,11 @@ void ArbCore::operator()() {
             }
 
             // Cache pre-sideload machines
-            if (last_assertion.sideloadBlockNumber) {
+            if (last_assertion.sideload_block_number) {
                 {
-                    auto block = *last_assertion.sideloadBlockNumber;
-                    std::unique_lock<std::shared_mutex> lock(
-                        sideload_cache_mutex);
-                    sideload_cache[block] = std::make_unique<Machine>(*machine);
-                    // Remove any sideload_cache entries that are either more
-                    // than sideload_cache_size blocks old, or in the future
-                    // (meaning they've been reorg'd out).
-                    auto it = sideload_cache.begin();
-                    while (it != sideload_cache.end()) {
-                        // Note: we check if block > sideload_cache_size here
-                        // to prevent an underflow in the following check.
-                        if ((block > sideload_cache_size &&
-                             it->first < block - sideload_cache_size) ||
-                            it->first > block) {
-                            it = sideload_cache.erase(it);
-                        } else {
-                            it++;
-                        }
-                    }
+                    sideload_cache.add(*last_assertion.sideload_block_number,
+                                       *last_assertion.sideload_timestamp,
+                                       std::make_unique<Machine>(*machine));
                 }
 
                 if (machine->machine_state.output.arb_gas_used >
@@ -1703,7 +1688,7 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
             mach->machine_state.context = AssertionContext(execConfig);
             auto assertion = mach->run();
-            if (assertion.gasCount == 0) {
+            if (assertion.gas_count == 0) {
                 break;
             }
         }
@@ -2626,13 +2611,7 @@ rocksdb::Status ArbCore::deleteSideloadsStartingAt(
     ReadWriteTransaction& tx,
     const uint256_t& block_number) {
     // Clear the cache
-    {
-        std::unique_lock<std::shared_mutex> guard(sideload_cache_mutex);
-        auto it = sideload_cache.lower_bound(block_number);
-        while (it != sideload_cache.end()) {
-            it = sideload_cache.erase(it);
-        }
-    }
+    sideload_cache.reorg(block_number);
 
     // Clear the DB
     std::vector<unsigned char> key;
@@ -2659,16 +2638,8 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
     ValueCache& cache,
     bool allow_slow_lookup) {
     // Check the cache
-    {
-        std::shared_lock<std::shared_mutex> lock(sideload_cache_mutex);
-        // Look for the first value after the value we want
-        auto it = sideload_cache.upper_bound(block_number);
-        if (it != sideload_cache.begin()) {
-            // Go back a value to find the one we want
-            it--;
-            return {rocksdb::Status::OK(),
-                    std::make_unique<Machine>(*it->second)};
-        }
+    if (auto cached_machine = sideload_cache.get(block_number)) {
+        return {rocksdb::Status::OK(), std::move(cached_machine)};
     }
 
     if (!allow_slow_lookup) {

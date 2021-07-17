@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     std::string filename = argv[2];
 
     DBDeleter deleter;
-    ArbStorage storage{temp_db_path};
+    ArbStorage storage{temp_db_path, 60 * 20};
 
     if (mode == "--hexops") {
         std::ifstream file(filename, std::ios::binary);
@@ -119,8 +119,8 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
-    std::cout << "Ran " << assertion.stepCount << " steps in "
-              << assertion.gasCount << " gas ending in state "
+    std::cout << "Ran " << assertion.step_count << " steps in "
+              << assertion.gas_count << " gas ending in state "
               << static_cast<int>(mach->currentStatus()) << "\n";
 
     auto tx = storage.makeReadWriteTransaction();

@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 )
@@ -48,7 +49,7 @@ func getInsnMultiplier(b *testing.B, filePath string) uint64 {
 
 func runExecutableFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(b, filePath)
-	ckp, err := cmachine.NewArbStorage(b.TempDir())
+	ckp, err := cmachine.NewArbStorage(b.TempDir(), 20*time.Minute)
 	if err != nil {
 		b.Fatal(err)
 	}
