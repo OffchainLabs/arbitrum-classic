@@ -133,20 +133,26 @@ std::vector<value> serializeValue(
     std::map<uint64_t, uint64_t>& segment_counts) {
     std::vector<value> ret{};
     value_vector.push_back(TUPLE + val.tuple_size());
-    for (uint64_t i = 0; i < val.tuple_size(); i++) {
-        auto nested = val.get_element_unsafe(i);
+    std::vector<value> to_serialize(val.rbegin(), val.rend());
+    while (!to_serialize.empty()) {
+        value nested = std::move(to_serialize.back());
+        to_serialize.pop_back();
         if (std::holds_alternative<Tuple>(nested)) {
             const auto& nested_tup = std::get<Tuple>(nested);
-            if (!shouldInlineTuple(nested_tup)) {
+            if (shouldInlineTuple(nested_tup)) {
+                value_vector.push_back(TUPLE + nested_tup.tuple_size());
+                to_serialize.insert(to_serialize.end(), nested_tup.rbegin(),
+                                    nested_tup.rend());
+            } else {
                 value_vector.push_back(HASH_PRE_IMAGE);
                 marshal_uint256_t(hash(nested_tup), value_vector);
                 ret.push_back(nested);
-                continue;
             }
-        }
-        auto res = serializeValue(nested, value_vector, segment_counts);
-        for (const auto& re : res) {
-            ret.push_back(re);
+        } else {
+            auto res = serializeValue(nested, value_vector, segment_counts);
+            for (const auto& re : res) {
+                ret.push_back(re);
+            }
         }
     }
     return ret;
@@ -192,7 +198,7 @@ void deleteParsedValue(std::vector<ParsedTupVal> tup,
                        std::vector<uint256_t>& vals_to_delete,
                        std::map<uint64_t, uint64_t>&) {
     while (!tup.empty()) {
-        auto val = tup.back();
+        ParsedTupVal val = std::move(tup.back());
         tup.pop_back();
         // We only need to delete tuples since other values are recorded inline
         if (std::holds_alternative<ValueHash>(val)) {
