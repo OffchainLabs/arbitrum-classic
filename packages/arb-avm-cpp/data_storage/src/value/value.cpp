@@ -43,6 +43,12 @@ struct ValueBeingParsed {
     }
 };
 
+constexpr uint64_t tupleInlineNumerator = 7;
+constexpr uint64_t tupleInlineDenominator = 8;
+bool shouldInlineTuple(const Tuple& tuple) {
+    return (::hash(tuple) % tupleInlineDenominator) < tupleInlineNumerator;
+}
+
 namespace {
 
 template <class T>
@@ -66,8 +72,8 @@ T parseBuffer(const char* buf, int& len) {
     return ParsedBuffer{depth, res};
 }
 
-std::vector<ParsedTupVal> parseTupleData(const char*& buf, uint8_t count) {
-    std::vector<ParsedTupVal> return_vector{};
+ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
+    ParsedTupValVector return_vector{};
     for (uint8_t i = 0; i < count; i++) {
         auto value_type = static_cast<ValueTypes>(*buf);
         ++buf;
@@ -89,15 +95,16 @@ std::vector<ParsedTupVal> parseTupleData(const char*& buf, uint8_t count) {
                 break;
             }
             case HASH_PRE_IMAGE: {
-                throw std::runtime_error("HASH_ONLY item");
-            }
-            case TUPLE: {
                 return_vector.emplace_back(ValueHash{deserializeUint256t(buf)});
                 break;
             }
             default: {
-                throw std::runtime_error(
-                    "tried to parse tuple value with invalid typecode");
+                if (value_type - TUPLE > 8) {
+                    throw std::runtime_error(
+                        "can't get tuple value with invalid type");
+                }
+                return_vector.emplace_back(
+                    parseTupleData(buf, value_type - TUPLE));
             }
         }
     }
@@ -130,14 +137,16 @@ std::vector<value> serializeValue(
         auto nested = val.get_element_unsafe(i);
         if (std::holds_alternative<Tuple>(nested)) {
             const auto& nested_tup = std::get<Tuple>(nested);
-            value_vector.push_back(TUPLE);
-            marshal_uint256_t(hash(nested_tup), value_vector);
-            ret.push_back(nested);
-        } else {
-            auto res = serializeValue(nested, value_vector, segment_counts);
-            for (const auto& re : res) {
-                ret.push_back(re);
+            if (!shouldInlineTuple(nested_tup)) {
+                value_vector.push_back(HASH_PRE_IMAGE);
+                marshal_uint256_t(hash(nested_tup), value_vector);
+                ret.push_back(nested);
+                continue;
             }
+        }
+        auto res = serializeValue(nested, value_vector, segment_counts);
+        for (const auto& re : res) {
+            ret.push_back(re);
         }
     }
     return ret;
@@ -179,10 +188,12 @@ void deleteParsedValue(const CodePointStub& cp,
                        std::map<uint64_t, uint64_t>& segment_counts) {
     segment_counts[cp.pc.segment]++;
 }
-void deleteParsedValue(const std::vector<ParsedTupVal>& tup,
+void deleteParsedValue(std::vector<ParsedTupVal> tup,
                        std::vector<uint256_t>& vals_to_delete,
                        std::map<uint64_t, uint64_t>&) {
-    for (const auto& val : tup) {
+    while (!tup.empty()) {
+        auto val = tup.back();
+        tup.pop_back();
         // We only need to delete tuples since other values are recorded inline
         if (std::holds_alternative<ValueHash>(val)) {
             vals_to_delete.push_back(std::get<ValueHash>(val).hash);
@@ -191,6 +202,9 @@ void deleteParsedValue(const std::vector<ParsedTupVal>& tup,
             for (const auto& val2 : parsed.nodes) {
                 vals_to_delete.push_back(val2);
             }
+        } else if (std::holds_alternative<ParsedTupValVector>(val)) {
+            const auto& inner = std::get<ParsedTupValVector>(val);
+            tup.insert(tup.end(), inner.begin(), inner.end());
         }
     }
 }

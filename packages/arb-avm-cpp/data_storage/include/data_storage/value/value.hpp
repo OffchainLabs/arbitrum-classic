@@ -55,8 +55,15 @@ struct ParsedBuffer {
     std::vector<uint256_t> nodes;
 };
 
-using ParsedTupVal =
-    std::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer>;
+class ParsedTupValVector;
+using ParsedTupVal = std::variant<uint256_t,
+                                  CodePointStub,
+                                  Buffer,
+                                  ValueHash,
+                                  ParsedBuffer,
+                                  ParsedTupValVector>;
+
+class ParsedTupValVector : public std::vector<ParsedTupVal> {};
 
 using ParsedBufVal = std::variant<Buffer, ParsedBuffer>;
 
@@ -65,6 +72,8 @@ using ParsedSerializedVal = std::variant<uint256_t,
                                          Buffer,
                                          std::vector<ParsedTupVal>,
                                          ParsedBuffer>;
+
+bool shouldInlineTuple(const Tuple& tuple);
 
 DbResult<value> getValueRecord(const ReadTransaction& tx,
                                const ParsedSerializedVal& record,

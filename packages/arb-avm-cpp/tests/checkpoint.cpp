@@ -263,25 +263,31 @@ TEST_CASE("Save And Get Tuple") {
         REQUIRE(hash(tuple) != hash(inner_tuple));
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        if (!shouldInlineTuple(inner_tuple)) {
+            getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        }
     }
     SECTION("save 2 tuples in tuple") {
         ValueCache value_cache{1, 0};
-        uint256_t num = 1;
-        value inner_tuple = Tuple::createTuple(num);
-        uint256_t num2 = 2;
-        value inner_tuple2 = Tuple::createTuple(num2);
+        uint256_t num = 2;
+        Tuple inner_tuple = Tuple::createTuple(num);
+        uint256_t num2 = 3;
+        Tuple inner_tuple2 = Tuple::createTuple(num2);
         auto tuple = Tuple(inner_tuple, inner_tuple2);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple2, 1, true, value_cache);
+        if (!shouldInlineTuple(inner_tuple)) {
+            getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        }
+        if (!shouldInlineTuple(inner_tuple2)) {
+            getTuple(*transaction, inner_tuple2, 1, true, value_cache);
+        }
     }
     SECTION("save saved tuple in tuple") {
         ValueCache value_cache{1, 0};
         auto transaction2 = storage.makeReadWriteTransaction();
-        uint256_t num = 1;
-        value inner_tuple = Tuple::createTuple(num);
+        uint256_t num = 4;
+        Tuple inner_tuple = Tuple::createTuple(num);
         value tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, inner_tuple, 1, true);
         getTuple(*transaction, inner_tuple, 1, true, value_cache);
@@ -289,8 +295,12 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 1, true, value_cache);
 
         // Use different cache to get real reference count
+        uint64_t expected_refs = 2;
+        if (shouldInlineTuple(inner_tuple)) {
+            expected_refs--;
+        }
         ValueCache value_cache2{1, 0};
-        getTuple(*transaction, inner_tuple, 2, true, value_cache2);
+        getTuple(*transaction, inner_tuple, expected_refs, true, value_cache2);
 
         // Test cache
         getTuple(*transaction, inner_tuple, 0, true, value_cache2);
