@@ -111,7 +111,7 @@ contract Outbox is IOutbox, Cloneable {
 
     /**
      * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired
-     * @param outboxIndex Index of OutboxEntry in outboxEntries array
+     * @param outboxEntryIndex Index of OutboxEntry in outboxEntries array
      * @param proof Merkle proof of message inclusion in outbox entry
      * @param index Merkle path to message
      * @param l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)
