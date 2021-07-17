@@ -20,10 +20,11 @@
     "build": "hardhat compile",
     "test": "hardhat test test/*.spec.ts",
     "test:ci": "CI=true yarn test",
-    "test:gas": "hardhat typechain && REPORT_GAS=true yarn test",
+    "test:gas": "REPORT_GAS=true yarn test",
     "test:fork": "SHOULD_FORK=1 hardhat test test/*.fork.ts",
     "test:gas:ci": "CI=true yarn test:gas && mv gasReporterOutput.json ../..",
-    "test:coverage": "hardhat typechain && hardhat coverage",
+    "test:fork:coverage": "SHOULD_FORK=1 hardhat coverage --testfiles 'test/*.fork.ts'",
+    "test:coverage": "hardhat coverage --testfiles 'test/*.spec.ts'",
     "lint:js": "eslint .",
     "lint:solidity": "solhint 'contracts/**/*.sol'",
     "lint": "yarn lint:solidity && yarn lint:js",
@@ -35,7 +36,8 @@
     "docker:build:geth": "docker build -t arb-bridge-eth-geth -f geth.Dockerfile .",
     "docker:geth": "rm -rf deployments/parity && ./scripts/launch-geth",
     "verify": "hardhat etherscan-verify --api-key $(dotenv -p ETHERSCAN_API_KEY)",
-    "typechain": "hardhat typechain"
+    "typechain": "hardhat typechain",
+    "slither": "slither . --hardhat-artifacts-directory build/contracts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "3.4.0",

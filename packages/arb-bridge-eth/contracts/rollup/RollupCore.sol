@@ -30,6 +30,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 contract RollupCore is IRollupCore {
     using SafeMath for uint256;
 
+    // Stakers become Zombies after losing a challenge
     struct Zombie {
         address stakerAddress;
         uint256 latestStakedNode;
@@ -72,7 +73,7 @@ contract RollupCore is IRollupCore {
      * @param stakerNum Index of the staker
      * @return Address of the staker
      */
-    function getStakerAddress(uint256 stakerNum) public view override returns (address) {
+    function getStakerAddress(uint256 stakerNum) external view override returns (address) {
         return _stakerList[stakerNum];
     }
 
@@ -149,7 +150,7 @@ contract RollupCore is IRollupCore {
      * @param owner Address to check the funds of
      * @return Amount of funds withdrawable by owner
      */
-    function withdrawableFunds(address owner) public view override returns (uint256) {
+    function withdrawableFunds(address owner) external view override returns (uint256) {
         return _withdrawableFunds[owner];
     }
 
@@ -172,7 +173,7 @@ contract RollupCore is IRollupCore {
     }
 
     /// @return Ethereum block that the most recent stake was created
-    function lastStakeBlock() public view override returns (uint256) {
+    function lastStakeBlock() external view override returns (uint256) {
         return _lastStakeBlock;
     }
 
@@ -206,20 +207,8 @@ contract RollupCore is IRollupCore {
         return _nodeHashes[index];
     }
 
-    function resetNodeHash(uint256 index) internal {
-        _nodeHashes[index] = 0;
-    }
-
-    /**
-     * @notice Update the latest node created
-     * @param newLatestNodeCreated New value for the latest node created
-     */
-    function updateLatestNodeCreated(uint256 newLatestNodeCreated) internal {
-        _latestNodeCreated = newLatestNodeCreated;
-    }
-
     /// @notice Reject the next unresolved node
-    function rejectNextNode() internal {
+    function _rejectNextNode() internal {
         destroyNode(_firstUnresolvedNode);
         _firstUnresolvedNode++;
     }
@@ -262,6 +251,7 @@ contract RollupCore is IRollupCore {
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
 
         INode node = getNode(nodeNum);
+        // Authenticate data against node's confirm data pre-image
         require(
             node.confirmData() ==
                 RollupLib.confirmHash(
@@ -273,6 +263,8 @@ contract RollupCore is IRollupCore {
                 ),
             "CONFIRM_DATA"
         );
+
+        // trusted external call to outbox
         outbox.processOutgoingMessages(sendsData, sendLengths);
 
         destroyNode(_latestConfirmed);
@@ -284,7 +276,7 @@ contract RollupCore is IRollupCore {
     }
 
     /**
-     * @notice Create a new stake
+     * @notice Create a new stake at latest confirmed node
      * @param stakerAddress Address of the new staker
      * @param depositAmount Stake amount of the new staker
      */
@@ -295,7 +287,7 @@ contract RollupCore is IRollupCore {
             stakerIndex,
             _latestConfirmed,
             depositAmount,
-            address(0),
+            address(0), // new staker is not in challenge
             true
         );
         _lastStakeBlock = block.number;
@@ -315,8 +307,8 @@ contract RollupCore is IRollupCore {
         Staker storage staker1 = _stakerMap[stakerAddress1];
         Staker storage staker2 = _stakerMap[stakerAddress2];
         address challenge = staker1.currentChallenge;
-        require(challenge == staker2.currentChallenge, "IN_CHAL");
         require(challenge != address(0), "NO_CHAL");
+        require(challenge == staker2.currentChallenge, "DIFF_IN_CHAL");
         return challenge;
     }
 
@@ -547,13 +539,10 @@ contract RollupCore is IRollupCore {
                 assertion.afterState.inboxCount <= memoryFrame.currentInboxSize,
                 "INBOX_PAST_END"
             );
-
+            // Insure inbox tip after assertion is included in a sequencer-inbox batch and return inbox acc; this gives replay protection against the state of the inbox
             (memoryFrame.sequencerBatchEnd, memoryFrame.sequencerBatchAcc) = inputDataFrame
                 .sequencerInbox
-                .proveBatchContainsSequenceNumber(
-                sequencerBatchProof,
-                assertion.afterState.inboxCount
-            );
+                .proveInboxContainsMessage(sequencerBatchProof, assertion.afterState.inboxCount);
         }
 
         {

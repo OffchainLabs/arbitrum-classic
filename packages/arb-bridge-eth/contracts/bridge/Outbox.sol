@@ -110,8 +110,8 @@ contract Outbox is IOutbox, Cloneable {
     }
 
     /**
-     * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired and
-     * @param outboxEntryIndex Index of OutboxEntry in outboxEntries array
+     * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired
+     * @param outboxIndex Index of OutboxEntry in outboxEntries array
      * @param proof Merkle proof of message inclusion in outbox entry
      * @param index Merkle path to message
      * @param l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)
@@ -157,7 +157,7 @@ contract Outbox is IOutbox, Cloneable {
         _l2Block = uint128(l2Block);
         _l1Block = uint128(l1Block);
         _timestamp = uint128(l2Timestamp);
-
+        // set and reset vars around execution so they remain valid during call
         executeBridgeCall(destAddr, amount, calldataForL1);
 
         _sender = currentSender;

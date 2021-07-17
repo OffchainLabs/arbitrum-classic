@@ -92,10 +92,6 @@ library Machine {
         machine.auxStack = addStackVal(machine.auxStack, val);
     }
 
-    function addDataStackInt(Data memory machine, uint256 val) internal pure {
-        machine.dataStack = addStackVal(machine.dataStack, Value.newInt(val));
-    }
-
     function hash(Data memory machine) internal pure returns (bytes32) {
         if (machine.status == MACHINE_HALT) {
             return bytes32(uint256(0));
