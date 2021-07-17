@@ -450,7 +450,10 @@ contract RollupCore is IRollupCore {
      * @param owner Address of the account to add withdrawable funds to
      */
     function increaseWithdrawableFunds(address owner, uint256 amount) internal {
-        _withdrawableFunds[owner] = _withdrawableFunds[owner].add(amount);
+        uint256 initialWithdrawable = _withdrawableFunds[owner];
+        uint256 finalWithdrawable = initialWithdrawable.add(amount);
+        _withdrawableFunds[owner] = finalWithdrawable;
+        emit UserWithdrawableFundsUpdated(owner, initialWithdrawable, finalWithdrawable);
     }
 
     /**
