@@ -74,7 +74,7 @@ endif (ENABLE_JEMALLOC)
 # On macOS, search Homebrew for keg-only versions of OpenSSL
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     execute_process(
-        COMMAND brew --prefix OpenSSL 
+        COMMAND brew --prefix OpenSSL
         RESULT_VARIABLE BREW_OPENSSL
         OUTPUT_VARIABLE BREW_OPENSSL_PREFIX
         OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -89,7 +89,7 @@ if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     endif()
 endif()
 
-find_package(Boost 1.65 COMPONENTS filesystem system REQUIRED)
+find_package(Boost 1.65 COMPONENTS filesystem system random REQUIRED)
 if(NOT TARGET Boost::boost)
     add_library(Boost::boost IMPORTED INTERFACE)
     set_property(TARGET Boost::boost PROPERTY
@@ -107,6 +107,13 @@ if(NOT TARGET Boost::system)
     set_property(TARGET Boost::system PROPERTY
         INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})
     set_property(TARGET Boost::system PROPERTY
+        INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
+endif()
+if(NOT TARGET Boost::random)
+    add_library(Boost::random IMPORTED INTERFACE)
+    set_property(TARGET Boost::random PROPERTY
+        INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})
+    set_property(TARGET Boost::random PROPERTY
         INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 endif()
 find_package(RocksDB REQUIRED)
@@ -155,7 +162,7 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/avm")
 endif()
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
     add_subdirectory(cavm)
-    
+
     get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
     if (NOT _isMultiConfig)
         set(INFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in)
