@@ -62,7 +62,6 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
 
     mapping(address => bool) isValidator;
 
-    // if paused, this is block when paused. else the time spent paused last time
     uint128 public blockTriggerPause;
     uint128 public blocksSpentPaused;
 }
