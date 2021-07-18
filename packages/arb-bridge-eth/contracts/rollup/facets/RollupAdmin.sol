@@ -60,9 +60,14 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
      */
     function resume() external override {
         _unpause();
+        uint256 initialTimer = uint256(blocksSpentPaused);
         // this won't underflow since block.number only increases
         // and this function is only callable after `pause`
-        blocksSpentPaused = uint128(block.number) - blockTriggerPause;
+        uint256 timePaused = block.number - blockTriggerPause;
+        uint128 newTimer = uint128(initialTimer + timePaused);
+        require(newTimer > initialTimer, "OVERFLOW");
+
+        blocksSpentPaused = newTimer;
         blockTriggerPause = uint128(block.number);
         emit OwnerFunctionCalled(4);
     }

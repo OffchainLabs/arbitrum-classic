@@ -22,7 +22,6 @@ pragma experimental ABIEncoderV2;
 
 import "../rollup/Rollup.sol";
 import "../challenge/IChallenge.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract ValidatorUtils {
     enum ConfirmType { NONE, VALID, INVALID }

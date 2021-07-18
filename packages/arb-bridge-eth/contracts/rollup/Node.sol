@@ -38,8 +38,8 @@ contract Node is Cloneable, INode {
     /// @notice Index of the node previous to this one
     uint256 public override prev;
 
-    /// @notice Deadline at which this node can be confirmed
-    /// @dev This does not include the time spent paused in the rollup
+    /// @dev Deadline at which this node can be confirmed
+    /// This does not include the time spent paused in the rollup
     uint256 internal deadlineBlock_;
 
     /// @notice Deadline at which a child of this node can be confirmed
