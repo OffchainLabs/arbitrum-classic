@@ -156,7 +156,7 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
     rocksdb::PinnableSlice value;
     rocksdb::ReadOptions read_opts;
     auto status =
-        txn_db->Get(read_opts, column_handles[DEFAULT_COLUMN], key, &value);
+        txn_db->Get(read_opts, column_handles[STATE_COLUMN], key, &value);
     if (status.IsNotFound()) {
         secret_hash_seed.resize(32);
         RAND_bytes(secret_hash_seed.data(), secret_hash_seed.size());
@@ -164,7 +164,7 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
         rocksdb::Slice value_slice(
             reinterpret_cast<const char*>(secret_hash_seed.data()),
             secret_hash_seed.size());
-        status = txn_db->Put(write_opts, column_handles[DEFAULT_COLUMN], key,
+        status = txn_db->Put(write_opts, column_handles[STATE_COLUMN], key,
                              value_slice);
     } else if (status.ok()) {
         secret_hash_seed = std::vector<unsigned char>(

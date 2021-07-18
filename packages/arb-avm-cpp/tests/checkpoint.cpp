@@ -519,3 +519,18 @@ TEST_CASE("Delete checkpoint") {
         checkDeletedCheckpoint(*transaction, machine);
     }
 }
+
+TEST_CASE("Secret hash seed") {
+    DBDeleter deleter;
+    std::vector<unsigned char> seed;
+    {
+        ArbStorage storage(dbpath);
+        seed = storage.makeReadTransaction()->getSecretHashSeed();
+        REQUIRE(seed.size() == 32);
+        REQUIRE(seed != std::vector<unsigned char>(32, 0));
+    }
+    {
+        ArbStorage storage(dbpath);
+        REQUIRE(seed == storage.makeReadTransaction()->getSecretHashSeed());
+    }
+}
