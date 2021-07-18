@@ -46,8 +46,8 @@ struct ValueBeingParsed {
 constexpr uint64_t tupleInlineNumerator = 7;
 constexpr uint64_t tupleInlineDenominator = 8;
 bool shouldInlineTuple(const Tuple& tuple) {
-    return (::hash(tuple) % tupleInlineDenominator) < tupleInlineNumerator ||
-           tuple.tuple_size() == 0;
+    return tuple.tuple_size() == 0 ||
+           (::hash(tuple) % tupleInlineDenominator) < tupleInlineNumerator;
 }
 
 namespace {

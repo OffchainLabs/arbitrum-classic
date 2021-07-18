@@ -56,21 +56,21 @@ struct ParsedBuffer {
 };
 
 class ParsedTupValVector;
-using ParsedTupVal = std::variant<uint256_t,
+using ParsedTupVal = std::variant<ParsedTupValVector,
+                                  uint256_t,
                                   CodePointStub,
                                   Buffer,
                                   ValueHash,
-                                  ParsedBuffer,
-                                  ParsedTupValVector>;
+                                  ParsedBuffer>;
 
 class ParsedTupValVector : public std::vector<ParsedTupVal> {};
 
 using ParsedBufVal = std::variant<Buffer, ParsedBuffer>;
 
-using ParsedSerializedVal = std::variant<uint256_t,
+using ParsedSerializedVal = std::variant<std::vector<ParsedTupVal>,
+                                         uint256_t,
                                          CodePointStub,
                                          Buffer,
-                                         std::vector<ParsedTupVal>,
                                          ParsedBuffer>;
 
 bool shouldInlineTuple(const Tuple& tuple);
