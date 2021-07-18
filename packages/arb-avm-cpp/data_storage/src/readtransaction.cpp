@@ -375,3 +375,7 @@ ValueResult<uint256_t> ReadTransaction::getUint256UsingFamilyAndKey(
     auto data = reinterpret_cast<const char*>(result.data.data());
     return {result.status, deserializeUint256t(data)};
 }
+
+const std::vector<unsigned char>& ReadTransaction::getSecretHashSeed() {
+    return transaction->datastorage->secret_hash_seed;
+}

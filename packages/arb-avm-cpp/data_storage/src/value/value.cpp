@@ -45,9 +45,11 @@ struct ValueBeingParsed {
 
 constexpr uint64_t tupleInlineNumerator = 7;
 constexpr uint64_t tupleInlineDenominator = 8;
-bool shouldInlineTuple(const Tuple& tuple) {
+bool shouldInlineTuple(const Tuple& tuple,
+                       const std::vector<unsigned char>& secret_hash_seed) {
+    auto hash = tuple.getHashPreImage().secretHash(secret_hash_seed);
     return tuple.tuple_size() == 0 ||
-           (::hash(tuple) % tupleInlineDenominator) < tupleInlineNumerator;
+           (hash % tupleInlineDenominator) < tupleInlineNumerator;
 }
 
 namespace {
@@ -132,7 +134,8 @@ ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
     }
 }
 
-std::vector<value> serializeValue(const uint256_t& val,
+std::vector<value> serializeValue(const std::vector<unsigned char>&,
+                                  const uint256_t& val,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(NUM);
@@ -140,6 +143,7 @@ std::vector<value> serializeValue(const uint256_t& val,
     return {};
 }
 std::vector<value> serializeValue(
+    const std::vector<unsigned char>&,
     const CodePointStub& val,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>& segment_counts) {
@@ -149,6 +153,7 @@ std::vector<value> serializeValue(
     return {};
 }
 std::vector<value> serializeValue(
+    const std::vector<unsigned char>& secret_hash_seed,
     const Tuple& val,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>& segment_counts) {
@@ -163,7 +168,7 @@ std::vector<value> serializeValue(
         if (std::holds_alternative<Tuple>(nested)) {
             const auto& nested_tup = std::get<Tuple>(nested);
             // Check if we should store the tuple in a separate DB item
-            if (shouldInlineTuple(nested_tup)) {
+            if (shouldInlineTuple(nested_tup, secret_hash_seed)) {
                 // Write the tuple header, then add the tuple contents
                 // to the stack of values to serialize (again in reverse)
                 value_vector.push_back(TUPLE + nested_tup.tuple_size());
@@ -177,7 +182,8 @@ std::vector<value> serializeValue(
                 ret.push_back(nested);
             }
         } else {
-            auto res = serializeValue(nested, value_vector, segment_counts);
+            auto res = serializeValue(secret_hash_seed, nested, value_vector,
+                                      segment_counts);
             for (const auto& re : res) {
                 ret.push_back(re);
             }
@@ -185,12 +191,14 @@ std::vector<value> serializeValue(
     }
     return ret;
 }
-std::vector<value> serializeValue(const std::shared_ptr<HashPreImage>&,
+std::vector<value> serializeValue(const std::vector<unsigned char>&,
+                                  const std::shared_ptr<HashPreImage>&,
                                   std::vector<unsigned char>&,
                                   std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
 }
-std::vector<value> serializeValue(const Buffer& b,
+std::vector<value> serializeValue(const std::vector<unsigned char>&,
+                                  const Buffer& b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
@@ -279,12 +287,14 @@ ParsedSerializedVal parseRecord(const char*& buf) {
 }
 
 std::vector<value> serializeValue(
+    const std::vector<unsigned char>& secret_hash_seed,
     const value& val,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>& segment_counts) {
     return std::visit(
         [&](const auto& val) {
-            return serializeValue(val, value_vector, segment_counts);
+            return serializeValue(secret_hash_seed, val, value_vector,
+                                  segment_counts);
         },
         val);
 }
@@ -652,7 +662,8 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
         if (save_ret.status.IsNotFound()) {
             std::vector<unsigned char> value_vector{};
             auto new_items_to_save =
-                serializeValue(next_item, value_vector, segment_counts);
+                serializeValue(tx.getSecretHashSeed(), next_item, value_vector,
+                               segment_counts);
             items_to_save.insert(items_to_save.end(), new_items_to_save.begin(),
                                  new_items_to_save.end());
             save_ret = saveValueWithRefCount(tx, 1, key, value_vector);
