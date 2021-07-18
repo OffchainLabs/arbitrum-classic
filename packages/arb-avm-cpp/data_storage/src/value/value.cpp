@@ -74,9 +74,11 @@ T parseBuffer(const char* buf, int& len) {
 }
 
 ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
+    // Begin by attempting to fill a single tuple of size `count`
     std::vector<std::pair<ParsedTupValVector, uint8_t>> tuple_stack(
         1, std::make_pair(ParsedTupValVector(), count));
     while (true) {
+        // Collapse full tuples into their parents (or if the root, return it)
         while (tuple_stack.back().first.size() >= tuple_stack.back().second) {
             ParsedTupValVector created_tup =
                 std::move(tuple_stack.back().first);
@@ -86,6 +88,7 @@ ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
             }
             tuple_stack.back().first.push_back(created_tup);
         }
+
         auto value_type = static_cast<ValueTypes>(*buf);
         ++buf;
         ParsedTupVal val;
@@ -116,11 +119,15 @@ ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
                     throw std::runtime_error(
                         "can't get tuple value with invalid type");
                 }
+                // Before continuing with the parent, fill in this tuple first
                 tuple_stack.push_back(
                     std::make_pair(ParsedTupValVector(), inner_count));
+                // Don't attempt to put a value in this tuple yet
                 continue;
             }
         }
+        // Continue filling in tuple by adding this value
+        // (if it was full, it'd have been collapsed earlier)
         tuple_stack.back().first.push_back(val);
     }
 }
@@ -147,19 +154,26 @@ std::vector<value> serializeValue(
     std::map<uint64_t, uint64_t>& segment_counts) {
     std::vector<value> ret{};
     value_vector.push_back(TUPLE + val.tuple_size());
+    // `to_serialize` is a stack, so we populate it in reverse order
     std::vector<value> to_serialize(val.rbegin(), val.rend());
     while (!to_serialize.empty()) {
+        // Pull from the end of `to_serialize` as its contents are reversed
         value nested = std::move(to_serialize.back());
         to_serialize.pop_back();
         if (std::holds_alternative<Tuple>(nested)) {
             const auto& nested_tup = std::get<Tuple>(nested);
+            // Check if we should store the tuple in a separate DB item
             if (shouldInlineTuple(nested_tup)) {
+                // Write the tuple header, then add the tuple contents
+                // to the stack of values to serialize (again in reverse)
                 value_vector.push_back(TUPLE + nested_tup.tuple_size());
                 to_serialize.insert(to_serialize.end(), nested_tup.rbegin(),
                                     nested_tup.rend());
             } else {
+                // Only put a reference to the inner tuple in this one
                 value_vector.push_back(HASH_PRE_IMAGE);
                 marshal_uint256_t(hash(nested_tup), value_vector);
+                // Mark the inner tuple as needing separate saving
                 ret.push_back(nested);
             }
         } else {
@@ -214,15 +228,20 @@ void deleteParsedValue(std::vector<ParsedTupVal> tup,
     while (!tup.empty()) {
         ParsedTupVal val = std::move(tup.back());
         tup.pop_back();
-        // We only need to delete tuples since other values are recorded inline
+        // We only need to delete tuples and buffers as all other values
+        // are "primitives"/"trivial" types in that they're recorded inline
+        // and don't reference anything else
         if (std::holds_alternative<ValueHash>(val)) {
+            // Delete the referenced hash in a later pass
             vals_to_delete.push_back(std::get<ValueHash>(val).hash);
         } else if (std::holds_alternative<ParsedBuffer>(val)) {
+            // Delete any buffer nodes in a later pass
             auto parsed = std::get<ParsedBuffer>(val);
             for (const auto& val2 : parsed.nodes) {
                 vals_to_delete.push_back(val2);
             }
         } else if (std::holds_alternative<ParsedTupValVector>(val)) {
+            // Descend into the tuple by merging in its contents into ours
             const auto& inner = std::get<ParsedTupValVector>(val);
             tup.insert(tup.end(), inner.begin(), inner.end());
         }
