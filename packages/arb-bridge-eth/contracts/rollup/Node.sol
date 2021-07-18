@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "./INode.sol";
 import "../libraries/Cloneable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import { RollupBase } from "./Rollup.sol";
 
 contract Node is Cloneable, INode {
     using SafeMath for uint256;
@@ -38,7 +39,8 @@ contract Node is Cloneable, INode {
     uint256 public override prev;
 
     /// @notice Deadline at which this node can be confirmed
-    uint256 public override deadlineBlock;
+    /// @dev This does not include the time spent paused in the rollup
+    uint256 internal deadlineBlock_;
 
     /// @notice Deadline at which a child of this node can be confirmed
     uint256 public override noChildConfirmedBeforeBlock;
@@ -87,7 +89,7 @@ contract Node is Cloneable, INode {
         challengeHash = _challengeHash;
         confirmData = _confirmData;
         prev = _prev;
-        deadlineBlock = _deadlineBlock;
+        deadlineBlock_ = _deadlineBlock;
         noChildConfirmedBeforeBlock = _deadlineBlock;
     }
 
@@ -139,17 +141,25 @@ contract Node is Cloneable, INode {
     /**
      * @notice Check whether the current block number has met or passed the node's deadline
      */
-    function requirePastDeadline(uint256 blocksSpentPaused) external view override {
-        require(block.number >= deadlineBlock.add(blocksSpentPaused), "BEFORE_DEADLINE");
+    function requirePastDeadline() external view override {
+        require(block.number >= deadlineBlock(), "BEFORE_DEADLINE");
     }
 
     /**
      * @notice Check whether the current block number has met or passed deadline for children of this node to be confirmed
      */
-    function requirePastChildConfirmDeadline(uint256 blocksSpentPaused) external view override {
+    function requirePastChildConfirmDeadline() external view override {
+        uint256 blocksSpentPaused = RollupBase(rollup).blocksSpentPaused();
         require(
             block.number >= noChildConfirmedBeforeBlock.add(blocksSpentPaused),
             "CHILD_TOO_RECENT"
         );
+    }
+
+    /// @notice Deadline at which this node can be confirmed
+    /// @dev This includes the time spent paused in the rollup
+    function deadlineBlock() public view override returns (uint256) {
+        uint256 blocksSpentPaused = RollupBase(rollup).blocksSpentPaused();
+        return deadlineBlock_.add(blocksSpentPaused);
     }
 }

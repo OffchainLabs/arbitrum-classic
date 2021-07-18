@@ -98,14 +98,10 @@ contract ValidatorUtils {
         IRollupUser(address(rollup)).requireUnresolvedExists();
         INode node = rollup.getNode(rollup.firstUnresolvedNode());
         bool inOrder = node.prev() == rollup.latestConfirmed();
-        uint256 blocksSpentPaused = IRollupUser(address(rollup)).blocksSpentPaused();
         if (inOrder) {
             // Verify the block's deadline has passed
-            require(
-                block.number >= SafeMath.add(node.deadlineBlock(), blocksSpentPaused),
-                "BEFORE_DEADLINE"
-            );
-            rollup.getNode(node.prev()).requirePastChildConfirmDeadline(blocksSpentPaused);
+            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
+            rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
 
             // Verify that no staker is staked on this node
             require(
@@ -127,9 +123,8 @@ contract ValidatorUtils {
         INode node = rollup.getNode(firstUnresolved);
 
         // Verify the block's deadline has passed
-        uint256 blocksPaused = IRollupUser(address(rollup)).blocksSpentPaused();
-        node.requirePastDeadline(blocksPaused);
-        rollup.getNode(node.prev()).requirePastChildConfirmDeadline(blocksPaused);
+        node.requirePastDeadline();
+        rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
 
         // Check that prev is latest confirmed
         require(node.prev() == rollup.latestConfirmed(), "INVALID_PREV");

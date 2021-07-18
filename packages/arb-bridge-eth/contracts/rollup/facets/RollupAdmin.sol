@@ -51,7 +51,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
      */
     function pause() external override {
         _pause();
-        blockPauseStart = uint128(block.number);
+        blockTriggerPause = uint128(block.number);
         emit OwnerFunctionCalled(3);
     }
 
@@ -60,7 +60,10 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
      */
     function resume() external override {
         _unpause();
-        blockPauseEnd = uint128(block.number);
+        // this won't underflow since block.number only increases
+        // and this function is only callable after `pause`
+        blocksSpentPaused = uint128(block.number) - blockTriggerPause;
+        blockTriggerPause = uint128(block.number);
         emit OwnerFunctionCalled(4);
     }
 
@@ -332,5 +335,10 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
             rollupEventBridge
         );
         emit OwnerFunctionCalled(24);
+    }
+
+    function resetBlocksSpentPaused() external override {
+        blocksSpentPaused = uint128(0);
+        emit OwnerFunctionCalled(25);
     }
 }

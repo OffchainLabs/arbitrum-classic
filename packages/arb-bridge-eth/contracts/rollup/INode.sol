@@ -60,7 +60,7 @@ interface INode {
 
     function latestChildNumber() external view returns (uint256);
 
-    function requirePastDeadline(uint256 blocksSpentPaused) external view;
+    function requirePastDeadline() external view;
 
-    function requirePastChildConfirmDeadline(uint256 blocksSpentPaused) external view;
+    function requirePastChildConfirmDeadline() external view;
 }
