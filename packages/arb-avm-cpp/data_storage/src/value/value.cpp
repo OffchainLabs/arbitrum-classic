@@ -47,9 +47,19 @@ constexpr uint64_t tupleInlineNumerator = 7;
 constexpr uint64_t tupleInlineDenominator = 8;
 bool shouldInlineTuple(const Tuple& tuple,
                        const std::vector<unsigned char>& secret_hash_seed) {
+    // We lose some precision from using `2^256-1` instead of `2^256`,
+    // and potentially from dividing by the denominator, but practically
+    // it's fine as 256 bit integers are so large.
+    static uint256_t maxInlineHash =
+        (std::numeric_limits<uint256_t>::max() / tupleInlineDenominator) *
+        tupleInlineNumerator;
+
+    if (tuple.tuple_size() == 0) {
+        return true;
+    }
+
     auto hash = tuple.getHashPreImage().secretHash(secret_hash_seed);
-    return tuple.tuple_size() == 0 ||
-           (hash % tupleInlineDenominator) < tupleInlineNumerator;
+    return hash <= maxInlineHash;
 }
 
 namespace {
