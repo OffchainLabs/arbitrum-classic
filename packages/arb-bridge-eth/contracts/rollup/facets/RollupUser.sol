@@ -195,6 +195,13 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                 "TOO_SMALL"
             );
 
+            // Don't allow an assertion to include more than the maxiumum number of sends
+            require(
+                assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) <=
+                    MAX_SEND_COUNT,
+                "TOO_MANY_SENDS"
+            );
+
             // Don't allow an assertion to use above a maximum amount of gas
             require(gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
         }
