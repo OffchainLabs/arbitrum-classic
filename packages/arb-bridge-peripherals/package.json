@@ -13,8 +13,8 @@
     "gen:uml": "sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/ethereum,./contracts/tokenbridge/libraries -o ./gatewayUML.svg",
     "gen:uml:test": "sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/test -o ./gatewayTestUML.svg",
     "pre:slither": "yarn post:slither && ln -s ../../node_modules/arb-bridge-eth && ln -s ../../node_modules/arbos-contracts",
-    "slither": "yarn pre:slither && slither --hardhat-artifacts-directory build/contracts .  --filter-paths node_modules && yarn post:slither",
-    "post:slither": "rm arb-bridge-eth && rm arbos-contracts"
+    "slither": "yarn pre:slither && slither --hardhat-artifacts-directory build/contracts .  --filter-paths 'node_modules|arb-bridge-eth|arbos-contracts' && yarn post:slither",
+    "post:slither": "rm -f arb-bridge-eth && rm -f arbos-contracts"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",
