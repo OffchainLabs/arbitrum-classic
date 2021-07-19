@@ -150,7 +150,8 @@ export class NodeState {
 function buildAccumulator(base: BytesLike, hashes: BytesLike[]): BytesLike {
   let acc = base
   for (const h of hashes) {
-    acc = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, h])
+    const hash = ethers.utils.solidityKeccak256(['bytes'], [h])
+    acc = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, hash])
   }
   return acc
 }
@@ -344,7 +345,7 @@ export class RollupContract {
     afterLogCount: BigNumberish
   ): Promise<ContractTransaction> {
     const messageData = ethers.utils.concat(sends)
-    const messageLengths = sends.map(msg => msg.length)
+    const messageLengths = sends.map(msg => (msg.length - 2) / 2)
     return this.rollup.confirmNextNode(
       prevSendAcc,
       messageData,
