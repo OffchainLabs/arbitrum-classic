@@ -16,7 +16,7 @@
 
 /* eslint-env node, mocha */
 import { ethers, deployments, run } from 'hardhat'
-import { Signer, BigNumberish, Contract, BytesLike } from 'ethers'
+import { Signer, BigNumberish, Contract, BytesLike, BigNumber } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { TransactionResponse } from '@ethersproject/providers'
 import { assert, expect } from 'chai'
@@ -27,6 +27,7 @@ import { RollupCreatorNoProxy__factory } from '../build/types/factories/RollupCr
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
 import { initializeAccounts } from './utils'
+import { hexConcat, zeroPad } from '@ethersproject/bytes'
 
 import {
   Node,
@@ -39,8 +40,7 @@ import {
 
 const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
-const zerobytes32 =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
+const zerobytes32 = ethers.constants.HashZero
 const stakeRequirement = 10
 const stakeToken = ethers.constants.AddressZero
 const confirmationPeriodBlocks = 100
@@ -204,7 +204,94 @@ async function makeSimpleNode(
   return { tx, node }
 }
 
+const makeSends = (count: number, batchStart = 0) => {
+  return [...Array(count)].map((_, i) =>
+    hexConcat([
+      [0],
+      zeroPad([i + batchStart], 32),
+      zeroPad([0], 32),
+      zeroPad([1], 32),
+    ])
+  )
+}
+
+function makeAssertion(
+  prevNodeState: NodeState,
+  gasUsed: BigNumberish,
+  sends: BytesLike[] = []
+): Assertion {
+  return new Assertion(prevNodeState, gasUsed, zerobytes32, [], sends, [])
+}
+
+async function makeNode(
+  rollup: RollupContract,
+  parentNode: Node,
+  prevNode?: Node,
+  sends: BytesLike[] = []
+): Promise<{ tx: ContractTransaction; node: Node }> {
+  const block = await ethers.provider.getBlock('latest')
+  const assertion = makeAssertion(
+    parentNode.afterState,
+    (block.number - parentNode.afterState.proposedBlock + 1) *
+      arbGasSpeedLimitPerBlock,
+    sends
+  )
+  const { tx, node, event } = await rollup.stakeOnNewNode(
+    parentNode,
+    assertion,
+    zerobytes32,
+    '0x',
+    prevNode
+  )
+  assert.equal(event.nodeHash, node.nodeHash)
+  assert.equal(event.executionHash, node.executionHash())
+  return { tx, node }
+}
+
 let prevNode: Node
+
+const initNewRollup = async () => {
+  const { rollupCon, blockCreated } = await createRollup()
+  rollup = new RollupContract(rollupCon)
+  const originalNode = await rollup.latestConfirmed()
+  const nodeAddress = await rollup.getNode(originalNode)
+
+  const NodeContract = await ethers.getContractFactory('Node')
+  const node = NodeContract.attach(nodeAddress) as NodeCon
+
+  const newState = new NodeState(
+    new ExecutionState(0, initialVmState, 0, 0, 0, zerobytes32, zerobytes32),
+    blockCreated,
+    1
+  )
+
+  const initialExecState = new ExecutionState(
+    0,
+    initialVmState,
+    0,
+    0,
+    0,
+    zerobytes32,
+    zerobytes32
+  )
+  const initialNodeState = new NodeState(initialExecState, blockCreated, 1)
+  const initialAssertion = new Assertion(
+    initialNodeState,
+    0,
+    initialVmState,
+    [],
+    [],
+    []
+  )
+  prevNode = new Node(initialAssertion, blockCreated, 1, zerobytes32)
+
+  assert.equal(
+    await node.stateHash(),
+    prevNode.afterState.hash(),
+    'initial confirmed node should have set initial state'
+  )
+  return rollup
+}
 
 describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
@@ -214,45 +301,7 @@ describe('ArbRollup', () => {
   })
 
   it('should initialize', async function () {
-    const { rollupCon, blockCreated } = await createRollup()
-    rollup = new RollupContract(rollupCon)
-    const originalNode = await rollup.latestConfirmed()
-    const nodeAddress = await rollup.getNode(originalNode)
-
-    const NodeContract = await ethers.getContractFactory('Node')
-    const node = NodeContract.attach(nodeAddress) as NodeCon
-
-    const newState = new NodeState(
-      new ExecutionState(0, initialVmState, 0, 0, 0, zerobytes32, zerobytes32),
-      blockCreated,
-      1
-    )
-
-    const initialExecState = new ExecutionState(
-      0,
-      initialVmState,
-      0,
-      0,
-      0,
-      zerobytes32,
-      zerobytes32
-    )
-    const initialNodeState = new NodeState(initialExecState, blockCreated, 1)
-    const initialAssertion = new Assertion(
-      initialNodeState,
-      0,
-      initialVmState,
-      [],
-      [],
-      []
-    )
-    prevNode = new Node(initialAssertion, blockCreated, 1, zerobytes32)
-
-    assert.equal(
-      await node.stateHash(),
-      prevNode.afterState.hash(),
-      'initial confirmed node should have set initial state'
-    )
+    rollup = await initNewRollup()
   })
 
   it('should always init logic contract', async function () {
@@ -902,5 +951,47 @@ describe('ArbRollup', () => {
     await expect(
       node.connect(accounts[0]).addStaker(await accounts[1].getAddress())
     ).to.be.revertedWith('ALREADY_STAKED')
+  })
+
+  it('should re-initialize', async function () {
+    rollup = await initNewRollup()
+  })
+
+  it('should place stake', async function () {
+    const stake = await rollup.currentRequiredStake()
+    await rollup.newStake({ value: stake })
+  })
+
+  const limitSends = makeSends(100)
+  it('should move stake to a new node with maximum # of sends', async function () {
+    await tryAdvanceChain(minimumAssertionPeriod)
+    const { node } = await makeNode(rollup, prevNode, undefined, limitSends)
+    prevNode = node
+  })
+
+  it('should confirm node with sends and it should take under 3 million gas', async function () {
+    await tryAdvanceChain(confirmationPeriodBlocks * 2)
+    const { execState: prevExecState } = prevNode.beforeState
+    const { execState: postExecState } = prevNode.afterState
+
+    const res = await rollup.confirmNextNode(
+      prevExecState.sendAcc,
+      prevExecState.sendCount,
+      limitSends,
+      postExecState.logAcc,
+      postExecState.logCount
+    )
+    const rec = await res.wait()
+    console.log('Gas used in 100 send assertion:', rec.gasUsed.toString())
+
+    expect(rec.gasUsed.lt(BigNumber.from(3000000))).to.be.true
+  })
+  const aboveLimitSends = makeSends(101, 101)
+
+  it('should revert when trying to make an assertion with too many sends', async function () {
+    await tryAdvanceChain(minimumAssertionPeriod)
+    await expect(
+      makeNode(rollup, prevNode, undefined, aboveLimitSends)
+    ).to.be.revertedWith('TOO_MANY_SENDS')
   })
 })
