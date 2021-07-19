@@ -364,11 +364,15 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function _currentWin() private {
-        if (turn == Turn.Asserter) {
-            _asserterWin();
-        } else {
-            _challengerWin();
-        }
+        // As a safety measure, challenges can only be resolved by timeouts during mainnet beta.
+        // As state is 0, no move is possible. The other party will lose via timeout
+        challengeState = bytes32(0);
+
+        // if (turn == Turn.Asserter) {
+        //     _asserterWin();
+        // } else {
+        //     _challengerWin();
+        // }
     }
 
     function _asserterWin() private {
