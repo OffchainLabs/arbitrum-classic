@@ -93,11 +93,13 @@ contract Bridge is OwnableUpgradeable, IBridge {
         // We set and reset active outbox around external call so activeOutbox remains valid during call
         (success, returnData) = destAddr.call{ value: amount }(data);
         activeOutbox = currentOutbox;
+        emit BridgeCallTriggered(msg.sender, destAddr, amount, data);
     }
 
     function setInbox(address inbox, bool enabled) external override onlyOwner {
         InOutInfo storage info = allowedInboxesMap[inbox];
         bool alreadyEnabled = info.allowed;
+        emit InboxToggle(inbox, enabled);
         if ((alreadyEnabled && enabled) || (!alreadyEnabled && !enabled)) {
             return;
         }
@@ -115,6 +117,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
     function setOutbox(address outbox, bool enabled) external override onlyOwner {
         InOutInfo storage info = allowedOutboxesMap[outbox];
         bool alreadyEnabled = info.allowed;
+        emit OutboxToggle(outbox, enabled);
         if ((alreadyEnabled && enabled) || (!alreadyEnabled && !enabled)) {
             return;
         }
