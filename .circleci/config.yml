@@ -109,9 +109,10 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_yarn_cache
       - run:
-          name: install
+          name: install and audit
           command: |
             yarn install --cache-folder ~/.cache/yarn
+            if [[ ! -z $CIRCLE_PULL_REQUEST ]] ; then yarn audit:ci ; fi
             yarn build
           working_directory: /home/user/project
       - run:
