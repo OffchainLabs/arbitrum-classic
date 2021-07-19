@@ -10,6 +10,7 @@ import { BytesLike } from '@ethersproject/bytes'
 
 import { Rollup } from '../build/types/Rollup'
 import { Bridge } from '../build/types/Bridge'
+import { hexDataLength } from '@ethersproject/bytes'
 
 const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -345,7 +346,7 @@ export class RollupContract {
     afterLogCount: BigNumberish
   ): Promise<ContractTransaction> {
     const messageData = ethers.utils.concat(sends)
-    const messageLengths = sends.map(msg => (msg.length - 2) / 2)
+    const messageLengths = sends.map(msg => hexDataLength(msg))
     return this.rollup.confirmNextNode(
       prevSendAcc,
       messageData,
