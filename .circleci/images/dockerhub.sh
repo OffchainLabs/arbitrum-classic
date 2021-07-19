@@ -19,8 +19,8 @@ docker tag go-base:latest offchainlabs/go-base:0.1.0
 docker push offchainlabs/go-base:0.1.0
 
 docker build -t cpp-base cpp-base
-docker tag cpp-base:latest offchainlabs/cpp-base:0.1.0
-docker push offchainlabs/cpp-base:0.1.0
+docker tag cpp-base:latest offchainlabs/cpp-base:0.3.3
+docker push offchainlabs/cpp-base:0.3.3
 
 docker build -t ethbridge-base ethbridge-base
 docker tag ethbridge-base:latest offchainlabs/ethbridge-base:0.1.0
