@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "../libraries/Cloneable.sol";
+import "../../libraries/Cloneable.sol";
 
 contract OutboxEntry is Cloneable {
     address outbox;
