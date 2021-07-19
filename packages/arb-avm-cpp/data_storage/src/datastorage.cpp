@@ -160,7 +160,7 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
     if (status.IsNotFound()) {
         secret_hash_seed.resize(32);
         boost::random::random_device rng;
-        // Note: this actually generates 32 byte ints then casts them to bytes.
+        // Note: this actually generates 32 bit ints then casts them to bytes.
         // This is suboptimal in that we consume more entropy than we need,
         // but practically this is cheap anyways and only happens once.
         rng.generate(secret_hash_seed.begin(), secret_hash_seed.end());
