@@ -118,15 +118,20 @@ const config = {
   networks: {
     hardhat: {
       chainId: 1337,
+      throwOnTransactionFailures: true,
       allowUnlimitedContractSize: true,
       accounts: {
-        accountsBalance: '10000000000000000000000000',
+        accountsBalance: '1000000000000000000000000000',
       },
-      blockGasLimit: 20000000,
+      blockGasLimit: 200000000,
       // mining: {
       //   auto: false,
       //   interval: 1000,
       // },
+      forking: {
+        url: 'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY'],
+        enabled: process.env['SHOULD_FORK'] === '1',
+      },
     },
     local_development: {
       url: 'http://127.0.0.1:7545',
@@ -198,6 +203,7 @@ const config = {
   },
   mocha: {
     timeout: 0,
+    bail: true,
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],
