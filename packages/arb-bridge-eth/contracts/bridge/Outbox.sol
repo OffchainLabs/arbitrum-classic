@@ -44,7 +44,7 @@ contract Outbox is IOutbox, Cloneable {
     address public rollup;
     IBridge public bridge;
 
-    OutboxEntry[] public outboxEntries;
+    mapping(uint256 => OutboxEntry) public outboxEntries;
 
     // Note, these variables are set and then wiped during a single transaction.
     // Therefore their values don't need to be maintained, and their slots will
@@ -98,20 +98,22 @@ contract Outbox is IOutbox, Cloneable {
         if (data[0] == MSG_ROOT) {
             require(data.length == 97, "BAD_LENGTH");
             uint256 batchNum = data.toUint(1);
+            // Ensure no outbox entry already exists w/ batch number
+            require(!outboxEntryExists(batchNum), "ENTRY_ALREADY_EXISTS");
+
             uint256 numInBatch = data.toUint(33);
             bytes32 outputRoot = data.toBytes32(65);
 
             OutboxEntry memory newOutboxEntry = OutboxEntry(outputRoot);
-
-            uint256 outboxEntryIndex = outboxEntries.length;
-            outboxEntries.push(newOutboxEntry);
-            emit OutboxEntryCreated(batchNum, outboxEntryIndex, outputRoot, numInBatch);
+            outboxEntries[batchNum] = newOutboxEntry;
+            // keeping redundant batchnum in event (batchnum and old outboxindex field) for outbox version interface compatibility
+            emit OutboxEntryCreated(batchNum, batchNum, outputRoot, numInBatch);
         }
     }
 
     /**
      * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired
-     * @param outboxEntryIndex Index of OutboxEntry in outboxEntries array
+     * @param batchNum Index of OutboxEntry in outboxEntries array
      * @param proof Merkle proof of message inclusion in outbox entry
      * @param index Merkle path to message
      * @param l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)
@@ -123,7 +125,7 @@ contract Outbox is IOutbox, Cloneable {
      * @param calldataForL1 abi-encoded L1 message data
      */
     function executeTransaction(
-        uint256 outboxEntryIndex,
+        uint256 batchNum,
         bytes32[] calldata proof,
         uint256 index,
         address l2Sender,
@@ -145,8 +147,8 @@ contract Outbox is IOutbox, Cloneable {
                 calldataForL1
             );
 
-        recordOutputAsSpent(outboxEntryIndex, proof, index, userTx);
-        emit OutBoxTransactionExecuted(destAddr, l2Sender, outboxEntryIndex, index);
+        recordOutputAsSpent(batchNum, proof, index, userTx);
+        emit OutBoxTransactionExecuted(destAddr, l2Sender, batchNum, index);
 
         address currentSender = _sender;
         uint128 currentL2Block = _l2Block;
@@ -167,7 +169,7 @@ contract Outbox is IOutbox, Cloneable {
     }
 
     function recordOutputAsSpent(
-        uint256 outboxEntryIndex,
+        uint256 batchNum,
         bytes32[] memory proof,
         uint256 path,
         bytes32 item
@@ -177,7 +179,7 @@ contract Outbox is IOutbox, Cloneable {
 
         // Hash the leaf an extra time to prove it's a leaf
         bytes32 calcRoot = calculateMerkleRoot(proof, path, item);
-        OutboxEntry storage outboxEntry = outboxEntries[outboxEntryIndex];
+        OutboxEntry storage outboxEntry = outboxEntries[batchNum];
         require(outboxEntry.root != bytes32(0), "NO_OUTBOX_ENTRY");
 
         // With a minimal path, the pair of path and proof length should always identify
@@ -242,16 +244,7 @@ contract Outbox is IOutbox, Cloneable {
         return MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
     }
 
-    function outboxEntriesLength() external view returns (uint256) {
-        return outboxEntries.length;
-    }
-
-    function outboxEntryExists(uint256 outboxEntryIndex) external view returns (bool) {
-        return outboxEntries[outboxEntryIndex].root != bytes32(0);
-    }
-
-    // bad semantic method, here to preserve interface compatability with OldOutbox.
-    function outboxesLength() public view returns (uint256) {
-        return outboxEntries.length;
+    function outboxEntryExists(uint256 batchNum) public view override returns (bool) {
+        return outboxEntries[batchNum].root != bytes32(0);
     }
 }

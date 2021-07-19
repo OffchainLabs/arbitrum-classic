@@ -42,4 +42,6 @@ interface IOutbox {
 
     function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
         external;
+
+    function outboxEntryExists(uint256 batchNum) external view returns (bool);
 }

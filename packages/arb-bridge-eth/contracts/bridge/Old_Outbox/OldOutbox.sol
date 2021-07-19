@@ -245,6 +245,10 @@ contract OldOutbox is IOutbox, Cloneable {
         return MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
     }
 
+    function outboxEntryExists(uint256 batchNum) public view override returns (bool) {
+        return batchNum < outboxes.length;
+    }
+
     function outboxesLength() public view returns (uint256) {
         return outboxes.length;
     }
