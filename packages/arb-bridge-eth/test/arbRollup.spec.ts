@@ -953,7 +953,7 @@ describe('ArbRollup', () => {
     ).to.be.revertedWith('ALREADY_STAKED')
   })
 
-  it('should re-initialize', async function () {
+  it('should initialize a fresh rollup', async function () {
     rollup = await initNewRollup()
   })
 
