@@ -28,7 +28,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 
 contract L1SignedLiquidityProvider is Ownable, IExitLiquidityProvider {
-    uint256 public constant fee_div = 100;
+    uint256 public constant FEE_DIV = 100;
     address tokenBridge;
     address signer;
 
@@ -55,7 +55,7 @@ contract L1SignedLiquidityProvider is Ownable, IExitLiquidityProvider {
         require(msg.sender == tokenBridge, "NOT_BRIDGE");
         bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, dest, erc20, amount));
         require(ECDSA.recover(withdrawData, liquidityProof) == signer, "BAD_SIG");
-        uint256 fee = amount / fee_div;
+        uint256 fee = amount / FEE_DIV;
         require(IERC20(erc20).transfer(dest, amount - fee), "INSUFFICIENT_LIQUIDITIY");
         return "";
     }
