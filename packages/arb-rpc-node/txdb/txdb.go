@@ -460,10 +460,6 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if cachedSnap != nil {
 		return cachedSnap, nil
 	}
-	if !db.allowSlowLookup {
-		// Not in memory cache, so give up
-		return nil, errors.New("block not in cache")
-	}
 	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64(), db.allowSlowLookup)
 	if err != nil || mach == nil {
 		return nil, err
@@ -477,6 +473,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 		return nil, err
 	}
 	db.snapshotCache.Add(info.Header, snap)
+	logger.Debug().Int("cache_size", db.snapshotCache.Size()).Hex("number", info.Header.Number.Bytes()).Msg("added block to cache")
 	return snap, nil
 }
 

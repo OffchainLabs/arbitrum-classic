@@ -28,6 +28,10 @@ func New(initialSize int, expiration time.Duration) (*BlockCache, error) {
 	}, nil
 }
 
+func (bc *BlockCache) Size() int {
+	return len(bc.cache)
+}
+
 // emptyCacheNoLock removes all entries
 func (bc *BlockCache) emptyCacheNoLock() {
 	bc.cache = make(map[uint64]*record, len(bc.cache))
