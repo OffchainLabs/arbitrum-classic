@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	golog "log"
+	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -33,7 +34,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -167,7 +170,7 @@ func startup() error {
 		}
 	}
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, l1Client, auth, config.GasPriceUrl)
+	valAuth, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config.GasPriceUrl, false)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
@@ -207,7 +210,10 @@ func startup() error {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy)
+	callOpts := bind.CallOpts{
+		BlockNumber: big.NewInt(int64(rpc.LatestBlockNumber)),
+	}
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, callOpts, valAuth)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
 	}
