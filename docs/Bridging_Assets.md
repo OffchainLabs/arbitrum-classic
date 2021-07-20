@@ -136,6 +136,9 @@ For steps 2 and 3: if you'd like perform a Generic Custom Gateway registration f
 - Deploy to Arbitrum via the standard gateway, and handle custom behavior by creating an ERC20 wrapper for the L2 contract
 - Deploy your L2 token and have us perform an admin registration (note: this admin ability is only a temporary measure to cleanly support previously-deployed tokens)
 
+| :point_up: The admin priviliedge over the router and generic custom gateway are temporary and users should use at their own discretion |
+| -------------------------------------------------------------------------------------------------------------------------------------- |
+
 #### Other Flavors of Gateways
 
 Note that in the system described above, one pair of Gateway contracts handles the bridging of many ERC20s; i.e., many ERC20s on L1 are each paired with their own ERC20s on Arbitrum via a single gateway contract pairing. Other gateways may well bear different relations with the contracts that they bridge.
