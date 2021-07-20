@@ -89,6 +89,11 @@ if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     endif()
 endif()
 
+SET(OPENSSL_ROOT_DIR ${OPENSSL_ROOT_DIR})
+SET(OPENSSL_INCLUDE_DIR ${OPENSSL_ROOT_DIR}/include)
+find_package(OpenSSL REQUIRED)
+INCLUDE_DIRECTORIES(${OPENSSL_INCLUDE_DIR})
+
 find_package(Boost 1.65 COMPONENTS filesystem system REQUIRED)
 if(NOT TARGET Boost::boost)
     add_library(Boost::boost IMPORTED INTERFACE)
@@ -114,7 +119,7 @@ include(CodeCoverage)
 include(Formatting)
 
 file(GLOB_RECURSE ALL_CODE_FILES
-	${PROJECT_SOURCE_DIR}/avm_values/*.[ch]pp
+    ${PROJECT_SOURCE_DIR}/avm_values/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/avm/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/app/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/tests/*.[h]pp
@@ -173,6 +178,7 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
             " $<TARGET_LINKER_FILE:avm_values>"
             " $<TARGET_LINKER_FILE:ff>"
             " ${JEMALLOC_LINK_LIBRARIES}"
+            " $<TARGET_LINKER_FILE:OpenSSL::Crypto>"
         )
         configure_file( ${INFILE} ${MIDDLEFILE} )
         file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})
