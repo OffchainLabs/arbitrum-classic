@@ -2,7 +2,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: ${CFLAGS}
-#cgo LDFLAGS: ${LDFLAGS} -lstdc++ -lm -lrocksdb -lsecp256k1 -lgmp -lkeccak -ldl -lboost_random
+#cgo LDFLAGS: ${LDFLAGS} -lstdc++ -lm -lrocksdb -lsecp256k1 -lgmp -lkeccak -ldl
 #cgo linux LDFLAGS: -latomic
 */
 import "C"

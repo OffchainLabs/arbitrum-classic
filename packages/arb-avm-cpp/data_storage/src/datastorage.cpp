@@ -18,9 +18,9 @@
 #include <data_storage/readtransaction.hpp>
 #include <data_storage/storageresult.hpp>
 
+#include <openssl/rand.h>
 #include <rocksdb/convenience.h>
 #include <rocksdb/filter_policy.h>
-#include <boost/random/random_device.hpp>
 
 #include <iostream>
 #include <string>
@@ -159,12 +159,7 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
         txn_db->Get(read_opts, column_handles[STATE_COLUMN], key, &value);
     if (status.IsNotFound()) {
         secret_hash_seed.resize(32);
-        boost::random::random_device rng;
-        // Note: this actually generates 32 bit ints then casts them to bytes.
-        // This is suboptimal in that we consume more entropy than we need,
-        // but practically this is cheap anyways and only happens once.
-        rng.generate(secret_hash_seed.begin(), secret_hash_seed.end());
-
+        RAND_bytes(secret_hash_seed.data(), secret_hash_seed.size());
         rocksdb::WriteOptions write_opts;
         rocksdb::Slice value_slice(
             reinterpret_cast<const char*>(secret_hash_seed.data()),
