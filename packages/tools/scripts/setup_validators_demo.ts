@@ -69,7 +69,7 @@ async function initializeClientWallets(inboxAddress: string): Promise<void> {
   const amount = ethers.utils.parseEther('100')
 
   for (const address of addresses) {
-    await inbox.depositEth(address, { value: amount })
+    await inbox.depositEth(address, { value: amount, gasLimit: 8000000 })
   }
 }
 
