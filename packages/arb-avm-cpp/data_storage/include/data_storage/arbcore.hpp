@@ -114,8 +114,8 @@ class ArbCore {
     std::mutex core_reorg_mutex;
     std::shared_ptr<DataStorage> data_storage;
 
-    std::unique_ptr<MachineThread> machine;
-    std::shared_ptr<Code> code{};
+    std::unique_ptr<MachineThread> core_machine;
+    std::shared_ptr<CoreCode> core_code{};
 
     // Cache a machine ready to sideload view transactions just after recent
     // blocks

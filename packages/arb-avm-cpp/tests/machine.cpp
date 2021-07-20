@@ -33,7 +33,7 @@ auto execution_path = boost::filesystem::current_path();
 
 void checkpointState(ArbStorage& storage, Machine& machine) {
     auto transaction = storage.makeReadWriteTransaction();
-    auto results = saveMachine(*transaction, machine);
+    auto results = saveTestMachine(*transaction, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
     REQUIRE(transaction->commit().ok());
@@ -41,13 +41,13 @@ void checkpointState(ArbStorage& storage, Machine& machine) {
 
 void checkpointStateTwice(ArbStorage& storage, Machine& machine) {
     auto transaction1 = storage.makeReadWriteTransaction();
-    auto results = saveMachine(*transaction1, machine);
+    auto results = saveTestMachine(*transaction1, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
     REQUIRE(transaction1->commit().ok());
 
     auto transaction2 = storage.makeReadWriteTransaction();
-    auto results2 = saveMachine(*transaction2, machine);
+    auto results2 = saveTestMachine(*transaction2, machine);
     REQUIRE(results2.status.ok());
     REQUIRE(results2.reference_count == 2);
     REQUIRE(transaction2->commit().ok());
@@ -82,7 +82,7 @@ TEST_CASE("Checkpoint State") {
     SECTION("save twice") { checkpointStateTwice(storage, *machine); }
     SECTION("assert machine hash") {
         auto transaction = storage.makeReadWriteTransaction();
-        auto results = saveMachine(*transaction, *machine);
+        auto results = saveTestMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
         auto machine2 = storage.getMachine(machine->hash(), value_cache);
@@ -103,11 +103,11 @@ TEST_CASE("Delete machine checkpoint") {
         machine->machine_state.context = AssertionContext(execConfig);
         machine->run();
         auto transaction = storage.makeReadWriteTransaction();
-        saveMachine(*transaction, *machine);
+        saveTestMachine(*transaction, *machine);
         execConfig.max_gas = 0;
         machine->machine_state.context = AssertionContext(execConfig);
         machine->run();
-        saveMachine(*transaction, *machine);
+        saveTestMachine(*transaction, *machine);
         deleteCheckpoint(*transaction, *machine);
         REQUIRE(transaction->commit().ok());
     }
@@ -122,7 +122,7 @@ TEST_CASE("Restore checkpoint") {
     SECTION("default") {
         auto machine = storage.getInitialMachine(value_cache);
         auto transaction = storage.makeReadWriteTransaction();
-        auto results = saveMachine(*transaction, *machine);
+        auto results = saveTestMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
         restoreCheckpoint(storage, *machine, value_cache);

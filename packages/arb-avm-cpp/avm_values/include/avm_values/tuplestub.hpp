@@ -38,6 +38,7 @@ class HashPreImage {
     uint256_t getSize() const { return valueSize; }
     void marshal(std::vector<unsigned char>& buf) const;
     uint256_t hash() const;
+    uint256_t secretHash(const std::vector<unsigned char>& seed) const;
 };
 
 inline uint256_t hash(const HashPreImage& hv) {

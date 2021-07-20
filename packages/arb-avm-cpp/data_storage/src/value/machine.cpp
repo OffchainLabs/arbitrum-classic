@@ -201,48 +201,50 @@ DbResult<MachineStateKeys> getMachineStateKeys(
     return CountedData<MachineStateKeys>{results.reference_count, parsed_state};
 }
 
-rocksdb::Status saveMachineState(ReadWriteTransaction& tx,
-                                 const Machine& machine) {
+std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
+    ReadWriteTransaction& tx,
+    const Machine& machine) {
     std::map<uint64_t, uint64_t> segment_counts;
 
     auto& machinestate = machine.machine_state;
     auto static_val_results =
         saveValueImpl(tx, machinestate.static_val, segment_counts);
     if (!static_val_results.status.ok()) {
-        return static_val_results.status;
+        return {static_val_results.status, {}};
     }
 
     auto register_val_results =
         saveValueImpl(tx, machinestate.registerVal, segment_counts);
     if (!register_val_results.status.ok()) {
-        return register_val_results.status;
+        return {register_val_results.status, {}};
     }
 
     auto datastack_tup = machinestate.stack.getTupleRepresentation();
     auto datastack_results = saveValueImpl(tx, datastack_tup, segment_counts);
     if (!datastack_results.status.ok()) {
-        return datastack_results.status;
+        return {datastack_results.status, {}};
     }
 
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
     auto auxstack_results = saveValueImpl(tx, auxstack_tup, segment_counts);
     if (!auxstack_results.status.ok()) {
-        return auxstack_results.status;
+        return {auxstack_results.status, {}};
     }
 
     ++segment_counts[machinestate.pc.segment];
     ++segment_counts[machinestate.errpc.pc.segment];
 
-    auto code_status = saveCode(tx, *machinestate.code, segment_counts);
+    auto code_status =
+        saveCode(tx, *machine.machine_state.code, segment_counts);
     if (!code_status.ok()) {
-        return code_status;
+        return {code_status, {}};
     }
 
-    return rocksdb::Status::OK();
+    return {rocksdb::Status::OK(), std::move(segment_counts)};
 }
 
-SaveResults saveMachine(ReadWriteTransaction& transaction,
-                        const Machine& machine) {
+SaveResults saveTestMachine(ReadWriteTransaction& transaction,
+                            Machine& machine) {
     std::vector<unsigned char> checkpoint_name;
     auto machine_hash = machine.hash();
     if (!machine_hash) {
@@ -256,10 +258,19 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
         return save_res;
     }
 
-    auto status = saveMachineState(transaction, machine);
-    if (!status.ok()) {
-        return {0, status};
+    auto machine_save_res = saveMachineState(transaction, machine);
+    if (!machine_save_res.first.ok()) {
+        return {0, machine_save_res.first};
     }
+    auto machine_code =
+        dynamic_cast<RunningCode*>(machine.machine_state.code.get());
+    assert(machine_code != nullptr);
+    auto parent_code = machine_code->getParent();
+    auto core_code = dynamic_cast<CoreCode*>(parent_code.get());
+    assert(core_code != nullptr);
+
+    core_code->commitChanges(*machine_code, machine_save_res.second);
+    machine.machine_state.code = std::make_shared<RunningCode>(parent_code);
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),
                               serialized_state);

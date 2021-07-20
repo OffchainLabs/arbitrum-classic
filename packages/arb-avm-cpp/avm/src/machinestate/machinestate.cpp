@@ -94,11 +94,11 @@ void MachineState::addProcessedLog(value log_val) {
 
 MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
 
-MachineState::MachineState(std::shared_ptr<Code> code_, value static_val_)
-    : code(std::move(code_)),
+MachineState::MachineState(std::shared_ptr<CoreCode> code_, value static_val_)
+    : pc(code_->initialCodePointRef()),
+      code(std::move(code_)),
       static_val(std::move(static_val_)),
-      arb_gas_remaining(max_arb_gas_remaining),
-      pc(code->initialCodePointRef()) {}
+      arb_gas_remaining(max_arb_gas_remaining) {}
 
 MachineState::MachineState(std::shared_ptr<Code> code_,
                            value register_val_,
@@ -110,21 +110,21 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
                            CodePointRef pc_,
                            CodePointStub errpc_,
                            MachineOutput output_)
-    : code(std::move(code_)),
+    : pc(pc_),
+      code(std::move(code_)),
       registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
       stack(std::move(stack_)),
       auxstack(std::move(auxstack_)),
       arb_gas_remaining(arb_gas_remaining_),
       state(state_),
-      pc(pc_),
       errpc(errpc_),
       output(std::move(output_)) {}
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
     auto executable = loadExecutable(executable_filename);
-    auto code = std::make_shared<Code>(0);
+    auto code = std::make_shared<CoreCode>(0);
     code->addSegment(std::move(executable.code));
     return MachineState{std::move(code), std::move(executable.static_val)};
 }
@@ -437,17 +437,17 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
 }
 
 CodePoint MachineState::loadCurrentInstruction() const {
-    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
+    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
         loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
     }
-    return loaded_segment->segment->loadCodePoint(pc.pc);
+    return loaded_segment->loadCodePoint(pc.pc);
 }
 
 const Operation& MachineState::loadCurrentOperation() const {
-    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
+    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
         loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
     }
-    return loaded_segment->segment->loadOperation(pc.pc);
+    return loaded_segment->loadOperation(pc.pc);
 }
 
 uint256_t MachineState::nextGasCost() const {
@@ -490,10 +490,9 @@ BlockReason MachineState::runOne() {
     bool is_valid_instruction =
         instructionValidity()[static_cast<size_t>(op.opcode)];
 
-    uint64_t stack_arg_count =
-        is_valid_instruction ? InstructionStackPops.at(op.opcode).size() : 0;
+    uint64_t stack_arg_count = stackArgCount()[static_cast<size_t>(op.opcode)];
     uint64_t auxstack_arg_count =
-        is_valid_instruction ? InstructionAuxStackPops.at(op.opcode).size() : 0;
+        auxstackArgCount()[static_cast<size_t>(op.opcode)];
 
     // We're only blocked if we can't execute at all
     BlockReason blockReason = [&]() -> BlockReason {

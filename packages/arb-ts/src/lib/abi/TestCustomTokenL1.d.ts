@@ -34,7 +34,7 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
     'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
-    'registerTokenOnL2(address,uint256,uint256,uint256)': FunctionFragment
+    'registerTokenOnL2(address,uint256,uint256,uint256,address)': FunctionFragment
     'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
     'transfer(address,uint256)': FunctionFragment
@@ -82,7 +82,7 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'registerTokenOnL2',
-    values: [string, BigNumberish, BigNumberish, BigNumberish]
+    values: [string, BigNumberish, BigNumberish, BigNumberish, string]
   ): string
   encodeFunctionData(functionFragment: 'symbol', values?: undefined): string
   encodeFunctionData(
@@ -271,14 +271,16 @@ export class TestCustomTokenL1 extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
+      creditBackAddress: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
+      creditBackAddress: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -440,14 +442,16 @@ export class TestCustomTokenL1 extends Contract {
     maxSubmissionCost: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
+    creditBackAddress: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'registerTokenOnL2(address,uint256,uint256,uint256)'(
+  'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
     l2CustomTokenAddress: string,
     maxSubmissionCost: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
+    creditBackAddress: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -609,14 +613,16 @@ export class TestCustomTokenL1 extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
+      creditBackAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
+      creditBackAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -794,14 +800,16 @@ export class TestCustomTokenL1 extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
+      creditBackAddress: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
+      creditBackAddress: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -972,14 +980,16 @@ export class TestCustomTokenL1 extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
+      creditBackAddress: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
+      creditBackAddress: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

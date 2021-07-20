@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
             ops.emplace_back(static_cast<OpCode>(op));
         }
 
-        auto code = std::make_shared<CodeSegment>(0, ops);
+        auto code = std::make_shared<UnsafeCodeSegment>(0, ops);
         auto status =
             storage.initialize(LoadedExecutable{std::move(code), Tuple()});
         if (!status.ok()) {
@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
               << static_cast<int>(mach->currentStatus()) << "\n";
 
     auto tx = storage.makeReadWriteTransaction();
-    saveMachine(*tx, *mach);
+    saveTestMachine(*tx, *mach);
     tx->commit();
 
     auto mach2 = storage.getMachine(mach->hash(), value_cache);

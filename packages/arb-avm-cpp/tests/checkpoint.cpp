@@ -263,25 +263,32 @@ TEST_CASE("Save And Get Tuple") {
         REQUIRE(hash(tuple) != hash(inner_tuple));
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        if (!shouldInlineTuple(inner_tuple, transaction->getSecretHashSeed())) {
+            getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        }
     }
     SECTION("save 2 tuples in tuple") {
         ValueCache value_cache{1, 0};
-        uint256_t num = 1;
-        value inner_tuple = Tuple::createTuple(num);
-        uint256_t num2 = 2;
-        value inner_tuple2 = Tuple::createTuple(num2);
+        uint256_t num = 2;
+        Tuple inner_tuple = Tuple::createTuple(num);
+        uint256_t num2 = 3;
+        Tuple inner_tuple2 = Tuple::createTuple(num2);
         auto tuple = Tuple(inner_tuple, inner_tuple2);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple2, 1, true, value_cache);
+        if (!shouldInlineTuple(inner_tuple, transaction->getSecretHashSeed())) {
+            getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        }
+        if (!shouldInlineTuple(inner_tuple2,
+                               transaction->getSecretHashSeed())) {
+            getTuple(*transaction, inner_tuple2, 1, true, value_cache);
+        }
     }
     SECTION("save saved tuple in tuple") {
         ValueCache value_cache{1, 0};
         auto transaction2 = storage.makeReadWriteTransaction();
-        uint256_t num = 1;
-        value inner_tuple = Tuple::createTuple(num);
+        uint256_t num = 4;
+        Tuple inner_tuple = Tuple::createTuple(num);
         value tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, inner_tuple, 1, true);
         getTuple(*transaction, inner_tuple, 1, true, value_cache);
@@ -289,8 +296,12 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 1, true, value_cache);
 
         // Use different cache to get real reference count
+        uint64_t expected_refs = 2;
+        if (shouldInlineTuple(inner_tuple, transaction2->getSecretHashSeed())) {
+            expected_refs--;
+        }
         ValueCache value_cache2{1, 0};
-        getTuple(*transaction, inner_tuple, 2, true, value_cache2);
+        getTuple(*transaction, inner_tuple, expected_refs, true, value_cache2);
 
         // Test cache
         getTuple(*transaction, inner_tuple, 0, true, value_cache2);
@@ -322,9 +333,9 @@ TEST_CASE("Checkpoint Benchmark") {
 }
 
 void saveState(ReadWriteTransaction& transaction,
-               const Machine& machine,
+               Machine& machine,
                uint256_t expected_ref_count) {
-    auto results = saveMachine(transaction, machine);
+    auto results = saveTestMachine(transaction, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(transaction.commit().ok());
@@ -386,7 +397,8 @@ void deleteCheckpoint(ReadWriteTransaction& transaction,
 }
 
 Machine getComplexMachine() {
-    auto code = std::make_shared<Code>();
+    auto core_code = std::make_shared<CoreCode>();
+    auto code = std::make_shared<RunningCode>(core_code);
     auto stub = code->addSegment();
     stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
     stub = code->addOperation(stub.pc, Operation(OpCode::MUL));
@@ -416,7 +428,8 @@ Machine getComplexMachine() {
 }
 
 Machine getDefaultMachine() {
-    auto code = std::make_shared<Code>();
+    auto core_code = std::make_shared<CoreCode>();
+    auto code = std::make_shared<RunningCode>(core_code);
     code->addSegment();
     auto static_val = Tuple();
     auto register_val = Tuple();
@@ -504,5 +517,20 @@ TEST_CASE("Delete checkpoint") {
         checkSavedState(*transaction, machine, 1);
         auto res2 = deleteMachine(*transaction, machine.hash());
         checkDeletedCheckpoint(*transaction, machine);
+    }
+}
+
+TEST_CASE("Secret hash seed") {
+    DBDeleter deleter;
+    std::vector<unsigned char> seed;
+    {
+        ArbStorage storage(dbpath, 60 * 20);
+        seed = storage.makeReadTransaction()->getSecretHashSeed();
+        REQUIRE(seed.size() == 32);
+        REQUIRE(seed != std::vector<unsigned char>(32, 0));
+    }
+    {
+        ArbStorage storage(dbpath, 60 * 20);
+        REQUIRE(seed == storage.makeReadTransaction()->getSecretHashSeed());
     }
 }

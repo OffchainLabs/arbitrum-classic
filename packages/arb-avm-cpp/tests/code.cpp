@@ -73,8 +73,8 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
 TEST_CASE("Code works correctly") {
     DBDeleter deleter;
     ArbStorage storage(dbpath, 60 * 20);
-    storage.initialize(
-        LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
+    storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
+                                        value{Tuple()}));
     ValueCache value_cache{1, 0};
     auto mach = storage.getInitialMachine(value_cache);
     generateTestMachine(mach);
@@ -84,8 +84,8 @@ TEST_CASE("Code works correctly") {
 TEST_CASE("Code serialization") {
     DBDeleter deleter;
     ArbStorage storage(dbpath, 60 * 20);
-    storage.initialize(
-        LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
+    storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
+                                        value{Tuple()}));
     ValueCache value_cache{1, 0};
 
     auto mach = storage.getInitialMachine(value_cache);
@@ -93,7 +93,7 @@ TEST_CASE("Code serialization") {
     auto tx = storage.makeReadWriteTransaction();
 
     SECTION("Save and load") {
-        auto save_ret = saveMachine(*tx, *mach);
+        auto save_ret = saveTestMachine(*tx, *mach);
         REQUIRE(save_ret.status.ok());
         REQUIRE(tx->commit().ok());
         auto mach2 = storage.getMachine(mach->hash(), value_cache);
@@ -101,14 +101,15 @@ TEST_CASE("Code serialization") {
     }
 
     SECTION("Save different and load") {
+        auto save_ret = saveTestMachine(*tx, *mach);
+        REQUIRE(save_ret.status.ok());
+
         auto mach2 = *mach;
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 7;
         mach2.machine_state.context = AssertionContext(execConfig);
         mach2.run();
-        auto save_ret = saveMachine(*tx, *mach);
-        REQUIRE(save_ret.status.ok());
-        save_ret = saveMachine(*tx, mach2);
+        save_ret = saveTestMachine(*tx, mach2);
         REQUIRE(save_ret.status.ok());
 
         SECTION("Delete first") {
@@ -129,8 +130,8 @@ TEST_CASE("Code serialization") {
     }
 
     SECTION("Save twice, delete and load") {
-        saveMachine(*tx, *mach);
-        saveMachine(*tx, *mach);
+        saveTestMachine(*tx, *mach);
+        saveTestMachine(*tx, *mach);
         deleteMachine(*tx, mach->hash());
         REQUIRE(tx->commit().ok());
         auto mach2 = storage.getMachine(mach->hash(), value_cache);
@@ -139,7 +140,7 @@ TEST_CASE("Code serialization") {
 }
 
 TEST_CASE("Code forks are identical to original") {
-    Code code;
+    CoreCode code;
     std::vector<CodePointStub> stubs(1, code.addSegment());
     constexpr size_t num_ops = 45;
     for (size_t i = 0; i < num_ops; i++) {

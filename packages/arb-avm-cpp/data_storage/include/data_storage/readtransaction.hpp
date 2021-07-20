@@ -98,6 +98,9 @@ class ReadTransaction {
     [[nodiscard]] ValueResult<uint256_t> refCountedGetUint256(
         rocksdb::Slice key_slice) const;
 
+    // Doesn't actually do a DB read, uses cached value.
+    const std::vector<unsigned char>& getSecretHashSeed();
+
    private:
     ValueResult<std::vector<std::vector<unsigned char>>>
     getVectorVectorUsingFamilyAndKey(rocksdb::ColumnFamilyHandle* family,
