@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -48,11 +49,18 @@ type TransactAuth struct {
 	gasPriceUrl string
 }
 
-func NewTransactAuth(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts, gasPriceUrl string) (*TransactAuth, error) {
+func NewTransactAuthAdvanced(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts, gasPriceUrl string, usePendingNonce bool) (*TransactAuth, error) {
 	if auth.Nonce == nil {
-		nonce, err := client.PendingNonceAt(ctx, auth.From)
+		var nonce uint64
+		var err error
+		if usePendingNonce {
+			nonce, err = client.PendingNonceAt(ctx, auth.From)
+		} else {
+			blockNum := big.NewInt(int64(rpc.LatestBlockNumber))
+			nonce, err = client.NonceAt(ctx, auth.From, blockNum)
+		}
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed to get nonce")
+			return nil, errors.Wrap(err, "failed to get nonce")
 		}
 		auth.Nonce = new(big.Int).SetUint64(nonce)
 	}
@@ -60,6 +68,10 @@ func NewTransactAuth(ctx context.Context, client ethutils.EthClient, auth *bind.
 		auth:        auth,
 		gasPriceUrl: gasPriceUrl,
 	}, nil
+}
+
+func NewTransactAuth(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts, gasPriceUrl string) (*TransactAuth, error) {
+	return NewTransactAuthAdvanced(ctx, client, auth, gasPriceUrl, true)
 }
 
 func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
