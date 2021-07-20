@@ -156,7 +156,7 @@ jobs:
 
   cpp-avm-build:
     docker:
-      - image: offchainlabs/cpp-base:0.3.3
+      - image: offchainlabs/cpp-base:0.3.4
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -179,7 +179,7 @@ jobs:
             - ./project/packages/arb-avm-cpp/debug/*
   cpp-avm:
     docker:
-      - image: offchainlabs/cpp-base:0.3.3
+      - image: offchainlabs/cpp-base:0.3.4
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
