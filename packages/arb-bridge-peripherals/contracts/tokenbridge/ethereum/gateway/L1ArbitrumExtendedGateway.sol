@@ -31,8 +31,6 @@ interface ITradeableExitReceiver {
 }
 
 abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
-    address internal constant USED_ADDRESS = address(0x01);
-
     struct ExitData {
         address _newTo;
         bytes _newData;
@@ -60,8 +58,8 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
     /**
      * @notice Allows a user to redirect their right to claim a withdrawal to another address.
      * @dev This method also allows you to make an arbitrary call after the transfer, similar to ERC677.
-     * This does not change the original data that will be triggered with the withdrawal's external call.
-     * The exit receiver is the one to
+     * This does not validate if the exit was already triggered. It is assumed the `_exitNum` is
+     * validated off-chain to ensure this was not yet triggered.
      * @param _exitNum Sequentially increasing exit counter determined by the L2 bridge
      * @param _initialDestination address the L2 withdrawal call initially set as the destination.
      * @param _newDestination address the L1 will now call instead of the previously set destination
@@ -105,6 +103,7 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         );
     }
 
+    /// @notice this does not verify if the external call was already done
     function getExternalCall(
         uint256 _exitNum,
         address _initialDestination,
@@ -112,7 +111,7 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
     ) public view virtual override returns (address target, bytes memory data) {
         bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
         ExitData memory exit = redirectedExits[withdrawData];
-        require(exit._newTo != USED_ADDRESS, "ALREADY_EXITED");
+        // if `_newTo` is not set, we return the initial destination
         target = exit._newTo == address(0) ? _initialDestination : exit._newTo;
         data = exit._newData;
         return (target, data);
