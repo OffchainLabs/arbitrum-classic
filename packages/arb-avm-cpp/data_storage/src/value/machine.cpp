@@ -67,6 +67,9 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
     marshal_uint256_t(state_data.output.log_acc, state_data_vector);
     marshal_uint256_t(state_data.output.send_count, state_data_vector);
     marshal_uint256_t(state_data.output.log_count, state_data_vector);
+    marshal_uint256_t(state_data.l1_block_number, state_data_vector);
+    marshal_uint256_t(state_data.l2_block_number, state_data_vector);
+    marshal_uint256_t(state_data.last_inbox_timestamp, state_data_vector);
 
     auto last_sideload_raw = std::numeric_limits<uint256_t>::max();
     if (state_data.output.last_sideload.has_value()) {
@@ -95,6 +98,9 @@ MachineStateKeys extractMachineStateKeys(
     auto log_acc = extractUint256(iter);
     auto send_count = extractUint256(iter);
     auto log_count = extractUint256(iter);
+    auto l1_block_number = extractUint256(iter);
+    auto l2_block_number = extractUint256(iter);
+    auto last_inbox_timestamp = extractUint256(iter);
     auto last_sideload_raw = extractUint256(iter);
 
     std::optional<uint256_t> last_sideload;
@@ -111,6 +117,9 @@ MachineStateKeys extractMachineStateKeys(
         pc,
         err_pc,
         status,
+        l1_block_number,
+        l2_block_number,
+        last_inbox_timestamp,
         {{fully_processed_messages, fully_processed_inbox_accumulator},
          total_steps,
          arb_gas_used,

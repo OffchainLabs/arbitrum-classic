@@ -639,6 +639,9 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         state_data.status,
         state_data.pc.pc,
         state_data.err_pc,
+        state_data.l1_block_number,
+        state_data.l2_block_number,
+        state_data.last_inbox_timestamp,
         state_data.output};
 
     return std::make_unique<T>(state);
@@ -757,8 +760,6 @@ void ArbCore::operator()() {
             if (last_assertion.sideload_block_number) {
                 {
                     sideload_cache.add(
-                        *last_assertion.sideload_block_number,
-                        *last_assertion.sideload_timestamp,
                         std::make_unique<Machine>(*core_machine));
                 }
 
@@ -777,7 +778,8 @@ void ArbCore::operator()() {
                     // Clear oldest cache and start populating next cache
                     std::cout
                         << "Last checkpoint gas used: " << last_checkpoint_gas
-                        << std::endl;
+                        << ", L2 block: "
+                        << *last_assertion.sideload_block_number << std::endl;
                     cache.nextCache();
                 }
 

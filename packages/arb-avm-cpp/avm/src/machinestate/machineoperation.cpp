@@ -907,6 +907,7 @@ BlockReason inboxOp(MachineState& m) {
     auto next_message = m.context.popInbox();
 
     if (next_message.message.timestamp > m.last_inbox_timestamp) {
+        m.l1_block_number = next_message.message.block_number;
         m.last_inbox_timestamp = next_message.message.timestamp;
     }
     m.addProcessedMessage(next_message);
@@ -973,7 +974,8 @@ BlockReason sideload(MachineState& m) {
         m.context.sideloads.pop_back();
     } else {
         if (m.context.stop_on_sideload && !m.context.first_instruction) {
-            return SideloadBlocked{block_num, m.last_inbox_timestamp};
+            m.l2_block_number = block_num;
+            return SideloadBlocked{block_num};
         }
         m.last_inbox_timestamp = 0;
         m.stack[0] = Tuple();

@@ -40,16 +40,14 @@ class SideloadCache {
         : expiration_seconds{expiration_seconds} {}
 
     size_t size();
-    uint256_t oldestHeight();
-    uint256_t nextHeight();
-    void add(uint256_t height,
-             uint256_t timestamp,
-             std::unique_ptr<Machine> machine);
-    std::unique_ptr<Machine> get(uint256_t height);
-    void reorg(uint256_t next_height);
+    uint256_t oldestBlockNumber();
+    uint256_t nextBlockNumber();
+    void add(std::unique_ptr<Machine> machine);
+    std::unique_ptr<Machine> get(uint256_t block_number);
+    void reorg(uint256_t next_block_number);
 
    private:
-    void reorgNoLock(uint256_t new_next_height);
+    void reorgNoLock(uint256_t next_block_number);
     void deleteExpiredNoLock();
     [[nodiscard]] uint256_t expiredTimestamp() const;
 };

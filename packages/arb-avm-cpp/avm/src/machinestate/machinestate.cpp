@@ -47,6 +47,9 @@ MachineStateKeys::MachineStateKeys(const MachineState& machine)
       pc(machine.pc, machine.loadCurrentInstruction()),
       err_pc(machine.errpc),
       status(machine.state),
+      l1_block_number(machine.l1_block_number),
+      l2_block_number(machine.l2_block_number),
+      last_inbox_timestamp(machine.last_inbox_timestamp),
       output(machine.output) {}
 
 uint256_t MachineStateKeys::machineHash() const {
@@ -109,6 +112,9 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
                            Status state_,
                            CodePointRef pc_,
                            CodePointStub errpc_,
+                           uint256_t l1_block_number_,
+                           uint256_t l2_block_number_,
+                           uint256_t last_inbox_timestamp_,
                            MachineOutput output_)
     : pc(pc_),
       code(std::move(code_)),
@@ -119,7 +125,10 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
       arb_gas_remaining(arb_gas_remaining_),
       state(state_),
       errpc(errpc_),
-      output(std::move(output_)) {}
+      l1_block_number(l1_block_number_),
+      l2_block_number(l2_block_number_),
+      last_inbox_timestamp(last_inbox_timestamp_),
+      output(output_) {}
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
@@ -174,11 +183,11 @@ std::vector<unsigned char> MachineState::marshalState() const {
 }
 
 void insertSizes(std::vector<unsigned char>& buf,
-                 int sz1,
-                 int sz2,
-                 int sz3,
-                 int sz4) {
-    int acc = 1;
+                 uint32_t sz1,
+                 uint32_t sz2,
+                 uint32_t sz3,
+                 uint32_t sz4) {
+    uint32_t acc = 1;
     buf.push_back(static_cast<uint8_t>(acc));
     acc += sz1 / 32;
     buf.push_back(static_cast<uint8_t>(acc));

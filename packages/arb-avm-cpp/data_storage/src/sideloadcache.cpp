@@ -20,7 +20,7 @@ size_t SideloadCache::size() {
     return cache.size();
 }
 
-uint256_t SideloadCache::oldestHeight() {
+uint256_t SideloadCache::oldestBlockNumber() {
     if (cache.empty()) {
         return 0;
     }
@@ -28,7 +28,7 @@ uint256_t SideloadCache::oldestHeight() {
     return cache.begin()->first;
 }
 
-uint256_t SideloadCache::nextHeight() {
+uint256_t SideloadCache::nextBlockNumber() {
     if (cache.empty()) {
         return 0;
     }
@@ -38,12 +38,13 @@ uint256_t SideloadCache::nextHeight() {
     return it->first + 1;
 }
 
-void SideloadCache::add(uint256_t height,
-                        uint256_t timestamp,
-                        std::unique_ptr<Machine> machine) {
+void SideloadCache::add(std::unique_ptr<Machine> machine) {
     std::lock_guard<std::mutex> guard(mutex);
 
-    reorgNoLock(height);
+    auto block_number = machine->machine_state.l2_block_number;
+    auto timestamp = machine->machine_state.last_inbox_timestamp;
+
+    reorgNoLock(block_number);
     deleteExpiredNoLock();
 
     if (timestamp <= expiredTimestamp()) {
@@ -52,14 +53,14 @@ void SideloadCache::add(uint256_t height,
     }
 
     // Add new entry
-    cache[height].timestamp = timestamp;
-    cache[height].machine = std::move(machine);
+    cache[block_number].timestamp = timestamp;
+    cache[block_number].machine = std::move(machine);
 }
 
-std::unique_ptr<Machine> SideloadCache::get(uint256_t height) {
+std::unique_ptr<Machine> SideloadCache::get(uint256_t block_number) {
     std::lock_guard<std::mutex> guard(mutex);
 
-    auto it = cache.find(height);
+    auto it = cache.find(block_number);
     if (it == cache.end()) {
         return nullptr;
     }
@@ -67,20 +68,20 @@ std::unique_ptr<Machine> SideloadCache::get(uint256_t height) {
     return std::make_unique<Machine>(*it->second.machine);
 }
 
-void SideloadCache::reorg(uint256_t next_height) {
+void SideloadCache::reorg(uint256_t next_block_number) {
     std::lock_guard<std::mutex> guard(mutex);
 
-    reorgNoLock(next_height);
+    reorgNoLock(next_block_number);
 }
 
-void SideloadCache::reorgNoLock(uint256_t next_height) {
-    if (next_height <= cache.begin()->first) {
+void SideloadCache::reorgNoLock(uint256_t next_block_number) {
+    if (next_block_number <= cache.begin()->first) {
         // Remove everything
         cache.clear();
     }
 
     for (auto rit = cache.crbegin();
-         rit != cache.crend() && rit->first >= next_height;) {
+         rit != cache.crend() && rit->first >= next_block_number;) {
         rit = decltype(rit){cache.erase(std::next(rit).base())};
     }
 }

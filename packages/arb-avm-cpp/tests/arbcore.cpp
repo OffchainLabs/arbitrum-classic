@@ -74,12 +74,13 @@ void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
                      uint256_t prev_message_count,
                      uint256_t prev_inbox_acc,
                      uint256_t target_message_count,
-                     int send_count,
-                     int log_count) {
+                     uint256_t send_count,
+                     uint256_t log_count) {
     auto initial_count_res = arbCore->messageEntryInsertedCount();
     REQUIRE(initial_count_res.status.ok());
 
     std::vector<std::vector<unsigned char>> raw_seq_batch_items;
+    raw_seq_batch_items.reserve(seq_batch_items.size());
     for (const auto& batch_item : seq_batch_items) {
         raw_seq_batch_items.push_back(serializeForCore(batch_item));
     }
@@ -303,7 +304,7 @@ TEST_CASE("ArbCore inbox") {
     REQUIRE(cursor_machine_hash.has_value());
 
     auto cursor_machine =
-        arbCore->takeExecutionCursorMachine(*cursor.data.get(), value_cache);
+        arbCore->takeExecutionCursorMachine(*cursor.data, value_cache);
     REQUIRE(cursor_machine);
     REQUIRE(cursor_machine_hash.value() == cursor_machine->hash());
 

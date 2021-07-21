@@ -35,7 +35,6 @@ struct Assertion {
     std::vector<value> logs;
     std::vector<value> debug_prints;
     std::optional<uint256_t> sideload_block_number;
-    std::optional<uint256_t> sideload_timestamp;
 };
 
 class MachineExecutionConfig {

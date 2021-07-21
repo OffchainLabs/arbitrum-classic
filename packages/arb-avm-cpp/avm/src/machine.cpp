@@ -92,10 +92,8 @@ Assertion Machine::run() {
         }
     }
     std::optional<uint256_t> sideload_block_number;
-    std::optional<uint256_t> sideload_timestamp;
     if (auto sideload_blocked = std::get_if<SideloadBlocked>(&block_reason)) {
         sideload_block_number = sideload_blocked->block_number;
-        sideload_timestamp = sideload_blocked->last_inbox_timestamp;
     }
     return {intx::narrow_cast<uint64_t>(machine_state.output.total_steps -
                                         start_steps),
@@ -106,6 +104,5 @@ Assertion Machine::run() {
             std::move(machine_state.context.sends),
             std::move(machine_state.context.logs),
             std::move(machine_state.context.debug_prints),
-            sideload_block_number,
-            sideload_timestamp};
+            sideload_block_number};
 }

@@ -111,6 +111,9 @@ struct MachineStateKeys {
     CodePointStub pc;
     CodePointStub err_pc;
     Status status;
+    uint256_t l1_block_number;
+    uint256_t l2_block_number;
+    uint256_t last_inbox_timestamp;
     MachineOutput output;
 
     MachineStateKeys(uint256_t static_hash_,
@@ -121,6 +124,9 @@ struct MachineStateKeys {
                      CodePointStub pc_,
                      CodePointStub err_pc_,
                      Status status_,
+                     uint256_t l1_block_number_,
+                     uint256_t l2_block_number_,
+                     uint256_t last_inbox_timestamp_,
                      MachineOutput output_)
         : static_hash(static_hash_),
           register_hash(register_hash_),
@@ -130,13 +136,16 @@ struct MachineStateKeys {
           pc(pc_),
           err_pc(err_pc_),
           status(status_),
-          output(std::move(output_)) {}
+          l1_block_number(l1_block_number_),
+          l2_block_number(l2_block_number_),
+          last_inbox_timestamp(last_inbox_timestamp_),
+          output(output_) {}
 
-    MachineStateKeys(const MachineState& machine);
+    explicit MachineStateKeys(const MachineState& machine);
 
-    uint256_t getTotalMessagesRead() const;
-    uint256_t getInboxAcc() const;
-    uint256_t machineHash() const;
+    [[nodiscard]] uint256_t getTotalMessagesRead() const;
+    [[nodiscard]] uint256_t getInboxAcc() const;
+    [[nodiscard]] uint256_t machineHash() const;
 };
 
 struct MachineState {
@@ -150,6 +159,8 @@ struct MachineState {
     uint256_t arb_gas_remaining;
     Status state{Status::Extensive};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
+    uint256_t l1_block_number{0};
+    uint256_t l2_block_number{0};
     uint256_t last_inbox_timestamp{0};
 
     MachineOutput output;
@@ -171,6 +182,9 @@ struct MachineState {
                  Status state_,
                  CodePointRef pc_,
                  CodePointStub errpc_,
+                 uint256_t l1_block_number,
+                 uint256_t l2_block_number,
+                 uint256_t last_inbox_timestamp,
                  MachineOutput output_);
 
     uint256_t getMachineSize() const;
