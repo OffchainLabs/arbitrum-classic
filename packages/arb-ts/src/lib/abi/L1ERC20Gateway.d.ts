@@ -453,7 +453,7 @@ export class L1ERC20Gateway extends Contract {
 
   counterpartGateway(overrides?: CallOverrides): Promise<string>
 
-  ' ()'(overrides?: CallOverrides): Promise<string>
+  'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
 
   encodeWithdrawal(
     _exitNum: BigNumberish,
