@@ -252,7 +252,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     }
 
     /**
-     * @notice Reduce the amount staked for the sender
+     * @notice Reduce the amount staked for the sender (difference between initial amount staked and target is creditted back to the sender).
      * @param target Target amount of stake for the staker. If this is below the current minimum, it will be set to minimum instead
      */
     function reduceDeposit(uint256 target) external onlyValidator whenNotPaused {
@@ -377,7 +377,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         increaseStakeBy(winningStaker, amountWon);
         remainingLoserStake = remainingLoserStake.sub(amountWon);
         clearChallenge(winningStaker);
-        // Send the other half to the owner address
+        // Credit the other half to the owner address
         increaseWithdrawableFunds(owner, remainingLoserStake);
         // Turning loser into zombie renders the loser's remaining stake inaccessible
         turnIntoZombie(losingStaker);

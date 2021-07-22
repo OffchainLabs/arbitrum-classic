@@ -352,7 +352,6 @@ contract RollupCore is IRollupCore {
 
     /**
      * @notice Reduce the stake of the given staker to the given target
-     * @dev Value deducted is accessible by pulling from _withdrawableFunds mapping
      * @param stakerAddress Address of the staker to reduce the stake of
      * @param target Amount of stake to leave with the staker
      * @return Amount of value released from the stake
