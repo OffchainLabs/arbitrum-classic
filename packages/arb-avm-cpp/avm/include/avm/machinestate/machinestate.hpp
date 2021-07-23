@@ -103,34 +103,44 @@ struct MachineOutput {
 };
 
 struct MachineStateKeys {
+    Status status;
+    uint256_t arb_gas_remaining;
+    uint256_t l1_block_number;
+    uint256_t l2_block_number;
+    uint256_t last_inbox_timestamp;
+    MachineOutput output;
+
     uint256_t static_hash;
     uint256_t register_hash;
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
-    uint256_t arb_gas_remaining;
     CodePointStub pc;
     CodePointStub err_pc;
-    Status status;
-    MachineOutput output;
 
-    MachineStateKeys(uint256_t static_hash_,
+    MachineStateKeys(Status status_,
+                     uint256_t arb_gas_remaining_,
+                     uint256_t l1_block_number_,
+                     uint256_t l2_block_number_,
+                     uint256_t last_inbox_timestamp_,
+                     MachineOutput output_,
+                     uint256_t static_hash_,
                      uint256_t register_hash_,
                      uint256_t datastack_hash_,
                      uint256_t auxstack_hash_,
-                     uint256_t arb_gas_remaining_,
                      CodePointStub pc_,
-                     CodePointStub err_pc_,
-                     Status status_,
-                     MachineOutput output_)
-        : static_hash(static_hash_),
+                     CodePointStub err_pc_)
+        : status(status_),
+          arb_gas_remaining(arb_gas_remaining_),
+          l1_block_number(l1_block_number_),
+          l2_block_number(l2_block_number_),
+          last_inbox_timestamp(last_inbox_timestamp_),
+          output(output_),
+          static_hash(static_hash_),
           register_hash(register_hash_),
           datastack_hash(datastack_hash_),
           auxstack_hash(auxstack_hash_),
-          arb_gas_remaining(arb_gas_remaining_),
           pc(pc_),
-          err_pc(err_pc_),
-          status(status_),
-          output(std::move(output_)) {}
+          err_pc(err_pc_) {}
 
     MachineStateKeys(const MachineState& machine);
 
@@ -140,6 +150,13 @@ struct MachineStateKeys {
 };
 
 struct MachineState {
+    Status state{Status::Extensive};
+    uint256_t arb_gas_remaining;
+    uint256_t l1_block_number{0};
+    uint256_t l2_block_number{0};
+    uint256_t last_inbox_timestamp{0};
+    MachineOutput output;
+
     CodePointRef pc{0, 0};
     std::shared_ptr<Code> code;
     mutable std::optional<CodeSegmentSnapshot> loaded_segment;
@@ -147,11 +164,7 @@ struct MachineState {
     value static_val;
     Datastack stack;
     Datastack auxstack;
-    uint256_t arb_gas_remaining;
-    Status state{Status::Extensive};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
-
-    MachineOutput output;
 
     AssertionContext context;
 
@@ -161,16 +174,19 @@ struct MachineState {
 
     MachineState(std::shared_ptr<CoreCode> code_, value static_val);
 
-    MachineState(std::shared_ptr<Code> code_,
+    MachineState(Status state_,
+                 uint256_t arb_gas_remaining_,
+                 uint256_t l1_block_number,
+                 uint256_t l2_block_number,
+                 uint256_t last_inbox_timestamp,
+                 MachineOutput output_,
+                 std::shared_ptr<Code> code_,
                  value register_val_,
                  value static_val,
                  Datastack stack_,
                  Datastack auxstack_,
-                 uint256_t arb_gas_remaining_,
-                 Status state_,
                  CodePointRef pc_,
-                 CodePointStub errpc_,
-                 MachineOutput output_);
+                 CodePointStub errpc_);
 
     uint256_t getMachineSize() const;
     OneStepProof marshalForProof() const;

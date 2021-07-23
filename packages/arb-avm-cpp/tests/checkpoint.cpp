@@ -360,6 +360,12 @@ void checkSavedState(const ReadWriteTransaction& transaction,
         hash(expected_machine.machine_state.auxstack.getTupleRepresentation()));
     REQUIRE(data.register_hash ==
             hash_value(expected_machine.machine_state.registerVal));
+    REQUIRE(data.l1_block_number ==
+            expected_machine.machine_state.l1_block_number);
+    REQUIRE(data.l2_block_number ==
+            expected_machine.machine_state.l2_block_number);
+    REQUIRE(data.last_inbox_timestamp ==
+            expected_machine.machine_state.last_inbox_timestamp);
 
     ValueCache value_cache{1, 0};
     REQUIRE(!std::holds_alternative<rocksdb::Status>(
@@ -394,55 +400,6 @@ void deleteCheckpoint(ReadWriteTransaction& transaction,
     auto res = deleteMachine(transaction, deleted_machine.hash());
     REQUIRE(res.status.ok());
     checkDeletedCheckpoint(transaction, deleted_machine);
-}
-
-Machine getComplexMachine() {
-    auto core_code = std::make_shared<CoreCode>();
-    auto code = std::make_shared<RunningCode>(core_code);
-    auto stub = code->addSegment();
-    stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
-    stub = code->addOperation(stub.pc, Operation(OpCode::MUL));
-    stub = code->addOperation(stub.pc, Operation(OpCode::SUB));
-    uint256_t register_val = 100;
-    auto static_val = Tuple(register_val, Tuple());
-
-    CodePointStub code_point_stub({0, 1}, 654546);
-
-    Datastack data_stack;
-    data_stack.push(register_val);
-    Datastack aux_stack;
-    aux_stack.push(register_val);
-    aux_stack.push(code_point_stub);
-
-    uint256_t arb_gas_remaining = 534574678365;
-
-    CodePointRef pc{0, 0};
-    CodePointStub err_pc({0, 0}, 968769876);
-    Status state = Status::Extensive;
-
-    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65};
-
-    return Machine(MachineState(std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc, output));
-}
-
-Machine getDefaultMachine() {
-    auto core_code = std::make_shared<CoreCode>();
-    auto code = std::make_shared<RunningCode>(core_code);
-    code->addSegment();
-    auto static_val = Tuple();
-    auto register_val = Tuple();
-    auto data_stack = Tuple();
-    auto aux_stack = Tuple();
-    uint256_t arb_gas_remaining = 534574678365;
-    CodePointRef pc(0, 0);
-    CodePointStub err_pc({0, 0}, 968769876);
-    Status state = Status::Extensive;
-    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34};
-    return Machine(MachineState(std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc, output));
 }
 
 TEST_CASE("Save Machinestatedata") {

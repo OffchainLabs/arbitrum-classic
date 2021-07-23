@@ -49,14 +49,7 @@ CodePointStub extractCodePointStub(iterator& iter) {
 void serializeMachineStateKeys(const MachineStateKeys& state_data,
                                std::vector<unsigned char>& state_data_vector) {
     state_data_vector.push_back(static_cast<unsigned char>(state_data.status));
-    marshal_uint256_t(state_data.static_hash, state_data_vector);
-    marshal_uint256_t(state_data.register_hash, state_data_vector);
-    marshal_uint256_t(state_data.datastack_hash, state_data_vector);
-    marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
     marshal_uint256_t(state_data.arb_gas_remaining, state_data_vector);
-    state_data.pc.marshal(state_data_vector);
-    state_data.err_pc.marshal(state_data_vector);
-
     marshal_uint256_t(state_data.output.fully_processed_inbox.count,
                       state_data_vector);
     marshal_uint256_t(state_data.output.fully_processed_inbox.accumulator,
@@ -67,26 +60,30 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
     marshal_uint256_t(state_data.output.log_acc, state_data_vector);
     marshal_uint256_t(state_data.output.send_count, state_data_vector);
     marshal_uint256_t(state_data.output.log_count, state_data_vector);
+    marshal_uint256_t(state_data.l1_block_number, state_data_vector);
+    marshal_uint256_t(state_data.l2_block_number, state_data_vector);
+    marshal_uint256_t(state_data.last_inbox_timestamp, state_data_vector);
 
     auto last_sideload_raw = std::numeric_limits<uint256_t>::max();
     if (state_data.output.last_sideload.has_value()) {
         last_sideload_raw = *state_data.output.last_sideload;
     }
     marshal_uint256_t(last_sideload_raw, state_data_vector);
+
+    marshal_uint256_t(state_data.static_hash, state_data_vector);
+    marshal_uint256_t(state_data.register_hash, state_data_vector);
+    marshal_uint256_t(state_data.datastack_hash, state_data_vector);
+    marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
+    state_data.pc.marshal(state_data_vector);
+    state_data.err_pc.marshal(state_data_vector);
 }
 
 MachineStateKeys extractMachineStateKeys(
-    std::vector<unsigned char>::const_iterator iter) {
+    const std::vector<unsigned char>& data) {
+    auto iter = data.cbegin();
     auto status = static_cast<Status>(*iter);
     ++iter;
-    auto static_hash = extractUint256(iter);
-    auto register_hash = extractUint256(iter);
-    auto datastack_hash = extractUint256(iter);
-    auto auxstack_hash = extractUint256(iter);
     auto arb_gas_remaining = extractUint256(iter);
-    auto pc = extractCodePointStub(iter);
-    auto err_pc = extractCodePointStub(iter);
-
     auto fully_processed_messages = extractUint256(iter);
     auto fully_processed_inbox_accumulator = extractUint256(iter);
     auto total_steps = extractUint256(iter);
@@ -95,22 +92,52 @@ MachineStateKeys extractMachineStateKeys(
     auto log_acc = extractUint256(iter);
     auto send_count = extractUint256(iter);
     auto log_count = extractUint256(iter);
+    auto l1_block_number = extractUint256(iter);
+    auto l2_block_number = extractUint256(iter);
+    auto last_inbox_timestamp = extractUint256(iter);
     auto last_sideload_raw = extractUint256(iter);
-
     std::optional<uint256_t> last_sideload;
     if (last_sideload_raw != std::numeric_limits<uint256_t>::max()) {
         last_sideload = last_sideload_raw;
     }
 
+    if (iter == data.cend()) {
+        // Does not include machine
+        return MachineStateKeys{
+            status,
+            arb_gas_remaining,
+            l1_block_number,
+            l2_block_number,
+            last_inbox_timestamp,
+            {{fully_processed_messages, fully_processed_inbox_accumulator},
+             total_steps,
+             arb_gas_used,
+             send_acc,
+             log_acc,
+             send_count,
+             log_count,
+             last_sideload},
+            0,
+            0,
+            0,
+            0,
+            {{0, 0}, 0},
+            {{0, 0}, 0}};
+    }
+
+    auto static_hash = extractUint256(iter);
+    auto register_hash = extractUint256(iter);
+    auto datastack_hash = extractUint256(iter);
+    auto auxstack_hash = extractUint256(iter);
+    auto pc = extractCodePointStub(iter);
+    auto err_pc = extractCodePointStub(iter);
+
     return MachineStateKeys{
-        static_hash,
-        register_hash,
-        datastack_hash,
-        auxstack_hash,
-        arb_gas_remaining,
-        pc,
-        err_pc,
         status,
+        arb_gas_remaining,
+        l1_block_number,
+        l2_block_number,
+        last_inbox_timestamp,
         {{fully_processed_messages, fully_processed_inbox_accumulator},
          total_steps,
          arb_gas_used,
@@ -118,7 +145,13 @@ MachineStateKeys extractMachineStateKeys(
          log_acc,
          send_count,
          log_count,
-         last_sideload}};
+         last_sideload},
+        static_hash,
+        register_hash,
+        datastack_hash,
+        auxstack_hash,
+        pc,
+        err_pc};
 }
 
 void deleteMachineState(ReadWriteTransaction& tx,
@@ -176,8 +209,7 @@ DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash) {
                              std::move(results.stored_value)};
     }
     if (results.reference_count < 1) {
-        auto iter = results.stored_value.cbegin();
-        auto parsed_state = extractMachineStateKeys(iter);
+        auto parsed_state = extractMachineStateKeys(results.stored_value);
 
         deleteMachineState(tx, parsed_state);
     }
@@ -195,8 +227,7 @@ DbResult<MachineStateKeys> getMachineStateKeys(
     if (!results.status.ok()) {
         return results.status;
     }
-    auto iter = results.stored_value.cbegin();
-    auto parsed_state = extractMachineStateKeys(iter);
+    auto parsed_state = extractMachineStateKeys(results.stored_value);
 
     return CountedData<MachineStateKeys>{results.reference_count, parsed_state};
 }

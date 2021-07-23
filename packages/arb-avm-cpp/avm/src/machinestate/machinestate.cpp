@@ -39,15 +39,18 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
       inbox_messages_consumed(0) {}
 
 MachineStateKeys::MachineStateKeys(const MachineState& machine)
-    : static_hash(hash_value(machine.static_val)),
+    : status(machine.state),
+      arb_gas_remaining(machine.arb_gas_remaining),
+      l1_block_number(machine.l1_block_number),
+      l2_block_number(machine.l2_block_number),
+      last_inbox_timestamp(machine.last_inbox_timestamp),
+      output(machine.output),
+      static_hash(hash_value(machine.static_val)),
       register_hash(hash_value(machine.registerVal)),
       datastack_hash(machine.stack.hash()),
       auxstack_hash(machine.auxstack.hash()),
-      arb_gas_remaining(machine.arb_gas_remaining),
       pc(machine.pc, machine.loadCurrentInstruction()),
-      err_pc(machine.errpc),
-      status(machine.state),
-      output(machine.output) {}
+      err_pc(machine.errpc) {}
 
 uint256_t MachineStateKeys::machineHash() const {
     if (status == Status::Halted)
@@ -95,31 +98,37 @@ void MachineState::addProcessedLog(value log_val) {
 MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
 
 MachineState::MachineState(std::shared_ptr<CoreCode> code_, value static_val_)
-    : pc(code_->initialCodePointRef()),
+    : arb_gas_remaining(max_arb_gas_remaining),
+      pc(code_->initialCodePointRef()),
       code(std::move(code_)),
-      static_val(std::move(static_val_)),
-      arb_gas_remaining(max_arb_gas_remaining) {}
+      static_val(std::move(static_val_)) {}
 
-MachineState::MachineState(std::shared_ptr<Code> code_,
+MachineState::MachineState(Status state_,
+                           uint256_t arb_gas_remaining_,
+                           uint256_t l1_block_number_,
+                           uint256_t l2_block_number_,
+                           uint256_t last_inbox_timestamp_,
+                           MachineOutput output_,
+                           std::shared_ptr<Code> code_,
                            value register_val_,
                            value static_val_,
                            Datastack stack_,
                            Datastack auxstack_,
-                           uint256_t arb_gas_remaining_,
-                           Status state_,
                            CodePointRef pc_,
-                           CodePointStub errpc_,
-                           MachineOutput output_)
-    : pc(pc_),
+                           CodePointStub errpc_)
+    : state(state_),
+      arb_gas_remaining(arb_gas_remaining_),
+      l1_block_number(l1_block_number_),
+      l2_block_number(l2_block_number_),
+      last_inbox_timestamp(last_inbox_timestamp_),
+      output(output_),
+      pc(pc_),
       code(std::move(code_)),
       registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
       stack(std::move(stack_)),
       auxstack(std::move(auxstack_)),
-      arb_gas_remaining(arb_gas_remaining_),
-      state(state_),
-      errpc(errpc_),
-      output(std::move(output_)) {}
+      errpc(errpc_) {}
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
