@@ -92,6 +92,12 @@ jobs:
           name: Upload Coverage to Codecov
           command: codecovbash
           working_directory: /home/user/project/packages
+      - run:
+          name: test update-abi
+          command: |
+            yarn update:abi
+            git status --porcelain | grep  arb-ts/src/lib/abi
+          working_directory: /home/user/project/packages/arb-ts
       - store_test_results:
           path: *test-path
   ethbridge:
