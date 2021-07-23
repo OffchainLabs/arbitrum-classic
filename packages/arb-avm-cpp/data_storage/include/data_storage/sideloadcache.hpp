@@ -45,11 +45,11 @@ class SideloadCache {
     void add(std::unique_ptr<Machine> machine);
     std::unique_ptr<Machine> get(uint256_t block_number);
     void reorg(uint256_t next_block_number);
+    [[nodiscard]] uint256_t expiredTimestamp() const;
 
    private:
     void reorgNoLock(uint256_t next_block_number);
     void deleteExpiredNoLock();
-    [[nodiscard]] uint256_t expiredTimestamp() const;
 };
 
 #endif  // ARB_AVM_CPP_SIDELOADCACHE_H

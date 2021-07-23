@@ -50,10 +50,14 @@ func NewMonitor(dbDir string, contractFile string, blockCoreExpire time.Duration
 		return nil, err
 	}
 
+	logger.Info().Msg("database opened")
+
 	err = storage.Initialize(contractFile)
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Info().Msg("storage initialized")
 
 	arbCore := storage.GetArbCore()
 	started := arbCore.StartThread()

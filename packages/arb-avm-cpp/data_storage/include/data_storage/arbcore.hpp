@@ -170,6 +170,7 @@ class ArbCore {
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpoint(
         ReadTransaction& tx,
         const uint256_t& arb_gas_used) const;
+    ValueResult<uint256_t> unexpiredMessageCount();
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas,
@@ -397,6 +398,9 @@ class ArbCore {
     [[nodiscard]] ValueResult<uint256_t> logsCursorGetCurrentTotalCount(
         const ReadTransaction& tx,
         size_t cursor_index) const;
+    bool runMachineWithMessages(MachineExecutionConfig& execConfig,
+                                size_t max_message_batch_size,
+                                std::unique_ptr<MachineThread>& machine);
 };
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,
