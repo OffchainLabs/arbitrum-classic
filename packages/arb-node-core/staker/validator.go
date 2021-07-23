@@ -91,11 +91,23 @@ func NewValidator(
 	}, nil
 }
 
-func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, error) {
+// removeOldStakers removes the stakes of all currently staked validators except
+// its own if dontRemoveSelf is true
+func (v *Validator) removeOldStakers(ctx context.Context, dontRemoveSelf bool) (*types.Transaction, error) {
 	stakersToEliminate, err := v.validatorUtils.RefundableStakers(ctx)
 	if err != nil {
 		return nil, err
 	}
+	if dontRemoveSelf {
+		for i, staker := range stakersToEliminate {
+			if staker == v.wallet.Address() {
+				stakersToEliminate[i] = stakersToEliminate[len(stakersToEliminate)-1]
+				stakersToEliminate = stakersToEliminate[:len(stakersToEliminate)-1]
+				break
+			}
+		}
+	}
+
 	if len(stakersToEliminate) == 0 {
 		return nil, nil
 	}

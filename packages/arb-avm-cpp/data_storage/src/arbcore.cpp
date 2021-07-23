@@ -2030,6 +2030,12 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                     deserializeSequencerBatchItemAccumulator(value_ptr);
 
                 if (accumulator != item.accumulator) {
+                    std::cerr << "INBOX FORCED REORG at sequence number "
+                              << item.last_sequence_number << std::endl
+                              << "Previous accumulator: " << accumulator
+                              << std::endl
+                              << "New accumulator:      " << item.accumulator
+                              << std::endl;
                     if (item.last_sequence_number == 0) {
                         reorging_to_count = 0;
                     } else {

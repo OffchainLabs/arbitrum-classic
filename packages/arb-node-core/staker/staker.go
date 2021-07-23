@@ -157,7 +157,8 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		}
 	}
 	if shouldResolveNodes {
-		tx, err := s.removeOldStakers(ctx)
+		// Keep the stake of this validator placed if we plan on staking further
+		tx, err := s.removeOldStakers(ctx, effectiveStrategy >= StakeLatestStrategy)
 		if err != nil || tx != nil {
 			return tx, err
 		}
