@@ -71,7 +71,10 @@ abstract contract ArbitrumGateway is TokenGateway {
         uint256 gasAvailable = gasleft() - gasReserveIfCallRevert();
         require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
 
-        IERC677Receiver(_to).onTokenTransfer{ gas: gasAvailable }(_from, _amount, _data);
+        require(
+            IERC677Receiver(_to).onTokenTransfer{ gas: gasAvailable }(_from, _amount, _data),
+            "CALLBACK_HOOK_EROR"
+        );
     }
 
     function inboundEscrowTransfer(
