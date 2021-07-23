@@ -382,8 +382,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             std::vector<unsigned char> checkpoint_vector(
                 checkpoint_it->value().data(),
                 checkpoint_it->value().data() + checkpoint_it->value().size());
-            auto checkpoint =
-                extractMachineStateKeys(checkpoint_vector.begin());
+            auto checkpoint = extractMachineStateKeys(checkpoint_vector);
             if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
                 (message_count >= checkpoint.getTotalMessagesRead())) {
                 if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
@@ -513,7 +512,7 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
     if (!result.status.ok()) {
         return result.status;
     }
-    return extractMachineStateKeys(result.data.begin());
+    return extractMachineStateKeys(result.data);
 }
 
 bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
@@ -567,7 +566,7 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
 
     std::vector<unsigned char> saved_value(
         it->value().data(), it->value().data() + it->value().size());
-    return extractMachineStateKeys(saved_value.begin());
+    return extractMachineStateKeys(saved_value);
 }
 
 template <class T>
@@ -636,6 +635,12 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         segment_ids = std::move(next_segment_ids);
     };
     auto state = MachineState{
+        state_data.status,
+        state_data.arb_gas_remaining,
+        state_data.l1_block_number,
+        state_data.l2_block_number,
+        state_data.last_inbox_timestamp,
+        state_data.output,
         std::make_shared<RunningCode>(core_code),
         std::move(std::get<CountedData<value>>(register_results).data),
         std::move(std::get<CountedData<value>>(static_results).data),
@@ -643,11 +648,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             std::get<Tuple>(std::get<CountedData<value>>(stack_results).data)),
         Datastack(std::get<Tuple>(
             std::get<CountedData<value>>(auxstack_results).data)),
-        state_data.arb_gas_remaining,
-        state_data.status,
         state_data.pc.pc,
-        state_data.err_pc,
-        state_data.output};
+        state_data.err_pc};
 
     return std::make_unique<T>(state);
 }
