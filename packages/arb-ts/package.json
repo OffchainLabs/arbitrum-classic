@@ -29,7 +29,12 @@
     "update:abi": "./scripts/update-abi && yarn format",
     "test:integration": "yarn run mocha integration_test/ --timeout 30000000 --bail",
     "generate_docs": "typedoc --plugin none",
-    "generate_token_list": "ts-node token_lists/generate_json.ts"
+    "generate_token_list": "ts-node token_lists/generate_json.ts",
+    "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
+    "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
+    "setStandard": "ts-node scripts/setStandardGateways.ts",
+    "setCustom": "ts-node scripts/setArbCustomGateways.ts",
+    "cancelRetryable": "ts-node scripts/cancelRetryable.ts"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
