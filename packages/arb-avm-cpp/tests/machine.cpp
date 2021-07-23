@@ -136,7 +136,7 @@ TEST_CASE("Proof") {
         machine.machine_state.context = AssertionContext(execConfig);
         auto assertion = machine.run();
         machine.marshalForProof();
-        if (assertion.stepCount == 0) {
+        if (assertion.step_count == 0) {
             break;
         }
     }
@@ -223,8 +223,8 @@ TEST_CASE("Stopping on sideload") {
     machine.machine_state.context = AssertionContext(execConfig);
     auto assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Error);
-    REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 13);
+    REQUIRE(!assertion.sideload_block_number);
+    REQUIRE(assertion.gas_count == 13);
 
     // Next, test running past the sideload with a value specified
     machine = orig_machine;
@@ -233,8 +233,8 @@ TEST_CASE("Stopping on sideload") {
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Halted);
-    REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 23);
+    REQUIRE(!assertion.sideload_block_number);
+    REQUIRE(assertion.gas_count == 23);
 
     // Next, test stopping on the sideload but continuing
     machine = orig_machine;
@@ -243,26 +243,26 @@ TEST_CASE("Stopping on sideload") {
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Extensive);
-    REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
-    REQUIRE(assertion.gasCount == 1);
+    REQUIRE(assertion.sideload_block_number == uint256_t(0x321));
+    REQUIRE(assertion.gas_count == 1);
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Error);
-    REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 12);
+    REQUIRE(!assertion.sideload_block_number);
+    REQUIRE(assertion.gas_count == 12);
 
     // Next, test stopping on the sideload and adding a value
     machine = orig_machine;
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Extensive);
-    REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
-    REQUIRE(assertion.gasCount == 1);
+    REQUIRE(assertion.sideload_block_number == uint256_t(0x321));
+    REQUIRE(assertion.gas_count == 1);
 
     execConfig.sideloads.emplace_back(InboxMessage());
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Halted);
-    REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 22);
+    REQUIRE(!assertion.sideload_block_number);
+    REQUIRE(assertion.gas_count == 22);
 }

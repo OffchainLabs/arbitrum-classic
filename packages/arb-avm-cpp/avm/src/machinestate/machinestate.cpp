@@ -183,11 +183,11 @@ std::vector<unsigned char> MachineState::marshalState() const {
 }
 
 void insertSizes(std::vector<unsigned char>& buf,
-                 int sz1,
-                 int sz2,
-                 int sz3,
-                 int sz4) {
-    int acc = 1;
+                 uint32_t sz1,
+                 uint32_t sz2,
+                 uint32_t sz3,
+                 uint32_t sz4) {
+    uint32_t acc = 1;
     buf.push_back(static_cast<uint8_t>(acc));
     acc += sz1 / 32;
     buf.push_back(static_cast<uint8_t>(acc));

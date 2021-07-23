@@ -221,7 +221,7 @@ RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
         }
 
         std::vector<unsigned char> debugPrintData;
-        for (const auto& debugPrint : assertion.debugPrints) {
+        for (const auto& debugPrint : assertion.debug_prints) {
             marshal_value(debugPrint, debugPrintData);
         }
 
@@ -232,9 +232,9 @@ RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
                 returnCharVector(logData),
                 static_cast<int>(assertion.logs.size()),
                 returnCharVector(debugPrintData),
-                static_cast<int>(assertion.debugPrints.size()),
-                intx::narrow_cast<uint64_t>(assertion.stepCount),
-                intx::narrow_cast<uint64_t>(assertion.gasCount)};
+                static_cast<int>(assertion.debug_prints.size()),
+                intx::narrow_cast<uint64_t>(assertion.step_count),
+                intx::narrow_cast<uint64_t>(assertion.gas_count)};
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";
         return makeEmptyAssertion();
