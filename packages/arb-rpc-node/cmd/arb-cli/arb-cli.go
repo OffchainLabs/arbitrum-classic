@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -94,6 +95,17 @@ type upgrade struct {
 	Instructions []string `json:"instructions"`
 }
 
+func upgradeArbOSSimple() error {
+	arbosDirPath, err := arbos.Path()
+	if err != nil {
+		return err
+	}
+	upgradeFile := filepath.Join(arbosDirPath, "upgrade.json")
+	targetMexe := filepath.Join(arbosDirPath, "arbos-upgrade.mexe")
+	startMexe := filepath.Join(arbosDirPath, "arbos_before.mexe")
+	return upgradeArbOS(upgradeFile, targetMexe, &startMexe)
+}
+
 func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) error {
 	targetMach, err := cmachine.New(targetMexe)
 	if err != nil {
@@ -149,7 +161,7 @@ func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) erro
 			return err
 		}
 	}
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * 10)
 
 	codeHash, err := arbOwner.GetUploadedCodeHash(&bind.CallOpts{})
 	if err != nil {
@@ -158,6 +170,8 @@ func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) erro
 	if codeHash != targetMach.CodePointHash() {
 		return errors.New("incorrect code segment uploaded")
 	}
+
+	fmt.Println("Uploaded code matches")
 
 	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(config.auth, targetMach.CodePointHash(), startHash)
 	if err != nil {
@@ -694,6 +708,8 @@ func handleCommand(fields []string) error {
 			source = &fields[3]
 		}
 		return upgradeArbOS(fields[1], fields[2], source)
+	case "upgrade-simple":
+		return upgradeArbOSSimple()
 	case "version":
 		return version()
 	case "spam":
