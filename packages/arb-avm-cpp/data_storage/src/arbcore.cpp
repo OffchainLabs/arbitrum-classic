@@ -303,8 +303,8 @@ rocksdb::Status ArbCore::saveAssertion(ReadWriteTransaction& tx,
         return status;
     }
 
-    if (assertion.sideloadBlockNumber) {
-        status = saveSideloadPosition(tx, *assertion.sideloadBlockNumber,
+    if (assertion.sideload_block_number) {
+        status = saveSideloadPosition(tx, *assertion.sideload_block_number,
                                       arb_gas_used);
         if (!status.ok()) {
             return status;
@@ -764,9 +764,9 @@ void ArbCore::operator()() {
             }
 
             // Cache pre-sideload machines
-            if (last_assertion.sideloadBlockNumber) {
+            if (last_assertion.sideload_block_number) {
                 {
-                    auto block = *last_assertion.sideloadBlockNumber;
+                    auto block = *last_assertion.sideload_block_number;
                     std::unique_lock<std::shared_mutex> lock(
                         sideload_cache_mutex);
                     sideload_cache[block] =
@@ -1719,7 +1719,7 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
             mach->machine_state.context = AssertionContext(execConfig);
             auto assertion = mach->run();
-            if (assertion.gasCount == 0) {
+            if (assertion.gas_count == 0) {
                 break;
             }
         }

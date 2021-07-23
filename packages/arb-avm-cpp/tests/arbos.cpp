@@ -71,8 +71,8 @@ TEST_CASE("ARBOS test vectors") {
             config.inbox_messages = messages;
             mach->machine_state.context = AssertionContext(config);
             auto assertion = mach->run();
-            INFO("Machine ran for " << assertion.gasCount << " gas with target "
-                                    << total_gas_target);
+            INFO("Machine ran for " << assertion.gas_count
+                                    << " gas with target " << total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
             uint64_t block_log_count = 0;
             uint64_t tx_log_count = 0;
@@ -100,7 +100,7 @@ TEST_CASE("ARBOS test vectors") {
                 INFO("Checking send " << k);
                 CHECK(assertion.sends[k] == sends[k]);
             }
-            CHECK(assertion.gasCount == total_gas_target);
+            CHECK(assertion.gas_count == total_gas_target);
             {
                 auto tx = storage.makeReadWriteTransaction();
                 saveTestMachine(*tx, *mach);
