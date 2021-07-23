@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	golog "log"
-	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -36,7 +35,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -210,10 +208,7 @@ func startup() error {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
 
-	callOpts := bind.CallOpts{
-		BlockNumber: big.NewInt(int64(rpc.LatestBlockNumber)),
-	}
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, callOpts, valAuth)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
 	}
