@@ -96,7 +96,7 @@ jobs:
           name: test update-abi
           command: |
             yarn update:abi
-            git status --porcelain | grep  arb-ts/src/lib/abi
+            git status --porcelain | grep  arb-ts/src/lib/abi || true
           working_directory: /home/user/project/packages/arb-ts
       - store_test_results:
           path: *test-path
@@ -135,6 +135,26 @@ jobs:
       #     working_directory: /home/user/project/packages/arb-bridge-eth
       - store_test_results:
           path: *test-path
+  yarn:
+    docker:
+      - image: offchainlabs/frontend-base:0.1.0
+    environment:
+      TEST_RESULTS: *test-path
+    steps:
+      - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
+      - run: mkdir -p $TEST_RESULTS
+      - restore_cache: *restore_yarn_cache
+      - run: yarn install --cache-folder ~/.cache/yarn
+      - save_cache: *save_yarn_cache
+      - run:
+          name: test yarn.lock diff
+          command: |
+            git status --porcelain | grep yarn.lock || true
+          working_directory: /home/user/project/
 
   # ethbridge-coverage:
   #   docker:
