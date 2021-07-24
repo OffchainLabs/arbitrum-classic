@@ -24,13 +24,12 @@ package cmachine
 import "C"
 import (
 	"runtime"
-	"time"
 	"unsafe"
 
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
@@ -38,12 +37,19 @@ type ArbStorage struct {
 	c unsafe.Pointer
 }
 
-func NewArbStorage(dbPath string, blockCoreExpire time.Duration) (*ArbStorage, error) {
+func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, error) {
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
 
-	cacheExpirationSeconds := int(blockCoreExpire.Seconds())
-	cArbStorage := C.createArbStorage(cDbPath, C.int(cacheExpirationSeconds))
+	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
+	cArbStorage := C.createArbStorage(
+		cDbPath,
+		C.int(coreConfig.MessageProcessCount),
+		C.int(coreConfig.CheckpointLoadGasCost),
+		C.int(coreConfig.GasCheckpointFrequency),
+		C.int(cacheExpirationSeconds),
+		C.int(coreConfig.Cache.LRUSize),
+	)
 
 	if cArbStorage == nil {
 		return nil, errors.Errorf("error creating ArbStorage %v", dbPath)

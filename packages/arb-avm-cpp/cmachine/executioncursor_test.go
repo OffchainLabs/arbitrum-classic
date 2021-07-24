@@ -17,11 +17,13 @@
 package cmachine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 func TestExecutionCursor(t *testing.T) {
@@ -37,7 +39,16 @@ func TestExecutionCursor(t *testing.T) {
 		}
 	}()
 
-	arbStorage, err := NewArbStorage(dePath, 20*time.Minute)
+	coreConfig := configuration.Core{
+		Cache: configuration.CoreCache{
+			LRUSize:     1000,
+			TimedExpire: 20 * time.Minute,
+		},
+		CheckpointLoadGasCost:  1_000_000,
+		GasCheckpointFrequency: 1_000_000,
+		MessageProcessCount:    10,
+	}
+	arbStorage, err := NewArbStorage(dePath, &coreConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

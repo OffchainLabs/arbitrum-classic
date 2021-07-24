@@ -80,6 +80,7 @@ void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
     REQUIRE(initial_count_res.status.ok());
 
     std::vector<std::vector<unsigned char>> raw_seq_batch_items;
+    raw_seq_batch_items.reserve(seq_batch_items.size());
     for (const auto& batch_item : seq_batch_items) {
         raw_seq_batch_items.push_back(serializeForCore(batch_item));
     }
@@ -130,11 +131,12 @@ TEST_CASE("ArbCore tests") {
         "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
 
     uint64_t logs_count = 0;
+    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
 
     for (const auto& filename : files) {
         INFO("Testing " << filename);
 
-        ArbStorage storage(dbpath, 60 * 20);
+        ArbStorage storage(dbpath, coreConfig);
         REQUIRE(storage.initialize(arb_os_path).ok());
         auto arbCore = storage.getArbCore();
         REQUIRE(arbCore->startThread());
@@ -268,7 +270,8 @@ TEST_CASE("ArbCore tests") {
 TEST_CASE("ArbCore inbox") {
     DBDeleter deleter;
 
-    ArbStorage storage(dbpath, 60 * 20);
+    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbStorage storage(dbpath, coreConfig);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
             .ok());
@@ -301,8 +304,7 @@ TEST_CASE("ArbCore inbox") {
     auto cursor_machine_hash = cursor.data->machineHash();
     REQUIRE(cursor_machine_hash.has_value());
 
-    auto cursor_machine =
-        arbCore->takeExecutionCursorMachine(*cursor.data.get());
+    auto cursor_machine = arbCore->takeExecutionCursorMachine(*cursor.data);
     REQUIRE(cursor_machine);
     REQUIRE(cursor_machine_hash.value() == cursor_machine->hash());
 
@@ -311,7 +313,8 @@ TEST_CASE("ArbCore inbox") {
 }
 
 TEST_CASE("ArbCore backwards reorg") {
-    ArbStorage storage(dbpath, 60 * 20);
+    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbStorage storage(dbpath, coreConfig);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
             .ok());

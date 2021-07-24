@@ -38,11 +38,16 @@ type Conf struct {
 	String    string `koanf:"string"`
 }
 
-type Database struct {
-	AllowSlowLookup  bool          `koanf:"allow-slow-lookup"`
-	BlockCacheSize   int           `koanf:"block-cache-size"`
-	BlockCacheExpire time.Duration `koanf:"block-cache-expire"`
-	BlockCoreExpire  time.Duration `koanf:"block-core-expire"`
+type Core struct {
+	Cache                  CoreCache `koanf:"cache"`
+	CheckpointLoadGasCost  int       `koanf:"checkpoint-load-gas-cost"`
+	GasCheckpointFrequency int       `koanf:"gas-checkpoint-frequency"`
+	MessageProcessCount    int       `koanf:"message-process-count"`
+}
+
+type CoreCache struct {
+	LRUSize     int           `koanf:"lru-size"`
+	TimedExpire time.Duration `koanf:"timed-expire"`
 }
 
 type FeedInput struct {
@@ -117,6 +122,7 @@ type WS struct {
 
 type Node struct {
 	Aggregator Aggregator `koanf:"aggregator"`
+	Cache      NodeCache  `koanf:"cache"`
 	ChainID    uint64     `koanf:"chain-id"`
 	Forwarder  struct {
 		Target string `koanf:"target"`
@@ -125,6 +131,13 @@ type Node struct {
 	Sequencer Sequencer `koanf:"sequencer"`
 	Type      string    `koanf:"type"`
 	WS        WS        `koanf:"ws"`
+}
+
+type NodeCache struct {
+	AllowSlowLookup  bool          `koanf:"allow-slow-lookup"`
+	LRUSize          int           `koanf:"lru-size"`
+	TimedInitialSize int           `koanf:"timed-initial-size"`
+	TimedExpire      time.Duration `koanf:"timed-expire"`
 }
 
 type Persistent struct {
@@ -159,7 +172,7 @@ type Log struct {
 type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               Conf        `koanf:"conf"`
-	Database           Database    `koanf:"database"`
+	Core               Core        `koanf:"core"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	GasPriceUrl        string      `koanf:"gas-price-url"`
@@ -223,10 +236,12 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
-	f.Bool("database.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
-	f.Int("database.block-cache-size", 1000, "number of recently used L2 blocks to hold in memory cache")
-	f.Duration("database.block-cache-expire", 20*time.Minute, "length of time to hold L2 blocks in memory cache")
-	f.Duration("database.block-core-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore memory cache")
+	f.Int("core.cache.lru-size", 20, "number of recently used L2 blocks to hold in lru memory cache")
+	f.Duration("core.cache.time-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
+
+	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
+	f.Int("node.cache.lru-size", 20, "number of recently used L2 blocks to hold in lru memory cache")
+	f.Duration("node.cache.time-expire", 20*time.Minute, "length of time to hold L2 blocks in timed memory cache")
 
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
@@ -457,6 +472,9 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	// Load defaults that are not specified on command line
 	err = k.Load(confmap.Provider(map[string]interface{}{
+		"core.message-process-count":             10,
+		"core.checkpoint-load-gas-cost":          1_000_000_000,
+		"core.gas-checkpoint-frequency":          1_000_000_000,
 		"feed.output.queue":                      100,
 		"node.sequencer.lockout.timeout":         30 * time.Second,
 		"node.sequencer.lockout.max-latency":     10 * time.Second,

@@ -19,11 +19,11 @@ package monitor
 import (
 	"context"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -45,8 +45,8 @@ type Monitor struct {
 	Reader  *InboxReader
 }
 
-func NewMonitor(dbDir string, contractFile string, blockCoreExpire time.Duration) (*Monitor, error) {
-	storage, err := cmachine.NewArbStorage(dbDir, blockCoreExpire)
+func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
+	storage, err := cmachine.NewArbStorage(dbDir, coreConfig)
 	if err != nil {
 		return nil, err
 	}

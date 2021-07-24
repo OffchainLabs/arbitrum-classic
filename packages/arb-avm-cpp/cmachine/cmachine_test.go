@@ -21,6 +21,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 func TestMachineCreation(t *testing.T) {
@@ -41,7 +43,16 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	arbStorage, err := NewArbStorage(dePath, 20*time.Minute)
+	coreConfig := configuration.Core{
+		Cache: configuration.CoreCache{
+			LRUSize:     1000,
+			TimedExpire: 20 * time.Minute,
+		},
+		CheckpointLoadGasCost:  1_000_000,
+		GasCheckpointFrequency: 1_000_000,
+		MessageProcessCount:    10,
+	}
+	arbStorage, err := NewArbStorage(dePath, &coreConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

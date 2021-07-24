@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var codeFile string
@@ -43,7 +44,16 @@ func TestCheckpoint(t *testing.T) {
 		}
 	}()
 
-	arbStorage, err := NewArbStorage(dePath, 20*time.Minute)
+	coreConfig := configuration.Core{
+		Cache: configuration.CoreCache{
+			LRUSize:     1000,
+			TimedExpire: 20 * time.Minute,
+		},
+		CheckpointLoadGasCost:  1_000_000,
+		GasCheckpointFrequency: 1_000_000,
+		MessageProcessCount:    10,
+	}
+	arbStorage, err := NewArbStorage(dePath, &coreConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
