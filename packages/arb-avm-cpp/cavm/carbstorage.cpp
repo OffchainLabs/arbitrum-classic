@@ -28,10 +28,12 @@
 #include <iostream>
 #include <string>
 
-CArbStorage* createArbStorage(const char* db_path) {
+CArbStorage* createArbStorage(const char* db_path,
+                              const int32_t cache_expiration_seconds) {
     auto string_filename = std::string(db_path);
     try {
-        auto storage = new ArbStorage(string_filename);
+        auto storage =
+            new ArbStorage(string_filename, cache_expiration_seconds);
         return static_cast<void*>(storage);
     } catch (const std::exception& e) {
         std::cerr << "Error creating storage: " << e.what() << std::endl;

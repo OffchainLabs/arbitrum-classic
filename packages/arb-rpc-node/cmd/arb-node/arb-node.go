@@ -163,7 +163,7 @@ func startup() error {
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", l2ChainId.Bytes()).Str("type", config.Node.Type).Msg("Launching arbitrum node")
 
-	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename)
+	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename, config.Database.BlockCoreExpire)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
@@ -261,7 +261,7 @@ func startup() error {
 
 	nodeStore := mon.Storage.GetNodeStore()
 	metrics.RegisterNodeStoreMetrics(nodeStore, metricsConfig)
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond, &config.Database)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}

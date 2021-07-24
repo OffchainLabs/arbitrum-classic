@@ -67,7 +67,7 @@ func parseBlockData(data []byte) (*machine.BlockInfo, error) {
 	}, nil
 }
 
-func serializeBlockData(header *types.Header, logIndex, log_count uint64) ([]byte, error) {
+func serializeBlockData(header *types.Header, logIndex, logCount uint64) ([]byte, error) {
 	var blockData []byte
 
 	logIndexData := make([]byte, 8)
@@ -75,7 +75,7 @@ func serializeBlockData(header *types.Header, logIndex, log_count uint64) ([]byt
 	blockData = append(blockData, logIndexData...)
 
 	logCountData := make([]byte, 8)
-	binary.BigEndian.PutUint64(logCountData[:], log_count)
+	binary.BigEndian.PutUint64(logCountData[:], logCount)
 	blockData = append(blockData, logCountData...)
 
 	headerJSON, err := header.MarshalJSON()
@@ -103,8 +103,8 @@ func (as *NodeStore) GetMessageBatch(batchNum *big.Int) *uint64 {
 	return &index
 }
 
-func (as *NodeStore) SaveBlock(header *types.Header, logIndex uint64, log_count uint64, requests []machine.EVMRequestInfo) error {
-	blockData, err := serializeBlockData(header, logIndex, log_count)
+func (as *NodeStore) SaveBlock(header *types.Header, logIndex uint64, logCount uint64, requests []machine.EVMRequestInfo) error {
+	blockData, err := serializeBlockData(header, logIndex, logCount)
 	if err != nil {
 		return err
 	}

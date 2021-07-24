@@ -19,6 +19,7 @@ package monitor
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -44,16 +45,20 @@ type Monitor struct {
 	Reader  *InboxReader
 }
 
-func NewMonitor(dbDir string, contractFile string) (*Monitor, error) {
-	storage, err := cmachine.NewArbStorage(dbDir)
+func NewMonitor(dbDir string, contractFile string, blockCoreExpire time.Duration) (*Monitor, error) {
+	storage, err := cmachine.NewArbStorage(dbDir, blockCoreExpire)
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Info().Msg("database opened")
 
 	err = storage.Initialize(contractFile)
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Info().Msg("storage initialized")
 
 	arbCore := storage.GetArbCore()
 	started := arbCore.StartThread()

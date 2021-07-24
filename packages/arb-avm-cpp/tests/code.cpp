@@ -72,7 +72,7 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
 
 TEST_CASE("Code works correctly") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbStorage storage(dbpath, 60 * 20);
     storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
                                         value{Tuple()}));
     auto mach = storage.getInitialMachine();
@@ -82,7 +82,7 @@ TEST_CASE("Code works correctly") {
 
 TEST_CASE("Code serialization") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbStorage storage(dbpath, 60 * 20);
     storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
                                         value{Tuple()}));
     ValueCache value_cache{1, 0};

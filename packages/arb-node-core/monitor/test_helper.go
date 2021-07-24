@@ -35,7 +35,7 @@ func PrepareArbCore(t *testing.T) (*Monitor, func()) {
 }
 
 func PrepareArbCoreWithMexe(t *testing.T, mexe string) (*Monitor, func()) {
-	monitor, err := NewMonitor(t.TempDir(), mexe)
+	monitor, err := NewMonitor(t.TempDir(), mexe, 20*time.Minute)
 	test.FailIfError(t, err)
 
 	shutdown := func() {

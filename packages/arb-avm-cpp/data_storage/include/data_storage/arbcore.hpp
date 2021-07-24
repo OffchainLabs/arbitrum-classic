@@ -24,6 +24,7 @@
 #include <data_storage/executioncursor.hpp>
 #include <data_storage/messageentry.hpp>
 #include <data_storage/readsnapshottransaction.hpp>
+#include <data_storage/sideloadcache.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
@@ -118,8 +119,9 @@ class ArbCore {
 
     // Cache a machine ready to sideload view transactions just after recent
     // blocks
-    std::shared_mutex sideload_cache_mutex;
-    std::map<uint256_t, std::unique_ptr<Machine>> sideload_cache;
+    std::shared_mutex lru_sideload_cache_mutex;
+    std::map<uint256_t, std::unique_ptr<Machine>> lru_sideload_cache;
+    SideloadCache expiring_sideload_cache;
 
     // Core thread inbox status input/output. Core thread will update if and
     // only if set to MESSAGES_READY
@@ -153,11 +155,12 @@ class ArbCore {
 
    public:
     ArbCore() = delete;
-    explicit ArbCore(std::shared_ptr<DataStorage> data_storage_);
+    ArbCore(std::shared_ptr<DataStorage> data_storage_,
+            int32_t cache_expiration_seconds);
 
     ~ArbCore() { abortThread(); }
     rocksdb::Status initialize(const LoadedExecutable& executable);
-    bool initialized() const;
+    [[nodiscard]] bool initialized() const;
     void operator()();
 
    public:
@@ -375,7 +378,8 @@ class ArbCore {
    public:
     // Public sideload interaction
     ValueResult<std::unique_ptr<Machine>> getMachineForSideload(
-        const uint256_t& block_number);
+        const uint256_t& block_number,
+        bool allow_slow_lookup);
 
     ValueResult<uint256_t> getSideloadPosition(ReadTransaction& tx,
                                                const uint256_t& block_number);

@@ -552,11 +552,13 @@ CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
 }
 
 CMachine* arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
-                                       uint64_t block_number) {
+                                       uint64_t block_number,
+                                       int allow_slow_lookup) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
 
     try {
-        auto machine = arbcore->getMachineForSideload(block_number);
+        auto machine =
+            arbcore->getMachineForSideload(block_number, allow_slow_lookup);
         if (!machine.status.ok()) {
             std::cerr << "Failed to load machine for sideload "
                       << machine.status.ToString() << std::endl;

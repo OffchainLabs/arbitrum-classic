@@ -38,6 +38,13 @@ type Conf struct {
 	String    string `koanf:"string"`
 }
 
+type Database struct {
+	AllowSlowLookup  bool          `koanf:"allow-slow-lookup"`
+	BlockCacheSize   int           `koanf:"block-cache-size"`
+	BlockCacheExpire time.Duration `koanf:"block-cache-expire"`
+	BlockCoreExpire  time.Duration `koanf:"block-core-expire"`
+}
+
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
 	URLs    []string      `koanf:"url"`
@@ -152,6 +159,7 @@ type Log struct {
 type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               Conf        `koanf:"conf"`
+	Database           Database    `koanf:"database"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	GasPriceUrl        string      `koanf:"gas-price-url"`
@@ -214,6 +222,11 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
+
+	f.Bool("database.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
+	f.Int("database.block-cache-size", 1000, "number of recently used L2 blocks to hold in memory cache")
+	f.Duration("database.block-cache-expire", 20*time.Minute, "length of time to hold L2 blocks in memory cache")
+	f.Duration("database.block-core-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore memory cache")
 
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")

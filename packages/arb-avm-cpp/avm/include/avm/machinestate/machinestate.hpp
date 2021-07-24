@@ -142,11 +142,11 @@ struct MachineStateKeys {
           pc(pc_),
           err_pc(err_pc_) {}
 
-    MachineStateKeys(const MachineState& machine);
+    explicit MachineStateKeys(const MachineState& machine);
 
-    uint256_t getTotalMessagesRead() const;
-    uint256_t getInboxAcc() const;
-    uint256_t machineHash() const;
+    [[nodiscard]] uint256_t getTotalMessagesRead() const;
+    [[nodiscard]] uint256_t getInboxAcc() const;
+    [[nodiscard]] uint256_t machineHash() const;
 };
 
 struct MachineState {

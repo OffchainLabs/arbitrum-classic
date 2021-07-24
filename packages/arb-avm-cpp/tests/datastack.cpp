@@ -62,7 +62,7 @@ void initializeDatastack(const ReadTransaction& transaction,
 }
 
 void saveDataStack(const Datastack& data_stack) {
-    ArbStorage storage(dbpath);
+    ArbStorage storage(dbpath, 60 * 20);
     std::vector<CodePoint> code;
     auto transaction = storage.makeReadWriteTransaction();
 
@@ -75,7 +75,7 @@ void saveDataStack(const Datastack& data_stack) {
 }
 
 void saveDataStackTwice(const Datastack& data_stack) {
-    ArbStorage storage(dbpath);
+    ArbStorage storage(dbpath, 60 * 20);
     std::vector<CodePoint> code;
     auto transaction = storage.makeReadWriteTransaction();
 
@@ -118,7 +118,7 @@ void saveTwiceAndGetDataStack(ReadWriteTransaction& transaction,
 
 TEST_CASE("Initialize datastack") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbStorage storage(dbpath, 60 * 20);
     auto transaction = storage.makeReadWriteTransaction();
     Datastack data_stack;
 
@@ -196,7 +196,7 @@ TEST_CASE("Save datastack") {
 
 TEST_CASE("Save and get datastack") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbStorage storage(dbpath, 60 * 20);
     Datastack datastack;
 
     SECTION("save datastack and get") {

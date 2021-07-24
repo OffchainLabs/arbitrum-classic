@@ -26,9 +26,11 @@
 #include <avm_values/vmValueParser.hpp>
 #include <utility>
 
-ArbStorage::ArbStorage(const std::string& db_path)
+ArbStorage::ArbStorage(const std::string& db_path,
+                       int32_t cache_expiration_seconds)
     : datastorage(std::make_shared<DataStorage>(db_path)),
-      arb_core(std::make_shared<ArbCore>(datastorage)) {}
+      arb_core(
+          std::make_shared<ArbCore>(datastorage, cache_expiration_seconds)) {}
 
 rocksdb::Status ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);

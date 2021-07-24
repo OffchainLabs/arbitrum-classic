@@ -149,7 +149,7 @@ func (m *Machine) String() string {
 func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	sendsRaw := receiveByteSlice(assertion.sends)
 	logsRaw := receiveByteSlice(assertion.logs)
-	debug_prints, err := protocol.BytesArrayToVals(receiveByteSlice(assertion.debug_prints), uint64(assertion.debug_print_count))
+	debugPrints, err := protocol.BytesArrayToVals(receiveByteSlice(assertion.debug_prints), uint64(assertion.debug_print_count))
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -161,7 +161,7 @@ func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssert
 		logsRaw,
 		uint64(assertion.log_count),
 	)
-	return goAssertion, debug_prints, uint64(assertion.num_steps), err
+	return goAssertion, debugPrints, uint64(assertion.num_steps), err
 }
 
 func (m *Machine) ExecuteAssertion(

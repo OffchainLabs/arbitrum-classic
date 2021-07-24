@@ -19,6 +19,7 @@ package cmachine
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 )
@@ -42,7 +43,7 @@ func TestCheckpoint(t *testing.T) {
 		}
 	}()
 
-	arbStorage, err := NewArbStorage(dePath)
+	arbStorage, err := NewArbStorage(dePath, 20*time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}

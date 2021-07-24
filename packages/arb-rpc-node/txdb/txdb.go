@@ -22,15 +22,12 @@ import (
 	"math/big"
 	"time"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	lru "github.com/hashicorp/golang-lru"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -39,18 +36,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
 type TxDB struct {
-	Lookup    core.ArbOutputLookup
-	as        machine.NodeStore
-	logReader *core.LogReader
+	Lookup          core.ArbOutputLookup
+	allowSlowLookup bool
+	as              machine.NodeStore
+	logReader       *core.LogReader
 
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
@@ -68,6 +68,7 @@ func New(
 	arbCore core.ArbCore,
 	as machine.NodeStore,
 	updateFrequency time.Duration,
+	dbConfig *configuration.Database,
 ) (*TxDB, <-chan error, error) {
 	snapshotCache, err := lru.New(100)
 	if err != nil {
@@ -464,7 +465,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if found {
 		return cachedSnap.(*snapshot.Snapshot), nil
 	}
-	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
+	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64(), db.allowSlowLookup)
 	if err != nil || mach == nil {
 		return nil, err
 	}

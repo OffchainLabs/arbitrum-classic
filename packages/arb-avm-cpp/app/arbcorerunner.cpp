@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
     if (clearDb) {
         {
-            ArbStorage storage{dbpath};
+            ArbStorage storage{dbpath, 60 * 20};
             {
                 auto tx = storage.makeReadWriteTransaction();
                 saveNextSegmentID(*tx, 0);
@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
             storage.closeDb();
         }
         {
-            ArbStorage storage{dbpath};
+            ArbStorage storage{dbpath, 60 * 20};
             auto s = storage.initialize(arbospath);
             if (!s.ok()) {
                 std::cerr << "Failed to get initialize storage" << s.ToString()
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "Loading db\n";
-    ArbStorage storage{dbpath};
+    ArbStorage storage{dbpath, 60 * 20};
     std::cout << "Initializing arbstorage\n";
     auto status = storage.initialize(arbospath);
     if (!status.ok()) {

@@ -50,9 +50,11 @@ constexpr uint256_t checkpoint_load_gas_cost = 1'000'000'000;
 constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 }  // namespace
 
-ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
+ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
+                 int32_t cache_expiration_seconds)
     : data_storage(std::move(data_storage_)),
       core_code(std::make_shared<CoreCode>(getNextSegmentID(data_storage))),
+      expiring_sideload_cache(cache_expiration_seconds),
       execution_cursor_value_cache(4, 0) {
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
@@ -768,20 +770,20 @@ void ArbCore::operator()() {
                 {
                     auto block = *last_assertion.sideload_block_number;
                     std::unique_lock<std::shared_mutex> lock(
-                        sideload_cache_mutex);
-                    sideload_cache[block] =
+                        lru_sideload_cache_mutex);
+                    lru_sideload_cache[block] =
                         std::make_unique<Machine>(*core_machine);
                     // Remove any sideload_cache entries that are either more
                     // than sideload_cache_size blocks old, or in the future
                     // (meaning they've been reorg'd out).
-                    auto it = sideload_cache.begin();
-                    while (it != sideload_cache.end()) {
+                    auto it = lru_sideload_cache.begin();
+                    while (it != lru_sideload_cache.end()) {
                         // Note: we check if block > sideload_cache_size here
                         // to prevent an underflow in the following check.
                         if ((block > sideload_cache_size &&
                              it->first < block - sideload_cache_size) ||
                             it->first > block) {
-                            it = sideload_cache.erase(it);
+                            it = lru_sideload_cache.erase(it);
                         } else {
                             it++;
                         }
@@ -803,7 +805,10 @@ void ArbCore::operator()() {
                     // Clear oldest cache and start populating next cache
                     std::cout
                         << "Last checkpoint gas used: " << last_checkpoint_gas
-                        << std::endl;
+                        << ", L1 block: "
+                        << core_machine->machine_state.l1_block_number
+                        << ", L2 block: "
+                        << *last_assertion.sideload_block_number << std::endl;
                     cache.nextCache();
                 }
 
@@ -2649,10 +2654,10 @@ rocksdb::Status ArbCore::deleteSideloadsStartingAt(
     const uint256_t& block_number) {
     // Clear the cache
     {
-        std::unique_lock<std::shared_mutex> guard(sideload_cache_mutex);
-        auto it = sideload_cache.lower_bound(block_number);
-        while (it != sideload_cache.end()) {
-            it = sideload_cache.erase(it);
+        std::unique_lock<std::shared_mutex> guard(lru_sideload_cache_mutex);
+        auto it = lru_sideload_cache.lower_bound(block_number);
+        while (it != lru_sideload_cache.end()) {
+            it = lru_sideload_cache.erase(it);
         }
     }
 
@@ -2677,13 +2682,14 @@ rocksdb::Status ArbCore::deleteSideloadsStartingAt(
 }
 
 ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
-    const uint256_t& block_number) {
+    const uint256_t& block_number,
+    bool allow_slow_lookup) {
     // Check the cache
     {
-        std::shared_lock<std::shared_mutex> lock(sideload_cache_mutex);
+        std::shared_lock<std::shared_mutex> lock(lru_sideload_cache_mutex);
         // Look for the first value after the value we want
-        auto it = sideload_cache.upper_bound(block_number);
-        if (it != sideload_cache.begin()) {
+        auto it = lru_sideload_cache.upper_bound(block_number);
+        if (it != lru_sideload_cache.begin()) {
             // Go back a value to find the one we want
             it--;
             return {rocksdb::Status::OK(),
