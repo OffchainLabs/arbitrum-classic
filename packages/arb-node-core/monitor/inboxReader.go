@@ -98,14 +98,13 @@ func NewInboxReader(
 	broadcastFeed chan broadcaster.BroadcastFeedMessage,
 ) (*InboxReader, error) {
 	firstMessageBlock := bridge.FromBlock()
-	if firstMessageBlock == 0 {
+	if firstMessageBlock <= 1 {
 		start, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
 		if err != nil {
 			return nil, err
 		}
 		firstMessageBlock = start.Height.AsInt().Int64()
 	}
-
 	return &InboxReader{
 		delayedBridge:     bridge,
 		sequencerInbox:    sequencerInbox,
@@ -118,10 +117,6 @@ func NewInboxReader(
 		healthChan:        healthChan,
 		BroadcastFeed:     broadcastFeed,
 	}, nil
-}
-
-func (ir *InboxReader) getFirstMessageBlock() {
-
 }
 
 func (ir *InboxReader) Start(parentCtx context.Context) {
