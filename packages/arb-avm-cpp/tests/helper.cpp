@@ -40,12 +40,12 @@ Machine getComplexMachine() {
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
 
-    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65};
+    auto output =
+        MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65, 72, 73, 74};
 
-    return Machine(MachineState(state, arb_gas_remaining, 42, 43, 44, output,
-                                std::move(code), register_val,
+    return Machine(MachineState(output, pc, std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
-                                pc, err_pc));
+                                arb_gas_remaining, state, err_pc));
 }
 
 Machine getDefaultMachine() {
@@ -60,9 +60,9 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34};
-    return Machine(MachineState(state, arb_gas_remaining, 42, 43, 44, output,
-                                std::move(code), register_val,
+    auto output =
+        MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34, 72, 73, 74};
+    return Machine(MachineState(output, pc, std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
-                                pc, err_pc));
+                                arb_gas_remaining, state, err_pc));
 }
