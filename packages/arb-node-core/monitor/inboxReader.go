@@ -97,22 +97,31 @@ func NewInboxReader(
 	healthChan chan nodehealth.Log,
 	broadcastFeed chan broadcaster.BroadcastFeedMessage,
 ) (*InboxReader, error) {
-	firstMessageBlock, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
-	if err != nil {
-		return nil, err
+	firstMessageBlock := bridge.FromBlock()
+	if firstMessageBlock == 0 {
+		start, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
+		if err != nil {
+			return nil, err
+		}
+		firstMessageBlock = start.Height.AsInt().Int64()
 	}
+
 	return &InboxReader{
 		delayedBridge:     bridge,
 		sequencerInbox:    sequencerInbox,
 		bridgeUtils:       bridgeUtils,
 		db:                db,
-		firstMessageBlock: firstMessageBlock.Height.AsInt(),
+		firstMessageBlock: big.NewInt(firstMessageBlock),
 		recentFeedItems:   make(map[common.Hash]time.Time),
 		completed:         make(chan bool, 1),
 		caughtUpChan:      make(chan bool, 1),
 		healthChan:        healthChan,
 		BroadcastFeed:     broadcastFeed,
 	}, nil
+}
+
+func (ir *InboxReader) getFirstMessageBlock() {
+
 }
 
 func (ir *InboxReader) Start(parentCtx context.Context) {
