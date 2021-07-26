@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,23 +39,20 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
       inbox_messages_consumed(0) {}
 
 MachineStateKeys::MachineStateKeys(const MachineState& machine)
-    : status(machine.state),
-      arb_gas_remaining(machine.arb_gas_remaining),
-      l1_block_number(machine.l1_block_number),
-      l2_block_number(machine.l2_block_number),
-      last_inbox_timestamp(machine.last_inbox_timestamp),
-      output(machine.output),
+    : output(machine.output),
+      pc(machine.pc, machine.loadCurrentInstruction()),
       static_hash(hash_value(machine.static_val)),
       register_hash(hash_value(machine.registerVal)),
       datastack_hash(machine.stack.hash()),
       auxstack_hash(machine.auxstack.hash()),
-      pc(machine.pc, machine.loadCurrentInstruction()),
+      arb_gas_remaining(machine.arb_gas_remaining),
+      state(machine.state),
       err_pc(machine.errpc) {}
 
 uint256_t MachineStateKeys::machineHash() const {
-    if (status == Status::Halted)
+    if (state == Status::Halted)
         return 0;
-    if (status == Status::Error)
+    if (state == Status::Error)
         return 1;
 
     std::array<unsigned char, 32 * 7> data{};
@@ -98,36 +95,30 @@ void MachineState::addProcessedLog(value log_val) {
 MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
 
 MachineState::MachineState(std::shared_ptr<CoreCode> code_, value static_val_)
-    : arb_gas_remaining(max_arb_gas_remaining),
-      pc(code_->initialCodePointRef()),
+    : pc(code_->initialCodePointRef()),
       code(std::move(code_)),
-      static_val(std::move(static_val_)) {}
+      static_val(std::move(static_val_)),
+      arb_gas_remaining(max_arb_gas_remaining) {}
 
-MachineState::MachineState(Status state_,
-                           uint256_t arb_gas_remaining_,
-                           uint256_t l1_block_number_,
-                           uint256_t l2_block_number_,
-                           uint256_t last_inbox_timestamp_,
-                           MachineOutput output_,
+MachineState::MachineState(MachineOutput output_,
+                           CodePointRef pc_,
                            std::shared_ptr<Code> code_,
                            value register_val_,
                            value static_val_,
                            Datastack stack_,
                            Datastack auxstack_,
-                           CodePointRef pc_,
+                           uint256_t arb_gas_remaining_,
+                           Status state_,
                            CodePointStub errpc_)
-    : state(state_),
-      arb_gas_remaining(arb_gas_remaining_),
-      l1_block_number(l1_block_number_),
-      l2_block_number(l2_block_number_),
-      last_inbox_timestamp(last_inbox_timestamp_),
-      output(output_),
+    : output(output_),
       pc(pc_),
       code(std::move(code_)),
       registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
       stack(std::move(stack_)),
       auxstack(std::move(auxstack_)),
+      arb_gas_remaining(arb_gas_remaining_),
+      state(state_),
       errpc(errpc_) {}
 
 MachineState MachineState::loadFromFile(

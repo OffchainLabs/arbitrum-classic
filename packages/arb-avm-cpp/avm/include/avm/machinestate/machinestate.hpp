@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,47 +99,40 @@ struct MachineOutput {
     uint256_t log_acc;
     uint256_t send_count;
     uint256_t log_count;
+    uint256_t l1_block_number;
+    uint256_t l2_block_number;
+    uint256_t last_inbox_timestamp;
     std::optional<uint256_t> last_sideload;
 };
 
 struct MachineStateKeys {
-    Status status;
-    uint256_t arb_gas_remaining;
-    uint256_t l1_block_number;
-    uint256_t l2_block_number;
-    uint256_t last_inbox_timestamp;
     MachineOutput output;
-
+    CodePointStub pc;
     uint256_t static_hash;
     uint256_t register_hash;
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
-    CodePointStub pc;
+    uint256_t arb_gas_remaining;
+    Status state;
     CodePointStub err_pc;
 
-    MachineStateKeys(Status status_,
-                     uint256_t arb_gas_remaining_,
-                     uint256_t l1_block_number_,
-                     uint256_t l2_block_number_,
-                     uint256_t last_inbox_timestamp_,
-                     MachineOutput output_,
+    MachineStateKeys(MachineOutput output_,
+                     CodePointStub pc_,
                      uint256_t static_hash_,
                      uint256_t register_hash_,
                      uint256_t datastack_hash_,
                      uint256_t auxstack_hash_,
-                     CodePointStub pc_,
+                     uint256_t arb_gas_remaining_,
+                     Status state_,
                      CodePointStub err_pc_)
-        : status(status_),
-          arb_gas_remaining(arb_gas_remaining_),
-          l1_block_number(l1_block_number_),
-          l2_block_number(l2_block_number_),
-          last_inbox_timestamp(last_inbox_timestamp_),
-          output(output_),
+        : output(output_),
+          pc(pc_),
           static_hash(static_hash_),
           register_hash(register_hash_),
           datastack_hash(datastack_hash_),
           auxstack_hash(auxstack_hash_),
-          pc(pc_),
+          arb_gas_remaining(arb_gas_remaining_),
+          state(state_),
           err_pc(err_pc_) {}
 
     explicit MachineStateKeys(const MachineState& machine);
@@ -150,11 +143,6 @@ struct MachineStateKeys {
 };
 
 struct MachineState {
-    Status state{Status::Extensive};
-    uint256_t arb_gas_remaining;
-    uint256_t l1_block_number{0};
-    uint256_t l2_block_number{0};
-    uint256_t last_inbox_timestamp{0};
     MachineOutput output;
 
     CodePointRef pc{0, 0};
@@ -164,6 +152,8 @@ struct MachineState {
     value static_val;
     Datastack stack;
     Datastack auxstack;
+    uint256_t arb_gas_remaining;
+    Status state{Status::Extensive};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
 
     AssertionContext context;
@@ -174,18 +164,15 @@ struct MachineState {
 
     MachineState(std::shared_ptr<CoreCode> code_, value static_val);
 
-    MachineState(Status state_,
-                 uint256_t arb_gas_remaining_,
-                 uint256_t l1_block_number,
-                 uint256_t l2_block_number,
-                 uint256_t last_inbox_timestamp,
-                 MachineOutput output_,
+    MachineState(MachineOutput output_,
+                 CodePointRef pc_,
                  std::shared_ptr<Code> code_,
                  value register_val_,
                  value static_val,
                  Datastack stack_,
                  Datastack auxstack_,
-                 CodePointRef pc_,
+                 uint256_t arb_gas_remaining_,
+                 Status state_,
                  CodePointStub errpc_);
 
     uint256_t getMachineSize() const;

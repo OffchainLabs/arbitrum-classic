@@ -41,8 +41,8 @@ uint256_t SideloadCache::nextBlockNumber() {
 void SideloadCache::add(std::unique_ptr<Machine> machine) {
     std::lock_guard<std::mutex> guard(mutex);
 
-    auto block_number = machine->machine_state.l2_block_number;
-    auto timestamp = machine->machine_state.last_inbox_timestamp;
+    auto block_number = machine->machine_state.output.l2_block_number;
+    auto timestamp = machine->machine_state.output.last_inbox_timestamp;
 
     reorgNoLock(block_number);
     deleteExpiredNoLock();
