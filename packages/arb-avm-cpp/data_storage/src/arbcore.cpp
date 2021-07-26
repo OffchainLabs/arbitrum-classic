@@ -221,13 +221,13 @@ std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
         std::get<CountedData<std::variant<MachineStateKeys, MachineOutput>>>(
             results)
             .data;
-    if (std::holds_alternative<MachineOutput>(res)) {
-        // TODO
-        throw std::runtime_error("MachineOutput handling not implemented yet");
+    if (std::holds_alternative<MachineStateKeys>(res)) {
+        return getMachineUsingStateKeys<T>(tx, std::get<MachineStateKeys>(res),
+                                           value_cache);
     }
 
-    return getMachineUsingStateKeys<T>(tx, std::get<MachineStateKeys>(res),
-                                       value_cache);
+    // Machine not found
+    return nullptr;
 }
 
 template std::unique_ptr<Machine> ArbCore::getMachineImpl(
@@ -517,27 +517,6 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     return tx.commit();
 }
 
-std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
-    ReadTransaction& tx,
-    const uint256_t& arb_gas_used) const {
-    std::vector<unsigned char> key;
-    marshal_uint256_t(arb_gas_used, key);
-
-    auto result = tx.checkpointGetVector(vecToSlice(key));
-    if (!result.status.ok()) {
-        return result.status;
-    }
-
-    auto variantkeys = extractMachineStateKeys(result.data);
-
-    if (std::holds_alternative<MachineOutput>(variantkeys)) {
-        // TODO
-        throw std::runtime_error("MachineOutput handling not implemented yet");
-    }
-
-    return std::get<MachineStateKeys>(variantkeys);
-}
-
 bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
     auto it = std::unique_ptr<rocksdb::Iterator>(tx.checkpointGetIterator());
     it->SeekToLast();
@@ -568,35 +547,37 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
     marshal_uint256_t(total_gas, key);
     auto key_slice = vecToSlice(key);
     it->SeekForPrev(key_slice);
-    if (!it->Valid()) {
+    while (it->Valid()) {
+        if (after_gas) {
+            it->Next();
+            if (!it->status().ok()) {
+                return it->status();
+            }
+            if (!it->Valid()) {
+                return rocksdb::Status::NotFound();
+            }
+        }
         if (!it->status().ok()) {
             return it->status();
         }
-        return rocksdb::Status::NotFound();
-    }
-    if (after_gas) {
-        it->Next();
-        if (!it->status().ok()) {
-            return it->status();
+
+        std::vector<unsigned char> saved_value(
+            it->value().data(), it->value().data() + it->value().size());
+        auto variantkeys = extractMachineStateKeys(saved_value);
+
+        if (std::holds_alternative<MachineStateKeys>(variantkeys)) {
+            // Found checkpoint with machine
+            return std::get<MachineStateKeys>(variantkeys);
         }
-        if (!it->Valid()) {
-            return rocksdb::Status::NotFound();
-        }
+
+        // Checkpoint did not contain machine
+        it->Prev();
     }
+
     if (!it->status().ok()) {
         return it->status();
     }
-
-    std::vector<unsigned char> saved_value(
-        it->value().data(), it->value().data() + it->value().size());
-    auto variantkeys = extractMachineStateKeys(saved_value);
-
-    if (std::holds_alternative<MachineOutput>(variantkeys)) {
-        // TODO
-        throw std::runtime_error("MachineOutput handling not implemented yet");
-    }
-
-    return std::get<MachineStateKeys>(variantkeys);
+    return rocksdb::Status::NotFound();
 }
 
 template <class T>

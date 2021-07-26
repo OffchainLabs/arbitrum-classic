@@ -170,9 +170,6 @@ class ArbCore {
     rocksdb::Status saveAssertion(ReadWriteTransaction& tx,
                                   const Assertion& assertion,
                                   uint256_t arb_gas_used);
-    std::variant<rocksdb::Status, MachineStateKeys> getCheckpoint(
-        ReadTransaction& tx,
-        const uint256_t& arb_gas_used) const;
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas,
