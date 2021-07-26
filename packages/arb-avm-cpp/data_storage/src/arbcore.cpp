@@ -217,8 +217,17 @@ std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
         throw std::runtime_error("failed to load machine state");
     }
 
-    return getMachineUsingStateKeys<T>(
-        tx, std::get<CountedData<MachineStateKeys>>(results).data, value_cache);
+    auto res =
+        std::get<CountedData<std::variant<MachineStateKeys, MachineOutput>>>(
+            results)
+            .data;
+    if (std::holds_alternative<MachineOutput>(res)) {
+        // TODO
+        throw std::runtime_error("MachineOutput handling not implemented yet");
+    }
+
+    return getMachineUsingStateKeys<T>(tx, std::get<MachineStateKeys>(res),
+                                       value_cache);
 }
 
 template std::unique_ptr<Machine> ArbCore::getMachineImpl(
@@ -382,39 +391,45 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             std::vector<unsigned char> checkpoint_vector(
                 checkpoint_it->value().data(),
                 checkpoint_it->value().data() + checkpoint_it->value().size());
-            auto checkpoint = extractMachineStateKeys(checkpoint_vector);
-            if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
-                (message_count >= checkpoint.getTotalMessagesRead())) {
-                if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
-                    // Good checkpoint
-                    try {
-                        if (std::holds_alternative<rocksdb::Status>(setup)) {
-                            setup = getMachineUsingStateKeys<MachineThread>(
-                                tx, checkpoint, cache);
-                            if (std::holds_alternative<
-                                    std::unique_ptr<MachineThread>>(setup) &&
-                                use_latest) {
-                                std::lock_guard<std::mutex> guard(
-                                    execution_cursor_value_cache_mutex);
-                                execution_cursor_value_cache.initializeFrom(
-                                    cache);
+            auto variantcheckpoint = extractMachineStateKeys(checkpoint_vector);
+            if (std::holds_alternative<MachineStateKeys>(variantcheckpoint)) {
+                auto checkpoint = std::get<MachineStateKeys>(variantcheckpoint);
+                if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
+                    (message_count >= checkpoint.getTotalMessagesRead())) {
+                    if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
+                        // Good checkpoint
+                        try {
+                            if (std::holds_alternative<rocksdb::Status>(
+                                    setup)) {
+                                setup = getMachineUsingStateKeys<MachineThread>(
+                                    tx, checkpoint, cache);
+                                if (std::holds_alternative<
+                                        std::unique_ptr<MachineThread>>(
+                                        setup) &&
+                                    use_latest) {
+                                    std::lock_guard<std::mutex> guard(
+                                        execution_cursor_value_cache_mutex);
+                                    execution_cursor_value_cache.initializeFrom(
+                                        cache);
+                                }
                             }
+                            break;
+                        } catch (const std::exception& e) {
+                            std::cerr
+                                << "Error loading machine from checkpoint: "
+                                << e.what() << std::endl;
+                            assert(false);
                         }
-                        break;
-                    } catch (const std::exception& e) {
-                        std::cerr << "Error loading machine from checkpoint: "
-                                  << e.what() << std::endl;
-                        assert(false);
                     }
+
+                    std::cerr << "Error: Invalid checkpoint found at gas: "
+                              << checkpoint.output.arb_gas_used << std::endl;
+                    assert(false);
                 }
 
-                std::cerr << "Error: Invalid checkpoint found at gas: "
-                          << checkpoint.output.arb_gas_used << std::endl;
-                assert(false);
+                // Obsolete checkpoint, need to delete referenced machine
+                deleteMachineState(tx, checkpoint);
             }
-
-            // Obsolete checkpoint, need to delete referenced machine
-            deleteMachineState(tx, checkpoint);
 
             // Delete checkpoint to make sure it isn't used later
             tx.checkpointDelete(checkpoint_it->key());
@@ -512,7 +527,15 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
     if (!result.status.ok()) {
         return result.status;
     }
-    return extractMachineStateKeys(result.data);
+
+    auto variantkeys = extractMachineStateKeys(result.data);
+
+    if (std::holds_alternative<MachineOutput>(variantkeys)) {
+        // TODO
+        throw std::runtime_error("MachineOutput handling not implemented yet");
+    }
+
+    return std::get<MachineStateKeys>(variantkeys);
 }
 
 bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
@@ -566,7 +589,14 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
 
     std::vector<unsigned char> saved_value(
         it->value().data(), it->value().data() + it->value().size());
-    return extractMachineStateKeys(saved_value);
+    auto variantkeys = extractMachineStateKeys(saved_value);
+
+    if (std::holds_alternative<MachineOutput>(variantkeys)) {
+        // TODO
+        throw std::runtime_error("MachineOutput handling not implemented yet");
+    }
+
+    return std::get<MachineStateKeys>(variantkeys);
 }
 
 template <class T>
@@ -583,6 +613,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         std::stringstream ss;
         ss << "failed loaded core machine static: "
            << std::get<rocksdb::Status>(static_results).ToString();
+        std::cerr << "getValueImpl error: " << ss.str() << std::endl;
         throw std::runtime_error(ss.str());
     }
 
@@ -593,6 +624,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         ss << "failed loaded core machine register with hash "
            << state_data.register_hash << ": "
            << std::get<rocksdb::Status>(register_results).ToString();
+        std::cerr << "getValueImpl error: " << ss.str() << std::endl;
         throw std::runtime_error(ss.str());
     }
 
@@ -601,6 +633,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     if (std::holds_alternative<rocksdb::Status>(stack_results) ||
         !std::holds_alternative<Tuple>(
             std::get<CountedData<value>>(stack_results).data)) {
+        std::cerr << "failed to load machine stack" << std::endl;
         throw std::runtime_error("failed to load machine stack");
     }
 
@@ -611,6 +644,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     }
     if (!std::holds_alternative<Tuple>(
             std::get<CountedData<value>>(auxstack_results).data)) {
+        std::cerr << "failed to load machine auxstack because of format error"
+                  << std::endl;
         throw std::runtime_error(
             "failed to load machine auxstack because of format error");
     }
@@ -635,12 +670,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         segment_ids = std::move(next_segment_ids);
     };
     auto state = MachineState{
-        state_data.status,
-        state_data.arb_gas_remaining,
-        state_data.l1_block_number,
-        state_data.l2_block_number,
-        state_data.last_inbox_timestamp,
         state_data.output,
+        state_data.pc.pc,
         std::make_shared<RunningCode>(core_code),
         std::move(std::get<CountedData<value>>(register_results).data),
         std::move(std::get<CountedData<value>>(static_results).data),
@@ -648,7 +679,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             std::get<Tuple>(std::get<CountedData<value>>(stack_results).data)),
         Datastack(std::get<Tuple>(
             std::get<CountedData<value>>(auxstack_results).data)),
-        state_data.pc.pc,
+        state_data.arb_gas_remaining,
+        state_data.state,
         state_data.err_pc};
 
     return std::make_unique<T>(state);
