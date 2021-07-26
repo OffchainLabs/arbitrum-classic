@@ -128,6 +128,10 @@ int main(int argc, char* argv[]) {
     tx->commit();
 
     auto mach2 = storage.getMachine(mach->hash(), value_cache);
+    if (!mach2) {
+        std::cerr << "Error loading machine: " << hex(mach->hash());
+        throw std::runtime_error("Error loading machine");
+    }
     execConfig.inbox_messages = std::vector<MachineMessage>();
     mach2->machine_state.context = AssertionContext{execConfig};
     mach2->run();
