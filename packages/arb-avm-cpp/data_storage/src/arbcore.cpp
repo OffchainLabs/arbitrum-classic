@@ -2710,6 +2710,11 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
         }
     }
 
+    if (!allow_slow_lookup) {
+        // Do not look in database
+        return {rocksdb::Status::OK(), nullptr};
+    }
+
     uint256_t gas_target;
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {

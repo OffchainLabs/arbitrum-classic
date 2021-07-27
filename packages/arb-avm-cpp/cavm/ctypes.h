@@ -83,6 +83,11 @@ typedef struct {
     uint64_t num_gas;
 } RawAssertion;
 
+typedef struct {
+    void* machine;
+    int slow_error;
+} CMachineResult;
+
 typedef void CAggregatorStore;
 typedef void CArbCore;
 typedef void CArbStorage;

@@ -17,25 +17,9 @@
 #include <data_storage/sideloadcache.hpp>
 
 size_t SideloadCache::size() {
+    std::lock_guard<std::mutex> guard(mutex);
+
     return cache.size();
-}
-
-uint256_t SideloadCache::oldestBlockNumber() {
-    if (cache.empty()) {
-        return 0;
-    }
-
-    return cache.begin()->first;
-}
-
-uint256_t SideloadCache::nextBlockNumber() {
-    if (cache.empty()) {
-        return 0;
-    }
-
-    auto it = cache.end();
-    it--;
-    return it->first + 1;
 }
 
 void SideloadCache::add(std::unique_ptr<Machine> machine) {
@@ -80,10 +64,8 @@ void SideloadCache::reorgNoLock(uint256_t next_block_number) {
         cache.clear();
     }
 
-    for (auto rit = cache.crbegin();
-         rit != cache.crend() && rit->first >= next_block_number;) {
-        rit = decltype(rit){cache.erase(std::next(rit).base())};
-    }
+    auto it = cache.lower_bound(next_block_number);
+    cache.erase(it, cache.end());
 }
 
 void SideloadCache::deleteExpiredNoLock() {

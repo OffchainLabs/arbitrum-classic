@@ -491,11 +491,15 @@ func (ac *ArbCore) GetMachineForSideload(blockNumber uint64, allowSlowLookup boo
 		allowSlowLookupInt = 1
 	}
 
-	cMachine := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber), C.int(allowSlowLookupInt))
+	cMachineResult := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber), C.int(allowSlowLookupInt))
 
-	if cMachine == nil {
+	if cMachineResult.slow_error == 1 {
+		return nil, errors.Errorf("machine would be too slow to load")
+	}
+
+	if cMachineResult.machine == nil {
 		return nil, errors.Errorf("error getting machine for sideload")
 	}
 
-	return WrapCMachine(cMachine), nil
+	return WrapCMachine(cMachineResult.machine), nil
 }

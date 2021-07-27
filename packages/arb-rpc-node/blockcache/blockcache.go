@@ -29,6 +29,9 @@ func New(initialSize int, expiration time.Duration) (*BlockCache, error) {
 }
 
 func (bc *BlockCache) Size() int {
+	bc.lock.Lock()
+	defer bc.lock.Unlock()
+
 	return len(bc.cache)
 }
 
