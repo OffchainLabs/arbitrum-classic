@@ -80,7 +80,7 @@ We believe strongly that interactive proving is the superior approach, for the f
 
 **More efficient in the pessimistic case**: In case of a dispute, interactive proving requires the L1 referee contract only to check that Alice and Bob's actions "have the right shape", for example, that Alice has divided her N-step claim into two claims half as large. (The referee doesn't need to evaluate the correctness of Alice's claims--Bob does that, off-chain.)  Only one instruction needs to be reexecuted. By contrast, reexecution requires the L1 referee to emulate the execution of an entire transaction.
 
-**Much higher per-tx gas limit:**  Interactive proving can escape from Ethereum's tight per-transaction gas limit; a transaction that requries so much gas it couldn't even fit into an Ethereum block is possible on Arbitrum.  The gas limit isn't infinite, for obvious reasons, but it can be much larger than on Ethereum. As far as Ethereum is concerned, the only downside of a gas-heavy Arbitrum transaction is that it may require an interacrtive fraud proof with slightly more steps (and only if indeed it is fraudulent). By contrast, reexecution must impose a *lower* gas limit than Ethereum, because it must be possible to emulate execution of the transaction (which is more expensive than executing it directly) within a single Ethereum transaction.
+**Much higher per-tx gas limit:**  Interactive proving can escape from Ethereum's tight per-transaction gas limit; a transaction that requries so much gas it couldn't even fit into an Ethereum block is possible on Arbitrum.  The gas limit isn't infinite, for obvious reasons, but it can be much larger than on Ethereum. As far as Ethereum is concerned, the only downside of a gas-heavy Arbitrum transaction is that it may require an interactive fraud proof with slightly more steps (and only if indeed it is fraudulent). By contrast, reexecution must impose a *lower* gas limit than Ethereum, because it must be possible to emulate execution of the transaction (which is more expensive than executing it directly) within a single Ethereum transaction.
 
 **No limit on contract size**: Interactive proving does not need to create an Ethereum contract for each L2 contract, so it does not need contracts to fit within Ethereum's contract size limit. As far as Arbitrum's dispute contracts are concerned, deploying a contract on L2 is just another bit of computation like any other. By contrast, reexecution approaches must impose a *lower* contract size limit than Ethereum, because they need to be able to instrument a contract in order to emulate its execution, and the resulting instrumented code must fit into a single Ethereum contract.
 
@@ -180,7 +180,7 @@ Each rollup block contains:
 - the rollup block number
 - the predecessor block number: rollup block number of the last block before this one that is (claimed to be) correct
 - the amount of computation the chain has done in its history (measured in ArbGas)
-- the number of inbox messages have been consumed in the chain’s history
+- the number of inbox messages that have been consumed in the chain’s history
 - a hash of the outputs produced over the chain’s history
 - a hash of the chain state.
 
@@ -296,13 +296,17 @@ At this point we’re effectively back in the original situation: Alice having m
 
 ### Why Dissection Correctly Identifies a Cheater
 
-Before talking about the complexities of the real challenge protocol, let’s stop to understand why the simplified version of the protocol is correct. Here correctness means two things: (1) if Alice’s initial claim is correct, Alice can always win the challenge, and (2) if Alice’s initial claim is incorrect, Bob can always win the challenge.
+Before talking about the complexities of the real challenge protocol, let’s stop to understand why the simplified version of the protocol is correct. Here correctness means two things:
 
-To prove (1), observe that if Alice’s initial claim is correct, she can offer a truthful midpoint claim, and both of the implied half-size claims will be correct. So whichever half Bob objects to, Alice will again be in the position of defending a correct claim. At each stage of the protocol, Alice will be defending a correct claim. At the end, Alice will have a correct one-step claim to prove, so that claim will be provable and Alice can win the challenge.
+(1) that the protocol is *live*: if Alice’s initial claim is correct, Alice can always win the challenge, and
 
-To prove (2), observe that if Alice’s initial claim is incorrect, this can only be because her claimed endpoint after N steps is incorrect. Now when Alice offers her midpoint state claim, that midpoint claim is either correct or incorrect. If it’s incorrect, then Bob can challenge Alice’s first-half claim, which will be incorrect. If Alice’s midpoint state claim is correct, then her second-half claim must be incorrect, so Bob can challenge that. So whatever Alice does, Bob will be able to challenge an incorrect half-size claim. At each stage of the protocol, Bob can identify an incorrect claim to challenge. At the end, Alice will have an incorrect one-step claim to prove, which she will be unable to do, so Bob can win the challenge.
+(2) that the protocol is *safe*: if Alice’s initial claim is incorrect, Bob can always win the challenge.
 
-(If you’re a stickler for mathematical precision, it should be clear how these arguments can be turned into proofs by induction on N.)
+To prove liveness, observe that if Alice’s initial claim is correct, she can offer a truthful midpoint claim, and both of the implied half-size claims will be correct. So whichever half Bob objects to, Alice will again be in the position of defending a correct claim. At each stage of the protocol, Alice will be defending a correct claim. At the end, Alice will have a correct one-step claim to prove, so that claim will be provable and Alice can win the challenge.
+
+To prove safety, observe that if Alice’s initial claim is incorrect, this can only be because her claimed endpoint after N steps is incorrect. Now when Alice offers her midpoint state claim, that midpoint claim is either correct or incorrect. If it’s incorrect, then Bob can challenge Alice’s first-half claim, which will be incorrect. If Alice’s midpoint state claim is correct, then her second-half claim must be incorrect, so Bob can challenge that. So whatever Alice does, Bob will be able to challenge an incorrect half-size claim. At each stage of the protocol, Bob can identify an incorrect claim to challenge. At the end, Alice will have an incorrect one-step claim to prove, which she will be unable to do, so Bob can win the challenge.
+
+(If you’re a stickler for mathematical precision, it should be clear how these arguments can be turned into proofs by induction on lgN.)
 
 ### The Real Dissection Protocol
 
@@ -322,9 +326,9 @@ It should be clear that these changes don’t affect the basic correctness of th
 
 ### Efficiency
 
-The challenge protocol is designed so that the dispute can be resolved with a minimum of work required by the EthBridge in its role as referee. When it is Alice’s move, the EthBridge only needs to keep track of the time Alice uses, and ensure that her move does include 99 intermediate points as required. The EthBridge doesn’t need to pay attention to whether those claims are correct in any way; it only needs to know whether Alice’s move “has the right shape”. 
+The challenge protocol is designed so that the dispute can be resolved with a minimum of work required by the EthBridge in its role as referee. When it is Alice’s move, the EthBridge only needs to keep track of the time Alice uses, and ensure that her move does include k = 99 intermediate points as required. The EthBridge doesn’t need to pay attention to whether those claims are correct in any way; it only needs to know whether Alice’s move “has the right shape”. 
 
-The only point where the EthBridge needs to evaluate a move “on the merits” is at the one-step proof, where it needs to look at Alice’s proof and determine whether the proof that was provided does indeed establish that the virtual machine moves from the before state to the claimed after state after one step of computation. We’ll discuss the details of one-step proofs below in the [Arbitrum Virtual Machine](#avm) section.
+The only point where the EthBridge needs to evaluate a move “on the merits” is at the one-step proof, where it needs to look at Alice’s proof and determine whether the proof that was provided does indeed establish that the virtual machine moves from the *before* state to the claimed *after* state after one step of computation. We’ll discuss the details of one-step proofs below in the [Arbitrum Virtual Machine](#avm) section.
 
 ## Validators
 
@@ -410,14 +414,14 @@ The *inbox* instruction consumes the next message from the VM’s inbox and push
 
 #### Producing outputs
 
-The AVM has two instructions that can produce outputs: *send* and *log*. Both are hashed into the output hash accumulator that records the (hash of) the VM’s outputs, but *send* causes its value to be recorded as calldata on the L1 chain, while *log* does not. This means that outputs produced with send will be visible to L1 contracts, while those produced with log will not. Of course, sends are more expensive than logs.
+The AVM has two instructions that can produce outputs: *send* and *log*. Both are hashed into the output hash accumulator that records (the hash of) the VM’s outputs, but *send* causes its value to be recorded as calldata on the L1 chain, while *log* does not. This means that outputs produced with send will be visible to L1 contracts, while those produced with log will not. Of course, sends are more expensive than logs.
 A useful design pattern is for a sequence of values to be produced as logs, and then a Merkle hash of those values to be produced as a single send. That allows an L1 contract to see the Merkle hash of the full sequence of outputs, so that it can verify the individual values when it sees them. ArbOS uses this design pattern, as described below.
 
 #### ArbGas and gas tracking
 
 The AVM has a notion of ArbGas, which is like gas on Ethereum. ArbGas measures the cost of executing an instruction, based on how long it will take a validator to execute it. Every AVM instruction has an ArbGas cost. 
 
-Arbitrum instructions have different gas costs than their Ethereum counterparts, for two reasons. First, the relative costs of executing Instruction A versus Instruction B can be different on a Layer 2 system versus on Ethereum. For example, storage accesses can be cheaper on Arbitrum relative to add instructions. ArbGas costs are based on the relative cost on Arbitrum.
+Arbitrum instructions have different gas costs than their Ethereum counterparts. The relative costs of executing Instruction A versus Instruction B can be different on a Layer 2 system versus on Ethereum. For example, storage accesses can be cheaper on Arbitrum relative to add instructions. ArbGas costs are based on the relative cost on Arbitrum.
 
 The AVM architecture has a machine register called ArbGas Remaining. Before executing any instruction, the ArbGas cost of that instruction is deducted from ArbGas Remaining. If this would underflow the register (indicating that the execution is “out of ArbGas”) a hard error is generated and the ArbGasRemaining register is set to MaxUint256. 
 
@@ -439,7 +443,7 @@ ArbOS is a trusted "operating system” at Layer 2 that isolates untrusted contr
 
 In Arbitrum, much of the work that would otherwise have to be done expensively at Layer 1 is instead done by ArbOS, trustlessly performing these functions at the speed and low cost of Layer 2. 
 
-Supporting these functions in Layer 2 trusted software, rather than building them in to the L1-enforced rules of the architecture as Ethereum does, offers significant advantages in cost because these operations can benefit from the lower cost of computation and storage at Layer 2, instead of having to manage those resources as part of the Layer 1 EthBridge contract. Having a trusted operating system at Layer 2 also has significant advantages in flexibility, because Layer 2 code is easier to evolve, or to customize for a particular chain, than a Layer-1 enforced VM architecture would be.
+Supporting these functions in Layer 2 trusted software, rather than building them into the L1-enforced rules of the architecture as Ethereum does, offers significant advantages in cost because these operations can benefit from the lower cost of computation and storage at Layer 2, instead of having to manage those resources as part of the Layer 1 EthBridge contract. Having a trusted operating system at Layer 2 also has significant advantages in flexibility, because Layer 2 code is easier to evolve, or to customize for a particular chain, than a Layer-1 enforced VM architecture would be.
 
 The use of a Layer 2 trusted operating system does require some support in the architecture, for example to allow the OS to limit and track resource usage by contracts. The AVM architecture provides that support.
 
@@ -540,9 +544,9 @@ A well-behaved sequencer will accept transactions from all requesters and treat 
 
 It will also minimize the delay it imposes on non-sequencer transactions by minimizing how far it backdates transactions, consistent with the goal of providing strong promises of transaction results.  Specifically, if the sequencer believes that 20 confirmation blocks are needed to have finality on Ethereum, then it will backdate transactions by 20 blocks. This is enough to ensure that the sequencer knows exactly which transactions will precede its current transaction, because those preceding transactions have finality.  There is no need for a benign sequencer to backdate more than that, so it won't.
 
-This does mean that transactions that go through the regular inbox will take longer to get finality. Their time to finality will roughly double: if finality requires C confirmation blocks, then a regular-inbox tranasaction at block B be processed after sequencer transactions that are inserted at time B+C-1 (but labeled with block B-1), and those sequencer transactions won't have finality until time B+2C-1.
+This does mean that transactions that go through the regular inbox will take longer to get finality. Their time to finality will roughly double: if finality requires k confirmation blocks, then a regular-inbox tranasaction at block B be processed after sequencer transactions that are inserted at time B+C-1 (but labeled with block B-1), and those sequencer transactions won't have finality until time B+2C-1.
 
-This is the basic tradeoff of having a sequencer: if you use the sequencer, finality is C blocks faster; but if you don't use the sequencer, finality is C blocks slower. This is usually a good tradeoff, because most transactions will use the sequencer; and because the practical difference between instant and 5-minute finality is bigger than the difference between 5-minute and 10-minute finality.
+This is the basic tradeoff of having a sequencer: if you use the sequencer, finality is k blocks faster; but if you don't use the sequencer, finality is k blocks slower. This is usually a good tradeoff, because most transactions will use the sequencer; and because the practical difference between instant and 5-minute finality is bigger than the difference between 5-minute and 10-minute finality.
 
 So a sequencer is generally a win, if the sequencer is well behaved.
 
@@ -562,7 +566,7 @@ How to achieve this is more complicated. Research by a team at Cornell Tech, inc
 
 ## Bridging
 
-We have already covered how users interact with L2 contracts--they submit transactions by putting messages into the chain’s inbox, or having a full node aggregator do so on their behalf. Let’s talk about how contract interact between L1 and L2--how an L1 contract calls an L2 contract, and vice versa.
+We have already covered how users interact with L2 contracts--they submit transactions by putting messages into the chain’s inbox, or having a full node aggregator do so on their behalf. Let’s talk about how contracts interact between L1 and L2--how an L1 contract calls an L2 contract, and vice versa.
 
 The L1 and L2 chains run asynchronously from each other, so it is not possible to make a cross-chain call that produces a result within the same transaction as the caller. Instead, cross-chain calls must be asynchronous, meaning that the caller submits the call at some point in time, and the call runs later. As a consequence, a cross-chain contract-to-contract call can never produce a result that is available to the calling contract (except for acknowledgement that the call was successfully submitted for later execution).
 
