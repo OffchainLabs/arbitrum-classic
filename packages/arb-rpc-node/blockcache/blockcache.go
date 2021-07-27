@@ -29,6 +29,9 @@ func New(initialSize int, expiration time.Duration) (*BlockCache, error) {
 }
 
 func (bc *BlockCache) Size() int {
+	bc.lock.Lock()
+	defer bc.lock.Unlock()
+
 	return len(bc.cache)
 }
 
@@ -39,7 +42,7 @@ func (bc *BlockCache) emptyCacheNoLock() {
 	bc.nextHeight = 0
 }
 
-// reorgNoLock removes all obsolete blocks up to and including nextHeight
+// reorgNoLock removes obsolete blocks including and after nextHeight
 func (bc *BlockCache) reorgNoLock(nextHeight uint64) {
 	if bc.nextHeight == 0 {
 		// Nothing to remove
@@ -53,12 +56,6 @@ func (bc *BlockCache) reorgNoLock(nextHeight uint64) {
 	}
 
 	for currentHeight := bc.nextHeight - 1; currentHeight >= nextHeight; currentHeight-- {
-		if _, exists := bc.cache[currentHeight]; !exists {
-			// No cache entry for currentHeight
-			continue
-		}
-
-		// Delete obsolete entry
 		delete(bc.cache, currentHeight)
 	}
 

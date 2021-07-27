@@ -223,8 +223,17 @@ std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
         throw std::runtime_error("failed to load machine state");
     }
 
-    return getMachineUsingStateKeys<T>(
-        tx, std::get<CountedData<MachineStateKeys>>(results).data, value_cache);
+    auto res =
+        std::get<CountedData<std::variant<MachineStateKeys, MachineOutput>>>(
+            results)
+            .data;
+    if (std::holds_alternative<MachineStateKeys>(res)) {
+        return getMachineUsingStateKeys<T>(tx, std::get<MachineStateKeys>(res),
+                                           value_cache);
+    }
+
+    // Machine not found
+    return nullptr;
 }
 
 template std::unique_ptr<Machine> ArbCore::getMachineImpl(
@@ -451,12 +460,14 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                                 execution_cursor_value_cache.initializeFrom(
                                     cache);
                             }
+                            break;
                         }
-                        break;
-                    } catch (const std::exception& e) {
-                        std::cerr << "Error loading machine from checkpoint: "
-                                  << e.what() << std::endl;
-                        assert(false);
+                        catch (const std::exception& e) {
+                            std::cerr
+                                << "Error loading machine from checkpoint: "
+                                << e.what() << std::endl;
+                            assert(false);
+                        }
                     }
 
                     while (new_machine->machine_state.output.arb_gas_used <
@@ -505,13 +516,9 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                     }
                 }
 
-                std::cerr << "Error: Invalid checkpoint found at gas: "
-                          << checkpoint.output.arb_gas_used << std::endl;
-                assert(false);
+                // Obsolete checkpoint, need to delete referenced machine
+                deleteMachineState(tx, checkpoint);
             }
-
-            // Obsolete checkpoint, need to delete referenced machine
-            deleteMachineState(tx, checkpoint);
 
             // Delete checkpoint to make sure it isn't used later
             tx.checkpointDelete(checkpoint_it->key());
@@ -599,19 +606,6 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     return tx.commit();
 }
 
-std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
-    ReadTransaction& tx,
-    const uint256_t& arb_gas_used) const {
-    std::vector<unsigned char> key;
-    marshal_uint256_t(arb_gas_used, key);
-
-    auto result = tx.checkpointGetVector(vecToSlice(key));
-    if (!result.status.ok()) {
-        return result.status;
-    }
-    return extractMachineStateKeys(result.data);
-}
-
 bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
     auto it = std::unique_ptr<rocksdb::Iterator>(tx.checkpointGetIterator());
     it->SeekToLast();
@@ -635,35 +629,34 @@ uint256_t ArbCore::maxCheckpointGas() {
 // gas is returned.
 std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
     ReadTransaction& tx,
-    const uint256_t& total_gas,
-    bool after_gas) {
+    const uint256_t& total_gas) {
     auto it = tx.checkpointGetIterator();
     std::vector<unsigned char> key;
     marshal_uint256_t(total_gas, key);
     auto key_slice = vecToSlice(key);
     it->SeekForPrev(key_slice);
-    if (!it->Valid()) {
+    while (it->Valid()) {
         if (!it->status().ok()) {
             return it->status();
         }
-        return rocksdb::Status::NotFound();
-    }
-    if (after_gas) {
-        it->Next();
-        if (!it->status().ok()) {
-            return it->status();
+
+        std::vector<unsigned char> saved_value(
+            it->value().data(), it->value().data() + it->value().size());
+        auto variantkeys = extractMachineStateKeys(saved_value);
+
+        if (std::holds_alternative<MachineStateKeys>(variantkeys)) {
+            // Found checkpoint with machine
+            return std::get<MachineStateKeys>(variantkeys);
         }
-        if (!it->Valid()) {
-            return rocksdb::Status::NotFound();
-        }
+
+        // Checkpoint did not contain machine
+        it->Prev();
     }
+
     if (!it->status().ok()) {
         return it->status();
     }
-
-    std::vector<unsigned char> saved_value(
-        it->value().data(), it->value().data() + it->value().size());
-    return extractMachineStateKeys(saved_value);
+    return rocksdb::Status::NotFound();
 }
 
 template <class T>
@@ -680,7 +673,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         std::stringstream ss;
         ss << "failed loaded core machine static: "
            << std::get<rocksdb::Status>(static_results).ToString();
-        std::cerr << ss.str() << std::endl;
+        std::cerr << "getValueImpl error: " << ss.str() << std::endl;
         throw std::runtime_error(ss.str());
     }
 
@@ -691,7 +684,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         ss << "failed loaded core machine register with hash "
            << state_data.register_hash << ": "
            << std::get<rocksdb::Status>(register_results).ToString();
-        std::cerr << ss.str() << std::endl;
+        std::cerr << "getValueImpl error: " << ss.str() << std::endl;
         throw std::runtime_error(ss.str());
     }
 
@@ -738,12 +731,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         segment_ids = std::move(next_segment_ids);
     };
     auto state = MachineState{
-        state_data.status,
-        state_data.arb_gas_remaining,
-        state_data.l1_block_number,
-        state_data.l2_block_number,
-        state_data.last_inbox_timestamp,
         state_data.output,
+        state_data.pc.pc,
         std::make_shared<RunningCode>(core_code),
         std::move(std::get<CountedData<value>>(register_results).data),
         std::move(std::get<CountedData<value>>(static_results).data),
@@ -751,7 +740,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             std::get<Tuple>(std::get<CountedData<value>>(stack_results).data)),
         Datastack(std::get<Tuple>(
             std::get<CountedData<value>>(auxstack_results).data)),
-        state_data.pc.pc,
+        state_data.arb_gas_remaining,
+        state_data.state,
         state_data.err_pc};
 
     return std::make_unique<T>(state);
@@ -911,7 +901,7 @@ void ArbCore::operator()() {
                     std::cout
                         << "Last checkpoint gas used: " << last_checkpoint_gas
                         << ", L1 block: "
-                        << core_machine->machine_state.l1_block_number
+                        << core_machine->machine_state.output.l1_block_number
                         << ", L2 block: "
                         << *last_assertion.sideload_block_number << std::endl;
                     cache.nextCache();
@@ -1880,8 +1870,7 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
     auto target_gas_used = total_gas_used;
     while (true) {
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-        auto checkpoint_result =
-            getCheckpointUsingGas(tx, target_gas_used, false);
+        auto checkpoint_result = getCheckpointUsingGas(tx, target_gas_used);
 
         if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
             return std::get<rocksdb::Status>(checkpoint_result);

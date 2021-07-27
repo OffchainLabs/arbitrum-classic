@@ -351,12 +351,18 @@ void checkSavedState(const ReadWriteTransaction& transaction,
                      const Machine& expected_machine,
                      uint32_t expected_ref_count) {
     auto results = getMachineStateKeys(transaction, expected_machine.hash());
-    REQUIRE(std::holds_alternative<CountedData<MachineStateKeys>>(results));
-    auto res = std::get<CountedData<MachineStateKeys>>(results);
+    REQUIRE(std::holds_alternative<
+            CountedData<std::variant<MachineStateKeys, MachineOutput>>>(
+        results));
+    auto res =
+        std::get<CountedData<std::variant<MachineStateKeys, MachineOutput>>>(
+            results);
     REQUIRE(res.reference_count == expected_ref_count);
 
-    auto data = res.data;
-    REQUIRE(data.status == expected_machine.machine_state.state);
+    auto variantdata = res.data;
+    REQUIRE(std::holds_alternative<MachineStateKeys>(variantdata));
+    auto data = std::get<MachineStateKeys>(variantdata);
+    REQUIRE(data.state == expected_machine.machine_state.state);
     REQUIRE(data.pc.pc == expected_machine.machine_state.pc);
     REQUIRE(
         data.datastack_hash ==
@@ -366,12 +372,12 @@ void checkSavedState(const ReadWriteTransaction& transaction,
         hash(expected_machine.machine_state.auxstack.getTupleRepresentation()));
     REQUIRE(data.register_hash ==
             hash_value(expected_machine.machine_state.registerVal));
-    REQUIRE(data.l1_block_number ==
-            expected_machine.machine_state.l1_block_number);
-    REQUIRE(data.l2_block_number ==
-            expected_machine.machine_state.l2_block_number);
-    REQUIRE(data.last_inbox_timestamp ==
-            expected_machine.machine_state.last_inbox_timestamp);
+    REQUIRE(data.output.l1_block_number ==
+            expected_machine.machine_state.output.l1_block_number);
+    REQUIRE(data.output.l2_block_number ==
+            expected_machine.machine_state.output.l2_block_number);
+    REQUIRE(data.output.last_inbox_timestamp ==
+            expected_machine.machine_state.output.last_inbox_timestamp);
 
     ValueCache value_cache{1, 0};
     REQUIRE(!std::holds_alternative<rocksdb::Status>(

@@ -17,32 +17,16 @@
 #include <data_storage/sideloadcache.hpp>
 
 size_t SideloadCache::size() {
+    std::shared_lock lock(mutex);
+
     return cache.size();
 }
 
-uint256_t SideloadCache::oldestBlockNumber() {
-    if (cache.empty()) {
-        return 0;
-    }
-
-    return cache.begin()->first;
-}
-
-uint256_t SideloadCache::nextBlockNumber() {
-    if (cache.empty()) {
-        return 0;
-    }
-
-    auto it = cache.end();
-    it--;
-    return it->first + 1;
-}
-
 void SideloadCache::add(std::unique_ptr<Machine> machine) {
-    std::lock_guard<std::mutex> guard(mutex);
+    std::unique_lock lock(mutex);
 
-    auto block_number = machine->machine_state.l2_block_number;
-    auto timestamp = machine->machine_state.last_inbox_timestamp;
+    auto block_number = machine->machine_state.output.l2_block_number;
+    auto timestamp = machine->machine_state.output.last_inbox_timestamp;
 
     reorgNoLock(block_number);
     deleteExpiredNoLock();
@@ -58,7 +42,7 @@ void SideloadCache::add(std::unique_ptr<Machine> machine) {
 }
 
 std::unique_ptr<Machine> SideloadCache::get(uint256_t block_number) {
-    std::lock_guard<std::mutex> guard(mutex);
+    std::shared_lock lock(mutex);
 
     auto it = cache.find(block_number);
     if (it == cache.end()) {
@@ -69,7 +53,7 @@ std::unique_ptr<Machine> SideloadCache::get(uint256_t block_number) {
 }
 
 void SideloadCache::reorg(uint256_t next_block_number) {
-    std::lock_guard<std::mutex> guard(mutex);
+    std::unique_lock lock(mutex);
 
     reorgNoLock(next_block_number);
 }
@@ -80,10 +64,8 @@ void SideloadCache::reorgNoLock(uint256_t next_block_number) {
         cache.clear();
     }
 
-    for (auto rit = cache.crbegin();
-         rit != cache.crend() && rit->first >= next_block_number;) {
-        rit = decltype(rit){cache.erase(std::next(rit).base())};
-    }
+    auto it = cache.lower_bound(next_block_number);
+    cache.erase(it, cache.end());
 }
 
 void SideloadCache::deleteExpiredNoLock() {

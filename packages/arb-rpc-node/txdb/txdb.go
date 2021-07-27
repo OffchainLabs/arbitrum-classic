@@ -90,6 +90,7 @@ func New(
 		as:                 as,
 		snapshotLRUCache:   snapshotLRUCache,
 		snapshotTimedCache: snapshotTimedCache,
+		allowSlowLookup:    cacheConfig.AllowSlowLookup,
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
