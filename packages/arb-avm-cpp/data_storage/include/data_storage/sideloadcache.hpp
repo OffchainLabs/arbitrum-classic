@@ -30,7 +30,7 @@ struct Record {
 
 class SideloadCache {
    private:
-    std::mutex mutex;
+    std::shared_mutex mutex;
     std::map<uint256_t, Record> cache;
 
     const int expiration_seconds;

@@ -17,13 +17,13 @@
 #include <data_storage/sideloadcache.hpp>
 
 size_t SideloadCache::size() {
-    std::lock_guard<std::mutex> guard(mutex);
+    std::shared_lock lock(mutex);
 
     return cache.size();
 }
 
 void SideloadCache::add(std::unique_ptr<Machine> machine) {
-    std::lock_guard<std::mutex> guard(mutex);
+    std::unique_lock lock(mutex);
 
     auto block_number = machine->machine_state.output.l2_block_number;
     auto timestamp = machine->machine_state.output.last_inbox_timestamp;
@@ -42,7 +42,7 @@ void SideloadCache::add(std::unique_ptr<Machine> machine) {
 }
 
 std::unique_ptr<Machine> SideloadCache::get(uint256_t block_number) {
-    std::lock_guard<std::mutex> guard(mutex);
+    std::shared_lock lock(mutex);
 
     auto it = cache.find(block_number);
     if (it == cache.end()) {
@@ -53,7 +53,7 @@ std::unique_ptr<Machine> SideloadCache::get(uint256_t block_number) {
 }
 
 void SideloadCache::reorg(uint256_t next_block_number) {
-    std::lock_guard<std::mutex> guard(mutex);
+    std::unique_lock lock(mutex);
 
     reorgNoLock(next_block_number);
 }
