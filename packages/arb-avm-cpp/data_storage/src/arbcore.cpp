@@ -46,11 +46,11 @@ constexpr auto logscursor_current_prefix = std::array<char, 1>{-66};
 }  // namespace
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
-                 ArbCoreConfig config_)
-    : config(config_),
+                 const ArbCoreConfig& coreConfig_)
+    : coreConfig(coreConfig_),
       data_storage(std::move(data_storage_)),
       core_code(std::make_shared<CoreCode>(getNextSegmentID(data_storage))),
-      timed_sideload_cache(config.timed_cache_expiration_seconds),
+      timed_sideload_cache(coreConfig.timed_cache_expiration_seconds),
       execution_cursor_value_cache(4, 0) {
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
@@ -391,6 +391,12 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                   << std::endl;
     }
 
+    // Save selected machine output so we know how long to execute machine to
+    // match selected checkpoint.  This will be necessary if selected checkpoint
+    // does not include machine or if entry from old_checkpoint_cache is behind
+    // the selected checkpoint
+    MachineOutput selected_machine_output{};
+
     {
         ReadWriteTransaction tx(data_storage);
 
@@ -440,94 +446,66 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             std::vector<unsigned char> checkpoint_vector(
                 checkpoint_it->value().data(),
                 checkpoint_it->value().data() + checkpoint_it->value().size());
-            auto variantcheckpoint = extractMachineStateKeys(checkpoint_vector);
-            if (std::holds_alternative<MachineStateKeys>(variantcheckpoint)) {
-                auto checkpoint = std::get<MachineStateKeys>(variantcheckpoint);
-                if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
-                    (message_count >= checkpoint.getTotalMessagesRead())) {
-                    if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
-                        if ((checkpoint.static_hash == 0) &&
-                            std::holds_alternative<rocksdb::Status>(setup)) {
-                            // Need to get machine from older checkpoint without
-                            // full reorg because current checkpoint does not
-                            // have a valid machine
-                            checkpoint_it->Prev();
-                            continue;
-                        }
-
-                        // Good checkpoint
-                        std::unique_ptr<MachineThread> new_machine;
-                        try {
-                            if (std::holds_alternative<rocksdb::Status>(
-                                    setup)) {
-                                setup = getMachineUsingStateKeys<MachineThread>(
-                                    tx, checkpoint, cache);
-                                if (use_latest) {
-                                    // First call, so seed value cache
-                                    std::lock_guard<std::mutex> guard(
-                                        execution_cursor_value_cache_mutex);
-                                    execution_cursor_value_cache.initializeFrom(
-                                        cache);
-                                }
-                            }
-                            break;
-                        } catch (const std::exception& e) {
-                            std::cerr
-                                << "Error loading machine from checkpoint: "
-                                << e.what() << std::endl;
-                            assert(false);
-                        }
-
-                        while (new_machine->machine_state.output.arb_gas_used <
-                               checkpoint.output.arb_gas_used) {
-                            // Need to run machine until caught up with current
-                            // checkpoint
-                            MachineExecutionConfig execConfig;
-                            execConfig.stop_on_sideload = use_latest;
-
-                            // Add messages and run machine
-                            auto success = runMachineWithMessages(
-                                execConfig, config.message_process_count,
-                                new_machine);
-                            if (!success) {
-                                std::cerr << "runMachineWithMessages failed"
-                                          << core_error_string << "\n";
-                                return rocksdb::Status::Aborted();
-                            }
-
-                            if (core_machine->status() ==
-                                MachineThread::MACHINE_ERROR) {
-                                core_error_string =
-                                    core_machine->getErrorString();
-                                std::cerr << "AVM machine stopped with error: "
-                                          << core_error_string << "\n";
-                                return rocksdb::Status::Aborted();
-                            }
-
-                            while (new_machine->nextAssertion()
-                                       .sideload_block_number) {
-                                timed_sideload_cache.add(
-                                    std::make_unique<Machine>(*core_machine));
-
-                                // Machine was stopped to save sideload,
-                                // start machine back up where it stopped
-                                auto machine_success =
-                                    core_machine->continueRunningMachine();
-                                if (!machine_success) {
-                                    core_error_string =
-                                        "Error continuing machine thread";
-                                    machine_error = true;
-                                    std::cerr << "Error catching up: "
-                                              << core_error_string << "\n";
-                                    return rocksdb::Status::Aborted();
-                                }
-                            }
-                        }
+            auto checkpoint_variant =
+                extractMachineStateKeys(checkpoint_vector);
+            if (std::holds_alternative<MachineOutput>(checkpoint_variant)) {
+                auto machine_output =
+                    std::get<MachineOutput>(checkpoint_variant);
+                if (message_count >=
+                    machine_output.fully_processed_inbox.count) {
+                    if (selected_machine_output.fully_processed_inbox.count ==
+                        0) {
+                        // Save selected output to know how much machine needs
+                        // to be executed if it behind
+                        selected_machine_output = machine_output;
                     }
 
-                    // Obsolete checkpoint, need to delete referenced machine
-                    deleteMachineState(tx, checkpoint);
+                    if (std::holds_alternative<std::unique_ptr<MachineThread>>(
+                            setup)) {
+                        // Checkpoint without machine, but machine restored
+                        // from old_machine_cache
+                        break;
+                    }
+
+                    // Need to get machine from older checkpoint without
+                    // full reorg because current checkpoint does not
+                    // have a valid machine
+                    checkpoint_it->Prev();
+                    continue;
                 }
+            }
+
+            auto checkpoint = std::get<MachineStateKeys>(checkpoint_variant);
+            if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
+                (message_count >= checkpoint.getTotalMessagesRead())) {
+                if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
+                    // Good checkpoint
+                    std::unique_ptr<MachineThread> new_machine;
+                    try {
+                        if (std::holds_alternative<rocksdb::Status>(setup)) {
+                            setup = getMachineUsingStateKeys<MachineThread>(
+                                tx, checkpoint, cache);
+                            if (use_latest) {
+                                // First call, so seed value cache
+                                std::lock_guard<std::mutex> guard(
+                                    execution_cursor_value_cache_mutex);
+                                execution_cursor_value_cache.initializeFrom(
+                                    cache);
+                            }
+                        }
+
+                        // Machine loaded from database or from
+                        // old_machine_cache
+                        break;
+                    } catch (const std::exception& e) {
+                        std::cerr << "Error loading machine from checkpoint: "
+                                  << e.what() << std::endl;
+                        assert(false);
+                    }
+                }
+
+                // Obsolete checkpoint, need to delete referenced machine
+                deleteMachineState(tx, checkpoint);
             }
 
             // Delete checkpoint to make sure it isn't used later
@@ -554,6 +532,44 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     auto new_machine =
         std::get<std::unique_ptr<MachineThread>>(std::move(setup));
     auto& output = new_machine->machine_state.output;
+
+    while (new_machine->machine_state.output.arb_gas_used <
+           selected_machine_output.arb_gas_used) {
+        // Need to run machine until caught up with current
+        // checkpoint
+        MachineExecutionConfig execConfig;
+        execConfig.stop_on_sideload = use_latest;
+
+        // Add messages and run machine
+        auto success = runMachineWithMessages(
+            execConfig, coreConfig.message_process_count, new_machine);
+        if (!success) {
+            std::cerr << "runMachineWithMessages failed" << core_error_string
+                      << "\n";
+            return rocksdb::Status::Aborted();
+        }
+
+        if (core_machine->status() == MachineThread::MACHINE_ERROR) {
+            core_error_string = core_machine->getErrorString();
+            std::cerr << "AVM machine stopped with error: " << core_error_string
+                      << "\n";
+            return rocksdb::Status::Aborted();
+        }
+
+        while (new_machine->nextAssertion().sideload_block_number) {
+            timed_sideload_cache.add(std::make_unique<Machine>(*core_machine));
+
+            // Machine was stopped to save sideload,
+            // start machine back up where it stopped
+            auto machine_success = core_machine->continueRunningMachine();
+            if (!machine_success) {
+                core_error_string = "Error continuing machine thread";
+                machine_error = true;
+                std::cerr << "Error catching up: " << core_error_string << "\n";
+                return rocksdb::Status::Aborted();
+            }
+        }
+    }
 
     auto log_inserted_count = logInsertedCount();
     if (!log_inserted_count.status.ok()) {
@@ -883,9 +899,9 @@ void ArbCore::operator()() {
                     while (it != lru_sideload_cache.end()) {
                         // Note: we check if block > sideload_cache_size here
                         // to prevent an underflow in the following check.
-                        if ((block > config.lru_sideload_cache_size &&
+                        if ((block > coreConfig.lru_sideload_cache_size &&
                              it->first <
-                                 block - config.lru_sideload_cache_size) ||
+                                 block - coreConfig.lru_sideload_cache_size) ||
                             it->first > block) {
                             it = lru_sideload_cache.erase(it);
                         } else {
@@ -895,7 +911,8 @@ void ArbCore::operator()() {
                 }
 
                 if (core_machine->machine_state.output.arb_gas_used >
-                    last_checkpoint_gas + config.min_gas_checkpoint_frequency) {
+                    last_checkpoint_gas +
+                        coreConfig.min_gas_checkpoint_frequency) {
                     // Save checkpoint after min_gas_checkpoint_frequency gas
                     // used
                     status = saveCheckpoint(tx);
@@ -946,7 +963,7 @@ void ArbCore::operator()() {
         if (core_machine->status() == MachineThread::MACHINE_NONE) {
             // Start execution of machine if new message available
             auto success = runMachineWithMessages(
-                execConfig, config.message_process_count, core_machine);
+                execConfig, coreConfig.message_process_count, core_machine);
             if (!success) {
                 break;
             }
@@ -1689,8 +1706,9 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
             std::get<ExecutionCursor>(closest_checkpoint));
     }
 
-    auto status = advanceExecutionCursorImpl(
-        *execution_cursor, total_gas_used, false, config.message_process_count);
+    auto status =
+        advanceExecutionCursorImpl(*execution_cursor, total_gas_used, false,
+                                   coreConfig.message_process_count);
 
     if (!status.ok()) {
         std::cerr << "Couldn't advance execution machine" << std::endl;
@@ -1715,7 +1733,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
         auto checkpoint_cursor = std::get<ExecutionCursor>(closest_checkpoint);
         bool already_newer = false;
         if (execution_cursor.getOutput().arb_gas_used +
-                config.checkpoint_load_gas_cost >
+                coreConfig.checkpoint_load_gas_cost >
             checkpoint_cursor.getOutput().arb_gas_used) {
             // The existing execution cursor is far enough ahead that running it
             // up to the target gas will be cheaper than loading the checkpoint
@@ -1734,7 +1752,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     }
 
     return advanceExecutionCursorImpl(execution_cursor, gas_target, go_over_gas,
-                                      config.message_process_count);
+                                      coreConfig.message_process_count);
 }
 
 MachineState& resolveExecutionVariant(std::unique_ptr<Machine>& mach) {
@@ -2843,7 +2861,7 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
     }
 
     auto status = advanceExecutionCursorImpl(
-        *execution_cursor, gas_target, false, config.message_process_count);
+        *execution_cursor, gas_target, false, coreConfig.message_process_count);
 
     ReadSnapshotTransaction tx(data_storage);
     return {status, takeExecutionCursorMachineImpl(tx, *execution_cursor)};

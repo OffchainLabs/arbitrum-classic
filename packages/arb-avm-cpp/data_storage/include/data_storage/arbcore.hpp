@@ -61,20 +61,22 @@ struct RawMessageInfo {
 
 struct ArbCoreConfig {
     // Maximum number of messages to process at a time
-    uint32_t message_process_count;
+    uint32_t message_process_count{10};
 
     // Checkpoint loaded from disk if difference greater than cost,
     // otherwise just run machine until gas reached
-    uint256_t checkpoint_load_gas_cost;
+    uint256_t checkpoint_load_gas_cost{1'000'000};
 
     // Frequency to save checkpoint to database
-    uint256_t min_gas_checkpoint_frequency;
+    uint256_t min_gas_checkpoint_frequency{1'000'000};
 
     // How long to keep items in memory cache
-    uint32_t timed_cache_expiration_seconds;
+    uint32_t timed_cache_expiration_seconds{60 * 20};
 
     // Number of items to keep in LRU cache
-    uint32_t lru_sideload_cache_size;
+    uint32_t lru_sideload_cache_size{20};
+
+    ArbCoreConfig() {}
 };
 
 class ArbCore {
@@ -104,7 +106,7 @@ class ArbCore {
    private:
     std::unique_ptr<std::thread> core_thread;
 
-    ArbCoreConfig config;
+    ArbCoreConfig coreConfig{};
 
     // Core thread input
     std::atomic<bool> arbcore_abort{false};
@@ -175,7 +177,8 @@ class ArbCore {
 
    public:
     ArbCore() = delete;
-    ArbCore(std::shared_ptr<DataStorage> data_storage_, ArbCoreConfig config);
+    ArbCore(std::shared_ptr<DataStorage> data_storage_,
+            const ArbCoreConfig& coreConfig);
 
     ~ArbCore() { abortThread(); }
     rocksdb::Status initialize(const LoadedExecutable& executable);

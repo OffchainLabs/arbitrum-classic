@@ -1,5 +1,5 @@
 /*
-* Copyright 2020, Offchain Labs, Inc.
+* Copyright 2020-2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package cmachine
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
@@ -44,16 +43,8 @@ func TestCheckpoint(t *testing.T) {
 		}
 	}()
 
-	coreConfig := configuration.Core{
-		Cache: configuration.CoreCache{
-			LRUSize:     1000,
-			TimedExpire: 20 * time.Minute,
-		},
-		CheckpointLoadGasCost:  1_000_000,
-		GasCheckpointFrequency: 1_000_000,
-		MessageProcessCount:    10,
-	}
-	arbStorage, err := NewArbStorage(dePath, &coreConfig)
+	coreConfig := configuration.DefaultCoreSettings()
+	arbStorage, err := NewArbStorage(dePath, coreConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

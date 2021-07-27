@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
@@ -50,16 +49,8 @@ func getInsnMultiplier(b *testing.B, filePath string) uint64 {
 
 func runExecutableFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(b, filePath)
-	coreConfig := configuration.Core{
-		Cache: configuration.CoreCache{
-			LRUSize:     1000,
-			TimedExpire: 20 * time.Minute,
-		},
-		CheckpointLoadGasCost:  1_000_000,
-		GasCheckpointFrequency: 1_000_000,
-		MessageProcessCount:    10,
-	}
-	ckp, err := cmachine.NewArbStorage(b.TempDir(), &coreConfig)
+	coreConfig := configuration.DefaultCoreSettings()
+	ckp, err := cmachine.NewArbStorage(b.TempDir(), coreConfig)
 	if err != nil {
 		b.Fatal(err)
 	}

@@ -23,7 +23,7 @@
 
 TEST_CASE("CheckpointedMachine tests") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     auto storage = std::make_shared<DataStorage>(dbpath);
     auto arbcore = std::make_unique<ArbCore>(storage, coreConfig);
     auto executable = loadExecutable(test_contract_path);

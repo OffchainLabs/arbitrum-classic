@@ -39,7 +39,7 @@ class ArbStorage {
     std::shared_ptr<ArbCore> arb_core;
 
    public:
-    ArbStorage(const std::string& db_path, ArbCoreConfig config);
+    ArbStorage(const std::string& db_path, const ArbCoreConfig& coreConfig);
     bool closeArbStorage();
     rocksdb::Status initialize(const LoadedExecutable& executable);
     rocksdb::Status initialize(const std::string& executable_path);

@@ -88,7 +88,7 @@ void getTupleValues(const ReadTransaction& transaction,
 
 TEST_CASE("Save value") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
@@ -109,7 +109,7 @@ TEST_CASE("Save value") {
 
 TEST_CASE("Save tuple") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
@@ -135,7 +135,7 @@ TEST_CASE("Save tuple") {
 
 TEST_CASE("Save and get value") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     ValueCache value_cache{1, 0};
@@ -164,7 +164,7 @@ TEST_CASE("Save and get value") {
 
 TEST_CASE("Save and get tuple values") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     ValueCache value_cache{1, 0};
@@ -221,7 +221,7 @@ TEST_CASE("Save and get tuple values") {
 
 TEST_CASE("Save And Get Tuple") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
@@ -315,7 +315,7 @@ TEST_CASE("Save And Get Tuple") {
 
 TEST_CASE("Checkpoint Benchmark") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     uint256_t num = 1;
@@ -416,7 +416,7 @@ void deleteCheckpoint(ReadWriteTransaction& transaction,
 
 TEST_CASE("Save Machinestatedata") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
@@ -432,7 +432,7 @@ TEST_CASE("Save Machinestatedata") {
 
 TEST_CASE("Get Machinestate data") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
@@ -450,7 +450,7 @@ TEST_CASE("Get Machinestate data") {
 
 TEST_CASE("Delete checkpoint") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
@@ -494,7 +494,7 @@ TEST_CASE("Delete checkpoint") {
 
 TEST_CASE("Secret hash seed") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     std::vector<unsigned char> seed;
     {
         ArbStorage storage(dbpath, coreConfig);

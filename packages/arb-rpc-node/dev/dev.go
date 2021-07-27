@@ -57,17 +57,9 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.
 		LRUSize:         1000,
 		TimedExpire:     20 * time.Minute,
 	}
-	coreConfig := configuration.Core{
-		Cache: configuration.CoreCache{
-			LRUSize:     1000,
-			TimedExpire: 20 * time.Minute,
-		},
-		CheckpointLoadGasCost:  1_000_000,
-		GasCheckpointFrequency: 1_000_000,
-		MessageProcessCount:    10,
-	}
+	coreConfig := configuration.DefaultCoreSettings()
 
-	mon, err := monitor.NewMonitor(dir, arbosPath, &coreConfig)
+	mon, err := monitor.NewMonitor(dir, arbosPath, coreConfig)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}

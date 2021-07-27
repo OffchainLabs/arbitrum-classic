@@ -131,7 +131,7 @@ TEST_CASE("ArbCore tests") {
         "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
 
     uint64_t logs_count = 0;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
 
     for (const auto& filename : files) {
         INFO("Testing " << filename);
@@ -270,7 +270,7 @@ TEST_CASE("ArbCore tests") {
 TEST_CASE("ArbCore inbox") {
     DBDeleter deleter;
 
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
@@ -313,7 +313,7 @@ TEST_CASE("ArbCore inbox") {
 }
 
 TEST_CASE("ArbCore backwards reorg") {
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")

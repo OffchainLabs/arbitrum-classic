@@ -178,7 +178,7 @@ Buffer checkBuffer(ArbStorage& storage, Buffer& buf) {
 
 TEST_CASE("Buffer Serialization") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
 
     ValueCache value_cache{1, 0};
@@ -214,7 +214,7 @@ TEST_CASE("Buffer Serialization") {
 
 TEST_CASE("Buffer Hash Failure") {
     DBDeleter deleter;
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
 
     ValueCache value_cache{1, 0};

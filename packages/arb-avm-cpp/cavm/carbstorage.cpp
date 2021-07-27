@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@
 #include <string>
 
 CArbStorage* createArbStorage(const char* db_path,
-                              const int32_t message_process_count,
-                              const int32_t checkpoint_load_gas_cost,
-                              const int32_t min_gas_checkpoint_frequency,
-                              const int32_t cache_expiration_seconds,
-                              const int32_t lru_cache_size) {
+                              int32_t message_process_count,
+                              int32_t checkpoint_load_gas_cost,
+                              int32_t min_gas_checkpoint_frequency,
+                              int32_t cache_expiration_seconds,
+                              int32_t lru_cache_size) {
     auto string_filename = std::string(db_path);
-    ArbCoreConfig coreConfig;
+    ArbCoreConfig coreConfig{};
     coreConfig.message_process_count = message_process_count;
     coreConfig.checkpoint_load_gas_cost = checkpoint_load_gas_cost;
     coreConfig.min_gas_checkpoint_frequency = min_gas_checkpoint_frequency;

@@ -494,7 +494,7 @@ func (ac *ArbCore) GetMachineForSideload(blockNumber uint64, allowSlowLookup boo
 	cMachineResult := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber), C.int(allowSlowLookupInt))
 
 	if cMachineResult.slow_error == 1 {
-		return nil, errors.Errorf("machine would be too slow to load")
+		return nil, errors.Errorf("missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )")
 	}
 
 	if cMachineResult.machine == nil {

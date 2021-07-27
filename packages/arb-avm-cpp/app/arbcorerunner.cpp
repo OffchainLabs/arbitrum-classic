@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     }
     auto dbpath = std::string(argv[1]);
     auto arbospath = std::string(argv[2]);
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
 
     if (clearDb) {
         {

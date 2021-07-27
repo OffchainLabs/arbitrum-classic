@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,15 +99,7 @@ func startup() error {
 		LRUSize:         1000,
 		TimedExpire:     20 * time.Minute,
 	}
-	coreConfig := configuration.Core{
-		Cache: configuration.CoreCache{
-			LRUSize:     1000,
-			TimedExpire: 20 * time.Minute,
-		},
-		CheckpointLoadGasCost:  1_000_000,
-		GasCheckpointFrequency: 1_000_000,
-		MessageProcessCount:    10,
-	}
+	coreConfig := configuration.DefaultCoreSettings()
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -237,7 +229,7 @@ func startup() error {
 		}
 	}()
 
-	mon, err := monitor.NewMonitor(dbPath, arbosPath, &coreConfig)
+	mon, err := monitor.NewMonitor(dbPath, arbosPath, coreConfig)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}

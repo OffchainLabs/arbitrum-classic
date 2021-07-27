@@ -36,16 +36,8 @@ func PrepareArbCore(t *testing.T) (*Monitor, func()) {
 }
 
 func PrepareArbCoreWithMexe(t *testing.T, mexe string) (*Monitor, func()) {
-	coreConfig := configuration.Core{
-		Cache: configuration.CoreCache{
-			LRUSize:     20,
-			TimedExpire: 20 * time.Minute,
-		},
-		CheckpointLoadGasCost:  1_000_000,
-		GasCheckpointFrequency: 1_000_000,
-		MessageProcessCount:    10,
-	}
-	monitor, err := NewMonitor(t.TempDir(), mexe, &coreConfig)
+	coreConfig := configuration.DefaultCoreSettings()
+	monitor, err := NewMonitor(t.TempDir(), mexe, coreConfig)
 	test.FailIfError(t, err)
 
 	shutdown := func() {

@@ -29,7 +29,7 @@
 TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
     ValueCache value_cache{1, 0};
-    ArbCoreConfig coreConfig{10, 1'000'000, 1'000'000, 60 * 20, 20};
+    ArbCoreConfig coreConfig{};
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
