@@ -175,8 +175,7 @@ class ArbCore {
                                   uint256_t arb_gas_used);
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
-        const uint256_t& total_gas,
-        bool after_gas);
+        const uint256_t& total_gas);
     rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
                                                 bool use_latest,
                                                 ValueCache& cache);

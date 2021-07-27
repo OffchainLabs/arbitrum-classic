@@ -542,23 +542,13 @@ uint256_t ArbCore::maxCheckpointGas() {
 // gas is returned.
 std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
     ReadTransaction& tx,
-    const uint256_t& total_gas,
-    bool after_gas) {
+    const uint256_t& total_gas) {
     auto it = tx.checkpointGetIterator();
     std::vector<unsigned char> key;
     marshal_uint256_t(total_gas, key);
     auto key_slice = vecToSlice(key);
     it->SeekForPrev(key_slice);
     while (it->Valid()) {
-        if (after_gas) {
-            it->Next();
-            if (!it->status().ok()) {
-                return it->status();
-            }
-            if (!it->Valid()) {
-                return rocksdb::Status::NotFound();
-            }
-        }
         if (!it->status().ok()) {
             return it->status();
         }
@@ -1777,8 +1767,7 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
     auto target_gas_used = total_gas_used;
     while (true) {
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-        auto checkpoint_result =
-            getCheckpointUsingGas(tx, target_gas_used, false);
+        auto checkpoint_result = getCheckpointUsingGas(tx, target_gas_used);
 
         if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
             return std::get<rocksdb::Status>(checkpoint_result);
