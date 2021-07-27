@@ -29,14 +29,15 @@ TEST_CASE("SideloadCache add") {
 
     // Test that expired block is not added
     auto expired_machine = std::make_unique<Machine>(getComplexMachine());
-    expired_machine->machine_state.last_inbox_timestamp =
+    expired_machine->machine_state.output.last_inbox_timestamp =
         std::time(nullptr) - expiration_seconds;
     cache.add(std::move(expired_machine));
     REQUIRE(cache.size() == 0);
 
     // Test that non-expired block is added
     auto valid_machine = std::make_unique<Machine>(getComplexMachine());
-    valid_machine->machine_state.last_inbox_timestamp = std::time(nullptr);
+    valid_machine->machine_state.output.last_inbox_timestamp =
+        std::time(nullptr);
     cache.add(std::move(valid_machine));
     REQUIRE(cache.size() == 1);
 }
@@ -55,10 +56,10 @@ TEST_CASE("SideloadCache get") {
     auto gas2 = machine2->machine_state.arb_gas_remaining;
     REQUIRE(gas1 != gas2);
 
-    machine1->machine_state.l2_block_number = 42;
-    machine2->machine_state.l2_block_number = 43;
-    machine1->machine_state.last_inbox_timestamp = std::time(nullptr);
-    machine2->machine_state.last_inbox_timestamp = std::time(nullptr);
+    machine1->machine_state.output.l2_block_number = 42;
+    machine2->machine_state.output.l2_block_number = 43;
+    machine1->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine2->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine1));
     cache.add(std::move(machine2));
     REQUIRE(cache.size() == 2);
@@ -104,86 +105,68 @@ TEST_CASE("SideloadCache reorg") {
     auto machine8 = std::make_unique<Machine>(*machine7);
     auto machine9 = std::make_unique<Machine>(*machine8);
 
-    machine0->machine_state.l2_block_number = 0;
-    machine1->machine_state.l2_block_number = 1;
-    machine2->machine_state.l2_block_number = 2;
-    machine3->machine_state.l2_block_number = 3;
-    machine0->machine_state.last_inbox_timestamp = std::time(nullptr);
-    machine1->machine_state.last_inbox_timestamp = std::time(nullptr);
-    machine2->machine_state.last_inbox_timestamp = std::time(nullptr);
-    machine3->machine_state.last_inbox_timestamp = std::time(nullptr);
+    machine0->machine_state.output.l2_block_number = 0;
+    machine1->machine_state.output.l2_block_number = 1;
+    machine2->machine_state.output.l2_block_number = 2;
+    machine3->machine_state.output.l2_block_number = 3;
+    machine0->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine1->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine2->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine3->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine0));
     cache.add(std::move(machine1));
     cache.add(std::move(machine2));
     cache.add(std::move(machine3));
     REQUIRE(cache.size() == 4);
-    REQUIRE(cache.oldestBlockNumber() == 0);
-    REQUIRE(cache.nextBlockNumber() == 4);
 
     // Test reorg above current height
     cache.reorg(4);
     REQUIRE(cache.size() == 4);
-    REQUIRE(cache.oldestBlockNumber() == 0);
-    REQUIRE(cache.nextBlockNumber() == 4);
 
     // Test reorg single value
     cache.reorg(3);
     REQUIRE(cache.size() == 3);
-    REQUIRE(cache.oldestBlockNumber() == 0);
-    REQUIRE(cache.nextBlockNumber() == 3);
 
     // Test reorg entire cache
     cache.reorg(0);
     REQUIRE(cache.size() == 0);
-    REQUIRE(cache.oldestBlockNumber() == 0);
-    REQUIRE(cache.nextBlockNumber() == 0);
 
-    machine4->machine_state.l2_block_number = 40;
-    machine5->machine_state.l2_block_number = 42;
-    machine6->machine_state.l2_block_number = 43;
-    machine4->machine_state.last_inbox_timestamp = std::time(nullptr);
-    machine5->machine_state.last_inbox_timestamp = std::time(nullptr);
-    machine6->machine_state.last_inbox_timestamp = std::time(nullptr);
+    machine4->machine_state.output.l2_block_number = 40;
+    machine5->machine_state.output.l2_block_number = 42;
+    machine6->machine_state.output.l2_block_number = 43;
+    machine4->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine5->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine6->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine4));
     cache.add(std::move(machine5));
     cache.add(std::move(machine6));
     REQUIRE(cache.size() == 3);
-    REQUIRE(cache.oldestBlockNumber() == 40);
-    REQUIRE(cache.nextBlockNumber() == 44);
 
     // Test reorg to single value
     cache.reorg(41);
     REQUIRE(cache.size() == 1);
-    REQUIRE(cache.oldestBlockNumber() == 40);
-    REQUIRE(cache.nextBlockNumber() == 41);
 
     // Test reorg below current stack
     cache.reorg(0);
     REQUIRE(cache.size() == 0);
-    REQUIRE(cache.oldestBlockNumber() == 0);
-    REQUIRE(cache.nextBlockNumber() == 0);
 
     // Test adding below current oldestHeight with empty cache
     cache.reorg(0);
     REQUIRE(cache.size() == 0);
-    REQUIRE(cache.oldestBlockNumber() == 0);
-    REQUIRE(cache.nextBlockNumber() == 0);
 
-    machine7->machine_state.l2_block_number = 39;
-    machine8->machine_state.l2_block_number = 40;
-    machine7->machine_state.last_inbox_timestamp = std::time(nullptr);
-    machine8->machine_state.last_inbox_timestamp = std::time(nullptr);
+    machine7->machine_state.output.l2_block_number = 39;
+    machine8->machine_state.output.l2_block_number = 40;
+    machine7->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine8->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine7));
     cache.add(std::move(machine8));
 
     // Test implicit reorg to value below current oldest
-    machine9->machine_state.l2_block_number = 30;
-    machine9->machine_state.last_inbox_timestamp = std::time(nullptr);
+    machine9->machine_state.output.l2_block_number = 30;
+    machine9->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine9));
 
     REQUIRE(cache.size() == 1);
-    REQUIRE(cache.oldestBlockNumber() == 30);
-    REQUIRE(cache.nextBlockNumber() == 31);
 }
 
 TEST_CASE("SideloadCache expire") {
@@ -211,27 +194,23 @@ TEST_CASE("SideloadCache expire") {
     auto gas3 = machine3->machine_state.arb_gas_remaining;
     REQUIRE(gas2 != gas3);
 
-    machine0->machine_state.l2_block_number = 0;
-    machine1->machine_state.l2_block_number = 1;
-    machine2->machine_state.l2_block_number = 2;
-    machine0->machine_state.last_inbox_timestamp = std::time(nullptr);
-    machine1->machine_state.last_inbox_timestamp = std::time(nullptr);
-    machine2->machine_state.last_inbox_timestamp = std::time(nullptr);
+    machine0->machine_state.output.l2_block_number = 0;
+    machine1->machine_state.output.l2_block_number = 1;
+    machine2->machine_state.output.l2_block_number = 2;
+    machine0->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine1->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine2->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine0));
     cache.add(std::move(machine1));
     cache.add(std::move(machine2));
     REQUIRE(cache.size() == 3);
-    REQUIRE(cache.oldestBlockNumber() == 0);
-    REQUIRE(cache.nextBlockNumber() == 3);
 
     // Let cache expire
     sleep(expiration_seconds);
 
     // Add one more record
-    machine3->machine_state.l2_block_number = 3;
-    machine3->machine_state.last_inbox_timestamp = std::time(nullptr);
+    machine3->machine_state.output.l2_block_number = 3;
+    machine3->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine3));
     REQUIRE(cache.size() == 1);
-    REQUIRE(cache.oldestBlockNumber() == 3);
-    REQUIRE(cache.nextBlockNumber() == 4);
 }
