@@ -41,7 +41,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
 
     event WhitelistSourceUpdated(address newSource);
 
-    modifier onlyWhitelisted {
+    modifier onlyWhitelisted() {
         if (whitelist != address(0)) {
             require(Whitelist(whitelist).isAllowed(msg.sender), "NOT_WHITELISTED");
         }
@@ -148,6 +148,10 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         address _creditBackAddress
     ) public payable virtual returns (uint256) {
         require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
+
+        // Can't modify previously set L2 address (can "reset" it to same address on the off chance that retryable fails on the first try)
+        if (l1ToL2Token[msg.sender] != address(0)) require(l1ToL2Token[msg.sender] == _l2Address);
+
         l1ToL2Token[msg.sender] = _l2Address;
 
         address[] memory l1Addresses = new address[](1);
@@ -157,12 +161,11 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
 
         emit TokenSet(l1Addresses[0], l2Addresses[0]);
 
-        bytes memory _data =
-            abi.encodeWithSelector(
-                L2CustomGateway.registerTokenFromL1.selector,
-                l1Addresses,
-                l2Addresses
-            );
+        bytes memory _data = abi.encodeWithSelector(
+            L2CustomGateway.registerTokenFromL1.selector,
+            l1Addresses,
+            l2Addresses
+        );
 
         return sendTxToL2(_creditBackAddress, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
     }
@@ -194,12 +197,11 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
             emit TokenSet(_l1Addresses[i], _l2Addresses[i]);
         }
 
-        bytes memory _data =
-            abi.encodeWithSelector(
-                L2CustomGateway.registerTokenFromL1.selector,
-                _l1Addresses,
-                _l2Addresses
-            );
+        bytes memory _data = abi.encodeWithSelector(
+            L2CustomGateway.registerTokenFromL1.selector,
+            _l1Addresses,
+            _l2Addresses
+        );
 
         return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
     }
