@@ -29,6 +29,8 @@ HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
 
+const static std::vector<value> empty_value_vector;
+
 class Tuple {
    private:
     std::shared_ptr<RawTuple> tpl;
@@ -127,14 +129,14 @@ class Tuple {
 
     [[nodiscard]] std::vector<value>::const_iterator begin() const {
         if (tpl == nullptr) {
-            return std::vector<value>().begin();
+            return empty_value_vector.begin();
         }
         return tpl->data.begin();
     }
 
     [[nodiscard]] std::vector<value>::const_iterator end() const {
         if (tpl == nullptr) {
-            return std::vector<value>().end();
+            return empty_value_vector.end();
         }
         return tpl->data.end();
     }
