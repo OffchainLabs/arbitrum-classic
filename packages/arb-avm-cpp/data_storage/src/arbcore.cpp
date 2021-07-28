@@ -394,7 +394,8 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
         rocksdb::Status::OK();
 
     if (initial_start) {
-        std::cerr << "Reloading latest checkpoint" << std::endl;
+        std::cerr << "Reloading cache starting with message " << message_count
+                  << std::endl;
     } else {
         std::cerr << "Reorganizing to message count " << message_count
                   << std::endl;
@@ -418,7 +419,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                 old_machine_it--;
                 auto& inbox = old_machine_it->second->machine_state.output
                                   .fully_processed_inbox;
-                if (initial_start || message_count >= inbox.count) {
+                if (message_count >= inbox.count) {
                     if (isValid(tx, inbox)) {
                         setup = std::make_unique<MachineThread>(
                             old_machine_it->second->machine_state);
@@ -446,23 +447,25 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             return checkpoint_it->status();
         }
 
+        if (!checkpoint_it->Valid()) {
+            return rocksdb::Status::NotFound();
+        }
+
         // At this point we know database has already been initialized, so
         // check schema version
         auto schema_result = schemaVersion(tx);
         if (!schema_result.status.ok()) {
             std::cerr << "Error getting schema version: "
-                      << schema_result.status.ToString() << std::endl;
-            return schema_result.status;
+                      << schema_result.status.ToString()
+                      << ", delete database and try again" << std::endl;
+            return rocksdb::Status::Corruption();
         }
         if (schema_result.data != arbcore_schema_version) {
             std::cerr << "Database version " << schema_result.data
                       << " does not match expected version "
-                      << arbcore_schema_version << std::endl;
+                      << arbcore_schema_version
+                      << ", delete database and try again" << std::endl;
             return rocksdb::Status::Corruption();
-        }
-
-        if (!checkpoint_it->Valid()) {
-            return rocksdb::Status::NotFound();
         }
 
         // Delete each checkpoint until at or below message_sequence_number
@@ -500,11 +503,10 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             }
 
             auto checkpoint = std::get<MachineStateKeys>(checkpoint_variant);
-            if (checkpoint.getTotalMessagesRead() == 0 || initial_start ||
+            if (checkpoint.getTotalMessagesRead() == 0 ||
                 (message_count >= checkpoint.getTotalMessagesRead())) {
                 if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
                     // Good checkpoint
-                    std::unique_ptr<MachineThread> new_machine;
                     try {
                         if (std::holds_alternative<rocksdb::Status>(setup)) {
                             setup = getMachineUsingStateKeys<MachineThread>(
@@ -553,11 +555,16 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             return status;
         }
     }
-    auto new_machine =
-        std::get<std::unique_ptr<MachineThread>>(std::move(setup));
-    auto& output = new_machine->machine_state.output;
+    // Machine was executing obsolete messages so restore machine
+    // from last checkpoint
+    if (core_machine != nullptr) {
+        core_machine->abortMachine();
+    }
 
-    while (new_machine->machine_state.output.arb_gas_used <
+    core_machine = std::get<std::unique_ptr<MachineThread>>(std::move(setup));
+    auto& output = core_machine->machine_state.output;
+
+    while (core_machine->machine_state.output.arb_gas_used <
            selected_machine_output.arb_gas_used) {
         // Need to run machine until caught up with current
         // checkpoint
@@ -565,32 +572,32 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
         execConfig.stop_on_sideload = initial_start;
 
         // Add messages and run machine
-        auto success = runMachineWithMessages(
-            execConfig, coreConfig.message_process_count, new_machine);
+        auto success = runMachineWithMessages(execConfig,
+                                              coreConfig.message_process_count);
         if (!success) {
             std::cerr << "runMachineWithMessages failed" << core_error_string
                       << "\n";
             return rocksdb::Status::Aborted();
         }
 
-        if (new_machine->status() == MachineThread::MACHINE_ERROR) {
-            core_error_string = new_machine->getErrorString();
+        if (core_machine->status() == MachineThread::MACHINE_ERROR) {
+            core_error_string = core_machine->getErrorString();
             std::cerr << "AVM machine stopped with error: " << core_error_string
                       << "\n";
             return rocksdb::Status::Aborted();
         }
 
-        while (new_machine->nextAssertion().sideload_block_number) {
-            timed_sideload_cache.add(std::make_unique<Machine>(*new_machine));
+        while (core_machine->nextAssertion().sideload_block_number) {
+            timed_sideload_cache.add(std::make_unique<Machine>(*core_machine));
 
-            if (new_machine->machine_state.output.arb_gas_used >=
+            if (core_machine->machine_state.output.arb_gas_used >=
                 selected_machine_output.arb_gas_used) {
                 break;
             }
 
             // Machine was stopped to save sideload,
             // start machine back up where it stopped
-            auto machine_success = new_machine->continueRunningMachine();
+            auto machine_success = core_machine->continueRunningMachine();
             if (!machine_success) {
                 core_error_string = "Error continuing machine thread";
                 machine_error = true;
@@ -601,7 +608,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     }
 
     if (selected_machine_output.arb_gas_used != 0 &&
-        new_machine->machine_state.output == selected_machine_output) {
+        core_machine->machine_state.output == selected_machine_output) {
         // Machine in unexpected state, data corruption might have occurred
         std::cerr << "Error catching up: machine in unexpected state"
                   << "\n";
@@ -651,14 +658,6 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     if (!status.ok()) {
         return status;
     }
-
-    // Machine was executing obsolete messages so restore machine
-    // from last checkpoint
-    if (core_machine != nullptr) {
-        core_machine->abortMachine();
-    }
-
-    core_machine = std::move(new_machine);
 
     // Update last machine
     {
@@ -1000,7 +999,7 @@ void ArbCore::operator()() {
         if (core_machine->status() == MachineThread::MACHINE_NONE) {
             // Start execution of machine if new message available
             auto success = runMachineWithMessages(
-                execConfig, coreConfig.message_process_count, core_machine);
+                execConfig, coreConfig.message_process_count);
             if (!success) {
                 break;
             }
@@ -1034,11 +1033,10 @@ void ArbCore::operator()() {
 }
 
 bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
-                                     size_t max_message_batch_size,
-                                     std::unique_ptr<MachineThread>& machine) {
+                                     size_t max_message_batch_size) {
     ReadSnapshotTransaction tx(data_storage);
     auto messages_result = readNextMessages(
-        tx, machine->machine_state.output.fully_processed_inbox,
+        tx, core_machine->machine_state.output.fully_processed_inbox,
         max_message_batch_size);
     if (!messages_result.status.ok()) {
         core_error_string = messages_result.status.ToString();
@@ -1051,7 +1049,7 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
     if (!messages_result.data.empty()) {
         execConfig.inbox_messages = messages_result.data;
 
-        auto success = machine->runMachine(execConfig);
+        auto success = core_machine->runMachine(execConfig);
         if (!success) {
             core_error_string = "Error starting machine thread";
             machine_error = true;

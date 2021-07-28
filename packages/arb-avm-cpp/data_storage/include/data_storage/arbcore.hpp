@@ -399,8 +399,7 @@ class ArbCore {
     rocksdb::Status updateSendInsertedCount(ReadWriteTransaction& tx,
                                             const uint256_t& send_index);
     bool runMachineWithMessages(MachineExecutionConfig& execConfig,
-                                size_t max_message_batch_size,
-                                std::unique_ptr<MachineThread>& machine);
+                                size_t max_message_batch_size);
 
    public:
     // Public sideload interaction
