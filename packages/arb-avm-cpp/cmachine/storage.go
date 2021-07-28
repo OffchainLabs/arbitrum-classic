@@ -41,6 +41,11 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
 
+	debugInt := 0
+	if coreConfig.Debug {
+		debugInt = 1
+	}
+
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
 	cArbStorage := C.createArbStorage(
 		cDbPath,
@@ -49,6 +54,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		C.int(coreConfig.GasCheckpointFrequency),
 		C.int(cacheExpirationSeconds),
 		C.int(coreConfig.Cache.LRUSize),
+		C.int(debugInt),
 	)
 
 	if cArbStorage == nil {

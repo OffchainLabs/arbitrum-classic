@@ -57,6 +57,7 @@ type Conf struct {
 type Core struct {
 	Cache                  CoreCache `koanf:"cache"`
 	CheckpointLoadGasCost  int       `koanf:"checkpoint-load-gas-cost"`
+	Debug                  bool      `koanf:"debug"`
 	GasCheckpointFrequency int       `koanf:"gas-checkpoint-frequency"`
 	MessageProcessCount    int       `koanf:"message-process-count"`
 }
@@ -267,6 +268,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 
 	f.Int("core.cache.lru-size", 20, "number of recently used L2 blocks to hold in lru memory cache")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
+	f.Bool("core.debug", false, "print extra debug messages in arbcore")
 
 	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
 	f.Int("node.cache.lru-size", 20, "number of recently used L2 blocks to hold in lru memory cache")

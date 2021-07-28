@@ -38,11 +38,13 @@
 #endif
 
 namespace {
+constexpr uint256_t arbcore_schema_version = 1;
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
 constexpr auto send_processed_key = std::array<char, 1>{-63};
-constexpr auto logscursor_current_prefix = std::array<char, 1>{-66};
+constexpr auto schema_version_key = std::array<char, 1>{-64};
+constexpr auto logscursor_current_prefix = std::array<char, 1>{-120};
 }  // namespace
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
@@ -174,11 +176,18 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
 
     ReadWriteTransaction tx(data_storage);
 
-    auto s = saveCheckpoint(tx);
-    if (!s.ok()) {
+    status = updateSchemaVersion(tx, arbcore_schema_version);
+    if (!status.ok()) {
+        std::cerr << "failed to save schema version into db: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
+
+    status = saveCheckpoint(tx);
+    if (!status.ok()) {
         std::cerr << "failed to save initial checkpoint into db: "
-                  << s.ToString() << std::endl;
-        return s;
+                  << status.ToString() << std::endl;
+        return status;
     }
 
     status = updateLogInsertedCount(tx, 0);
@@ -197,11 +206,11 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         }
     }
 
-    s = tx.commit();
-    if (!s.ok()) {
-        std::cerr << "failed to commit initial state into db: " << s.ToString()
-                  << std::endl;
-        return s;
+    status = tx.commit();
+    if (!status.ok()) {
+        std::cerr << "failed to commit initial state into db: "
+                  << status.ToString() << std::endl;
+        return status;
     }
 
     return rocksdb::Status::OK();
@@ -379,12 +388,12 @@ ValueResult<uint256_t> ArbCore::unexpiredMessageCount() {
 // checkpoint is used.
 rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     const uint256_t& message_count,
-    bool use_latest,
+    bool initial_start,
     ValueCache& cache) {
     std::variant<std::unique_ptr<MachineThread>, rocksdb::Status> setup =
         rocksdb::Status::OK();
 
-    if (use_latest) {
+    if (initial_start) {
         std::cerr << "Reloading latest checkpoint" << std::endl;
     } else {
         std::cerr << "Reorganizing to message count " << message_count
@@ -409,7 +418,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                 old_machine_it--;
                 auto& inbox = old_machine_it->second->machine_state.output
                                   .fully_processed_inbox;
-                if (use_latest || message_count >= inbox.count) {
+                if (initial_start || message_count >= inbox.count) {
                     if (isValid(tx, inbox)) {
                         setup = std::make_unique<MachineThread>(
                             old_machine_it->second->machine_state);
@@ -432,9 +441,24 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
         // Find first checkpoint to delete
         checkpoint_it->SeekToLast();
         if (!checkpoint_it->status().ok()) {
-            std::cerr << "Error: SeekToLast failed during reorg"
+            std::cerr << "Error: SeekToLast failed during reorg: "
                       << checkpoint_it->status().ToString() << std::endl;
             return checkpoint_it->status();
+        }
+
+        // At this point we know database has already been initialized, so
+        // check schema version
+        auto schema_result = schemaVersion(tx);
+        if (!schema_result.status.ok()) {
+            std::cerr << "Error getting schema version: "
+                      << schema_result.status.ToString() << std::endl;
+            return schema_result.status;
+        }
+        if (schema_result.data != arbcore_schema_version) {
+            std::cerr << "Database version " << schema_result.data
+                      << " does not match expected version "
+                      << arbcore_schema_version << std::endl;
+            return rocksdb::Status::Corruption();
         }
 
         if (!checkpoint_it->Valid()) {
@@ -476,7 +500,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             }
 
             auto checkpoint = std::get<MachineStateKeys>(checkpoint_variant);
-            if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
+            if (checkpoint.getTotalMessagesRead() == 0 || initial_start ||
                 (message_count >= checkpoint.getTotalMessagesRead())) {
                 if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
                     // Good checkpoint
@@ -485,7 +509,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                         if (std::holds_alternative<rocksdb::Status>(setup)) {
                             setup = getMachineUsingStateKeys<MachineThread>(
                                 tx, checkpoint, cache);
-                            if (use_latest) {
+                            if (initial_start) {
                                 // First call, so seed value cache
                                 std::lock_guard<std::mutex> guard(
                                     execution_cursor_value_cache_mutex);
@@ -538,7 +562,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
         // Need to run machine until caught up with current
         // checkpoint
         MachineExecutionConfig execConfig;
-        execConfig.stop_on_sideload = use_latest;
+        execConfig.stop_on_sideload = initial_start;
 
         // Add messages and run machine
         auto success = runMachineWithMessages(
@@ -549,19 +573,24 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             return rocksdb::Status::Aborted();
         }
 
-        if (core_machine->status() == MachineThread::MACHINE_ERROR) {
-            core_error_string = core_machine->getErrorString();
+        if (new_machine->status() == MachineThread::MACHINE_ERROR) {
+            core_error_string = new_machine->getErrorString();
             std::cerr << "AVM machine stopped with error: " << core_error_string
                       << "\n";
             return rocksdb::Status::Aborted();
         }
 
         while (new_machine->nextAssertion().sideload_block_number) {
-            timed_sideload_cache.add(std::make_unique<Machine>(*core_machine));
+            timed_sideload_cache.add(std::make_unique<Machine>(*new_machine));
+
+            if (new_machine->machine_state.output.arb_gas_used >=
+                selected_machine_output.arb_gas_used) {
+                break;
+            }
 
             // Machine was stopped to save sideload,
             // start machine back up where it stopped
-            auto machine_success = core_machine->continueRunningMachine();
+            auto machine_success = new_machine->continueRunningMachine();
             if (!machine_success) {
                 core_error_string = "Error continuing machine thread";
                 machine_error = true;
@@ -569,6 +598,14 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                 return rocksdb::Status::Aborted();
             }
         }
+    }
+
+    if (selected_machine_output.arb_gas_used != 0 &&
+        new_machine->machine_state.output == selected_machine_output) {
+        // Machine in unexpected state, data corruption might have occurred
+        std::cerr << "Error catching up: machine in unexpected state"
+                  << "\n";
+        return rocksdb::Status::Aborted();
     }
 
     auto log_inserted_count = logInsertedCount();
@@ -1992,6 +2029,17 @@ ValueResult<uint256_t> ArbCore::sendProcessedCount(ReadTransaction& tx) const {
 rocksdb::Status ArbCore::updateSendProcessedCount(ReadWriteTransaction& tx,
                                                   rocksdb::Slice value_slice) {
     return tx.statePut(vecToSlice(send_processed_key), value_slice);
+}
+
+ValueResult<uint256_t> ArbCore::schemaVersion(ReadTransaction& tx) const {
+    return tx.stateGetUint256(vecToSlice(schema_version_key));
+}
+rocksdb::Status ArbCore::updateSchemaVersion(ReadWriteTransaction& tx,
+                                             const uint256_t& schema_version) {
+    std::vector<unsigned char> value;
+    marshal_uint256_t(schema_version, value);
+
+    return tx.statePut(vecToSlice(schema_version_key), vecToSlice(value));
 }
 
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {

@@ -76,6 +76,9 @@ struct ArbCoreConfig {
     // Number of items to keep in LRU cache
     uint32_t lru_sideload_cache_size{20};
 
+    // Print extra debug messages to stderr
+    bool debug{false};
+
     ArbCoreConfig() {}
 };
 
@@ -192,6 +195,10 @@ class ArbCore {
 
    private:
     // Private database interaction
+    [[nodiscard]] ValueResult<uint256_t> schemaVersion(
+        ReadTransaction& tx) const;
+    rocksdb::Status updateSchemaVersion(ReadWriteTransaction& tx,
+                                        const uint256_t& schema_version);
     rocksdb::Status saveAssertion(ReadWriteTransaction& tx,
                                   const Assertion& assertion,
                                   uint256_t arb_gas_used);
@@ -200,7 +207,7 @@ class ArbCore {
         ReadTransaction& tx,
         const uint256_t& total_gas);
     rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
-                                                bool use_latest,
+                                                bool initial_start,
                                                 ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(

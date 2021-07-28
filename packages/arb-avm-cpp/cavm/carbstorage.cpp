@@ -33,7 +33,8 @@ CArbStorage* createArbStorage(const char* db_path,
                               int32_t checkpoint_load_gas_cost,
                               int32_t min_gas_checkpoint_frequency,
                               int32_t cache_expiration_seconds,
-                              int32_t lru_cache_size) {
+                              int32_t lru_cache_size,
+                              int debug) {
     auto string_filename = std::string(db_path);
     ArbCoreConfig coreConfig{};
     coreConfig.message_process_count = message_process_count;
@@ -41,6 +42,7 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.min_gas_checkpoint_frequency = min_gas_checkpoint_frequency;
     coreConfig.timed_cache_expiration_seconds = cache_expiration_seconds;
     coreConfig.lru_sideload_cache_size = lru_cache_size;
+    coreConfig.debug = debug;
     try {
         auto storage = new ArbStorage(string_filename, coreConfig);
         return static_cast<void*>(storage);

@@ -89,6 +89,9 @@ struct InboxState {
         accumulator = message.accumulator;
         count += 1;
     }
+
+    bool operator==(const InboxState& other) const;
+    bool operator!=(const InboxState& other) const;
 };
 
 struct MachineOutput {
@@ -103,6 +106,9 @@ struct MachineOutput {
     uint256_t l2_block_number;
     uint256_t last_inbox_timestamp;
     std::optional<uint256_t> last_sideload;
+
+    bool operator==(const MachineOutput& other) const;
+    bool operator!=(const MachineOutput& other) const;
 };
 
 struct MachineStateKeys {
