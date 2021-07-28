@@ -150,7 +150,9 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
 
         // Can't modify previously set L2 address (can "reset" it to same address on the off chance that retryable fails on the first try)
-        if (l1ToL2Token[msg.sender] != address(0)) require(l1ToL2Token[msg.sender] == _l2Address);
+        address currentL2TokenAddress = l1ToL2Token[msg.sender];
+        if (currentL2TokenAddress != address(0))
+            require(currentL2TokenAddress == _l2Address, "CANT_REREGISTER");
 
         l1ToL2Token[msg.sender] = _l2Address;
 
