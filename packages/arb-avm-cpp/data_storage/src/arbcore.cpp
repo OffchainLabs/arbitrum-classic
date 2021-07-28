@@ -362,6 +362,12 @@ ValueResult<uint256_t> ArbCore::unexpiredMessageCount() {
             auto checkpoint = std::get<MachineStateKeys>(variantcheckpoint);
 
             if (checkpoint.output.last_inbox_timestamp < expired_timestamp) {
+                if (previous_message_count == 0) {
+                    // All checkpoints are expired, so return current count
+                    return {rocksdb::Status::OK(),
+                            checkpoint.output.last_inbox_timestamp};
+                }
+
                 // Current checkpoint is expired, so return previous count
                 return {rocksdb::Status::OK(), previous_message_count};
             }
