@@ -462,15 +462,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	}
 
 	// Initial application of command line parameters and environment variables so other methods can be applied
-	// Command line parameters and environment variables will be applied again to override other methods
-	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
-		return nil, errors.Wrap(err, "error loading config")
-	}
-	err = loadEnvironmentVariables(k)
-	if err != nil {
-		return nil, errors.Wrap(err, "error loading environment variables")
-	}
-
 	if err := applyOverrides(f, k); err != nil {
 		return nil, err
 	}
@@ -479,35 +470,58 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 }
 
 func applyOverrides(f *flag.FlagSet, k *koanf.Koanf) error {
+	// Apply command line options and environment variables
+	if err := applyOverrideOverrides(f, k); err != nil {
+		return err
+	}
+
 	// Load configuration file from S3 if setup
-	if err := loadS3Variables(k); err != nil {
-		return errors.Wrap(err, "error loading S3 settings")
+	if len(k.String("conf.s3.secret-key")) != 0 {
+		if err := loadS3Variables(k); err != nil {
+			return errors.Wrap(err, "error loading S3 settings")
+		}
+
+		if err := applyOverrideOverrides(f, k); err != nil {
+			return err
+		}
 	}
 
 	// Local config file overrides S3 config file
 	configFile := k.String("conf.file")
 	if len(configFile) > 0 {
 		if err := k.Load(file.Provider(configFile), json.Parser()); err != nil {
-			return errors.Wrap(err, "error loading config file")
+			return errors.Wrap(err, "error loading local config file")
 		}
+
+		if err := applyOverrideOverrides(f, k); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// applyOverrideOverrides for configuration values that need to be re-applied for each configuration item applied
+func applyOverrideOverrides(f *flag.FlagSet, k *koanf.Koanf) error {
+	// Command line overrides config file or config string
+	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+		return errors.Wrap(err, "error loading command line config")
 	}
 
 	// Config string overrides any config file
 	configString := k.String("conf.string")
 	if len(configString) > 0 {
-		if err := k.Load(rawbytes.Provider([]byte(configString)), nil); err != nil {
-			return errors.Wrap(err, "error loading config")
+		if err := k.Load(rawbytes.Provider([]byte(configString)), json.Parser()); err != nil {
+			return errors.Wrap(err, "error loading config string config")
+		}
+
+		// Command line overrides config file or config string
+		if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+			return errors.Wrap(err, "error loading command line config")
 		}
 	}
 
-	// Command line overrides config file or config string
-	// Will be applied again after chain specific overrides
-	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
-		return errors.Wrap(err, "error loading config")
-	}
-
 	// Environment variables overrides config files or command line options
-	// Will be applied again after chain specific overrides
 	if err := loadEnvironmentVariables(k); err != nil {
 		return errors.Wrap(err, "error loading environment variables")
 	}
@@ -530,17 +544,13 @@ func loadEnvironmentVariables(k *koanf.Koanf) error {
 }
 
 func loadS3Variables(k *koanf.Koanf) error {
-	if len(k.String("conf.s3.secret-key")) != 0 {
-		return k.Load(s3.Provider(s3.Config{
-			AccessKey: k.String("conf.s3.access-key"),
-			SecretKey: k.String("conf.s3.secret-key"),
-			Region:    k.String("conf.s3.region"),
-			Bucket:    k.String("conf.s3.bucket"),
-			ObjectKey: k.String("conf.s3.object-key"),
-		}), nil)
-	}
-
-	return nil
+	return k.Load(s3.Provider(s3.Config{
+		AccessKey: k.String("conf.s3.access-key"),
+		SecretKey: k.String("conf.s3.secret-key"),
+		Region:    k.String("conf.s3.region"),
+		Bucket:    k.String("conf.s3.bucket"),
+		ObjectKey: k.String("conf.s3.object-key"),
+	}), nil)
 }
 
 func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
