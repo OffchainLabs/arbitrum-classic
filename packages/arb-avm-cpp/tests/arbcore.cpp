@@ -235,6 +235,31 @@ TEST_CASE("ArbCore tests") {
         //        REQUIRE(before_sideload.status.ok());
         //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
         //                    .op.opcode == OpCode::SIDELOAD);
+
+        auto final_output = arbCore->getLastMachineOutput();
+
+        // Create a new arbCore and verify it gets to the same point
+        storage.closeArbStorage();
+        storage = ArbStorage(dbpath, coreConfig);
+        REQUIRE(storage.initialize(arb_os_path).ok());
+        arbCore = storage.getArbCore();
+        logs_count = uint64_t(arbCore->getLastMachineOutput().log_count);
+        if (!sends.empty()) {
+            // If there were sends, the block must have ended, so there should
+            // be a checkpoint present
+            REQUIRE(
+                arbCore->getLastMachineOutput().fully_processed_inbox.count >
+                0);
+        }
+        REQUIRE(arbCore->startThread());
+
+        int n = 0;
+        while (arbCore->getLastMachineOutput().arb_gas_used <
+               final_output.arb_gas_used) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            REQUIRE(n++ < 100);
+        }
+        REQUIRE(arbCore->getLastMachineOutput() == final_output);
     }
 }
 

@@ -365,7 +365,7 @@ ValueResult<uint256_t> ArbCore::unexpiredMessageCount() {
                 if (previous_message_count == 0) {
                     // All checkpoints are expired, so return current count
                     return {rocksdb::Status::OK(),
-                            checkpoint.output.last_inbox_timestamp};
+                            checkpoint.output.fully_processed_inbox.count};
                 }
 
                 // Current checkpoint is expired, so return previous count
@@ -534,6 +534,12 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                                   << e.what() << std::endl;
                         assert(false);
                     }
+                } else {
+                    std::cerr << "Unexpectedly invalid checkpoint inbox at "
+                                 "message count "
+                              << checkpoint.output.fully_processed_inbox.count
+                              << std::endl;
+                    assert(false);
                 }
 
                 // Obsolete checkpoint, need to delete referenced machine
@@ -670,6 +676,9 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
         std::unique_lock<std::shared_mutex> guard(last_machine_mutex);
         last_machine = std::make_unique<Machine>(*core_machine);
     }
+
+    // Checkpoint was saved at sideload, attempt to continue running
+    core_machine->continueRunningMachine();
 
     return tx.commit();
 }
