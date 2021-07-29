@@ -106,7 +106,7 @@ func NewTestDevNode(
 	test.FailIfError(t, err)
 	initMsg, err := message.NewInitMessage(params, owner, config)
 	test.FailIfError(t, err)
-	_, err = backend.AddInboxMessage(initMsg, rollupAddress)
+	_, err = backend.AddInboxMessage(initMsg, common.Address{})
 	test.FailIfError(t, err)
 
 	go func() {

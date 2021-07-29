@@ -145,6 +145,9 @@ func TestL2ToL1Tx(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if batch == nil {
+			t.Fatal("message batch not found")
+		}
 		if batch.BatchNumber.Cmp(big.NewInt(int64(i))) != 0 {
 			t.Fatal("wrong batch num")
 		}

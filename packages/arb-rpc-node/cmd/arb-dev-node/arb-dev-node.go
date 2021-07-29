@@ -236,7 +236,7 @@ func startup() error {
 		if err != nil {
 			return err
 		}
-		if _, err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
+		if _, err := backend.AddInboxMessage(initMsg, common.Address{}); err != nil {
 			return errors.Wrap(err, "error adding init message to inbox")
 		}
 	}

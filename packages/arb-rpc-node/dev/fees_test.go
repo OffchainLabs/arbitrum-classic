@@ -161,7 +161,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		t.Error("expected unfair random")
 	}
 
-	_, err = arbOwner.SetFeesEnabled(auth, true)
+	_, err = arbOwner.SetChainParameter(auth, arbos.FeesEnabledParamId, big.NewInt(1))
 	test.FailIfError(t, err)
 	auth.GasLimit = 0
 
@@ -228,19 +228,21 @@ func TestFees(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		t.Log("tx", i)
-		tx, err := arbOwner.GiveOwnership(auth, auth.From)
+		tx, err := arbOwner.SetChainParameter(auth, arbos.ChainOwnerParamId, new(big.Int).SetBytes(auth.From[:]))
 		test.FailIfError(t, err)
 		paid := checkFees(t, backend, tx)
 		totalPaid = totalPaid.Add(totalPaid, paid)
 		checkPaid()
 	}
 
-	networkDest, congestionDest, err := arbOwner.GetFeeRecipients(&bind.CallOpts{})
+	networkDest, err := arbOwner.GetChainParameter(&bind.CallOpts{}, arbos.NetworkFeeRecipientParamId)
 	test.FailIfError(t, err)
-	if networkDest != feeConfig.NetFeeRecipient.ToEthAddress() {
+	if ethcommon.BigToAddress(networkDest) != feeConfig.NetFeeRecipient.ToEthAddress() {
 		t.Error("wrong network dest", networkDest)
 	}
-	if congestionDest != feeConfig.CongestionFeeRecipient.ToEthAddress() {
+	congestionDest, err := arbOwner.GetChainParameter(&bind.CallOpts{}, arbos.CongestionFeeRecipientParamId)
+	test.FailIfError(t, err)
+	if ethcommon.BigToAddress(congestionDest) != feeConfig.CongestionFeeRecipient.ToEthAddress() {
 		t.Error("wrong congestion dest", congestionDest)
 	}
 

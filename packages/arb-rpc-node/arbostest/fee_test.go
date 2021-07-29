@@ -269,7 +269,7 @@ func TestFees(t *testing.T) {
 			BlockNum:  common.NewTimeBlocksInt(0),
 			Timestamp: big.NewInt(0),
 		}
-		ib.AddMessage(init, chain, big.NewInt(0), chainTime)
+		ib.AddMessage(init, common.Address{}, big.NewInt(0), chainTime)
 
 		deposit := message.EthDepositTx{
 			L2Message: message.NewSafeL2Message(message.ContractTransaction{
