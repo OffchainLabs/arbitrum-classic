@@ -1923,7 +1923,8 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 std::cerr << "No execution machine available" << std::endl;
                 return std::get<rocksdb::Status>(closest_checkpoint);
             }
-            execution_cursor = std::get<ExecutionCursor>(closest_checkpoint);
+            execution_cursor =
+                std::move(std::get<ExecutionCursor>(closest_checkpoint));
         }
     }
 
