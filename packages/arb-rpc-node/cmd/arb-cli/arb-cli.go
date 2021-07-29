@@ -106,6 +106,31 @@ func upgradeArbOSSimple() error {
 	return upgradeArbOS(upgradeFile, targetMexe, &startMexe)
 }
 
+func checkUploadedArbOS(targetMexe string) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Getting uploaded")
+	codeHash, err := arbOwner.GetUploadedCodeHash(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	fmt.Println("Got uploaded")
+	targetMach, err := cmachine.New(targetMexe)
+	if err != nil {
+		return err
+	}
+	if codeHash != targetMach.CodePointHash() {
+		fmt.Println("Uploaded code segment different than target")
+		fmt.Println("Uploaded:", codeHash)
+		fmt.Println("Target:", targetMach.CodePointHash())
+	} else {
+		fmt.Println("Uploaded code segment matches target")
+	}
+	return nil
+}
+
 func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) error {
 	config.auth.GasPrice = big.NewInt(355800000)
 	targetMach, err := cmachine.New(targetMexe)
@@ -713,6 +738,11 @@ func handleCommand(fields []string) error {
 		return upgradeArbOS(fields[1], fields[2], source)
 	case "upgrade-simple":
 		return upgradeArbOSSimple()
+	case "check-upgrade":
+		if len(fields) != 2 {
+			return errors.New("Expected target mexe")
+		}
+		return checkUploadedArbOS(fields[1])
 	case "version":
 		return version()
 	case "spam":
@@ -834,6 +864,7 @@ func run(ctx context.Context) error {
 	}
 	fmt.Println("Sending from address", auth.From)
 	auth.Context = context.Background()
+	auth.GasPrice = big.NewInt(405800000)
 	config = &Config{
 		client: client,
 		auth:   auth,
