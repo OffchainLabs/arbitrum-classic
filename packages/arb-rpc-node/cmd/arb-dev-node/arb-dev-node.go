@@ -35,7 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/miguelmota/go-ethereum-hdwallet"
+	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -204,10 +204,7 @@ func startup() error {
 	if deleteDir {
 		owner := common.NewAddressFromEth(accounts[0].Address)
 		config := protocol.ChainParams{
-			StakeRequirement:          big.NewInt(10),
-			StakeToken:                common.Address{},
 			GracePeriod:               common.NewTimeBlocksInt(3),
-			MaxExecutionSteps:         10000000000,
 			ArbGasSpeedLimitPerSecond: 2000000000000,
 		}
 

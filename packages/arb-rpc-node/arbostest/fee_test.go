@@ -244,10 +244,7 @@ func TestFees(t *testing.T) {
 
 	addInitializationLoc := func(ib *InboxBuilder) {
 		config := protocol.ChainParams{
-			StakeRequirement:          big.NewInt(0),
-			StakeToken:                common.Address{},
 			GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
-			MaxExecutionSteps:         0,
 			ArbGasSpeedLimitPerSecond: 1000000000,
 		}
 

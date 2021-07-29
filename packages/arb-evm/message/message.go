@@ -72,7 +72,7 @@ func NestedMessage(data []byte, kind inbox.Type) (Message, error) {
 	case L2Type:
 		return L2Message{Data: data}, nil
 	case InitType:
-		return NewInitFromData(data), nil
+		return NewInitFromData(data)
 	case EthDepositTxType:
 		return NewEthDepositTxFromData(data), nil
 	case RetryableType:

@@ -54,11 +54,8 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	aggAuth := bind.NewKeyedTransactor(privkey2)
 
 	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
-		ArbGasSpeedLimitPerSecond: 2000000000,
+		ArbGasSpeedLimitPerSecond: 1999999999,
 	}
 
 	netFeeRecipient := common.RandAddress()
