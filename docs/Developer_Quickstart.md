@@ -91,7 +91,7 @@ truffle migrate --network arbitrum
    The pet shop dApp should now be running in your browser. Choose a pet or two
    and click the adopt button to adopt your new animal friend(s).
 
-### Summary
+### Election Dapp
 
 If you want to try another dApp run, deploy the solidity contracts and launch the frontend
 
@@ -102,3 +102,7 @@ yarn
 truffle migrate --network arbitrum
 yarn start
 ```
+
+### More Demos
+
+For more demos, see our [demos](https://github.com/OffchainLabs/arbitrum-interop-quickstart) mono-repo.
