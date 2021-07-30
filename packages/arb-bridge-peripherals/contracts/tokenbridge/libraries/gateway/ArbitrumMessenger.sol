@@ -50,8 +50,12 @@ abstract contract L1ArbitrumMessenger {
         return seqNum;
     }
 
+    function getBridge(address _inbox) internal view virtual returns (IBridge) {
+        return IInbox(_inbox).bridge();
+    }
+
     function getL2ToL1Sender(address _inbox) internal view virtual returns (address) {
-        IOutbox outbox = IOutbox(IInbox(_inbox).bridge().activeOutbox());
+        IOutbox outbox = IOutbox(getBridge(_inbox).activeOutbox());
         address l2ToL1Sender = outbox.l2ToL1Sender();
 
         require(l2ToL1Sender != address(0), "NO_SENDER");

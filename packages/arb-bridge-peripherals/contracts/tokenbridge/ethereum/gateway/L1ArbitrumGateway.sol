@@ -23,6 +23,8 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+
 import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
 import "../../libraries/IERC677.sol";
@@ -37,7 +39,14 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
     address public inbox;
 
     modifier onlyCounterpartGateway() virtual override {
-        address l2ToL1Sender = getL2ToL1Sender(inbox);
+        address _inbox = inbox;
+
+        // a message coming from the counterpart gateway was executed by the bridge
+        address bridge = address(super.getBridge(_inbox));
+        require(msg.sender == bridge, "NOT_FROM_BRIDGE");
+
+        // and the outbox reports that the L2 address of the sender is the counterpart gateway
+        address l2ToL1Sender = super.getL2ToL1Sender(_inbox);
         require(isCounterpartGateway(l2ToL1Sender), "ONLY_COUNTERPART_GATEWAY");
         _;
     }
