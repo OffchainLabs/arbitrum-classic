@@ -68,10 +68,6 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         whitelist = address(0);
     }
 
-    function postUpgradeInit() external {
-        owner = address(0x6c26D7f792CfEc88acdB382fe720bdcE7C922776);
-    }
-
     function getExternalCall(
         uint256 _exitNum,
         address _initialDestination,
