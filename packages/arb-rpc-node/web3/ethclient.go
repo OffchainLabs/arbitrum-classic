@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
@@ -73,6 +74,19 @@ func (c *EthClient) PendingCodeAt(_ context.Context, account common.Address) ([]
 	pending := rpc.PendingBlockNumber
 	block := rpc.BlockNumberOrHash{BlockNumber: &pending}
 	return c.srv.GetCode(&account, block)
+}
+
+func (c *EthClient) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
+	if !blockNumber.IsInt64() {
+		return 0, errors.New("block number is not int64")
+	}
+	rpcBlockNumber := rpc.BlockNumber(blockNumber.Int64())
+	block := rpc.BlockNumberOrHash{BlockNumber: &rpcBlockNumber}
+	count, err := c.srv.GetTransactionCount(ctx, &account, block)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(count), err
 }
 
 func (c *EthClient) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
