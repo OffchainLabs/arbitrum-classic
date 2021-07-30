@@ -77,7 +77,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         address _initialDestination,
         bytes memory _initialData
     ) public view virtual override returns (address target, bytes memory data) {
-        if (getChainId() == 1 && _exitNum == 938) {
+        if (getChainId() == 1 && _exitNum == 0) {
             return (0x0AA354A392745Bc5f63ff8866261e8B6647002DF, "");
         }
         return super.getExternalCall(_exitNum, _initialDestination, _initialData);
