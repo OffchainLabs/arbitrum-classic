@@ -15,6 +15,8 @@
  */
 
 export { Bridge } from './lib/bridge'
+export { BridgeMonitor } from './lib/bridge_monitor'
+
 export {
   OutboundTransferInitiatedResult,
   L2ToL1EventResult,

@@ -23,6 +23,8 @@ import { PayableOverrides } from '@ethersproject/contracts'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
+import { Bridge__factory } from './abi/factories/Bridge__factory'
+
 import networks from './networks'
 
 interface RetryableGasArgs {
@@ -42,7 +44,7 @@ export class Bridge {
   walletAddressCache?: string
   outboxAddressCache?: string
 
-  private constructor(l1BridgeObj: L1Bridge, l2BridgeObj: L2Bridge) {
+  constructor(l1BridgeObj: L1Bridge, l2BridgeObj: L2Bridge) {
     this.l1Bridge = l1BridgeObj
     this.l2Bridge = l2BridgeObj
   }
@@ -53,7 +55,7 @@ export class Bridge {
     this.getL2EthBalance()
   }
 
-  static async init(
+  static async _createBridges(
     ethSigner: Signer,
     arbSigner: Signer,
     l1GatewayRouterAddress?: string,
@@ -111,7 +113,21 @@ export class Bridge {
 
     const l1BridgeObj = new L1Bridge(l1GatewayRouterAddress, ethSigner)
     const l2BridgeObj = new L2Bridge(l2GatewayRouterAddress, arbSigner)
+    return { l1BridgeObj, l2BridgeObj }
+  }
 
+  static async init(
+    ethSigner: Signer,
+    arbSigner: Signer,
+    l1GatewayRouterAddress?: string,
+    l2GatewayRouterAddress?: string
+  ) {
+    const { l1BridgeObj, l2BridgeObj } = await this._createBridges(
+      ethSigner,
+      arbSigner,
+      l1GatewayRouterAddress,
+      l2GatewayRouterAddress
+    )
     return new Bridge(l1BridgeObj, l2BridgeObj)
   }
 
@@ -197,9 +213,8 @@ export class Bridge {
     overrides?: PayableOverrides
   ) {
     const l1ChainId = await this.l1Signer.getChainId()
-    const { l1WethGateway: l1WethGatewayAddress } = networks[
-      l1ChainId
-    ].tokenBridge
+    const { l1WethGateway: l1WethGatewayAddress } =
+      networks[l1ChainId].tokenBridge
 
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
@@ -320,6 +335,21 @@ export class Bridge {
       l2ChainId || this.l2Provider
     )
   }
+
+  public async getL2TxnFromL1Txn(l1Transaction: string | ContractReceipt) {
+    if (typeof l1Transaction == 'string') {
+      l1Transaction = await this.getL1Transaction(l1Transaction)
+    }
+    const seqNums = await this.getInboxSeqNumFromContractTransaction(
+      l1Transaction
+    )
+    const seqNum = seqNums && seqNums[0]
+    if (!seqNum) throw new Error('Seq num not found')
+
+    const txHash = await this.calculateL2TransactionHash(seqNum)
+    return this.l2Provider.getTransactionReceipt(txHash)
+  }
+
   /**
    * Hash of L2 side of retryable txn; txn gets generated automatically and is formatted as tho user submitted
    */
@@ -435,10 +465,11 @@ export class Bridge {
       console.warn('retryable ticket failed', l2Txn)
       throw new Error('l2 txn failed')
     }
-    const redemptionTxHash = await BridgeHelper.calculateL2RetryableTransactionHash(
-      inboxSeqNum[0],
-      this.l2Provider
-    )
+    const redemptionTxHash =
+      await BridgeHelper.calculateL2RetryableTransactionHash(
+        inboxSeqNum[0],
+        this.l2Provider
+      )
     console.log(`Ensuring txn hasn't been redeemed:`)
 
     const redemptionRec = await this.l2Provider.getTransactionReceipt(
@@ -609,10 +640,21 @@ export class Bridge {
     return BridgeHelper.getL2ToL1EventData(destinationAddress, this.l2Provider)
   }
 
+  public async getEthWithdrawals(destinationAddress?: string) {
+    return BridgeHelper.getEthWithdrawals(this.l2Provider, destinationAddress)
+  }
+
   public async getOutboxAddress() {
     if (this.outboxAddressCache) {
       return this.outboxAddressCache
     }
+
+    const l1ChainId = await this.l1Signer.getChainId()
+    if (networks[l1ChainId]) {
+      this.outboxAddressCache = networks[l1ChainId].tokenBridge.outbox
+      return this.outboxAddressCache
+    }
+
     const inboxAddress = (await this.l1Bridge.getInbox()).address
     const coreBridgeAddress = await BridgeHelper.getCoreBridgeFromInbox(
       inboxAddress,
@@ -699,6 +741,16 @@ export class Bridge {
         value: maxSubmissionPrice,
       }
     )
+  }
+
+  public async getBridgeContract() {
+    const l1ChainId = await this.l1Signer.getChainId()
+    const bridgeAddress = networks[l1ChainId].tokenBridge.bridge
+    return Bridge__factory.connect(bridgeAddress, this.l1Provider)
+  }
+
+  public async getRetryablesL1() {
+    return BridgeHelper.getRetryablesL1(this.l1Provider)
   }
   public async getL1GatewaySetEventData() {
     const l1ChainId = await this.l1Signer.getChainId()
