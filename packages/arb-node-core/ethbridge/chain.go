@@ -44,22 +44,38 @@ func (a ArbAddresses) ArbFactoryAddress() common.Address {
 // RBF = Replace By Fee
 const rbfInterval time.Duration = time.Minute * 5
 
-func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, attemptRbf func() (ethcommon.Hash, error)) (*types.Receipt, error) {
+type attemptRbfInfo struct {
+	attempt func() (ethcommon.Hash, error)
+	account ethcommon.Address
+	nonce   uint64
+}
+
+func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
 	lastRbf := time.Now()
 	for {
 		select {
 		case <-time.After(time.Second):
-			if attemptRbf != nil && time.Since(lastRbf) >= rbfInterval {
+			if rbfInfo != nil && time.Since(lastRbf) >= rbfInterval {
 				var err error
-				txHash, err = attemptRbf()
-				if err == nil {
-					lastRbf = time.Now()
-				} else {
+				txHash, err = rbfInfo.attempt()
+				lastRbf = time.Now()
+				if err != nil {
 					logger.Warn().Err(err).Msg("failed to replace by fee")
 				}
 			}
 			receipt, err := client.TransactionReceipt(ctx, txHash)
 			if receipt == nil && err == nil {
+				if rbfInfo != nil {
+					// an alternative tx might've gotten confirmed
+					nonce, err := client.NonceAt(ctx, rbfInfo.account, nil)
+					if err == nil {
+						if nonce >= rbfInfo.nonce {
+							return nil, nil
+						}
+					} else {
+						logger.Warn().Err(err).Str("account", rbfInfo.account.String()).Msg("Issue getting pending nonce")
+					}
+				}
 				continue
 			}
 			if err != nil {
@@ -86,9 +102,9 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 }
 
 func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string, auth *TransactAuth) (*types.Receipt, error) {
-	var attemptRbf func() (ethcommon.Hash, error)
+	var rbfInfo *attemptRbfInfo
 	if auth != nil {
-		attemptRbf = func() (ethcommon.Hash, error) {
+		attemptRbf := func() (ethcommon.Hash, error) {
 			auth, err := auth.getAuth(ctx)
 			if err != nil {
 				return ethcommon.Hash{}, err
@@ -108,15 +124,20 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 			if err != nil {
 				return ethcommon.Hash{}, err
 			}
-			err = client.SendTransaction(ctx, tx)
+			err = client.SendTransaction(ctx, newTx)
 			if err != nil {
 				return ethcommon.Hash{}, err
 			}
 			*tx = *newTx
 			return newTx.Hash(), nil
 		}
+		rbfInfo = &attemptRbfInfo{
+			attempt: attemptRbf,
+			account: auth.auth.From,
+			nonce:   tx.Nonce(),
+		}
 	}
-	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, tx.Hash(), attemptRbf)
+	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, tx.Hash(), rbfInfo)
 	if err != nil {
 		logger.Warn().Err(err).Hex("tx", tx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
