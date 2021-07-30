@@ -24,6 +24,8 @@ module.exports = {
 }
 ```
 
+See [Pet Shop Demo](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/demo-dapp-pet-shop).
+
 ## Truffle
 
 To port an existing truffle configuration:
@@ -36,17 +38,16 @@ To port an existing truffle configuration:
 
 2.  Edit the `truffle-config.js`:
 
-    - Set the mnemonic and the url to an Arbitrum aggregator at the top of the file. 
-    
-    ```js
+    - Set the mnemonic and the url to an Arbitrum aggregator at the top of the file.
 
+    ```js
     const HDWalletProvider = require('@truffle/hdwallet-provider')
 
     const mnemonic =
       'jar deny prosper gasp flush glass core corn alarm treat leg smart'
     const arbProviderUrl = 'http://localhost:8547/'
     ```
-    
+
     - Add the `arbitrum` network to `module.exports`:
 
     ```js
@@ -73,10 +74,11 @@ For older versions of truffle (< 0.5.x), do the following:
 
 - Import `wrapProvider` from `arb-ethers-web3-bridge` at the top of `truffle-config.js`:
 
-```bash 
+```bash
 const wrapProvider = require('arb-ethers-web3-bridge').wrapProvider
 ```
-- return the wrapped provider here: 
+
+- return the wrapped provider here:
   ```js
     module.exports = {
         arbitrum: {
@@ -91,4 +93,4 @@ const wrapProvider = require('arb-ethers-web3-bridge').wrapProvider
         },
       },
     }
-    ```
+  ```

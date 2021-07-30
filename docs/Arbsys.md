@@ -15,6 +15,8 @@ To call it, write something like this:
 uint256 txCount = ArbSys(address(100)).getTransactionCount();
 ```
 
+See our [Eth Withdrawal Demo](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/eth_withdraw) for an example of client side interaction with ArbSys.
+
 Here is the interface offered by ArbSys:
 
 ```sol
