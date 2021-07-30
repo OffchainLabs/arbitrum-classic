@@ -8,10 +8,10 @@ Our [Tutorials](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree
 
 It includes:
 
-- :white_check_mark: [Deploying a simple Dapp](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/demo-dapp-pet-shop)
-- :white_check_mark: [Depositing](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/token_deposit) and [Withdrawing](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/token_withdraw) tokens
+- ✅ [Deploying a simple Dapp](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/demo-dapp-pet-shop)
+- ✅ [Depositing](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/token_deposit) and [Withdrawing](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/token_withdraw) tokens
 
-- :white_check_mark: [L1 to L2 messaging](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/greeter)
-- :white_check_mark: [L2 to L1 messaging](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/outbox-execute)
+- ✅ [L1 to L2 messaging](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/greeter)
+- ✅ [L2 to L1 messaging](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/outbox-execute)
 
 And more!
