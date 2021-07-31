@@ -403,6 +403,42 @@ func disableL1Whitelist(inbox ethcommon.Address) error {
 	return waitForTx(tx, "UpdateWhitelistConsumers")
 }
 
+func setMaxDelaySeconds(rollupAddr ethcommon.Address, newDelay *big.Int) error {
+	admin, err := ethbridgecontracts.NewRollupAdminFacet(rollupAddr, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := admin.SetSequencerInboxMaxDelaySeconds(config.auth, newDelay)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Waiting for receipt for", tx.Hash())
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "UpdateWhitelistConsumers")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
+func setMaxDelayBlocks(rollupAddr ethcommon.Address, newDelay *big.Int) error {
+	admin, err := ethbridgecontracts.NewRollupAdminFacet(rollupAddr, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := admin.SetSequencerInboxMaxDelayBlocks(config.auth, newDelay)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Waiting for receipt for", tx.Hash())
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "UpdateWhitelistConsumers")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
 func deposit(inboxAddress ethcommon.Address, value *big.Int, submissionPrice *big.Int) error {
 	inbox, err := ethbridgecontracts.NewInbox(inboxAddress, config.client)
 	if err != nil {
@@ -798,6 +834,26 @@ func handleCommand(fields []string) error {
 			users = append(users, ethcommon.HexToAddress(val))
 		}
 		return enableL1Addresses(rollup, whitelist, users)
+	case "set-max-delay-blocks":
+		if len(fields) != 3 {
+			return errors.New("Expected [rollup] [delay] arguments")
+		}
+		rollup := ethcommon.HexToAddress(fields[1])
+		delay, ok := new(big.Int).SetString(fields[2], 10)
+		if !ok {
+			return errors.New("bad delay")
+		}
+		return setMaxDelayBlocks(rollup, delay)
+	case "set-max-delay-seconds":
+		if len(fields) != 3 {
+			return errors.New("Expected [rollup] [delay] arguments")
+		}
+		rollup := ethcommon.HexToAddress(fields[1])
+		delay, ok := new(big.Int).SetString(fields[2], 10)
+		if !ok {
+			return errors.New("bad delay")
+		}
+		return setMaxDelaySeconds(rollup, delay)
 	case "disable-l1-whitelist":
 		if len(fields) != 2 {
 			return errors.New("Expected [inbox] arguments")
