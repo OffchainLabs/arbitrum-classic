@@ -28,6 +28,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -223,8 +224,10 @@ func TestSequencerBatcher(t *testing.T) {
 		l2ChainId,
 		seqMon.Reader,
 		client,
-		big.NewInt(1),
-		big.NewInt(50),
+		configuration.Sequencer{
+			CreateBatchBlockInterval:   50,
+			DelayedMessagesTargetDelay: 1,
+		},
 		seqInbox,
 		auth,
 		dummyDataSigner,

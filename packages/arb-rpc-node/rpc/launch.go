@@ -64,11 +64,10 @@ type StatelessBatcherMode struct {
 func (b StatelessBatcherMode) isBatcherMode() {}
 
 type SequencerBatcherMode struct {
-	Auth                       *bind.TransactOpts
-	Core                       core.ArbCore
-	InboxReader                *monitor.InboxReader
-	DelayedMessagesTargetDelay *big.Int
-	CreateBatchBlockInterval   *big.Int
+	Auth        *bind.TransactOpts
+	Core        core.ArbCore
+	InboxReader *monitor.InboxReader
+	Config      configuration.Sequencer
 }
 
 func (b SequencerBatcherMode) isBatcherMode() {}
@@ -129,8 +128,7 @@ func SetupBatcher(
 			l2ChainId,
 			batcherMode.InboxReader,
 			client,
-			batcherMode.DelayedMessagesTargetDelay,
-			batcherMode.CreateBatchBlockInterval,
+			batcherMode.Config,
 			seqInbox,
 			batcherMode.Auth,
 			dataSigner,

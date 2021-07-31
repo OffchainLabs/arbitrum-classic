@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -98,8 +99,7 @@ func NewSequencerBatcher(
 	chainId *big.Int,
 	inboxReader *monitor.InboxReader,
 	client ethutils.EthClient,
-	delayedMessagesTargetDelay *big.Int,
-	createBatchBlockInterval *big.Int,
+	config configuration.Sequencer,
 	sequencerInbox *ethbridgecontracts.SequencerInbox,
 	auth *bind.TransactOpts,
 	dataSigner func([]byte) ([]byte, error),
@@ -134,7 +134,7 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
-	if createBatchBlockInterval.Cmp(big.NewInt(0)) <= 0 || createBatchBlockInterval.Cmp(maxDelayBlocks) >= 0 {
+	if config.CreateBatchBlockInterval < 0 || config.CreateBatchBlockInterval > maxDelayBlocks.Int64() {
 		return nil, errors.New("invalid batch creation block interval")
 	}
 
@@ -142,7 +142,7 @@ func NewSequencerBatcher(
 		db:                         db,
 		inboxReader:                inboxReader,
 		client:                     client,
-		delayedMessagesTargetDelay: delayedMessagesTargetDelay,
+		delayedMessagesTargetDelay: big.NewInt(config.DelayedMessagesTargetDelay),
 		sequencerInbox:             sequencerInbox,
 		auth:                       transactAuth,
 		chainTimeCheckInterval:     time.Second,
@@ -154,7 +154,7 @@ func NewSequencerBatcher(
 		// TODO make these configurable
 		updateTimestampInterval:         big.NewInt(4),
 		sequenceDelayedMessagesInterval: big.NewInt(20),
-		createBatchBlockInterval:        createBatchBlockInterval,
+		createBatchBlockInterval:        big.NewInt(config.CreateBatchBlockInterval),
 
 		sequencer:              common.NewAddressFromEth(sequencer),
 		signer:                 types.NewEIP155Signer(chainId),
