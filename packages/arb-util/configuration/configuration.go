@@ -110,7 +110,7 @@ type WS struct {
 
 type Forwarder struct {
 	Target    string `koanf:"target"`
-	Submitter string `koanf:"submitter"`
+	Submitter string `koanf:"submitter-address"`
 }
 
 type Node struct {
@@ -189,7 +189,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
-	f.String("node.forwarder.submitter", "", "address of the node that will submit your transaction to the chain")
+	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
