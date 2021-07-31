@@ -263,12 +263,14 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(queueItem.tx))
 			batchDataSize += len(queueItem.tx.Data())
 		}
-		if !seenOwnTx && emptiedQueue {
+		if !seenOwnTx && emptiedQueue && batchDataSize+len(startTx.Data()) <= maxTxDataSize {
 			// Another thread must have encountered an internal error attempting to process startTx
 			// Let's try again ourselves (if we fail this time we won't try again)
 			batchTxs = append(batchTxs, startTx)
 			resultChans = append(resultChans, startResultChan)
 			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(startTx))
+			batchDataSize += len(startTx.Data())
+			seenOwnTx = true
 		}
 		logger.Info().Int("count", len(l2BatchContents)).Msg("gather user txes")
 
@@ -436,7 +438,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 
 		b.newTxFeed.Send(ethcore.NewTxsEvent{Txs: sequencedTxs})
 
-		if emptiedQueue || seenOwnTx {
+		if seenOwnTx {
 			break
 		}
 	}
