@@ -99,6 +99,7 @@ type S3 struct {
 type Sequencer struct {
 	CreateBatchBlockInterval   int64   `koanf:"create-batch-block-interval"`
 	DelayedMessagesTargetDelay int64   `koanf:"delayed-messages-target-delay"`
+	ReorgOutHugeMessages       bool    `koanf:"reorg-out-huge-messages"`
 	Lockout                    Lockout `koanf:"lockout"`
 }
 
@@ -195,6 +196,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.rpc.path", "/", "RPC path")
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
+	f.Bool("node.sequencer.reorg-out-huge-messages", false, "erase any huge messages in database that cannot be published (DANGEROUS)")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
 	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
