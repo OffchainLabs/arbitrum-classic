@@ -247,7 +247,8 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	for len(b.txQueue) > 0 {
 		queueItem := <-b.txQueue
 		if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
-			// This batch would be too large to publish
+			// This batch would be too large to publish with this tx added.
+			// Put the tx back in the queue so it can be included later.
 			b.txQueue <- queueItem
 			break
 		}
