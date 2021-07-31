@@ -520,8 +520,11 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	}
 
 	// Check if we need to reorg because we've exceeded the window
-	lastBatchItem := batchItems[len(batchItems)-1]
-	lastSeqMsg, err := inbox.NewInboxMessageFromData(lastBatchItem.SequencerMessage)
+	firstSeqBatchItem := batchItems[0]
+	if len(firstSeqBatchItem.SequencerMessage) == 0 {
+		firstSeqBatchItem = batchItems[1]
+	}
+	firstSeqMsg, err := inbox.NewInboxMessageFromData(firstSeqBatchItem.SequencerMessage)
 	if err != nil {
 		return false, err
 	}
@@ -529,8 +532,8 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	if err != nil {
 		return false, err
 	}
-	delayBlocks := new(big.Int).Sub(newestChainTime.BlockNum.AsInt(), lastSeqMsg.ChainTime.BlockNum.AsInt())
-	delaySeconds := new(big.Int).Sub(newestChainTime.Timestamp, lastSeqMsg.ChainTime.Timestamp)
+	delayBlocks := new(big.Int).Sub(newestChainTime.BlockNum.AsInt(), firstSeqMsg.ChainTime.BlockNum.AsInt())
+	delaySeconds := new(big.Int).Sub(newestChainTime.Timestamp, firstSeqMsg.ChainTime.Timestamp)
 	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 {
 		logger.Error().Str("delayBlocks", delayBlocks.String()).Str("delaySeconds", delaySeconds.String()).Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
 
