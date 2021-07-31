@@ -108,16 +108,19 @@ type WS struct {
 	Path string `koanf:"path"`
 }
 
+type Forwarder struct {
+	Target    string `koanf:"target"`
+	Submitter string `koanf:"submitter"`
+}
+
 type Node struct {
 	Aggregator Aggregator `koanf:"aggregator"`
 	ChainID    uint64     `koanf:"chain-id"`
-	Forwarder  struct {
-		Target string `koanf:"target"`
-	} `koanf:"forwarder"`
-	RPC       RPC       `koanf:"rpc"`
-	Sequencer Sequencer `koanf:"sequencer"`
-	Type      string    `koanf:"type"`
-	WS        WS        `koanf:"ws"`
+	Forwarder  Forwarder  `koanf:"forwarder"`
+	RPC        RPC        `koanf:"rpc"`
+	Sequencer  Sequencer  `koanf:"sequencer"`
+	Type       string     `koanf:"type"`
+	WS         WS         `koanf:"ws"`
 }
 
 type Persistent struct {
@@ -186,6 +189,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
+	f.String("node.forwarder.submitter", "", "address of the node that will submit your transaction to the chain")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")

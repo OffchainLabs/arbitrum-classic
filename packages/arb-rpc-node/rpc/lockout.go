@@ -237,7 +237,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			} else if b.redis.getLockout(ctx) == selectedSeq {
 				logger.Info().Str("rpc", selectedSeq).Msg("forwarding to new sequencer")
 				var err error
-				b.currentBatcher, err = batcher.NewForwarder(ctx, selectedSeq)
+				b.currentBatcher, err = batcher.NewForwarder(ctx, configuration.Forwarder{Target: selectedSeq})
 				if err == nil {
 					b.currentSeq = selectedSeq
 				} else {
