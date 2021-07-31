@@ -312,6 +312,10 @@ func (t ContractTransaction) AsEthTx() *types.Transaction {
 	}
 }
 
+func (t ContractTransaction) AsNonConstructorTx() *types.Transaction {
+	return types.NewTransaction(0, t.DestAddress.ToEthAddress(), t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
+}
+
 type Call struct {
 	BasicTx
 }
