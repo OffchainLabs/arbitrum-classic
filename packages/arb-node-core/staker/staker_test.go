@@ -41,6 +41,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -182,9 +183,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	validatorWalletFactory, _, _, err := ethbridgecontracts.DeployValidatorWalletCreator(auth, client)
 	test.FailIfError(t, err)
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, &configuration.Config{}, &configuration.Wallet{})
 	test.FailIfError(t, err)
-	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2)
+	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, &configuration.Config{}, &configuration.Wallet{})
 	test.FailIfError(t, err)
 
 	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, 0, valAuth, client)

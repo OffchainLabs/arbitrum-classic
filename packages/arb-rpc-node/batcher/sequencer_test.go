@@ -177,6 +177,15 @@ func TestSequencerBatcher(t *testing.T) {
 		extraConfig,
 	)
 
+	config := configuration.Config{
+		Node: configuration.Node{
+			Sequencer: configuration.Sequencer{
+				CreateBatchBlockInterval:   50,
+				DelayedMessagesTargetDelay: 1,
+			},
+		},
+	}
+
 	bridgeUtilsAddr, _, _, err := ethbridgecontracts.DeployBridgeUtils(auth, client)
 	test.FailIfError(t, err)
 
@@ -192,7 +201,7 @@ func TestSequencerBatcher(t *testing.T) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, 0, client, bind.CallOpts{})
 	test.FailIfError(t, err)
 
-	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, &config, &config.Wallet)
 	test.FailIfError(t, err)
 
 	delayedInbox, err := ethbridge.NewStandardInbox(delayedInboxAddr, client, transactAuth)
@@ -212,10 +221,26 @@ func TestSequencerBatcher(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
-	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), 0, common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	_, err = seqMon.StartInboxReader(
+		ctx,
+		client,
+		common.NewAddressFromEth(rollupAddr),
+		0,
+		common.NewAddressFromEth(bridgeUtilsAddr),
+		nil,
+		dummySequencerFeed,
+	)
 	test.FailIfError(t, err)
 
-	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), 0, common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	_, err = otherMon.StartInboxReader(
+		ctx,
+		client,
+		common.NewAddressFromEth(rollupAddr),
+		0,
+		common.NewAddressFromEth(bridgeUtilsAddr),
+		nil,
+		dummySequencerFeed,
+	)
 	test.FailIfError(t, err)
 
 	batcher, err := NewSequencerBatcher(
@@ -224,14 +249,12 @@ func TestSequencerBatcher(t *testing.T) {
 		l2ChainId,
 		seqMon.Reader,
 		client,
-		configuration.Sequencer{
-			CreateBatchBlockInterval:   50,
-			DelayedMessagesTargetDelay: 1,
-		},
 		seqInbox,
 		auth,
 		dummyDataSigner,
 		nil,
+		&config,
+		&config.Wallet,
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true

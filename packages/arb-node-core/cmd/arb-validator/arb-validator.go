@@ -80,14 +80,14 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, wallet, l1Client, l1ChainId, err := configuration.ParseValidator(ctx)
+	config, walletConfig, l1Client, l1ChainId, err := configuration.ParseValidator(ctx)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		len(config.Validator.UtilsAddress) == 0 || len(config.Validator.WalletFactoryAddress) == 0 ||
 		len(config.Validator.Strategy) == 0 {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage: arb-validator --conf=<filename> \n")
-		fmt.Printf("          or: arb-validator --persistent.storage.path=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket>\n")
+		fmt.Printf("          or: arb-validator --persistent.storage.path=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket>\n\n")
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			fmt.Printf("%s\n", err.Error())
 		}
@@ -132,7 +132,7 @@ func startup() error {
 	bridgeUtilsAddr := ethcommon.HexToAddress(config.BridgeUtilsAddress)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
-	auth, _, err := cmdhelp.GetKeystore(config.Persistent.Chain, wallet, config.GasPrice, l1ChainId)
+	auth, _, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}
@@ -168,7 +168,7 @@ func startup() error {
 		}
 	}
 
-	valAuth, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
+	valAuth, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
@@ -182,7 +182,12 @@ func startup() error {
 			logger.Warn().Err(err).
 				Str("sender", auth.From.Hex()).
 				Msg("Failed to deploy validator wallet")
-			time.Sleep(time.Second * 5)
+
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(time.Second * 5):
+			}
 		}
 		chainState.ValidatorWallet = validatorAddress.String()
 

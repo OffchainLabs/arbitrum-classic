@@ -58,6 +58,15 @@ type Feed struct {
 	Output FeedOutput `koanf:"output"`
 }
 
+type Fireblocks struct {
+	APIKey        string `koanf:"api-key,omitempty"`
+	AssetId       string `koanf:"asset-id,omitempty"`
+	BaseURL       string `koanf:"base-url,omitempty"`
+	SourceAddress string `koanf:"source-address,omitempty"`
+	SourceId      string `koanf:"source-id,omitempty"`
+	SourceType    string `koanf:"source-type,omitempty"`
+}
+
 type Healthcheck struct {
 	Addr          string `koanf:"addr"`
 	Enable        bool   `koanf:"enable"`
@@ -146,7 +155,10 @@ type Validator struct {
 }
 
 type Wallet struct {
-	Password string `koanf:"password"`
+	Password              string `koanf:"password"`
+	PrivateKey            string `koanf:"private-key"`
+	FireblocksKeyPassword string `koanf:"fireblocks-key-password,omitempty"`
+	FireblocksPrivateKey  string `koanf:"fireblocks-private-key,omitempty"`
 }
 
 type Log struct {
@@ -158,6 +170,7 @@ type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               Conf        `koanf:"conf"`
 	Feed               Feed        `koanf:"feed"`
+	Fireblocks         Fireblocks  `koanf:"fireblocks"`
 	GasPrice           float64     `koanf:"gas-price"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
 	L1                 struct {
@@ -181,15 +194,34 @@ func (c *Config) GetValidatorDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "validator_db")
 }
 
+func ParseCLI() (*Config, *Wallet, error) {
+	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+
+	AddForwarderTarget(f)
+	AddWalletOptions(f)
+
+	k, err := beginCommonParse(f)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	out, wallet, err := endCommonParse(k)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return out, wallet, nil
+}
+
 func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
+	AddForwarderTarget(f)
 
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
-	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
@@ -236,7 +268,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
-	f.String("wallet.password", "", "password for wallet")
+	AddHealthcheckOptions(f)
 
 	k, err := beginCommonParse(f)
 	if err != nil {
@@ -411,6 +443,25 @@ func AddFeedOutputOptions(f *flag.FlagSet) {
 	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
 }
 
+func AddForwarderTarget(f *flag.FlagSet) {
+	f.String("node.forwarder.target", "", "url of another node to send transactions through")
+}
+
+func AddHealthcheckOptions(f *flag.FlagSet) {
+	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
+	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
+	f.Bool("healthcheck.l1-node", false, "enable checking the health of the L1 node")
+	f.Bool("healthcheck.metrics", false, "enable prometheus endpoint")
+	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
+	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
+	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
+}
+
+func AddWalletOptions(f *flag.FlagSet) {
+	f.String("wallet.password", "", "password for wallet")
+	f.String("wallet.private-key", "", "wallet private key string")
+}
+
 func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Bool("conf.dump", false, "print out currently active configuration file")
 	f.String("conf.env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
@@ -424,14 +475,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.StringSlice("feed.input.url", []string{}, "URL of sequencer feed source")
-
-	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
-	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
-	f.Bool("healthcheck.l1-node", false, "enable checking the health of the L1 node")
-	f.Bool("healthcheck.metrics", false, "enable prometheus endpoint")
-	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
-	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
-	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
 
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
@@ -567,8 +610,32 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	}
 	err := k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
 	if err != nil {
-
 		return nil, nil, err
+	}
+
+	if len(out.Fireblocks.APIKey) != 0 || len(out.Fireblocks.BaseURL) != 0 ||
+		len(out.Wallet.FireblocksPrivateKey) != 0 || len(out.Fireblocks.SourceAddress) != 0 ||
+		len(out.Fireblocks.SourceId) != 0 || len(out.Fireblocks.SourceType) != 0 {
+		if len(out.Fireblocks.APIKey) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.api-key")
+		}
+		if len(out.Fireblocks.BaseURL) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.base-url")
+		}
+		if len(out.Wallet.FireblocksPrivateKey) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.private-key")
+		}
+		if len(out.Fireblocks.SourceAddress) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-address")
+		}
+		if len(out.Fireblocks.SourceId) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-id")
+		}
+		if len(out.Fireblocks.SourceType) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-type")
+		}
+
+		out.Wallet.FireblocksPrivateKey = strings.Replace(out.Wallet.FireblocksPrivateKey, "\\n", "\n", -1)
 	}
 
 	if out.Conf.Dump {
@@ -592,6 +659,9 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	// Don't pass around password with normal configuration
 	wallet := out.Wallet
 	out.Wallet.Password = ""
+	out.Wallet.PrivateKey = ""
+	out.Wallet.FireblocksKeyPassword = ""
+	out.Wallet.FireblocksPrivateKey = ""
 
 	return &out, &wallet, nil
 }

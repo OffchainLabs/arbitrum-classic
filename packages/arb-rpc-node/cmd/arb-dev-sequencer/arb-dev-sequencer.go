@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -281,19 +281,25 @@ func startup() error {
 		Auth:        seqAuth,
 		Core:        mon.Core,
 		InboxReader: inboxReader,
-		Config: configuration.Sequencer{
-			CreateBatchBlockInterval:   *createBatchBlockInterval,
-			DelayedMessagesTargetDelay: *delayedMessagesTargetDelay,
-		},
 	}
-	settings := configuration.FeedOutput{
-		Addr:          "127.0.0.1",
-		IOTimeout:     2 * time.Second,
-		Port:          "9642",
-		Ping:          5 * time.Second,
-		ClientTimeout: 15 * time.Second,
-		Queue:         1,
-		Workers:       2,
+	config := configuration.Config{
+		Feed: configuration.Feed{
+			Output: configuration.FeedOutput{
+				Addr:          "127.0.0.1",
+				IOTimeout:     2 * time.Second,
+				Port:          "9642",
+				Ping:          5 * time.Second,
+				ClientTimeout: 15 * time.Second,
+				Queue:         1,
+				Workers:       2,
+			},
+		},
+		Node: configuration.Node{
+			Sequencer: configuration.Sequencer{
+				CreateBatchBlockInterval:   *createBatchBlockInterval,
+				DelayedMessagesTargetDelay: *delayedMessagesTargetDelay,
+			},
+		},
 	}
 
 	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond)
@@ -315,7 +321,8 @@ func startup() error {
 		time.Duration(5)*time.Second,
 		batcherMode,
 		signer,
-		settings,
+		&config,
+		&config.Wallet,
 	)
 	if err != nil {
 		return err

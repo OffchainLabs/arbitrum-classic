@@ -89,7 +89,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, wallet, l1Client, l1ChainId, err := configuration.ParseNode(ctx)
+	config, walletConfig, l1Client, l1ChainId, err := configuration.ParseNode(ctx)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		((config.Node.Type != "sequencer") && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
@@ -161,7 +161,12 @@ func startup() error {
 
 	l2ChainId := new(big.Int).SetUint64(config.Node.ChainID)
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
-	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", l2ChainId.Bytes()).Str("type", config.Node.Type).Msg("Launching arbitrum node")
+	logger.Info().
+		Hex("chainaddress", rollupAddress.Bytes()).
+		Hex("chainid", l2ChainId.Bytes()).
+		Str("type", config.Node.Type).
+		Int64("fromBlock", config.Rollup.FromBlock).
+		Msg("Launching arbitrum node")
 
 	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename)
 	if err != nil {
@@ -209,6 +214,7 @@ func startup() error {
 			Str("url", config.L1.URL).
 			Str("rollup", config.Rollup.Address).
 			Str("bridgeUtils", config.BridgeUtilsAddress).
+			Int64("fromBlock", config.Rollup.FromBlock).
 			Msg("failed to start inbox reader, waiting and retrying")
 
 		select {
@@ -225,7 +231,7 @@ func startup() error {
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
 	} else {
 		var auth *bind.TransactOpts
-		auth, dataSigner, err = cmdhelp.GetKeystore(config.Persistent.Chain, wallet, config.GasPrice, l1ChainId)
+		auth, dataSigner, err = cmdhelp.GetKeystore(config, walletConfig, l1ChainId)
 		if err != nil {
 			return errors.Wrap(err, "error running GetKeystore")
 		}
@@ -246,7 +252,6 @@ func startup() error {
 				Auth:        auth,
 				Core:        mon.Core,
 				InboxReader: inboxReader,
-				Config:      config.Node.Sequencer,
 			}
 		} else {
 			inboxAddress := common.HexToAddress(config.Node.Aggregator.InboxAddress)
@@ -282,7 +287,8 @@ func startup() error {
 			time.Duration(config.Node.Aggregator.MaxBatchTime)*time.Second,
 			batcherMode,
 			dataSigner,
-			config.Feed.Output,
+			config,
+			walletConfig,
 		)
 		lockoutConf := config.Node.Sequencer.Lockout
 		if err == nil && lockoutConf.Redis != "" {

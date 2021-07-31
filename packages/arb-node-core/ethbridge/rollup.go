@@ -81,7 +81,8 @@ func (r *Rollup) ConfirmNextNode(ctx context.Context, assertion *core.Assertion,
 		assertion.After.LogAcc,
 		assertion.After.TotalLogCount,
 	)
-	return errors.WithStack(err)
+	// Do not use errors.WithStack so that any existing error stack is preserved
+	return err
 }
 
 func (r *Rollup) NewStake(ctx context.Context, amount *big.Int) error {

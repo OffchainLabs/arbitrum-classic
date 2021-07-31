@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package challenge
 
 import (
@@ -21,6 +37,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
@@ -304,12 +321,12 @@ func initializeChallengeTest(
 	_, err = validatorCon2.Initialize(challenger)
 	test.FailIfError(t, err)
 
-	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter)
+	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter, &configuration.Config{}, &configuration.Wallet{})
 	test.FailIfError(t, err)
 	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, asserterAuth)
 	test.FailIfError(t, err)
 
-	challengerAuth, err := ethbridge.NewTransactAuth(ctx, client, challenger)
+	challengerAuth, err := ethbridge.NewTransactAuth(ctx, client, challenger, &configuration.Config{}, &configuration.Wallet{})
 	test.FailIfError(t, err)
 	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, challengerAuth)
 	test.FailIfError(t, err)

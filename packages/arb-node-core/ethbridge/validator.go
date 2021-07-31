@@ -177,6 +177,9 @@ func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethco
 	} else if len(logs) == 1 {
 		log := logs[0]
 		parsed, err := walletCreator.ParseWalletCreated(log)
+		if err != nil {
+			return ethcommon.Address{}, err
+		}
 		return parsed.WalletAddress, err
 	}
 

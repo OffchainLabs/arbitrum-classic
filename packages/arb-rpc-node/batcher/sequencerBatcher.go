@@ -22,10 +22,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -38,10 +34,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type SequencerLockoutManager interface {
@@ -70,7 +69,7 @@ type SequencerBatcher struct {
 	sequenceDelayedMessagesInterval *big.Int
 	createBatchBlockInterval        *big.Int
 	LockoutManager                  SequencerLockoutManager
-	config                          configuration.Sequencer
+	config                          *configuration.Config
 
 	sequencer common.Address
 	signer    types.Signer
@@ -100,11 +99,12 @@ func NewSequencerBatcher(
 	chainId *big.Int,
 	inboxReader *monitor.InboxReader,
 	client ethutils.EthClient,
-	config configuration.Sequencer,
 	sequencerInbox *ethbridgecontracts.SequencerInbox,
 	auth *bind.TransactOpts,
 	dataSigner func([]byte) ([]byte, error),
 	broadcaster *broadcaster.Broadcaster,
+	config *configuration.Config,
+	walletConfig *configuration.Wallet,
 ) (*SequencerBatcher, error) {
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
@@ -120,7 +120,7 @@ func NewSequencerBatcher(
 		return nil, errors.New("Transaction auth isn't for sequencer")
 	}
 
-	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, config, walletConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
-	if config.CreateBatchBlockInterval <= 0 || config.CreateBatchBlockInterval > maxDelayBlocks.Int64() {
+	if config.Node.Sequencer.CreateBatchBlockInterval <= 0 || config.Node.Sequencer.CreateBatchBlockInterval > maxDelayBlocks.Int64() {
 		return nil, errors.New("invalid batch creation block interval")
 	}
 
@@ -142,7 +142,7 @@ func NewSequencerBatcher(
 		db:                         db,
 		inboxReader:                inboxReader,
 		client:                     client,
-		delayedMessagesTargetDelay: big.NewInt(config.DelayedMessagesTargetDelay),
+		delayedMessagesTargetDelay: big.NewInt(config.Node.Sequencer.DelayedMessagesTargetDelay),
 		sequencerInbox:             sequencerInbox,
 		auth:                       transactAuth,
 		chainTimeCheckInterval:     time.Second,
@@ -155,7 +155,7 @@ func NewSequencerBatcher(
 		// TODO make these configurable
 		updateTimestampInterval:         big.NewInt(4),
 		sequenceDelayedMessagesInterval: big.NewInt(20),
-		createBatchBlockInterval:        big.NewInt(config.CreateBatchBlockInterval),
+		createBatchBlockInterval:        big.NewInt(config.Node.Sequencer.CreateBatchBlockInterval),
 
 		sequencer:              common.NewAddressFromEth(sequencer),
 		signer:                 types.NewEIP155Signer(chainId),
@@ -546,7 +546,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	if len(batchItems[0].SequencerMessage) >= 128*1024 {
 		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big!")
-		if b.config.ReorgOutHugeMessages {
+		if b.config.Node.Sequencer.ReorgOutHugeMessages {
 			err = b.reorgOutHugeMsg(ctx, prevMsgCount)
 			if err != nil {
 				return false, err
@@ -573,7 +573,10 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 {
 		logger.Error().Str("delayBlocks", delayBlocks.String()).Str("delaySeconds", delaySeconds.String()).Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
 
-		b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
+		err = b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
+		if err != nil {
+			return false, errors.Wrap(err, "error during reorg after exceeded max sequencer delay")
+		}
 
 		return false, errors.New("exceeded max sequencer delay, reorganized to compensate")
 	}
@@ -845,7 +848,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			} else {
 				// Schedule another run sooner
 				b.lastCreatedBatchAt = new(big.Int).Sub(blockNum, b.createBatchBlockInterval)
-				b.lastCreatedBatchAt.Add(b.lastCreatedBatchAt, big.NewInt(b.config.ContinueBatchPostingBlockInterval))
+				b.lastCreatedBatchAt.Add(b.lastCreatedBatchAt, big.NewInt(b.config.Node.Sequencer.ContinueBatchPostingBlockInterval))
 			}
 		}
 		firstBoot = false
