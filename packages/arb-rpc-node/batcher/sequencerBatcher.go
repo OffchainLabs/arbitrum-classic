@@ -767,7 +767,9 @@ func (b *SequencerBatcher) reorgOutHugeMsg(ctx context.Context, prevMsgCount *bi
 		}
 	}
 	for i := range batchItems {
-		batchItems[i].Accumulator = common.Hash{}
+		item := &batchItems[i]
+		item.LastSeqNum.Sub(item.LastSeqNum, big.NewInt(1))
+		item.Accumulator = common.Hash{}
 	}
 	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
