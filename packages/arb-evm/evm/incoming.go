@@ -51,9 +51,18 @@ func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 		return nil, errors.New("message not convertible to receipt")
 	}
 	l2Type := l2msg.L2Type()
+
+	tx := ethMsg.AsEthTx()
+	if res.ResultCode == ReturnCode && ethMsg.AsEthTx().To() == nil && len(res.ReturnData) == 0 {
+		ethMsg, ok := ethMsg.(message.ContractTransaction)
+		if ok {
+			// If we're in a successful retryable send to the 0 address, it wasn't treated as contract construction
+			tx = ethMsg.AsNonConstructorTx()
+		}
+	}
 	return &ProcessedTx{
 		Result:    res,
-		Tx:        ethMsg.AsEthTx(),
+		Tx:        tx,
 		Kind:      msg.Kind,
 		L2Subtype: &l2Type,
 	}, nil
