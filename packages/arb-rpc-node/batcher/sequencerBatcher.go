@@ -238,200 +238,209 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		return err
 	}
 
-	var batchTxs []*types.Transaction
-	var resultChans []chan error
-	var l2BatchContents []message.AbstractL2Message
-	var batchDataSize int
-	seenOwnTx := false
-	// This pattern is safe as we acquired a lock so we are the exclusive reader
-	for len(b.txQueue) > 0 {
-		queueItem := <-b.txQueue
-		if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
-			// This batch would be too large to publish with this tx added.
-			// Put the tx back in the queue so it can be included later.
-			b.txQueue <- queueItem
-			break
+	for {
+		var batchTxs []*types.Transaction
+		var resultChans []chan error
+		var l2BatchContents []message.AbstractL2Message
+		var batchDataSize int
+		seenOwnTx := false
+		emptiedQueue := true
+		// This pattern is safe as we acquired a lock so we are the exclusive reader
+		for len(b.txQueue) > 0 {
+			queueItem := <-b.txQueue
+			if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
+				// This batch would be too large to publish with this tx added.
+				// Put the tx back in the queue so it can be included later.
+				b.txQueue <- queueItem
+				emptiedQueue = false
+				break
+			}
+			if queueItem.tx == startTx {
+				seenOwnTx = true
+			}
+			batchTxs = append(batchTxs, queueItem.tx)
+			resultChans = append(resultChans, queueItem.resultChan)
+			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(queueItem.tx))
+			batchDataSize += len(queueItem.tx.Data())
 		}
-		if queueItem.tx == startTx {
-			seenOwnTx = true
+		if !seenOwnTx && emptiedQueue {
+			// Another thread must have encountered an internal error attempting to process startTx
+			// Let's try again ourselves (if we fail this time we won't try again)
+			batchTxs = append(batchTxs, startTx)
+			resultChans = append(resultChans, startResultChan)
+			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(startTx))
 		}
-		batchTxs = append(batchTxs, queueItem.tx)
-		resultChans = append(resultChans, queueItem.resultChan)
-		l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(queueItem.tx))
-		batchDataSize += len(queueItem.tx.Data())
-	}
-	if !seenOwnTx {
-		// Another thread must have encountered an internal error attempting to process startTx
-		// Let's try again ourselves (if we fail this time we won't try again)
-		batchTxs = append(batchTxs, startTx)
-		resultChans = append(resultChans, startResultChan)
-		l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(startTx))
-	}
-	logger.Info().Int("count", len(l2BatchContents)).Msg("gather user txes")
+		logger.Info().Int("count", len(l2BatchContents)).Msg("gather user txes")
 
-	msgCount, err := b.db.GetMessageCount()
-	if err != nil {
-		return err
-	}
-	var prevAcc common.Hash
-	if msgCount.Cmp(big.NewInt(0)) > 0 {
-		prevAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(msgCount, big.NewInt(1)))
+		msgCount, err := b.db.GetMessageCount()
 		if err != nil {
 			return err
 		}
-	}
-	originalAcc := prevAcc
-	totalDelayedCount, err := b.db.GetTotalDelayedMessagesSequenced()
-	if err != nil {
-		return err
-	}
-	if totalDelayedCount.Cmp(big.NewInt(0)) == 0 {
-		return errors.New("chain not yet initialized")
-	}
-
-	batch, err := message.NewTransactionBatchFromMessages(l2BatchContents)
-	if err != nil {
-		return err
-	}
-	l2Message := message.NewSafeL2Message(batch)
-	seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
-
-	logCount, err := b.db.GetLogCount()
-	if err != nil {
-		return err
-	}
-
-	txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
-	err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
-	if err != nil {
-		return err
-	}
-	core.WaitForMachineIdle(b.db)
-
-	var sequencedTxs []*types.Transaction
-	var sequencedBatchItems []inbox.SequencerBatchItem
-
-	newLogCount, err := b.db.GetLogCount()
-	if err != nil {
-		return err
-	}
-	txLogs, err := b.db.GetLogs(logCount, new(big.Int).Sub(newLogCount, logCount))
-	if err != nil {
-		return err
-	}
-	txResults, err := txLogsToResults(txLogs)
-	if err != nil {
-		return err
-	}
-
-	txHashes := make([]common.Hash, 0, len(batchTxs))
-	for _, tx := range batchTxs {
-		txHashes = append(txHashes, common.NewHashFromEth(tx.Hash()))
-	}
-
-	successCount := 0
-	for _, hash := range txHashes {
-		if shouldIncludeTxResult(txResults[hash]) {
-			successCount++
+		var prevAcc common.Hash
+		if msgCount.Cmp(big.NewInt(0)) > 0 {
+			prevAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(msgCount, big.NewInt(1)))
+			if err != nil {
+				return err
+			}
 		}
-	}
-	if successCount == len(batchTxs) {
-		sequencedTxs = batchTxs
-		msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
-		prevAcc = txBatchItem.Accumulator
-		sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
-		for _, c := range resultChans {
-			c <- nil
+		originalAcc := prevAcc
+		totalDelayedCount, err := b.db.GetTotalDelayedMessagesSequenced()
+		if err != nil {
+			return err
 		}
-	} else {
-		// Reorg to before we processed the batch and re-process the messages individually
-		err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, nil, nil, msgCount)
+		if totalDelayedCount.Cmp(big.NewInt(0)) == 0 {
+			return errors.New("chain not yet initialized")
+		}
+
+		batch, err := message.NewTransactionBatchFromMessages(l2BatchContents)
+		if err != nil {
+			return err
+		}
+		l2Message := message.NewSafeL2Message(batch)
+		seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
+
+		logCount, err := b.db.GetLogCount()
+		if err != nil {
+			return err
+		}
+
+		txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
+		err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return err
 		}
 		core.WaitForMachineIdle(b.db)
-		if successCount == 0 {
-			// All of the transactions failed
-			for i, c := range resultChans {
-				c <- evm.HandleCallError(txResults[txHashes[i]], false)
-			}
-			return <-startResultChan
+
+		var sequencedTxs []*types.Transaction
+		var sequencedBatchItems []inbox.SequencerBatchItem
+
+		newLogCount, err := b.db.GetLogCount()
+		if err != nil {
+			return err
 		}
-		// At least one of the transactions failed and one of the transactions succeeded
-		for i, tx := range batchTxs {
-			txHash := txHashes[i]
-			if !shouldIncludeTxResult(txResults[txHash]) {
-				resultChans[i] <- evm.HandleCallError(txResults[txHash], false)
-				continue
+		txLogs, err := b.db.GetLogs(logCount, new(big.Int).Sub(newLogCount, logCount))
+		if err != nil {
+			return err
+		}
+		txResults, err := txLogsToResults(txLogs)
+		if err != nil {
+			return err
+		}
+
+		txHashes := make([]common.Hash, 0, len(batchTxs))
+		for _, tx := range batchTxs {
+			txHashes = append(txHashes, common.NewHashFromEth(tx.Hash()))
+		}
+
+		successCount := 0
+		for _, hash := range txHashes {
+			if shouldIncludeTxResult(txResults[hash]) {
+				successCount++
 			}
-			l2Msg := message.NewCompressedECDSAFromEth(tx)
-			batch, err = message.NewTransactionBatchFromMessages([]message.AbstractL2Message{l2Msg})
-			if err != nil {
-				return err
+		}
+		if successCount == len(batchTxs) {
+			sequencedTxs = batchTxs
+			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
+			prevAcc = txBatchItem.Accumulator
+			sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
+			for _, c := range resultChans {
+				c <- nil
 			}
-			l2Message := message.NewSafeL2Message(batch)
-			seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
-			txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
-			err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
+		} else {
+			// Reorg to before we processed the batch and re-process the messages individually
+			err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, nil, nil, msgCount)
 			if err != nil {
 				return err
 			}
 			core.WaitForMachineIdle(b.db)
-			newLogCount, err = b.db.GetLogCount()
-			if err != nil {
-				return err
+			if successCount == 0 {
+				// All of the transactions failed
+				for i, c := range resultChans {
+					c <- evm.HandleCallError(txResults[txHashes[i]], false)
+				}
+				return <-startResultChan
 			}
-			txLogs, err = b.db.GetLogs(logCount, new(big.Int).Sub(newLogCount, logCount))
-			if err != nil {
-				return err
-			}
-			newTxResults, err := txLogsToResults(txLogs)
-			if err != nil {
-				return err
-			}
-			txResult := newTxResults[txHash]
-			if !shouldIncludeTxResult(txResult) {
-				err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, nil, nil, msgCount)
+			// At least one of the transactions failed and one of the transactions succeeded
+			for i, tx := range batchTxs {
+				txHash := txHashes[i]
+				if !shouldIncludeTxResult(txResults[txHash]) {
+					resultChans[i] <- evm.HandleCallError(txResults[txHash], false)
+					continue
+				}
+				l2Msg := message.NewCompressedECDSAFromEth(tx)
+				batch, err = message.NewTransactionBatchFromMessages([]message.AbstractL2Message{l2Msg})
 				if err != nil {
 					return err
 				}
-				resultChans[i] <- evm.HandleCallError(txResult, false)
-				continue
+				l2Message := message.NewSafeL2Message(batch)
+				seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
+				txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
+				err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
+				if err != nil {
+					return err
+				}
+				core.WaitForMachineIdle(b.db)
+				newLogCount, err = b.db.GetLogCount()
+				if err != nil {
+					return err
+				}
+				txLogs, err = b.db.GetLogs(logCount, new(big.Int).Sub(newLogCount, logCount))
+				if err != nil {
+					return err
+				}
+				newTxResults, err := txLogsToResults(txLogs)
+				if err != nil {
+					return err
+				}
+				txResult := newTxResults[txHash]
+				if !shouldIncludeTxResult(txResult) {
+					err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, nil, nil, msgCount)
+					if err != nil {
+						return err
+					}
+					resultChans[i] <- evm.HandleCallError(txResult, false)
+					continue
+				}
+				msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
+				prevAcc = txBatchItem.Accumulator
+				sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
+				sequencedTxs = append(sequencedTxs, tx)
+				logCount = newLogCount
+				resultChans[i] <- nil
 			}
-			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
-			prevAcc = txBatchItem.Accumulator
-			sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
-			sequencedTxs = append(sequencedTxs, tx)
-			logCount = newLogCount
-			resultChans[i] <- nil
 		}
-	}
 
-	newBlockMessage := message.NewInboxMessage(
-		message.EndBlockMessage{},
-		b.sequencer,
-		new(big.Int).Set(msgCount),
-		big.NewInt(0),
-		b.latestChainTime.Clone(),
-	)
+		newBlockMessage := message.NewInboxMessage(
+			message.EndBlockMessage{},
+			b.sequencer,
+			new(big.Int).Set(msgCount),
+			big.NewInt(0),
+			b.latestChainTime.Clone(),
+		)
 
-	newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
-	sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
-	err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
-	if err != nil {
-		return err
-	}
-
-	if b.feedBroadcaster != nil {
-		err = b.feedBroadcaster.Broadcast(originalAcc, sequencedBatchItems, b.dataSigner)
+		newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
+		sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
+		err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return err
 		}
+
+		if b.feedBroadcaster != nil {
+			err = b.feedBroadcaster.Broadcast(originalAcc, sequencedBatchItems, b.dataSigner)
+			if err != nil {
+				return err
+			}
+		}
+
+		core.WaitForMachineIdle(b.db)
+
+		b.newTxFeed.Send(ethcore.NewTxsEvent{Txs: sequencedTxs})
+
+		if emptiedQueue || seenOwnTx {
+			break
+		}
 	}
 
-	core.WaitForMachineIdle(b.db)
-
-	b.newTxFeed.Send(ethcore.NewTxsEvent{Txs: sequencedTxs})
 	return <-startResultChan
 }
 
