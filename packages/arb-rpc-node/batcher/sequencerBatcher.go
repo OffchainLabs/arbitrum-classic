@@ -134,7 +134,7 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
-	if config.CreateBatchBlockInterval < 0 || config.CreateBatchBlockInterval > maxDelayBlocks.Int64() {
+	if config.CreateBatchBlockInterval <= 0 || config.CreateBatchBlockInterval > maxDelayBlocks.Int64() {
 		return nil, errors.New("invalid batch creation block interval")
 	}
 
