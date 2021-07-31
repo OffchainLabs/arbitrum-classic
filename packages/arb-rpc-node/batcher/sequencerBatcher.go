@@ -519,6 +519,8 @@ const gasCostPerMessage int = 1431
 const gasCostPerMessageByte int = 16
 const gasCostMaximum int = 2_000_000
 
+const reorgOutHugeMessages bool = false
+
 // Updates both prevMsgCount and nonce on success
 func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum *big.Int, prevMsgCount *big.Int, nonce *big.Int) (bool, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
@@ -532,12 +534,14 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	}
 
 	if len(batchItems[0].SequencerMessage) >= 128*1024 {
-		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big! Reorganizing out")
-		err = b.reorgOutHugeMsg(ctx, prevMsgCount)
-		if err != nil {
-			return false, err
+		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big!")
+		if reorgOutHugeMessages {
+			err = b.reorgOutHugeMsg(ctx, prevMsgCount)
+			if err != nil {
+				return false, err
+			}
+			return false, errors.New("reorganized out huge message")
 		}
-		return false, errors.New("reorganized out enormous transaction")
 	}
 
 	// Check if we need to reorg because we've exceeded the window
