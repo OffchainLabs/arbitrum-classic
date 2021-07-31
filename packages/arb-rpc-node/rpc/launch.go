@@ -44,7 +44,7 @@ type BatcherMode interface {
 }
 
 type ForwarderBatcherMode struct {
-	NodeURL string
+	Config configuration.Forwarder
 }
 
 func (b ForwarderBatcherMode) isBatcherMode() {}
@@ -64,11 +64,10 @@ type StatelessBatcherMode struct {
 func (b StatelessBatcherMode) isBatcherMode() {}
 
 type SequencerBatcherMode struct {
-	Auth                       *bind.TransactOpts
-	Core                       core.ArbCore
-	InboxReader                *monitor.InboxReader
-	DelayedMessagesTargetDelay *big.Int
-	CreateBatchBlockInterval   *big.Int
+	Auth        *bind.TransactOpts
+	Core        core.ArbCore
+	InboxReader *monitor.InboxReader
+	Config      configuration.Sequencer
 }
 
 func (b SequencerBatcherMode) isBatcherMode() {}
@@ -87,7 +86,7 @@ func SetupBatcher(
 ) (batcher.TransactionBatcher, error) {
 	switch batcherMode := batcherMode.(type) {
 	case ForwarderBatcherMode:
-		return batcher.NewForwarder(ctx, batcherMode.NodeURL)
+		return batcher.NewForwarder(ctx, batcherMode.Config)
 	case StatelessBatcherMode:
 		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, gasPriceUrl)
 		if err != nil {
@@ -129,8 +128,7 @@ func SetupBatcher(
 			l2ChainId,
 			batcherMode.InboxReader,
 			client,
-			batcherMode.DelayedMessagesTargetDelay,
-			batcherMode.CreateBatchBlockInterval,
+			batcherMode.Config,
 			seqInbox,
 			batcherMode.Auth,
 			dataSigner,

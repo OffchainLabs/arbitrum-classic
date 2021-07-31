@@ -30,6 +30,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 type Forwarder struct {
@@ -42,32 +43,38 @@ type AggregatorInfo struct {
 	Address *ethcommon.Address `json:"address"`
 }
 
-func NewForwarder(ctx context.Context, url string) (*Forwarder, error) {
-	client, err := ethclient.DialContext(ctx, url)
+func NewForwarder(ctx context.Context, config configuration.Forwarder) (*Forwarder, error) {
+	client, err := ethclient.DialContext(ctx, config.Target)
 	if err != nil {
 		return nil, err
 	}
 
-	rpcClient, err := rpc.DialContext(ctx, url)
-	if err != nil {
-		return nil, err
-	}
-	var raw json.RawMessage
-	if err := rpcClient.CallContext(ctx, &raw, "arb_getAggregator"); err != nil {
-		return nil, err
-	}
-	if len(raw) == 0 {
-		return nil, ethereum.NotFound
-	}
-	var ret AggregatorInfo
-	if err := json.Unmarshal(raw, &ret); err != nil {
-		return nil, err
-	}
 	var agg *common.Address
-	if ret.Address != nil {
-		tmp := common.NewAddressFromEth(*ret.Address)
+	if config.Submitter != "" {
+		tmp := common.HexToAddress(config.Submitter)
 		agg = &tmp
+	} else {
+		rpcClient, err := rpc.DialContext(ctx, config.Target)
+		if err != nil {
+			return nil, err
+		}
+		var raw json.RawMessage
+		if err := rpcClient.CallContext(ctx, &raw, "arb_getAggregator"); err != nil {
+			return nil, err
+		}
+		if len(raw) == 0 {
+			return nil, ethereum.NotFound
+		}
+		var ret AggregatorInfo
+		if err := json.Unmarshal(raw, &ret); err != nil {
+			return nil, err
+		}
+		if ret.Address != nil {
+			tmp := common.NewAddressFromEth(*ret.Address)
+			agg = &tmp
+		}
 	}
+
 	return &Forwarder{client: client, aggregator: agg}, nil
 }
 
