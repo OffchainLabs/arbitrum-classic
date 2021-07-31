@@ -532,6 +532,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	}
 
 	if len(batchItems[0].SequencerMessage) >= 128*1024 {
+		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big! Reorganizing out")
 		err = b.reorgOutHugeMsg(ctx, prevMsgCount)
 		if err != nil {
 			return false, err
