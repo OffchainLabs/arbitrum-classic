@@ -208,11 +208,16 @@ func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) 
 	return resMap, nil
 }
 
+const maxTxDataSize int = 100_000
+
 func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Transaction) error {
 	_, err := types.Sender(b.signer, startTx)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error processing user transaction")
 		return err
+	}
+	if len(startTx.Data()) > maxTxDataSize {
+		return errors.New("oversized data")
 	}
 	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
 	startResultChan := make(chan error, 1)
@@ -236,16 +241,23 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	var batchTxs []*types.Transaction
 	var resultChans []chan error
 	var l2BatchContents []message.AbstractL2Message
+	var batchDataSize int
 	seenOwnTx := false
 	// This pattern is safe as we acquired a lock so we are the exclusive reader
 	for len(b.txQueue) > 0 {
 		queueItem := <-b.txQueue
+		if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
+			// This batch would be too large to publish
+			b.txQueue <- queueItem
+			break
+		}
 		if queueItem.tx == startTx {
 			seenOwnTx = true
 		}
 		batchTxs = append(batchTxs, queueItem.tx)
 		resultChans = append(resultChans, queueItem.resultChan)
 		l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(queueItem.tx))
+		batchDataSize += len(queueItem.tx.Data())
 	}
 	if !seenOwnTx {
 		// Another thread must have encountered an internal error attempting to process startTx
@@ -519,6 +531,14 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 		return true, nil
 	}
 
+	if len(batchItems[0].SequencerMessage) >= 128*1024 {
+		err = b.reorgOutHugeMsg(ctx, prevMsgCount)
+		if err != nil {
+			return false, err
+		}
+		return false, errors.New("reorganized out enormous transaction")
+	}
+
 	// Check if we need to reorg because we've exceeded the window
 	firstSeqBatchItem := batchItems[0]
 	if len(firstSeqBatchItem.SequencerMessage) == 0 {
@@ -704,6 +724,33 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 			item.Accumulator = common.Hash{}
 		}
 		batchItems[i] = item
+	}
+	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *SequencerBatcher) reorgOutHugeMsg(ctx context.Context, prevMsgCount *big.Int) error {
+	b.inboxReader.MessageDeliveryMutex.Lock()
+	defer b.inboxReader.MessageDeliveryMutex.Unlock()
+
+	batchItems, err := b.db.GetSequencerBatchItems(new(big.Int).Add(prevMsgCount, big.NewInt(1)))
+	if err != nil {
+		return err
+	}
+
+	var previousSeqBatchAcc common.Hash
+	if prevMsgCount.Cmp(big.NewInt(0)) > 0 {
+		previousSeqBatchAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(prevMsgCount, big.NewInt(1)))
+		if err != nil {
+			return err
+		}
+	}
+	for i := range batchItems {
+		batchItems[i].Accumulator = common.Hash{}
 	}
 	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
