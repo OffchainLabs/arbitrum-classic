@@ -97,10 +97,11 @@ type S3 struct {
 }
 
 type Sequencer struct {
-	CreateBatchBlockInterval   int64   `koanf:"create-batch-block-interval"`
-	DelayedMessagesTargetDelay int64   `koanf:"delayed-messages-target-delay"`
-	ReorgOutHugeMessages       bool    `koanf:"reorg-out-huge-messages"`
-	Lockout                    Lockout `koanf:"lockout"`
+	CreateBatchBlockInterval          int64   `koanf:"create-batch-block-interval"`
+	ContinueBatchPostingBlockInterval int64   `koanf:"continue-batch-posting-block-interval"`
+	DelayedMessagesTargetDelay        int64   `koanf:"delayed-messages-target-delay"`
+	ReorgOutHugeMessages              bool    `koanf:"reorg-out-huge-messages"`
+	Lockout                           Lockout `koanf:"lockout"`
 }
 
 type WS struct {
@@ -195,6 +196,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
+	f.Int64("node.sequencer.continue-batch-posting-block-interval", 2, "block interval to post the next batch after posting a partial one")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	f.Bool("node.sequencer.reorg-out-huge-messages", false, "erase any huge messages in database that cannot be published (DANGEROUS)")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
