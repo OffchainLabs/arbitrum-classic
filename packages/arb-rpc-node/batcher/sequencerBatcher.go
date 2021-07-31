@@ -70,7 +70,7 @@ type SequencerBatcher struct {
 	sequenceDelayedMessagesInterval *big.Int
 	createBatchBlockInterval        *big.Int
 	LockoutManager                  SequencerLockoutManager
-	reorgOutHugeMessages            bool
+	config                          configuration.Sequencer
 
 	sequencer common.Address
 	signer    types.Signer
@@ -151,7 +151,7 @@ func NewSequencerBatcher(
 		dataSigner:                 dataSigner,
 		maxDelayBlocks:             maxDelayBlocks,
 		maxDelaySeconds:            maxDelaySeconds,
-		reorgOutHugeMessages:       config.ReorgOutHugeMessages,
+		config:                     config,
 
 		// TODO make these configurable
 		updateTimestampInterval:         big.NewInt(4),
@@ -547,7 +547,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	if len(batchItems[0].SequencerMessage) >= 128*1024 {
 		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big!")
-		if b.reorgOutHugeMessages {
+		if b.config.ReorgOutHugeMessages {
 			err = b.reorgOutHugeMsg(ctx, prevMsgCount)
 			if err != nil {
 				return false, err
@@ -844,9 +844,9 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			} else if complete {
 				b.lastCreatedBatchAt = blockNum
 			} else {
-				// Schedule another run in 5 minutes
+				// Schedule another run sooner
 				b.lastCreatedBatchAt = new(big.Int).Sub(blockNum, b.createBatchBlockInterval)
-				b.lastCreatedBatchAt.Add(b.lastCreatedBatchAt, big.NewInt(20))
+				b.lastCreatedBatchAt.Add(b.lastCreatedBatchAt, big.NewInt(b.config.ContinueBatchPostingBlockInterval))
 			}
 		}
 		firstBoot = false
