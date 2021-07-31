@@ -243,11 +243,10 @@ func startup() error {
 
 		if config.Node.Type == "sequencer" {
 			batcherMode = rpc.SequencerBatcherMode{
-				Auth:                       auth,
-				Core:                       mon.Core,
-				InboxReader:                inboxReader,
-				DelayedMessagesTargetDelay: big.NewInt(config.Node.Sequencer.DelayedMessagesTargetDelay),
-				CreateBatchBlockInterval:   big.NewInt(config.Node.Sequencer.CreateBatchBlockInterval),
+				Auth:        auth,
+				Core:        mon.Core,
+				InboxReader: inboxReader,
+				Config:      config.Node.Sequencer,
 			}
 		} else {
 			inboxAddress := common.HexToAddress(config.Node.Aggregator.InboxAddress)
