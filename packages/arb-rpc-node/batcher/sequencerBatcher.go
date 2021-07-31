@@ -70,6 +70,7 @@ type SequencerBatcher struct {
 	sequenceDelayedMessagesInterval *big.Int
 	createBatchBlockInterval        *big.Int
 	LockoutManager                  SequencerLockoutManager
+	reorgOutHugeMessages            bool
 
 	sequencer common.Address
 	signer    types.Signer
@@ -150,6 +151,7 @@ func NewSequencerBatcher(
 		dataSigner:                 dataSigner,
 		maxDelayBlocks:             maxDelayBlocks,
 		maxDelaySeconds:            maxDelaySeconds,
+		reorgOutHugeMessages:       config.ReorgOutHugeMessages,
 
 		// TODO make these configurable
 		updateTimestampInterval:         big.NewInt(4),
@@ -531,8 +533,6 @@ const gasCostPerMessage int = 1431
 const gasCostPerMessageByte int = 16
 const gasCostMaximum int = 2_000_000
 
-const reorgOutHugeMessages bool = false
-
 // Updates both prevMsgCount and nonce on success
 func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum *big.Int, prevMsgCount *big.Int, nonce *big.Int) (bool, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
@@ -547,7 +547,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	if len(batchItems[0].SequencerMessage) >= 128*1024 {
 		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big!")
-		if reorgOutHugeMessages {
+		if b.reorgOutHugeMessages {
 			err = b.reorgOutHugeMsg(ctx, prevMsgCount)
 			if err != nil {
 				return false, err
@@ -767,7 +767,9 @@ func (b *SequencerBatcher) reorgOutHugeMsg(ctx context.Context, prevMsgCount *bi
 		}
 	}
 	for i := range batchItems {
-		batchItems[i].Accumulator = common.Hash{}
+		item := &batchItems[i]
+		item.LastSeqNum.Sub(item.LastSeqNum, big.NewInt(1))
+		item.Accumulator = common.Hash{}
 	}
 	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
