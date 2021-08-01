@@ -82,13 +82,12 @@ func SetupBatcher(
 	batcherMode BatcherMode,
 	dataSigner func([]byte) ([]byte, error),
 	broadcasterSettings configuration.FeedOutput,
-	gasPriceUrl string,
 ) (batcher.TransactionBatcher, error) {
 	switch batcherMode := batcherMode.(type) {
 	case ForwarderBatcherMode:
 		return batcher.NewForwarder(ctx, batcherMode.Config)
 	case StatelessBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, gasPriceUrl)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +97,7 @@ func SetupBatcher(
 		}
 		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime), nil
 	case StatefulBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, gasPriceUrl)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +132,6 @@ func SetupBatcher(
 			batcherMode.Auth,
 			dataSigner,
 			feedBroadcaster,
-			gasPriceUrl,
 		)
 		if err != nil {
 			return nil, err
