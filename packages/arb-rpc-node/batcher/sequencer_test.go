@@ -192,7 +192,7 @@ func TestSequencerBatcher(t *testing.T) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, 0, client, bind.CallOpts{})
 	test.FailIfError(t, err)
 
-	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
+	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
 	test.FailIfError(t, err)
 
 	delayedInbox, err := ethbridge.NewStandardInbox(delayedInboxAddr, client, transactAuth)
@@ -232,7 +232,6 @@ func TestSequencerBatcher(t *testing.T) {
 		auth,
 		dummyDataSigner,
 		nil,
-		"",
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true

@@ -105,7 +105,6 @@ func NewSequencerBatcher(
 	auth *bind.TransactOpts,
 	dataSigner func([]byte) ([]byte, error),
 	broadcaster *broadcaster.Broadcaster,
-	gasPriceUrl string,
 ) (*SequencerBatcher, error) {
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
@@ -121,7 +120,7 @@ func NewSequencerBatcher(
 		return nil, errors.New("Transaction auth isn't for sequencer")
 	}
 
-	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, gasPriceUrl)
+	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
 	if err != nil {
 		return nil, err
 	}

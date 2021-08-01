@@ -316,7 +316,6 @@ func startup() error {
 		batcherMode,
 		signer,
 		settings,
-		"",
 	)
 	if err != nil {
 		return err
