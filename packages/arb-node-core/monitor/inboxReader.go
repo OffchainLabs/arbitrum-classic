@@ -64,9 +64,6 @@ const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
 
 type InboxReader struct {
 	// Only in run thread
-	delayedBridge      *ethbridge.DelayedBridgeWatcher
-	sequencerInbox     *ethbridge.SequencerInboxWatcher
-	bridgeUtils        *ethbridge.BridgeUtils
 	db                 core.ArbCore
 	firstMessageBlock  *big.Int
 	caughtUp           bool
@@ -83,6 +80,9 @@ type InboxReader struct {
 	completed  chan bool
 
 	// Thread safe
+	delayedBridge        *ethbridge.DelayedBridgeWatcher
+	sequencerInbox       *ethbridge.SequencerInboxWatcher
+	bridgeUtils          *ethbridge.BridgeUtils
 	caughtUpChan         chan bool
 	MessageDeliveryMutex sync.Mutex
 	BroadcastFeed        chan broadcaster.BroadcastFeedMessage
@@ -542,4 +542,8 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		ir.lastAcc = seqBatchItems[len(seqBatchItems)-1].Accumulator
 	}
 	return false, nil
+}
+
+func (ir *InboxReader) GetDelayedAccumulator(ctx context.Context, sequenceNumber *big.Int, blockNumber *big.Int) (common.Hash, error) {
+	return ir.delayedBridge.GetAccumulator(ctx, sequenceNumber, blockNumber)
 }

@@ -473,7 +473,7 @@ func (b *SequencerBatcher) Aggregator() *common.Address {
 	return &b.sequencer
 }
 
-func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (bool, error) {
+func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime inbox.ChainTime) (bool, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 	if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
@@ -487,7 +487,8 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (bo
 	if err != nil {
 		return false, err
 	}
-	newDelayedCount, err := b.db.GetDelayedMessagesToSequence(new(big.Int).Sub(chainTime.BlockNum.AsInt(), b.delayedMessagesTargetDelay))
+	lastConfirmedL1Block := new(big.Int).Sub(chainTime.BlockNum.AsInt(), b.delayedMessagesTargetDelay)
+	newDelayedCount, err := b.db.GetDelayedMessagesToSequence(lastConfirmedL1Block)
 	if err != nil {
 		return false, err
 	}
@@ -508,9 +509,26 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (bo
 			return false, err
 		}
 	}
-	delayedAcc, err := b.db.GetDelayedInboxAcc(new(big.Int).Sub(newDelayedCount, big.NewInt(1)))
+	lastDelayedSeqNum := new(big.Int).Sub(newDelayedCount, big.NewInt(1))
+	delayedAcc, err := b.db.GetDelayedInboxAcc(lastDelayedSeqNum)
 	if err != nil {
 		return false, err
+	}
+	_, isSimulatedBackend := b.client.(*ethutils.SimulatedEthClient)
+	var getDelayedAccTarget *big.Int
+	if isSimulatedBackend {
+		// The simulated backend doesn't support querying against old blocks
+		getDelayedAccTarget = chainTime.BlockNum.AsInt()
+	} else {
+		// Confirm that the message wasn't reorganized forwards to a further reorganizable block
+		getDelayedAccTarget = lastConfirmedL1Block
+	}
+	l1DelayedAcc, err := b.inboxReader.GetDelayedAccumulator(ctx, lastDelayedSeqNum, getDelayedAccTarget)
+	if err != nil {
+		return false, err
+	}
+	if delayedAcc != l1DelayedAcc {
+		return false, errors.New("inbox reader missed delayed inbox reorg")
 	}
 	batchItem := inbox.NewDelayedItem(lastSeqNum, newDelayedCount, prevAcc, oldDelayedCount, delayedAcc)
 	logger.Info().
@@ -844,7 +862,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
 		sequencedDelayed := false
 		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch || firstDelayedSequence || atomic.LoadInt32(&b.waitingOnDelayedAtomic) != 0 {
-			sequencedDelayed, err = b.deliverDelayedMessages(chainTime)
+			sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime)
 			if err != nil {
 				logger.Error().Err(err).Msg("Error delivering delayed messages")
 				continue
