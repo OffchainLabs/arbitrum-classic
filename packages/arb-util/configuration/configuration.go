@@ -159,7 +159,6 @@ type Config struct {
 	Conf               Conf        `koanf:"conf"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
-	GasPriceUrl        string      `koanf:"gas-price-url"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
 	L1                 struct {
 		URL string `koanf:"url"`
@@ -223,8 +222,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
-	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
-	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
+	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 
 	f.Uint64("node.chain-id", 42161, "chain id of the arbitrum chain")
 
