@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync/atomic"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
@@ -80,6 +81,7 @@ type SequencerBatcher struct {
 	latestChainTime        inbox.ChainTime
 	lastCreatedBatchAt     *big.Int
 	lastSequencedDelayedAt *big.Int
+	publishingBatchAtomic  int32
 }
 
 func getChainTime(ctx context.Context, client ethutils.EthClient) (inbox.ChainTime, error) {
@@ -165,6 +167,7 @@ func NewSequencerBatcher(
 		latestChainTime:        chainTime,
 		lastSequencedDelayedAt: chainTime.BlockNum.AsInt(),
 		lastCreatedBatchAt:     chainTime.BlockNum.AsInt(),
+		publishingBatchAtomic:  0,
 	}, nil
 }
 
@@ -691,8 +694,10 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	// AddSequencerL2BatchFromOriginCustomNonce will have already updated the nonce
 	prevMsgCount.Set(newMsgCount)
 
+	atomic.StoreInt32(&b.publishingBatchAtomic, 1)
 	go (func() {
-		receipt, err := ethbridge.WaitForReceiptWithResults(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin")
+		defer atomic.StoreInt32(&b.publishingBatchAtomic, 0)
+		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin", b.auth)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error waiting for batch receipt")
 			return
@@ -781,7 +786,8 @@ func (b *SequencerBatcher) reorgOutHugeMsg(ctx context.Context, prevMsgCount *bi
 
 func (b *SequencerBatcher) Start(ctx context.Context) {
 	logger.Log().Msg("Starting sequencer batch submission thread")
-	firstBoot := true
+	firstDelayedSequence := true
+	firstBatchCreation := true
 	if b.feedBroadcaster != nil {
 		defer b.feedBroadcaster.Stop()
 	}
@@ -804,27 +810,32 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		}
 		blockNum := chainTime.BlockNum.AsInt()
 		targetCreateBatch := new(big.Int).Add(b.lastCreatedBatchAt, b.createBatchBlockInterval)
-		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0
+		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 || firstBatchCreation
+		if creatingBatch && atomic.LoadInt32(&b.publishingBatchAtomic) != 0 {
+			// The previous batch is still waiting on confirmation; don't attempt to create another yet
+			creatingBatch = false
+		}
 		targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
 		sequencedDelayed := false
-		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch || firstBoot {
+		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch || firstDelayedSequence {
 			sequencedDelayed, err = b.deliverDelayedMessages(chainTime)
 			if err != nil {
 				logger.Error().Err(err).Msg("Error delivering delayed messages")
 				continue
 			}
 			b.lastSequencedDelayedAt = blockNum
+			firstDelayedSequence = false
 		}
 		targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
 		var dontPublishBlockNum *big.Int
-		if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed || firstBoot {
+		if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed {
 			b.inboxReader.MessageDeliveryMutex.Lock()
 			b.latestChainTime = chainTime
 			// Avoid inefficency of publishing something that just got put in this timestamp
 			dontPublishBlockNum = b.latestChainTime.BlockNum.AsInt()
 			b.inboxReader.MessageDeliveryMutex.Unlock()
 		}
-		if creatingBatch || firstBoot {
+		if creatingBatch {
 			prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{Context: ctx})
 			if err != nil {
 				logger.Error().Err(err).Msg("error getting on-chain message count")
@@ -843,12 +854,8 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 				logger.Error().Err(err).Msg("error creating batch")
 			} else if complete {
 				b.lastCreatedBatchAt = blockNum
-			} else {
-				// Schedule another run sooner
-				b.lastCreatedBatchAt = new(big.Int).Sub(blockNum, b.createBatchBlockInterval)
-				b.lastCreatedBatchAt.Add(b.lastCreatedBatchAt, big.NewInt(b.config.ContinueBatchPostingBlockInterval))
+				firstBatchCreation = false
 			}
 		}
-		firstBoot = false
 	}
 }
