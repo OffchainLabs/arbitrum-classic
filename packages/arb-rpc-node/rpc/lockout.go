@@ -192,6 +192,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 						}
 						time.Sleep(500 * time.Millisecond)
 					}
+					b.sequencerBatcher.WaitOnDelayedSequencing()
 				}
 				b.currentBatcher = b.sequencerBatcher
 				b.currentSeq = b.config.SelfRPCURL

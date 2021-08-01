@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -82,6 +83,8 @@ type SequencerBatcher struct {
 	lastCreatedBatchAt     *big.Int
 	lastSequencedDelayedAt *big.Int
 	publishingBatchAtomic  int32
+	waitingOnDelayedAtomic int32
+	waitingOnDelayedMutex  sync.RWMutex
 }
 
 func getChainTime(ctx context.Context, client ethutils.EthClient) (inbox.ChainTime, error) {
@@ -141,7 +144,7 @@ func NewSequencerBatcher(
 		return nil, errors.New("invalid batch creation block interval")
 	}
 
-	return &SequencerBatcher{
+	batcher := &SequencerBatcher{
 		db:                         db,
 		inboxReader:                inboxReader,
 		client:                     client,
@@ -168,7 +171,11 @@ func NewSequencerBatcher(
 		lastSequencedDelayedAt: chainTime.BlockNum.AsInt(),
 		lastCreatedBatchAt:     chainTime.BlockNum.AsInt(),
 		publishingBatchAtomic:  0,
-	}, nil
+		waitingOnDelayedAtomic: 1,
+	}
+	batcher.waitingOnDelayedMutex.Lock()
+
+	return batcher, nil
 }
 
 func (b *SequencerBatcher) PendingTransactionCount(_ context.Context, _ common.Address) *uint64 {
@@ -225,6 +232,12 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		return errors.New("oversized data")
 	}
 	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
+
+	if atomic.LoadInt32(&b.waitingOnDelayedAtomic) != 0 {
+		b.waitingOnDelayedMutex.RLock()
+		b.waitingOnDelayedMutex.RUnlock()
+	}
+
 	startResultChan := make(chan error, 1)
 	b.txQueue <- txQueueItem{tx: startTx, resultChan: startResultChan}
 	b.inboxReader.MessageDeliveryMutex.Lock()
@@ -520,6 +533,10 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (bo
 		return false, err
 	}
 
+	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 0) != 0 {
+		b.waitingOnDelayedMutex.Unlock()
+	}
+
 	if b.feedBroadcaster != nil {
 		err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
 		if err != nil {
@@ -528,6 +545,15 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (bo
 	}
 
 	return true, nil
+}
+
+// Warning: acquires MessageDeliveryMutex
+func (b *SequencerBatcher) WaitOnDelayedSequencing() {
+	b.inboxReader.MessageDeliveryMutex.Lock()
+	defer b.inboxReader.MessageDeliveryMutex.Unlock()
+	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 1) == 0 {
+		b.waitingOnDelayedMutex.Lock()
+	}
 }
 
 const gasCostBase int = 70292
@@ -817,7 +843,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		}
 		targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
 		sequencedDelayed := false
-		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch || firstDelayedSequence {
+		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch || firstDelayedSequence || atomic.LoadInt32(&b.waitingOnDelayedAtomic) != 0 {
 			sequencedDelayed, err = b.deliverDelayedMessages(chainTime)
 			if err != nil {
 				logger.Error().Err(err).Msg("Error delivering delayed messages")
