@@ -275,7 +275,11 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 			if msg, ok := msg.(message.AbstractTransaction); ok {
 				emptyAddress := common.Address{}
 				if msg.Destination() == emptyAddress {
-					copy(contractAddress[:], r.ReturnData[12:])
+					if len(r.ReturnData) == 32 {
+						copy(contractAddress[:], r.ReturnData[12:])
+					} else {
+						logger.Warn().Str("txresult", r.String()).Msg("incorrect returndata size in ToEthReceipt")
+					}
 				}
 			}
 		}
