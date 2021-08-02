@@ -600,7 +600,7 @@ const gasCostMaximum int = 2_000_000
 func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum *big.Int, prevMsgCount *big.Int, nonce *big.Int) (bool, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	batchItems, err := b.db.GetSequencerBatchItems(prevMsgCount)
-	atomic.StoreInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostBase))
+	origEstimate := atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic)
 	b.inboxReader.MessageDeliveryMutex.Unlock()
 	if err != nil {
 		return false, err
@@ -749,6 +749,15 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	tx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc)
 	if err != nil {
 		return false, err
+	}
+
+	if publishingAllBatchItems {
+		// Reset the pending gas estimate to gasCostBase,
+		// plus whatever was sequenced while we were building this batch.
+		atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostBase)-origEstimate)
+	} else {
+		// Since we didn't publish everything, only subtract gas for what we did publish.
+		atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, -int64(estimatedGasCost))
 	}
 
 	// Update prevMsgCount for the next iteration if we're not publishingAllBatchItems
