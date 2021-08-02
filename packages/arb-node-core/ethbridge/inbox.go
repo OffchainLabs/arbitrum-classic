@@ -168,10 +168,7 @@ func AddSequencerL2BatchFromOrigin(ctx context.Context, inbox *ethbridgecontract
 
 // Like AddSequencerL2BatchFromOrigin but with a custom nonce that will be incremented on success
 func AddSequencerL2BatchFromOriginCustomNonce(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, nonce *big.Int, transactions []byte, lengths []*big.Int, sectionsMetadata []*big.Int, afterAcc [32]byte) (*types.Transaction, error) {
-	rawAuth, err := auth.getAuth(ctx)
-	if err != nil {
-		return nil, err
-	}
+	rawAuth := auth.getAuth(ctx)
 	rawAuth.Nonce = nonce
 	tx, err := inbox.AddSequencerL2BatchFromOrigin(rawAuth, transactions, lengths, sectionsMetadata, afterAcc)
 	if err != nil {
