@@ -91,6 +91,9 @@ type SequencerBatcher struct {
 	// A write lock on this is held while the above condition is true.
 	// This lets SendTransaction wait on it without spinlocking.
 	waitingOnDelayedMutex sync.RWMutex
+	// The total estimate of unpublished transactions' gas usage.
+	// Added to every time something is sequenced, zeroed when batch posted.
+	pendingBatchGasEstimateAtomic int64
 }
 
 func getChainTime(ctx context.Context, client ethutils.EthClient) (inbox.ChainTime, error) {
@@ -168,15 +171,16 @@ func NewSequencerBatcher(
 		sequenceDelayedMessagesInterval: big.NewInt(20),
 		createBatchBlockInterval:        big.NewInt(config.CreateBatchBlockInterval),
 
-		sequencer:              common.NewAddressFromEth(sequencer),
-		signer:                 types.NewEIP155Signer(chainId),
-		txQueue:                make(chan txQueueItem, 10),
-		newTxFeed:              event.Feed{},
-		latestChainTime:        chainTime,
-		lastSequencedDelayedAt: chainTime.BlockNum.AsInt(),
-		lastCreatedBatchAt:     chainTime.BlockNum.AsInt(),
-		publishingBatchAtomic:  0,
-		waitingOnDelayedAtomic: 1,
+		sequencer:                     common.NewAddressFromEth(sequencer),
+		signer:                        types.NewEIP155Signer(chainId),
+		txQueue:                       make(chan txQueueItem, 10),
+		newTxFeed:                     event.Feed{},
+		latestChainTime:               chainTime,
+		lastSequencedDelayedAt:        chainTime.BlockNum.AsInt(),
+		lastCreatedBatchAt:            chainTime.BlockNum.AsInt(),
+		publishingBatchAtomic:         0,
+		waitingOnDelayedAtomic:        1,
+		pendingBatchGasEstimateAtomic: int64(gasCostBase),
 	}
 	batcher.waitingOnDelayedMutex.Lock()
 
@@ -368,6 +372,8 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
 			prevAcc = txBatchItem.Accumulator
 			sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
+			postingCostEstimate := gasCostPerMessage + gasCostPerMessageByte*len(seqMsg.Data)
+			atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 			for _, c := range resultChans {
 				c <- nil
 			}
@@ -430,6 +436,8 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 				prevAcc = txBatchItem.Accumulator
 				sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
 				sequencedTxs = append(sequencedTxs, tx)
+				postingCostEstimate := gasCostPerMessage + gasCostPerMessageByte*len(seqMsg.Data)
+				atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 				logCount = newLogCount
 				resultChans[i] <- nil
 			}
@@ -449,6 +457,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		if err != nil {
 			return err
 		}
+		atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostPerMessage))
 
 		if b.feedBroadcaster != nil {
 			err = b.feedBroadcaster.Broadcast(originalAcc, sequencedBatchItems, b.dataSigner)
@@ -555,6 +564,8 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	if err != nil {
 		return false, err
 	}
+	postingCostEstimate := gasCostPerMessage + gasCostDelayedMessages
+	atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 
 	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 0) != 0 {
 		b.waitingOnDelayedMutex.Unlock()
@@ -589,6 +600,7 @@ const gasCostMaximum int = 2_000_000
 func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum *big.Int, prevMsgCount *big.Int, nonce *big.Int) (bool, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	batchItems, err := b.db.GetSequencerBatchItems(prevMsgCount)
+	atomic.StoreInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostBase))
 	b.inboxReader.MessageDeliveryMutex.Unlock()
 	if err != nil {
 		return false, err
@@ -859,7 +871,9 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		}
 		blockNum := chainTime.BlockNum.AsInt()
 		targetCreateBatch := new(big.Int).Add(b.lastCreatedBatchAt, b.createBatchBlockInterval)
-		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 || firstBatchCreation
+		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
+			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= int64(gasCostMaximum)*9/10 ||
+			firstBatchCreation
 		if creatingBatch && atomic.LoadInt32(&b.publishingBatchAtomic) != 0 {
 			// The previous batch is still waiting on confirmation; don't attempt to create another yet
 			creatingBatch = false
