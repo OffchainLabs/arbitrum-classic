@@ -24,7 +24,7 @@ module.exports = {
 }
 ```
 
-See [Pet Shop Demo](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review/packages/demo-dapp-pet-shop).
+See [Pet Shop Demo](https://github.com/OffchainLabs/arbitrum-tutorials/packages/demo-dapp-pet-shop).
 
 ## Truffle
 
