@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -56,10 +57,11 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutil
 		select {
 		case <-time.After(time.Second):
 			if rbfInfo != nil && time.Since(lastRbf) >= rbfInterval {
-				var err error
-				txHash, err = rbfInfo.attempt()
+				newTxHash, err := rbfInfo.attempt()
 				lastRbf = time.Now()
-				if err != nil {
+				if err == nil {
+					txHash = newTxHash
+				} else {
 					logger.Warn().Err(err).Msg("failed to replace by fee")
 				}
 			}
@@ -101,26 +103,75 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 	return waitForReceiptWithResultsSimpleInternal(ctx, client, txHash, nil)
 }
 
+func increaseByPercent(original *big.Int, percentage int64) *big.Int {
+	threshold := new(big.Int).Mul(original, big.NewInt(100+percentage))
+	threshold.Div(threshold, big.NewInt(100))
+	return threshold
+}
+
 func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string, auth *TransactAuth) (*types.Receipt, error) {
 	var rbfInfo *attemptRbfInfo
 	if auth != nil {
 		attemptRbf := func() (ethcommon.Hash, error) {
-			auth, err := auth.getAuth(ctx)
-			if err != nil {
-				return ethcommon.Hash{}, err
-			}
+			auth := auth.getAuth(ctx)
 			if auth.GasPrice.Cmp(tx.GasPrice()) <= 0 {
 				return tx.Hash(), nil
 			}
-			legacyTx := &types.LegacyTx{
-				Nonce:    tx.Nonce(),
-				GasPrice: auth.GasPrice,
-				Gas:      tx.Gas(),
-				To:       tx.To(),
-				Value:    tx.Value(),
-				Data:     tx.Data(),
+			var rawTx *types.Transaction
+			if tx.Type() == types.DynamicFeeTxType {
+				block, err := client.HeaderByNumber(ctx, nil)
+				if err != nil {
+					return ethcommon.Hash{}, err
+				}
+				if block.BaseFee == nil {
+					return ethcommon.Hash{}, errors.New("attempted to use dynamic fee tx in pre-EIP-1559 block")
+				}
+				tipCap, err := client.SuggestGasTipCap(ctx)
+				if err != nil {
+					return ethcommon.Hash{}, err
+				}
+				if tipCap.Cmp(increaseByPercent(tx.GasTipCap(), 10)) < 0 {
+					// We only replace by fee when we'd increase the tip by 10%
+					return tx.Hash(), nil
+				}
+				feeCap := new(big.Int).Mul(block.BaseFee, big.NewInt(2))
+				feeCap.Add(feeCap, tipCap)
+				minFeeCap := increaseByPercent(tx.GasFeeCap(), 10)
+				if feeCap.Cmp(minFeeCap) < 0 {
+					feeCap = minFeeCap
+				}
+				baseTx := &types.DynamicFeeTx{
+					ChainID:    tx.ChainId(),
+					Nonce:      tx.Nonce(),
+					GasTipCap:  tipCap,
+					GasFeeCap:  feeCap,
+					Gas:        tx.Gas(),
+					To:         tx.To(),
+					Value:      tx.Value(),
+					Data:       tx.Data(),
+					AccessList: tx.AccessList(),
+				}
+				rawTx = types.NewTx(baseTx)
+			} else {
+				gasPrice, err := client.SuggestGasPrice(ctx)
+				if err != nil {
+					return ethcommon.Hash{}, err
+				}
+				if gasPrice.Cmp(increaseByPercent(tx.GasPrice(), 10)) < 0 {
+					// We only replace by fee when we'd increase the fee by at least 10%
+					return tx.Hash(), nil
+				}
+				baseTx := &types.LegacyTx{
+					Nonce:    tx.Nonce(),
+					GasPrice: gasPrice,
+					Gas:      tx.Gas(),
+					To:       tx.To(),
+					Value:    tx.Value(),
+					Data:     tx.Data(),
+				}
+				rawTx = types.NewTx(baseTx)
 			}
-			newTx, err := auth.Signer(auth.From, types.NewTx(legacyTx))
+			newTx, err := auth.Signer(auth.From, rawTx)
 			if err != nil {
 				return ethcommon.Hash{}, err
 			}

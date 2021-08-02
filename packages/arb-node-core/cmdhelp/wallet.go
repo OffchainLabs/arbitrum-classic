@@ -88,7 +88,7 @@ func GetKeystore(
 	}
 
 	gasPriceAsFloat := 1e9 * gasPrice
-	if gasPriceAsFloat < math.MaxInt64 {
+	if gasPriceAsFloat < math.MaxInt64 && gasPriceAsFloat > 0 {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
 
