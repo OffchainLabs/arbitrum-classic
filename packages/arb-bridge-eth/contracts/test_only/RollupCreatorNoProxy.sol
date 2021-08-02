@@ -35,6 +35,15 @@ import "../rollup/facets/RollupAdmin.sol";
 
 import "../libraries/Whitelist.sol";
 
+contract RollupTester is Rollup {
+    constructor() public Rollup(1) {
+        // this undoes the proxy safety from the main rollup contract
+        // to enable hardhat traces / debugging
+        confirmPeriodBlocks = 0;
+        require(!isInit(), "INVALID_CONSTRUCTOR");
+    }
+}
+
 contract RollupCreatorNoProxy {
     event RollupCreated(address rollupAddress, Inbox inbox);
 
@@ -134,7 +143,7 @@ contract RollupCreatorNoProxy {
         returns (address)
     {
         CreateRollupFrame memory frame;
-        frame.rollup = address(new Rollup());
+        frame.rollup = address(new RollupTester());
         (
             frame.delayedBridge,
             frame.sequencerInbox,

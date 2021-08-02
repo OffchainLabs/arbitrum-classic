@@ -28,12 +28,12 @@ contract aeERC20 is ERC20PermitUpgradeable, ERC677Token {
     using AddressUpgradeable for address;
 
     function _initialize(
-        string memory name,
-        string memory symbol,
-        uint8 decimals
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_
     ) internal initializer {
-        __ERC20Permit_init(name);
-        __ERC20_init(name, symbol);
-        _setupDecimals(decimals);
+        __ERC20Permit_init(name_);
+        __ERC20_init(name_, symbol_);
+        _setupDecimals(decimals_);
     }
 }

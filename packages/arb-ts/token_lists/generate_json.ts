@@ -26,7 +26,14 @@ const gen = async () => {
   console.log(`Checking ${tokenAddresses.length} addresses`)
 
   for (const l1Address of tokenAddresses) {
-    const l1GatewayAddress = await bridge.l1Bridge.getGatewayAddress(l1Address)
+    let l1GatewayAddress: string
+    try {
+      l1GatewayAddress = await bridge.l1Bridge.getGatewayAddress(l1Address)
+    } catch (err) {
+      console.log(`Could not get gateway for ${l1Address}; moving on!`)
+      continue
+    }
+
     if (l1GatewayAddress === constants.AddressZero) {
       throw new Error(`Token ${l1Address} not registered in L1 router`)
     }
@@ -83,10 +90,9 @@ const gen = async () => {
     }
 
     if (l2Name !== l1Name) {
-      console.warn(
-        `******* Warning! names don't match for deployment of ${l1Address}: L1 name ${l1Name}. L2 name: ${l2Name}`
+      console.info(
+        `******* NOTE: names don't match for deployment of ${l1Address}: L1 name ${l1Name}. L2 name: ${l2Name}`
       )
-      continue
     }
 
     const arbTokenInfo: TokenInfo = {
@@ -101,6 +107,7 @@ const gen = async () => {
         l1GatewayAddress,
       },
     }
+    console.info('Adding', l2Symbol)
     tokens.push(arbTokenInfo)
   }
   tokens.sort((a, b) => (a.symbol < b.symbol ? -1 : 1))

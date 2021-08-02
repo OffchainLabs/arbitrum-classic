@@ -22,27 +22,27 @@ import "../arbitrum/IArbToken.sol";
 import "../libraries/aeERC20.sol";
 
 contract TestArbCustomToken is aeERC20, IArbToken {
-    address public bridge;
+    address public l2Gateway;
     address public override l1Address;
 
-    modifier onlyBridge {
-        require(msg.sender == bridge, "ONLY_BRIDGE");
+    modifier onlyGateway {
+        require(msg.sender == l2Gateway, "ONLY_l2GATEWAY");
         _;
     }
 
-    constructor(address _bridge, address _l1Address) public {
-        bridge = _bridge;
+    constructor(address _l2Gateway, address _l1Address) public {
+        l2Gateway = _l2Gateway;
         l1Address = _l1Address;
         aeERC20._initialize("TestCustomToken", "CARB", uint8(18));
     }
 
     function someWackyCustomStuff() public {}
 
-    function bridgeMint(address account, uint256 amount) external override onlyBridge {
+    function bridgeMint(address account, uint256 amount) external override onlyGateway {
         _mint(account, amount);
     }
 
-    function bridgeBurn(address account, uint256 amount) external override onlyBridge {
+    function bridgeBurn(address account, uint256 amount) external override onlyGateway {
         _burn(account, amount);
     }
 }

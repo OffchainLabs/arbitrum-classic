@@ -1,16 +1,5 @@
 import { ethers } from 'hardhat'
-
-import MainnetDeployments from '../deployment-42161.json'
-
-const infuraKey = process.env['INFURA_KEY']
-if (!infuraKey) throw new Error('No INFURA_KEY')
-
-const l1Prov = new ethers.providers.JsonRpcProvider(
-  'https://mainnet.infura.io/v3/' + infuraKey
-)
-const l2Prov = new ethers.providers.JsonRpcProvider(
-  'https://arb1.arbitrum.io/rpc'
-)
+import { instantiateBridge } from 'arb-ts/scripts/instantiate_bridge'
 
 const l1privKey = process.env['L1_PRIVKEY']
 if (!l1privKey) throw new Error('No L1_PRIVKEY')
@@ -18,21 +7,24 @@ if (!l1privKey) throw new Error('No L1_PRIVKEY')
 const l2privKey = process.env['L2_PRIVKEY']
 if (!l2privKey) throw new Error('No L2_PRIVKEY')
 
-const L1Signer = ethers.Wallet.fromMnemonic(l1privKey)
-const L2Signer = ethers.Wallet.fromMnemonic(l2privKey)
-
-const l1Signer = L1Signer.connect(l1Prov)
-const l2Signer = L2Signer.connect(l2Prov)
-
 const wait = (ms: number) => new Promise(res => setTimeout(res, ms))
 
-const l1InboxAddr = MainnetDeployments.inbox
-const l1GatewayRouterAddr = MainnetDeployments.l1GatewayRouter
-const l2GatewayRouterAddr = MainnetDeployments.l2GatewayRouter
-const l1ProxyAdminAddr = '0x9aD46fac0Cf7f790E5be05A0F15223935A0c0aDa'
-const l2ProxyAdminAddr = '0xd570aCE65C43af47101fC6250FD6fC63D1c22a86'
-
 const main = async () => {
+  const { bridge, l1Network, l2Network } = await instantiateBridge(
+    l1privKey,
+    l2privKey
+  )
+
+  const { l1Signer, l2Signer } = bridge
+
+  const l1SignerAddress = await l1Signer.getAddress()
+
+  const l1ProxyAdminAddr = l1Network.tokenBridge.l1ProxyAdmin
+  const l2ProxyAdminAddr = l2Network.tokenBridge.l2ProxyAdmin
+  const l1GatewayRouterAddr = l1Network.tokenBridge.l1GatewayRouter
+  const l2GatewayRouterAddr = l2Network.tokenBridge.l2GatewayRouter
+  const l1InboxAddr = l1Network.tokenBridge.inbox
+
   const l1Router = (
     await ethers.getContractAt('L1GatewayRouter', l1GatewayRouterAddr)
   ).connect(l1Signer)
@@ -43,7 +35,7 @@ const main = async () => {
   //   check if user owns router
   const expectedOwner = await l1Router.owner()
 
-  if (expectedOwner.toLowerCase() !== l1Signer.address.toLowerCase()) {
+  if (expectedOwner.toLowerCase() !== l1SignerAddress.toLowerCase()) {
     throw new Error('Not router owner')
   }
 
@@ -102,7 +94,7 @@ const main = async () => {
     l2CustomGatewayProxy.address,
     l1GatewayRouterAddr,
     l1InboxAddr,
-    l1Signer.address
+    l1SignerAddress
   )
 
   await l1Init.wait()

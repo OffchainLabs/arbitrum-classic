@@ -19,5 +19,4 @@ ignore:
   - 'packages/arb-node-core/ethbridgetestcontracts'
   - 'packages/arb-evm/arboscontracts'
   - 'packages/arb-avm-cpp/external/keccak'
-  - 'packages/arb-provider-ethers/src/lib/abi'
   - 'packages/arb-ts/src/lib/abi'

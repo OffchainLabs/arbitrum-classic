@@ -64,7 +64,7 @@ abstract contract L1ArbitrumMessenger {
 }
 
 abstract contract L2ArbitrumMessenger {
-    address internal constant arbsysAddr = address(100);
+    address internal constant ARB_SYS_ADDRESS = address(100);
 
     event TxToL1(address indexed _from, address indexed _to, uint256 indexed _id, bytes _data);
 
@@ -74,7 +74,7 @@ abstract contract L2ArbitrumMessenger {
         address _to,
         bytes memory _data
     ) internal virtual returns (uint256) {
-        uint256 _id = ArbSys(arbsysAddr).sendTxToL1{ value: _l1CallValue }(_to, _data);
+        uint256 _id = ArbSys(ARB_SYS_ADDRESS).sendTxToL1{ value: _l1CallValue }(_to, _data);
         emit TxToL1(_from, _to, _id, _data);
         return _id;
     }

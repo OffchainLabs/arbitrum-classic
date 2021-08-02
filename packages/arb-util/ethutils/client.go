@@ -43,7 +43,6 @@ type EthClient interface {
 	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
 	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
 	BlockInfoByNumber(ctx context.Context, number *big.Int) (*BlockInfo, error)
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 	TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error)
 	TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error)
 	PendingCallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error)

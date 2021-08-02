@@ -138,6 +138,15 @@ library RollupLib {
             );
     }
 
+    function assertionGasUsed(RollupLib.Assertion memory assertion)
+        internal
+        pure
+        returns (uint256)
+    {
+        require(assertion.afterState.gasUsed > assertion.beforeState.gasUsed, "GAS_USED_UNDERFLOW");
+        return assertion.afterState.gasUsed - assertion.beforeState.gasUsed;
+    }
+
     function challengeRoot(
         Assertion memory assertion,
         bytes32 assertionExecHash,
@@ -215,9 +224,5 @@ library RollupLib {
     ) internal pure returns (bytes32) {
         uint8 hasSiblingInt = hasSibling ? 1 : 0;
         return keccak256(abi.encodePacked(hasSiblingInt, lastHash, assertionExecHash, inboxAcc));
-    }
-
-    function nodeAccumulator(bytes32 prevAcc, bytes32 newNodeHash) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(prevAcc, newNodeHash));
     }
 }

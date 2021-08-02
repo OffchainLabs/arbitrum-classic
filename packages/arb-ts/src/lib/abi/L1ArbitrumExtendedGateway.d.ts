@@ -23,7 +23,6 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
   functions: {
-    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'encodeWithdrawal(uint256,address)': FunctionFragment
@@ -36,13 +35,10 @@ interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'parseInboundData(bytes)': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
+    'router()': FunctionFragment
     'transferExitAndCall(uint256,address,address,bytes,bytes)': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'STORAGE_GAP',
-    values?: undefined
-  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -95,12 +91,12 @@ interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'redirectedExits',
     values: [BytesLike]
   ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'transferExitAndCall',
     values: [BigNumberish, string, string, BytesLike, BytesLike]
   ): string
 
-  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -146,6 +142,7 @@ interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'redirectedExits',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'transferExitAndCall',
     data: BytesLike
@@ -180,10 +177,6 @@ export class L1ArbitrumExtendedGateway extends Contract {
   interface: L1ArbitrumExtendedGatewayInterface
 
   functions: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -330,6 +323,10 @@ export class L1ArbitrumExtendedGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
+
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
@@ -348,10 +345,6 @@ export class L1ArbitrumExtendedGateway extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
-
-  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -495,6 +488,10 @@ export class L1ArbitrumExtendedGateway extends Contract {
     overrides?: CallOverrides
   ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
+
   transferExitAndCall(
     _exitNum: BigNumberish,
     _initialDestination: string,
@@ -514,10 +511,6 @@ export class L1ArbitrumExtendedGateway extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -664,6 +657,10 @@ export class L1ArbitrumExtendedGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
+
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
@@ -728,10 +725,6 @@ export class L1ArbitrumExtendedGateway extends Contract {
   }
 
   estimateGas: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -874,6 +867,10 @@ export class L1ArbitrumExtendedGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
+
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
@@ -894,10 +891,6 @@ export class L1ArbitrumExtendedGateway extends Contract {
   }
 
   populateTransaction: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -1045,6 +1038,10 @@ export class L1ArbitrumExtendedGateway extends Contract {
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     transferExitAndCall(
       _exitNum: BigNumberish,

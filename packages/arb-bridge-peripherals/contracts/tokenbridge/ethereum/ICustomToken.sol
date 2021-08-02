@@ -29,7 +29,8 @@ interface ICustomToken {
         address l2CustomTokenAddress,
         uint256 maxSubmissionCost,
         uint256 maxGas,
-        uint256 gasPriceBid
+        uint256 gasPriceBid,
+        address creditBackAddress
     ) external virtual;
 
     function transferFrom(

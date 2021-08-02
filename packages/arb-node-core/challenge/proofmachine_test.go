@@ -162,10 +162,9 @@ func checkProofs(t *testing.T, proofs []*proofData, osps []*ethbridgetestcontrac
 func TestValidateProof(t *testing.T) {
 	testMachines, err := gotest.OpCodeTestFiles()
 	test.FailIfError(t, err)
-	backend, pks := test.SimulatedBackend(t)
+	backend, auths := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	test.FailIfError(t, err)
+	auth := auths[0]
 	sequencer := common.RandAddress().ToEthAddress()
 	maxDelayBlocks := big.NewInt(60)
 	maxDelaySeconds := big.NewInt(900)

@@ -54,7 +54,6 @@ export class L2Bridge {
   l2GatewayRouter: L2GatewayRouter
   l2Tokens: Tokens
   l2Provider: providers.Provider
-  l2EthBalance: BigNumber
   arbRetryableTx: ArbRetryableTx
   walletAddressCache?: string
 
@@ -81,8 +80,6 @@ export class L2Bridge {
       ARB_RETRYABLE_TX_ADDRESS,
       l2Signer
     )
-
-    this.l2EthBalance = BigNumber.from(0)
   }
 
   /**
@@ -219,9 +216,7 @@ export class L2Bridge {
     return this.walletAddressCache
   }
 
-  public async getAndUpdateL2EthBalance(): Promise<BigNumber> {
-    const bal = await this.l2Signer.getBalance()
-    this.l2EthBalance = bal
-    return bal
+  public getL2EthBalance(): Promise<BigNumber> {
+    return this.l2Signer.getBalance()
   }
 }

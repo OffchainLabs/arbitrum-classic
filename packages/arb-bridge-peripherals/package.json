@@ -11,14 +11,17 @@
     "deploy:buddydeployer": "hardhat run scripts/deploy_buddy_deployer.ts --network kovan5",
     "deploy": "yarn deploy:tokenbridge",
     "gen:uml": "sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/ethereum,./contracts/tokenbridge/libraries -o ./gatewayUML.svg",
-    "gen:uml:test": "sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/test -o ./gatewayTestUML.svg"
+    "gen:uml:test": "sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/test -o ./gatewayTestUML.svg",
+    "pre:slither": "yarn post:slither && ln -s ../../node_modules/arb-bridge-eth && ln -s ../../node_modules/arbos-contracts",
+    "slither": "yarn pre:slither && slither --hardhat-artifacts-directory build/contracts .  --filter-paths 'node_modules|arb-bridge-eth|arbos-contracts' && yarn post:slither",
+    "post:slither": "rm -f arb-bridge-eth && rm -f arbos-contracts"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",
     "@nomiclabs/hardhat-waffle": "^2.0.0",
+    "@openzeppelin/upgrades-core": "^1.7.6",
     "@openzeppelin/contracts": "3.4.0",
     "@openzeppelin/contracts-upgradeable": "3.4.0",
-    "@openzeppelin/upgrades-core": "^1.7.6",
     "@types/chai": "^4.2.15",
     "@types/mocha": "^8.2.0",
     "@types/node": "^14.14.28",
@@ -26,7 +29,7 @@
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.0.0",
     "ethers": "^5.0.24",
-    "hardhat": "^2.0.7",
+    "hardhat": "^2.4.3",
     "sol2uml": "^1.1.25",
     "ts-node": "^9.1.1",
     "typechain": "^4.0.0",

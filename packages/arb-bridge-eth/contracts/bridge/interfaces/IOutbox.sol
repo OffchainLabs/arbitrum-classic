@@ -21,14 +21,14 @@ pragma solidity ^0.6.11;
 interface IOutbox {
     event OutboxEntryCreated(
         uint256 indexed batchNum,
-        uint256 outboxIndex,
+        uint256 outboxEntryIndex,
         bytes32 outputRoot,
         uint256 numInBatch
     );
     event OutBoxTransactionExecuted(
         address indexed destAddr,
         address indexed l2Sender,
-        uint256 indexed outboxIndex,
+        uint256 indexed outboxEntryIndex,
         uint256 transactionIndex
     );
 
@@ -42,4 +42,6 @@ interface IOutbox {
 
     function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
         external;
+
+    function outboxEntryExists(uint256 batchNum) external view returns (bool);
 }

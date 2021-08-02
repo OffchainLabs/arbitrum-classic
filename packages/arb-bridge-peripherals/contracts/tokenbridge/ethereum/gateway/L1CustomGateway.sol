@@ -85,6 +85,12 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         }
     }
 
+    function postUpgradeInit() external {
+        require(whitelist == address(0), "ALREADY_INIT");
+        router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
+        whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
+    }
+
     /**
      * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
      * @param _l1Token L1 address of ERC20
@@ -125,12 +131,11 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
     }
 
     /**
-     * @notice Allows L1 Token contract to trustlessly register its custom L2 counterpart.
-
+     * @notice Allows L1 Token contract to trustlessly register its custom L2 counterpart. (other registerTokenToL2 method allows excess eth recovery from _maxSubmissionCost and is recommended)
      * @param _l2Address counterpart address of L1 token
-     * @param _maxGas max gas for L2 retryable exrecution 
-     * @param _gasPriceBid gas price for L2 retryable ticket 
-     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et 
+     * @param _maxGas max gas for L2 retryable exrecution
+     * @param _gasPriceBid gas price for L2 retryable ticket
+     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et
      * @return Retryable ticket ID
      */
     function registerTokenToL2(
@@ -139,6 +144,26 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
     ) external payable virtual returns (uint256) {
+        return registerTokenToL2(_l2Address, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
+    }
+
+    /**
+     * @notice Allows L1 Token contract to trustlessly register its custom L2 counterpart.
+
+     * @param _l2Address counterpart address of L1 token
+     * @param _maxGas max gas for L2 retryable exrecution 
+     * @param _gasPriceBid gas price for L2 retryable ticket 
+     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et 
+     * @param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
+     * @return Retryable ticket ID
+     */
+    function registerTokenToL2(
+        address _l2Address,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
+    ) public payable virtual returns (uint256) {
         require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
         l1ToL2Token[msg.sender] = _l2Address;
 
@@ -156,7 +181,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 l2Addresses
             );
 
-        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
+        return sendTxToL2(_creditBackAddress, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
     }
 
     /**

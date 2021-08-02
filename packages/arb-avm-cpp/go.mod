@@ -3,7 +3,7 @@ module github.com/offchainlabs/arbitrum/packages/arb-avm-cpp
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.10.3
+	github.com/ethereum/go-ethereum v1.10.4
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.1.0

@@ -18,21 +18,24 @@
 
 pragma solidity ^0.6.11;
 
-import "./RollupCore.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
-import "./RollupEventBridge.sol";
-
-import "./INode.sol";
-import "./INodeFactory.sol";
-import "../challenge/IChallenge.sol";
-import "../challenge/IChallengeFactory.sol";
-import "../bridge/interfaces/IBridge.sol";
-import "../bridge/interfaces/IOutbox.sol";
+import "@openzeppelin/contracts/proxy/Proxy.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "../bridge/Messages.sol";
+import "./RollupEventBridge.sol";
+import "./RollupCore.sol";
 import "./RollupLib.sol";
+import "./INode.sol";
+import "./INodeFactory.sol";
+
+import "../challenge/IChallenge.sol";
+import "../challenge/IChallengeFactory.sol";
+
+import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/IOutbox.sol";
+import "../bridge/Messages.sol";
+
 import "../libraries/Cloneable.sol";
 import "./facets/IRollupFacets.sol";
 
@@ -54,51 +57,28 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     address public stakeToken;
     uint256 public minimumAssertionPeriod;
 
-    uint256 public sequencerInboxMaxDelayBlocks;
-    uint256 public sequencerInboxMaxDelaySeconds;
+    uint256 public STORAGE_GAP_1;
+    uint256 public STORAGE_GAP_2;
     uint256 public challengeExecutionBisectionDegree;
 
     address[] internal facets;
 
     mapping(address => bool) isValidator;
-
-    event RollupCreated(bytes32 machineHash);
-
-    event NodeCreated(
-        uint256 indexed nodeNum,
-        bytes32 indexed parentNodeHash,
-        bytes32 nodeHash,
-        bytes32 executionHash,
-        uint256 inboxMaxCount,
-        uint256 afterInboxBatchEndCount,
-        bytes32 afterInboxBatchAcc,
-        bytes32[3][2] assertionBytes32Fields,
-        uint256[4][2] assertionIntFields
-    );
-
-    event NodeConfirmed(
-        uint256 indexed nodeNum,
-        bytes32 afterSendAcc,
-        uint256 afterSendCount,
-        bytes32 afterLogAcc,
-        uint256 afterLogCount
-    );
-
-    event NodeRejected(uint256 indexed nodeNum);
-
-    event RollupChallengeStarted(
-        address indexed challengeContract,
-        address asserter,
-        address challenger,
-        uint256 challengedNode
-    );
-
-    event StakerReassigned(address indexed staker, uint256 newNode);
-    event NodesDestroyed(uint256 indexed startNode, uint256 indexed endNode);
-    event OwnerFunctionCalled(uint256 indexed id);
 }
 
-contract Rollup is RollupBase {
+contract Rollup is Proxy, RollupBase {
+    using Address for address;
+
+    constructor(uint256 _confirmPeriodBlocks) public Cloneable() Pausable() {
+        // constructor is used so logic contract can't be init'ed
+        confirmPeriodBlocks = _confirmPeriodBlocks;
+        require(isInit(), "CONSTRUCTOR_NOT_INIT");
+    }
+
+    function isInit() internal view returns (bool) {
+        return confirmPeriodBlocks != 0;
+    }
+
     // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, arbGasSpeedLimitPerBlock, baseStake ]
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
@@ -111,8 +91,16 @@ contract Rollup is RollupBase {
         address[2] calldata _facets,
         uint256[2] calldata sequencerInboxParams
     ) public {
-        require(confirmPeriodBlocks == 0, "ALREADY_INIT");
-        require(_rollupParams[0] != 0, "BAD_CONF_PERIOD");
+        require(!isInit(), "ALREADY_INIT");
+
+        // calls initialize method in user facet
+        require(_facets[0].isContract(), "FACET_0_NOT_CONTRACT");
+        require(_facets[1].isContract(), "FACET_1_NOT_CONTRACT");
+        (bool success, ) =
+            _facets[1].delegatecall(
+                abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
+            );
+        require(success, "FAIL_INIT_FACET");
 
         delayedBridge = IBridge(connectedContracts[0]);
         sequencerBridge = ISequencerInbox(connectedContracts[1]);
@@ -145,19 +133,34 @@ contract Rollup is RollupBase {
         minimumAssertionPeriod = 75;
         challengeExecutionBisectionDegree = 400;
 
-        sequencerInboxMaxDelayBlocks = sequencerInboxParams[0];
-        sequencerInboxMaxDelaySeconds = sequencerInboxParams[1];
+        sequencerBridge.setMaxDelayBlocks(sequencerInboxParams[0]);
+        sequencerBridge.setMaxDelaySeconds(sequencerInboxParams[1]);
 
         // facets[0] == admin, facets[1] == user
         facets = _facets;
 
-        (bool success, ) =
-            _facets[1].delegatecall(
-                abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
-            );
-        require(success, "FAIL_INIT_FACET");
-
         emit RollupCreated(_machineHash);
+        require(isInit(), "INITIALIZE_NOT_INIT");
+    }
+
+    function postUpgradeInit(address newAdminFacet) external {
+        // this upgrade moves the delay blocks and seconds tracking to the sequencer inbox
+        // because of that we need to update the admin facet logic to allow the owner to set
+        // these values in the sequencer inbox
+
+        uint256 oldDelayBlocks = STORAGE_GAP_1;
+        uint256 oldDelaySeconds = STORAGE_GAP_2;
+
+        require(oldDelayBlocks == 6545, "ALREADY_POST_INIT");
+        require(oldDelaySeconds == 86400, "ALREADY_POST_INIT");
+
+        sequencerBridge.setMaxDelayBlocks(oldDelayBlocks);
+        sequencerBridge.setMaxDelaySeconds(oldDelaySeconds);
+
+        STORAGE_GAP_1 = 0;
+        STORAGE_GAP_2 = 0;
+
+        facets[0] = newAdminFacet;
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
@@ -188,12 +191,11 @@ contract Rollup is RollupBase {
     }
 
     /**
-     * Fallback and delegate functions from OZ
-     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.0/contracts/proxy/TransparentUpgradeableProxy.sol
-     * And dispatch pattern from EIP-2535: Diamonds
+     * This contract uses a dispatch pattern from EIP-2535: Diamonds
+     * together with Open Zeppelin's proxy
      */
 
-    function getFacets() public view returns (address, address) {
+    function getFacets() external view returns (address, address) {
         return (getAdminFacet(), getUserFacet());
     }
 
@@ -206,27 +208,10 @@ contract Rollup is RollupBase {
     }
 
     /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other
-     * function in the contract matches the call data.
+     * @dev This is a virtual function that should be overriden so it returns the address to which the fallback function
+     * and {_fallback} should delegate.
      */
-    fallback() external payable {
-        _fallback();
-    }
-
-    /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data
-     * is empty.
-     */
-    receive() external payable {
-        _fallback();
-    }
-
-    /**
-     * @dev Delegates the current call to the address returned by `_implementation()`.
-     *
-     * This function does not return to its internall call site, it will return directly to the external caller.
-     */
-    function _fallback() internal virtual {
+    function _implementation() internal view virtual override returns (address) {
         require(msg.data.length >= 4, "NO_FUNC_SIG");
         address rollupOwner = owner;
         // if there is an owner and it is the sender, delegate to admin facet
@@ -234,37 +219,7 @@ contract Rollup is RollupBase {
             rollupOwner != address(0) && rollupOwner == msg.sender
                 ? getAdminFacet()
                 : getUserFacet();
-        _delegate(target);
-    }
-
-    /**
-     * @dev Delegates the current call to `implementation`.
-     *
-     * This function does not return to its internall call site, it will return directly to the external caller.
-     */
-    function _delegate(address implementation) internal virtual {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            // Copy msg.data. We take full control of memory in this inline assembly
-            // block because it will not return to Solidity code. We overwrite the
-            // Solidity scratch pad at memory position 0.
-            calldatacopy(0, 0, calldatasize())
-
-            // Call the implementation.
-            // out and outsize are 0 because we don't know the size yet.
-            let result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
-
-            // Copy the returned data.
-            returndatacopy(0, 0, returndatasize())
-
-            switch result
-                // delegatecall returns 0 on error.
-                case 0 {
-                    revert(0, returndatasize())
-                }
-                default {
-                    return(0, returndatasize())
-                }
-        }
+        require(target.isContract(), "TARGET_NOT_CONTRACT");
+        return target;
     }
 }

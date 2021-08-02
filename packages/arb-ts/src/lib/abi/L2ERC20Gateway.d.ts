@@ -23,7 +23,6 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L2ERC20GatewayInterface extends ethers.utils.Interface {
   functions: {
-    'STORAGE_GAP()': FunctionFragment
     'beaconProxyFactory()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'cloneableProxyHash()': FunctionFragment
@@ -36,12 +35,10 @@ interface L2ERC20GatewayInterface extends ethers.utils.Interface {
     'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'initialize(address,address,address)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
+    'router()': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'STORAGE_GAP',
-    values?: undefined
-  ): string
   encodeFunctionData(
     functionFragment: 'beaconProxyFactory',
     values?: undefined
@@ -84,8 +81,12 @@ interface L2ERC20GatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     values: [string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
-  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'beaconProxyFactory',
     data: BytesLike
@@ -125,6 +126,11 @@ interface L2ERC20GatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -153,10 +159,6 @@ export class L2ERC20Gateway extends Contract {
   interface: L2ERC20GatewayInterface
 
   functions: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
-
     beaconProxyFactory(overrides?: CallOverrides): Promise<[string]>
 
     'beaconProxyFactory()'(overrides?: CallOverrides): Promise<[string]>
@@ -279,11 +281,15 @@ export class L2ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
+
+    postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
-
-  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   beaconProxyFactory(overrides?: CallOverrides): Promise<string>
 
@@ -408,11 +414,15 @@ export class L2ERC20Gateway extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
+
+  'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
+
   callStatic: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
-
     beaconProxyFactory(overrides?: CallOverrides): Promise<string>
 
     'beaconProxyFactory()'(overrides?: CallOverrides): Promise<string>
@@ -535,6 +545,14 @@ export class L2ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
+    'postUpgradeInit()'(overrides?: CallOverrides): Promise<void>
+
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -573,10 +591,6 @@ export class L2ERC20Gateway extends Contract {
   }
 
   estimateGas: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
-
     beaconProxyFactory(overrides?: CallOverrides): Promise<BigNumber>
 
     'beaconProxyFactory()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -699,13 +713,17 @@ export class L2ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
+
+    postUpgradeInit(overrides?: Overrides): Promise<BigNumber>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     beaconProxyFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'beaconProxyFactory()'(
@@ -841,5 +859,13 @@ export class L2ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
+
+    postUpgradeInit(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

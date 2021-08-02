@@ -3,7 +3,11 @@ package challenge
 import (
 	"context"
 	"math/big"
+	"math/rand"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
@@ -181,18 +185,26 @@ func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *
 	}, nil
 }
 
+func gasPrice(tx *types.Transaction, baseFee *big.Int) *big.Int {
+	if baseFee == nil {
+		return tx.GasPrice()
+	}
+	return math.BigMin(new(big.Int).Add(tx.GasTipCap(), baseFee), tx.GasFeeCap())
+}
+
 func initializeChallengeTest(
 	t *testing.T,
 	asserterTime *big.Int,
 	challengerTime *big.Int,
 	arbCore core.ArbCore,
 ) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, ethcommon.Address, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, func(nd *core.NodeInfo)) {
+	rand.Seed(100000)
 	ctx := context.Background()
-	clnt, pks := test.SimulatedBackend(t)
-	deployer := bind.NewKeyedTransactor(pks[0])
-	asserter := bind.NewKeyedTransactor(pks[1])
-	challenger := bind.NewKeyedTransactor(pks[2])
-	sequencer := bind.NewKeyedTransactor(pks[3])
+	clnt, auths := test.SimulatedBackend(t)
+	deployer := auths[0]
+	asserter := auths[1]
+	challenger := auths[2]
+	sequencer := auths[3]
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(deployer, client)
 	test.FailIfError(t, err)
@@ -234,12 +246,20 @@ func initializeChallengeTest(
 		init,
 		common.NewAddressFromEth(rollupAddr),
 		big.NewInt(0),
-		tx.GasPrice(),
+		gasPrice(tx, initBlock.BaseFee()),
 		inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocks(initBlock.Number()),
 			Timestamp: new(big.Int).SetUint64(initBlock.Time()),
 		},
 	)
+
+	acc, err := delayedBridge.InboxAccs(&bind.CallOpts{}, big.NewInt(0))
+	test.FailIfError(t, err)
+	delayed := inbox.NewDelayedMessage(common.Hash{}, initMsg)
+
+	if acc != delayed.DelayedAccumulator {
+		t.Fatal("unexpected acc in inbox")
+	}
 
 	sequencerBridgeAddr, _, sequencerBridge, err := ethbridgecontracts.DeploySequencerInbox(deployer, client)
 	test.FailIfError(t, err)
@@ -254,7 +274,6 @@ func initializeChallengeTest(
 		Timestamp: new(big.Int).SetUint64(latestHeader.Time),
 	}
 
-	delayed := inbox.NewDelayedMessage(common.Hash{}, initMsg)
 	delayedItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayed.DelayedAccumulator)
 	endOfBlockMessage := message.NewInboxMessage(
 		message.EndBlockMessage{},
@@ -266,6 +285,7 @@ func initializeChallengeTest(
 	endOfBlockItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, delayedItem.Accumulator)
 	delayedAccInt := new(big.Int).SetBytes(delayed.DelayedAccumulator.Bytes())
 	batchMetadata := []*big.Int{big.NewInt(0), chainTime.BlockNum.AsInt(), chainTime.Timestamp, big.NewInt(1), delayedAccInt}
+
 	_, err = sequencerBridge.AddSequencerL2BatchFromOrigin(sequencer, nil, nil, batchMetadata, endOfBlockItem.Accumulator)
 	test.FailIfError(t, err)
 

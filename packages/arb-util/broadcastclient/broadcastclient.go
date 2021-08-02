@@ -89,6 +89,24 @@ func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiv
 	return nil
 }
 
+func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
+	go (func() {
+		for {
+			err := bc.ConnectWithChannel(ctx, messageReceiver)
+			if err == nil {
+				break
+			}
+			logger.Warn().Str("url", bc.websocketUrl).Err(err).
+				Msg("failed connect to sequencer broadcast, waiting and retrying")
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(5 * time.Second):
+			}
+		}
+	})()
+}
+
 func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {
 
 	if len(bc.websocketUrl) == 0 {
