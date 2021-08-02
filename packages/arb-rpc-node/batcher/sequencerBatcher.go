@@ -82,9 +82,15 @@ type SequencerBatcher struct {
 	latestChainTime        inbox.ChainTime
 	lastCreatedBatchAt     *big.Int
 	lastSequencedDelayedAt *big.Int
-	publishingBatchAtomic  int32
+	// 1 if we've published a batch to the L1 mempool,
+	// but it hasn't been included in an L1 block yet.
+	publishingBatchAtomic int32
+	// 1 if we're starting up and need to sequence delayed messages
+	// before opening up to users' RPC transactions.
 	waitingOnDelayedAtomic int32
-	waitingOnDelayedMutex  sync.RWMutex
+	// A write lock on this is held while the above condition is true.
+	// This lets SendTransaction wait on it without spinlocking.
+	waitingOnDelayedMutex sync.RWMutex
 }
 
 func getChainTime(ctx context.Context, client ethutils.EthClient) (inbox.ChainTime, error) {
