@@ -54,5 +54,12 @@ interface ITokenGateway {
         bytes calldata _data
     ) external payable returns (bytes memory);
 
+    /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @dev the L1 and L2 address oracles may not always be in sync.
+     * For example, a custom token may have been registered but not deploy or the contract self destructed.
+     * @param l1ERC20 address of L1 token
+     * @return L2 address of a bridged ERC20 token
+     */
     function calculateL2TokenAddress(address l1ERC20) external view returns (address);
 }

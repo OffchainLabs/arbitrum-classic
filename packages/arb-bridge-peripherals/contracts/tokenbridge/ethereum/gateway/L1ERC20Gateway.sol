@@ -136,8 +136,8 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         return outboundCalldata;
     }
 
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
+    function calculateL2TokenAddress(address l1ERC20)
+        public
         view
         virtual
         override

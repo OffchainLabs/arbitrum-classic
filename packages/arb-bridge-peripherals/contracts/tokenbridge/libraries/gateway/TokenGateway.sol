@@ -49,30 +49,17 @@ abstract contract TokenGateway is ITokenGateway {
 
     /**
      * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * @dev the L1 and L2 address oracles may not always be in sync.
      * For example, a custom token may have been registered but not deploy or the contract self destructed.
      * @param l1ERC20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
     function calculateL2TokenAddress(address l1ERC20)
-        external
+        public
         view
         virtual
         override
-        returns (address)
-    {
-        // will revert if not called by router
-        return _calculateL2TokenAddress(l1ERC20);
-    }
-
-    /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
-     * For example, a custom token may have been registered but not deploy or the contract self destructed.
-     * @param l1ERC20 address of L1 token
-     * @return L2 address of a bridged ERC20 token or 0 if no valid L2 address for the given input
-     */
-    function _calculateL2TokenAddress(address l1ERC20) internal view virtual returns (address);
+        returns (address);
 
     function outboundTransfer(
         address _token,

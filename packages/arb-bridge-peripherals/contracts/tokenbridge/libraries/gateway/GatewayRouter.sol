@@ -121,11 +121,11 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         return gateway;
     }
 
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
+    function calculateL2TokenAddress(address l1ERC20)
+        public
         view
         virtual
-        override
+        override(TokenGateway, ITokenGateway)
         returns (address)
     {
         address gateway = getGateway(l1ERC20);

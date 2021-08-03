@@ -159,8 +159,8 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
         stubAddressOracleReturn = _stubValue;
     }
 
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
+    function calculateL2TokenAddress(address l1ERC20)
+        public
         view
         virtual
         override
@@ -172,7 +172,7 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
         if (stubAddressOracleReturn != address(0)) {
             return stubAddressOracleReturn;
         }
-        return super._calculateL2TokenAddress(l1ERC20);
+        return super.calculateL2TokenAddress(l1ERC20);
     }
 }
 

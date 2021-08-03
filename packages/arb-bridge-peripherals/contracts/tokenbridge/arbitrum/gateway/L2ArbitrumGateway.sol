@@ -116,7 +116,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
 
         uint256 id;
         {
-            address l2Token = _calculateL2TokenAddress(_l1Token);
+            address l2Token = calculateL2TokenAddress(_l1Token);
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
 
             outboundEscrowTransfer(l2Token, _from, _amount);
@@ -180,7 +180,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
     ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
         (bytes memory gatewayData, bytes memory callHookData) = abi.decode(_data, (bytes, bytes));
 
-        address expectedAddress = _calculateL2TokenAddress(_token);
+        address expectedAddress = calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
             bool shouldHalt =
