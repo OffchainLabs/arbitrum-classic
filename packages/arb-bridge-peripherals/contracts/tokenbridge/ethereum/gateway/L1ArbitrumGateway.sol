@@ -47,7 +47,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
 
         // and the outbox reports that the L2 address of the sender is the counterpart gateway
         address l2ToL1Sender = super.getL2ToL1Sender(_inbox);
-        require(isCounterpartGateway(l2ToL1Sender), "ONLY_COUNTERPART_GATEWAY");
+        require(l2ToL1Sender == counterpartGateway, "ONLY_COUNTERPART_GATEWAY");
         _;
     }
 

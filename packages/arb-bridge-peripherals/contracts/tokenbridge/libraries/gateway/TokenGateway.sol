@@ -28,7 +28,9 @@ abstract contract TokenGateway is ITokenGateway {
     address public router;
 
     modifier onlyCounterpartGateway() virtual {
-        require(isCounterpartGateway(msg.sender), "ONLY_COUNTERPART_GATEWAY");
+        // this method is overriden in gateways that require special logic for validation
+        // ie L2 to L1 messages need to be validated against the outbox
+        require(msg.sender == counterpartGateway, "ONLY_COUNTERPART_GATEWAY");
         _;
     }
 
@@ -41,10 +43,6 @@ abstract contract TokenGateway is ITokenGateway {
 
     function isRouter(address _target) internal view virtual returns (bool isTargetRouter) {
         return _target == router;
-    }
-
-    function isCounterpartGateway(address _target) internal view virtual returns (bool) {
-        return _target == counterpartGateway;
     }
 
     /**

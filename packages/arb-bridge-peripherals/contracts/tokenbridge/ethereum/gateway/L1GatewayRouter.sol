@@ -208,8 +208,9 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
-    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+    modifier onlyCounterpartGateway() override {
         // don't expect messages from L2 router
-        return false;
+        revert("ONLY_COUNTERPART_GATEWAY");
+        _;
     }
 }
