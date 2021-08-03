@@ -21,12 +21,12 @@ pragma solidity ^0.6.11;
 import "../ethereum/gateway/L1WethGateway.sol";
 import "../ethereum/gateway/L1CustomGateway.sol";
 import "../ethereum/gateway/L1ERC20Gateway.sol";
+import "../ethereum/L1ArbitrumMessenger.sol";
 
 import "../arbitrum/gateway/L2WethGateway.sol";
 import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
-
-import "../libraries/gateway/ArbitrumMessenger.sol";
+import "../arbitrum/L2ArbitrumMessenger.sol";
 
 // these contracts are used to "flatten" out communication between contracts
 // this way the token bridge can be tested fully in the base layer

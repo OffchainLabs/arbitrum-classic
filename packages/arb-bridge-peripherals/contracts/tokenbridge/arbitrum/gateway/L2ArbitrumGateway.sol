@@ -23,7 +23,7 @@ import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 
 import "../IArbToken.sol";
 
-import { L2ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
+import "../L2ArbitrumMessenger.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
 
 /**

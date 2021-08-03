@@ -20,7 +20,6 @@ pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
-import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 abstract contract L1ArbitrumMessenger {
     event TxToL2(address indexed _from, address indexed _to, uint256 indexed _seqNum, bytes _data);
@@ -60,22 +59,5 @@ abstract contract L1ArbitrumMessenger {
 
         require(l2ToL1Sender != address(0), "NO_SENDER");
         return l2ToL1Sender;
-    }
-}
-
-abstract contract L2ArbitrumMessenger {
-    address internal constant ARB_SYS_ADDRESS = address(100);
-
-    event TxToL1(address indexed _from, address indexed _to, uint256 indexed _id, bytes _data);
-
-    function sendTxToL1(
-        uint256 _l1CallValue,
-        address _from,
-        address _to,
-        bytes memory _data
-    ) internal virtual returns (uint256) {
-        uint256 _id = ArbSys(ARB_SYS_ADDRESS).sendTxToL1{ value: _l1CallValue }(_to, _data);
-        emit TxToL1(_from, _to, _id, _data);
-        return _id;
     }
 }

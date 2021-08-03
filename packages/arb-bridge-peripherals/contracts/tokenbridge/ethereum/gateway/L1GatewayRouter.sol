@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 
-import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
+import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../arbitrum/gateway/L2GatewayRouter.sol";
 

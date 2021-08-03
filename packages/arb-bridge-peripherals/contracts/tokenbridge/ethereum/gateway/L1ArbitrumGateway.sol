@@ -25,7 +25,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
-import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
+import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
 import "../../libraries/IERC677.sol";
 
