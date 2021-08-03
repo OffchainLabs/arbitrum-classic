@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
@@ -44,22 +45,39 @@ func (a ArbAddresses) ArbFactoryAddress() common.Address {
 // RBF = Replace By Fee
 const rbfInterval time.Duration = time.Minute * 5
 
-func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, attemptRbf func() (ethcommon.Hash, error)) (*types.Receipt, error) {
+type attemptRbfInfo struct {
+	attempt func() (ethcommon.Hash, error)
+	account ethcommon.Address
+	nonce   uint64
+}
+
+func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
 	lastRbf := time.Now()
 	for {
 		select {
 		case <-time.After(time.Second):
-			if attemptRbf != nil && time.Since(lastRbf) >= rbfInterval {
-				var err error
-				txHash, err = attemptRbf()
+			if rbfInfo != nil && time.Since(lastRbf) >= rbfInterval {
+				newTxHash, err := rbfInfo.attempt()
+				lastRbf = time.Now()
 				if err == nil {
-					lastRbf = time.Now()
+					txHash = newTxHash
 				} else {
 					logger.Warn().Err(err).Msg("failed to replace by fee")
 				}
 			}
 			receipt, err := client.TransactionReceipt(ctx, txHash)
 			if receipt == nil && err == nil {
+				if rbfInfo != nil {
+					// an alternative tx might've gotten confirmed
+					nonce, err := client.NonceAt(ctx, rbfInfo.account, nil)
+					if err == nil {
+						if nonce >= rbfInfo.nonce {
+							return nil, nil
+						}
+					} else {
+						logger.Warn().Err(err).Str("account", rbfInfo.account.String()).Msg("Issue getting pending nonce")
+					}
+				}
 				continue
 			}
 			if err != nil {
@@ -85,38 +103,92 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 	return waitForReceiptWithResultsSimpleInternal(ctx, client, txHash, nil)
 }
 
+func increaseByPercent(original *big.Int, percentage int64) *big.Int {
+	threshold := new(big.Int).Mul(original, big.NewInt(100+percentage))
+	threshold.Div(threshold, big.NewInt(100))
+	return threshold
+}
+
 func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string, auth *TransactAuth) (*types.Receipt, error) {
-	var attemptRbf func() (ethcommon.Hash, error)
+	var rbfInfo *attemptRbfInfo
 	if auth != nil {
-		attemptRbf = func() (ethcommon.Hash, error) {
-			auth, err := auth.getAuth(ctx)
-			if err != nil {
-				return ethcommon.Hash{}, err
-			}
+		attemptRbf := func() (ethcommon.Hash, error) {
+			auth := auth.getAuth(ctx)
 			if auth.GasPrice.Cmp(tx.GasPrice()) <= 0 {
 				return tx.Hash(), nil
 			}
-			legacyTx := &types.LegacyTx{
-				Nonce:    tx.Nonce(),
-				GasPrice: auth.GasPrice,
-				Gas:      tx.Gas(),
-				To:       tx.To(),
-				Value:    tx.Value(),
-				Data:     tx.Data(),
+			var rawTx *types.Transaction
+			if tx.Type() == types.DynamicFeeTxType {
+				block, err := client.HeaderByNumber(ctx, nil)
+				if err != nil {
+					return ethcommon.Hash{}, err
+				}
+				if block.BaseFee == nil {
+					return ethcommon.Hash{}, errors.New("attempted to use dynamic fee tx in pre-EIP-1559 block")
+				}
+				tipCap, err := client.SuggestGasTipCap(ctx)
+				if err != nil {
+					return ethcommon.Hash{}, err
+				}
+				if tipCap.Cmp(increaseByPercent(tx.GasTipCap(), 10)) < 0 {
+					// We only replace by fee when we'd increase the tip by 10%
+					return tx.Hash(), nil
+				}
+				feeCap := new(big.Int).Mul(block.BaseFee, big.NewInt(2))
+				feeCap.Add(feeCap, tipCap)
+				minFeeCap := increaseByPercent(tx.GasFeeCap(), 10)
+				if feeCap.Cmp(minFeeCap) < 0 {
+					feeCap = minFeeCap
+				}
+				baseTx := &types.DynamicFeeTx{
+					ChainID:    tx.ChainId(),
+					Nonce:      tx.Nonce(),
+					GasTipCap:  tipCap,
+					GasFeeCap:  feeCap,
+					Gas:        tx.Gas(),
+					To:         tx.To(),
+					Value:      tx.Value(),
+					Data:       tx.Data(),
+					AccessList: tx.AccessList(),
+				}
+				rawTx = types.NewTx(baseTx)
+			} else {
+				gasPrice, err := client.SuggestGasPrice(ctx)
+				if err != nil {
+					return ethcommon.Hash{}, err
+				}
+				if gasPrice.Cmp(increaseByPercent(tx.GasPrice(), 10)) < 0 {
+					// We only replace by fee when we'd increase the fee by at least 10%
+					return tx.Hash(), nil
+				}
+				baseTx := &types.LegacyTx{
+					Nonce:    tx.Nonce(),
+					GasPrice: gasPrice,
+					Gas:      tx.Gas(),
+					To:       tx.To(),
+					Value:    tx.Value(),
+					Data:     tx.Data(),
+				}
+				rawTx = types.NewTx(baseTx)
 			}
-			newTx, err := auth.Signer(auth.From, types.NewTx(legacyTx))
+			newTx, err := auth.Signer(auth.From, rawTx)
 			if err != nil {
 				return ethcommon.Hash{}, err
 			}
-			err = client.SendTransaction(ctx, tx)
+			err = client.SendTransaction(ctx, newTx)
 			if err != nil {
 				return ethcommon.Hash{}, err
 			}
 			*tx = *newTx
 			return newTx.Hash(), nil
 		}
+		rbfInfo = &attemptRbfInfo{
+			attempt: attemptRbf,
+			account: auth.auth.From,
+			nonce:   tx.Nonce(),
+		}
 	}
-	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, tx.Hash(), attemptRbf)
+	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, tx.Hash(), rbfInfo)
 	if err != nil {
 		logger.Warn().Err(err).Hex("tx", tx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
