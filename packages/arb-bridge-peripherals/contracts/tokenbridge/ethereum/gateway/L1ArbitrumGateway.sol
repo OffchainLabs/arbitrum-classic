@@ -136,10 +136,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
     }
 
     function createOutboundTx(
-        address _l1Token,
         address _from,
-        address _to,
-        uint256 _amount,
+        uint256 _tokenAmount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
@@ -187,9 +185,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
     ) public payable virtual override returns (bytes memory res) {
         address _from;
         uint256 seqNum;
+        bytes memory extraData;
         {
             uint256 _maxSubmissionCost;
-            bytes memory extraData;
             (_from, _maxSubmissionCost, extraData) = parseOutboundData(_data);
 
             require(_l1Token.isContract(), "L1_NOT_CONTRACT");
@@ -198,22 +196,20 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
 
             outboundEscrowTransfer(_l1Token, _from, _amount);
 
-            // we override the extraData field to save on the stack
-            extraData = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
+            // we override the res field to save on the stack
+            res = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
 
             seqNum = createOutboundTx(
-                _l1Token,
                 _from,
-                _to,
                 _amount,
                 _maxGas,
                 _gasPriceBid,
                 _maxSubmissionCost,
-                extraData
+                res
             );
         }
 
-        emit OutboundTransferInitiated(_l1Token, _from, _to, seqNum, _amount, _data);
+        emit OutboundTransferInitiated(_l1Token, _from, _to, seqNum, _amount, extraData);
         return abi.encode(seqNum);
     }
 

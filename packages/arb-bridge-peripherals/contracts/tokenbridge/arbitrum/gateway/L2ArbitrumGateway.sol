@@ -110,7 +110,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override returns (bytes memory) {
+    ) public payable virtual override returns (bytes memory res) {
         // can be triggered directly or by router
         require(msg.value == 0, "NO_VALUE");
 
@@ -123,14 +123,13 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
 
             outboundEscrowTransfer(l2Token, _from, _amount);
 
-            // we override the _extraData field to save on the stack
-            _extraData = getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
-
-            id = createOutboundTx(_from, _amount, _extraData);
+            // we override the res field to save on the stack
+            res = getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
+            id = createOutboundTx(_from, _amount, res);
         }
         // exitNum incremented after being used in createOutboundTx
         exitNum++;
-        emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _data);
+        emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _extraData);
         return abi.encode(id);
     }
 

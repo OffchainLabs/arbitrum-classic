@@ -46,14 +46,12 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
     }
 
     function createOutboundTx(
-        address _l1Token,
         address _from,
-        address _to,
-        uint256 _amount,
+        uint256 _tokenAmount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
-        bytes memory _extraData
+        bytes memory _outboundCalldata
     ) internal virtual override returns (uint256) {
         return
             sendTxToL2(
@@ -61,15 +59,15 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
                 counterpartGateway,
                 _from,
                 // msg.value does not include weth withdrawn from user, we need to add in that amount
-                msg.value + _amount,
+                msg.value + _tokenAmount,
                 // send token amount to L2 as call value
-                _amount,
+                _tokenAmount,
                 L2GasParams({
                     _maxSubmissionCost: _maxSubmissionCost,
                     _maxGas: _maxGas,
                     _gasPriceBid: _gasPriceBid
                 }),
-                _extraData
+                _outboundCalldata
             );
     }
 
