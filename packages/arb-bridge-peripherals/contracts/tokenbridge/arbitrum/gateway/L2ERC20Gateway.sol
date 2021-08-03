@@ -31,7 +31,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         address _l1Counterpart,
         address _router,
         address _beaconProxyFactory
-    ) public virtual {
+    ) public {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
         require(_beaconProxyFactory != address(0), "INVALID_BEACON");
         beaconProxyFactory = _beaconProxyFactory;
@@ -51,6 +51,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         override
         returns (address)
     {
+        // this method is marked virtual to be overriden in subclasses used in testing
         return
             BeaconProxyFactory(beaconProxyFactory).calculateExpectedAddress(
                 address(this),
@@ -81,7 +82,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         address _to,
         uint256 _amount,
         bytes memory deployData
-    ) internal virtual override returns (bool shouldHalt) {
+    ) internal override returns (bool shouldHalt) {
         bytes32 userSalt = getUserSalt(l1ERC20);
         address createdContract = BeaconProxyFactory(beaconProxyFactory).createProxy(userSalt);
 

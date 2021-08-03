@@ -61,7 +61,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         address _l1Router,
         address _inbox,
         address _owner
-    ) public virtual {
+    ) public {
         L1ArbitrumExtendedGateway._initialize(_l1Counterpart, _l1Router, _inbox);
         owner = _owner;
         // disable whitelist by default
@@ -72,7 +72,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _exitNum,
         address _initialDestination,
         bytes memory _initialData
-    ) public view virtual override returns (address target, bytes memory data) {
+    ) public view override returns (address target, bytes memory data) {
         if (getChainId() == 1 && _exitNum == 0) {
             return (0x0AA354A392745Bc5f63ff8866261e8B6647002DF, "");
         }
@@ -109,7 +109,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override onlyWhitelisted returns (bytes memory) {
+    ) public payable override onlyWhitelisted returns (bytes memory) {
         return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
@@ -120,13 +120,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
      * @param l1ERC20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
-    function calculateL2TokenAddress(address l1ERC20)
-        public
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
         return l1ToL2Token[l1ERC20];
     }
 
@@ -143,7 +137,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable virtual returns (uint256) {
+    ) external payable returns (uint256) {
         return registerTokenToL2(_l2Address, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
@@ -163,7 +157,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
         address _creditBackAddress
-    ) public payable virtual returns (uint256) {
+    ) public payable returns (uint256) {
         require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
         l1ToL2Token[msg.sender] = _l2Address;
 
@@ -211,7 +205,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable virtual returns (uint256) {
+    ) external payable returns (uint256) {
         require(msg.sender == owner, "ONLY_OWNER");
         require(_l1Addresses.length == _l2Addresses.length, "INVALID_LENGTHS");
 

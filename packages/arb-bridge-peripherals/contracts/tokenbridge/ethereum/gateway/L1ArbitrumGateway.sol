@@ -39,7 +39,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
 
     address public inbox;
 
-    modifier onlyCounterpartGateway() virtual override {
+    modifier onlyCounterpartGateway() override {
         address _inbox = inbox;
 
         // a message coming from the counterpart gateway was executed by the bridge
@@ -78,7 +78,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
+    ) external payable override onlyCounterpartGateway returns (bytes memory) {
         (uint256 exitNum, bytes memory callHookData) = parseInboundData(_data);
 
         (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
@@ -112,7 +112,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address _initialDestination,
         bytes memory _initialData
     ) public view virtual returns (address target, bytes memory data) {
-        // current destination can be changed for tradeable exits in a super class
+        // this method is virtual so the destination of a call can be changed
+        // using tradeable exits in a subclass (L1ArbitrumExtendedGateway)
         target = _initialDestination;
         data = _initialData;
     }
@@ -120,7 +121,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
     function parseInboundData(bytes calldata _data)
         public
         pure
-        virtual
         returns (uint256 _exitNum, bytes memory _extraData)
     {
         // this data is encoded by the counterpart gateway, so this shouldn't revert
@@ -132,6 +132,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address _dest,
         uint256 _amount
     ) internal virtual override {
+        // this method is virtual since different subclasses can handle escrow differently
         IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
 
@@ -183,6 +184,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory res) {
+        // This function is set as public and virtual so that subclasses can override
+        // it and add custom validation for callers (ie only whitelisted users)
         address _from;
         uint256 seqNum;
         bytes memory extraData;
@@ -218,14 +221,14 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address _from,
         uint256 _amount
     ) internal virtual {
-        // escrow funds in gateway
+        // this method is virtual since different subclasses can handle escrow differently
+        // user funds are escrowed on the gateway using this function
         IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
     }
 
     function parseOutboundData(bytes memory _data)
         internal
         view
-        virtual
         returns (
             address _from,
             uint256 _maxSubmissionCost,
@@ -250,6 +253,10 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes memory _data
     ) public view virtual override returns (bytes memory outboundCalldata) {
+        // this function is public so users can query how much calldata will be sent to the L2
+        // before execution
+        // it is virtual since different gateway subclasses can build this calldata differently
+        // ( ie the standard ERC20 gateway queries for a tokens name/symbol/decimals )
         bytes memory emptyBytes = "";
 
         outboundCalldata = abi.encodeWithSelector(

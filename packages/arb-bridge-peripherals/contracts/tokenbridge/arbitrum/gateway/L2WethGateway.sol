@@ -34,7 +34,7 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _router,
         address _l1Weth,
         address _l2Weth
-    ) public virtual {
+    ) public {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
         require(_l1Weth != address(0), "INVALID_L1WETH");
         require(_l2Weth != address(0), "INVALID_L2WETH");
@@ -55,7 +55,7 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _to,
         uint256 _amount,
         bytes memory deployData
-    ) internal virtual override returns (bool shouldHalt) {
+    ) internal override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         // trigger withdrawal
         createOutboundTx(
@@ -73,13 +73,7 @@ contract L2WethGateway is L2ArbitrumGateway {
      * @param l1ERC20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
-    function calculateL2TokenAddress(address l1ERC20)
-        public
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
         if (l1ERC20 != l1Weth) {
             // invalid L1 weth address
             return address(0);
@@ -91,7 +85,7 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _l2TokenAddress,
         address _dest,
         uint256 _amount
-    ) internal virtual override {
+    ) internal override {
         IWETH9(_l2TokenAddress).deposit{ value: _amount }();
         IERC20(_l2TokenAddress).safeTransfer(_dest, _amount);
     }
@@ -100,7 +94,7 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _from,
         uint256 _tokenAmount,
         bytes memory _outboundCalldata
-    ) internal virtual override returns (uint256) {
+    ) internal override returns (uint256) {
         return
             sendTxToL1(
                 // we send the amount of weth withdrawn as callvalue to the L1 gateway

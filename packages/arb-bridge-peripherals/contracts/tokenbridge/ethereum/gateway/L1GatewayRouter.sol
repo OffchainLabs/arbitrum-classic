@@ -43,7 +43,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         address _whitelist,
         address _counterpartGateway,
         address _inbox
-    ) public virtual {
+    ) public {
         GatewayRouter._initialize(_counterpartGateway, address(0), _defaultGateway);
         owner = _owner;
         WhitelistConsumer.whitelist = _whitelist;
@@ -59,7 +59,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable virtual onlyOwner returns (uint256) {
+    ) external payable onlyOwner returns (uint256) {
         defaultGateway = newL1DefaultGateway;
 
         emit DefaultGatewayUpdated(newL1DefaultGateway);
@@ -208,7 +208,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override onlyWhitelisted returns (bytes memory) {
+    ) public payable override onlyWhitelisted returns (bytes memory) {
         // will revert if msg.sender is not whitelisted
         super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }

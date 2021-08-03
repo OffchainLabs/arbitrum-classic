@@ -111,7 +111,12 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory res) {
-        // can be triggered directly or by router
+        // This function is set as public and virtual so that subclasses can override
+        // it and add custom validation for callers (ie only whitelisted users)
+
+        // the function is marked as payable to conform to the inheritance setup
+        // this particular code path shouldn't have a msg.value > 0
+        // TODO: remove this invariant for execution markets
         require(msg.value == 0, "NO_VALUE");
 
         (address _from, bytes memory _extraData) = parseOutboundData(_data);
@@ -138,6 +143,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         address _from,
         uint256 _amount
     ) internal virtual {
+        // this method is virtual since different subclasses can handle escrow differently
+        // user funds are escrowed on the gateway using this function
         // burns L2 tokens in order to release escrowed L1 tokens
         IArbToken(_l2Token).bridgeBurn(_from, _amount);
     }
@@ -145,7 +152,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
     function parseOutboundData(bytes memory _data)
         internal
         view
-        virtual
         returns (address _from, bytes memory _extraData)
     {
         if (super.isRouter(msg.sender)) {
@@ -161,6 +167,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         address _dest,
         uint256 _amount
     ) internal virtual override {
+        // this method is virtual since different subclasses can handle escrow differently
         IArbToken(_l2Address).bridgeMint(_dest, _amount);
     }
 
@@ -181,7 +188,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
+    ) external payable override onlyCounterpartGateway returns (bytes memory) {
         (bytes memory gatewayData, bytes memory callHookData) = abi.decode(_data, (bytes, bytes));
 
         address expectedAddress = calculateL2TokenAddress(_token);

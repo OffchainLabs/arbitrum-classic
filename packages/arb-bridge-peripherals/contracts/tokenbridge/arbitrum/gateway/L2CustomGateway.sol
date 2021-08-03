@@ -26,7 +26,7 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
     // stores addresses of L2 tokens to be used
     mapping(address => address) public override l1ToL2Token;
 
-    function initialize(address _l1Counterpart, address _router) public virtual {
+    function initialize(address _l1Counterpart, address _router) public {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
     }
 
@@ -51,7 +51,7 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
         address _to,
         uint256 _amount,
         bytes memory gatewayData
-    ) internal virtual override returns (bool shouldHalt) {
+    ) internal override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         // trigger withdrawal
         createOutboundTx(
@@ -69,19 +69,12 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
      * @param l1ERC20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
-    function calculateL2TokenAddress(address l1ERC20)
-        public
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
         return l1ToL2Token[l1ERC20];
     }
 
     function registerTokenFromL1(address[] calldata l1Address, address[] calldata l2Address)
         external
-        virtual
         onlyCounterpartGateway
     {
         // we assume both arrays are the same length, safe since its encoded by the L1
