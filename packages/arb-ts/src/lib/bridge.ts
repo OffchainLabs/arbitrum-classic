@@ -606,17 +606,22 @@ export class Bridge {
    */
   public async getTokenWithdrawEventData(
     l1TokenAddress: string,
-    destinationAddress?: string
+    destinationAddress?: string,
+    l2BlockNumber?: number
   ) {
     const gatewayAddress = await this.l2Bridge.l2GatewayRouter.getGateway(
       l1TokenAddress
     )
+    if (gatewayAddress === constants.AddressZero) {
+      return []
+    }
 
     return BridgeHelper.getOutBoundTransferInitiatedLogs(
       this.l2Provider,
       gatewayAddress,
       l1TokenAddress,
-      destinationAddress
+      destinationAddress,
+      l2BlockNumber
     )
   }
 
@@ -640,8 +645,15 @@ export class Bridge {
     return BridgeHelper.getL2ToL1EventData(destinationAddress, this.l2Provider)
   }
 
-  public async getEthWithdrawals(destinationAddress?: string) {
-    return BridgeHelper.getEthWithdrawals(this.l2Provider, destinationAddress)
+  public async getEthWithdrawals(
+    destinationAddress?: string,
+    l2BlockNumber?: number
+  ) {
+    return BridgeHelper.getEthWithdrawals(
+      this.l2Provider,
+      destinationAddress,
+      l2BlockNumber
+    )
   }
 
   public async getOutboxAddress() {
@@ -673,7 +685,8 @@ export class Bridge {
    */
   public async getOutGoingMessageState(
     batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    indexInBatch: BigNumber,
+    l1BlockNumber?: number
   ) {
     const outboxAddress = await this.getOutboxAddress()
     return BridgeHelper.getOutgoingMessageState(
@@ -681,7 +694,8 @@ export class Bridge {
       indexInBatch,
       outboxAddress,
       this.l1Provider,
-      this.l2Provider
+      this.l2Provider,
+      l1BlockNumber
     )
   }
 
@@ -749,8 +763,8 @@ export class Bridge {
     return Bridge__factory.connect(bridgeAddress, this.l1Provider)
   }
 
-  public async getRetryablesL1() {
-    return BridgeHelper.getRetryablesL1(this.l1Provider)
+  public async getRetryablesL1(l1BlockNumber?: number) {
+    return BridgeHelper.getRetryablesL1(this.l1Provider, l1BlockNumber)
   }
   public async getL1GatewaySetEventData() {
     const l1ChainId = await this.l1Signer.getChainId()

@@ -127,7 +127,8 @@ export class BridgeHelper {
     provider: providers.Provider,
     gatewayAddress: string,
     tokenAddress?: string,
-    destinationAddress?: string
+    destinationAddress?: string,
+    toBlock?: number
   ) => {
     const gatewayContract = TokenGateway__factory.connect(
       gatewayAddress,
@@ -141,7 +142,8 @@ export class BridgeHelper {
       'OutboundTransferInitiated',
       gatewayContract,
       // @ts-ignore
-      topics
+      topics,
+      { toBlock: toBlock || 'latest' }
     )
 
     return logs.map(log => {
@@ -512,14 +514,17 @@ export class BridgeHelper {
   static getOutboxEntry = async (
     batchNumber: BigNumber,
     outboxAddress: string,
-    l1Provider: providers.Provider
+    l1Provider: providers.Provider,
+    l1BlockNumber?: number
   ): Promise<string> => {
     const iface = new ethers.utils.Interface([
       'function outboxes(uint256) public view returns (address)',
       'function outboxesLength() public view returns (uint256)',
     ])
     const outbox = new ethers.Contract(outboxAddress, iface).connect(l1Provider)
-    const len: BigNumber = await outbox.outboxesLength()
+    const len: BigNumber = await outbox.outboxesLength({
+      blockTag: l1BlockNumber,
+    })
     if (batchNumber.gte(len)) {
       return constants.AddressZero
     }
@@ -712,7 +717,8 @@ export class BridgeHelper {
 
   static getEthWithdrawals = async (
     l2Provider: providers.Provider,
-    destinationAddress?: string
+    destinationAddress?: string,
+    l2BlockNumber?: number
   ) => {
     const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
 
@@ -721,7 +727,8 @@ export class BridgeHelper {
       contract,
       destinationAddress
         ? [ethers.utils.hexZeroPad(destinationAddress, 32)]
-        : []
+        : [],
+      { toBlock: l2BlockNumber || 'latest' }
     )
 
     return logs
@@ -732,12 +739,20 @@ export class BridgeHelper {
       .filter(res => res.data === '0x')
   }
 
-  static getRetryablesL1 = async (l1Provider: providers.Provider) => {
+  static getRetryablesL1 = async (
+    l1Provider: providers.Provider,
+    l1BlockNumber?: number
+  ) => {
     const { chainId } = await l1Provider.getNetwork()
     const bridgeAddress = networks[chainId].tokenBridge.bridge
 
     const contract = Bridge__factory.connect(bridgeAddress, l1Provider)
-    const logs = await BridgeHelper.getEventLogs('MessageDelivered', contract)
+    const logs = await BridgeHelper.getEventLogs(
+      'MessageDelivered',
+      contract,
+      undefined,
+      { toBlock: l1BlockNumber }
+    )
 
     return logs
       .map(log => {
@@ -836,7 +851,8 @@ export class BridgeHelper {
     outboxIndex: BigNumber,
     path: BigNumber,
     outboxAddress: string,
-    l1Provider: providers.Provider
+    l1Provider: providers.Provider,
+    toBlock?: number
   ): Promise<boolean> => {
     const contract = Outbox__factory.connect(outboxAddress, l1Provider)
     const topics = [
@@ -848,7 +864,8 @@ export class BridgeHelper {
       'OutBoxTransactionExecuted',
       contract,
       // @ts-ignore
-      topics
+      topics,
+      { toBlock: toBlock || 'latest' }
     )
     const parsedData = logs.map(
       log =>
@@ -867,7 +884,8 @@ export class BridgeHelper {
     indexInBatch: BigNumber,
     outBoxAddress: string,
     l1Provider: providers.Provider,
-    l2Provider: providers.Provider
+    l2Provider: providers.Provider,
+    l1BlockNumber?: number
   ): Promise<OutgoingMessageState> => {
     try {
       const proofData = await BridgeHelper.tryGetProofOnce(
@@ -884,7 +902,8 @@ export class BridgeHelper {
         batchNumber,
         proofData.path,
         outBoxAddress,
-        l1Provider
+        l1Provider,
+        l1BlockNumber
       )
       if (messageExecuted) {
         return OutgoingMessageState.EXECUTED
@@ -893,7 +912,8 @@ export class BridgeHelper {
       const outboxEntry = await BridgeHelper.getOutboxEntry(
         batchNumber,
         outBoxAddress,
-        l1Provider
+        l1Provider,
+        l1BlockNumber
       )
 
       if (outboxEntry === constants.AddressZero) {
