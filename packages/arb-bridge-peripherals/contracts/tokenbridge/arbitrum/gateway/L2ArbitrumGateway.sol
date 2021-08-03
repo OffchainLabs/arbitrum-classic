@@ -144,7 +144,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         virtual
         returns (address _from, bytes memory _extraData)
     {
-        if (isRouter(msg.sender)) {
+        if (super.isRouter(msg.sender)) {
             (_from, _extraData) = abi.decode(_data, (address, bytes));
         } else {
             _from = msg.sender;

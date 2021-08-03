@@ -245,7 +245,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
             bytes memory _extraData
         )
     {
-        if (isRouter(msg.sender)) {
+        if (super.isRouter(msg.sender)) {
             // router encoded
             (_from, _extraData) = abi.decode(_data, (address, bytes));
         } else {

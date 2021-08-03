@@ -19,7 +19,6 @@
 pragma solidity ^0.6.11;
 
 import "./ITokenGateway.sol";
-import "./IGatewayRouter.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 abstract contract TokenGateway is ITokenGateway {
@@ -41,7 +40,7 @@ abstract contract TokenGateway is ITokenGateway {
         router = _router;
     }
 
-    function isRouter(address _target) internal view virtual returns (bool isTargetRouter) {
+    function isRouter(address _target) internal view returns (bool isTargetRouter) {
         return _target == router;
     }
 

@@ -20,12 +20,11 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
-import "./IGatewayRouter.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
  */
-abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
+abstract contract GatewayRouter is TokenGateway {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
@@ -53,17 +52,13 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         defaultGateway = _defaultGateway;
     }
 
-    function isRouter() external view override returns (bool) {
-        return true;
-    }
-
     function finalizeInboundTransfer(
         address _token,
         address _from,
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable virtual override(TokenGateway, ITokenGateway) returns (bytes memory) {
+    ) external payable virtual override returns (bytes memory) {
         revert("ONLY_OUTBOUND_ROUTER");
     }
 
@@ -74,7 +69,7 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override(TokenGateway, ITokenGateway) returns (bytes memory) {
+    ) public payable virtual override returns (bytes memory) {
         address gateway = getGateway(_token);
         bytes memory gatewayData = getOutboundCalldata(_token, msg.sender, _to, _amount, _data);
 
@@ -100,11 +95,6 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         return abi.encode(_from, _data);
     }
 
-    function isRouter(address _target) internal view virtual override returns (bool) {
-        // nothing routes to gateway router
-        return false;
-    }
-
     function getGateway(address _token) public view virtual returns (address gateway) {
         gateway = l1TokenToGateway[_token];
 
@@ -125,7 +115,7 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         public
         view
         virtual
-        override(TokenGateway, ITokenGateway)
+        override
         returns (address)
     {
         address gateway = getGateway(l1ERC20);
