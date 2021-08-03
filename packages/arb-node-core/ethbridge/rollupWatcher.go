@@ -112,7 +112,7 @@ func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: big.NewInt(r.fromBlock),
-		ToBlock:   nil,
+		ToBlock:   big.NewInt(r.fromBlock),
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
 	}
