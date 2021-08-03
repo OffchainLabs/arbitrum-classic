@@ -48,21 +48,21 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
     }
 
     function createOutboundTx(
-        address _l1Token,
         address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _extraData
+        uint256 _tokenAmount,
+        bytes memory _outboundCalldata
     ) internal virtual returns (uint256) {
-        return sendTxToL1(_from, 0, getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData));
-    }
+        // We make this function virtual since outboundTransfer logic is the same for many gateways
+        // but sometimes (ie weth) you construct the outgoing message differently.
 
-    function sendTxToL1(
-        address _from,
-        uint256 _l1CallValue,
-        bytes memory _data
-    ) internal virtual returns (uint256) {
-        return sendTxToL1(_l1CallValue, _from, counterpartGateway, _data);
+        return
+            sendTxToL1(
+                // default to sending no callvalue to the L1
+                0,
+                _from,
+                counterpartGateway,
+                _outboundCalldata
+            );
     }
 
     function getOutboundCalldata(
@@ -123,11 +123,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
 
             outboundEscrowTransfer(l2Token, _from, _amount);
 
-            id = createOutboundTx(_l1Token, _from, _to, _amount, _extraData);
+            // we override the _extraData field to save on the stack
+            _extraData = getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
+
+            id = createOutboundTx(_from, _amount, _extraData);
         }
         // exitNum incremented after being used in createOutboundTx
         exitNum++;
-        emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _extraData);
+        emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _data);
         return abi.encode(id);
     }
 
@@ -210,7 +213,10 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             }
 
             if (shouldWithdraw) {
-                createOutboundTx(_token, address(this), _from, _amount, "");
+                // we override the gatewayData field to save on the stack
+                gatewayData = getOutboundCalldata(_token, address(this), _from, _amount, "");
+
+                createOutboundTx(address(this), _amount, gatewayData);
                 return bytes("");
             }
         }

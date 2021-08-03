@@ -91,7 +91,11 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
             return false;
         } else {
             // trigger withdrawal then halt
-            createOutboundTx(l1ERC20, address(this), _from, _amount, "");
+            createOutboundTx(
+                address(this),
+                _amount,
+                getOutboundCalldata(l1ERC20, address(this), _from, _amount, "")
+            );
             return true;
         }
     }

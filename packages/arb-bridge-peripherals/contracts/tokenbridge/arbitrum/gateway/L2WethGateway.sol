@@ -58,7 +58,11 @@ contract L2WethGateway is L2ArbitrumGateway {
     ) internal virtual override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         // trigger withdrawal
-        createOutboundTx(l1ERC20, address(this), _from, _amount, "");
+        createOutboundTx(
+            address(this),
+            _amount,
+            getOutboundCalldata(l1ERC20, address(this), _from, _amount, "")
+        );
         return true;
     }
 
@@ -93,17 +97,17 @@ contract L2WethGateway is L2ArbitrumGateway {
     }
 
     function createOutboundTx(
-        address _l1Token,
         address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _extraData
+        uint256 _tokenAmount,
+        bytes memory _outboundCalldata
     ) internal virtual override returns (uint256) {
         return
             sendTxToL1(
+                // we send the amount of weth withdrawn as callvalue to the L1 gateway
+                _tokenAmount,
                 _from,
-                _amount,
-                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData)
+                counterpartGateway,
+                _outboundCalldata
             );
     }
 
