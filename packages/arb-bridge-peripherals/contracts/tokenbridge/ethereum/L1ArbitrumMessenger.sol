@@ -24,10 +24,41 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 abstract contract L1ArbitrumMessenger {
     event TxToL2(address indexed _from, address indexed _to, uint256 indexed _seqNum, bytes _data);
 
+    struct L2GasParams {
+        uint256 _maxSubmissionCost;
+        uint256 _maxGas;
+        uint256 _gasPriceBid;
+    }
+
     function sendTxToL2(
         address _inbox,
         address _to,
         address _user,
+        uint256 _l1CallValue,
+        uint256 _l2CallValue,
+        L2GasParams memory _l2GasParams,
+        bytes memory _data
+    ) internal virtual returns (uint256) {
+        // alternative function entry point when struggling with the stack size
+        return
+            sendTxToL2(
+                _inbox,
+                _to,
+                _user,
+                _l1CallValue,
+                _l2CallValue,
+                _l2GasParams._maxSubmissionCost,
+                _l2GasParams._maxGas,
+                _l2GasParams._gasPriceBid,
+                _data
+            );
+    }
+
+    function sendTxToL2(
+        address _inbox,
+        address _to,
+        address _user,
+        uint256 _l1CallValue,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
@@ -35,7 +66,7 @@ abstract contract L1ArbitrumMessenger {
         bytes memory _data
     ) internal virtual returns (uint256) {
         uint256 seqNum =
-            IInbox(_inbox).createRetryableTicket{ value: msg.value }(
+            IInbox(_inbox).createRetryableTicket{ value: _l1CallValue }(
                 _to,
                 _l2CallValue,
                 _maxSubmissionCost,

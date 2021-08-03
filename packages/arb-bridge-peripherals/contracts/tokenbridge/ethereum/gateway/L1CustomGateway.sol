@@ -181,7 +181,18 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 l2Addresses
             );
 
-        return sendTxToL2(_creditBackAddress, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                _creditBackAddress,
+                msg.value,
+                0,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
     /**
@@ -218,6 +229,17 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 _l2Addresses
             );
 
-        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                msg.sender,
+                msg.value,
+                0,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 }

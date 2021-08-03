@@ -143,39 +143,26 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
-        bytes memory _extraData
+        bytes memory _outboundCalldata
     ) internal virtual returns (uint256) {
+        // We make this function virtual since outboundTransfer logic is the same for many gateways
+        // but sometimes (ie weth) you construct the outgoing message differently.
+
         // msg.value is sent, but 0 is set to the L2 call value
         // the eth sent is used to pay for the tx's gas
         return
             sendTxToL2(
-                _from,
-                0, // l2 call value 0 by default
-                _maxSubmissionCost,
-                _maxGas,
-                _gasPriceBid,
-                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData)
-            );
-    }
-
-    function sendTxToL2(
-        address _user,
-        uint256 _l2CallValue,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes memory _data
-    ) internal virtual returns (uint256) {
-        return
-            sendTxToL2(
                 inbox,
                 counterpartGateway,
-                _user,
-                _l2CallValue,
-                _maxSubmissionCost,
-                _maxGas,
-                _gasPriceBid,
-                _data
+                _from,
+                msg.value, // we forward the L1 call value to the inbox
+                0, // l2 call value 0 by default
+                L2GasParams({
+                    _maxSubmissionCost: _maxSubmissionCost,
+                    _maxGas: _maxGas,
+                    _gasPriceBid: _gasPriceBid
+                }),
+                _outboundCalldata
             );
     }
 
@@ -210,6 +197,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             require(l2Token != address(0), "NO_L2_TOKEN_SET");
 
             outboundEscrowTransfer(_l1Token, _from, _amount);
+
+            // we override the extraData field to save on the stack
+            extraData = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
 
             seqNum = createOutboundTx(
                 _l1Token,

@@ -54,27 +54,6 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         owner = address(0x6c26D7f792CfEc88acdB382fe720bdcE7C922776);
     }
 
-    function sendTxToL2(
-        address _user,
-        uint256 _l2CallValue,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes memory _data
-    ) internal virtual returns (uint256) {
-        return
-            L1ArbitrumMessenger.sendTxToL2(
-                inbox,
-                counterpartGateway,
-                _user,
-                _l2CallValue,
-                _maxSubmissionCost,
-                _maxGas,
-                _gasPriceBid,
-                _data
-            );
-    }
-
     function setDefaultGateway(
         address newL1DefaultGateway,
         uint256 _maxGas,
@@ -94,7 +73,20 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         bytes memory data =
             abi.encodeWithSelector(L2GatewayRouter.setDefaultGateway.selector, l2NewDefaultGateway);
 
-        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                msg.sender,
+                msg.value,
+                0,
+                L2GasParams({
+                    _maxSubmissionCost: _maxSubmissionCost,
+                    _maxGas: _maxGas,
+                    _gasPriceBid: _gasPriceBid
+                }),
+                data
+            );
     }
 
     function setOwner(address newOwner) external onlyOwner {
@@ -125,7 +117,20 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         bytes memory data =
             abi.encodeWithSelector(L2GatewayRouter.setGateway.selector, _token, _gateway);
 
-        return sendTxToL2(_creditBackAddress, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                _creditBackAddress,
+                msg.value,
+                0,
+                L2GasParams({
+                    _maxSubmissionCost: _maxSubmissionCost,
+                    _maxGas: _maxGas,
+                    _gasPriceBid: _gasPriceBid
+                }),
+                data
+            );
     }
 
     /**

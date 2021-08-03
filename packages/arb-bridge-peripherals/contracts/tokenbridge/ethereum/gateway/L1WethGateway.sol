@@ -57,39 +57,20 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
     ) internal virtual override returns (uint256) {
         return
             sendTxToL2(
+                inbox,
+                counterpartGateway,
                 _from,
-                _amount, // send token amount to L2 as call value
-                _maxSubmissionCost,
-                _maxGas,
-                _gasPriceBid,
-                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData)
+                // msg.value does not include weth withdrawn from user, we need to add in that amount
+                msg.value + _amount,
+                // send token amount to L2 as call value
+                _amount,
+                L2GasParams({
+                    _maxSubmissionCost: _maxSubmissionCost,
+                    _maxGas: _maxGas,
+                    _gasPriceBid: _gasPriceBid
+                }),
+                _extraData
             );
-    }
-
-    function sendTxToL2(
-        address _inbox,
-        address _to,
-        address _user,
-        uint256 _l2CallValue,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes memory _data
-    ) internal virtual override returns (uint256) {
-        // msg.value does not include weth withdrawn from user, we need to add in that amount
-        uint256 seqNum =
-            IInbox(_inbox).createRetryableTicket{ value: msg.value + _l2CallValue }(
-                _to,
-                _l2CallValue,
-                _maxSubmissionCost,
-                _user,
-                _user,
-                _maxGas,
-                _gasPriceBid,
-                _data
-            );
-        emit TxToL2(_user, _to, seqNum, _data);
-        return seqNum;
     }
 
     function outboundEscrowTransfer(
