@@ -751,14 +751,15 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 		return false, err
 	}
 
+	var removedPendingGasEstimate int64
 	if publishingAllBatchItems {
-		// Reset the pending gas estimate to gasCostBase,
-		// plus whatever was sequenced while we were building this batch.
-		atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostBase)-origEstimate)
+		// Reset the pending gas estimate to gasCostBase.
+		removedPendingGasEstimate = origEstimate
 	} else {
 		// Since we didn't publish everything, only subtract gas for what we did publish.
-		atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, -int64(estimatedGasCost))
+		removedPendingGasEstimate = int64(estimatedGasCost)
 	}
+	atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostBase)-removedPendingGasEstimate)
 
 	// Update prevMsgCount for the next iteration if we're not publishingAllBatchItems
 	// AddSequencerL2BatchFromOriginCustomNonce will have already updated the nonce
