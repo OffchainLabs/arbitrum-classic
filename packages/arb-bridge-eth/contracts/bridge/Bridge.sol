@@ -41,8 +41,45 @@ contract Bridge is OwnableUpgradeable, IBridge {
     address public override activeOutbox;
     bytes32[] public override inboxAccs;
 
+    address private baseFeeRetriever;
+
     function initialize() external initializer {
         __Ownable_init();
+        initBaseFeeRetriever();
+    }
+
+    function initBaseFeeRetriever() public {
+        require(baseFeeRetriever == address(0), "ALREADY_INIT");
+        // We can't embed arbitrary bytecode in this contract directly, but we can in a constructor!
+        // `bytecode` is bytecode that returns the new contract's bytecode
+        /* prettier-ignore */
+        bytes memory bytecode =
+            // Use CODECOPY to put the new contract's bytecode in memory
+            // PUSH1 9
+            // PUSH1 12
+            // PUSH1 0
+            // CODECOPY
+            hex"6009600C600039"
+            // Return the new contract's bytecode
+            // PUSH1 9
+            // PUSH1 0
+            // RETURN
+            hex"60096000F3"
+            // The new contract's bytecode
+            // BASEFEE
+            // PUSH1 0
+            // MSTORE
+            // PUSH1 32
+            // PUSH1 0
+            // RETURN
+            hex"4860005260206000F3";
+        address addr;
+        assembly {
+            addr := create2(0, add(bytecode, 32), mload(bytecode), 0)
+        }
+        baseFeeRetriever = addr;
+        // Confirm that we're post-EIP-3198 and this actually works
+        getBaseFee();
     }
 
     function allowedInboxes(address inbox) external view override returns (bool) {
@@ -51,6 +88,17 @@ contract Bridge is OwnableUpgradeable, IBridge {
 
     function allowedOutboxes(address outbox) external view override returns (bool) {
         return allowedOutboxesMap[outbox].allowed;
+    }
+
+    function getBaseFee() internal view returns (uint256) {
+        require(baseFeeRetriever != address(0), "BASE_FEE_NOT_INIT");
+        (bool success, bytes memory ret) = baseFeeRetriever.staticcall("");
+        require(success && ret.length == 32, "BASE_FEE_FAILED");
+        uint256 baseFee;
+        assembly {
+            baseFee := mload(add(ret, 32))
+        }
+        return baseFee;
     }
 
     function deliverMessageToInbox(
@@ -67,7 +115,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
                 block.number,
                 block.timestamp, // solhint-disable-line not-rely-on-time
                 count,
-                tx.gasprice,
+                getBaseFee(),
                 messageDataHash
             );
         bytes32 prevAcc = 0;
@@ -75,7 +123,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
             prevAcc = inboxAccs[count - 1];
         }
         inboxAccs.push(Messages.addMessageToInbox(prevAcc, messageHash));
-        emit MessageDelivered(count, prevAcc, msg.sender, kind, sender, messageDataHash);
+        emit MessageDeliveredWithBaseFee(count, prevAcc, msg.sender, kind, sender, messageDataHash);
         return count;
     }
 

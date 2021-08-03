@@ -19,7 +19,17 @@
 pragma solidity ^0.6.11;
 
 interface IBridge {
+    // Deprecated. Now, MessageDeliveredWithBaseFee is used instead.
     event MessageDelivered(
+        uint256 indexed messageIndex,
+        bytes32 indexed beforeInboxAcc,
+        address inbox,
+        uint8 kind,
+        address sender,
+        bytes32 messageDataHash
+    );
+
+    event MessageDeliveredWithBaseFee(
         uint256 indexed messageIndex,
         bytes32 indexed beforeInboxAcc,
         address inbox,

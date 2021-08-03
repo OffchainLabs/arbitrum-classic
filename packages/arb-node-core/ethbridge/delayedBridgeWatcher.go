@@ -40,6 +40,7 @@ import (
 
 var delayedBridgeABI abi.ABI
 var messageDeliveredID ethcommon.Hash
+var messageDeliveredWithBaseFeeID ethcommon.Hash
 var inboxMessageDeliveredID ethcommon.Hash
 var inboxMessageFromOriginID ethcommon.Hash
 
@@ -49,6 +50,7 @@ func init() {
 		panic(err)
 	}
 	messageDeliveredID = parsedBridgeABI.Events["MessageDelivered"].ID
+	messageDeliveredWithBaseFeeID = parsedBridgeABI.Events["MessageDeliveredWithBaseFee"].ID
 	delayedBridgeABI = parsedBridgeABI
 
 	parsedInboxABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.InboxABI))
@@ -101,7 +103,7 @@ func (r *DelayedBridgeWatcher) LookupMessagesInRange(ctx context.Context, from, 
 		FromBlock: from,
 		ToBlock:   to,
 		Addresses: []ethcommon.Address{r.address},
-		Topics:    [][]ethcommon.Hash{{messageDeliveredID}},
+		Topics:    [][]ethcommon.Hash{{messageDeliveredID, messageDeliveredWithBaseFeeID}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
@@ -126,7 +128,7 @@ func (r *DelayedBridgeWatcher) LookupMessageBlock(ctx context.Context, messageNu
 		FromBlock: big.NewInt(r.fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
-		Topics:    [][]ethcommon.Hash{{messageDeliveredID}, {msgNumBytes}},
+		Topics:    [][]ethcommon.Hash{{messageDeliveredID, messageDeliveredWithBaseFeeID}, {msgNumBytes}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
@@ -187,6 +189,8 @@ func (r *DelayedBridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs
 		if ethLog.BlockNumber > maxBlockNum {
 			maxBlockNum = ethLog.BlockNumber
 		}
+		// This may be a MessageDelivered or MessageDeliveredWithBaseFee,
+		// but they have the same parameters.
 		parsedLog, err := r.con.ParseMessageDelivered(ethLog)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -239,6 +243,14 @@ func (r *DelayedBridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs
 		}
 
 		tx := rawTransactions[string(rawMsg.MessageIndex.Bytes())]
+		var gasPrice *big.Int
+		if rawMsg.Raw.Topics[0] == messageDeliveredID {
+			gasPrice = info.txGasPrice(tx)
+		} else if rawMsg.Raw.Topics[0] == messageDeliveredWithBaseFeeID {
+			gasPrice = info.baseFee
+		} else {
+			return nil, errors.Errorf("unexpected message event topic %s", rawMsg.Raw.Topics[0].String())
+		}
 		msg := &DeliveredInboxMessage{
 			BlockHash:      common.NewHashFromEth(rawMsg.Raw.BlockHash),
 			BeforeInboxAcc: rawMsg.BeforeInboxAcc,
@@ -246,7 +258,7 @@ func (r *DelayedBridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs
 				Kind:        inbox.Type(rawMsg.Kind),
 				Sender:      common.NewAddressFromEth(rawMsg.Sender),
 				InboxSeqNum: rawMsg.MessageIndex,
-				GasPrice:    info.txGasPrice(tx),
+				GasPrice:    gasPrice,
 				Data:        data,
 				ChainTime: inbox.ChainTime{
 					BlockNum: common.NewTimeBlocks(
