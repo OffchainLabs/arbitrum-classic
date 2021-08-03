@@ -24,19 +24,21 @@ import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 import "../IArbToken.sol";
 
 import "../L2ArbitrumMessenger.sol";
-import "../../libraries/gateway/ArbitrumGateway.sol";
+import "../../libraries/gateway/EscrowAndCallGateway.sol";
+import "../../libraries/gateway/TokenGateway.sol";
 
 /**
  * @title Common interface for gatways on Arbitrum messaging to L1.
  */
-abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
+abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, EscrowAndCallGateway {
     using Address for address;
 
     uint256 public exitNum;
 
     function _initialize(address _l1Counterpart, address _router) internal virtual override {
-        // L2 gateway may have a router address(0)
-        ArbitrumGateway._initialize(_l1Counterpart, _router);
+        TokenGateway._initialize(_l1Counterpart, _router);
+        // L1 gateway must have a router
+        require(_router != address(0), "BAD_ROUTER");
     }
 
     function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
@@ -71,7 +73,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         bytes memory _data
     ) public view virtual override returns (bytes memory outboundCalldata) {
         outboundCalldata = abi.encodeWithSelector(
-            ArbitrumGateway.finalizeInboundTransfer.selector,
+            TokenGateway.finalizeInboundTransfer.selector,
             _token,
             _from,
             _to,

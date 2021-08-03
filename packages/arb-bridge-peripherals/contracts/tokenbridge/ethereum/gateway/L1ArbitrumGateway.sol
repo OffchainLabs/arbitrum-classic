@@ -26,13 +26,14 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
 import "../L1ArbitrumMessenger.sol";
-import "../../libraries/gateway/ArbitrumGateway.sol";
+import "../../libraries/gateway/EscrowAndCallGateway.sol";
+import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/IERC677.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
  */
-abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
+abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, EscrowAndCallGateway {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -56,7 +57,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         address _router,
         address _inbox
     ) internal virtual {
-        ArbitrumGateway._initialize(_l2Counterpart, _router);
+        TokenGateway._initialize(_l2Counterpart, _router);
         // L1 gateway must have a router
         require(_router != address(0), "BAD_ROUTER");
         require(_inbox != address(0), "BAD_INBOX");
@@ -266,7 +267,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         bytes memory emptyBytes = "";
 
         outboundCalldata = abi.encodeWithSelector(
-            ArbitrumGateway.finalizeInboundTransfer.selector,
+            TokenGateway.finalizeInboundTransfer.selector,
             _l1Token,
             _from,
             _to,

@@ -27,7 +27,7 @@ import "../../ethereum/gateway/L1GatewayRouter.sol";
  */
 contract L2GatewayRouter is GatewayRouter {
     function initialize(address _counterpartGateway, address _defaultGateway) public virtual {
-        GatewayRouter._initialize(_counterpartGateway, _defaultGateway);
+        GatewayRouter._initialize(_counterpartGateway, address(0), _defaultGateway);
     }
 
     function setGateway(address[] memory _l1Token, address[] memory _gateway)

@@ -23,6 +23,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 abstract contract TokenGateway is ITokenGateway {
     using Address for address;
+
     address public counterpartGateway;
     address public router;
 
@@ -34,6 +35,9 @@ abstract contract TokenGateway is ITokenGateway {
     }
 
     function _initialize(address _counterpartGateway, address _router) internal virtual {
+        // This initializes internal variables of the abstract contract it can be chained together with other functions.
+        // It is virtual so subclasses can override or wrap around this logic.
+        // An example where this is useful is different subclasses that validate the router address differently
         require(_counterpartGateway != address(0), "INVALID_COUNTERPART");
         require(counterpartGateway == address(0), "ALREADY_INIT");
         counterpartGateway = _counterpartGateway;

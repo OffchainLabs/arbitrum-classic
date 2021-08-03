@@ -43,12 +43,15 @@ abstract contract GatewayRouter is TokenGateway {
     event GatewaySet(address indexed l1Token, address indexed gateway);
     event DefaultGatewayUpdated(address newDefaultGateway);
 
-    function _initialize(address _counterpartGateway, address _defaultGateway)
-        internal
-        virtual
-        override
-    {
-        TokenGateway._initialize(_counterpartGateway, address(0));
+    function _initialize(
+        address _counterpartGateway,
+        address _router,
+        address _defaultGateway
+    ) internal {
+        // if you are a router, you can't have a router
+        require(_router == address(0), "BAD_ROUTER");
+        TokenGateway._initialize(_counterpartGateway, _router);
+        // default gateway can have 0 address
         defaultGateway = _defaultGateway;
     }
 
