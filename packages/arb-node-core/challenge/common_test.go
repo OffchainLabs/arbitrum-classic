@@ -6,9 +6,6 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -185,13 +182,6 @@ func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *
 	}, nil
 }
 
-func gasPrice(tx *types.Transaction, baseFee *big.Int) *big.Int {
-	if baseFee == nil {
-		return tx.GasPrice()
-	}
-	return math.BigMin(new(big.Int).Add(tx.GasTipCap(), baseFee), tx.GasFeeCap())
-}
-
 func initializeChallengeTest(
 	t *testing.T,
 	asserterTime *big.Int,
@@ -246,7 +236,7 @@ func initializeChallengeTest(
 		init,
 		common.NewAddressFromEth(rollupAddr),
 		big.NewInt(0),
-		gasPrice(tx, initBlock.BaseFee()),
+		initBlock.BaseFee(),
 		inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocks(initBlock.Number()),
 			Timestamp: new(big.Int).SetUint64(initBlock.Time()),
