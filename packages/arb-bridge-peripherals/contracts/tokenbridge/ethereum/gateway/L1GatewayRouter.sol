@@ -50,10 +50,6 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         inbox = _inbox;
     }
 
-    function postUpgradeInit() external {
-        owner = address(0x6c26D7f792CfEc88acdB382fe720bdcE7C922776);
-    }
-
     function sendTxToL2(
         address _user,
         uint256 _l2CallValue,
