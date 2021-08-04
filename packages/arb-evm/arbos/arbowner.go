@@ -55,7 +55,7 @@ func init() {
 	continueArbOSUpgradeABI = arbowner.Methods["continueCodeUpload"]
 	finishArbOSUpgradeABI = arbowner.Methods["finishCodeUploadAsArbosUpgrade"]
 	getUploadedCodeHashABI = arbowner.Methods["getUploadedCodeHash"]
-	setChainParameterABI = arbowner.Methods["SetChainParameter"]
+	setChainParameterABI = arbowner.Methods["setChainParameter"]
 	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
 	deployContractABI = arbowner.Methods["deployContract"]
 	getTotalOfEthBalancesABI = arbowner.Methods["getTotalOfEthBalances"]
