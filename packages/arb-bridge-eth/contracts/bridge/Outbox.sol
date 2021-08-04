@@ -115,6 +115,9 @@ contract Outbox is IOutbox, Cloneable {
             // Ensure no outbox entry already exists w/ batch number
             require(!outboxEntryExists(batchNum), "ENTRY_ALREADY_EXISTS");
 
+            // This is the total number of msgs included in the root, it can be used to
+            // detect when all msgs were executed against a root.
+            // It currently isn't stored, but instead emitted in an event for utility
             uint256 numInBatch = data.toUint(33);
             bytes32 outputRoot = data.toBytes32(65);
 
