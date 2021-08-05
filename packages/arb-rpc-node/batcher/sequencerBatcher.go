@@ -230,7 +230,7 @@ func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) 
 
 const maxTxDataSize int = 100_000
 
-func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Transaction) error {
+func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.Transaction) error {
 	_, err := types.Sender(b.signer, startTx)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error processing user transaction")
@@ -245,7 +245,12 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		// Get a message from the channel, then put it back.
 		// This blocks on there being a message in the channel,
 		// without actually affecting the channel's state.
-		b.waitingOnDelayedChannel <- <-b.waitingOnDelayedChannel
+		select {
+		case x := <-b.waitingOnDelayedChannel:
+			b.waitingOnDelayedChannel <- x
+		case <-ctx.Done():
+			return errors.Wrap(ctx.Err(), "SendTransaction context closed waiting on delayed sequencing")
+		}
 	}
 
 	startResultChan := make(chan error, 1)
