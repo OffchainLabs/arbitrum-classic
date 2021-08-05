@@ -30,14 +30,6 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
     }
 
-    function postUpgradeInit() external {
-        address usdc = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
-        address user = 0xBB1a241DCBd6A3894cB61F659034874Dc9CF65D4;
-        uint256 amount = 560099999;
-        require(IERC20(usdc).totalSupply() == 0, "ALREADY_POST_INIT");
-        IArbToken(usdc).bridgeMint(user, amount);
-    }
-
     /**
      * @notice internal utility function used to handle when no contract is deployed at expected address
      * @param _l1Token L1 address of ERC20
