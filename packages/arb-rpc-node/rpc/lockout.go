@@ -156,6 +156,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			if b.livelinessExpiresAt.After(time.Now()) {
 				b.redis.acquireOrUpdateLockout(ctx, &b.lockoutExpiresAt)
 			}
+			var fatalError error
 			if b.hasSequencerLockout() {
 				if b.currentBatcher != b.sequencerBatcher {
 					logger.Info().Str("rpc", b.config.SelfRPCURL).Msg("acquired sequencer lockout")
@@ -195,12 +196,17 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 					if b.hasSequencerLockout() {
 						err := b.sequencerBatcher.SequenceDelayedMessages(ctx, true)
 						if err != nil {
-							logger.Warn().Err(err).Msg("failed to sequence delayed messages after acquiring lockout")
+							fatalError = errors.Wrap(err, "failed to sequence delayed messages")
 						}
 					}
 				}
-				b.currentBatcher = b.sequencerBatcher
-				b.currentSeq = b.config.SelfRPCURL
+				if fatalError == nil {
+					b.currentBatcher = b.sequencerBatcher
+					b.currentSeq = b.config.SelfRPCURL
+				} else {
+					logger.Warn().Err(fatalError).Msg("failed to initialize sequencer after acquiring lockout")
+					b.currentBatcher = b.getErrorBatcher(fatalError)
+				}
 				b.mutex.Unlock()
 				holdingMutex = false
 				seqNum, err := b.core.GetMessageCount()
@@ -256,7 +262,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			}
 		}
 		refreshDelay := time.Millisecond * 500
-		if b.hasSequencerLockout() {
+		if b.currentBatcher == b.sequencerBatcher && b.hasSequencerLockout() {
 			firstLockoutExpiresAt := b.lockoutExpiresAt
 			if b.livelinessExpiresAt.Before(firstLockoutExpiresAt) {
 				firstLockoutExpiresAt = b.livelinessExpiresAt
