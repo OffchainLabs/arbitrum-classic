@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -88,9 +87,9 @@ type SequencerBatcher struct {
 	// 1 if we're starting up and need to sequence delayed messages
 	// before opening up to users' RPC transactions.
 	waitingOnDelayedAtomic int32
-	// A write lock on this is held while the above condition is true.
-	// This lets SendTransaction wait on it without spinlocking.
-	waitingOnDelayedMutex sync.RWMutex
+	// When not waiting on delayed sequencing, there's an item in
+	// this channel. Otherwise, it's empty, so it can be blocked on.
+	waitingOnDelayedChannel chan struct{}
 	// The total estimate of unpublished transactions' gas usage.
 	// Added to every time something is sequenced, zeroed when batch posted.
 	pendingBatchGasEstimateAtomic int64
@@ -180,9 +179,9 @@ func NewSequencerBatcher(
 		lastCreatedBatchAt:            chainTime.BlockNum.AsInt(),
 		publishingBatchAtomic:         0,
 		waitingOnDelayedAtomic:        1,
+		waitingOnDelayedChannel:       make(chan struct{}, 1),
 		pendingBatchGasEstimateAtomic: int64(gasCostBase),
 	}
-	batcher.waitingOnDelayedMutex.Lock()
 
 	return batcher, nil
 }
@@ -243,8 +242,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
 
 	if atomic.LoadInt32(&b.waitingOnDelayedAtomic) != 0 {
-		b.waitingOnDelayedMutex.RLock()
-		b.waitingOnDelayedMutex.RUnlock()
+		b.waitingOnDelayedChannel <- <-b.waitingOnDelayedChannel
 	}
 
 	startResultChan := make(chan error, 1)
@@ -508,6 +506,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	}
 	if newDelayedCount.Cmp(oldDelayedCount) <= 0 {
 		logger.Debug().Str("delayedCount", oldDelayedCount.String()).Msg("no delayed messages to sequence")
+		b.releaseDelayedSequencingLockout()
 		return false, nil
 	}
 
@@ -567,9 +566,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	postingCostEstimate := gasCostPerMessage + gasCostDelayedMessages
 	atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 
-	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 0) != 0 {
-		b.waitingOnDelayedMutex.Unlock()
-	}
+	b.releaseDelayedSequencingLockout()
 
 	if b.feedBroadcaster != nil {
 		err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
@@ -581,12 +578,16 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	return true, nil
 }
 
-// Warning: acquires MessageDeliveryMutex
 func (b *SequencerBatcher) WaitOnDelayedSequencing() {
-	b.inboxReader.MessageDeliveryMutex.Lock()
-	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 1) == 0 {
-		b.waitingOnDelayedMutex.Lock()
+		<-b.waitingOnDelayedChannel
+	}
+}
+
+func (b *SequencerBatcher) releaseDelayedSequencingLockout() {
+	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 0) != 0 {
+		var x struct{}
+		b.waitingOnDelayedChannel <- x
 	}
 }
 
