@@ -52,6 +52,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         whitelist = newSource;
         emit WhitelistSourceUpdated(newSource);
     }
+
     // end whitelist consumer
 
     function initialize(
@@ -68,12 +69,6 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         l2BeaconProxyFactory = _l2BeaconProxyFactory;
         // disable whitelist by default
         whitelist = address(0);
-    }
-
-    function postUpgradeInit() external {
-        require(whitelist == address(0), "ALREADY_INIT");
-        router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
-        whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
     }
 
     /**

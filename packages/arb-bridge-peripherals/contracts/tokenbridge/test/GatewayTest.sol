@@ -58,6 +58,15 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
         return 1337;
     }
 
+    function getBridge(address _inboxMock) internal view virtual override returns (IBridge) {
+        if (shouldUseInbox) {
+            // the inbox mock covers the role of bridge/inbox/outbox
+            return IBridge(_inboxMock);
+        } else {
+            return IBridge(msg.sender);
+        }
+    }
+
     function getL2ToL1Sender(address _inbox) internal view virtual override returns (address) {
         if (shouldUseInbox) {
             return super.getL2ToL1Sender(_inbox);
@@ -117,6 +126,16 @@ contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
         returns (address)
     {
         return L1ArbitrumTestMessenger.getL2ToL1Sender(_inbox);
+    }
+
+    function getBridge(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (IBridge)
+    {
+        return L1ArbitrumTestMessenger.getBridge(_inbox);
     }
 }
 
@@ -190,6 +209,16 @@ contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
     {
         return L1ArbitrumTestMessenger.getL2ToL1Sender(_inbox);
     }
+
+    function getBridge(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (IBridge)
+    {
+        return L1ArbitrumTestMessenger.getBridge(_inbox);
+    }
 }
 
 contract L2CustomGatewayTester is L2ArbitrumTestMessenger, L2CustomGateway {
@@ -239,6 +268,16 @@ contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
         returns (address)
     {
         return L1ArbitrumTestMessenger.getL2ToL1Sender(_inbox);
+    }
+
+    function getBridge(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (IBridge)
+    {
+        return L1ArbitrumTestMessenger.getBridge(_inbox);
     }
 }
 

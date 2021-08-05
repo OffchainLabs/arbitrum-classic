@@ -23,7 +23,6 @@ import { Contract, ContractFactory } from 'ethers'
 describe('Bridge peripherals end-to-end', () => {
   let accounts: SignerWithAddress[]
 
-  let l1InboxMock: Contract
   let l1RouterTestBridge: Contract
   let l2RouterTestBridge: Contract
   let l1TestBridge: Contract
@@ -46,12 +45,6 @@ describe('Bridge peripherals end-to-end', () => {
       'L1GatewayTester'
     )
     l1TestBridge = await L1TestBridge.deploy()
-
-    const L1InboxMock: ContractFactory = await ethers.getContractFactory(
-      'InboxMock'
-    )
-    // by default this inbox mock is not used. this needs to be toggled in the arbitrum tester messenger
-    l1InboxMock = await L1InboxMock.deploy()
 
     // l2 side deploy
 
@@ -83,7 +76,7 @@ describe('Bridge peripherals end-to-end', () => {
     await l1TestBridge.functions.initialize(
       l2TestBridge.address,
       l1RouterTestBridge.address,
-      l1InboxMock.address, // inbox
+      accounts[0].address, // inbox
       cloneableProxyHash,
       beaconProxyFactory.address
     )
@@ -99,7 +92,7 @@ describe('Bridge peripherals end-to-end', () => {
       l1TestBridge.address, // defaultGateway
       '0x0000000000000000000000000000000000000000', // no whitelist
       l2RouterTestBridge.address, // counterparty
-      l1InboxMock.address // inbox
+      accounts[0].address // inbox
     )
 
     const l2DefaultGateway = await l1TestBridge.counterpartGateway()
@@ -229,48 +222,6 @@ describe('Bridge peripherals end-to-end', () => {
       postUserBalance.toNumber(),
       'Tokens not escrowed'
     )
-  })
-
-  it('should communicate with inbox mock correctly', async function () {
-    await l1TestBridge.setInboxUse(true)
-    await l1InboxMock.setL2ToL1Sender(l2TestBridge.address)
-
-    const Token = await ethers.getContractFactory('TestERC20')
-    const token = await Token.deploy()
-    // send escrowed tokens to bridge
-    const tokenAmount = 100
-    await token.mint()
-    await token.approve(l1TestBridge.address, tokenAmount)
-
-    const data = ethers.utils.defaultAbiCoder.encode(
-      ['uint256', 'bytes'],
-      [maxSubmissionCost, '0x']
-    )
-
-    await l1RouterTestBridge.outboundTransfer(
-      token.address,
-      accounts[0].address,
-      tokenAmount,
-      maxGas,
-      gasPrice,
-      data
-    )
-
-    const prevUserBalance = await token.balanceOf(accounts[0].address)
-
-    await l2TestBridge.functions[
-      'outboundTransfer(address,address,uint256,bytes)'
-    ](token.address, accounts[0].address, tokenAmount, '0x')
-
-    const postUserBalance = await token.balanceOf(accounts[0].address)
-
-    assert.equal(
-      prevUserBalance.toNumber() + tokenAmount,
-      postUserBalance.toNumber(),
-      'Tokens not escrowed'
-    )
-    // unset to avoid affecting other tests
-    await l1TestBridge.setInboxUse(false)
   })
 
   it('should force withdraw correctly if deposit is incorrect', async function () {

@@ -30,12 +30,14 @@ describe('Bridge peripherals layer 1', () => {
   const maxGas = 1000000000
   const gasPrice = 0
   const l2Template20 = '0x0000000000000000000000000000000000000020'
-  const l2Address = '0x1100000000000000000000000000000000000011'
+  let l2Address: string
+  // const l2Address = '0x1100000000000000000000000000000000000011'
 
   before(async function () {
     accounts = await ethers.getSigners()
+    l2Address = accounts[0].address
 
-    TestBridge = await ethers.getContractFactory('L1ERC20Gateway')
+    TestBridge = await ethers.getContractFactory('L1GatewayTester')
     testBridge = await TestBridge.deploy()
 
     const Inbox = await ethers.getContractFactory('InboxMock')
@@ -139,12 +141,23 @@ describe('Bridge peripherals layer 1', () => {
   })
 
   it('should submit the correct submission cost to the inbox', async function () {
+    const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
+    const l1ERC20Gateway = await L1ERC20Gateway.deploy()
+
+    await l1ERC20Gateway.initialize(
+      l2Address,
+      accounts[0].address,
+      inbox.address,
+      '0x0000000000000000000000000000000000000000000000000000000000000001', // cloneable proxy hash
+      accounts[0].address // beaconProxyFactory
+    )
+
     const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
     // send escrowed tokens to bridge
     const tokenAmount = 100
     await token.mint()
-    await token.approve(testBridge.address, tokenAmount)
+    await token.approve(l1ERC20Gateway.address, tokenAmount)
 
     let data = ethers.utils.defaultAbiCoder.encode(
       ['uint256', 'bytes'],
@@ -156,7 +169,7 @@ describe('Bridge peripherals layer 1', () => {
       [accounts[0].address, data]
     )
 
-    const tx = await testBridge.outboundTransfer(
+    const tx = await l1ERC20Gateway.outboundTransfer(
       token.address,
       accounts[0].address,
       tokenAmount,
@@ -177,9 +190,8 @@ describe('Bridge peripherals layer 1', () => {
       maxSubmissionCost,
       'Invalid submission cost'
     )
-    // const vals = testBridge.interface.parseLog(logs[0])
 
-    const escrowedTokens = await token.balanceOf(testBridge.address)
+    const escrowedTokens = await token.balanceOf(l1ERC20Gateway.address)
     assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
   })
 })

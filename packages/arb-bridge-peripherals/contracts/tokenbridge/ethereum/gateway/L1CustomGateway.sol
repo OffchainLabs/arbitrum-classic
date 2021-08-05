@@ -68,12 +68,6 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         whitelist = address(0);
     }
 
-    function postUpgradeInit() external {
-        require(whitelist == address(0), "ALREADY_INIT");
-        router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
-        whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
-    }
-
     /**
      * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
      * @param _l1Token L1 address of ERC20
