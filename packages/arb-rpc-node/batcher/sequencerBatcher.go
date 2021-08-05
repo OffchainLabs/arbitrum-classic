@@ -242,6 +242,9 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
 
 	if atomic.LoadInt32(&b.waitingOnDelayedAtomic) != 0 {
+		// Get a message from the channel, then put it back.
+		// This blocks on there being a message in the channel,
+		// without actually affecting the channel's state.
 		b.waitingOnDelayedChannel <- <-b.waitingOnDelayedChannel
 	}
 
@@ -580,12 +583,18 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 
 func (b *SequencerBatcher) WaitOnDelayedSequencing() {
 	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 1) == 0 {
+		// We've moved waitingOnDelayedAtomic from 0 to 1.
+		// Whoever set it to 0 must have inserted a message into this channel.
+		// Remove that message from the channel so SendTransaction blocks.
 		<-b.waitingOnDelayedChannel
 	}
 }
 
 func (b *SequencerBatcher) releaseDelayedSequencingLockout() {
 	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 0) != 0 {
+		// We've moved waitingOnDelayedAtomic from 1 to 0.
+		// At 1, there should (eventually) be no messages in the delayed channel.
+		// To release this lock, we insert a message into the channel.
 		var x struct{}
 		b.waitingOnDelayedChannel <- x
 	}
