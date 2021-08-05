@@ -285,8 +285,15 @@ func startup() error {
 			config.Feed.Output,
 		)
 		lockoutConf := config.Node.Sequencer.Lockout
-		if err == nil && lockoutConf.Redis != "" {
-			batch, err = rpc.SetupLockout(ctx, batch.(*batcher.SequencerBatcher), mon.Core, inboxReader, lockoutConf, errChan)
+		if err == nil {
+			seqBatcher, ok := batch.(*batcher.SequencerBatcher)
+			if lockoutConf.Redis != "" {
+				// Setup the lockout. This will take care of the initial delayed sequence.
+				batch, err = rpc.SetupLockout(ctx, seqBatcher, mon.Core, inboxReader, lockoutConf, errChan)
+			} else if ok {
+				// Ensure we sequence delayed messages before opening the RPC.
+				err = seqBatcher.SequenceDelayedMessages(ctx, false)
+			}
 		}
 		if err == nil {
 			go batch.Start(ctx)

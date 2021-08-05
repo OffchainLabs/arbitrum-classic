@@ -192,7 +192,12 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 						}
 						time.Sleep(500 * time.Millisecond)
 					}
-					b.sequencerBatcher.WaitOnDelayedSequencing()
+					if b.hasSequencerLockout() {
+						err := b.sequencerBatcher.SequenceDelayedMessages(ctx, true)
+						if err != nil {
+							logger.Warn().Err(err).Msg("failed to sequence delayed messages after acquiring lockout")
+						}
+					}
 				}
 				b.currentBatcher = b.sequencerBatcher
 				b.currentSeq = b.config.SelfRPCURL

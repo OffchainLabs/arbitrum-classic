@@ -288,8 +288,6 @@ func TestSequencerBatcher(t *testing.T) {
 			test.FailIfError(t, err)
 		}
 		client.Commit()
-		batcher.WaitOnDelayedSequencing()
-		batcher.WaitOnDelayedSequencing()
 		<-time.After(time.Millisecond * 500)
 	}
 	for i := 0; i < 50; i++ {

@@ -84,12 +84,6 @@ type SequencerBatcher struct {
 	// 1 if we've published a batch to the L1 mempool,
 	// but it hasn't been included in an L1 block yet.
 	publishingBatchAtomic int32
-	// 1 if we're starting up and need to sequence delayed messages
-	// before opening up to users' RPC transactions.
-	waitingOnDelayedAtomic int32
-	// When not waiting on delayed sequencing, there's an item in
-	// this channel. Otherwise, it's empty, so it can be blocked on.
-	waitingOnDelayedChannel chan struct{}
 	// The total estimate of unpublished transactions' gas usage.
 	// Added to every time something is sequenced, zeroed when batch posted.
 	pendingBatchGasEstimateAtomic int64
@@ -178,8 +172,6 @@ func NewSequencerBatcher(
 		lastSequencedDelayedAt:        chainTime.BlockNum.AsInt(),
 		lastCreatedBatchAt:            chainTime.BlockNum.AsInt(),
 		publishingBatchAtomic:         0,
-		waitingOnDelayedAtomic:        1,
-		waitingOnDelayedChannel:       make(chan struct{}, 1),
 		pendingBatchGasEstimateAtomic: int64(gasCostBase),
 	}
 
@@ -240,18 +232,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		return errors.New("oversized data")
 	}
 	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
-
-	if atomic.LoadInt32(&b.waitingOnDelayedAtomic) != 0 {
-		// Get a message from the channel, then put it back.
-		// This blocks on there being a message in the channel,
-		// without actually affecting the channel's state.
-		select {
-		case x := <-b.waitingOnDelayedChannel:
-			b.waitingOnDelayedChannel <- x
-		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "SendTransaction context closed waiting on delayed sequencing")
-		}
-	}
 
 	startResultChan := make(chan error, 1)
 	b.txQueue <- txQueueItem{tx: startTx, resultChan: startResultChan}
@@ -493,10 +473,10 @@ func (b *SequencerBatcher) Aggregator() *common.Address {
 	return &b.sequencer
 }
 
-func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime inbox.ChainTime) (bool, error) {
+func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime inbox.ChainTime, bypassLockout bool) (bool, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
-	if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
+	if !bypassLockout && b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
 		return false, errors.New("sequencer lockout missing")
 	}
 	msgCount, err := b.db.GetMessageCount()
@@ -514,7 +494,6 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	}
 	if newDelayedCount.Cmp(oldDelayedCount) <= 0 {
 		logger.Debug().Str("delayedCount", oldDelayedCount.String()).Msg("no delayed messages to sequence")
-		b.releaseDelayedSequencingLockout()
 		return false, nil
 	}
 
@@ -574,8 +553,6 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	postingCostEstimate := gasCostPerMessage + gasCostDelayedMessages
 	atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 
-	b.releaseDelayedSequencingLockout()
-
 	if b.feedBroadcaster != nil {
 		err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
 		if err != nil {
@@ -586,23 +563,14 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	return true, nil
 }
 
-func (b *SequencerBatcher) WaitOnDelayedSequencing() {
-	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 1) == 0 {
-		// We've moved waitingOnDelayedAtomic from 0 to 1.
-		// Whoever set it to 0 must have inserted a message into this channel.
-		// Remove that message from the channel so SendTransaction blocks.
-		<-b.waitingOnDelayedChannel
+// Warning: bypassLockout should only be used if the lockout manager itself is calling this
+func (b *SequencerBatcher) SequenceDelayedMessages(ctx context.Context, bypassLockout bool) error {
+	chainTime, err := getChainTime(ctx, b.client)
+	if err != nil {
+		return err
 	}
-}
-
-func (b *SequencerBatcher) releaseDelayedSequencingLockout() {
-	if atomic.SwapInt32(&b.waitingOnDelayedAtomic, 0) != 0 {
-		// We've moved waitingOnDelayedAtomic from 1 to 0.
-		// At 1, there should (eventually) be no messages in the delayed channel.
-		// To release this lock, we insert a message into the channel.
-		var x struct{}
-		b.waitingOnDelayedChannel <- x
-	}
+	_, err = b.deliverDelayedMessages(ctx, chainTime, bypassLockout)
+	return err
 }
 
 const gasCostBase int = 70292
@@ -872,7 +840,6 @@ func (b *SequencerBatcher) reorgOutHugeMsg(ctx context.Context, prevMsgCount *bi
 
 func (b *SequencerBatcher) Start(ctx context.Context) {
 	logger.Log().Msg("Starting sequencer batch submission thread")
-	firstDelayedSequence := true
 	firstBatchCreation := true
 	if b.feedBroadcaster != nil {
 		defer b.feedBroadcaster.Stop()
@@ -905,14 +872,13 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		}
 		targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
 		sequencedDelayed := false
-		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch || firstDelayedSequence || atomic.LoadInt32(&b.waitingOnDelayedAtomic) != 0 {
-			sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime)
+		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
+			sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime, false)
 			if err != nil {
 				logger.Error().Err(err).Msg("Error delivering delayed messages")
 				continue
 			}
 			b.lastSequencedDelayedAt = blockNum
-			firstDelayedSequence = false
 		}
 		targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
 		var dontPublishBlockNum *big.Int
