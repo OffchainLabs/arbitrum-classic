@@ -33,7 +33,9 @@ contract Outbox is IOutbox, Cloneable {
     using BytesLib for bytes;
 
     struct OutboxEntry {
+        // merkle root of outputs
         bytes32 root;
+        // mapping from output id => is spent
         mapping(bytes32 => bool) spentOutput;
     }
 
@@ -51,7 +53,7 @@ contract Outbox is IOutbox, Cloneable {
         uint128 _l1Block;
         uint128 _timestamp;
         uint128 _batchNum;
-        uint128 _index;
+        bytes32 _outputId;
         address _sender;
     }
     // Note, these variables are set and then wiped during a single transaction.
@@ -85,12 +87,12 @@ contract Outbox is IOutbox, Cloneable {
         return uint256(context._timestamp);
     }
 
-    function l2BatchNum() external view override returns (uint256) {
+    function l2ToL1BatchNum() external view override returns (uint256) {
         return uint256(context._batchNum);
     }
 
-    function l2Index() external view override returns (uint256) {
-        return uint256(context._index);
+    function l2ToL1OutputId() external view override returns (bytes32) {
+        return context._outputId;
     }
 
     function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
@@ -153,19 +155,22 @@ contract Outbox is IOutbox, Cloneable {
         uint256 amount,
         bytes calldata calldataForL1
     ) external virtual {
-        bytes32 userTx =
-            calculateItemHash(
-                l2Sender,
-                destAddr,
-                l2Block,
-                l1Block,
-                l2Timestamp,
-                amount,
-                calldataForL1
-            );
+        bytes32 outputId;
+        {
+            bytes32 userTx =
+                calculateItemHash(
+                    l2Sender,
+                    destAddr,
+                    l2Block,
+                    l1Block,
+                    l2Timestamp,
+                    amount,
+                    calldataForL1
+                );
 
-        recordOutputAsSpent(batchNum, proof, index, userTx);
-        emit OutBoxTransactionExecuted(destAddr, l2Sender, batchNum, index);
+            outputId = recordOutputAsSpent(batchNum, proof, index, userTx);
+            emit OutBoxTransactionExecuted(destAddr, l2Sender, batchNum, index);
+        }
 
         // we temporarily store the previous values so the outbox can naturally
         // unwind itself when there are nested calls to `executeTransaction`
@@ -177,7 +182,7 @@ contract Outbox is IOutbox, Cloneable {
             _l1Block: uint128(l1Block),
             _timestamp: uint128(l2Timestamp),
             _batchNum: uint128(batchNum),
-            _index: uint128(index)
+            _outputId: outputId
         });
 
         // set and reset vars around execution so they remain valid during call
@@ -191,7 +196,7 @@ contract Outbox is IOutbox, Cloneable {
         bytes32[] memory proof,
         uint256 path,
         bytes32 item
-    ) internal {
+    ) internal returns (bytes32) {
         require(proof.length < 256, "PROOF_TOO_LONG");
         require(path < 2**proof.length, "PATH_NOT_MINIMAL");
 
@@ -209,6 +214,7 @@ contract Outbox is IOutbox, Cloneable {
         require(calcRoot == outboxEntry.root, "BAD_ROOT");
 
         outboxEntry.spentOutput[uniqueKey] = true;
+        return uniqueKey;
     }
 
     function executeBridgeCall(

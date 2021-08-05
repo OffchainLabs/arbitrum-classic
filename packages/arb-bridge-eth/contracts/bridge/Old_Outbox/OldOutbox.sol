@@ -81,11 +81,11 @@ contract OldOutbox is IOutbox, Cloneable {
         return uint256(_timestamp);
     }
 
-    function l2BatchNum() external view override returns (uint256) {
+    function l2ToL1BatchNum() external view override returns (uint256) {
         revert("NOT_IMPLEMENTED");
     }
 
-    function l2Index() external view override returns (uint256) {
+    function l2ToL1OutputId() external view override returns (bytes32) {
         revert("NOT_IMPLEMENTED");
     }
 
