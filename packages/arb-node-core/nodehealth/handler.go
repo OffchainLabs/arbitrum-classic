@@ -83,8 +83,11 @@ func (h *metricsHandler) wrap(name string, check healthcheck.Check) healthcheck.
 			return 1
 		},
 	)
-	if err := h.registry.GetOrRegister(h.namespace+"/healthcheck/"+name, gauge); err != nil {
-		// Should never fail
+
+	fullName := h.namespace + "/healthcheck/" + name
+	// Unregister and replace the existing check if there is one
+	h.registry.Unregister(fullName)
+	if err := h.registry.Register(fullName, gauge); err != nil {
 		panic(err)
 	}
 	return check
