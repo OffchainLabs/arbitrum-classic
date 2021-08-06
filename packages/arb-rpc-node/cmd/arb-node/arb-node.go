@@ -26,8 +26,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/metrics/exp"
-
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -170,7 +168,7 @@ func startup() error {
 	}
 	defer mon.Close()
 
-	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.MetricsPrefix)
+	metricsConfig := metrics.NewMetricsConfig(config.MetricsServer, &config.Healthcheck.MetricsPrefix)
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics}
 	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer}
@@ -258,8 +256,6 @@ func startup() error {
 			}
 		}
 	}
-
-	exp.Setup("0.0.0.0:8081")
 
 	nodeStore := mon.Storage.GetNodeStore()
 	metricsConfig.RegisterNodeStoreMetrics(nodeStore)

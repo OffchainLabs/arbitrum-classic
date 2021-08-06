@@ -4,10 +4,12 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/metrics/exp"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ethereum/go-ethereum/metrics"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
@@ -20,7 +22,11 @@ type Config struct {
 	Registry metrics.Registry
 }
 
-func NewMetricsConfig(prefix *string) *Config {
+func NewMetricsConfig(config configuration.Metrics, prefix *string) *Config {
+	if metrics.Enabled {
+		exp.Setup(config.Addr + ":" + config.Port)
+	}
+
 	registry := metrics.DefaultRegistry
 	if prefix != nil && *prefix != "" {
 		registry = metrics.NewPrefixedChildRegistry(registry, *prefix)
