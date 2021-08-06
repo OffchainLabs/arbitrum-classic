@@ -108,14 +108,12 @@ func startup() error {
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 
 	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.MetricsPrefix)
-	metricsConfig.RegisterSystemMetrics()
-	metricsConfig.RegisterStaticMetrics()
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 
 	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry, metricsConfig.Registerer)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
