@@ -148,15 +148,10 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
 
-    auto message_count_result = unexpiredMessageCount();
-    if (!message_count_result.status.ok()) {
-        return message_count_result.status;
-    }
-
-    auto status = reorgToMessageCountOrBefore(
+    auto status = reorgCheckpoints(
         [&](const MachineOutput& output) {
-            return message_count_result.data >=
-                   output.fully_processed_inbox.count;
+            return timed_sideload_cache.expiredTimestamp() >=
+                   output.last_inbox_timestamp;
         },
         false, cache);
 
@@ -342,60 +337,11 @@ rocksdb::Status ArbCore::saveAssertion(ReadWriteTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-// unexpiredMessageCount returns the oldest message count that is not expired
-ValueResult<uint256_t> ArbCore::unexpiredMessageCount() {
-    ReadTransaction tx(data_storage);
-    auto checkpoint_it = tx.checkpointGetIterator();
-
-    checkpoint_it->SeekToLast();
-    if (!checkpoint_it->status().ok()) {
-        std::cerr << "Error: SeekToLast failed while finding unexpired "
-                     "message number"
-                  << checkpoint_it->status().ToString() << std::endl;
-        return {checkpoint_it->status(), 0};
-    }
-
-    auto expired_timestamp = timed_sideload_cache.expiredTimestamp();
-    uint256_t previous_message_count = 0;
-    while (checkpoint_it->Valid()) {
-        std::vector<unsigned char> checkpoint_vector(
-            checkpoint_it->value().data(),
-            checkpoint_it->value().data() + checkpoint_it->value().size());
-        auto variantcheckpoint = extractMachineStateKeys(checkpoint_vector);
-        if (std::holds_alternative<MachineStateKeys>(variantcheckpoint)) {
-            auto& checkpoint = std::get<MachineStateKeys>(variantcheckpoint);
-
-            if (checkpoint.output.last_inbox_timestamp < expired_timestamp) {
-                if (previous_message_count == 0) {
-                    // All checkpoints are expired, so return current count
-                    return {rocksdb::Status::OK(),
-                            checkpoint.output.fully_processed_inbox.count};
-                }
-
-                // Current checkpoint is expired, so return previous count
-                return {rocksdb::Status::OK(), previous_message_count};
-            }
-
-            previous_message_count =
-                checkpoint.output.fully_processed_inbox.count;
-        }
-
-        checkpoint_it->Prev();
-    }
-
-    if (!checkpoint_it->status().ok()) {
-        return {checkpoint_it->status(), 0};
-    }
-
-    // All checkpoints are after timestamp
-    return {rocksdb::Status::OK(), 0};
-}
-
 // reorgToMessageCountOrBefore resets the checkpoint and database entries
 // such that machine state is at or before the requested message. cleaning
 // up old references as needed.
 // If initial_start is true the various caching data structures are seeded.
-rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
+rocksdb::Status ArbCore::reorgCheckpoints(
     const std::function<bool(const MachineOutput&)>& check_output,
     bool initial_start,
     ValueCache& cache) {
@@ -620,7 +566,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     }
 
     if (selected_machine_output.has_value() &&
-        core_machine->machine_state.output == selected_machine_output) {
+        core_machine->machine_state.output != selected_machine_output) {
         // Machine in unexpected state, data corruption might have occurred
         std::cerr << "Error catching up: machine in unexpected state"
                   << "\n";
@@ -861,14 +807,14 @@ void ArbCore::operator()() {
                 << "Core thread operating on invalid machine. Rolling back."
                 << std::endl;
             assert(false);
-            auto status = reorgToMessageCountOrBefore(
+            auto status = reorgCheckpoints(
                 [&](const MachineOutput& output) {
                     return 0 >= output.fully_processed_inbox.count;
                 },
                 true, cache);
             if (!status.ok()) {
                 std::cerr << "Error in core thread calling "
-                             "reorgToMessageCountOrBefore: "
+                             "reorgCheckpoints: "
                           << status.ToString() << std::endl;
             }
         }
@@ -2439,7 +2385,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
         }
     }
     if (reorging_to_count) {
-        auto status = reorgToMessageCountOrBefore(
+        auto status = reorgCheckpoints(
             [&](const MachineOutput& output) {
                 return *reorging_to_count >= output.fully_processed_inbox.count;
             },

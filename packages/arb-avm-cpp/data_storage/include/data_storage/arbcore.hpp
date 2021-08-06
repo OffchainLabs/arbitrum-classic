@@ -202,12 +202,11 @@ class ArbCore {
     rocksdb::Status saveAssertion(ReadWriteTransaction& tx,
                                   const Assertion& assertion,
                                   uint256_t arb_gas_used);
-    ValueResult<uint256_t> unexpiredMessageCount();
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas);
-    rocksdb::Status reorgToMessageCountOrBefore(
-        const std::function<bool(const MachineOutput&)>&,
+    rocksdb::Status reorgCheckpoints(
+        const std::function<bool(const MachineOutput&)>& check_output,
         bool initial_start,
         ValueCache& cache);
     template <class T>
