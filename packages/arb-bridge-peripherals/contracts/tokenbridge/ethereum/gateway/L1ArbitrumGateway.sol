@@ -26,6 +26,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
 import "../L1ArbitrumMessenger.sol";
+import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/IERC677.sol";
@@ -79,7 +80,24 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
-        (uint256 exitNum, bytes memory callHookData) = parseInboundData(_data);
+        uint256 exitNum;
+        bytes memory callHookData;
+
+        {
+            uint8 version = GatewayMessageHandler.getGatewayMessageVersion(_data);
+            if(version == 0) {
+                // something went wrong
+                revert("PANIC! 0");
+            } else if(version == 1) {
+                (
+                    exitNum,
+                    callHookData
+                ) = GatewayMessageHandler.parseToL1GatewayMsgV1(_data);
+            } else {
+                // something went wrong, we don't have these yet
+                revert("PANIC! > 1");
+            }
+        }
 
         (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
@@ -116,15 +134,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         // using tradeable exits in a subclass (L1ArbitrumExtendedGateway)
         target = _initialDestination;
         data = _initialData;
-    }
-
-    function parseInboundData(bytes calldata _data)
-        public
-        pure
-        returns (uint256 _exitNum, bytes memory _extraData)
-    {
-        // this data is encoded by the counterpart gateway, so this shouldn't revert
-        (_exitNum, _extraData) = abi.decode(_data, (uint256, bytes));
     }
 
     function inboundEscrowTransfer(
@@ -265,7 +274,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             _from,
             _to,
             _amount,
-            abi.encode(emptyBytes, _data)
+            GatewayMessageHandler.encodeToL2GatewayMsgV1(emptyBytes, _data)
         );
 
         return outboundCalldata;

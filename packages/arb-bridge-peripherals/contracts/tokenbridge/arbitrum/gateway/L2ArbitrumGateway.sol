@@ -24,6 +24,7 @@ import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 import "../IArbToken.sol";
 
 import "../L2ArbitrumMessenger.sol";
+import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 
@@ -71,14 +72,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         address _to,
         uint256 _amount,
         bytes memory _data
-    ) public view virtual override returns (bytes memory outboundCalldata) {
+    ) public view override returns (bytes memory outboundCalldata) {
         outboundCalldata = abi.encodeWithSelector(
             TokenGateway.finalizeInboundTransfer.selector,
             _token,
             _from,
             _to,
             _amount,
-            abi.encode(exitNum, _data)
+            GatewayMessageHandler.encodeFromL2GatewayMsgV1(exitNum, _data)
         );
 
         return outboundCalldata;
@@ -189,7 +190,24 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
-        (bytes memory gatewayData, bytes memory callHookData) = abi.decode(_data, (bytes, bytes));
+        bytes memory gatewayData;
+        bytes memory callHookData;
+        
+        {
+            uint8 version = GatewayMessageHandler.getGatewayMessageVersion(_data);
+            if(version == 0) {
+                // something went wrong
+                revert("PANIC! 0");
+            } else if(version == 1) {
+                (
+                    gatewayData,
+                    callHookData
+                ) = GatewayMessageHandler.parseFromL1GatewayMsgV1(_data);
+            } else {
+                // something went wrong, we don't have these yet
+                revert("PANIC! > 1");
+            }
+        }
 
         address expectedAddress = calculateL2TokenAddress(_token);
 
