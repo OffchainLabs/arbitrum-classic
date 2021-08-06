@@ -107,7 +107,7 @@ func startup() error {
 	// Dummy sequencerFeed since validator doesn't use it
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 
-	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.MetricsPrefix)
+	metricsConfig := metrics.NewMetricsConfig(config.MetricsServer, &config.Healthcheck.MetricsPrefix)
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
