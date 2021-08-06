@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 
-import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
+import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../arbitrum/gateway/L2GatewayRouter.sol";
 
@@ -43,32 +43,11 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         address _whitelist,
         address _counterpartGateway,
         address _inbox
-    ) public virtual {
-        GatewayRouter._initialize(_counterpartGateway, _defaultGateway);
+    ) public {
+        GatewayRouter._initialize(_counterpartGateway, address(0), _defaultGateway);
         owner = _owner;
         WhitelistConsumer.whitelist = _whitelist;
         inbox = _inbox;
-    }
-
-    function sendTxToL2(
-        address _user,
-        uint256 _l2CallValue,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes memory _data
-    ) internal virtual returns (uint256) {
-        return
-            L1ArbitrumMessenger.sendTxToL2(
-                inbox,
-                counterpartGateway,
-                _user,
-                _l2CallValue,
-                _maxSubmissionCost,
-                _maxGas,
-                _gasPriceBid,
-                _data
-            );
     }
 
     function setDefaultGateway(
@@ -76,7 +55,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable virtual onlyOwner returns (uint256) {
+    ) external payable onlyOwner returns (uint256) {
         defaultGateway = newL1DefaultGateway;
 
         emit DefaultGatewayUpdated(newL1DefaultGateway);
@@ -90,7 +69,20 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         bytes memory data =
             abi.encodeWithSelector(L2GatewayRouter.setDefaultGateway.selector, l2NewDefaultGateway);
 
-        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                msg.sender,
+                msg.value,
+                0,
+                L2GasParams({
+                    _maxSubmissionCost: _maxSubmissionCost,
+                    _maxGas: _maxGas,
+                    _gasPriceBid: _gasPriceBid
+                }),
+                data
+            );
     }
 
     function setOwner(address newOwner) external onlyOwner {
@@ -121,7 +113,20 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         bytes memory data =
             abi.encodeWithSelector(L2GatewayRouter.setGateway.selector, _token, _gateway);
 
-        return sendTxToL2(_creditBackAddress, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                _creditBackAddress,
+                msg.value,
+                0,
+                L2GasParams({
+                    _maxSubmissionCost: _maxSubmissionCost,
+                    _maxGas: _maxGas,
+                    _gasPriceBid: _gasPriceBid
+                }),
+                data
+            );
     }
 
     /**
@@ -199,13 +204,14 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override onlyWhitelisted returns (bytes memory) {
+    ) public payable override onlyWhitelisted returns (bytes memory) {
         // will revert if msg.sender is not whitelisted
         super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
-    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+    modifier onlyCounterpartGateway() override {
         // don't expect messages from L2 router
-        return false;
+        revert("ONLY_COUNTERPART_GATEWAY");
+        _;
     }
 }

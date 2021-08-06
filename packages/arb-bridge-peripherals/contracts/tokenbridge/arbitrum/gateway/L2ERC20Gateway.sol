@@ -31,7 +31,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         address _l1Counterpart,
         address _router,
         address _beaconProxyFactory
-    ) public virtual {
+    ) public {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
         require(_beaconProxyFactory != address(0), "INVALID_BEACON");
         beaconProxyFactory = _beaconProxyFactory;
@@ -39,18 +39,19 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
 
     /**
      * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * @dev the L1 and L2 address oracles may not always be in sync.
      * For example, a custom token may have been registered but not deploy or the contract self destructed.
      * @param l1ERC20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
+    function calculateL2TokenAddress(address l1ERC20)
+        public
         view
         virtual
         override
         returns (address)
     {
+        // this method is marked virtual to be overriden in subclasses used in testing
         return
             BeaconProxyFactory(beaconProxyFactory).calculateExpectedAddress(
                 address(this),
@@ -81,7 +82,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         address _to,
         uint256 _amount,
         bytes memory deployData
-    ) internal virtual override returns (bool shouldHalt) {
+    ) internal override returns (bool shouldHalt) {
         bytes32 userSalt = getUserSalt(l1ERC20);
         address createdContract = BeaconProxyFactory(beaconProxyFactory).createProxy(userSalt);
 
@@ -91,7 +92,11 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
             return false;
         } else {
             // trigger withdrawal then halt
-            createOutboundTx(l1ERC20, address(this), _from, _amount, "");
+            createOutboundTx(
+                address(this),
+                _amount,
+                getOutboundCalldata(l1ERC20, address(this), _from, _amount, "")
+            );
             return true;
         }
     }

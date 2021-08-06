@@ -26,13 +26,12 @@ import "../../ethereum/gateway/L1GatewayRouter.sol";
  * @notice Router also serves as an L2-L1 token address oracle.
  */
 contract L2GatewayRouter is GatewayRouter {
-    function initialize(address _counterpartGateway, address _defaultGateway) public virtual {
-        GatewayRouter._initialize(_counterpartGateway, _defaultGateway);
+    function initialize(address _counterpartGateway, address _defaultGateway) public {
+        GatewayRouter._initialize(_counterpartGateway, address(0), _defaultGateway);
     }
 
     function setGateway(address[] memory _l1Token, address[] memory _gateway)
         external
-        virtual
         onlyCounterpartGateway
     {
         // counterpart gateway (L1 router) should never allow wrong lengths
@@ -49,15 +48,11 @@ contract L2GatewayRouter is GatewayRouter {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) public payable virtual returns (bytes memory) {
+    ) public payable returns (bytes memory) {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
-    function setDefaultGateway(address newL2DefaultGateway)
-        external
-        virtual
-        onlyCounterpartGateway
-    {
+    function setDefaultGateway(address newL2DefaultGateway) external onlyCounterpartGateway {
         defaultGateway = newL2DefaultGateway;
         emit DefaultGatewayUpdated(newL2DefaultGateway);
     }
