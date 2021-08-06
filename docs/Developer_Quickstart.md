@@ -29,76 +29,37 @@ Once you have deployed Arbitrum, you can [build and run the demo app](#hello-arb
 
 See [Local Blockchain Setup](Local_Blockchain.md).
 
-## Hello, Arbitrum
+## Hello, Arbitrum 
 
-Now you'll deploy and run a demo dApp on Arbitrum. The dApp is based on
-a simple Pet Shop dApp that is used in a Truffle tutorial.
+Check out our Arbitrum Interop Quickstart repo here! https://github.com/OffchainLabs/arbitrum-tutorials
 
-First clone the pet-shop demo dApp and install dependencies:
+This monorepo will help you get started with building on Arbitrum. It provides various simple demos showing and explaining how to interact with Arbitrum — deploying and using contracts directly on L2, moving Ether and tokens betweens L1 and L2, and more.
 
-```bash
-git clone https://github.com/OffchainLabs/demo-dapp-pet-shop
-cd demo-dapp-pet-shop
-yarn
-```
+We show how you can use broadly supported Ethereum ecosystem tooling (Hardhat, Ethers-js, etc.) as well as our special [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts) library for convenience.
 
-### Deployment
+### What's included?
 
-Deploy contracts to Arbitrum :
+#### :white_check_mark: Basics
 
-```bash
-truffle migrate --network arbitrum
-```
+- 🐹 [Pet Shop DApp](./packages/demo-dapp-pet-shop/) (L2 only)
+- 🗳 [Election DApp](./packages/demo-dapp-election/) (L2 only)
 
-### Use the dApp
+#### :white_check_mark: Moving Stuff around
 
-1. Install [Metamask](https://metamask.io/)
+- ⤴️ 🔹 [Deposit Ether](./packages/eth_deposit/)
+- ⤵️ 🔹 [Withdraw Ether](./packages/eth_withdraw/)
+- ⤴️ 💸 [Deposit Token](./packages/token_deposit/)
+- ⤵️ 💸 [Withdraw token](./packages/token_withdraw/)
 
-   > Once Metamask is installed, open it and select
-   > `Import Account` and enter one of the following pre-funded private keys
-   >
-   > ```
-   > 0x979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76
-   > 0xd26a199ae5b6bed1992439d1840f7cb400d0a55a0c9f796fa67d7c571fbb180e
-   > 0xaf5c2984cb1e2f668ae3fd5bbfe0471f68417efd012493538dcd42692299155b
-   > 0x9af1e691e3db692cc9cad4e87b6490e099eb291e3b434a0d3f014dfd2bb747cc
-   > 0x27e926925fb5903ee038c894d9880f74d3dd6518e23ab5e5651de93327c7dffa
-   > 0xe4b33c0bb790b88f2463facaf86ae7c17cbdab41187e69ddde8cc1c1fda7c9ab
-   > ```
+#### :white_check_mark: General Interop
 
-2) Select local arbitrum network in Metamask
+- 🤝 [Greeter](./packages/greeter/) (L1 to L2)
+- 📤 [Outbox](./packages/outbox-execute/) (L2 to L1)
 
-   - Go back to Metamask or click the extension icon
-   - Select `Main Ethereum Network` top right hand side
-   - Choose `Custom RPC`
-   - Enter `Local Arbitrum` as the network name
-   - Enter `http://127.0.0.1:8547` as the RPC url
-   - Press the save button
-   - Metamask should now have an Local Arbitrum account holding ETH
+#### :white_check_mark: Advanced Features
 
-3) Launch the front-end
+- ®️ [Arb Address Table](./packages/address_table/)
 
-   ```bash
-   yarn start
-   ```
-
-   The browser will open to [localhost:8080](http://localhost:8080)
-
-   In the popup window that appears, select `Connect`
-
-4) Adopt some pets
-
-   The pet shop dApp should now be running in your browser. Choose a pet or two
-   and click the adopt button to adopt your new animal friend(s).
-
-### Summary
-
-If you want to try another dApp run, deploy the solidity contracts and launch the frontend
-
-```bash
-git clone https://github.com/OffchainLabs/demo-dapp-election
-cd demo-dapp-election
-yarn
-truffle migrate --network arbitrum
-yarn start
-```
+<p align="center">
+  <img width="350" height="100" src= "https://arbitrum.io/wp-content/uploads/2021/01/cropped-Arbitrum_Horizontal-Logo-Full-color-White-background-scaled-1.jpg" />
+</p>
