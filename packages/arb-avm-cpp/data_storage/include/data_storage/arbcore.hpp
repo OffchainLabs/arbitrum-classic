@@ -206,9 +206,10 @@ class ArbCore {
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas);
-    rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
-                                                bool initial_start,
-                                                ValueCache& cache);
+    rocksdb::Status reorgToMessageCountOrBefore(
+        const std::function<bool(const MachineOutput&)>&,
+        bool initial_start,
+        ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(
         const ReadTransaction& transaction,
