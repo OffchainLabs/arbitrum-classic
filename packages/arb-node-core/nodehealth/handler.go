@@ -83,7 +83,7 @@ func (h *metricsHandler) wrap(name string, check healthcheck.Check) healthcheck.
 			return 1
 		},
 	)
-	if err := h.registry.Register(h.namespace+"/healthcheck/"+name, gauge); err != nil {
+	if err := h.registry.GetOrRegister(h.namespace+"/healthcheck/"+name, gauge); err != nil {
 		// Should never fail
 		panic(err)
 	}
