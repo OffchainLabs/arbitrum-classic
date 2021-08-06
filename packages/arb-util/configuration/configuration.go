@@ -171,6 +171,9 @@ type Config struct {
 	Validator     Validator  `koanf:"validator"`
 	WaitToCatchUp bool       `koanf:"wait-to-catch-up"`
 	Wallet        Wallet     `koanf:"wallet"`
+
+	// The following field needs to be top level for compatibility with the underlying go-ethereum lib
+	Metrics bool `koanf:"metrics"`
 }
 
 func (c *Config) GetNodeDatabasePath() string {
@@ -432,6 +435,8 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
 	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
+
+	f.Bool("metrics", false, "enable metrics")
 
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
