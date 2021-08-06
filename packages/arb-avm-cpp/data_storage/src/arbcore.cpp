@@ -148,13 +148,8 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
 
-    auto status = reorgCheckpoints(
-        [&](const MachineOutput& output) {
-            return timed_sideload_cache.expiredTimestamp() >=
-                   output.last_inbox_timestamp;
-        },
-        false, cache);
-
+    auto status = reorgToTimestampOrBefore(
+        timed_sideload_cache.expiredTimestamp(), true, cache);
     if (status.ok()) {
         // Database already initialized
         return status;
@@ -337,7 +332,42 @@ rocksdb::Status ArbCore::saveAssertion(ReadWriteTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-// reorgToMessageCountOrBefore resets the checkpoint and database entries
+rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
+    const uint256_t& message_count,
+    bool initial_start,
+    ValueCache& cache) {
+    if (initial_start) {
+        std::cerr << "Reloading chain starting with message " << message_count
+                  << "\n";
+    } else {
+        std::cerr << "Reorg'ing chain to message " << message_count << "\n";
+    }
+
+    return reorgCheckpoints(
+        [&](const MachineOutput& output) {
+            return message_count >= output.fully_processed_inbox.count;
+        },
+        initial_start, cache);
+}
+
+rocksdb::Status ArbCore::reorgToTimestampOrBefore(const uint256_t& timestamp,
+                                                  bool initial_start,
+                                                  ValueCache& cache) {
+    if (initial_start) {
+        std::cerr << "Reloading chain starting with timestamp " << timestamp
+                  << "\n";
+    } else {
+        std::cerr << "Reorg'ing chain to timestamp " << timestamp << "\n";
+    }
+
+    return reorgCheckpoints(
+        [&](const MachineOutput& output) {
+            return timestamp >= output.last_inbox_timestamp;
+        },
+        initial_start, cache);
+}
+
+// reorgCheckpoints resets the checkpoint and database entries
 // such that machine state is at or before the requested message. cleaning
 // up old references as needed.
 // If initial_start is true the various caching data structures are seeded.
@@ -807,11 +837,7 @@ void ArbCore::operator()() {
                 << "Core thread operating on invalid machine. Rolling back."
                 << std::endl;
             assert(false);
-            auto status = reorgCheckpoints(
-                [&](const MachineOutput& output) {
-                    return 0 >= output.fully_processed_inbox.count;
-                },
-                true, cache);
+            auto status = reorgToMessageCountOrBefore(0, false, cache);
             if (!status.ok()) {
                 std::cerr << "Error in core thread calling "
                              "reorgCheckpoints: "
@@ -2385,11 +2411,8 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
         }
     }
     if (reorging_to_count) {
-        auto status = reorgCheckpoints(
-            [&](const MachineOutput& output) {
-                return *reorging_to_count >= output.fully_processed_inbox.count;
-            },
-            false, cache);
+        auto status =
+            reorgToMessageCountOrBefore(*reorging_to_count, false, cache);
         if (!status.ok()) {
             return status;
         }

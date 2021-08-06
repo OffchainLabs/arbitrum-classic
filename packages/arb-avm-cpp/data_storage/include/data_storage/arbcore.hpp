@@ -205,6 +205,12 @@ class ArbCore {
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas);
+    rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
+                                                bool initial_start,
+                                                ValueCache& cache);
+    rocksdb::Status reorgToTimestampOrBefore(const uint256_t& timestamp,
+                                             bool initial_start,
+                                             ValueCache& cache);
     rocksdb::Status reorgCheckpoints(
         const std::function<bool(const MachineOutput&)>& check_output,
         bool initial_start,
