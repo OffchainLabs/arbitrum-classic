@@ -21,6 +21,8 @@ pragma solidity ^0.6.11;
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
+/// @notice L1 utility contract to assist with L1 <=> L2 interactions
+/// @dev this is an abstract contract instead of library so the functions can be easily overriden when testing
 abstract contract L1ArbitrumMessenger {
     event TxToL2(address indexed _from, address indexed _to, uint256 indexed _seqNum, bytes _data);
 
@@ -65,17 +67,16 @@ abstract contract L1ArbitrumMessenger {
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual returns (uint256) {
-        uint256 seqNum =
-            IInbox(_inbox).createRetryableTicket{ value: _l1CallValue }(
-                _to,
-                _l2CallValue,
-                _maxSubmissionCost,
-                _user,
-                _user,
-                _maxGas,
-                _gasPriceBid,
-                _data
-            );
+        uint256 seqNum = IInbox(_inbox).createRetryableTicket{ value: _l1CallValue }(
+            _to,
+            _l2CallValue,
+            _maxSubmissionCost,
+            _user,
+            _user,
+            _maxGas,
+            _gasPriceBid,
+            _data
+        );
         emit TxToL2(_user, _to, seqNum, _data);
         return seqNum;
     }
@@ -84,6 +85,7 @@ abstract contract L1ArbitrumMessenger {
         return IInbox(_inbox).bridge();
     }
 
+    /// @dev the l2ToL1Sender behaves as the tx.origin, the msg.sender should be validated to protect against reentrancies
     function getL2ToL1Sender(address _inbox) internal view virtual returns (address) {
         IOutbox outbox = IOutbox(getBridge(_inbox).activeOutbox());
         address l2ToL1Sender = outbox.l2ToL1Sender();
