@@ -437,7 +437,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
 	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
 	f.Bool("healthcheck.l1-node", false, "enable checking the health of the L1 node")
-	f.Bool("healthcheck.metrics", false, "serve healthcheck statistics over metrics intrface")
+	f.Bool("healthcheck.metrics", false, "serve healthcheck statistics over metrics interface")
 	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
 	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
