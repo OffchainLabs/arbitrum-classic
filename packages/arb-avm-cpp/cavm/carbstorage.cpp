@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,22 @@
 #include <string>
 
 CArbStorage* createArbStorage(const char* db_path,
-                              const int32_t cache_expiration_seconds) {
+                              int32_t message_process_count,
+                              int32_t checkpoint_load_gas_cost,
+                              int32_t min_gas_checkpoint_frequency,
+                              int32_t cache_expiration_seconds,
+                              int32_t lru_cache_size,
+                              int debug) {
     auto string_filename = std::string(db_path);
+    ArbCoreConfig coreConfig{};
+    coreConfig.message_process_count = message_process_count;
+    coreConfig.checkpoint_load_gas_cost = checkpoint_load_gas_cost;
+    coreConfig.min_gas_checkpoint_frequency = min_gas_checkpoint_frequency;
+    coreConfig.timed_cache_expiration_seconds = cache_expiration_seconds;
+    coreConfig.lru_sideload_cache_size = lru_cache_size;
+    coreConfig.debug = debug;
     try {
-        auto storage =
-            new ArbStorage(string_filename, cache_expiration_seconds);
+        auto storage = new ArbStorage(string_filename, coreConfig);
         return static_cast<void*>(storage);
     } catch (const std::exception& e) {
         std::cerr << "Error creating storage: " << e.what() << std::endl;

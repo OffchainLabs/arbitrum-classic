@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,14 +93,13 @@ func startup() error {
 	privKeyString := fs.String("privkey", "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76", "funded private key")
 	//fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
-	blockCacheSize := *fs.Int("block-cache-size", 100, "number of recently used blocks to hold in memory")
-	blockCoreExpire := fs.Duration("database.block-core-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore memory cache")
 
-	dbConfig := configuration.Database{
+	nodeCacheConfig := configuration.NodeCache{
 		AllowSlowLookup: true,
-		BlockCacheSize:  blockCacheSize,
-		BlockCoreExpire: *blockCoreExpire,
+		LRUSize:         1000,
+		TimedExpire:     20 * time.Minute,
 	}
+	coreConfig := configuration.DefaultCoreSettings()
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -230,7 +229,7 @@ func startup() error {
 		}
 	}()
 
-	mon, err := monitor.NewMonitor(dbPath, arbosPath, *blockCoreExpire)
+	mon, err := monitor.NewMonitor(dbPath, arbosPath, coreConfig)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
@@ -305,7 +304,7 @@ func startup() error {
 		Workers:       2,
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond, &dbConfig)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond, &nodeCacheConfig)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}

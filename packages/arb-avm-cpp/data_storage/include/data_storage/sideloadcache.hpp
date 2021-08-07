@@ -33,10 +33,10 @@ class SideloadCache {
     std::shared_mutex mutex;
     std::map<uint256_t, Record> cache;
 
-    const int expiration_seconds;
+    const uint32_t expiration_seconds;
 
    public:
-    explicit SideloadCache(int expiration_seconds)
+    explicit SideloadCache(uint32_t expiration_seconds)
         : expiration_seconds{expiration_seconds} {}
 
     size_t size();

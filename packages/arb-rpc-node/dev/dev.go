@@ -52,12 +52,14 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
 func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
-	dbConfig := configuration.Database{
+	nodeCacheConfig := configuration.NodeCache{
 		AllowSlowLookup: true,
-		BlockCacheSize:  100,
-		BlockCoreExpire: 20 * time.Minute,
+		LRUSize:         1000,
+		TimedExpire:     20 * time.Minute,
 	}
-	mon, err := monitor.NewMonitor(dir, arbosPath, 20*time.Minute)
+	coreConfig := configuration.DefaultCoreSettings()
+
+	mon, err := monitor.NewMonitor(dir, arbosPath, coreConfig)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}
@@ -68,7 +70,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.
 		return nil, nil, nil, nil, err
 	}
 
-	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 10*time.Millisecond, &dbConfig)
+	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 10*time.Millisecond, &nodeCacheConfig)
 	if err != nil {
 		mon.Close()
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")

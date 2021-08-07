@@ -68,7 +68,8 @@ void restoreCheckpoint(ArbStorage& storage,
 
 TEST_CASE("Checkpoint State") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath, 60 * 20);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     REQUIRE(storage.initialize(test_contract_path).ok());
     ValueCache value_cache{1, 0};
 
@@ -92,7 +93,8 @@ TEST_CASE("Checkpoint State") {
 
 TEST_CASE("Delete machine checkpoint") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath, 60 * 20);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     REQUIRE(storage.initialize(test_contract_path).ok());
 
     SECTION("default") {
@@ -114,7 +116,8 @@ TEST_CASE("Delete machine checkpoint") {
 
 TEST_CASE("Restore checkpoint") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath, 60 * 20);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     REQUIRE(storage.initialize(test_contract_path).ok());
     ValueCache value_cache{1, 0};
 

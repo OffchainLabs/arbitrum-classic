@@ -43,8 +43,8 @@ struct ValueBeingParsed {
     }
 };
 
-constexpr uint64_t tupleInlineNumerator = 7;
-constexpr uint64_t tupleInlineDenominator = 8;
+constexpr uint64_t tupleInlineNumerator = 0;
+constexpr uint64_t tupleInlineDenominator = 100;
 bool shouldInlineTuple(const Tuple& tuple,
                        const std::vector<unsigned char>& secret_hash_seed) {
     auto hash = tuple.getHashPreImage().secretHash(secret_hash_seed);

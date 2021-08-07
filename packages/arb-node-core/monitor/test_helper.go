@@ -24,6 +24,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -35,7 +36,8 @@ func PrepareArbCore(t *testing.T) (*Monitor, func()) {
 }
 
 func PrepareArbCoreWithMexe(t *testing.T, mexe string) (*Monitor, func()) {
-	monitor, err := NewMonitor(t.TempDir(), mexe, 20*time.Minute)
+	coreConfig := configuration.DefaultCoreSettings()
+	monitor, err := NewMonitor(t.TempDir(), mexe, coreConfig)
 	test.FailIfError(t, err)
 
 	shutdown := func() {

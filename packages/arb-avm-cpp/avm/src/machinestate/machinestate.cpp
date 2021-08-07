@@ -883,3 +883,26 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
 uint256_t MachineState::getTotalMessagesRead() const {
     return output.fully_processed_inbox.count;
 }
+
+bool MachineOutput::operator==(const MachineOutput& other) const {
+    return fully_processed_inbox == other.fully_processed_inbox &&
+           total_steps == other.total_steps &&
+           arb_gas_used == other.arb_gas_used && send_acc == other.send_acc &&
+           log_acc == other.log_acc && send_count == other.send_count &&
+           log_count == other.log_count &&
+           l1_block_number == other.l1_block_number &&
+           l2_block_number == other.l2_block_number &&
+           last_inbox_timestamp == other.last_inbox_timestamp &&
+           last_sideload == other.last_sideload;
+}
+bool MachineOutput::operator!=(const MachineOutput& other) const {
+    return !(*this == other);
+}
+
+bool InboxState::operator==(const InboxState& other) const {
+    return count == other.count && accumulator == other.accumulator;
+}
+
+bool InboxState::operator!=(const InboxState& other) const {
+    return !(*this == other);
+}
