@@ -381,8 +381,9 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& sends);
 
    private:
-    rocksdb::Status addMessages(const message_data_struct& data,
-                                ValueCache& cache);
+    ValueResult<std::optional<uint256_t>> addMessages(
+        const message_data_struct& data,
+        ValueCache& cache);
     ValueResult<std::vector<value>> getLogsNoLock(ReadTransaction& tx,
                                                   uint256_t index,
                                                   uint256_t count,
