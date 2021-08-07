@@ -825,7 +825,8 @@ void ArbCore::operator()() {
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
 
-    uint256_t last_checkpoint_gas = maxCheckpointGas();
+    uint256_t next_checkpoint_gas =
+        maxCheckpointGas() + coreConfig.min_gas_checkpoint_frequency;
     while (!arbcore_abort) {
         bool isMachineValid;
         {
@@ -843,13 +844,14 @@ void ArbCore::operator()() {
                              "reorgCheckpoints: "
                           << status.ToString() << std::endl;
             }
+            next_checkpoint_gas = coreConfig.min_gas_checkpoint_frequency;
         }
         if (message_data_status == MESSAGES_READY) {
             // Reorg might occur while adding messages
             try {
                 auto add_status = addMessages(message_data, cache);
-                if (!add_status.ok()) {
-                    core_error_string = add_status.ToString();
+                if (!add_status.status.ok()) {
+                    core_error_string = add_status.status.ToString();
                     message_data_status = MESSAGES_ERROR;
                     std::cerr
                         << "ArbCore addMessages error: " << core_error_string
@@ -857,6 +859,11 @@ void ArbCore::operator()() {
                 } else {
                     machine_idle = false;
                     message_data_status = MESSAGES_SUCCESS;
+                    if (add_status.data.has_value()) {
+                        next_checkpoint_gas =
+                            add_status.data.value() +
+                            coreConfig.min_gas_checkpoint_frequency;
+                    }
                 }
             } catch (const std::exception& e) {
                 core_error_string = e.what();
@@ -937,9 +944,8 @@ void ArbCore::operator()() {
                     }
                 }
 
-                if (core_machine->machine_state.output.arb_gas_used >
-                    last_checkpoint_gas +
-                        coreConfig.min_gas_checkpoint_frequency) {
+                if (core_machine->machine_state.output.arb_gas_used >=
+                    next_checkpoint_gas) {
                     // Save checkpoint after min_gas_checkpoint_frequency gas
                     // used
                     status = saveCheckpoint(tx);
@@ -949,11 +955,13 @@ void ArbCore::operator()() {
                                   << core_error_string << "\n";
                         break;
                     }
-                    last_checkpoint_gas =
-                        core_machine->machine_state.output.arb_gas_used;
+                    next_checkpoint_gas =
+                        core_machine->machine_state.output.arb_gas_used +
+                        coreConfig.min_gas_checkpoint_frequency;
                     // Clear oldest cache and start populating next cache
                     std::cout
-                        << "Last checkpoint gas used: " << last_checkpoint_gas
+                        << "Last checkpoint gas used: "
+                        << core_machine->machine_state.output.arb_gas_used
                         << ", L1 block: "
                         << core_machine->machine_state.output.l1_block_number
                         << ", L2 block: "
@@ -2093,8 +2101,12 @@ ValueResult<uint256_t> ArbCore::totalDelayedMessagesSequencedImpl(
     }
 }
 
-rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
-                                     ValueCache& cache) {
+// addMessages adds the next batch of messages to the machine.  If there is
+// a reorg, the amount of gas used by the last checkpoint is returned.
+ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
+    const ArbCore::message_data_struct& data,
+    ValueCache& cache) {
+    std::optional<uint256_t> last_gas_used;
     std::vector<std::pair<SequencerBatchItem, rocksdb::Slice>> seq_batch_items;
     for (auto& bytes : data.sequencer_batch_items) {
         auto it = bytes.begin();
@@ -2136,20 +2148,20 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
             while (seq_batch_it->Valid()) {
                 auto status = tx.sequencerBatchItemDelete(seq_batch_it->key());
                 if (!status.ok()) {
-                    return status;
+                    return {status, std::nullopt};
                 }
                 deleted_any = true;
                 seq_batch_it->Next();
             }
             if (!seq_batch_it->status().ok()) {
-                return seq_batch_it->status();
+                return {seq_batch_it->status(), std::nullopt};
             }
             if (deleted_any) {
                 reorging_to_count = *data.reorg_batch_items;
             }
         }
 
-        if (seq_batch_items.size() > 0) {
+        if (!seq_batch_items.empty()) {
             uint256_t start = message_data.previous_message_count;
             bool checking_prev = false;
             if (start > 0) {
@@ -2164,12 +2176,12 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
             if (checking_prev) {
                 seq_batch_it->Seek(start_slice);
                 if (!seq_batch_it->status().ok()) {
-                    return seq_batch_it->status();
+                    return {seq_batch_it->status(), std::nullopt};
                 }
                 if (!seq_batch_it->Valid()) {
                     std::cerr << "addMessages: previous batch item not found"
                               << std::endl;
-                    return rocksdb::Status::NotFound();
+                    return {rocksdb::Status::NotFound(), std::nullopt};
                 }
                 auto key_ptr = reinterpret_cast<const unsigned char*>(
                     seq_batch_it->key().data());
@@ -2196,7 +2208,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
             for (auto& item_and_bytes : seq_batch_items) {
                 if (!seq_batch_it->Valid()) {
                     if (!seq_batch_it->status().ok()) {
-                        return seq_batch_it->status();
+                        return {seq_batch_it->status(), std::nullopt};
                     }
                     break;
                 }
@@ -2226,11 +2238,11 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                         auto status =
                             tx.sequencerBatchItemDelete(seq_batch_it->key());
                         if (!status.ok()) {
-                            return status;
+                            return {status, std::nullopt};
                         }
                         seq_batch_it->Next();
                         if (!seq_batch_it->status().ok()) {
-                            return seq_batch_it->status();
+                            return {seq_batch_it->status(), std::nullopt};
                         }
                     }
                     break;
@@ -2241,10 +2253,10 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
             }
         }
 
-        if (delayed_messages.size() > 0) {
+        if (!delayed_messages.empty()) {
             auto delayed_msg_seq_res = totalDelayedMessagesSequencedImpl(tx);
             if (!delayed_msg_seq_res.status.ok()) {
-                return delayed_msg_seq_res.status;
+                return {delayed_msg_seq_res.status, std::nullopt};
             }
             uint256_t start = delayed_messages[0].first.delayed_sequence_number;
             bool checking_prev = false;
@@ -2266,7 +2278,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
 
                 if (!inserting && !delayed_it->Valid()) {
                     if (!delayed_it->status().ok()) {
-                        return delayed_it->status();
+                        return {delayed_it->status(), std::nullopt};
                     }
                     if (checking_prev) {
                         throw std::runtime_error(
@@ -2293,7 +2305,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                                 deserializeDelayedMessageAccumulator(value_ptr);
                         } else {
                             if (!delayed_it->status().ok()) {
-                                return delayed_it->status();
+                                return {delayed_it->status(), std::nullopt};
                             }
                             inserting = true;
                         }
@@ -2315,11 +2327,11 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                             auto status =
                                 tx.delayedMessageDelete(delayed_it->key());
                             if (!status.ok()) {
-                                return status;
+                                return {status, std::nullopt};
                             }
                             delayed_it->Next();
                             if (!delayed_it->status().ok()) {
-                                return delayed_it->status();
+                                return {delayed_it->status(), std::nullopt};
                             }
                         }
                         inserting = true;
@@ -2339,7 +2351,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                     auto key_slice = vecToSlice(key_vec);
                     auto status = tx.delayedMessagePut(key_slice, value_slice);
                     if (!status.ok()) {
-                        return status;
+                        return {status, std::nullopt};
                     }
                 }
             }
@@ -2368,7 +2380,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                     std::cerr << "ArbCore failed to lookup delayed message "
                                  "accumulator"
                               << std::endl;
-                    return res.status;
+                    return {res.status, std::nullopt};
                 }
                 delayed_acc = res.data;
             } else if (item.total_delayed_count <
@@ -2402,22 +2414,24 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
             auto status = tx.sequencerBatchItemPut(vecToSlice(key_vec),
                                                    item_and_slice.second);
             if (!status.ok()) {
-                return status;
+                return {status, std::nullopt};
             }
         }
         auto status = tx.commit();
         if (!status.ok()) {
-            return status;
+            return {status, std::nullopt};
         }
     }
     if (reorging_to_count) {
         auto status =
             reorgToMessageCountOrBefore(*reorging_to_count, false, cache);
         if (!status.ok()) {
-            return status;
+            return {status, std::nullopt};
         }
+
+        last_gas_used = maxCheckpointGas();
     }
-    return rocksdb::Status::OK();
+    return {rocksdb::Status::OK(), last_gas_used};
 }
 
 // deleteLogsStartingAt deletes the given index along with any
