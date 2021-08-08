@@ -134,7 +134,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         }
         // exitNum incremented after being used in createOutboundTx
         exitNum++;
-        emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _extraData);
+        emit OutboundTransferInitiatedV1(_l1Token, _from, _to, id, _amount, _extraData);
         return abi.encode(id);
     }
 
@@ -194,16 +194,23 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         address expectedAddress = calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
-            bool shouldHalt =
-                handleNoContract(_token, expectedAddress, _from, _to, _amount, gatewayData);
+            bool shouldHalt = handleNoContract(
+                _token,
+                expectedAddress,
+                _from,
+                _to,
+                _amount,
+                gatewayData
+            );
             if (shouldHalt) return bytes("");
         }
         // ignores gatewayData if token already deployed
 
         {
             // validate if L1 address supplied matches that of the expected L2 address
-            (bool success, bytes memory _l1AddressData) =
-                expectedAddress.staticcall(abi.encodeWithSelector(IArbToken.l1Address.selector));
+            (bool success, bytes memory _l1AddressData) = expectedAddress.staticcall(
+                abi.encodeWithSelector(IArbToken.l1Address.selector)
+            );
 
             bool shouldWithdraw;
             if (!success || _l1AddressData.length < 32) {

@@ -212,7 +212,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             );
         }
 
-        emit OutboundTransferInitiated(_l1Token, _from, _to, seqNum, _amount, extraData);
+        emit OutboundTransferInitiatedV1(_l1Token, _from, _to, seqNum, _amount, extraData);
         return abi.encode(seqNum);
     }
 
