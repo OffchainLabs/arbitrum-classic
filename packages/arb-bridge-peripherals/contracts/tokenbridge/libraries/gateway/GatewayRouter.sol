@@ -99,7 +99,8 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _amount,
         bytes memory _data
     ) public view virtual override returns (bytes memory) {
-        return abi.encode(_from, _data);
+        address gateway = getGateway(_token);
+        return TokenGateway(gateway).getOutboundCalldata(_token, _from, _to, _amount, _data);
     }
 
     function getGateway(address _token) public view virtual returns (address gateway) {
