@@ -34,7 +34,7 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _router,
         address _l1Weth,
         address _l2Weth
-    ) public virtual {
+    ) public {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
         require(_l1Weth != address(0), "INVALID_L1WETH");
         require(_l2Weth != address(0), "INVALID_L2WETH");
@@ -55,27 +55,25 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _to,
         uint256 _amount,
         bytes memory deployData
-    ) internal virtual override returns (bool shouldHalt) {
+    ) internal override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         // trigger withdrawal
-        createOutboundTx(l1ERC20, address(this), _from, _amount, "");
+        createOutboundTx(
+            address(this),
+            _amount,
+            getOutboundCalldata(l1ERC20, address(this), _from, _amount, "")
+        );
         return true;
     }
 
     /**
      * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * @dev the L1 and L2 address oracles may not always be in sync.
      * For example, a custom token may have been registered but not deploy or the contract self destructed.
      * @param l1ERC20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
         if (l1ERC20 != l1Weth) {
             // invalid L1 weth address
             return address(0);
@@ -87,23 +85,23 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _l2TokenAddress,
         address _dest,
         uint256 _amount
-    ) internal virtual override {
+    ) internal override {
         IWETH9(_l2TokenAddress).deposit{ value: _amount }();
         IERC20(_l2TokenAddress).safeTransfer(_dest, _amount);
     }
 
     function createOutboundTx(
-        address _l1Token,
         address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _extraData
-    ) internal virtual override returns (uint256) {
+        uint256 _tokenAmount,
+        bytes memory _outboundCalldata
+    ) internal override returns (uint256) {
         return
             sendTxToL1(
+                // we send the amount of weth withdrawn as callvalue to the L1 gateway
+                _tokenAmount,
                 _from,
-                _amount,
-                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData)
+                counterpartGateway,
+                _outboundCalldata
             );
     }
 

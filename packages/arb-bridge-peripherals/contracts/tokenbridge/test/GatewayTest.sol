@@ -21,12 +21,12 @@ pragma solidity ^0.6.11;
 import "../ethereum/gateway/L1WethGateway.sol";
 import "../ethereum/gateway/L1CustomGateway.sol";
 import "../ethereum/gateway/L1ERC20Gateway.sol";
+import "../ethereum/L1ArbitrumMessenger.sol";
 
 import "../arbitrum/gateway/L2WethGateway.sol";
 import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
-
-import "../libraries/gateway/ArbitrumMessenger.sol";
+import "../arbitrum/L2ArbitrumMessenger.sol";
 
 // these contracts are used to "flatten" out communication between contracts
 // this way the token bridge can be tested fully in the base layer
@@ -42,6 +42,7 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
         address _inbox,
         address _to,
         address _user,
+        uint256 _l1CallValue,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
@@ -99,6 +100,7 @@ contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
         address _inbox,
         address _to,
         address _user,
+        uint256 _l1CallValue,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
@@ -110,6 +112,7 @@ contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
                 _inbox,
                 _to,
                 _user,
+                _l1CallValue,
                 _l2CallValue,
                 _maxSubmissionCost,
                 _maxGas,
@@ -159,8 +162,8 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
         stubAddressOracleReturn = _stubValue;
     }
 
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
+    function calculateL2TokenAddress(address l1ERC20)
+        public
         view
         virtual
         override
@@ -172,7 +175,7 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
         if (stubAddressOracleReturn != address(0)) {
             return stubAddressOracleReturn;
         }
-        return super._calculateL2TokenAddress(l1ERC20);
+        return super.calculateL2TokenAddress(l1ERC20);
     }
 }
 
@@ -181,6 +184,7 @@ contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
         address _inbox,
         address _to,
         address _user,
+        uint256 _l1CallValue,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
@@ -192,6 +196,7 @@ contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
                 _inbox,
                 _to,
                 _user,
+                _l1CallValue,
                 _l2CallValue,
                 _maxSubmissionCost,
                 _maxGas,
@@ -241,17 +246,19 @@ contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
         address _inbox,
         address _to,
         address _user,
+        uint256 _l1CallValue,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal virtual override(L1WethGateway, L1ArbitrumTestMessenger) returns (uint256) {
+    ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
         return
             L1ArbitrumTestMessenger.sendTxToL2(
                 _inbox,
                 _to,
                 _user,
+                _l1CallValue,
                 _l2CallValue,
                 _maxSubmissionCost,
                 _maxGas,

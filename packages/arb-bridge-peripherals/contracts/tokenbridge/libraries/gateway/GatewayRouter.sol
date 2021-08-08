@@ -20,12 +20,11 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
-import "./IGatewayRouter.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
  */
-abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
+abstract contract GatewayRouter is TokenGateway {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
@@ -44,17 +43,16 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
     event GatewaySet(address indexed l1Token, address indexed gateway);
     event DefaultGatewayUpdated(address newDefaultGateway);
 
-    function _initialize(address _counterpartGateway, address _defaultGateway)
-        internal
-        virtual
-        override
-    {
-        TokenGateway._initialize(_counterpartGateway, address(0));
+    function _initialize(
+        address _counterpartGateway,
+        address _router,
+        address _defaultGateway
+    ) internal {
+        // if you are a router, you can't have a router
+        require(_router == address(0), "BAD_ROUTER");
+        TokenGateway._initialize(_counterpartGateway, _router);
+        // default gateway can have 0 address
         defaultGateway = _defaultGateway;
-    }
-
-    function isRouter() external view override returns (bool) {
-        return true;
     }
 
     function finalizeInboundTransfer(
@@ -63,7 +61,7 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable virtual override(TokenGateway, ITokenGateway) returns (bytes memory) {
+    ) external payable virtual override returns (bytes memory) {
         revert("ONLY_OUTBOUND_ROUTER");
     }
 
@@ -74,7 +72,7 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override(TokenGateway, ITokenGateway) returns (bytes memory) {
+    ) public payable virtual override returns (bytes memory) {
         address gateway = getGateway(_token);
         bytes memory gatewayData = getOutboundCalldata(_token, msg.sender, _to, _amount, _data);
 
@@ -100,11 +98,6 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         return abi.encode(_from, _data);
     }
 
-    function isRouter(address _target) internal view virtual override returns (bool) {
-        // nothing routes to gateway router
-        return false;
-    }
-
     function getGateway(address _token) public view virtual returns (address gateway) {
         gateway = l1TokenToGateway[_token];
 
@@ -121,8 +114,8 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         return gateway;
     }
 
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
+    function calculateL2TokenAddress(address l1ERC20)
+        public
         view
         virtual
         override

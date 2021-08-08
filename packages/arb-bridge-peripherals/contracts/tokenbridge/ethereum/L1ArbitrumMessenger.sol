@@ -20,32 +20,63 @@ pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
-import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
+/// @notice L1 utility contract to assist with L1 <=> L2 interactions
+/// @dev this is an abstract contract instead of library so the functions can be easily overriden when testing
 abstract contract L1ArbitrumMessenger {
     event TxToL2(address indexed _from, address indexed _to, uint256 indexed _seqNum, bytes _data);
+
+    struct L2GasParams {
+        uint256 _maxSubmissionCost;
+        uint256 _maxGas;
+        uint256 _gasPriceBid;
+    }
 
     function sendTxToL2(
         address _inbox,
         address _to,
         address _user,
+        uint256 _l1CallValue,
+        uint256 _l2CallValue,
+        L2GasParams memory _l2GasParams,
+        bytes memory _data
+    ) internal virtual returns (uint256) {
+        // alternative function entry point when struggling with the stack size
+        return
+            sendTxToL2(
+                _inbox,
+                _to,
+                _user,
+                _l1CallValue,
+                _l2CallValue,
+                _l2GasParams._maxSubmissionCost,
+                _l2GasParams._maxGas,
+                _l2GasParams._gasPriceBid,
+                _data
+            );
+    }
+
+    function sendTxToL2(
+        address _inbox,
+        address _to,
+        address _user,
+        uint256 _l1CallValue,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual returns (uint256) {
-        uint256 seqNum =
-            IInbox(_inbox).createRetryableTicket{ value: msg.value }(
-                _to,
-                _l2CallValue,
-                _maxSubmissionCost,
-                _user,
-                _user,
-                _maxGas,
-                _gasPriceBid,
-                _data
-            );
+        uint256 seqNum = IInbox(_inbox).createRetryableTicket{ value: _l1CallValue }(
+            _to,
+            _l2CallValue,
+            _maxSubmissionCost,
+            _user,
+            _user,
+            _maxGas,
+            _gasPriceBid,
+            _data
+        );
         emit TxToL2(_user, _to, seqNum, _data);
         return seqNum;
     }
@@ -54,28 +85,12 @@ abstract contract L1ArbitrumMessenger {
         return IInbox(_inbox).bridge();
     }
 
+    /// @dev the l2ToL1Sender behaves as the tx.origin, the msg.sender should be validated to protect against reentrancies
     function getL2ToL1Sender(address _inbox) internal view virtual returns (address) {
         IOutbox outbox = IOutbox(getBridge(_inbox).activeOutbox());
         address l2ToL1Sender = outbox.l2ToL1Sender();
 
         require(l2ToL1Sender != address(0), "NO_SENDER");
         return l2ToL1Sender;
-    }
-}
-
-abstract contract L2ArbitrumMessenger {
-    address internal constant ARB_SYS_ADDRESS = address(100);
-
-    event TxToL1(address indexed _from, address indexed _to, uint256 indexed _id, bytes _data);
-
-    function sendTxToL1(
-        uint256 _l1CallValue,
-        address _from,
-        address _to,
-        bytes memory _data
-    ) internal virtual returns (uint256) {
-        uint256 _id = ArbSys(ARB_SYS_ADDRESS).sendTxToL1{ value: _l1CallValue }(_to, _data);
-        emit TxToL1(_from, _to, _id, _data);
-        return _id;
     }
 }
