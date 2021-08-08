@@ -120,7 +120,16 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         // TODO: remove this invariant for execution markets
         require(msg.value == 0, "NO_VALUE");
 
-        (address _from, bytes memory _extraData) = parseOutboundData(_data);
+        address _from;
+        bytes memory _extraData;
+        {
+            if (isRouter(msg.sender)) {
+                (_from, _extraData) = GatewayMessageHandler.parseFromRouterToGateway(_data);
+            } else {
+                _from = msg.sender;
+                _extraData = _data;
+            }
+        }
 
         uint256 id;
         {
@@ -148,19 +157,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         // user funds are escrowed on the gateway using this function
         // burns L2 tokens in order to release escrowed L1 tokens
         IArbToken(_l2Token).bridgeBurn(_from, _amount);
-    }
-
-    function parseOutboundData(bytes memory _data)
-        internal
-        view
-        returns (address _from, bytes memory _extraData)
-    {
-        if (super.isRouter(msg.sender)) {
-            (_from, _extraData) = abi.decode(_data, (address, bytes));
-        } else {
-            _from = msg.sender;
-            _extraData = _data;
-        }
     }
 
     function inboundEscrowTransfer(
@@ -192,17 +188,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
         bytes memory gatewayData;
         bytes memory callHookData;
-        
+
         {
             uint8 version = GatewayMessageHandler.getGatewayMessageVersion(_data);
-            if(version == 0) {
+            if (version == 0) {
                 // something went wrong
                 revert("PANIC! 0");
-            } else if(version == 1) {
-                (
-                    gatewayData,
-                    callHookData
-                ) = GatewayMessageHandler.parseFromL1GatewayMsgV1(_data);
+            } else if (version == 1) {
+                (gatewayData, callHookData) = GatewayMessageHandler.parseFromL1GatewayMsgV1(_data);
             } else {
                 // something went wrong, we don't have these yet
                 revert("PANIC! > 1");
@@ -212,16 +205,23 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         address expectedAddress = calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
-            bool shouldHalt =
-                handleNoContract(_token, expectedAddress, _from, _to, _amount, gatewayData);
+            bool shouldHalt = handleNoContract(
+                _token,
+                expectedAddress,
+                _from,
+                _to,
+                _amount,
+                gatewayData
+            );
             if (shouldHalt) return bytes("");
         }
         // ignores gatewayData if token already deployed
 
         {
             // validate if L1 address supplied matches that of the expected L2 address
-            (bool success, bytes memory _l1AddressData) =
-                expectedAddress.staticcall(abi.encodeWithSelector(IArbToken.l1Address.selector));
+            (bool success, bytes memory _l1AddressData) = expectedAddress.staticcall(
+                abi.encodeWithSelector(IArbToken.l1Address.selector)
+            );
 
             bool shouldWithdraw;
             if (!success || _l1AddressData.length < 32) {

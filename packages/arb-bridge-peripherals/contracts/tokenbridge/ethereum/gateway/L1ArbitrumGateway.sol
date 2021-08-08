@@ -85,14 +85,11 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
 
         {
             uint8 version = GatewayMessageHandler.getGatewayMessageVersion(_data);
-            if(version == 0) {
+            if (version == 0) {
                 // something went wrong
                 revert("PANIC! 0");
-            } else if(version == 1) {
-                (
-                    exitNum,
-                    callHookData
-                ) = GatewayMessageHandler.parseToL1GatewayMsgV1(_data);
+            } else if (version == 1) {
+                (exitNum, callHookData) = GatewayMessageHandler.parseToL1GatewayMsgV1(_data);
             } else {
                 // something went wrong, we don't have these yet
                 revert("PANIC! > 1");
@@ -200,7 +197,15 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         bytes memory extraData;
         {
             uint256 _maxSubmissionCost;
-            (_from, _maxSubmissionCost, extraData) = parseOutboundData(_data);
+            if (super.isRouter(msg.sender)) {
+                // router encoded
+                (_from, extraData) = GatewayMessageHandler.parseFromRouterToGateway(_data);
+            } else {
+                _from = msg.sender;
+                extraData = _data;
+            }
+            // user encoded
+            (_maxSubmissionCost, extraData) = abi.decode(extraData, (uint256, bytes));
 
             require(_l1Token.isContract(), "L1_NOT_CONTRACT");
             address l2Token = calculateL2TokenAddress(_l1Token);
@@ -233,26 +238,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         // this method is virtual since different subclasses can handle escrow differently
         // user funds are escrowed on the gateway using this function
         IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
-    }
-
-    function parseOutboundData(bytes memory _data)
-        internal
-        view
-        returns (
-            address _from,
-            uint256 _maxSubmissionCost,
-            bytes memory _extraData
-        )
-    {
-        if (super.isRouter(msg.sender)) {
-            // router encoded
-            (_from, _extraData) = abi.decode(_data, (address, bytes));
-        } else {
-            _from = msg.sender;
-            _extraData = _data;
-        }
-        // user encoded
-        (_maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
     }
 
     function getOutboundCalldata(
