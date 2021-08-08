@@ -22,11 +22,11 @@ repos:
     hooks:
       - id: go-fmt
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: 'v2.2.1' # Use the sha or tag you want to point at
+    rev: 'v2.3.2' # Use the sha or tag you want to point at
     hooks:
       - id: prettier
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: 'v7.24.0' # Use the sha / tag you want to point at
+    rev: 'v7.32.0' # Use the sha / tag you want to point at
     hooks:
       - id: eslint
         args: [--fix]
@@ -34,11 +34,11 @@ repos:
         # ignore prettier config
         files: \.[jt]sx?$
         additional_dependencies:
-          - 'eslint@7.3.1'
-          - 'typescript@3.8.3'
-          - '@typescript-eslint/parser@3.4.0'
-          - '@typescript-eslint/eslint-plugin@3.4.0'
-          - eslint-config-prettier@6.11.0
+          - 'eslint@7.32.0'
+          - 'typescript@4.3.5'
+          - '@typescript-eslint/parser@4.29.0'
+          - '@typescript-eslint/eslint-plugin@4.29.0'
+          - eslint-config-prettier@8.3.0
   - repo: https://github.com/syntaqx/git-hooks
     rev: v0.0.16
     hooks:

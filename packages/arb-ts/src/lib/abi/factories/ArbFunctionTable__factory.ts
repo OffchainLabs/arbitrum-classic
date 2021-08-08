@@ -2,19 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ArbFunctionTable } from '../ArbFunctionTable'
-
-export class ArbFunctionTable__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ArbFunctionTable {
-    return new Contract(address, _abi, signerOrProvider) as ArbFunctionTable
-  }
-}
+import type {
+  ArbFunctionTable,
+  ArbFunctionTableInterface,
+} from '../ArbFunctionTable'
 
 const _abi = [
   {
@@ -84,3 +77,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ArbFunctionTable__factory {
+  static readonly abi = _abi
+  static createInterface(): ArbFunctionTableInterface {
+    return new utils.Interface(_abi) as ArbFunctionTableInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ArbFunctionTable {
+    return new Contract(address, _abi, signerOrProvider) as ArbFunctionTable
+  }
+}

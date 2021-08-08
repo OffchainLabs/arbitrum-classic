@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface ITokenGatewayInterface extends ethers.utils.Interface {
   functions: {
@@ -69,26 +68,51 @@ interface ITokenGatewayInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
 }
 
-export class ITokenGateway extends Contract {
+export class ITokenGateway extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: ITokenGatewayInterface
 
   functions: {
     calculateL2TokenAddress(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    'calculateL2TokenAddress(address)'(
       l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<[string]>
@@ -99,16 +123,7 @@ export class ITokenGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     outboundTransfer(
@@ -118,26 +133,11 @@ export class ITokenGateway extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
   calculateL2TokenAddress(
-    l1ERC20: string,
-    overrides?: CallOverrides
-  ): Promise<string>
-
-  'calculateL2TokenAddress(address)'(
     l1ERC20: string,
     overrides?: CallOverrides
   ): Promise<string>
@@ -148,16 +148,7 @@ export class ITokenGateway extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-    _token: string,
-    _from: string,
-    _to: string,
-    _amount: BigNumberish,
-    _data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   outboundTransfer(
@@ -167,26 +158,11 @@ export class ITokenGateway extends Contract {
     _maxGas: BigNumberish,
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-    _token: string,
-    _to: string,
-    _amount: BigNumberish,
-    _maxGas: BigNumberish,
-    _gasPriceBid: BigNumberish,
-    _data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
     calculateL2TokenAddress(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'calculateL2TokenAddress(address)'(
       l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<string>
@@ -200,26 +176,7 @@ export class ITokenGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     outboundTransfer(
-      _token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
       _token: string,
       _to: string,
       _amount: BigNumberish,
@@ -232,31 +189,46 @@ export class ITokenGateway extends Contract {
 
   filters: {
     InboundTransferFinalized(
-      token: null,
-      _from: string | null,
-      _to: string | null,
-      _transferId: BigNumberish | null,
-      _amount: null,
-      _data: null
-    ): EventFilter
+      token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _transferId?: BigNumberish | null,
+      _amount?: null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber, string],
+      {
+        token: string
+        _from: string
+        _to: string
+        _transferId: BigNumber
+        _amount: BigNumber
+        _data: string
+      }
+    >
 
     OutboundTransferInitiated(
-      token: null,
-      _from: string | null,
-      _to: string | null,
-      _transferId: BigNumberish | null,
-      _amount: null,
-      _data: null
-    ): EventFilter
+      token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _transferId?: BigNumberish | null,
+      _amount?: null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber, string],
+      {
+        token: string
+        _from: string
+        _to: string
+        _transferId: BigNumber
+        _amount: BigNumber
+        _data: string
+      }
+    >
   }
 
   estimateGas: {
     calculateL2TokenAddress(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'calculateL2TokenAddress(address)'(
       l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -267,16 +239,7 @@ export class ITokenGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     outboundTransfer(
@@ -286,17 +249,7 @@ export class ITokenGateway extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
@@ -306,27 +259,13 @@ export class ITokenGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'calculateL2TokenAddress(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     finalizeInboundTransfer(
       _token: string,
       _from: string,
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     outboundTransfer(
@@ -336,17 +275,7 @@ export class ITokenGateway extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

@@ -9,15 +9,14 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface IRollupCoreInterface extends ethers.utils.Interface {
   functions: {
@@ -157,16 +156,46 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
   events: {}
 }
 
-export class IRollupCore extends Contract {
+export class IRollupCore extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: IRollupCoreInterface
 
@@ -176,17 +205,7 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber, BigNumber, string, boolean]>
 
-    '_stakerMap(address)'(
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber, BigNumber, string, boolean]>
-
     amountStaked(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
-    'amountStaked(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
@@ -196,28 +215,11 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    'currentChallenge(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
     firstUnresolvedNode(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
-    'getNode(uint256)'(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
     getNodeHash(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    'getNodeHash(uint256)'(
       index: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string]>
@@ -227,57 +229,24 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    'getStakerAddress(uint256)'(
-      stakerNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
     isStaked(staker: string, overrides?: CallOverrides): Promise<[boolean]>
-
-    'isStaked(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
 
     isZombie(staker: string, overrides?: CallOverrides): Promise<[boolean]>
 
-    'isZombie(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
     lastStakeBlock(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'lastStakeBlock()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     latestConfirmed(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'latestConfirmed()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     latestNodeCreated(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'latestNodeCreated()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     latestStakedNode(
       staker: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
-    'latestStakedNode(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
     stakerCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'stakerCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     withdrawableFunds(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
-    'withdrawableFunds(address)'(
       owner: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
@@ -287,21 +256,9 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    'zombieAddress(uint256)'(
-      zombieNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
     zombieCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'zombieCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     zombieLatestStakedNode(
-      zombieNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
-    'zombieLatestStakedNode(uint256)'(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
@@ -312,99 +269,39 @@ export class IRollupCore extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, BigNumber, BigNumber, string, boolean]>
 
-  '_stakerMap(address)'(
-    stakerAddress: string,
-    overrides?: CallOverrides
-  ): Promise<[BigNumber, BigNumber, BigNumber, string, boolean]>
-
   amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
-
-  'amountStaked(address)'(
-    staker: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
 
   currentChallenge(staker: string, overrides?: CallOverrides): Promise<string>
 
-  'currentChallenge(address)'(
-    staker: string,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
-
-  'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<BigNumber>
 
   getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<string>
 
-  'getNode(uint256)'(
-    nodeNum: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   getNodeHash(index: BigNumberish, overrides?: CallOverrides): Promise<string>
-
-  'getNodeHash(uint256)'(
-    index: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>
 
   getStakerAddress(
     stakerNum: BigNumberish,
     overrides?: CallOverrides
   ): Promise<string>
 
-  'getStakerAddress(uint256)'(
-    stakerNum: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   isStaked(staker: string, overrides?: CallOverrides): Promise<boolean>
-
-  'isStaked(address)'(
-    staker: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
 
   isZombie(staker: string, overrides?: CallOverrides): Promise<boolean>
 
-  'isZombie(address)'(
-    staker: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
-
   lastStakeBlock(overrides?: CallOverrides): Promise<BigNumber>
-
-  'lastStakeBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
   latestConfirmed(overrides?: CallOverrides): Promise<BigNumber>
 
-  'latestConfirmed()'(overrides?: CallOverrides): Promise<BigNumber>
-
   latestNodeCreated(overrides?: CallOverrides): Promise<BigNumber>
-
-  'latestNodeCreated()'(overrides?: CallOverrides): Promise<BigNumber>
 
   latestStakedNode(
     staker: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
-  'latestStakedNode(address)'(
-    staker: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
   stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
-  'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
   withdrawableFunds(
-    owner: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
-  'withdrawableFunds(address)'(
     owner: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>
@@ -414,21 +311,9 @@ export class IRollupCore extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  'zombieAddress(uint256)'(
-    zombieNum: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   zombieCount(overrides?: CallOverrides): Promise<BigNumber>
 
-  'zombieCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
   zombieLatestStakedNode(
-    zombieNum: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
-  'zombieLatestStakedNode(uint256)'(
     zombieNum: BigNumberish,
     overrides?: CallOverrides
   ): Promise<BigNumber>
@@ -439,99 +324,39 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber, BigNumber, string, boolean]>
 
-    '_stakerMap(address)'(
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber, BigNumber, string, boolean]>
-
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'amountStaked(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
 
     currentChallenge(staker: string, overrides?: CallOverrides): Promise<string>
 
-    'currentChallenge(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
-
-    'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<BigNumber>
 
     getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<string>
 
-    'getNode(uint256)'(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     getNodeHash(index: BigNumberish, overrides?: CallOverrides): Promise<string>
-
-    'getNodeHash(uint256)'(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
 
     getStakerAddress(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>
 
-    'getStakerAddress(uint256)'(
-      stakerNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     isStaked(staker: string, overrides?: CallOverrides): Promise<boolean>
-
-    'isStaked(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
 
     isZombie(staker: string, overrides?: CallOverrides): Promise<boolean>
 
-    'isZombie(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
     lastStakeBlock(overrides?: CallOverrides): Promise<BigNumber>
-
-    'lastStakeBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
     latestConfirmed(overrides?: CallOverrides): Promise<BigNumber>
 
-    'latestConfirmed()'(overrides?: CallOverrides): Promise<BigNumber>
-
     latestNodeCreated(overrides?: CallOverrides): Promise<BigNumber>
-
-    'latestNodeCreated()'(overrides?: CallOverrides): Promise<BigNumber>
 
     latestStakedNode(
       staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'latestStakedNode(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
-    'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
     withdrawableFunds(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'withdrawableFunds(address)'(
       owner: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -541,21 +366,9 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    'zombieAddress(uint256)'(
-      zombieNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     zombieCount(overrides?: CallOverrides): Promise<BigNumber>
 
-    'zombieCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
     zombieLatestStakedNode(
-      zombieNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'zombieLatestStakedNode(uint256)'(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -569,38 +382,16 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    '_stakerMap(address)'(
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'amountStaked(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
 
     currentChallenge(
       staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'currentChallenge(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
 
-    'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<BigNumber>
-
     getNode(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'getNode(uint256)'(
       nodeNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -610,67 +401,29 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'getNodeHash(uint256)'(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     getStakerAddress(
-      stakerNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'getStakerAddress(uint256)'(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     isStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'isStaked(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     isZombie(staker: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'isZombie(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
 
     lastStakeBlock(overrides?: CallOverrides): Promise<BigNumber>
 
-    'lastStakeBlock()'(overrides?: CallOverrides): Promise<BigNumber>
-
     latestConfirmed(overrides?: CallOverrides): Promise<BigNumber>
 
-    'latestConfirmed()'(overrides?: CallOverrides): Promise<BigNumber>
-
     latestNodeCreated(overrides?: CallOverrides): Promise<BigNumber>
-
-    'latestNodeCreated()'(overrides?: CallOverrides): Promise<BigNumber>
 
     latestStakedNode(
       staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'latestStakedNode(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
-    'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
     withdrawableFunds(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'withdrawableFunds(address)'(
       owner: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -680,21 +433,9 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'zombieAddress(uint256)'(
-      zombieNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     zombieCount(overrides?: CallOverrides): Promise<BigNumber>
 
-    'zombieCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
     zombieLatestStakedNode(
-      zombieNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'zombieLatestStakedNode(uint256)'(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -706,17 +447,7 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    '_stakerMap(address)'(
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     amountStaked(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'amountStaked(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -726,25 +457,11 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'currentChallenge(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     firstUnresolvedNode(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'firstUnresolvedNode()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getNode(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getNode(uint256)'(
       nodeNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -754,17 +471,7 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'getNodeHash(uint256)'(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getStakerAddress(
-      stakerNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getStakerAddress(uint256)'(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -774,57 +481,25 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'isStaked(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     isZombie(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'isZombie(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     lastStakeBlock(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'lastStakeBlock()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     latestConfirmed(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'latestConfirmed()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     latestNodeCreated(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'latestNodeCreated()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
 
     latestStakedNode(
       staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'latestStakedNode(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     stakerCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'stakerCount()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     withdrawableFunds(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'withdrawableFunds(address)'(
       owner: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -834,21 +509,9 @@ export class IRollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'zombieAddress(uint256)'(
-      zombieNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     zombieCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'zombieCount()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     zombieLatestStakedNode(
-      zombieNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'zombieLatestStakedNode(uint256)'(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>

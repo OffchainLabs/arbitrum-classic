@@ -2,36 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Signer } from 'ethers'
+import { Signer, utils, Contract, ContractFactory, Overrides } from 'ethers'
 import { Provider, TransactionRequest } from '@ethersproject/providers'
-import { Contract, ContractFactory, Overrides } from '@ethersproject/contracts'
-
-import type { Mock } from '../Mock'
-
-export class Mock__factory extends ContractFactory {
-  constructor(signer?: Signer) {
-    super(_abi, _bytecode, signer)
-  }
-
-  deploy(_mocked: string, overrides?: Overrides): Promise<Mock> {
-    return super.deploy(_mocked, overrides || {}) as Promise<Mock>
-  }
-  getDeployTransaction(
-    _mocked: string,
-    overrides?: Overrides
-  ): TransactionRequest {
-    return super.getDeployTransaction(_mocked, overrides || {})
-  }
-  attach(address: string): Mock {
-    return super.attach(address) as Mock
-  }
-  connect(signer: Signer): Mock__factory {
-    return super.connect(signer) as Mock__factory
-  }
-  static connect(address: string, signerOrProvider: Signer | Provider): Mock {
-    return new Contract(address, _abi, signerOrProvider) as Mock
-  }
-}
+import type { Mock, MockInterface } from '../Mock'
 
 const _abi = [
   {
@@ -124,3 +97,36 @@ const _abi = [
 
 const _bytecode =
   '0x608060405234801561001057600080fd5b506040516104043803806104048339818101604052602081101561003357600080fd5b810190808051604051939291908464010000000082111561005357600080fd5b90830190602082018581111561006857600080fd5b825164010000000081118282018810171561008257600080fd5b82525081516020918201929091019080838360005b838110156100af578181015183820152602001610097565b50505050905090810190601f1680156100dc5780820380516001836020036101000a031916815260200191505b50604052505081516100f6915060009060208401906100fd565b5050610198565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061013e57805160ff191683800117855561016b565b8280016001018555821561016b579182015b8281111561016b578251825591602001919060010190610150565b5061017792915061017b565b5090565b61019591905b808211156101775760008155600101610181565b90565b61025d806101a76000396000f3fe60806040526004361061002d5760003560e01c8063679b6ded14610036578063baa570331461010057610034565b3661003457005b005b34801561004257600080fd5b506100ee600480360361010081101561005a57600080fd5b6001600160a01b038235811692602081013592604082013592606083013581169260808101359091169160a08201359160c081013591810190610100810160e08201356401000000008111156100af57600080fd5b8201836020820111156100c157600080fd5b803590602001918460018302840111640100000000831117156100e357600080fd5b50909250905061018a565b60408051918252519081900360200190f35b34801561010c57600080fd5b50610115610199565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561014f578181015183820152602001610137565b50505050905090810190601f16801561017c5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b60009998505050505050505050565b6000805460408051602060026001851615610100026000190190941693909304601f8101849004840282018401909252818152929183018282801561021f5780601f106101f45761010080835404028352916020019161021f565b820191906000526020600020905b81548152906001019060200180831161020257829003601f168201915b50505050508156fea26469706673582212209f5be6bc9ab41fece3a0719153a7a4b02c4a2aee98dd9b380e72ca0eaf1da1be64736f6c634300060b0033'
+
+export class Mock__factory extends ContractFactory {
+  constructor(signer?: Signer) {
+    super(_abi, _bytecode, signer)
+  }
+
+  deploy(
+    _mocked: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<Mock> {
+    return super.deploy(_mocked, overrides || {}) as Promise<Mock>
+  }
+  getDeployTransaction(
+    _mocked: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): TransactionRequest {
+    return super.getDeployTransaction(_mocked, overrides || {})
+  }
+  attach(address: string): Mock {
+    return super.attach(address) as Mock
+  }
+  connect(signer: Signer): Mock__factory {
+    return super.connect(signer) as Mock__factory
+  }
+  static readonly bytecode = _bytecode
+  static readonly abi = _abi
+  static createInterface(): MockInterface {
+    return new utils.Interface(_abi) as MockInterface
+  }
+  static connect(address: string, signerOrProvider: Signer | Provider): Mock {
+    return new Contract(address, _abi, signerOrProvider) as Mock
+  }
+}

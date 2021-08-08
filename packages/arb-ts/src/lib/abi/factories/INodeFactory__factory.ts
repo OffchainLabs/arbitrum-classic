@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { INodeFactory } from '../INodeFactory'
-
-export class INodeFactory__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): INodeFactory {
-    return new Contract(address, _abi, signerOrProvider) as INodeFactory
-  }
-}
+import type { INodeFactory, INodeFactoryInterface } from '../INodeFactory'
 
 const _abi = [
   {
@@ -57,3 +47,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class INodeFactory__factory {
+  static readonly abi = _abi
+  static createInterface(): INodeFactoryInterface {
+    return new utils.Interface(_abi) as INodeFactoryInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): INodeFactory {
+    return new Contract(address, _abi, signerOrProvider) as INodeFactory
+  }
+}
