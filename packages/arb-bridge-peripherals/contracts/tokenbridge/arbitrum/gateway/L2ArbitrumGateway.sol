@@ -81,7 +81,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             _from,
             _to,
             _amount,
-            GatewayMessageHandler.encodeFromL2GatewayMsgV1(exitNum, _data)
+            GatewayMessageHandler.encodeFromL2GatewayMsg(exitNum, _data)
         );
 
         return outboundCalldata;
@@ -186,21 +186,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
-        bytes memory gatewayData;
-        bytes memory callHookData;
-
-        {
-            uint8 version = GatewayMessageHandler.getGatewayMessageVersion(_data);
-            if (version == 0) {
-                // something went wrong
-                revert("PANIC! 0");
-            } else if (version == 1) {
-                (gatewayData, callHookData) = GatewayMessageHandler.parseFromL1GatewayMsgV1(_data);
-            } else {
-                // something went wrong, we don't have these yet
-                revert("PANIC! > 1");
-            }
-        }
+        (bytes memory gatewayData, bytes memory callHookData) = GatewayMessageHandler
+            .parseFromL1GatewayMsg(_data);
 
         address expectedAddress = calculateL2TokenAddress(_token);
 

@@ -80,21 +80,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
-        uint256 exitNum;
-        bytes memory callHookData;
-
-        {
-            uint8 version = GatewayMessageHandler.getGatewayMessageVersion(_data);
-            if (version == 0) {
-                // something went wrong
-                revert("PANIC! 0");
-            } else if (version == 1) {
-                (exitNum, callHookData) = GatewayMessageHandler.parseToL1GatewayMsgV1(_data);
-            } else {
-                // something went wrong, we don't have these yet
-                revert("PANIC! > 1");
-            }
-        }
+        (uint256 exitNum, bytes memory callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(
+            _data
+        );
 
         (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
@@ -259,7 +247,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             _from,
             _to,
             _amount,
-            GatewayMessageHandler.encodeToL2GatewayMsgV1(emptyBytes, _data)
+            GatewayMessageHandler.encodeToL2GatewayMsg(emptyBytes, _data)
         );
 
         return outboundCalldata;
