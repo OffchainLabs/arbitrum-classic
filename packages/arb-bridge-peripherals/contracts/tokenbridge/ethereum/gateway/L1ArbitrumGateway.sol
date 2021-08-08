@@ -213,8 +213,17 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
                 res
             );
         }
-
-        emit OutboundTransferInitiatedV1(_l1Token, _from, _to, seqNum, _amount, extraData);
+        // deposits don't have an exit num from L1 to L2, only on the way back
+        uint256 currExitNum = 0;
+        emit OutboundTransferInitiatedV1(
+            _l1Token,
+            _from,
+            _to,
+            seqNum,
+            currExitNum,
+            _amount,
+            extraData
+        );
         return abi.encode(seqNum);
     }
 

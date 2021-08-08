@@ -34,6 +34,7 @@ interface ITokenGateway {
         address indexed _from,
         address indexed _to,
         uint256 indexed _transferId,
+        uint256 _exitNum,
         uint256 _amount,
         bytes _userData
     );

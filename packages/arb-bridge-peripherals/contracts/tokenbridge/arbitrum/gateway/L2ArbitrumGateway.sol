@@ -133,7 +133,10 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             }
         }
 
+        // unique id used to identify the L2 to L1 tx
         uint256 id;
+        // exit number used for tradeable exits
+        uint256 currExitNum = exitNum;
         {
             address l2Token = calculateL2TokenAddress(_l1Token);
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
@@ -144,7 +147,15 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             res = getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
             id = createOutboundTx(_from, _amount, res);
         }
-        emit OutboundTransferInitiatedV1(_l1Token, _from, _to, id, _amount, _extraData);
+        emit OutboundTransferInitiatedV1(
+            _l1Token,
+            _from,
+            _to,
+            id,
+            currExitNum,
+            _amount,
+            _extraData
+        );
         return abi.encode(id);
     }
 
