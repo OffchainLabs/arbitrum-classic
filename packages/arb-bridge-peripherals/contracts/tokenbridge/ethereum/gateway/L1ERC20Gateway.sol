@@ -130,7 +130,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
             _from,
             _to,
             _amount,
-            abi.encode(deployData, _data)
+            GatewayMessageHandler.encodeToL2GatewayMsg(deployData, _data)
         );
 
         return outboundCalldata;

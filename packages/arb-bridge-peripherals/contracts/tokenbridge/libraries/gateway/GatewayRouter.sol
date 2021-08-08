@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
+import "./GatewayMessageHandler.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
@@ -74,7 +75,10 @@ abstract contract GatewayRouter is TokenGateway {
         bytes calldata _data
     ) public payable virtual override returns (bytes memory) {
         address gateway = getGateway(_token);
-        bytes memory gatewayData = getOutboundCalldata(_token, msg.sender, _to, _amount, _data);
+        bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
+            msg.sender,
+            _data
+        );
 
         emit TransferRouted(_token, msg.sender, _to, gateway);
         return
@@ -95,7 +99,8 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _amount,
         bytes memory _data
     ) public view virtual override returns (bytes memory) {
-        return abi.encode(_from, _data);
+        address gateway = getGateway(_token);
+        return TokenGateway(gateway).getOutboundCalldata(_token, _from, _to, _amount, _data);
     }
 
     function getGateway(address _token) public view virtual returns (address gateway) {

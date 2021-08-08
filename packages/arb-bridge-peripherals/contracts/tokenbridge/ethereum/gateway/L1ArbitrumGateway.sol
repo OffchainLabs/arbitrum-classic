@@ -26,6 +26,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
 import "../L1ArbitrumMessenger.sol";
+import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/IERC677.sol";
@@ -79,7 +80,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
-        (uint256 exitNum, bytes memory callHookData) = parseInboundData(_data);
+        (uint256 exitNum, bytes memory callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(
+            _data
+        );
 
         (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
@@ -116,15 +119,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         // using tradeable exits in a subclass (L1ArbitrumExtendedGateway)
         target = _initialDestination;
         data = _initialData;
-    }
-
-    function parseInboundData(bytes calldata _data)
-        public
-        pure
-        returns (uint256 _exitNum, bytes memory _extraData)
-    {
-        // this data is encoded by the counterpart gateway, so this shouldn't revert
-        (_exitNum, _extraData) = abi.decode(_data, (uint256, bytes));
     }
 
     function inboundEscrowTransfer(
@@ -191,7 +185,15 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         bytes memory extraData;
         {
             uint256 _maxSubmissionCost;
-            (_from, _maxSubmissionCost, extraData) = parseOutboundData(_data);
+            if (super.isRouter(msg.sender)) {
+                // router encoded
+                (_from, extraData) = GatewayMessageHandler.parseFromRouterToGateway(_data);
+            } else {
+                _from = msg.sender;
+                extraData = _data;
+            }
+            // user encoded
+            (_maxSubmissionCost, extraData) = abi.decode(extraData, (uint256, bytes));
 
             require(_l1Token.isContract(), "L1_NOT_CONTRACT");
             address l2Token = calculateL2TokenAddress(_l1Token);
@@ -211,8 +213,17 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
                 res
             );
         }
-
-        emit OutboundTransferInitiatedV1(_l1Token, _from, _to, seqNum, _amount, extraData);
+        // deposits don't have an exit num from L1 to L2, only on the way back
+        uint256 currExitNum = 0;
+        emit OutboundTransferInitiatedV1(
+            _l1Token,
+            _from,
+            _to,
+            seqNum,
+            currExitNum,
+            _amount,
+            extraData
+        );
         return abi.encode(seqNum);
     }
 
@@ -224,26 +235,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         // this method is virtual since different subclasses can handle escrow differently
         // user funds are escrowed on the gateway using this function
         IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
-    }
-
-    function parseOutboundData(bytes memory _data)
-        internal
-        view
-        returns (
-            address _from,
-            uint256 _maxSubmissionCost,
-            bytes memory _extraData
-        )
-    {
-        if (super.isRouter(msg.sender)) {
-            // router encoded
-            (_from, _extraData) = abi.decode(_data, (address, bytes));
-        } else {
-            _from = msg.sender;
-            _extraData = _data;
-        }
-        // user encoded
-        (_maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
     }
 
     function getOutboundCalldata(
@@ -265,7 +256,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             _from,
             _to,
             _amount,
-            abi.encode(emptyBytes, _data)
+            GatewayMessageHandler.encodeToL2GatewayMsg(emptyBytes, _data)
         );
 
         return outboundCalldata;

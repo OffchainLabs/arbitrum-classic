@@ -24,6 +24,7 @@ import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 import "../IArbToken.sol";
 
 import "../L2ArbitrumMessenger.sol";
+import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 
@@ -55,6 +56,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         // We make this function virtual since outboundTransfer logic is the same for many gateways
         // but sometimes (ie weth) you construct the outgoing message differently.
 
+        // exitNum incremented after being included in _outboundCalldata
+        exitNum++;
         return
             sendTxToL1(
                 // default to sending no callvalue to the L1
@@ -71,14 +74,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         address _to,
         uint256 _amount,
         bytes memory _data
-    ) public view virtual override returns (bytes memory outboundCalldata) {
+    ) public view override returns (bytes memory outboundCalldata) {
         outboundCalldata = abi.encodeWithSelector(
             TokenGateway.finalizeInboundTransfer.selector,
             _token,
             _from,
             _to,
             _amount,
-            abi.encode(exitNum, _data)
+            GatewayMessageHandler.encodeFromL2GatewayMsg(exitNum, _data)
         );
 
         return outboundCalldata;
@@ -119,9 +122,21 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         // TODO: remove this invariant for execution markets
         require(msg.value == 0, "NO_VALUE");
 
-        (address _from, bytes memory _extraData) = parseOutboundData(_data);
+        address _from;
+        bytes memory _extraData;
+        {
+            if (isRouter(msg.sender)) {
+                (_from, _extraData) = GatewayMessageHandler.parseFromRouterToGateway(_data);
+            } else {
+                _from = msg.sender;
+                _extraData = _data;
+            }
+        }
 
+        // unique id used to identify the L2 to L1 tx
         uint256 id;
+        // exit number used for tradeable exits
+        uint256 currExitNum = exitNum;
         {
             address l2Token = calculateL2TokenAddress(_l1Token);
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
@@ -132,9 +147,15 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             res = getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
             id = createOutboundTx(_from, _amount, res);
         }
-        // exitNum incremented after being used in createOutboundTx
-        exitNum++;
-        emit OutboundTransferInitiatedV1(_l1Token, _from, _to, id, _amount, _extraData);
+        emit OutboundTransferInitiatedV1(
+            _l1Token,
+            _from,
+            _to,
+            id,
+            currExitNum,
+            _amount,
+            _extraData
+        );
         return abi.encode(id);
     }
 
@@ -147,19 +168,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         // user funds are escrowed on the gateway using this function
         // burns L2 tokens in order to release escrowed L1 tokens
         IArbToken(_l2Token).bridgeBurn(_from, _amount);
-    }
-
-    function parseOutboundData(bytes memory _data)
-        internal
-        view
-        returns (address _from, bytes memory _extraData)
-    {
-        if (super.isRouter(msg.sender)) {
-            (_from, _extraData) = abi.decode(_data, (address, bytes));
-        } else {
-            _from = msg.sender;
-            _extraData = _data;
-        }
     }
 
     function inboundEscrowTransfer(
@@ -189,7 +197,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
-        (bytes memory gatewayData, bytes memory callHookData) = abi.decode(_data, (bytes, bytes));
+        (bytes memory gatewayData, bytes memory callHookData) = GatewayMessageHandler
+            .parseFromL1GatewayMsg(_data);
 
         address expectedAddress = calculateL2TokenAddress(_token);
 

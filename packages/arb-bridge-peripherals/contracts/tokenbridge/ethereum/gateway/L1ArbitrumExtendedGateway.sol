@@ -32,6 +32,7 @@ interface ITradeableExitReceiver {
 
 abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
     struct ExitData {
+        bool isExit;
         address _newTo;
         bytes _newData;
     }
@@ -84,12 +85,11 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
 
         if (_data.length > 0) {
             require(_newDestination.isContract(), "TO_NOT_CONTRACT");
-            bool success =
-                ITradeableExitReceiver(_newDestination).onExitTransfer(
-                    expectedSender,
-                    _exitNum,
-                    _data
-                );
+            bool success = ITradeableExitReceiver(_newDestination).onExitTransfer(
+                expectedSender,
+                _exitNum,
+                _data
+            );
             require(success, "TRANSFER_HOOK_FAIL");
         }
 
@@ -111,11 +111,16 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
     ) public view virtual override returns (address target, bytes memory data) {
         // this function is virtual so that subclasses can override it with custom logic where necessary
         bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
-        ExitData memory exit = redirectedExits[withdrawData];
-        // if `_newTo` is not set, we return the initial destination
-        target = exit._newTo == address(0) ? _initialDestination : exit._newTo;
-        data = exit._newData;
-        return (target, data);
+        ExitData storage exit = redirectedExits[withdrawData];
+
+        // here we don't authenticate `_initialData`. we could hash it into `withdrawData` but would increase gas costs
+        // this is safe because if the exit isn't overriden, the _initialData coming from L2 is trusted
+        // but if the exit is traded, all we care about is the latest user calldata
+        if (exit.isExit) {
+            return (exit._newTo, exit._newData);
+        } else {
+            return (_initialDestination, _initialData);
+        }
     }
 
     function setRedirectedExit(
@@ -125,7 +130,7 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         bytes memory _newData
     ) internal {
         bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
-        redirectedExits[withdrawData] = ExitData(_newDestination, _newData);
+        redirectedExits[withdrawData] = ExitData(true, _newDestination, _newData);
     }
 
     function encodeWithdrawal(uint256 _exitNum, address _initialDestination)
