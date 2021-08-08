@@ -4,7 +4,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y curl && \
     curl -fsSL https://deb.nodesource.com/setup_14.x | bash - && \
-    apt-get install -y git librocksdb-dev libgmp-dev sudo netcat-openbsd nodejs gcc g++ && \
+    apt-get install -y git librocksdb-dev libgmp-dev libusb-dev pkg-config sudo netcat-openbsd nodejs gcc g++ && \
     curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/yarnkey.gpg >/dev/null && \
     echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | sudo tee /etc/apt/sources.list.d/yarn.list && \
     apt-get update && sudo apt-get install yarn && \
