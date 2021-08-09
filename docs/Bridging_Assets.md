@@ -149,4 +149,4 @@ No matter the complexity of a particular token's bridging needs, a gateway can i
 
 ### Demos
 
-See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/packages/token_deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/packages/token_withdraw) for demos of interacting with the bridge architecture via [arb-ts](https://arb-ts-docs.netlify.app/).
+See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token_deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token_withdraw) for demos of interacting with the bridge architecture via [arb-ts](https://arb-ts-docs.netlify.app/).

@@ -12,7 +12,7 @@ For Ethereum/Arbitrum "bridge" functionality — methods that involve communicat
 
 ## Demos
 
-See our [Tutorials](https://github.com/OffchainLabs/arbitrum-interop-quickstart/tree/final-review) repo for client-side integration demos.
+See our [Tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) repo for client-side integration demos.
 
 ## Arbitrum Integration
 
