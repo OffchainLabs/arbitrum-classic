@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
             auto segment = machine.machine_state.code->loadCodeSegment(0);
             for (size_t i = 0; i < segment.op_count; i++) {
                 auto code_point =
-                    segment.segment->loadCodePoint(segment.op_count - i - 1);
+                    segment.loadCodePoint(segment.op_count - i - 1);
                 std::cerr << std::setw(3) << i << std::setw(0) << " "
                           << code_point.op << std::endl;
             }

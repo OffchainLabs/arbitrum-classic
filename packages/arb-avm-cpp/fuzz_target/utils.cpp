@@ -24,7 +24,7 @@
 
 value parseFuzzInputValue(const uint8_t*& buf,
                           const uint8_t* bufEnd,
-                          const std::shared_ptr<Code>& code) {
+                          const std::shared_ptr<CoreCode>& code) {
     value output;
     std::vector<value*> slots;
     slots.push_back(&output);
@@ -81,7 +81,7 @@ value parseFuzzInputValue(const uint8_t*& buf,
 }
 
 Machine parseFuzzInput(const uint8_t* buf, size_t len) {
-    auto code = std::make_shared<Code>();
+    auto code = std::make_shared<CoreCode>();
     auto bufEnd = buf + len;
     value staticVal = parseFuzzInputValue(buf, bufEnd, code);
     auto stub = code->addSegment();
@@ -97,7 +97,7 @@ Machine parseFuzzInput(const uint8_t* buf, size_t len) {
             stub = code->addOperation(stub.pc, op);
         }
     }
-    return Machine(code, staticVal);
+    return Machine(MachineState(code, staticVal));
 }
 
 bool opcodeAllowed(OpCode opcode) {
@@ -196,9 +196,9 @@ void ProofTester::testMachine(Machine machine) {
         auto proof = machine.marshalForProof();
         writeProof(proof);
         auto assertion = machine.run();
-        fuzz_require(assertion.stepCount == 1,
+        fuzz_require(assertion.step_count == 1,
                      "Assertion produced wrong step count ",
-                     assertion.stepCount);
+                     assertion.step_count);
         writeMachineState(machine);
         queryPipe.flush();
         if (buffered_results < 4) {
