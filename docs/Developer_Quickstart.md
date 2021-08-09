@@ -105,4 +105,4 @@ yarn start
 
 ### More Demos
 
-For more demos, see our [demos](https://github.com/OffchainLabs/arbitrum-interop-quickstart) mono-repo.
+For more demos, see our [demos](https://github.com/OffchainLabs/arbitrum-tutorials) mono-repo.
