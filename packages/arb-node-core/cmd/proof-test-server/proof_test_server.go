@@ -28,9 +28,9 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
 )
 
@@ -174,9 +174,9 @@ func main() {
 	_, err = resultPipe.Write(buf)
 	handleFatalError(err)
 
-	backend, pks := test.SimulatedBackend(&testing.T{})
+	backend, auths := test.SimulatedBackend(&testing.T{})
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
+	auth := auths[0]
 	handleFatalError(err)
 	sequencer := common.RandAddress().ToEthAddress()
 	maxDelayBlocks := big.NewInt(60)
