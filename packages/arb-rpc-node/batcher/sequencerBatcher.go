@@ -579,6 +579,9 @@ const gasCostPerMessage int = 1431
 const gasCostPerMessageByte int = 16
 const gasCostMaximum int = 2_000_000
 
+// Wait this long after batch confirmation before publishing a new batch
+const l1RacePrevention time.Duration = time.Second * 10
+
 // Updates both prevMsgCount and nonce on success
 func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum *big.Int, prevMsgCount *big.Int, nonce *big.Int) (bool, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
@@ -765,6 +768,11 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 		if b.logBatchGasCosts {
 			fmt.Printf("%v,%v,%v\n", len(transactionsLengths), len(transactionsData), receipt.GasUsed)
 		}
+
+		// Don't set publishingBatchAtomic to 0 until after this.
+		// This prevents us from publishing the next batch too quickly.
+		// If we don't have this, the MessageCount query might be out of date.
+		time.Sleep(l1RacePrevention)
 	})()
 
 	return publishingAllBatchItems, nil
@@ -890,13 +898,19 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			b.inboxReader.MessageDeliveryMutex.Unlock()
 		}
 		if creatingBatch {
-			prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{Context: ctx})
+			prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{
+				Context:     ctx,
+				BlockNumber: blockNum,
+			})
 			if err != nil {
 				logger.Error().Err(err).Msg("error getting on-chain message count")
 				continue
 			}
-			// Gets the nonce at the latest block's state, *not* the pending state
-			nonceInt, err := b.client.NonceAt(ctx, b.sequencer.ToEthAddress(), nil)
+			// Gets the nonce at the latest block's state, *not* the pending state.
+			// We attempt to get this at the same block as prevMsgCount,
+			// but it isn't perfectly atomic as there could've been a reorg.
+			// That's fine though, as the worst case is that batch creation simply fails and we retry.
+			nonceInt, err := b.client.NonceAt(ctx, b.sequencer.ToEthAddress(), blockNum)
 			if err != nil {
 				logger.Error().Err(err).Msg("error getting latest sequencer nonce")
 				continue
