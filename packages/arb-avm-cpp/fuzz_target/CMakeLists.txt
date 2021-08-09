@@ -24,11 +24,14 @@ if (${AVM_FUZZER} MATCHES "afl")
     add_executable(fuzz_target afl.cpp libfuzzer.cpp ${SHARED_SOURCE})
 elseif (${AVM_FUZZER} MATCHES "libfuzzer" OR ${AVM_FUZZER} MATCHES "honggfuzz")
     add_executable(fuzz_target libfuzzer.cpp ${SHARED_SOURCE})
-else ()
+elseif (NOT ${AVM_FUZZER} MATCHES "manual_test")
     message(FATAL_ERROR "Unsupported AVM_FUZZER value \"${AVM_FUZZER}\" (must be afl, libfuzzer, or honggfuzz)")
 endif ()
 
 add_executable(manual_test manualtest.cpp ${SHARED_SOURCE})
 
-target_link_libraries(fuzz_target PRIVATE avm)
+if (NOT ${AVM_FUZZER} MATCHES "manual_test")
+    target_link_libraries(fuzz_target PRIVATE avm)
+endif ()
+
 target_link_libraries(manual_test PRIVATE avm)
