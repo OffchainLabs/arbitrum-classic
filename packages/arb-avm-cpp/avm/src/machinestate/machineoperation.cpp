@@ -19,7 +19,6 @@
 #include <avm/machinestate/ecops.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
-#include <tee/tee_task.hpp>
 
 #include <PicoSHA2/picosha2.h>
 #include <ethash/keccak.h>
@@ -27,12 +26,12 @@
 #include <ethash/keccak.hpp>
 
 #include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <netdb.h>
 
 #include "tee/eigentee.h"
 #include "tee/tee_task.hpp"
-
 
 eigen_enclave_info_t *g_enclave_info = NULL;
 eigen_auditor_set_t *g_auditors = NULL;
@@ -120,6 +119,11 @@ int release() {
   eigen_enclave_info_free(g_enclave_info);
   eigen_auditor_set_free(g_auditors);
   return 0;
+}
+
+static bool is_file_exist(const char *fileName) {
+  std::ifstream infile(fileName);
+  return infile.good();
 }
 
 // Many opcode implementations were inspired from the Apache 2.0 licensed EVM
@@ -987,11 +991,25 @@ void ecall(MachineState& m) {
     const char *pub = getenv("TEESDK_PUB");
     const char *pri = getenv("TEESDK_PRI");
     const char *conf = getenv("TEESDK_CONF");
-    const char *method = getenv("TEESDK_METHOD");
-    const char *args = getenv("TEESDK_ARGS");
     const char *uid = getenv("TEESDK_UID");
     const char *token = getenv("TEESDK_TOKEN");
 #endif
+    // If env is set with invalid value, fast failue
+    // Just check the file exists
+    if (!is_file_exist(pub) || !is_file_exist(pri) || !is_file_exist(conf)) {
+        std::cerr << "[TEESDK] ENV is not set with valid value, fail:"
+                  << " TEESDK_PUB: " << pub
+                  << " TEESDK_PRI: " << pri
+                  << " TEESDK_CONF: " << conf
+                  << std::endl;
+        Tuple res = Tuple(1, 0, 0, 0);
+ 
+        m.stack.push(res);
+        ++m.pc;
+        std::cerr << "ecall done: " << res << std::endl;
+        return;
+    }
+
     char *output = NULL; // malloc from `submit_task`
     size_t outputsize = 0;
     int32_t port = 8082;
@@ -1007,13 +1025,107 @@ void ecall(MachineState& m) {
         std::cerr << "[TEESDK] init fail: " << result << std::endl;
     }
 
+    std::string method_string;
+    std::string args_string;
+
+    switch (intx::narrow_cast<std::size_t>(arg1)) {
+    case 0: // EigenTEERegister
+        method_string = "EigenTEERegister";
+        break;
+    case 1: // AddCipherCipher
+        method_string = "operator";
+        args_string = "add_cipher_cipher,2,";
+        args_string += intx::to_string(arg2);
+        args_string += ",";
+        args_string += intx::to_string(arg3);
+        break;
+    case 2: // AddCipherPlain
+        method_string = "operator";
+        args_string = "add_cipher_plain,2,";
+        args_string += intx::to_string(arg2);
+        args_string += ",";
+        args_string += intx::to_string(arg3);
+        break;
+    case 3: // SubCipherCipher
+        method_string = "operator";
+        args_string = "sub_cipher_cipher,2,";
+        args_string += intx::to_string(arg2);
+        args_string += ",";
+        args_string += intx::to_string(arg3);
+        break;
+    case 4: // SubCipherPlain
+        method_string = "operator";
+        args_string = "sub_cipher_plain,2,";
+        args_string += intx::to_string(arg2);
+        args_string += ",";
+        args_string += intx::to_string(arg3);
+        break;
+    case 11: // Encrypt
+        method_string = "operator";
+        args_string = "encrypt,1,";
+        args_string += intx::to_string(arg2);
+        break;
+    case 12: // Deccrypt
+        method_string = "operator";
+        args_string = "decrypt,1,";
+        args_string += intx::to_string(arg2);
+        break;
+    default:
+        method_string = "echo";
+        break;
+    }
+
     if (result == 0) {
-        result = submit_task(method, args, uid, token, &output, &outputsize);
+        result = submit_task(method_string.c_str(), args_string.c_str(), uid, token, &output, &outputsize);
 
         if (result != 0) {
             std::cerr << "[TEESDK] submit_task fail: " << result << std::endl;
         }
     }
+
+    uint256_t out_arg1 = 0;
+    uint256_t out_arg2 = 0;
+    uint256_t out_arg3 = 0;
+    uint256_t out_arg4 = 0;
+    uint256_t temp;
+
+    if (result == 0) {
+        // XXX: the string should end with '\0'
+        std::cerr << "[TEESDK] submit_task output " << "[" << outputsize << "]: " << output << std::endl;
+
+        // Success
+        out_arg1 = 0;
+
+        switch (intx::narrow_cast<std::size_t>(arg1)) {
+        case 0:
+            // EigenTEERegister
+            break;
+        case 1: // AddCipherCipher
+        case 2: // AddCipherPlain
+        case 3: // SubCipherCipher
+        case 4: // SubCipherPlain
+        case 11: // Encrypt
+        case 12: // Deccrypt
+            for (size_t i = 0; i < outputsize; i++) {
+                if (i == 0) {
+                    temp = output[0] - '0';
+                }
+                else {
+                    temp = temp * 10 + output[i] - '0';
+                }
+            }
+            out_arg2 = temp;
+            break;
+        default:
+            out_arg1 = 1;
+            break;
+        }
+    }
+    else {
+        // Fail
+        out_arg1 = 1;
+    }
+
 	
 	// TODO: Release should be called when it should be called.
     // if (result == 0) {
@@ -1030,8 +1142,8 @@ void ecall(MachineState& m) {
 
     // TODO: something is calculated here
 
-    Tuple res = Tuple(arg1 + 100, arg2 + 100, arg3 + 100, arg4 + 100);
-
+    Tuple res = Tuple(out_arg1, out_arg2, out_arg3, out_arg4);
+ 
     m.stack.push(res);
     ++m.pc;
     std::cerr << "ecall done: " << res << std::endl;
