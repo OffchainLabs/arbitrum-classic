@@ -20,7 +20,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 
@@ -32,9 +31,9 @@ import (
 )
 
 func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
-	backend, pks := test.SimulatedBackend(t)
+	backend, auths := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth := bind.NewKeyedTransactor(pks[0])
+	auth := auths[0]
 	_, _, machineTester, err := ethbridgetestcontracts.DeployMachineTester(auth, client)
 	test.FailIfError(t, err)
 	client.Commit()

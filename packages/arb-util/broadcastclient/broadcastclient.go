@@ -19,13 +19,14 @@ package broadcastclient
 import (
 	"context"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"math/big"
 	"net"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -73,14 +74,37 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int, idleTimeo
 
 func (bc *BroadcastClient) Connect(ctx context.Context) (chan broadcaster.BroadcastFeedMessage, error) {
 	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
+
+	return messageReceiver, bc.ConnectWithChannel(ctx, messageReceiver)
+}
+
+func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) error {
 	_, err := bc.connect(ctx, messageReceiver)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	bc.startBackgroundReader(ctx, messageReceiver)
 
-	return messageReceiver, nil
+	return nil
+}
+
+func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
+	go (func() {
+		for {
+			err := bc.ConnectWithChannel(ctx, messageReceiver)
+			if err == nil {
+				break
+			}
+			logger.Warn().Str("url", bc.websocketUrl).Err(err).
+				Msg("failed connect to sequencer broadcast, waiting and retrying")
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(5 * time.Second):
+			}
+		}
+	})()
 }
 
 func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {

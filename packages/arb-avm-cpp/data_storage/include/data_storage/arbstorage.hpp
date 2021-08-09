@@ -48,8 +48,7 @@ class ArbStorage {
     [[nodiscard]] std::unique_ptr<AggregatorStore> getAggregatorStore() const;
     [[nodiscard]] std::shared_ptr<ArbCore> getArbCore();
 
-    [[nodiscard]] std::unique_ptr<Machine> getInitialMachine(
-        ValueCache& value_cache) const;
+    [[nodiscard]] std::unique_ptr<Machine> getInitialMachine();
     [[nodiscard]] std::unique_ptr<Machine> getMachine(
         uint256_t machineHash,
         ValueCache& value_cache) const;

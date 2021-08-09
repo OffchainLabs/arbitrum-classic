@@ -77,3 +77,15 @@ void ValueCache::nextCache() {
     saving_cache_index = (saving_cache_index + 1) % caches.size();
     caches[saving_cache_index].clear();
 }
+
+void ValueCache::initializeFrom(const ValueCache& other) {
+    if (caches.empty() || other.caches.empty()) {
+        return;
+    }
+    for (size_t i = 0; i < other.caches.size(); i++) {
+        const auto& other_cache = other.caches[i];
+        caches[saving_cache_index].insert(other_cache.begin(),
+                                          other_cache.end());
+    }
+    nextCache();
+}

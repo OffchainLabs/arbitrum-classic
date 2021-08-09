@@ -24,6 +24,8 @@ module.exports = {
 }
 ```
 
+See [Pet Shop Demo](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/demo-dapp-pet-shop).
+
 ## Truffle
 
 To port an existing truffle configuration:
@@ -36,10 +38,9 @@ To port an existing truffle configuration:
 
 2.  Edit the `truffle-config.js`:
 
-    - Import `wrapProvider` from `arb-ethers-web3-bridge` and set the mnemonic and the url to an Arbitrum aggregator at the top of the file:
+    - Set the mnemonic and the url to an Arbitrum aggregator at the top of the file.
 
     ```js
-    const wrapProvider = require('arb-ethers-web3-bridge').wrapProvider
     const HDWalletProvider = require('@truffle/hdwallet-provider')
 
     const mnemonic =
@@ -53,9 +54,7 @@ To port an existing truffle configuration:
     module.exports = {
         arbitrum: {
           provider: function () {
-            // return wrapped provider:
-            return wrapProvider(
-              new HDWalletProvider(mnemonic, arbProviderUrl)
+              return new HDWalletProvider(mnemonic, arbProviderUrl)
             )
           },
           network_id: '*',
@@ -70,3 +69,28 @@ Now that the truffle project is set up correctly, just run migrate to deploy you
 ```bash
 truffle migrate --reset --network arbitrum
 ```
+
+For older versions of truffle (< 0.5.x), do the following:
+
+- Import `wrapProvider` from `arb-ethers-web3-bridge` at the top of `truffle-config.js`:
+
+```bash
+const wrapProvider = require('arb-ethers-web3-bridge').wrapProvider
+```
+
+- return the wrapped provider here:
+  ```js
+    module.exports = {
+        arbitrum: {
+          provider: function () {
+            // return wrapped provider:
+            return wrapProvider(
+              new HDWalletProvider(mnemonic, arbProviderUrl)
+            )
+          },
+          network_id: '*',
+          gasPrice: 0,
+        },
+      },
+    }
+  ```

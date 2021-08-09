@@ -278,11 +278,13 @@ func startup() error {
 	}
 
 	batcherMode := rpc.SequencerBatcherMode{
-		Auth:                       seqAuth,
-		Core:                       mon.Core,
-		InboxReader:                inboxReader,
-		DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
-		CreateBatchBlockInterval:   big.NewInt(*createBatchBlockInterval),
+		Auth:        seqAuth,
+		Core:        mon.Core,
+		InboxReader: inboxReader,
+		Config: configuration.Sequencer{
+			CreateBatchBlockInterval:   *createBatchBlockInterval,
+			DelayedMessagesTargetDelay: *delayedMessagesTargetDelay,
+		},
 	}
 	settings := configuration.FeedOutput{
 		Addr:          "127.0.0.1",
@@ -314,7 +316,6 @@ func startup() error {
 		batcherMode,
 		signer,
 		settings,
-		"",
 	)
 	if err != nil {
 		return err
@@ -353,7 +354,17 @@ func startup() error {
 	errChan := make(chan error, 1)
 	defer close(errChan)
 	go func() {
-		err := rpc.LaunchPublicServer(ctx, web3Server, "127.0.0.1", "8547", "127.0.0.1", "8548")
+		rpcConfig := configuration.RPC{
+			Addr: "0.0.0.0",
+			Port: "8547",
+			Path: "/",
+		}
+		wsConfig := configuration.WS{
+			Addr: "0.0.0.0",
+			Port: "8548",
+			Path: "/",
+		}
+		err := rpc.LaunchPublicServer(ctx, web3Server, rpcConfig, wsConfig)
 		if err != nil {
 			errChan <- err
 		}

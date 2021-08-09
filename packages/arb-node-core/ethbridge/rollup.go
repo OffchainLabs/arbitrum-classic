@@ -20,6 +20,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
@@ -42,12 +43,12 @@ type Rollup struct {
 	builderCon *ethbridgecontracts.RollupUserFacet
 }
 
-func NewRollup(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend) (*Rollup, error) {
+func NewRollup(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend, callOpts bind.CallOpts) (*Rollup, error) {
 	builderCon, err := ethbridgecontracts.NewRollupUserFacet(address, builder)
 	if err != nil {
 		return nil, err
 	}
-	watcher, err := NewRollupWatcher(address, fromBlock, client)
+	watcher, err := NewRollupWatcher(address, fromBlock, client, callOpts)
 	if err != nil {
 		return nil, err
 	}

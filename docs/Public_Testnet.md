@@ -56,19 +56,25 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 
 All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/69c58d6b33c4dfb7d8293ccfdcb1675798201b7e/packages/arb-bridge-eth/contracts
 
-#### Important Addresses
+### Important Addresses
+
+#### L1:
 
 - Main L1 Rollup Contract: [0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c](https://rinkeby.etherscan.io/address/0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c)
-- Ethereum Inbox Contract [0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e](https://rinkeby.etherscan.io/address/0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e)
+- Ethereum Inbox Contract: [0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e](https://rinkeby.etherscan.io/address/0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e)
+- L1 Gateway Router: [0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380](https://rinkeby.etherscan.io/address/0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380)
+- L1 Standard ERC20 Gateway: [0x91169Dbb45e6804743F94609De50D511C437572E](https://rinkeby.etherscan.io/address/0x91169Dbb45e6804743F94609De50D511C437572E)
+- L1 Custom Gateway: [0x917dc9a69F65dC3082D518192cd3725E1Fa96cA2](https://rinkeby.etherscan.io/address/0x917dc9a69F65dC3082D518192cd3725E1Fa96cA2)
+- L1 WETH Gateway: [0x81d1a19cf7071732D4313c75dE8DD5b8CF697eFD](https://rinkeby.etherscan.io/address/0x81d1a19cf7071732D4313c75dE8DD5b8CF697eFD)
+- L1 WETH Address: [0xc778417E063141139Fce010982780140Aa0cD5Ab](https://rinkeby.etherscan.io/address/0xc778417E063141139Fce010982780140Aa0cD5Ab)
 
-## V5 Arbitrum Chain
+#### L2:
 
-For connecting to our older "v5" Arbitrum chain (running on Kovan), use the following:
-
-- Aggregator RPC Endpoint: https://kovan5.arbitrum.io/rpc
-- Chain ID: 144545313136048
-- Symbol: ETH
-- Block Explorer URL: https://explorer5.arbitrum.io/#/
+- L2 Gateway Router: [0x9413AD42910c1eA60c737dB5f58d1C504498a3cD](https://rinkeby-explorer.arbitrum.io/address/0x9413AD42910c1eA60c737dB5f58d1C504498a3cD)
+- L2 Standard ERC20 Gateway: [0x195C107F3F75c4C93Eba7d9a1312F19305d6375f](https://rinkeby-explorer.arbitrum.io/address/0x195C107F3F75c4C93Eba7d9a1312F19305d6375f)
+- L2 Custom Gateway: [0x9b014455AcC2Fe90c52803849d0002aeEC184a06](https://rinkeby-explorer.arbitrum.io/address/0x9b014455AcC2Fe90c52803849d0002aeEC184a06)
+- L2 WETH Gateway: [0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9](https://rinkeby-explorer.arbitrum.io/address/0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9)
+- L2 WETH Address: [0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681](https://rinkeby-explorer.arbitrum.io/address/0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681)
 
 <!--
 ## Running your own node

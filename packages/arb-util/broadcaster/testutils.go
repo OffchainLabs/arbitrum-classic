@@ -120,13 +120,13 @@ func (mg *RandomMessageGenerator) Start(parentCtx context.Context) <-chan error 
 		}
 
 		prevAcc := common.RandHash()
-		currAcc := common.RandHash()
 
 		var lastSeq int64
 
 		messageCount := 0
 		if ticker != nil {
 			for {
+				currAcc := common.RandHash()
 				currSeq := lastSeq + 1
 				select {
 				case <-ctx.Done():
@@ -156,6 +156,7 @@ func (mg *RandomMessageGenerator) Start(parentCtx context.Context) <-chan error 
 			}
 		} else {
 			for {
+				currAcc := common.RandHash()
 				currSeq := lastSeq + 1
 				select {
 				case <-ctx.Done():

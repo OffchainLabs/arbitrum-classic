@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	golog "log"
-	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -29,12 +28,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
@@ -81,7 +80,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, wallet, l1Client, l1ChainId, err := configuration.Parse(ctx)
+	config, wallet, l1Client, l1ChainId, err := configuration.ParseValidator(ctx)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		len(config.Validator.UtilsAddress) == 0 || len(config.Validator.WalletFactoryAddress) == 0 ||
@@ -129,8 +128,6 @@ func startup() error {
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)
 
-	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
-
 	rollupAddr := ethcommon.HexToAddress(config.Rollup.Address)
 	bridgeUtilsAddr := ethcommon.HexToAddress(config.BridgeUtilsAddress)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
@@ -171,7 +168,7 @@ func startup() error {
 		}
 	}
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, l1Client, auth, config.GasPriceUrl)
+	valAuth, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
@@ -200,7 +197,7 @@ func startup() error {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
 
-	mon, err := monitor.NewMonitor(config.GetDatabasePath(), config.Rollup.Machine.Filename)
+	mon, err := monitor.NewMonitor(config.GetValidatorDatabasePath(), config.Rollup.Machine.Filename)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
@@ -211,22 +208,9 @@ func startup() error {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
-	}
-
-	chainMachineHash, err := stakerManager.GetInitialMachineHash(ctx)
-	if err != nil {
-		return errors.Wrap(err, "error checking initial chain state")
-	}
-	initialExecutionCursor, err := mon.Core.GetExecutionCursor(big.NewInt(0))
-	if err != nil {
-		return errors.Wrap(err, "error loading initial ArbCore machine")
-	}
-	initialMachineHash := initialExecutionCursor.MachineHash()
-	if initialMachineHash != chainMachineHash {
-		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
 	_, err = mon.StartInboxReader(ctx, l1Client, common.NewAddressFromEth(rollupAddr), config.Rollup.FromBlock, common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed)

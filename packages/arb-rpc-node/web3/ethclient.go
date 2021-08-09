@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
@@ -73,6 +74,25 @@ func (c *EthClient) PendingCodeAt(_ context.Context, account common.Address) ([]
 	pending := rpc.PendingBlockNumber
 	block := rpc.BlockNumberOrHash{BlockNumber: &pending}
 	return c.srv.GetCode(&account, block)
+}
+
+// Treats a null blockNumber as the latest block, not pending
+func (c *EthClient) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
+	var rpcBlockNumber rpc.BlockNumber
+	if blockNumber == nil {
+		rpcBlockNumber = rpc.BlockNumber(rpc.LatestBlockNumber)
+	} else {
+		if !blockNumber.IsInt64() {
+			return 0, errors.New("block number is not int64")
+		}
+		rpcBlockNumber = rpc.BlockNumber(blockNumber.Int64())
+	}
+	block := rpc.BlockNumberOrHash{BlockNumber: &rpcBlockNumber}
+	count, err := c.srv.GetTransactionCount(ctx, &account, block)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(count), err
 }
 
 func (c *EthClient) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
@@ -180,4 +200,19 @@ func (c *EthClient) BlockByHash(_ context.Context, hash common.Hash) (*types.Blo
 		receipts = append(receipts, res.Result.ToEthReceipt(arbcommon.NewHashFromEth(hash)))
 	}
 	return types.NewBlock(info.Header, txes, nil, receipts, new(trie.Trie)), nil
+}
+
+func (c *EthClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	if number == nil {
+		return c.srv.srv.LatestBlockHeader()
+	}
+	info, err := c.srv.srv.BlockInfoByNumber(number.Uint64())
+	if err != nil || info == nil {
+		return nil, err
+	}
+	return info.Header, nil
+}
+
+func (c *EthClient) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
+	return big.NewInt(0), nil
 }

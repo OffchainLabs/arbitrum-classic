@@ -18,40 +18,49 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
-	"math/big"
 )
 
 type NodeWatcher struct {
-	con *ethbridgecontracts.INode
+	con          *ethbridgecontracts.INode
+	baseCallOpts bind.CallOpts
 }
 
-func NewNodeWatcher(address ethcommon.Address, client ethutils.EthClient) (*NodeWatcher, error) {
+func NewNodeWatcher(address ethcommon.Address, client ethutils.EthClient, callOpts bind.CallOpts) (*NodeWatcher, error) {
 	con, err := ethbridgecontracts.NewINode(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return &NodeWatcher{
-		con: con,
+		con:          con,
+		baseCallOpts: callOpts,
 	}, nil
 }
 
+func (n *NodeWatcher) getCallOpts(ctx context.Context) *bind.CallOpts {
+	opts := n.baseCallOpts
+	opts.Context = ctx
+	return &opts
+}
+
 func (n *NodeWatcher) Prev(ctx context.Context) (*big.Int, error) {
-	prev, err := n.con.Prev(&bind.CallOpts{Context: ctx})
+	prev, err := n.con.Prev(n.getCallOpts(ctx))
 	return prev, errors.WithStack(err)
 }
 
 func (n *NodeWatcher) DeadlineBlock(ctx context.Context) (*big.Int, error) {
-	block, err := n.con.DeadlineBlock(&bind.CallOpts{Context: ctx})
+	block, err := n.con.DeadlineBlock(n.getCallOpts(ctx))
 	return block, errors.WithStack(err)
 }
 
 func (n *NodeWatcher) StakerCount(ctx context.Context) (*big.Int, error) {
-	count, err := n.con.StakerCount(&bind.CallOpts{Context: ctx})
+	count, err := n.con.StakerCount(n.getCallOpts(ctx))
 	return count, errors.WithStack(err)
 }

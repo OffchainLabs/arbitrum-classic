@@ -265,9 +265,14 @@ describe('Bridge peripherals layer 1', () => {
     await token.mint()
     await token.approve(testBridge.address, tokenAmount)
 
-    const data = ethers.utils.defaultAbiCoder.encode(
+    let data = ethers.utils.defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
+    )
+
+    data = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [accounts[0].address, data]
     )
 
     const tx = await testBridge.outboundTransfer(

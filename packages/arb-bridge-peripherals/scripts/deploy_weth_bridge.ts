@@ -1,38 +1,17 @@
 // import { Bridge } from 'arb-ts/src'
 import { ethers } from 'hardhat'
 
-import { ProxyAdmin__factory } from 'arb-ts/src/lib/abi/factories/ProxyAdmin__factory'
-
-import RinkebyAddresses from '../deployment-421611.json'
+import { instantiateBridge } from 'arb-ts/scripts/instantiate_bridge'
 
 const infuraKey = process.env['INFURA_KEY']
 if (!infuraKey) throw new Error('No INFURA_KEY')
-
-const l1Prov = new ethers.providers.JsonRpcProvider(
-  'https://rinkeby.infura.io/v3/' + infuraKey
-)
-const l2Prov = new ethers.providers.JsonRpcProvider(
-  'https://rinkeby.arbitrum.io/rpc'
-)
 
 const privKey = process.env['DEVNET_PRIVKEY']
 if (!privKey) throw new Error('No DEVNET_PRIVKEY')
 
 const signer = new ethers.Wallet(privKey)
 
-const l1Signer = signer.connect(l1Prov)
-const l2Signer = signer.connect(l2Prov)
-
 const wait = (ms: number) => new Promise(res => setTimeout(res, ms))
-
-const l1InboxAddr = RinkebyAddresses.inbox
-const l1GatewayRouterAddr = RinkebyAddresses.l1GatewayRouter
-const l2GatewayRouterAddr = RinkebyAddresses.l2GatewayRouter
-const l1ProxyAdminAddr = '0x0DbAF24efA2bc9Dd1a6c0530DD252BCcF883B89A'
-const l2ProxyAdminAddr = '0x58816566EB91815Cc07f3Ad5230eE0820fe1A19a'
-
-const l1WethAddr = '0xc778417e063141139fce010982780140aa0cd5ab'
-const l2WethAddr = '0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681'
 
 // L1 to L2 call parameters
 const gasPriceBid = '0'
@@ -42,6 +21,20 @@ const maxSubmissionCost = '259829212830'
 const deposit = ethers.utils.parseEther('0.01')
 
 const main = async () => {
+  const { bridge, l1Network } = await instantiateBridge(privKey, privKey)
+  const { tokenBridge } = l1Network
+  const { l1Signer, l2Signer } = bridge
+  const l1SignerAddress = await l1Signer.getAddress()
+
+  const l1InboxAddr = tokenBridge.inbox
+  const l1GatewayRouterAddr = tokenBridge.l1GatewayRouter
+  const l2GatewayRouterAddr = tokenBridge.l2GatewayRouter
+  const l1ProxyAdminAddr = tokenBridge.l1ProxyAdmin
+  const l2ProxyAdminAddr = tokenBridge.l2ProxyAdmin
+
+  const l1WethAddr = tokenBridge.l1Weth
+  const l2WethAddr = tokenBridge.l2Weth
+
   const l1Router = (
     await ethers.getContractAt('L1GatewayRouter', l1GatewayRouterAddr)
   ).connect(l1Signer)
@@ -52,7 +45,7 @@ const main = async () => {
   //   check if user owns router
   const expectedOwner = await l1Router.owner()
 
-  if (expectedOwner.toLowerCase() !== l1Signer.address.toLowerCase()) {
+  if (expectedOwner.toLowerCase() !== l1SignerAddress.toLowerCase()) {
     throw new Error('Not router owner')
   }
 

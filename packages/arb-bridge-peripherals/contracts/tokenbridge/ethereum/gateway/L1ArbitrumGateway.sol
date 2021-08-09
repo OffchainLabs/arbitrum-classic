@@ -187,7 +187,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) external payable virtual override returns (bytes memory res) {
+    ) public payable virtual override returns (bytes memory res) {
         address _from;
         uint256 seqNum;
         {
@@ -196,8 +196,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
             (_from, _maxSubmissionCost, extraData) = parseOutboundData(_data);
 
             require(_l1Token.isContract(), "L1_NOT_CONTRACT");
-            // this validates if the l1 token was set correctly
             address l2Token = _calculateL2TokenAddress(_l1Token);
+            require(l2Token != address(0), "NO_L2_TOKEN_SET");
 
             outboundEscrowTransfer(_l1Token, _from, _amount);
 

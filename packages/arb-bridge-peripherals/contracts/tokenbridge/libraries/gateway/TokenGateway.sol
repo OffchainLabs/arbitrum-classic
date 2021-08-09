@@ -25,7 +25,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 abstract contract TokenGateway is ITokenGateway {
     using Address for address;
     address public counterpartGateway;
-    address public STORAGE_GAP;
+    address public router;
 
     modifier onlyCounterpartGateway() virtual {
         require(isCounterpartGateway(msg.sender), "ONLY_COUNTERPART_GATEWAY");
@@ -36,23 +36,11 @@ abstract contract TokenGateway is ITokenGateway {
         require(_counterpartGateway != address(0), "INVALID_COUNTERPART");
         require(counterpartGateway == address(0), "ALREADY_INIT");
         counterpartGateway = _counterpartGateway;
-        // TODO: remove _router parameter
+        router = _router;
     }
 
     function isRouter(address _target) internal view virtual returns (bool isTargetRouter) {
-        (bool success, bytes memory ret) =
-            _target.staticcall(abi.encodeWithSelector(IGatewayRouter.isRouter.selector));
-
-        // TODO: remove isContract check
-        if (!_target.isContract()) return false;
-        if (!success) return false;
-
-        // if calling an EOA the default value of this will be 0
-        assembly {
-            isTargetRouter := mload(ret)
-        }
-
-        return isTargetRouter;
+        return _target == router;
     }
 
     function isCounterpartGateway(address _target) internal view virtual returns (bool) {
@@ -82,7 +70,7 @@ abstract contract TokenGateway is ITokenGateway {
      * @dev this always returns the same as the L1 oracle, but may be out of date.
      * For example, a custom token may have been registered but not deploy or the contract self destructed.
      * @param l1ERC20 address of L1 token
-     * @return L2 address of a bridged ERC20 token
+     * @return L2 address of a bridged ERC20 token or 0 if no valid L2 address for the given input
      */
     function _calculateL2TokenAddress(address l1ERC20) internal view virtual returns (address);
 

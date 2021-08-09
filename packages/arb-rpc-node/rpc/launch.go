@@ -44,7 +44,7 @@ type BatcherMode interface {
 }
 
 type ForwarderBatcherMode struct {
-	NodeURL string
+	Config configuration.Forwarder
 }
 
 func (b ForwarderBatcherMode) isBatcherMode() {}
@@ -64,11 +64,10 @@ type StatelessBatcherMode struct {
 func (b StatelessBatcherMode) isBatcherMode() {}
 
 type SequencerBatcherMode struct {
-	Auth                       *bind.TransactOpts
-	Core                       core.ArbCore
-	InboxReader                *monitor.InboxReader
-	DelayedMessagesTargetDelay *big.Int
-	CreateBatchBlockInterval   *big.Int
+	Auth        *bind.TransactOpts
+	Core        core.ArbCore
+	InboxReader *monitor.InboxReader
+	Config      configuration.Sequencer
 }
 
 func (b SequencerBatcherMode) isBatcherMode() {}
@@ -83,13 +82,12 @@ func SetupBatcher(
 	batcherMode BatcherMode,
 	dataSigner func([]byte) ([]byte, error),
 	broadcasterSettings configuration.FeedOutput,
-	gasPriceUrl string,
 ) (batcher.TransactionBatcher, error) {
 	switch batcherMode := batcherMode.(type) {
 	case ForwarderBatcherMode:
-		return batcher.NewForwarder(ctx, batcherMode.NodeURL)
+		return batcher.NewForwarder(ctx, batcherMode.Config)
 	case StatelessBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, gasPriceUrl)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +97,7 @@ func SetupBatcher(
 		}
 		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime), nil
 	case StatefulBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, gasPriceUrl)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
 		if err != nil {
 			return nil, err
 		}
@@ -129,13 +127,11 @@ func SetupBatcher(
 			l2ChainId,
 			batcherMode.InboxReader,
 			client,
-			batcherMode.DelayedMessagesTargetDelay,
-			batcherMode.CreateBatchBlockInterval,
+			batcherMode.Config,
 			seqInbox,
 			batcherMode.Auth,
 			dataSigner,
 			feedBroadcaster,
-			gasPriceUrl,
 		)
 		if err != nil {
 			return nil, err
@@ -145,23 +141,32 @@ func SetupBatcher(
 		if err != nil {
 			return nil, errors.Wrap(err, "error starting feed broadcaster")
 		}
-		go seqBatcher.Start(ctx)
 		return seqBatcher, nil
 	default:
 		return nil, errors.New("unexpected batcher type")
 	}
 }
 
-func LaunchPublicServer(ctx context.Context, web3Server *rpc.Server, web3RPCAddr string, web3RPCPort string, web3WSAddr, web3WSPort string) error {
+func LaunchPublicServer(ctx context.Context, web3Server *rpc.Server, rpc configuration.RPC, ws configuration.WS) error {
+	if rpc.Port == ws.Port && rpc.Port != "" {
+		if rpc.Addr != ws.Addr {
+			return errors.New("if serving on same port, rpc and ws addreses must be the same")
+		}
+		if rpc.Path == ws.Path {
+			return errors.New("if serving on same port, ws and rpc path must be different")
+		}
+		return utils2.LaunchRPCAndWS(ctx, web3Server, rpc.Addr, rpc.Port, rpc.Path, ws.Path)
+	}
+
 	errChan := make(chan error, 1)
-	if web3RPCPort != "" {
+	if rpc.Port != "" {
 		go func() {
-			errChan <- utils2.LaunchRPC(ctx, web3Server, web3RPCAddr, web3RPCPort)
+			errChan <- utils2.LaunchRPC(ctx, web3Server, rpc.Addr, rpc.Port, rpc.Path)
 		}()
 	}
-	if web3WSPort != "" {
+	if ws.Port != "" {
 		go func() {
-			errChan <- utils2.LaunchWS(ctx, web3Server, web3WSAddr, web3WSPort)
+			errChan <- utils2.LaunchWS(ctx, web3Server, ws.Addr, ws.Port, ws.Path)
 		}()
 	}
 	return <-errChan

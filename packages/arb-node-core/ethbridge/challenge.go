@@ -20,10 +20,13 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
@@ -57,12 +60,12 @@ type Challenge struct {
 	builderCon *ethbridgecontracts.Challenge
 }
 
-func NewChallenge(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend) (*Challenge, error) {
+func NewChallenge(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend, callOpts bind.CallOpts) (*Challenge, error) {
 	builderCon, err := ethbridgecontracts.NewChallenge(address, builder)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	watcher, err := NewChallengeWatcher(address, fromBlock, client)
+	watcher, err := NewChallengeWatcher(address, fromBlock, client, callOpts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -71,6 +74,17 @@ func NewChallenge(address ethcommon.Address, fromBlock int64, client ethutils.Et
 		BuilderBackend:   builder,
 		builderCon:       builderCon,
 	}, nil
+}
+
+func addStackTrace(err error) error {
+	type stackTracer interface {
+		StackTrace() errors.StackTrace
+	}
+	_, ok := err.(stackTracer)
+	if ok {
+		return err
+	}
+	return errors.WithStack(err)
 }
 
 func (c *Challenge) BisectExecution(
@@ -94,7 +108,8 @@ func (c *Challenge) BisectExecution(
 		subCuts[0].(*core.ExecutionState).RestHash(),
 		subCutHashes,
 	)
-	return errors.WithStack(err)
+
+	return addStackTrace(err)
 }
 
 func (c *Challenge) OneStepProveExecution(

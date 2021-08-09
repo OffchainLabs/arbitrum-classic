@@ -94,6 +94,14 @@ func (m *Server) BlockNum(block *rpc.BlockNumber) (uint64, error) {
 	}
 }
 
+func (m *Server) LatestBlockHeader() (*types.Header, error) {
+	latest, err := m.db.LatestBlock()
+	if err != nil || latest == nil {
+		return nil, err
+	}
+	return latest.Header, nil
+}
+
 // GetMessageResult returns the value output by the VM in response to the
 // l2message with the given hash
 func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, error) {
