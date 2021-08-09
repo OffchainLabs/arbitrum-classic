@@ -37,7 +37,7 @@
     "sol_docs:generate": "python docs/sol_contract_docs/generate_docs.py"
   },
   "engines": {
-    "node": ">= 8.0.0 < 16.0.0",
+    "node": ">= 8.0.0",
     "npm": "^6.0.0",
     "yarn": "^1.0.0"
   },
@@ -46,7 +46,6 @@
   "workspaces": {
     "packages": [
       "packages/arb-bridge-eth",
-      "packages/arb-provider-ethers",
       "packages/tools",
       "packages/arb-bridge-peripherals",
       "packages/arb-ts",
@@ -63,7 +62,6 @@
     "solidity-docgen": "^0.5.11"
   },
   "resolutions": {
-    "arb-provider-ethers/ethers": "~4.0.47",
     "eth-sig-util/ethereumjs-abi": "^0.6.8-1",
     "typechain/truffle-v4/truffle": "^4.0.0",
     "typechain/truffle-v5/truffle": "^5.0.0",

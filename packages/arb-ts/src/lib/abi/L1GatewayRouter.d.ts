@@ -23,7 +23,6 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L1GatewayRouterInterface extends ethers.utils.Interface {
   functions: {
-    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'defaultGateway()': FunctionFragment
@@ -36,18 +35,15 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
     'l1TokenToGateway(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'owner()': FunctionFragment
+    'router()': FunctionFragment
     'setDefaultGateway(address,uint256,uint256,uint256)': FunctionFragment
-    'setGateway(address,uint256,uint256,uint256)': FunctionFragment
+    'setGateway(address,uint256,uint256,uint256,address)': FunctionFragment
     'setGateways(address[],address[],uint256,uint256,uint256)': FunctionFragment
     'setOwner(address)': FunctionFragment
     'updateWhitelistSource(address)': FunctionFragment
     'whitelist()': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'STORAGE_GAP',
-    values?: undefined
-  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -91,13 +87,14 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(functionFragment: 'owner', values?: undefined): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'setDefaultGateway',
     values: [string, BigNumberish, BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'setGateway',
-    values: [string, BigNumberish, BigNumberish, BigNumberish]
+    values: [string, BigNumberish, BigNumberish, BigNumberish, string]
   ): string
   encodeFunctionData(
     functionFragment: 'setGateways',
@@ -110,7 +107,6 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(functionFragment: 'whitelist', values?: undefined): string
 
-  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -144,6 +140,7 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'setDefaultGateway',
     data: BytesLike
@@ -190,10 +187,6 @@ export class L1GatewayRouter extends Contract {
   interface: L1GatewayRouterInterface
 
   functions: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -315,6 +308,10 @@ export class L1GatewayRouter extends Contract {
 
     'owner()'(overrides?: CallOverrides): Promise<[string]>
 
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
+
     setDefaultGateway(
       newL1DefaultGateway: string,
       _maxGas: BigNumberish,
@@ -331,11 +328,12 @@ export class L1GatewayRouter extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    setGateway(
+    'setGateway(address,uint256,uint256,uint256,address)'(
       _gateway: string,
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
@@ -389,10 +387,6 @@ export class L1GatewayRouter extends Contract {
 
     'whitelist()'(overrides?: CallOverrides): Promise<[string]>
   }
-
-  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -512,6 +506,10 @@ export class L1GatewayRouter extends Contract {
 
   'owner()'(overrides?: CallOverrides): Promise<string>
 
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
+
   setDefaultGateway(
     newL1DefaultGateway: string,
     _maxGas: BigNumberish,
@@ -528,11 +526,12 @@ export class L1GatewayRouter extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  setGateway(
+  'setGateway(address,uint256,uint256,uint256,address)'(
     _gateway: string,
     _maxGas: BigNumberish,
     _gasPriceBid: BigNumberish,
     _maxSubmissionCost: BigNumberish,
+    _creditBackAddress: string,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
@@ -587,10 +586,6 @@ export class L1GatewayRouter extends Contract {
   'whitelist()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -709,6 +704,10 @@ export class L1GatewayRouter extends Contract {
 
     'owner()'(overrides?: CallOverrides): Promise<string>
 
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
+
     setDefaultGateway(
       newL1DefaultGateway: string,
       _maxGas: BigNumberish,
@@ -725,11 +724,12 @@ export class L1GatewayRouter extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    setGateway(
+    'setGateway(address,uint256,uint256,uint256,address)'(
       _gateway: string,
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -822,10 +822,6 @@ export class L1GatewayRouter extends Contract {
   }
 
   estimateGas: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -947,6 +943,10 @@ export class L1GatewayRouter extends Contract {
 
     'owner()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
+
     setDefaultGateway(
       newL1DefaultGateway: string,
       _maxGas: BigNumberish,
@@ -963,11 +963,12 @@ export class L1GatewayRouter extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    setGateway(
+    'setGateway(address,uint256,uint256,uint256,address)'(
       _gateway: string,
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
@@ -1020,10 +1021,6 @@ export class L1GatewayRouter extends Contract {
   }
 
   populateTransaction: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -1150,6 +1147,10 @@ export class L1GatewayRouter extends Contract {
 
     'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     setDefaultGateway(
       newL1DefaultGateway: string,
       _maxGas: BigNumberish,
@@ -1166,11 +1167,12 @@ export class L1GatewayRouter extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    setGateway(
+    'setGateway(address,uint256,uint256,uint256,address)'(
       _gateway: string,
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 

@@ -30,6 +30,7 @@ set(LIB_HEADERS
   include/data_storage/readtransaction.hpp
   include/data_storage/readsnapshottransaction.hpp
   include/data_storage/readwritetransaction.hpp
+  include/data_storage/sideloadcache.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
   include/data_storage/value/code.hpp
@@ -53,6 +54,7 @@ set(LIB_SOURCES
   src/messageentry.cpp
   src/readtransaction.cpp
   src/readwritetransaction.cpp
+  src/sideloadcache.cpp
   src/value/code.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp
@@ -82,7 +84,7 @@ target_include_directories(data_storage PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(data_storage PUBLIC avm avm_values cavm Threads::Threads)
+target_link_libraries(data_storage PUBLIC avm avm_values cavm Threads::Threads OpenSSL::Crypto)
 
 target_code_coverage(data_storage AUTO ALL)
 

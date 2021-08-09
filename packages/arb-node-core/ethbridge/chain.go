@@ -41,12 +41,41 @@ func (a ArbAddresses) ArbFactoryAddress() common.Address {
 	return common.NewAddressFromEth(ethcommon.HexToAddress(a.ArbFactory))
 }
 
-func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash) (*types.Receipt, error) {
+// RBF = Replace By Fee
+const rbfInterval time.Duration = time.Minute * 5
+
+type attemptRbfInfo struct {
+	attempt func() (ethcommon.Hash, error)
+	account ethcommon.Address
+	nonce   uint64
+}
+
+func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
+	lastRbf := time.Now()
 	for {
 		select {
 		case <-time.After(time.Second):
+			if rbfInfo != nil && time.Since(lastRbf) >= rbfInterval {
+				var err error
+				txHash, err = rbfInfo.attempt()
+				lastRbf = time.Now()
+				if err != nil {
+					logger.Warn().Err(err).Msg("failed to replace by fee")
+				}
+			}
 			receipt, err := client.TransactionReceipt(ctx, txHash)
 			if receipt == nil && err == nil {
+				if rbfInfo != nil {
+					// an alternative tx might've gotten confirmed
+					nonce, err := client.NonceAt(ctx, rbfInfo.account, nil)
+					if err == nil {
+						if nonce >= rbfInfo.nonce {
+							return nil, nil
+						}
+					} else {
+						logger.Warn().Err(err).Str("account", rbfInfo.account.String()).Msg("Issue getting pending nonce")
+					}
+				}
 				continue
 			}
 			if err != nil {
@@ -68,8 +97,47 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 	}
 }
 
-func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
-	receipt, err := WaitForReceiptWithResultsSimple(ctx, client, tx.Hash())
+func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash) (*types.Receipt, error) {
+	return waitForReceiptWithResultsSimpleInternal(ctx, client, txHash, nil)
+}
+
+func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string, auth *TransactAuth) (*types.Receipt, error) {
+	var rbfInfo *attemptRbfInfo
+	if auth != nil {
+		attemptRbf := func() (ethcommon.Hash, error) {
+			auth, err := auth.getAuth(ctx)
+			if err != nil {
+				return ethcommon.Hash{}, err
+			}
+			if auth.GasPrice.Cmp(tx.GasPrice()) <= 0 {
+				return tx.Hash(), nil
+			}
+			legacyTx := &types.LegacyTx{
+				Nonce:    tx.Nonce(),
+				GasPrice: auth.GasPrice,
+				Gas:      tx.Gas(),
+				To:       tx.To(),
+				Value:    tx.Value(),
+				Data:     tx.Data(),
+			}
+			newTx, err := auth.Signer(auth.From, types.NewTx(legacyTx))
+			if err != nil {
+				return ethcommon.Hash{}, err
+			}
+			err = client.SendTransaction(ctx, newTx)
+			if err != nil {
+				return ethcommon.Hash{}, err
+			}
+			*tx = *newTx
+			return newTx.Hash(), nil
+		}
+		rbfInfo = &attemptRbfInfo{
+			attempt: attemptRbf,
+			account: auth.auth.From,
+			nonce:   tx.Nonce(),
+		}
+	}
+	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, tx.Hash(), rbfInfo)
 	if err != nil {
 		logger.Warn().Err(err).Hex("tx", tx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
@@ -77,12 +145,13 @@ func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, f
 	if receipt.Status != 1 {
 		logger.Warn().Hex("tx", tx.Hash().Bytes()).Msg("failed transaction")
 		callMsg := ethereum.CallMsg{
-			From:     from,
-			To:       tx.To(),
-			Gas:      tx.Gas(),
-			GasPrice: tx.GasPrice(),
-			Value:    tx.Value(),
-			Data:     tx.Data(),
+			From:      from,
+			To:        tx.To(),
+			Gas:       tx.Gas(),
+			GasTipCap: tx.GasTipCap(),
+			GasFeeCap: tx.GasFeeCap(),
+			Value:     tx.Value(),
+			Data:      tx.Data(),
 		}
 		data, err := client.CallContract(ctx, callMsg, receipt.BlockNumber)
 		if err != nil {
@@ -91,4 +160,8 @@ func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, f
 		return nil, errors.Errorf("transaction %v failed with tx %v", methodName, string(data))
 	}
 	return receipt, nil
+}
+
+func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
+	return WaitForReceiptWithResultsAndReplaceByFee(ctx, client, from, tx, methodName, nil)
 }

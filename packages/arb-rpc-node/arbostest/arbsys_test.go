@@ -422,6 +422,7 @@ func TestAddressTable(t *testing.T) {
 }
 
 func TestArbSysBLS(t *testing.T) {
+	t.Skip("BLS disabled")
 	x0a, x1a, y0a, y1a := common.RandBigInt(), common.RandBigInt(), common.RandBigInt(), common.RandBigInt()
 	x0b, x1b, y0b, y1b := common.RandBigInt(), common.RandBigInt(), common.RandBigInt(), common.RandBigInt()
 

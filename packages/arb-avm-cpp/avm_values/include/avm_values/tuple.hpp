@@ -29,6 +29,8 @@ HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
 
+const static std::vector<value> empty_value_vector;
+
 class Tuple {
    private:
     std::shared_ptr<RawTuple> tpl;
@@ -123,6 +125,30 @@ class Tuple {
             throw bad_tuple_index{};
         }
         return tpl->data[pos];
+    }
+
+    [[nodiscard]] std::vector<value>::const_iterator begin() const {
+        if (tpl == nullptr) {
+            return empty_value_vector.begin();
+        }
+        return tpl->data.begin();
+    }
+
+    [[nodiscard]] std::vector<value>::const_iterator end() const {
+        if (tpl == nullptr) {
+            return empty_value_vector.end();
+        }
+        return tpl->data.end();
+    }
+
+    [[nodiscard]] std::reverse_iterator<std::vector<value>::const_iterator>
+    rbegin() const {
+        return std::reverse_iterator(end());
+    }
+
+    [[nodiscard]] std::reverse_iterator<std::vector<value>::const_iterator>
+    rend() const {
+        return std::reverse_iterator(begin());
     }
 
     [[nodiscard]] const value& get_element_unsafe(const uint64_t pos) const {

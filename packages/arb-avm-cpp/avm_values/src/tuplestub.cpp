@@ -35,6 +35,19 @@ uint256_t HashPreImage::hash() const {
     return intx::be::load<uint256_t>(hash_val.bytes);
 }
 
+uint256_t HashPreImage::secretHash(
+    const std::vector<unsigned char>& seed) const {
+    std::vector<unsigned char> tupData2;
+    tupData2.push_back(TUPLE);
+    tupData2.insert(tupData2.end(), seed.begin(), seed.end());
+
+    tupData2.insert(tupData2.end(), firstHash.begin(), firstHash.end());
+    marshal_uint256_t(valueSize, tupData2);
+
+    auto hash_val = ethash::keccak256(tupData2.data(), tupData2.size());
+    return intx::be::load<uint256_t>(hash_val.bytes);
+}
+
 void HashPreImage::marshal(std::vector<unsigned char>& buf) const {
     buf.insert(buf.end(), firstHash.begin(), firstHash.end());
     marshal_uint256_t(valueSize, buf);

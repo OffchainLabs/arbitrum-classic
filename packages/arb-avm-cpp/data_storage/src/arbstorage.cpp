@@ -26,9 +26,10 @@
 #include <avm_values/vmValueParser.hpp>
 #include <utility>
 
-ArbStorage::ArbStorage(const std::string& db_path)
+ArbStorage::ArbStorage(const std::string& db_path,
+                       const ArbCoreConfig& coreConfig)
     : datastorage(std::make_shared<DataStorage>(db_path)),
-      arb_core(std::make_shared<ArbCore>(datastorage)) {}
+      arb_core(std::make_shared<ArbCore>(datastorage, coreConfig)) {}
 
 rocksdb::Status ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
@@ -61,15 +62,14 @@ std::shared_ptr<ArbCore> ArbStorage::getArbCore() {
     return arb_core;
 }
 
-std::unique_ptr<Machine> ArbStorage::getInitialMachine(
-    ValueCache& value_cache) const {
-    auto cursor = arb_core->getExecutionCursor(0, value_cache);
+std::unique_ptr<Machine> ArbStorage::getInitialMachine() {
+    auto cursor = arb_core->getExecutionCursor(0);
     if (!cursor.status.ok()) {
         throw std::runtime_error(
             "failed to get initial machine. Database not initialized of "
             "corrupted");
     }
-    return arb_core->takeExecutionCursorMachine(*cursor.data, value_cache);
+    return arb_core->takeExecutionCursorMachine(*cursor.data);
 }
 
 std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,

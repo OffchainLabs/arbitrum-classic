@@ -24,7 +24,7 @@ const main = async () => {
     throw new Error('Buddy deploy event was not triggered one time!')
   const withdrawalId = buddyDeployEvents[0].withdrawalId
 
-  const logs = await BridgeHelper.getWithdrawalsInL2Transaction(
+  const logs = BridgeHelper.getWithdrawalsInL2Transaction(
     l2TransactionReceipt,
     ethers.provider
   )

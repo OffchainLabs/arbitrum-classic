@@ -15,3 +15,12 @@
  */
 
 #include <avm_values/code.hpp>
+
+Code::~Code() = default;
+
+void CoreCode::commitChanges(
+    RunningCode& code,
+    const std::map<uint64_t, uint64_t>& segment_counts) {
+    const std::lock_guard<std::mutex> lock(mutex);
+    impl->next_segment_num = code.fillInCode(impl->segments, segment_counts);
+}

@@ -29,14 +29,23 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
 
-func LaunchRPC(ctx context.Context, handler http.Handler, addr string, port string) error {
+func LaunchRPC(ctx context.Context, handler http.Handler, addr, port, path string) error {
 	r := mux.NewRouter()
-	r.Handle("/", handler).Methods("GET", "POST", "OPTIONS")
+	r.Handle(path, handler).Methods("GET", "POST", "OPTIONS")
 	return launchServer(ctx, r, addr, port, "rpc")
 }
 
-func LaunchWS(ctx context.Context, server *rpc.Server, addr string, port string) error {
-	return launchServer(ctx, server.WebsocketHandler([]string{"*"}), addr, port, "websocket")
+func LaunchWS(ctx context.Context, server *rpc.Server, addr, port, path string) error {
+	r := mux.NewRouter()
+	r.Handle(path, server.WebsocketHandler([]string{"*"}))
+	return launchServer(ctx, r, addr, port, "websocket")
+}
+
+func LaunchRPCAndWS(ctx context.Context, server *rpc.Server, addr, port, rpcPath, wsPath string) error {
+	r := mux.NewRouter()
+	r.Handle(rpcPath, server).Methods("GET", "POST", "OPTIONS")
+	r.Handle(wsPath, server.WebsocketHandler([]string{"*"}))
+	return launchServer(ctx, r, addr, port, "websocket")
 }
 
 func launchServer(ctx context.Context, handler http.Handler, addr string, port string, serverType string) error {

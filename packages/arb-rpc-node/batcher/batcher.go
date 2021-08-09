@@ -19,10 +19,11 @@ package batcher
 import (
 	"container/list"
 	"context"
-	"github.com/pkg/errors"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog/log"
 
@@ -82,6 +83,8 @@ type TransactionBatcher interface {
 	PendingSnapshot() (*snapshot.Snapshot, error)
 
 	Aggregator() *common.Address
+
+	Start(context.Context)
 }
 
 type pendingSentBatch struct {
@@ -376,4 +379,7 @@ func (m *Batcher) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscri
 
 func (m *Batcher) Aggregator() *common.Address {
 	return &m.sender
+}
+
+func (m *Batcher) Start(ctx context.Context) {
 }

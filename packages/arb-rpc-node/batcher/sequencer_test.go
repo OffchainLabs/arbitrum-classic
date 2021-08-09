@@ -28,6 +28,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -154,8 +155,8 @@ func TestSequencerBatcher(t *testing.T) {
 	test.FailIfError(t, err)
 	extraConfig := init.ExtraConfig
 
-	clnt, pks := test.SimulatedBackend(t)
-	auth := bind.NewKeyedTransactor(pks[0])
+	clnt, auths := test.SimulatedBackend(t)
+	auth := auths[0]
 	sequencer := common.NewAddressFromEth(auth.From)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
@@ -188,7 +189,7 @@ func TestSequencerBatcher(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, 0, client)
+	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, 0, client, bind.CallOpts{})
 	test.FailIfError(t, err)
 
 	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
@@ -223,8 +224,10 @@ func TestSequencerBatcher(t *testing.T) {
 		l2ChainId,
 		seqMon.Reader,
 		client,
-		big.NewInt(1),
-		big.NewInt(50),
+		configuration.Sequencer{
+			CreateBatchBlockInterval:   50,
+			DelayedMessagesTargetDelay: 1,
+		},
 		seqInbox,
 		auth,
 		dummyDataSigner,

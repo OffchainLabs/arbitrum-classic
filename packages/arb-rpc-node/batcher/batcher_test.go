@@ -19,17 +19,18 @@ package batcher
 import (
 	"context"
 	"crypto/ecdsa"
+	"math/big"
+	"math/rand"
+	"sync"
+	"testing"
+	"time"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/pkg/errors"
-	"math/big"
-	"math/rand"
-	"sync"
-	"testing"
-	"time"
 )
 
 type mock struct {
@@ -99,6 +100,10 @@ func (m *mock) TransactionReceipt(_ context.Context, txHash ethcommon.Hash) (*ty
 		GasUsed:     0,
 		BlockNumber: big.NewInt(0),
 	}, nil
+}
+
+func (m *mock) NonceAt(_ context.Context, _ ethcommon.Address, _ *big.Int) (uint64, error) {
+	panic("NonceAt not implemented for mock")
 }
 
 func generateTxes(t *testing.T, chainId *big.Int) ([]*types.Transaction, map[ethcommon.Address]uint64) {

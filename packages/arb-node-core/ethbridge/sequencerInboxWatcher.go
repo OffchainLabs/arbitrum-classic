@@ -376,7 +376,7 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		return SequencerBatch{}, err
 	}
 
-	sender, err := types.Sender(types.NewEIP155Signer(tx.ChainId()), tx)
+	sender, err := types.Sender(types.NewLondonSigner(tx.ChainId()), tx)
 	if err != nil {
 		return SequencerBatch{}, err
 	}

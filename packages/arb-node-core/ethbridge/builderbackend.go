@@ -25,8 +25,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 type BuilderBackend struct {
@@ -43,8 +44,12 @@ func NewBuilderBackend(wallet *ValidatorWallet) (*BuilderBackend, error) {
 	if err != nil {
 		return nil, err
 	}
+	fakeAuth, err := bind.NewKeyedTransactorWithChainID(randKey, big.NewInt(9999999))
+	if err != nil {
+		return nil, err
+	}
 	return &BuilderBackend{
-		builderAuth: bind.NewKeyedTransactor(randKey),
+		builderAuth: fakeAuth,
 		realSender:  wallet.From().ToEthAddress(),
 		wallet:      wallet.Address().ToEthAddress(),
 		realClient:  wallet.client,
@@ -57,6 +62,14 @@ func (b *BuilderBackend) TransactionCount() int {
 
 func (b *BuilderBackend) ClearTransactions() {
 	b.transactions = nil
+}
+
+func (b *BuilderBackend) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	return &types.Header{}, nil
+}
+
+func (b *BuilderBackend) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
+	return big.NewInt(0), nil
 }
 
 func (b *BuilderBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
@@ -95,11 +108,10 @@ func (b *BuilderBackend) SendTransaction(ctx context.Context, tx *types.Transact
 		return err
 	}
 	msg := ethereum.CallMsg{
-		From:     b.realSender,
-		To:       &b.wallet,
-		GasPrice: big.NewInt(1),
-		Value:    totalAmount,
-		Data:     realData,
+		From:  b.realSender,
+		To:    &b.wallet,
+		Value: totalAmount,
+		Data:  realData,
 	}
 	_, err = b.realClient.EstimateGas(ctx, msg)
 	return errors.WithStack(err)
