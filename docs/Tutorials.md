@@ -12,7 +12,7 @@ It includes:
 
 - ✅ [Depositing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token_deposit) and [Withdrawing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token_withdraw) tokens
 
-- ✅ [Depositing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/ether_deposit) and [Withdrawing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/ether_withdraw) Etner
+- ✅ [Depositing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/eth_deposit) and [Withdrawing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/eth_withdraw) Etner
 
 - ✅ [L1 to L2 messaging](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/greeter)
 - ✅ [L2 to L1 messaging](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/outbox-execute)
