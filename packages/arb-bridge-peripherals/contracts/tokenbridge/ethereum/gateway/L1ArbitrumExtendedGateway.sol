@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "../../libraries/IERC677.sol";
+import "../../libraries/ITransferAndCall.sol";
 
 import "./L1ArbitrumGateway.sol";
 
@@ -58,7 +58,7 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
 
     /**
      * @notice Allows a user to redirect their right to claim a withdrawal to another address.
-     * @dev This method also allows you to make an arbitrary call after the transfer, similar to ERC677.
+     * @dev This method also allows you to make an arbitrary call after the transfer.
      * This does not validate if the exit was already triggered. It is assumed the `_exitNum` is
      * validated off-chain to ensure this was not yet triggered.
      * @param _exitNum Sequentially increasing exit counter determined by the L2 bridge
@@ -85,11 +85,12 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
 
         if (_data.length > 0) {
             require(_newDestination.isContract(), "TO_NOT_CONTRACT");
-            bool success = ITradeableExitReceiver(_newDestination).onExitTransfer(
-                expectedSender,
-                _exitNum,
-                _data
-            );
+            bool success =
+                ITradeableExitReceiver(_newDestination).onExitTransfer(
+                    expectedSender,
+                    _exitNum,
+                    _data
+                );
             require(success, "TRANSFER_HOOK_FAIL");
         }
 

@@ -29,7 +29,7 @@ import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
-import "../../libraries/IERC677.sol";
+import "../../libraries/ITransferAndCall.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
@@ -80,9 +80,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
-        (uint256 exitNum, bytes memory callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(
-            _data
-        );
+        (uint256 exitNum, bytes memory callHookData) =
+            GatewayMessageHandler.parseToL1GatewayMsg(_data);
 
         (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
