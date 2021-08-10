@@ -133,7 +133,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     )
     assert.equal(l2TokenAddress, l2Token.address, 'Token Pair not correct')
     const l2Balance = await l2Token.balanceOf(accounts[0].address)
-    assert.equal(l2Balance, tokenAmount, 'Tokens not minted')
+    assert.equal(l2Balance.toNumber(), tokenAmount, 'Tokens not minted')
   })
 
   it('should withdraw tokens', async function () {

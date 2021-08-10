@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface WhitelistInterface extends ethers.utils.Interface {
   functions: {
@@ -62,129 +61,99 @@ interface WhitelistInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'WhitelistUpgraded'): EventFragment
 }
 
-export class Whitelist extends Contract {
+export class Whitelist extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: WhitelistInterface
 
   functions: {
     isAllowed(arg0: string, overrides?: CallOverrides): Promise<[boolean]>
 
-    'isAllowed(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
     owner(overrides?: CallOverrides): Promise<[string]>
-
-    'owner()'(overrides?: CallOverrides): Promise<[string]>
 
     setOwner(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setWhitelist(
       user: string[],
       val: boolean[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setWhitelist(address[],bool[])'(
-      user: string[],
-      val: boolean[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     triggerConsumers(
       newWhitelist: string,
       targets: string[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'triggerConsumers(address,address[])'(
-      newWhitelist: string,
-      targets: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
   isAllowed(arg0: string, overrides?: CallOverrides): Promise<boolean>
 
-  'isAllowed(address)'(
-    arg0: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
-
   owner(overrides?: CallOverrides): Promise<string>
-
-  'owner()'(overrides?: CallOverrides): Promise<string>
 
   setOwner(
     newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setOwner(address)'(
-    newOwner: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setWhitelist(
     user: string[],
     val: boolean[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setWhitelist(address[],bool[])'(
-    user: string[],
-    val: boolean[],
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   triggerConsumers(
     newWhitelist: string,
     targets: string[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'triggerConsumers(address,address[])'(
-    newWhitelist: string,
-    targets: string[],
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
     isAllowed(arg0: string, overrides?: CallOverrides): Promise<boolean>
 
-    'isAllowed(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
     owner(overrides?: CallOverrides): Promise<string>
 
-    'owner()'(overrides?: CallOverrides): Promise<string>
-
     setOwner(newOwner: string, overrides?: CallOverrides): Promise<void>
-
-    'setOwner(address)'(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     setWhitelist(
       user: string[],
@@ -192,19 +161,7 @@ export class Whitelist extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setWhitelist(address[],bool[])'(
-      user: string[],
-      val: boolean[],
-      overrides?: CallOverrides
-    ): Promise<void>
-
     triggerConsumers(
-      newWhitelist: string,
-      targets: string[],
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'triggerConsumers(address,address[])'(
       newWhitelist: string,
       targets: string[],
       overrides?: CallOverrides
@@ -212,52 +169,39 @@ export class Whitelist extends Contract {
   }
 
   filters: {
-    OwnerUpdated(newOwner: null): EventFilter
+    OwnerUpdated(
+      newOwner?: null
+    ): TypedEventFilter<[string], { newOwner: string }>
 
-    WhitelistUpgraded(newWhitelist: null, targets: null): EventFilter
+    WhitelistUpgraded(
+      newWhitelist?: null,
+      targets?: null
+    ): TypedEventFilter<
+      [string, string[]],
+      { newWhitelist: string; targets: string[] }
+    >
   }
 
   estimateGas: {
     isAllowed(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'isAllowed(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     owner(overrides?: CallOverrides): Promise<BigNumber>
 
-    'owner()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    setOwner(newOwner: string, overrides?: Overrides): Promise<BigNumber>
-
-    'setOwner(address)'(
+    setOwner(
       newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setWhitelist(
       user: string[],
       val: boolean[],
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setWhitelist(address[],bool[])'(
-      user: string[],
-      val: boolean[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     triggerConsumers(
       newWhitelist: string,
       targets: string[],
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'triggerConsumers(address,address[])'(
-      newWhitelist: string,
-      targets: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
@@ -267,47 +211,23 @@ export class Whitelist extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'isAllowed(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     setOwner(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setWhitelist(
       user: string[],
       val: boolean[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setWhitelist(address[],bool[])'(
-      user: string[],
-      val: boolean[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     triggerConsumers(
       newWhitelist: string,
       targets: string[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'triggerConsumers(address,address[])'(
-      newWhitelist: string,
-      targets: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

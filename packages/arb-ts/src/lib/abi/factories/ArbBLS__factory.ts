@@ -2,16 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ArbBLS } from '../ArbBLS'
-
-export class ArbBLS__factory {
-  static connect(address: string, signerOrProvider: Signer | Provider): ArbBLS {
-    return new Contract(address, _abi, signerOrProvider) as ArbBLS
-  }
-}
+import type { ArbBLS, ArbBLSInterface } from '../ArbBLS'
 
 const _abi = [
   {
@@ -77,3 +70,13 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ArbBLS__factory {
+  static readonly abi = _abi
+  static createInterface(): ArbBLSInterface {
+    return new utils.Interface(_abi) as ArbBLSInterface
+  }
+  static connect(address: string, signerOrProvider: Signer | Provider): ArbBLS {
+    return new Contract(address, _abi, signerOrProvider) as ArbBLS
+  }
+}
