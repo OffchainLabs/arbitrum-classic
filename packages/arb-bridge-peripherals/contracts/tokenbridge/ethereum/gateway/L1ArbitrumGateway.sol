@@ -25,7 +25,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
-import "../../libraries/IERC677.sol";
+import "../../libraries/ITransferAndCall.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.

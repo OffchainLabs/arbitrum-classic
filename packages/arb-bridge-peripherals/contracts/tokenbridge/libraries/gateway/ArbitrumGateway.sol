@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "../IERC677.sol";
+import "../ITransferAndCall.sol";
 import "./TokenGateway.sol";
 
 abstract contract ArbitrumGateway is TokenGateway {
@@ -71,7 +71,7 @@ abstract contract ArbitrumGateway is TokenGateway {
         uint256 gasAvailable = gasleft() - gasReserveIfCallRevert();
         require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
 
-        IERC677Receiver(_to).onTokenTransfer{ gas: gasAvailable }(_from, _amount, _data);
+        ITransferAndCallReceiver(_to).onTokenTransfer{ gas: gasAvailable }(_from, _amount, _data);
     }
 
     function inboundEscrowTransfer(
