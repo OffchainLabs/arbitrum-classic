@@ -73,13 +73,13 @@ func NewTransactAuthAdvanced(
 	}
 	var sendTx func(ctx context.Context, tx *types.Transaction) error
 
-	if len(walletConfig.FireblocksPrivateKey) != 0 {
+	if len(walletConfig.FireblocksSSLKey) != 0 {
 		var signKey *rsa.PrivateKey
 		var err error
-		if len(walletConfig.FireblocksKeyPassword) != 0 {
-			signKey, err = jwt.ParseRSAPrivateKeyFromPEMWithPassword([]byte(walletConfig.FireblocksPrivateKey), walletConfig.FireblocksKeyPassword)
+		if len(walletConfig.FireblocksSSLKeyPassword) != 0 {
+			signKey, err = jwt.ParseRSAPrivateKeyFromPEMWithPassword([]byte(walletConfig.FireblocksSSLKey), walletConfig.FireblocksSSLKeyPassword)
 		} else {
-			signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(walletConfig.FireblocksPrivateKey))
+			signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(walletConfig.FireblocksSSLKey))
 		}
 		if err != nil {
 			return nil, errors.Wrap(err, "problem with fireblocks privatekey")

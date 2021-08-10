@@ -53,7 +53,7 @@ func GetKeystore(
 	var signer = func(data []byte) ([]byte, error) { return nil, errors.New("undefined signer") }
 	var auth *bind.TransactOpts
 
-	if len(walletConfig.FireblocksPrivateKey) != 0 {
+	if len(walletConfig.FireblocksSSLKey) != 0 {
 		fromAddress := ethcommon.HexToAddress(config.Fireblocks.SourceAddress)
 		auth = &bind.TransactOpts{
 			From: fromAddress,

@@ -155,10 +155,10 @@ type Validator struct {
 }
 
 type Wallet struct {
-	Password              string `koanf:"password"`
-	PrivateKey            string `koanf:"private-key"`
-	FireblocksKeyPassword string `koanf:"fireblocks-key-password,omitempty"`
-	FireblocksPrivateKey  string `koanf:"fireblocks-private-key,omitempty"`
+	Password                 string `koanf:"password"`
+	PrivateKey               string `koanf:"private-key"`
+	FireblocksSSLKey         string `koanf:"fireblocks-ssl-key,omitempty"`
+	FireblocksSSLKeyPassword string `koanf:"fireblocks-ssl-key-password,omitempty"`
 }
 
 type Log struct {
@@ -641,8 +641,8 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 		if len(out.Fireblocks.BaseURL) == 0 {
 			return nil, nil, errors.New("fireblocks configured but missing fireblocks.base-url")
 		}
-		if len(out.Wallet.FireblocksPrivateKey) == 0 {
-			return nil, nil, errors.New("fireblocks configured but missing fireblocks.private-key")
+		if len(out.Wallet.FireblocksSSLKey) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.ssl-key")
 		}
 		if len(out.Fireblocks.SourceAddress) == 0 {
 			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-address")
@@ -654,7 +654,7 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-type")
 		}
 
-		out.Wallet.FireblocksPrivateKey = strings.Replace(out.Wallet.FireblocksPrivateKey, "\\n", "\n", -1)
+		out.Wallet.FireblocksSSLKey = strings.Replace(out.Wallet.FireblocksSSLKey, "\\n", "\n", -1)
 	}
 
 	if out.Conf.Dump {
@@ -679,8 +679,8 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	wallet := out.Wallet
 	out.Wallet.Password = ""
 	out.Wallet.PrivateKey = ""
-	out.Wallet.FireblocksKeyPassword = ""
-	out.Wallet.FireblocksPrivateKey = ""
+	out.Wallet.FireblocksSSLKeyPassword = ""
+	out.Wallet.FireblocksSSLKey = ""
 
 	return &out, &wallet, nil
 }
