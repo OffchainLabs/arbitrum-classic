@@ -497,7 +497,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("metrics-server.addr", "127.0.0.1", "metrics server address")
 	f.String("metrics-server.port", "6070", "metrics server address")
 
-  f.String("log.rpc", "info", "log level for rpc")
+	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
 
 	f.Bool("pprof-enable", false, "enable profiling server")
@@ -634,9 +634,7 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 		return nil, nil, err
 	}
 
-	if len(out.Fireblocks.APIKey) != 0 || len(out.Fireblocks.BaseURL) != 0 ||
-		len(out.Wallet.FireblocksPrivateKey) != 0 || len(out.Fireblocks.SourceAddress) != 0 ||
-		len(out.Fireblocks.SourceId) != 0 || len(out.Fireblocks.SourceType) != 0 {
+	if out.Fireblocks != (Fireblocks{}) {
 		if len(out.Fireblocks.APIKey) == 0 {
 			return nil, nil, errors.New("fireblocks configured but missing fireblocks.api-key")
 		}
