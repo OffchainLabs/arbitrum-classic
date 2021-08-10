@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface TransparentUpgradeableProxyInterface extends ethers.utils.Interface {
   functions: {
@@ -63,134 +62,112 @@ interface TransparentUpgradeableProxyInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'Upgraded'): EventFragment
 }
 
-export class TransparentUpgradeableProxy extends Contract {
+export class TransparentUpgradeableProxy extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: TransparentUpgradeableProxyInterface
 
   functions: {
-    admin(overrides?: Overrides): Promise<ContractTransaction>
-
-    'admin()'(overrides?: Overrides): Promise<ContractTransaction>
+    admin(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     changeAdmin(
       newAdmin: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'changeAdmin(address)'(
-      newAdmin: string,
-      overrides?: Overrides
+    implementation(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
-
-    implementation(overrides?: Overrides): Promise<ContractTransaction>
-
-    'implementation()'(overrides?: Overrides): Promise<ContractTransaction>
 
     upgradeTo(
       newImplementation: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'upgradeTo(address)'(
-      newImplementation: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     upgradeToAndCall(
       newImplementation: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'upgradeToAndCall(address,bytes)'(
-      newImplementation: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
-  admin(overrides?: Overrides): Promise<ContractTransaction>
-
-  'admin()'(overrides?: Overrides): Promise<ContractTransaction>
+  admin(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   changeAdmin(
     newAdmin: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'changeAdmin(address)'(
-    newAdmin: string,
-    overrides?: Overrides
+  implementation(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
-
-  implementation(overrides?: Overrides): Promise<ContractTransaction>
-
-  'implementation()'(overrides?: Overrides): Promise<ContractTransaction>
 
   upgradeTo(
     newImplementation: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'upgradeTo(address)'(
-    newImplementation: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   upgradeToAndCall(
     newImplementation: string,
     data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'upgradeToAndCall(address,bytes)'(
-    newImplementation: string,
-    data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
     admin(overrides?: CallOverrides): Promise<string>
 
-    'admin()'(overrides?: CallOverrides): Promise<string>
-
     changeAdmin(newAdmin: string, overrides?: CallOverrides): Promise<void>
 
-    'changeAdmin(address)'(
-      newAdmin: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     implementation(overrides?: CallOverrides): Promise<string>
-
-    'implementation()'(overrides?: CallOverrides): Promise<string>
 
     upgradeTo(
       newImplementation: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'upgradeTo(address)'(
-      newImplementation: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     upgradeToAndCall(
-      newImplementation: string,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'upgradeToAndCall(address,bytes)'(
       newImplementation: string,
       data: BytesLike,
       overrides?: CallOverrides
@@ -198,89 +175,68 @@ export class TransparentUpgradeableProxy extends Contract {
   }
 
   filters: {
-    AdminChanged(previousAdmin: null, newAdmin: null): EventFilter
+    AdminChanged(
+      previousAdmin?: null,
+      newAdmin?: null
+    ): TypedEventFilter<
+      [string, string],
+      { previousAdmin: string; newAdmin: string }
+    >
 
-    Upgraded(implementation: string | null): EventFilter
+    Upgraded(
+      implementation?: string | null
+    ): TypedEventFilter<[string], { implementation: string }>
   }
 
   estimateGas: {
-    admin(overrides?: Overrides): Promise<BigNumber>
-
-    'admin()'(overrides?: Overrides): Promise<BigNumber>
-
-    changeAdmin(newAdmin: string, overrides?: Overrides): Promise<BigNumber>
-
-    'changeAdmin(address)'(
-      newAdmin: string,
-      overrides?: Overrides
+    admin(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    implementation(overrides?: Overrides): Promise<BigNumber>
+    changeAdmin(
+      newAdmin: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
-    'implementation()'(overrides?: Overrides): Promise<BigNumber>
+    implementation(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     upgradeTo(
       newImplementation: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'upgradeTo(address)'(
-      newImplementation: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     upgradeToAndCall(
       newImplementation: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'upgradeToAndCall(address,bytes)'(
-      newImplementation: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
-    admin(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'admin()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    admin(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     changeAdmin(
       newAdmin: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'changeAdmin(address)'(
-      newAdmin: string,
-      overrides?: Overrides
+    implementation(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
-
-    implementation(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'implementation()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     upgradeTo(
       newImplementation: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'upgradeTo(address)'(
-      newImplementation: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     upgradeToAndCall(
       newImplementation: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'upgradeToAndCall(address,bytes)'(
-      newImplementation: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

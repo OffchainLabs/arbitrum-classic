@@ -9,15 +9,14 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface ValidatorUtilsInterface extends ethers.utils.Interface {
   functions: {
@@ -130,16 +129,46 @@ interface ValidatorUtilsInterface extends ethers.utils.Interface {
   events: {}
 }
 
-export class ValidatorUtils extends Contract {
+export class ValidatorUtils extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: ValidatorUtilsInterface
 
@@ -149,17 +178,7 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<[boolean]>
 
-    'areUnresolvedNodesLinear(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
     checkDecidableNextNode(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<[number]>
-
-    'checkDecidableNextNode(address)'(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<[number]>
@@ -172,23 +191,7 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<[number, BigNumber, BigNumber]>
 
-    'findNodeConflict(address,uint256,uint256,uint256)'(
-      rollup: string,
-      node1: BigNumberish,
-      node2: BigNumberish,
-      maxDepth: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[number, BigNumber, BigNumber]>
-
     findStakerConflict(
-      rollup: string,
-      staker1: string,
-      staker2: string,
-      maxDepth: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[number, BigNumber, BigNumber]>
-
-    'findStakerConflict(address,address,address,uint256)'(
       rollup: string,
       staker1: string,
       staker2: string,
@@ -208,26 +211,7 @@ export class ValidatorUtils extends Contract {
       }
     >
 
-    'getConfig(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber] & {
-        confirmPeriodBlocks: BigNumber
-        extraChallengeTimeBlocks: BigNumber
-        arbGasSpeedLimitPerBlock: BigNumber
-        baseStake: BigNumber
-      }
-    >
-
     getStakers(
-      rollup: string,
-      startIndex: BigNumberish,
-      max: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string[], boolean] & { hasMore: boolean }>
-
-    'getStakers(address,uint256,uint256)'(
       rollup: string,
       startIndex: BigNumberish,
       max: BigNumberish,
@@ -240,18 +224,7 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, string]>
 
-    'latestStaked(address,address)'(
-      rollup: string,
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, string]>
-
     refundableStakers(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<[string[]]>
-
-    'refundableStakers(address)'(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<[string[]]>
@@ -261,28 +234,12 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<[void]>
 
-    'requireConfirmable(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<[void]>
-
     requireRejectable(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<[boolean]>
 
-    'requireRejectable(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
     stakedNodes(
-      rollup: string,
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber[]]>
-
-    'stakedNodes(address,address)'(
       rollup: string,
       staker: string,
       overrides?: CallOverrides
@@ -301,27 +258,7 @@ export class ValidatorUtils extends Contract {
       }
     >
 
-    'stakerInfo(address,address)'(
-      rollup: string,
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [boolean, BigNumber, BigNumber, string] & {
-        isStaked: boolean
-        latestStakedNode: BigNumber
-        amountStaked: BigNumber
-        currentChallenge: string
-      }
-    >
-
     timedOutChallenges(
-      rollup: string,
-      startIndex: BigNumberish,
-      max: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string[], boolean] & { hasMore: boolean }>
-
-    'timedOutChallenges(address,uint256,uint256)'(
       rollup: string,
       startIndex: BigNumberish,
       max: BigNumberish,
@@ -334,17 +271,7 @@ export class ValidatorUtils extends Contract {
     overrides?: CallOverrides
   ): Promise<boolean>
 
-  'areUnresolvedNodesLinear(address)'(
-    rollup: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
-
   checkDecidableNextNode(
-    rollup: string,
-    overrides?: CallOverrides
-  ): Promise<number>
-
-  'checkDecidableNextNode(address)'(
     rollup: string,
     overrides?: CallOverrides
   ): Promise<number>
@@ -357,23 +284,7 @@ export class ValidatorUtils extends Contract {
     overrides?: CallOverrides
   ): Promise<[number, BigNumber, BigNumber]>
 
-  'findNodeConflict(address,uint256,uint256,uint256)'(
-    rollup: string,
-    node1: BigNumberish,
-    node2: BigNumberish,
-    maxDepth: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<[number, BigNumber, BigNumber]>
-
   findStakerConflict(
-    rollup: string,
-    staker1: string,
-    staker2: string,
-    maxDepth: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<[number, BigNumber, BigNumber]>
-
-  'findStakerConflict(address,address,address,uint256)'(
     rollup: string,
     staker1: string,
     staker2: string,
@@ -393,26 +304,7 @@ export class ValidatorUtils extends Contract {
     }
   >
 
-  'getConfig(address)'(
-    rollup: string,
-    overrides?: CallOverrides
-  ): Promise<
-    [BigNumber, BigNumber, BigNumber, BigNumber] & {
-      confirmPeriodBlocks: BigNumber
-      extraChallengeTimeBlocks: BigNumber
-      arbGasSpeedLimitPerBlock: BigNumber
-      baseStake: BigNumber
-    }
-  >
-
   getStakers(
-    rollup: string,
-    startIndex: BigNumberish,
-    max: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<[string[], boolean] & { hasMore: boolean }>
-
-  'getStakers(address,uint256,uint256)'(
     rollup: string,
     startIndex: BigNumberish,
     max: BigNumberish,
@@ -425,35 +317,14 @@ export class ValidatorUtils extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, string]>
 
-  'latestStaked(address,address)'(
-    rollup: string,
-    staker: string,
-    overrides?: CallOverrides
-  ): Promise<[BigNumber, string]>
-
   refundableStakers(
-    rollup: string,
-    overrides?: CallOverrides
-  ): Promise<string[]>
-
-  'refundableStakers(address)'(
     rollup: string,
     overrides?: CallOverrides
   ): Promise<string[]>
 
   requireConfirmable(rollup: string, overrides?: CallOverrides): Promise<void>
 
-  'requireConfirmable(address)'(
-    rollup: string,
-    overrides?: CallOverrides
-  ): Promise<void>
-
   requireRejectable(rollup: string, overrides?: CallOverrides): Promise<boolean>
-
-  'requireRejectable(address)'(
-    rollup: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
 
   stakedNodes(
     rollup: string,
@@ -461,26 +332,7 @@ export class ValidatorUtils extends Contract {
     overrides?: CallOverrides
   ): Promise<BigNumber[]>
 
-  'stakedNodes(address,address)'(
-    rollup: string,
-    staker: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber[]>
-
   stakerInfo(
-    rollup: string,
-    stakerAddress: string,
-    overrides?: CallOverrides
-  ): Promise<
-    [boolean, BigNumber, BigNumber, string] & {
-      isStaked: boolean
-      latestStakedNode: BigNumber
-      amountStaked: BigNumber
-      currentChallenge: string
-    }
-  >
-
-  'stakerInfo(address,address)'(
     rollup: string,
     stakerAddress: string,
     overrides?: CallOverrides
@@ -500,30 +352,13 @@ export class ValidatorUtils extends Contract {
     overrides?: CallOverrides
   ): Promise<[string[], boolean] & { hasMore: boolean }>
 
-  'timedOutChallenges(address,uint256,uint256)'(
-    rollup: string,
-    startIndex: BigNumberish,
-    max: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<[string[], boolean] & { hasMore: boolean }>
-
   callStatic: {
     areUnresolvedNodesLinear(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    'areUnresolvedNodesLinear(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
     checkDecidableNextNode(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<number>
-
-    'checkDecidableNextNode(address)'(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<number>
@@ -536,23 +371,7 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<[number, BigNumber, BigNumber]>
 
-    'findNodeConflict(address,uint256,uint256,uint256)'(
-      rollup: string,
-      node1: BigNumberish,
-      node2: BigNumberish,
-      maxDepth: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[number, BigNumber, BigNumber]>
-
     findStakerConflict(
-      rollup: string,
-      staker1: string,
-      staker2: string,
-      maxDepth: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[number, BigNumber, BigNumber]>
-
-    'findStakerConflict(address,address,address,uint256)'(
       rollup: string,
       staker1: string,
       staker2: string,
@@ -572,26 +391,7 @@ export class ValidatorUtils extends Contract {
       }
     >
 
-    'getConfig(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber] & {
-        confirmPeriodBlocks: BigNumber
-        extraChallengeTimeBlocks: BigNumber
-        arbGasSpeedLimitPerBlock: BigNumber
-        baseStake: BigNumber
-      }
-    >
-
     getStakers(
-      rollup: string,
-      startIndex: BigNumberish,
-      max: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string[], boolean] & { hasMore: boolean }>
-
-    'getStakers(address,uint256,uint256)'(
       rollup: string,
       startIndex: BigNumberish,
       max: BigNumberish,
@@ -604,46 +404,19 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, string]>
 
-    'latestStaked(address,address)'(
-      rollup: string,
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, string]>
-
     refundableStakers(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<string[]>
-
-    'refundableStakers(address)'(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<string[]>
 
     requireConfirmable(rollup: string, overrides?: CallOverrides): Promise<void>
 
-    'requireConfirmable(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     requireRejectable(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    'requireRejectable(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
     stakedNodes(
-      rollup: string,
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber[]>
-
-    'stakedNodes(address,address)'(
       rollup: string,
       staker: string,
       overrides?: CallOverrides
@@ -662,27 +435,7 @@ export class ValidatorUtils extends Contract {
       }
     >
 
-    'stakerInfo(address,address)'(
-      rollup: string,
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [boolean, BigNumber, BigNumber, string] & {
-        isStaked: boolean
-        latestStakedNode: BigNumber
-        amountStaked: BigNumber
-        currentChallenge: string
-      }
-    >
-
     timedOutChallenges(
-      rollup: string,
-      startIndex: BigNumberish,
-      max: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string[], boolean] & { hasMore: boolean }>
-
-    'timedOutChallenges(address,uint256,uint256)'(
       rollup: string,
       startIndex: BigNumberish,
       max: BigNumberish,
@@ -698,30 +451,12 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'areUnresolvedNodesLinear(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     checkDecidableNextNode(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'checkDecidableNextNode(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     findNodeConflict(
-      rollup: string,
-      node1: BigNumberish,
-      node2: BigNumberish,
-      maxDepth: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'findNodeConflict(address,uint256,uint256,uint256)'(
       rollup: string,
       node1: BigNumberish,
       node2: BigNumberish,
@@ -737,29 +472,9 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'findStakerConflict(address,address,address,uint256)'(
-      rollup: string,
-      staker1: string,
-      staker2: string,
-      maxDepth: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     getConfig(rollup: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'getConfig(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     getStakers(
-      rollup: string,
-      startIndex: BigNumberish,
-      max: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'getStakers(address,uint256,uint256)'(
       rollup: string,
       startIndex: BigNumberish,
       max: BigNumberish,
@@ -772,18 +487,7 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'latestStaked(address,address)'(
-      rollup: string,
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     refundableStakers(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'refundableStakers(address)'(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -793,28 +497,12 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'requireConfirmable(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     requireRejectable(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'requireRejectable(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     stakedNodes(
-      rollup: string,
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'stakedNodes(address,address)'(
       rollup: string,
       staker: string,
       overrides?: CallOverrides
@@ -826,20 +514,7 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'stakerInfo(address,address)'(
-      rollup: string,
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     timedOutChallenges(
-      rollup: string,
-      startIndex: BigNumberish,
-      max: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'timedOutChallenges(address,uint256,uint256)'(
       rollup: string,
       startIndex: BigNumberish,
       max: BigNumberish,
@@ -853,30 +528,12 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'areUnresolvedNodesLinear(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     checkDecidableNextNode(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'checkDecidableNextNode(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     findNodeConflict(
-      rollup: string,
-      node1: BigNumberish,
-      node2: BigNumberish,
-      maxDepth: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'findNodeConflict(address,uint256,uint256,uint256)'(
       rollup: string,
       node1: BigNumberish,
       node2: BigNumberish,
@@ -892,32 +549,12 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'findStakerConflict(address,address,address,uint256)'(
-      rollup: string,
-      staker1: string,
-      staker2: string,
-      maxDepth: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getConfig(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'getConfig(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getStakers(
-      rollup: string,
-      startIndex: BigNumberish,
-      max: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getStakers(address,uint256,uint256)'(
       rollup: string,
       startIndex: BigNumberish,
       max: BigNumberish,
@@ -930,18 +567,7 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'latestStaked(address,address)'(
-      rollup: string,
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     refundableStakers(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'refundableStakers(address)'(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -951,28 +577,12 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'requireConfirmable(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     requireRejectable(
       rollup: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'requireRejectable(address)'(
-      rollup: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     stakedNodes(
-      rollup: string,
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'stakedNodes(address,address)'(
       rollup: string,
       staker: string,
       overrides?: CallOverrides
@@ -984,20 +594,7 @@ export class ValidatorUtils extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'stakerInfo(address,address)'(
-      rollup: string,
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     timedOutChallenges(
-      rollup: string,
-      startIndex: BigNumberish,
-      max: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'timedOutChallenges(address,uint256,uint256)'(
       rollup: string,
       startIndex: BigNumberish,
       max: BigNumberish,

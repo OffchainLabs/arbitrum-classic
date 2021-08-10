@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface IInboxInterface extends ethers.utils.Interface {
   functions: {
@@ -117,23 +116,51 @@ interface IInboxInterface extends ethers.utils.Interface {
   ): EventFragment
 }
 
-export class IInbox extends Contract {
+export class IInbox extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: IInboxInterface
 
   functions: {
     bridge(overrides?: CallOverrides): Promise<[string]>
-
-    'bridge()'(overrides?: CallOverrides): Promise<[string]>
 
     createRetryableTicket(
       destAddr: string,
@@ -144,29 +171,12 @@ export class IInbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
-      destAddr: string,
-      arbTxCallValue: BigNumberish,
-      maxSubmissionCost: BigNumberish,
-      submissionRefundAddress: string,
-      valueRefundAddress: string,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     depositEth(
       maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'depositEth(uint256)'(
-      maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendContractTransaction(
@@ -175,16 +185,7 @@ export class IInbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendL1FundedContractTransaction(
@@ -192,15 +193,7 @@ export class IInbox extends Contract {
       gasPriceBid: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendL1FundedUnsignedTransaction(
@@ -209,26 +202,12 @@ export class IInbox extends Contract {
       nonce: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendL2Message(
       messageData: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'sendL2Message(bytes)'(
-      messageData: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendUnsignedTransaction(
@@ -238,23 +217,11 @@ export class IInbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
   bridge(overrides?: CallOverrides): Promise<string>
-
-  'bridge()'(overrides?: CallOverrides): Promise<string>
 
   createRetryableTicket(
     destAddr: string,
@@ -265,29 +232,12 @@ export class IInbox extends Contract {
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
     data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
-    destAddr: string,
-    arbTxCallValue: BigNumberish,
-    maxSubmissionCost: BigNumberish,
-    submissionRefundAddress: string,
-    valueRefundAddress: string,
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   depositEth(
     maxSubmissionCost: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'depositEth(uint256)'(
-    maxSubmissionCost: BigNumberish,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendContractTransaction(
@@ -296,16 +246,7 @@ export class IInbox extends Contract {
     destAddr: string,
     amount: BigNumberish,
     data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    destAddr: string,
-    amount: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendL1FundedContractTransaction(
@@ -313,15 +254,7 @@ export class IInbox extends Contract {
     gasPriceBid: BigNumberish,
     destAddr: string,
     data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    destAddr: string,
-    data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendL1FundedUnsignedTransaction(
@@ -330,26 +263,12 @@ export class IInbox extends Contract {
     nonce: BigNumberish,
     destAddr: string,
     data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    nonce: BigNumberish,
-    destAddr: string,
-    data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendL2Message(
     messageData: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'sendL2Message(bytes)'(
-    messageData: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendUnsignedTransaction(
@@ -359,37 +278,13 @@ export class IInbox extends Contract {
     destAddr: string,
     amount: BigNumberish,
     data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    nonce: BigNumberish,
-    destAddr: string,
-    amount: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
     bridge(overrides?: CallOverrides): Promise<string>
 
-    'bridge()'(overrides?: CallOverrides): Promise<string>
-
     createRetryableTicket(
-      destAddr: string,
-      arbTxCallValue: BigNumberish,
-      maxSubmissionCost: BigNumberish,
-      submissionRefundAddress: string,
-      valueRefundAddress: string,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
       destAddr: string,
       arbTxCallValue: BigNumberish,
       maxSubmissionCost: BigNumberish,
@@ -406,21 +301,7 @@ export class IInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'depositEth(uint256)'(
-      maxSubmissionCost: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     sendContractTransaction(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       destAddr: string,
@@ -437,24 +318,7 @@ export class IInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     sendL1FundedUnsignedTransaction(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       nonce: BigNumberish,
@@ -468,22 +332,7 @@ export class IInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'sendL2Message(bytes)'(
-      messageData: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     sendUnsignedTransaction(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       nonce: BigNumberish,
@@ -496,19 +345,20 @@ export class IInbox extends Contract {
 
   filters: {
     InboxMessageDelivered(
-      messageNum: BigNumberish | null,
-      data: null
-    ): EventFilter
+      messageNum?: BigNumberish | null,
+      data?: null
+    ): TypedEventFilter<
+      [BigNumber, string],
+      { messageNum: BigNumber; data: string }
+    >
 
     InboxMessageDeliveredFromOrigin(
-      messageNum: BigNumberish | null
-    ): EventFilter
+      messageNum?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { messageNum: BigNumber }>
   }
 
   estimateGas: {
     bridge(overrides?: CallOverrides): Promise<BigNumber>
-
-    'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
 
     createRetryableTicket(
       destAddr: string,
@@ -519,29 +369,12 @@ export class IInbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
-      destAddr: string,
-      arbTxCallValue: BigNumberish,
-      maxSubmissionCost: BigNumberish,
-      submissionRefundAddress: string,
-      valueRefundAddress: string,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     depositEth(
       maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'depositEth(uint256)'(
-      maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendContractTransaction(
@@ -550,16 +383,7 @@ export class IInbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendL1FundedContractTransaction(
@@ -567,15 +391,7 @@ export class IInbox extends Contract {
       gasPriceBid: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendL1FundedUnsignedTransaction(
@@ -584,26 +400,12 @@ export class IInbox extends Contract {
       nonce: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendL2Message(
       messageData: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'sendL2Message(bytes)'(
-      messageData: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendUnsignedTransaction(
@@ -613,25 +415,13 @@ export class IInbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
     bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     createRetryableTicket(
       destAddr: string,
       arbTxCallValue: BigNumberish,
@@ -641,29 +431,12 @@ export class IInbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
-      destAddr: string,
-      arbTxCallValue: BigNumberish,
-      maxSubmissionCost: BigNumberish,
-      submissionRefundAddress: string,
-      valueRefundAddress: string,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     depositEth(
       maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'depositEth(uint256)'(
-      maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendContractTransaction(
@@ -672,16 +445,7 @@ export class IInbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendL1FundedContractTransaction(
@@ -689,15 +453,7 @@ export class IInbox extends Contract {
       gasPriceBid: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendL1FundedUnsignedTransaction(
@@ -706,26 +462,12 @@ export class IInbox extends Contract {
       nonce: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendL2Message(
       messageData: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'sendL2Message(bytes)'(
-      messageData: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendUnsignedTransaction(
@@ -735,17 +477,7 @@ export class IInbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }
