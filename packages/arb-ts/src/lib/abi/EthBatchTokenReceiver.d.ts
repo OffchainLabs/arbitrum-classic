@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface EthBatchTokenReceiverInterface extends ethers.utils.Interface {
   functions: {
@@ -98,75 +97,77 @@ interface EthBatchTokenReceiverInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'DeployBuddyContract'): EventFragment
 }
 
-export class EthBatchTokenReceiver extends Contract {
+export class EthBatchTokenReceiver extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: EthBatchTokenReceiverInterface
 
   functions: {
     codeHash(overrides?: CallOverrides): Promise<[string]>
 
-    'codeHash()'(overrides?: CallOverrides): Promise<[string]>
-
     distributeBatch(
       _root: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'distributeBatch(bytes32)'(
-      _root: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     finalizeBuddyDeploy(
       success: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'finalizeBuddyDeploy(bool)'(
-      success: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     inbox(overrides?: CallOverrides): Promise<[string]>
-
-    'inbox()'(overrides?: CallOverrides): Promise<[string]>
 
     initiateBuddyDeploy(
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      contractInitCode: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     l2Buddy(overrides?: CallOverrides): Promise<[string]>
 
-    'l2Buddy()'(overrides?: CallOverrides): Promise<[string]>
-
     l2Connection(overrides?: CallOverrides): Promise<[number]>
 
-    'l2Connection()'(overrides?: CallOverrides): Promise<[number]>
-
     l2Deployer(overrides?: CallOverrides): Promise<[string]>
-
-    'l2Deployer()'(overrides?: CallOverrides): Promise<[string]>
 
     redeemWithdrawal(
       dest: string,
@@ -175,75 +176,37 @@ export class EthBatchTokenReceiver extends Contract {
       index: BigNumberish,
       peaks: BytesLike[],
       siblings: BytesLike[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'redeemWithdrawal(address,uint256,uint256,uint256,bytes32[],bytes32[])'(
-      dest: string,
-      amount: BigNumberish,
-      width: BigNumberish,
-      index: BigNumberish,
-      peaks: BytesLike[],
-      siblings: BytesLike[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
   codeHash(overrides?: CallOverrides): Promise<string>
 
-  'codeHash()'(overrides?: CallOverrides): Promise<string>
-
   distributeBatch(
     _root: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'distributeBatch(bytes32)'(
-    _root: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   finalizeBuddyDeploy(
     success: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'finalizeBuddyDeploy(bool)'(
-    success: boolean,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   inbox(overrides?: CallOverrides): Promise<string>
-
-  'inbox()'(overrides?: CallOverrides): Promise<string>
 
   initiateBuddyDeploy(
     maxSubmissionCost: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
     contractInitCode: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
-    maxSubmissionCost: BigNumberish,
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    contractInitCode: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   l2Buddy(overrides?: CallOverrides): Promise<string>
 
-  'l2Buddy()'(overrides?: CallOverrides): Promise<string>
-
   l2Connection(overrides?: CallOverrides): Promise<number>
 
-  'l2Connection()'(overrides?: CallOverrides): Promise<number>
-
   l2Deployer(overrides?: CallOverrides): Promise<string>
-
-  'l2Deployer()'(overrides?: CallOverrides): Promise<string>
 
   redeemWithdrawal(
     dest: string,
@@ -252,54 +215,22 @@ export class EthBatchTokenReceiver extends Contract {
     index: BigNumberish,
     peaks: BytesLike[],
     siblings: BytesLike[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'redeemWithdrawal(address,uint256,uint256,uint256,bytes32[],bytes32[])'(
-    dest: string,
-    amount: BigNumberish,
-    width: BigNumberish,
-    index: BigNumberish,
-    peaks: BytesLike[],
-    siblings: BytesLike[],
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
     codeHash(overrides?: CallOverrides): Promise<string>
 
-    'codeHash()'(overrides?: CallOverrides): Promise<string>
-
     distributeBatch(_root: BytesLike, overrides?: CallOverrides): Promise<void>
-
-    'distributeBatch(bytes32)'(
-      _root: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     finalizeBuddyDeploy(
       success: boolean,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'finalizeBuddyDeploy(bool)'(
-      success: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     inbox(overrides?: CallOverrides): Promise<string>
 
-    'inbox()'(overrides?: CallOverrides): Promise<string>
-
     initiateBuddyDeploy(
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      contractInitCode: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
@@ -309,27 +240,11 @@ export class EthBatchTokenReceiver extends Contract {
 
     l2Buddy(overrides?: CallOverrides): Promise<string>
 
-    'l2Buddy()'(overrides?: CallOverrides): Promise<string>
-
     l2Connection(overrides?: CallOverrides): Promise<number>
-
-    'l2Connection()'(overrides?: CallOverrides): Promise<number>
 
     l2Deployer(overrides?: CallOverrides): Promise<string>
 
-    'l2Deployer()'(overrides?: CallOverrides): Promise<string>
-
     redeemWithdrawal(
-      dest: string,
-      amount: BigNumberish,
-      width: BigNumberish,
-      index: BigNumberish,
-      peaks: BytesLike[],
-      siblings: BytesLike[],
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'redeemWithdrawal(address,uint256,uint256,uint256,bytes32[],bytes32[])'(
       dest: string,
       amount: BigNumberish,
       width: BigNumberish,
@@ -342,64 +257,42 @@ export class EthBatchTokenReceiver extends Contract {
 
   filters: {
     DeployBuddyContract(
-      seqNum: BigNumberish | null,
-      l2Address: null
-    ): EventFilter
+      seqNum?: BigNumberish | null,
+      l2Address?: null
+    ): TypedEventFilter<
+      [BigNumber, string],
+      { seqNum: BigNumber; l2Address: string }
+    >
   }
 
   estimateGas: {
     codeHash(overrides?: CallOverrides): Promise<BigNumber>
 
-    'codeHash()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    distributeBatch(_root: BytesLike, overrides?: Overrides): Promise<BigNumber>
-
-    'distributeBatch(bytes32)'(
+    distributeBatch(
       _root: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     finalizeBuddyDeploy(
       success: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'finalizeBuddyDeploy(bool)'(
-      success: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     inbox(overrides?: CallOverrides): Promise<BigNumber>
-
-    'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initiateBuddyDeploy(
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      contractInitCode: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     l2Buddy(overrides?: CallOverrides): Promise<BigNumber>
 
-    'l2Buddy()'(overrides?: CallOverrides): Promise<BigNumber>
-
     l2Connection(overrides?: CallOverrides): Promise<BigNumber>
 
-    'l2Connection()'(overrides?: CallOverrides): Promise<BigNumber>
-
     l2Deployer(overrides?: CallOverrides): Promise<BigNumber>
-
-    'l2Deployer()'(overrides?: CallOverrides): Promise<BigNumber>
 
     redeemWithdrawal(
       dest: string,
@@ -408,76 +301,38 @@ export class EthBatchTokenReceiver extends Contract {
       index: BigNumberish,
       peaks: BytesLike[],
       siblings: BytesLike[],
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'redeemWithdrawal(address,uint256,uint256,uint256,bytes32[],bytes32[])'(
-      dest: string,
-      amount: BigNumberish,
-      width: BigNumberish,
-      index: BigNumberish,
-      peaks: BytesLike[],
-      siblings: BytesLike[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
     codeHash(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'codeHash()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     distributeBatch(
       _root: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'distributeBatch(bytes32)'(
-      _root: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     finalizeBuddyDeploy(
       success: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'finalizeBuddyDeploy(bool)'(
-      success: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     initiateBuddyDeploy(
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      contractInitCode: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     l2Buddy(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'l2Buddy()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     l2Connection(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'l2Connection()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     l2Deployer(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'l2Deployer()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     redeemWithdrawal(
       dest: string,
@@ -486,17 +341,7 @@ export class EthBatchTokenReceiver extends Contract {
       index: BigNumberish,
       peaks: BytesLike[],
       siblings: BytesLike[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'redeemWithdrawal(address,uint256,uint256,uint256,bytes32[],bytes32[])'(
-      dest: string,
-      amount: BigNumberish,
-      width: BigNumberish,
-      index: BigNumberish,
-      peaks: BytesLike[],
-      siblings: BytesLike[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

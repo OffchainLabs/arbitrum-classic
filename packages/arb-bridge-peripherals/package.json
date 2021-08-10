@@ -25,12 +25,12 @@
     "arbos-contracts": "^1.0.0",
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.0.0",
-    "ethers": "^5.0.24",
+    "ethers": "^5.1.0",
     "hardhat": "^2.0.7",
     "sol2uml": "^1.1.25",
     "ts-node": "^9.1.1",
-    "typechain": "^4.0.0",
-    "typescript": "^4.1.5"
+    "typechain": "^5.1.2",
+    "typescript": "^4.2.2"
   },
   "optionalDependencies": {
     "@openzeppelin/upgrades-core": "^1.7.6"

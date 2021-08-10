@@ -138,7 +138,7 @@ export class BridgeHelper {
         ...gatewayContract.interface.parseLog(log).args,
         txHash: log.transactionHash,
       }
-      return (data as unknown) as OutboundTransferInitiatedResult
+      return data as unknown as OutboundTransferInitiatedResult
     })
   }
 
@@ -208,10 +208,8 @@ export class BridgeHelper {
     seqNum: BigNumber,
     l2Provider: providers.Provider
   ) => {
-    const l2RetryableHash = await BridgeHelper.calculateL2RetryableTransactionHash(
-      seqNum,
-      l2Provider
-    )
+    const l2RetryableHash =
+      await BridgeHelper.calculateL2RetryableTransactionHash(seqNum, l2Provider)
     return l2Provider.waitForTransaction(l2RetryableHash)
   }
 
@@ -243,7 +241,7 @@ export class BridgeHelper {
     const eventTopic = iface.getEventTopic(DeployedEvent)
     const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
-      log => (iface.parseLog(log).args as unknown) as BuddyDeployEventResult
+      log => iface.parseLog(log).args as unknown as BuddyDeployEventResult
     )
   }
 
@@ -259,7 +257,7 @@ export class BridgeHelper {
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
       log =>
-        (iface.parseLog(log).args as unknown) as OutboundTransferInitiatedResult
+        iface.parseLog(log).args as unknown as OutboundTransferInitiatedResult
     )
   }
 
@@ -306,7 +304,7 @@ export class BridgeHelper {
     )
     const logs = await BridgeHelper.getEventLogs('GatewaySet', contract)
     return logs.map(
-      log => (contract.interface.parseLog(log).args as unknown) as GatewaySet
+      log => contract.interface.parseLog(log).args as unknown as GatewaySet
     )
   }
 
@@ -322,7 +320,7 @@ export class BridgeHelper {
     const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
 
     return logs.map(
-      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
     )
   }
 
@@ -715,7 +713,7 @@ export class BridgeHelper {
 
     return logs.map(
       log =>
-        (contract.interface.parseLog(log).args as unknown) as L2ToL1EventResult
+        contract.interface.parseLog(log).args as unknown as L2ToL1EventResult
     )
   }
 
@@ -763,7 +761,7 @@ export class BridgeHelper {
 
     const parsedData = logs.map(
       log =>
-        (contract.interface.parseLog(log).args as unknown) as L2ToL1EventResult
+        contract.interface.parseLog(log).args as unknown as L2ToL1EventResult
     )
 
     return parsedData.filter(log => log.indexInBatch.eq(indexInBatch))
@@ -803,8 +801,8 @@ export class BridgeHelper {
     )
     const parsedData = logs.map(
       log =>
-        (contract.interface.parseLog(log)
-          .args as unknown) as OutBoxTransactionExecuted
+        contract.interface.parseLog(log)
+          .args as unknown as OutBoxTransactionExecuted
     )
     return (
       parsedData.filter(executedEvent =>

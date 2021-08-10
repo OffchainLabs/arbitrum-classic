@@ -20,15 +20,15 @@ rm -rf packages/arb-ts/src/lib/abi/*
 
 cd ../arb-bridge-eth/build/types
 
-\cp -rf * ../../../arb-ts/src/lib/abi
+\cp -Rf * ../../../arb-ts/src/lib/abi
 
             
 cd ../../../arb-os/contracts/src/types
 
-\cp -rf * ../../../../arb-ts/src/lib/abi
+\cp -Rf * ../../../../arb-ts/src/lib/abi
 
 cd ../../../../arb-bridge-peripherals/build/types
 
-\cp -rf * ../../../arb-ts/src/lib/abi
+\cp -Rf * ../../../arb-ts/src/lib/abi
 
 cd ../../../arb-ts

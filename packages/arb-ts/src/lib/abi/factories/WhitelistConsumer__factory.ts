@@ -2,19 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { WhitelistConsumer } from '../WhitelistConsumer'
-
-export class WhitelistConsumer__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): WhitelistConsumer {
-    return new Contract(address, _abi, signerOrProvider) as WhitelistConsumer
-  }
-}
+import type {
+  WhitelistConsumer,
+  WhitelistConsumerInterface,
+} from '../WhitelistConsumer'
 
 const _abi = [
   {
@@ -57,3 +50,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class WhitelistConsumer__factory {
+  static readonly abi = _abi
+  static createInterface(): WhitelistConsumerInterface {
+    return new utils.Interface(_abi) as WhitelistConsumerInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): WhitelistConsumer {
+    return new Contract(address, _abi, signerOrProvider) as WhitelistConsumer
+  }
+}

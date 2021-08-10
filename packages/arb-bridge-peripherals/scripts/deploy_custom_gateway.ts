@@ -66,22 +66,28 @@ const main = async () => {
   ).connect(l2Signer)
 
   console.log('deploying L1 proxy')
-  let l1CustomGatewayProxy = await L1TransparentUpgradeableProxy.deploy(
-    l1CustomGateway.address,
-    l1ProxyAdminAddr,
-    '0x'
+  const l1CustomGatewayProxyDeployment =
+    await L1TransparentUpgradeableProxy.deploy(
+      l1CustomGateway.address,
+      l1ProxyAdminAddr,
+      '0x'
+    )
+  await l1CustomGatewayProxyDeployment.deployed()
+  const l1CustomGatewayProxy = L1CustomGateway.attach(
+    l1CustomGatewayProxyDeployment.address
   )
-  await l1CustomGatewayProxy.deployed()
-  l1CustomGatewayProxy = L1CustomGateway.attach(l1CustomGatewayProxy.address)
 
   console.log('deploying L2 proxy')
-  let l2CustomGatewayProxy = await L2TransparentUpgradeableProxy.deploy(
-    l2CustomGateway.address,
-    l2ProxyAdminAddr,
-    '0x'
+  const l2CustomGatewayProxyDeployment =
+    await L2TransparentUpgradeableProxy.deploy(
+      l2CustomGateway.address,
+      l2ProxyAdminAddr,
+      '0x'
+    )
+  await l2CustomGatewayProxyDeployment.deployed()
+  const l2CustomGatewayProxy = L2CustomGateway.attach(
+    l2CustomGatewayProxyDeployment.address
   )
-  await l2CustomGatewayProxy.deployed()
-  l2CustomGatewayProxy = L2CustomGateway.attach(l2CustomGatewayProxy.address)
 
   console.log({
     l1CustomGatewayProxy: l1CustomGatewayProxy.address,

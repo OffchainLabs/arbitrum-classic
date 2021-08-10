@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IOutbox } from '../IOutbox'
-
-export class IOutbox__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IOutbox {
-    return new Contract(address, _abi, signerOrProvider) as IOutbox
-  }
-}
+import type { IOutbox, IOutboxInterface } from '../IOutbox'
 
 const _abi = [
   {
@@ -150,3 +140,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class IOutbox__factory {
+  static readonly abi = _abi
+  static createInterface(): IOutboxInterface {
+    return new utils.Interface(_abi) as IOutboxInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IOutbox {
+    return new Contract(address, _abi, signerOrProvider) as IOutbox
+  }
+}
