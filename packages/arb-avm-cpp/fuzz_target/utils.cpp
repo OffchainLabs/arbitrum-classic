@@ -15,6 +15,7 @@
  */
 
 #include "utils.hpp"
+#include "libproofchecker.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -110,80 +111,32 @@ bool opcodeAllowed(OpCode opcode) {
     }
 }
 
-ProofTester::ProofTester(bool debug) {
-    queryPipePath = std::tmpnam(nullptr);
-    if (mkfifo(queryPipePath.data(), 0644)) {
-        throw std::runtime_error(std::string("Failed to mkfifo: ") +
-                                 std::strerror(errno));
-    }
-    resultPipePath = std::tmpnam(nullptr);
-    if (mkfifo(resultPipePath.data(), 0644)) {
-        throw std::runtime_error(std::string("Failed to mkfifo result pipe: ") +
-                                 std::strerror(errno));
-    }
-    if (fork() == 0) {
-        execl("/bin/sh", "/bin/sh", "-c",
-              "../../arb-node-core/proof_test_server $1 $2", "-s",
-              queryPipePath.data(), resultPipePath.data(), nullptr);
+ProofTester::ProofTester(bool debug) {}
 
-        throw std::runtime_error(
-            std::string("Error starting Go proof test server: ") +
-            std::strerror(errno));
-    }
-    queryPipe.open(queryPipePath, std::ios::out | std::ios::binary);
-    resultPipe.open(resultPipePath, std::ios::in | std::ios::binary);
-    uint8_t initMessage[1];
-    initMessage[0] = debug;
-    queryPipe.write(reinterpret_cast<const char*>(initMessage),
-                    sizeof(initMessage));
-    queryPipe.flush();
-    resultPipe.read(reinterpret_cast<char*>(initMessage), sizeof(initMessage));
-    if (debug) {
-        std::cerr << "Established contact with Go proof test server"
-                  << std::endl;
-    }
+void writeMachineState(const Machine& machine,
+                       std::vector<unsigned char>& output_data) {
+    marshal_uint256_t(machine.machine_state.output.arb_gas_used, output_data);
+    marshal_uint256_t(machine.machine_state.getTotalMessagesRead(),
+                      output_data);
+    marshal_uint256_t(machine.machine_state.hash(), output_data);
+    marshal_uint256_t(machine.machine_state.output.send_acc, output_data);
+    marshal_uint256_t(machine.machine_state.output.log_acc, output_data);
 }
 
-ProofTester::~ProofTester() {
-    if (!resultPipePath.empty()) {
-        remove(resultPipePath.data());
-    }
-    if (!queryPipePath.empty()) {
-        remove(queryPipePath.data());
-    }
+void writeVarSizedBytes(const std::vector<unsigned char>& data,
+                        std::vector<unsigned char>& output_data) {
+    marshal_uint64_t(data.size(), output_data);
+    output_data.insert(output_data.end(), data.begin(), data.end());
 }
 
-void ProofTester::writeMachineState(const Machine& machine) {
-    std::vector<unsigned char> data;
-    marshal_uint256_t(machine.machine_state.output.arb_gas_used, data);
-    marshal_uint256_t(machine.machine_state.getTotalMessagesRead(), data);
-    marshal_uint256_t(machine.machine_state.hash(), data);
-    marshal_uint256_t(machine.machine_state.output.send_acc, data);
-    marshal_uint256_t(machine.machine_state.output.log_acc, data);
-    queryPipe.write(reinterpret_cast<const char*>(data.data()), data.size());
-}
-
-void ProofTester::writeVarSizedBytes(const std::vector<unsigned char>& data) {
-    std::vector<unsigned char> tmp;
-    marshal_uint64_t(data.size(), tmp);
-    queryPipe.write(reinterpret_cast<const char*>(tmp.data()), tmp.size());
-    queryPipe.write(reinterpret_cast<const char*>(data.data()), data.size());
-}
-
-void ProofTester::writeProof(const OneStepProof& proof) {
-    writeVarSizedBytes(proof.standard_proof);
-    writeVarSizedBytes(proof.buffer_proof);
-}
-
-uint8_t ProofTester::readResult() {
-    uint8_t buf[1];
-    resultPipe.read(reinterpret_cast<char*>(buf), 1);
-    return buf[0];
+void writeProof(const OneStepProof& proof,
+                std::vector<unsigned char>& output_data) {
+    writeVarSizedBytes(proof.standard_proof, output_data);
+    writeVarSizedBytes(proof.buffer_proof, output_data);
 }
 
 void ProofTester::testMachine(Machine machine) {
     Machine machine2 = machine;
-    size_t buffered_results = 0;
     while (machine.currentStatus() == Status::Extensive &&
            machine.machine_state.output.arb_gas_used < FUZZ_MAX_GAS &&
            machine.machine_state.output.total_steps < FUZZ_MAX_STEPS &&
@@ -192,23 +145,18 @@ void ProofTester::testMachine(Machine machine) {
         config.max_gas = machine.machine_state.output.arb_gas_used + 1;
         config.go_over_gas = true;
         machine.machine_state.context = AssertionContext(config);
-        writeMachineState(machine);
+
+        std::vector<unsigned char> proof_data;
+        writeMachineState(machine, proof_data);
         auto proof = machine.marshalForProof();
-        writeProof(proof);
+        writeProof(proof, proof_data);
         auto assertion = machine.run();
         fuzz_require(assertion.stepCount == 1,
                      "Assertion produced wrong step count ",
                      assertion.stepCount);
-        writeMachineState(machine);
-        queryPipe.flush();
-        if (buffered_results < 4) {
-            buffered_results++;
-        } else if (readResult() != 0) {
-            throw std::runtime_error("Go proof tester errored");
-        }
-    }
-    for (; buffered_results > 0; buffered_results--) {
-        if (readResult() != 0) {
+        writeMachineState(machine, proof_data);
+        int res = CheckProof(0, proof_data.data(), proof_data.size());
+        if (res != 0) {
             throw std::runtime_error("Go proof tester errored");
         }
     }

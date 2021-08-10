@@ -25,8 +25,8 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
