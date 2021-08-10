@@ -33,6 +33,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
@@ -167,7 +168,7 @@ func startup() error {
 		}
 	}
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, l1Client, auth, config.GasPriceUrl)
+	valAuth, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
@@ -207,7 +208,7 @@ func startup() error {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
 	}

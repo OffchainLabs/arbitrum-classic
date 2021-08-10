@@ -22,8 +22,7 @@ export interface balancesMap {
   const transfers = (
     await BridgeHelper.getEventLogs('Transfer', token, [])
   ).map(
-    (log: any) =>
-      (token.interface.parseLog(log).args as unknown) as TransferEvent
+    (log: any) => token.interface.parseLog(log).args as unknown as TransferEvent
   )
 
   for (const transferLog of transfers) {

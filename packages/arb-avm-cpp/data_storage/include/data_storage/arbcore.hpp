@@ -147,6 +147,10 @@ class ArbCore {
     // Not protected by mutex! Must only be used by the main ArbCore thread.
     uint256_t last_old_machine_cache_gas;
 
+    // Value cache for execution cursors
+    ValueCache execution_cursor_value_cache;
+    std::mutex execution_cursor_value_cache_mutex;
+
    public:
     ArbCore() = delete;
     explicit ArbCore(std::shared_ptr<DataStorage> data_storage_);
@@ -242,16 +246,13 @@ class ArbCore {
    public:
     // Execution Cursor interaction
     ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
-        uint256_t total_gas_used,
-        ValueCache& cache);
+        uint256_t total_gas_used);
     rocksdb::Status advanceExecutionCursor(ExecutionCursor& execution_cursor,
                                            uint256_t max_gas,
-                                           bool go_over_gas,
-                                           ValueCache& cache);
+                                           bool go_over_gas);
 
     std::unique_ptr<Machine> takeExecutionCursorMachine(
-        ExecutionCursor& execution_cursor,
-        ValueCache& cache) const;
+        ExecutionCursor& execution_cursor);
 
    private:
     // Execution cursor internal functions
@@ -259,17 +260,14 @@ class ArbCore {
         ExecutionCursor& execution_cursor,
         uint256_t total_gas_used,
         bool go_over_gas,
-        size_t message_group_size,
-        ValueCache& cache);
+        size_t message_group_size);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,
-        ExecutionCursor& execution_cursor,
-        ValueCache& cache) const;
+        ExecutionCursor& execution_cursor);
     std::unique_ptr<Machine> takeExecutionCursorMachineImpl(
         const ReadTransaction& tx,
-        ExecutionCursor& execution_cursor,
-        ValueCache& cache) const;
+        ExecutionCursor& execution_cursor);
 
    public:
     ValueResult<uint256_t> logInsertedCount() const;
@@ -377,8 +375,7 @@ class ArbCore {
    public:
     // Public sideload interaction
     ValueResult<std::unique_ptr<Machine>> getMachineForSideload(
-        const uint256_t& block_number,
-        ValueCache& cache);
+        const uint256_t& block_number);
 
     ValueResult<uint256_t> getSideloadPosition(ReadTransaction& tx,
                                                const uint256_t& block_number);

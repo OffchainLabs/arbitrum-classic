@@ -34,5 +34,6 @@ export { L2GatewayRouter__factory } from './lib/abi/factories/L2GatewayRouter__f
 export { ArbRetryableTx__factory } from './lib/abi/factories/ArbRetryableTx__factory'
 export { ERC20__factory } from './lib/abi/factories/ERC20__factory'
 export { ArbSys__factory } from './lib/abi/factories/ArbSys__factory'
+export { ArbAddressTable__factory } from './lib/abi/factories/ArbAddressTable__factory'
 export { networks } from './lib/networks'
 export { argSerializerConstructor } from './lib/byte_serialize_params'

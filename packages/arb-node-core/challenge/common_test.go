@@ -47,12 +47,12 @@ func executeChallenge(
 	challengerBackend, err := ethbridge.NewBuilderBackend(challengerWallet)
 	test.FailIfError(t, err)
 
-	asserterChallengeCon, err := ethbridge.NewChallenge(challengeAddress, 0, client, asserterBackend)
+	asserterChallengeCon, err := ethbridge.NewChallenge(challengeAddress, 0, client, asserterBackend, bind.CallOpts{})
 	test.FailIfError(t, err)
-	challengerChallengeCon, err := ethbridge.NewChallenge(challengeAddress, 0, client, challengerBackend)
+	challengerChallengeCon, err := ethbridge.NewChallenge(challengeAddress, 0, client, challengerBackend, bind.CallOpts{})
 	test.FailIfError(t, err)
 
-	challenge, err := ethbridge.NewChallengeWatcher(challengeAddress, 0, client)
+	challenge, err := ethbridge.NewChallengeWatcher(challengeAddress, 0, client, bind.CallOpts{})
 	test.FailIfError(t, err)
 
 	seqInbox, err := ethbridge.NewSequencerInboxWatcher(seqInboxAddr, client)
@@ -304,12 +304,12 @@ func initializeChallengeTest(
 	_, err = validatorCon2.Initialize(challenger)
 	test.FailIfError(t, err)
 
-	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter, "")
+	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter)
 	test.FailIfError(t, err)
 	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, asserterAuth)
 	test.FailIfError(t, err)
 
-	challengerAuth, err := ethbridge.NewTransactAuth(ctx, client, challenger, "")
+	challengerAuth, err := ethbridge.NewTransactAuth(ctx, client, challenger)
 	test.FailIfError(t, err)
 	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, challengerAuth)
 	test.FailIfError(t, err)

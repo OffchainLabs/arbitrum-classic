@@ -97,9 +97,11 @@ type S3 struct {
 }
 
 type Sequencer struct {
-	CreateBatchBlockInterval   int64   `koanf:"create-batch-block-interval"`
-	DelayedMessagesTargetDelay int64   `koanf:"delayed-messages-target-delay"`
-	Lockout                    Lockout `koanf:"lockout"`
+	CreateBatchBlockInterval          int64   `koanf:"create-batch-block-interval"`
+	ContinueBatchPostingBlockInterval int64   `koanf:"continue-batch-posting-block-interval"`
+	DelayedMessagesTargetDelay        int64   `koanf:"delayed-messages-target-delay"`
+	ReorgOutHugeMessages              bool    `koanf:"reorg-out-huge-messages"`
+	Lockout                           Lockout `koanf:"lockout"`
 }
 
 type WS struct {
@@ -108,16 +110,19 @@ type WS struct {
 	Path string `koanf:"path"`
 }
 
+type Forwarder struct {
+	Target    string `koanf:"target"`
+	Submitter string `koanf:"submitter-address"`
+}
+
 type Node struct {
 	Aggregator Aggregator `koanf:"aggregator"`
 	ChainID    uint64     `koanf:"chain-id"`
-	Forwarder  struct {
-		Target string `koanf:"target"`
-	} `koanf:"forwarder"`
-	RPC       RPC       `koanf:"rpc"`
-	Sequencer Sequencer `koanf:"sequencer"`
-	Type      string    `koanf:"type"`
-	WS        WS        `koanf:"ws"`
+	Forwarder  Forwarder  `koanf:"forwarder"`
+	RPC        RPC        `koanf:"rpc"`
+	Sequencer  Sequencer  `koanf:"sequencer"`
+	Type       string     `koanf:"type"`
+	WS         WS         `koanf:"ws"`
 }
 
 type Persistent struct {
@@ -154,7 +159,6 @@ type Config struct {
 	Conf               Conf        `koanf:"conf"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
-	GasPriceUrl        string      `koanf:"gas-price-url"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
 	L1                 struct {
 		URL string `koanf:"url"`
@@ -186,11 +190,14 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
+	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
+	f.Int64("node.sequencer.continue-batch-posting-block-interval", 2, "block interval to post the next batch after posting a partial one")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
+	f.Bool("node.sequencer.reorg-out-huge-messages", false, "erase any huge messages in database that cannot be published (DANGEROUS)")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
 	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
@@ -215,8 +222,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
-	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
-	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
+	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 
 	f.Uint64("node.chain-id", 42161, "chain id of the arbitrum chain")
 
@@ -271,6 +277,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
 				"feed.input.url":                   []string{"wss://arb1.arbitrum.io/feed"},
+				"node.aggregator.inbox-address":    "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f",
 				"node.chain-id":                    "42161",
 				"node.forwarder.target":            "https://arb1.arbitrum.io/rpc",
 				"persistent.chain":                 "mainnet",
@@ -289,6 +296,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
 				"feed.input.url":                   []string{"wss://rinkeby.arbitrum.io/feed"},
+				"node.aggregator.inbox-address":    "0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e",
 				"node.chain-id":                    "421611",
 				"node.forwarder.target":            "https://rinkeby.arbitrum.io/rpc",
 				"persistent.chain":                 "rinkeby",
@@ -454,15 +462,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	}
 
 	// Initial application of command line parameters and environment variables so other methods can be applied
-	// Command line parameters and environment variables will be applied again to override other methods
-	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
-		return nil, errors.Wrap(err, "error loading config")
-	}
-	err = loadEnvironmentVariables(k)
-	if err != nil {
-		return nil, errors.Wrap(err, "error loading environment variables")
-	}
-
 	if err := applyOverrides(f, k); err != nil {
 		return nil, err
 	}
@@ -471,35 +470,58 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 }
 
 func applyOverrides(f *flag.FlagSet, k *koanf.Koanf) error {
+	// Apply command line options and environment variables
+	if err := applyOverrideOverrides(f, k); err != nil {
+		return err
+	}
+
 	// Load configuration file from S3 if setup
-	if err := loadS3Variables(k); err != nil {
-		return errors.Wrap(err, "error loading S3 settings")
+	if len(k.String("conf.s3.secret-key")) != 0 {
+		if err := loadS3Variables(k); err != nil {
+			return errors.Wrap(err, "error loading S3 settings")
+		}
+
+		if err := applyOverrideOverrides(f, k); err != nil {
+			return err
+		}
 	}
 
 	// Local config file overrides S3 config file
 	configFile := k.String("conf.file")
 	if len(configFile) > 0 {
 		if err := k.Load(file.Provider(configFile), json.Parser()); err != nil {
-			return errors.Wrap(err, "error loading config file")
+			return errors.Wrap(err, "error loading local config file")
 		}
+
+		if err := applyOverrideOverrides(f, k); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// applyOverrideOverrides for configuration values that need to be re-applied for each configuration item applied
+func applyOverrideOverrides(f *flag.FlagSet, k *koanf.Koanf) error {
+	// Command line overrides config file or config string
+	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+		return errors.Wrap(err, "error loading command line config")
 	}
 
 	// Config string overrides any config file
 	configString := k.String("conf.string")
 	if len(configString) > 0 {
-		if err := k.Load(rawbytes.Provider([]byte(configString)), nil); err != nil {
-			return errors.Wrap(err, "error loading config")
+		if err := k.Load(rawbytes.Provider([]byte(configString)), json.Parser()); err != nil {
+			return errors.Wrap(err, "error loading config string config")
+		}
+
+		// Command line overrides config file or config string
+		if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+			return errors.Wrap(err, "error loading command line config")
 		}
 	}
 
-	// Command line overrides config file or config string
-	// Will be applied again after chain specific overrides
-	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
-		return errors.Wrap(err, "error loading config")
-	}
-
 	// Environment variables overrides config files or command line options
-	// Will be applied again after chain specific overrides
 	if err := loadEnvironmentVariables(k); err != nil {
 		return errors.Wrap(err, "error loading environment variables")
 	}
@@ -522,17 +544,13 @@ func loadEnvironmentVariables(k *koanf.Koanf) error {
 }
 
 func loadS3Variables(k *koanf.Koanf) error {
-	if len(k.String("conf.s3.secret-key")) != 0 {
-		return k.Load(s3.Provider(s3.Config{
-			AccessKey: k.String("conf.s3.access-key"),
-			SecretKey: k.String("conf.s3.secret-key"),
-			Region:    k.String("conf.s3.region"),
-			Bucket:    k.String("conf.s3.bucket"),
-			ObjectKey: k.String("conf.s3.object-key"),
-		}), nil)
-	}
-
-	return nil
+	return k.Load(s3.Provider(s3.Config{
+		AccessKey: k.String("conf.s3.access-key"),
+		SecretKey: k.String("conf.s3.secret-key"),
+		Region:    k.String("conf.s3.region"),
+		Bucket:    k.String("conf.s3.bucket"),
+		ObjectKey: k.String("conf.s3.object-key"),
+	}), nil)
 }
 
 func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {

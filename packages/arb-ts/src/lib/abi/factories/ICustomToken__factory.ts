@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ICustomToken } from '../ICustomToken'
-
-export class ICustomToken__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ICustomToken {
-    return new Contract(address, _abi, signerOrProvider) as ICustomToken
-  }
-}
+import type { ICustomToken, ICustomTokenInterface } from '../ICustomToken'
 
 const _abi = [
   {
@@ -58,6 +48,11 @@ const _abi = [
         name: 'gasPriceBid',
         type: 'uint256',
       },
+      {
+        internalType: 'address',
+        name: 'creditBackAddress',
+        type: 'address',
+      },
     ],
     name: 'registerTokenOnL2',
     outputs: [],
@@ -94,3 +89,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ICustomToken__factory {
+  static readonly abi = _abi
+  static createInterface(): ICustomTokenInterface {
+    return new utils.Interface(_abi) as ICustomTokenInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ICustomToken {
+    return new Contract(address, _abi, signerOrProvider) as ICustomToken
+  }
+}

@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface ArbitrumGatewayInterface extends ethers.utils.Interface {
   functions: {
@@ -111,16 +110,46 @@ interface ArbitrumGatewayInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
 }
 
-export class ArbitrumGateway extends Contract {
+export class ArbitrumGateway extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: ArbitrumGatewayInterface
 
@@ -130,14 +159,7 @@ export class ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    'calculateL2TokenAddress(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
     counterpartGateway(overrides?: CallOverrides): Promise<[string]>
-
-    'counterpartGateway()'(overrides?: CallOverrides): Promise<[string]>
 
     finalizeInboundTransfer(
       _token: string,
@@ -145,32 +167,12 @@ export class ArbitrumGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     gasReserveIfCallRevert(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     getOutboundCalldata(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    'getOutboundCalldata(address,address,address,uint256,bytes)'(
       _token: string,
       _from: string,
       _to: string,
@@ -185,16 +187,7 @@ export class ArbitrumGateway extends Contract {
       _from: string,
       _to: string,
       _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     outboundTransfer(
@@ -204,22 +197,10 @@ export class ArbitrumGateway extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _l1Token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     router(overrides?: CallOverrides): Promise<[string]>
-
-    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
 
   calculateL2TokenAddress(
@@ -227,14 +208,7 @@ export class ArbitrumGateway extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  'calculateL2TokenAddress(address)'(
-    l1ERC20: string,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   counterpartGateway(overrides?: CallOverrides): Promise<string>
-
-  'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
 
   finalizeInboundTransfer(
     _token: string,
@@ -242,32 +216,12 @@ export class ArbitrumGateway extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-    _token: string,
-    _from: string,
-    _to: string,
-    _amount: BigNumberish,
-    _data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
 
-  'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
-
   getOutboundCalldata(
-    _token: string,
-    _from: string,
-    _to: string,
-    _amount: BigNumberish,
-    _data: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<string>
-
-  'getOutboundCalldata(address,address,address,uint256,bytes)'(
     _token: string,
     _from: string,
     _to: string,
@@ -282,16 +236,7 @@ export class ArbitrumGateway extends Contract {
     _from: string,
     _to: string,
     _data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-    _l2Address: string,
-    _amount: BigNumberish,
-    _from: string,
-    _to: string,
-    _data: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   outboundTransfer(
@@ -301,22 +246,10 @@ export class ArbitrumGateway extends Contract {
     _maxGas: BigNumberish,
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-    _l1Token: string,
-    _to: string,
-    _amount: BigNumberish,
-    _maxGas: BigNumberish,
-    _gasPriceBid: BigNumberish,
-    _data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   router(overrides?: CallOverrides): Promise<string>
-
-  'router()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
     calculateL2TokenAddress(
@@ -324,14 +257,7 @@ export class ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    'calculateL2TokenAddress(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     counterpartGateway(overrides?: CallOverrides): Promise<string>
-
-    'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
 
     finalizeInboundTransfer(
       _token: string,
@@ -342,29 +268,9 @@ export class ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
 
-    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
-
     getOutboundCalldata(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'getOutboundCalldata(address,address,address,uint256,bytes)'(
       _token: string,
       _from: string,
       _to: string,
@@ -382,26 +288,7 @@ export class ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     outboundTransfer(
-      _l1Token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
       _l1Token: string,
       _to: string,
       _amount: BigNumberish,
@@ -412,36 +299,63 @@ export class ArbitrumGateway extends Contract {
     ): Promise<string>
 
     router(overrides?: CallOverrides): Promise<string>
-
-    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
     InboundTransferFinalized(
-      token: null,
-      _from: string | null,
-      _to: string | null,
-      _transferId: BigNumberish | null,
-      _amount: null,
-      _data: null
-    ): EventFilter
+      token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _transferId?: BigNumberish | null,
+      _amount?: null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber, string],
+      {
+        token: string
+        _from: string
+        _to: string
+        _transferId: BigNumber
+        _amount: BigNumber
+        _data: string
+      }
+    >
 
     OutboundTransferInitiated(
-      token: null,
-      _from: string | null,
-      _to: string | null,
-      _transferId: BigNumberish | null,
-      _amount: null,
-      _data: null
-    ): EventFilter
+      token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _transferId?: BigNumberish | null,
+      _amount?: null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber, string],
+      {
+        token: string
+        _from: string
+        _to: string
+        _transferId: BigNumber
+        _amount: BigNumber
+        _data: string
+      }
+    >
 
     TransferAndCallTriggered(
-      success: null,
-      _from: string | null,
-      _to: string | null,
-      _amount: null,
-      callHookData: null
-    ): EventFilter
+      success?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _amount?: null,
+      callHookData?: null
+    ): TypedEventFilter<
+      [boolean, string, string, BigNumber, string],
+      {
+        success: boolean
+        _from: string
+        _to: string
+        _amount: BigNumber
+        callHookData: string
+      }
+    >
   }
 
   estimateGas: {
@@ -450,14 +364,7 @@ export class ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'calculateL2TokenAddress(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     counterpartGateway(overrides?: CallOverrides): Promise<BigNumber>
-
-    'counterpartGateway()'(overrides?: CallOverrides): Promise<BigNumber>
 
     finalizeInboundTransfer(
       _token: string,
@@ -465,32 +372,12 @@ export class ArbitrumGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
 
-    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
-
     getOutboundCalldata(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'getOutboundCalldata(address,address,address,uint256,bytes)'(
       _token: string,
       _from: string,
       _to: string,
@@ -505,16 +392,7 @@ export class ArbitrumGateway extends Contract {
       _from: string,
       _to: string,
       _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     outboundTransfer(
@@ -524,22 +402,10 @@ export class ArbitrumGateway extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _l1Token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     router(overrides?: CallOverrides): Promise<BigNumber>
-
-    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -548,16 +414,7 @@ export class ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'calculateL2TokenAddress(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     counterpartGateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'counterpartGateway()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
 
     finalizeInboundTransfer(
       _token: string,
@@ -565,36 +422,14 @@ export class ArbitrumGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     gasReserveIfCallRevert(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'gasReserveIfCallRevert()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getOutboundCalldata(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getOutboundCalldata(address,address,address,uint256,bytes)'(
       _token: string,
       _from: string,
       _to: string,
@@ -609,16 +444,7 @@ export class ArbitrumGateway extends Contract {
       _from: string,
       _to: string,
       _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     outboundTransfer(
@@ -628,21 +454,9 @@ export class ArbitrumGateway extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _l1Token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }
