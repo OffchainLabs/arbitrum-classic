@@ -19,7 +19,6 @@ import { ethers, deployments, run } from 'hardhat'
 import { Signer, BigNumberish, Contract, BytesLike, BigNumber } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { assert, expect } from 'chai'
-import { RollupCreatorNoProxy__factory } from '../build/types/factories/RollupCreatorNoProxy__factory'
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
 import { initializeAccounts } from './utils'
@@ -101,9 +100,9 @@ async function createRollup(
   if (shouldDebug) {
     // this deploys the rollup contracts without proxies to facilitate debugging
     const ChallengeFactory = await deployments.get('ChallengeFactory')
-    const RollupCreatorNoProxy = (await ethers.getContractFactory(
+    const RollupCreatorNoProxy = await ethers.getContractFactory(
       'RollupCreatorNoProxy'
-    )) as RollupCreatorNoProxy__factory
+    )
     rollupCreator = await RollupCreatorNoProxy.deploy(
       ChallengeFactory.address,
       ...rollupConfig
