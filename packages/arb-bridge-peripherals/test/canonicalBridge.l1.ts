@@ -181,7 +181,15 @@ describe('Bridge peripherals layer 1', () => {
     // TicketData(uint256)
     const expectedTopic =
       '0x7efacbad201ebbc50ec0ce4b474c54b735a31b1bac996acff50df7de0314e8f9'
-    const logs = receipt.events
+    const events = receipt.events
+
+    if (!events) {
+      const msg = 'No events in receipt'
+      assert(events, msg)
+      throw new Error(msg)
+    }
+
+    const logs = events
       .filter((curr: any) => curr.topics[0] === expectedTopic)
       .map((curr: any) => inbox.interface.parseLog(curr))
 
