@@ -20,23 +20,27 @@ project (fuzz_target LANGUAGES CXX)
 
 set(SHARED_SOURCE utils.cpp utils.hpp)
 
-set(GO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/proofchecker)
-set(GO_SRCS ${GO_SRC_DIR}/proofchecker.go)
-set(GO_LIBNAME libproofchecker.dylib)
-set(GOPATH ${CMAKE_CURRENT_BINARY_DIR})
-
 if(UNIX AND NOT APPLE)
     set(LINUX TRUE)
 endif()
 
 if(LINUX) 
     SET(LIBNAME soname)
+    SET(LIB_EXTENSION so)
     # linux stuff here
 elseif(APPLE)
     SET(LIBNAME install_name)
+    SET(LIB_EXTENSION dylib)
 else()
     message(FATAL_ERROR "not support on non-unix systems")
 endif()
+
+set(GO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/proofchecker)
+set(GO_SRCS ${GO_SRC_DIR}/proofchecker.go)
+set(GO_LIBNAME libproofchecker.${LIB_EXTENSION})
+set(GOPATH ${CMAKE_CURRENT_BINARY_DIR})
+
+
 
 # Custom command for 'go build -buildmode=c-shared ...'
 # to create a library from Go codes.
