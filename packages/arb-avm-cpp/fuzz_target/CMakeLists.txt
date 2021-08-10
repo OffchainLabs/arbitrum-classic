@@ -20,7 +20,7 @@ project (fuzz_target LANGUAGES CXX)
 
 set(SHARED_SOURCE utils.cpp utils.hpp)
 
-set(GO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../arb-util/lib/proofchecker)
+set(GO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/proofchecker)
 set(GO_SRCS ${GO_SRC_DIR}/proofchecker.go)
 set(GO_LIBNAME libproofchecker.dylib)
 set(GOPATH ${CMAKE_CURRENT_BINARY_DIR})
