@@ -21,9 +21,10 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../ITransferAndCall.sol";
-import "./TokenGateway.sol";
 
-abstract contract ArbitrumGateway is TokenGateway {
+// import "./TokenGateway.sol";
+
+abstract contract EscrowAndCallGateway {
     using Address for address;
 
     event TransferAndCallTriggered(
@@ -33,27 +34,6 @@ abstract contract ArbitrumGateway is TokenGateway {
         uint256 _amount,
         bytes callHookData
     );
-
-    function _initialize(address _counterpartGateway, address _router) internal virtual override {
-        TokenGateway._initialize(_counterpartGateway, _router);
-    }
-
-    function outboundTransfer(
-        address _l1Token,
-        address _to,
-        uint256 _amount,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes calldata _data
-    ) external payable virtual override returns (bytes memory);
-
-    function finalizeInboundTransfer(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes calldata _data
-    ) external payable virtual override returns (bytes memory);
 
     function inboundEscrowAndCall(
         address _l2Address,

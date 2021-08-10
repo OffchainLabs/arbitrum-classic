@@ -20,7 +20,6 @@ pragma solidity ^0.6.11;
 
 // import "./ITokenGateway.sol";
 
-// interface IGatewayRouter is ITokenGateway {
 interface ICustomGateway {
     function l1ToL2Token(address _l1Token) external view returns (address _l2Token);
 

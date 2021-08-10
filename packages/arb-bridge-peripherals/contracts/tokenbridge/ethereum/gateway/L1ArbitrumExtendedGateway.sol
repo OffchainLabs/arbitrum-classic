@@ -32,6 +32,7 @@ interface ITradeableExitReceiver {
 
 abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
     struct ExitData {
+        bool isExit;
         address _newTo;
         bytes _newData;
     }
@@ -72,7 +73,7 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         address _newDestination,
         bytes calldata _newData,
         bytes calldata _data
-    ) external virtual {
+    ) external {
         // the initial data doesn't make a difference when transfering you exit
         // since the L2 bridge gives a unique exit ID to each exit
         (address expectedSender, ) = getExternalCall(_exitNum, _initialDestination, "");
@@ -109,12 +110,18 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         address _initialDestination,
         bytes memory _initialData
     ) public view virtual override returns (address target, bytes memory data) {
+        // this function is virtual so that subclasses can override it with custom logic where necessary
         bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
-        ExitData memory exit = redirectedExits[withdrawData];
-        // if `_newTo` is not set, we return the initial destination
-        target = exit._newTo == address(0) ? _initialDestination : exit._newTo;
-        data = exit._newData;
-        return (target, data);
+        ExitData storage exit = redirectedExits[withdrawData];
+
+        // here we don't authenticate `_initialData`. we could hash it into `withdrawData` but would increase gas costs
+        // this is safe because if the exit isn't overriden, the _initialData coming from L2 is trusted
+        // but if the exit is traded, all we care about is the latest user calldata
+        if (exit.isExit) {
+            return (exit._newTo, exit._newData);
+        } else {
+            return (_initialDestination, _initialData);
+        }
     }
 
     function setRedirectedExit(
@@ -122,15 +129,14 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         address _initialDestination,
         address _newDestination,
         bytes memory _newData
-    ) internal virtual {
+    ) internal {
         bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
-        redirectedExits[withdrawData] = ExitData(_newDestination, _newData);
+        redirectedExits[withdrawData] = ExitData(true, _newDestination, _newData);
     }
 
     function encodeWithdrawal(uint256 _exitNum, address _initialDestination)
         public
         pure
-        virtual
         returns (bytes32)
     {
         // here we assume the L2 bridge gives a unique exitNum to each exit

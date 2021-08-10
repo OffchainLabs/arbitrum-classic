@@ -31,7 +31,7 @@ describe('Mainnet fork', () => {
 
     // deploy new logic contracts
     const NewRollupLogic = await ethers.getContractFactory('Rollup')
-    const newRollupLogic = await NewRollupLogic.deploy()
+    const newRollupLogic = await NewRollupLogic.deploy(1)
     await newRollupLogic.deployed()
 
     const NewAdminFacet = await ethers.getContractFactory('RollupAdminFacet')
@@ -124,6 +124,6 @@ describe('Mainnet fork', () => {
 
     await expect(
       rollupDispatch.postUpgradeInit(newerAdminFacet.address)
-    ).to.be.revertedWith('ALREADY_POST_INIT')
+    ).to.be.revertedWith('NOT_FROM_ADMIN')
   })
 })

@@ -36,6 +36,7 @@ import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IOutbox.sol";
 import "../bridge/Messages.sol";
 
+import "../libraries/ProxyUtil.sol";
 import "../libraries/Cloneable.sol";
 import "./facets/IRollupFacets.sol";
 
@@ -144,6 +145,11 @@ contract Rollup is Proxy, RollupBase {
     }
 
     function postUpgradeInit(address newAdminFacet) external {
+        // it is assumed the rollup contract is behind a Proxy controlled by a proxy admin
+        // this function can only be called by the proxy admin contract
+        address proxyAdmin = ProxyUtil.getProxyAdmin();
+        require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
+
         // this upgrade moves the delay blocks and seconds tracking to the sequencer inbox
         // because of that we need to update the admin facet logic to allow the owner to set
         // these values in the sequencer inbox
