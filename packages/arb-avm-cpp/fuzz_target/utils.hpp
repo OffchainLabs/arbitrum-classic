@@ -41,20 +41,8 @@ constexpr uint256_t FUZZ_MAX_GAS = 10'000;
 constexpr uint64_t FUZZ_MAX_STEPS = 100;
 
 class ProofTester {
-   protected:
-    std::string queryPipePath;
-    std::string resultPipePath;
-    std::fstream queryPipe;
-    std::fstream resultPipe;
-
-    void writeMachineState(const Machine& machine);
-    void writeVarSizedBytes(const std::vector<unsigned char>& data);
-    void writeProof(const OneStepProof& proof);
-    uint8_t readResult();
-
    public:
     ProofTester(bool debug);
-    ~ProofTester();
 
     void testMachine(Machine machine);
 };

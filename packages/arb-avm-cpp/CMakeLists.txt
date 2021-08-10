@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.20)
 
 find_package(Git)
 if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../.git")
@@ -66,8 +66,8 @@ if (${AVM_FUZZER} MATCHES "afl")
     add_compile_options(-fsanitize=address)
     add_link_options(-fsanitize=address)
 elseif (${AVM_FUZZER} MATCHES "libfuzzer")
-    SET(CMAKE_C_COMPILER "/usr/bin/clang" CACHE PATH "" FORCE)
-    SET(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE PATH "" FORCE)
+    SET(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang" CACHE PATH "" FORCE)
+    SET(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++" CACHE PATH "" FORCE)
     add_compile_options(-fsanitize=address,fuzzer-no-link)
     add_link_options(-fsanitize=address,fuzzer)
 elseif (${AVM_FUZZER} MATCHES "honggfuzz")

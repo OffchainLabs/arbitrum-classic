@@ -10,7 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
@@ -18,7 +19,6 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"

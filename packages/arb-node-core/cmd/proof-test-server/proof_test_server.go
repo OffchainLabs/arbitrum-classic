@@ -24,82 +24,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
-	"github.com/pkg/errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/proofmachine"
 )
-
-type stateData struct {
-	gasUsed           *big.Int
-	totalMessagesRead *big.Int
-	machineHash       common.Hash
-	sendAcc           common.Hash
-	logAcc            common.Hash
-}
-
-type proofData struct {
-	before      stateData
-	proof       []byte
-	bufferProof []byte
-	after       stateData
-}
-
-func getProverNum(op uint8) uint8 {
-	if (op >= 0xa1 && op <= 0xa6) || op == 0x70 {
-		return 1
-	} else if op >= 0x20 && op <= 0x24 {
-		return 2
-	} else {
-		return 0
-	}
-}
-
-func checkProof(proof proofData, osps []*ethbridgetestcontracts.IOneStepProof, sequencerBridge, delayedBridge ethcommon.Address, debug bool) error {
-	op := proof.proof[0]
-	if debug {
-		fmt.Fprintf(os.Stderr, "Proving execution of opcode 0x%x\n", op)
-	}
-	prover := getProverNum(op)
-	machineData, err := osps[prover].ExecuteStep(
-		&bind.CallOpts{},
-		[2]ethcommon.Address{sequencerBridge, delayedBridge},
-		proof.before.totalMessagesRead,
-		[2][32]byte{
-			proof.before.sendAcc,
-			proof.before.logAcc,
-		},
-		proof.proof,
-		proof.bufferProof,
-	)
-	if err != nil {
-		return errors.Wrap(err, "Solidity OSP execution failed")
-	}
-	correctGasUsed := new(big.Int).Sub(proof.after.gasUsed, proof.before.gasUsed)
-	if new(big.Int).SetUint64(machineData.Gas).Cmp(correctGasUsed) != 0 {
-		return errors.Errorf("wrong gas %v instead of %v", machineData.Gas, correctGasUsed)
-	}
-	if machineData.AfterMessagesRead.Cmp(proof.after.totalMessagesRead) != 0 {
-		return errors.Errorf("wrong total messages read")
-	}
-	if machineData.Fields[0] != proof.before.machineHash {
-		return errors.Errorf("wrong before machine")
-	}
-	if machineData.Fields[2] != proof.after.sendAcc {
-		return errors.Errorf("wrong send accumulator")
-	}
-	if machineData.Fields[3] != proof.after.logAcc {
-		return errors.Errorf("wrong log accumulator")
-	}
-	if machineData.Fields[1] != proof.after.machineHash {
-		return errors.Errorf("wrong after machine (got %v but expected %v)", common.Hash(machineData.Fields[1]).String(), proof.after.machineHash.String())
-	}
-	return nil
-}
 
 func handleFatalError(err error) {
 	if err != nil {
@@ -112,17 +44,20 @@ func handleFatalError(err error) {
 	}
 }
 
-func readStateData(reader io.Reader) stateData {
+func readStateData(reader io.Reader) *core.ExecutionState {
 	buf := make([]byte, 32*5)
 	_, err := io.ReadFull(reader, buf)
 	handleFatalError(err)
-	data := stateData{
-		gasUsed:           new(big.Int).SetBytes(buf[:32]),
-		totalMessagesRead: new(big.Int).SetBytes(buf[32:64]),
+	data := &core.ExecutionState{
+		InboxAcc:          common.Hash{},
+		TotalMessagesRead: new(big.Int).SetBytes(buf[32:64]),
+		TotalGasConsumed:  new(big.Int).SetBytes(buf[:32]),
+		TotalSendCount:    nil,
+		TotalLogCount:     nil,
 	}
-	copy(data.machineHash[:], buf[64:96])
-	copy(data.sendAcc[:], buf[96:128])
-	copy(data.logAcc[:], buf[128:160])
+	copy(data.MachineHash[:], buf[64:96])
+	copy(data.SendAcc[:], buf[96:128])
+	copy(data.LogAcc[:], buf[128:160])
 	return data
 }
 
@@ -136,16 +71,18 @@ func readBytes(reader io.Reader) []byte {
 	return buf
 }
 
-func readProofData(reader io.Reader) proofData {
+func readProofData(reader io.Reader) *proofmachine.ProofData {
 	before := readStateData(reader)
 	proof := readBytes(reader)
 	bufferProof := readBytes(reader)
 	after := readStateData(reader)
-	return proofData{
-		before:      before,
-		proof:       proof,
-		bufferProof: bufferProof,
-		after:       after,
+	return &proofmachine.ProofData{
+		Assertion: &core.Assertion{
+			Before: before,
+			After:  after,
+		},
+		Proof:       proof,
+		BufferProof: bufferProof,
 	}
 }
 
@@ -177,46 +114,22 @@ func main() {
 	backend, auths := test.SimulatedBackend(&testing.T{})
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := auths[0]
+	proofChecker, err := proofmachine.NewProofChecker(auth, client)
 	handleFatalError(err)
-	sequencer := common.RandAddress().ToEthAddress()
-	maxDelayBlocks := big.NewInt(60)
-	maxDelaySeconds := big.NewInt(900)
-
-	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
-	handleFatalError(err)
-	osp2Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof2(auth, client)
-	handleFatalError(err)
-	osp3Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProofHash(auth, client)
-	handleFatalError(err)
-	delayedBridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(auth, client)
-	handleFatalError(err)
-	sequencerBridgeAddr, _, sequencerCon, err := ethbridgecontracts.DeploySequencerInbox(auth, client)
-	handleFatalError(err)
-	rollupAddr, _, rollup, err := ethbridgetestcontracts.DeployRollupMock(auth, client)
-	handleFatalError(err)
-	client.Commit()
-
-	_, err = rollup.SetMock(auth, maxDelayBlocks, maxDelaySeconds)
-	handleFatalError(err)
-	_, err = sequencerCon.Initialize(auth, delayedBridgeAddr, sequencer, rollupAddr)
-	handleFatalError(err)
-	client.Commit()
-
-	osp1, err := ethbridgetestcontracts.NewIOneStepProof(osp1Addr, client)
-	handleFatalError(err)
-	osp2, err := ethbridgetestcontracts.NewIOneStepProof(osp2Addr, client)
-	handleFatalError(err)
-	osp3, err := ethbridgetestcontracts.NewIOneStepProof(osp3Addr, client)
-	handleFatalError(err)
-	provers := []*ethbridgetestcontracts.IOneStepProof{osp1, osp2, osp3}
 
 	for {
 		proof := readProofData(queryPipe)
-		err = checkProof(proof, provers, sequencerBridgeAddr, delayedBridgeAddr, debug)
+		if debug {
+			fmt.Fprintf(os.Stderr, "Proving execution of opcode 0x%x\n", proof.Proof[0])
+		}
+		proofErrors := proofChecker.CheckProof(proof)
 		retByte := uint8(0)
-		if err != nil {
+		if len(proofErrors) > 0 {
 			retByte = 1
-			fmt.Fprintf(os.Stderr, "Error verifying proof: %v\n", err)
+			fmt.Fprintln(os.Stderr, "Error verifying proof:")
+		}
+		for _, err := range proofChecker.CheckProof(proof) {
+			fmt.Fprintln(os.Stderr, err)
 		}
 		_, err = resultPipe.Write([]byte{retByte})
 		handleFatalError(err)
