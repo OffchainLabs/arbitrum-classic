@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IERC677 } from '../IERC677'
-
-export class IERC677__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IERC677 {
-    return new Contract(address, _abi, signerOrProvider) as IERC677
-  }
-}
+import type { IERC677, IERC677Interface } from '../IERC677'
 
 const _abi = [
   {
@@ -261,3 +251,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class IERC677__factory {
+  static readonly abi = _abi
+  static createInterface(): IERC677Interface {
+    return new utils.Interface(_abi) as IERC677Interface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IERC677 {
+    return new Contract(address, _abi, signerOrProvider) as IERC677
+  }
+}

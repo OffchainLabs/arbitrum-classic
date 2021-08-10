@@ -2,19 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ArbitrumGateway } from '../ArbitrumGateway'
-
-export class ArbitrumGateway__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ArbitrumGateway {
-    return new Contract(address, _abi, signerOrProvider) as ArbitrumGateway
-  }
-}
+import type {
+  ArbitrumGateway,
+  ArbitrumGatewayInterface,
+} from '../ArbitrumGateway'
 
 const _abi = [
   {
@@ -354,3 +347,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ArbitrumGateway__factory {
+  static readonly abi = _abi
+  static createInterface(): ArbitrumGatewayInterface {
+    return new utils.Interface(_abi) as ArbitrumGatewayInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ArbitrumGateway {
+    return new Contract(address, _abi, signerOrProvider) as ArbitrumGateway
+  }
+}

@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface AddInterface extends ethers.utils.Interface {
   functions: {
@@ -84,16 +83,46 @@ interface AddInterface extends ethers.utils.Interface {
   events: {}
 }
 
-export class Add extends Contract {
+export class Add extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: AddInterface
 
@@ -104,23 +133,15 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
-    'add(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
     getSeqNum(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'getSeqNum()'(overrides?: CallOverrides): Promise<[BigNumber]>
+    isNotTopLevel(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
-    isNotTopLevel(overrides?: Overrides): Promise<ContractTransaction>
-
-    'isNotTopLevel()'(overrides?: Overrides): Promise<ContractTransaction>
-
-    isTopLevel(overrides?: Overrides): Promise<ContractTransaction>
-
-    'isTopLevel()'(overrides?: Overrides): Promise<ContractTransaction>
+    isTopLevel(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     mult(
       x: BigNumberish,
@@ -128,20 +149,9 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
-    'mult(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
     payTo(
       addr: string,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'payTo(address)'(
-      addr: string,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     pythag(
@@ -150,20 +160,12 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
-    'pythag(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
+    withdraw5000(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
-    withdraw5000(overrides?: Overrides): Promise<ContractTransaction>
-
-    'withdraw5000()'(overrides?: Overrides): Promise<ContractTransaction>
-
-    withdrawMyEth(overrides?: PayableOverrides): Promise<ContractTransaction>
-
-    'withdrawMyEth()'(
-      overrides?: PayableOverrides
+    withdrawMyEth(
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
@@ -173,23 +175,15 @@ export class Add extends Contract {
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
-  'add(uint256,uint256)'(
-    x: BigNumberish,
-    y: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
   getSeqNum(overrides?: CallOverrides): Promise<BigNumber>
 
-  'getSeqNum()'(overrides?: CallOverrides): Promise<BigNumber>
+  isNotTopLevel(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
-  isNotTopLevel(overrides?: Overrides): Promise<ContractTransaction>
-
-  'isNotTopLevel()'(overrides?: Overrides): Promise<ContractTransaction>
-
-  isTopLevel(overrides?: Overrides): Promise<ContractTransaction>
-
-  'isTopLevel()'(overrides?: Overrides): Promise<ContractTransaction>
+  isTopLevel(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   mult(
     x: BigNumberish,
@@ -197,20 +191,9 @@ export class Add extends Contract {
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
-  'mult(uint256,uint256)'(
-    x: BigNumberish,
-    y: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
   payTo(
     addr: string,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'payTo(address)'(
-    addr: string,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   pythag(
@@ -219,19 +202,13 @@ export class Add extends Contract {
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
-  'pythag(uint256,uint256)'(
-    x: BigNumberish,
-    y: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
+  withdraw5000(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
-  withdraw5000(overrides?: Overrides): Promise<ContractTransaction>
-
-  'withdraw5000()'(overrides?: Overrides): Promise<ContractTransaction>
-
-  withdrawMyEth(overrides?: PayableOverrides): Promise<ContractTransaction>
-
-  'withdrawMyEth()'(overrides?: PayableOverrides): Promise<ContractTransaction>
+  withdrawMyEth(
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   callStatic: {
     add(
@@ -240,23 +217,11 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'add(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     getSeqNum(overrides?: CallOverrides): Promise<BigNumber>
-
-    'getSeqNum()'(overrides?: CallOverrides): Promise<BigNumber>
 
     isNotTopLevel(overrides?: CallOverrides): Promise<boolean>
 
-    'isNotTopLevel()'(overrides?: CallOverrides): Promise<boolean>
-
     isTopLevel(overrides?: CallOverrides): Promise<boolean>
-
-    'isTopLevel()'(overrides?: CallOverrides): Promise<boolean>
 
     mult(
       x: BigNumberish,
@@ -264,15 +229,7 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'mult(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     payTo(addr: string, overrides?: CallOverrides): Promise<void>
-
-    'payTo(address)'(addr: string, overrides?: CallOverrides): Promise<void>
 
     pythag(
       x: BigNumberish,
@@ -280,19 +237,9 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'pythag(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     withdraw5000(overrides?: CallOverrides): Promise<void>
 
-    'withdraw5000()'(overrides?: CallOverrides): Promise<void>
-
     withdrawMyEth(overrides?: CallOverrides): Promise<void>
-
-    'withdrawMyEth()'(overrides?: CallOverrides): Promise<void>
   }
 
   filters: {}
@@ -304,23 +251,15 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'add(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     getSeqNum(overrides?: CallOverrides): Promise<BigNumber>
 
-    'getSeqNum()'(overrides?: CallOverrides): Promise<BigNumber>
+    isNotTopLevel(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
-    isNotTopLevel(overrides?: Overrides): Promise<BigNumber>
-
-    'isNotTopLevel()'(overrides?: Overrides): Promise<BigNumber>
-
-    isTopLevel(overrides?: Overrides): Promise<BigNumber>
-
-    'isTopLevel()'(overrides?: Overrides): Promise<BigNumber>
+    isTopLevel(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     mult(
       x: BigNumberish,
@@ -328,17 +267,9 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'mult(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    payTo(addr: string, overrides?: PayableOverrides): Promise<BigNumber>
-
-    'payTo(address)'(
+    payTo(
       addr: string,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     pythag(
@@ -347,19 +278,13 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'pythag(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
+    withdraw5000(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    withdraw5000(overrides?: Overrides): Promise<BigNumber>
-
-    'withdraw5000()'(overrides?: Overrides): Promise<BigNumber>
-
-    withdrawMyEth(overrides?: PayableOverrides): Promise<BigNumber>
-
-    'withdrawMyEth()'(overrides?: PayableOverrides): Promise<BigNumber>
+    withdrawMyEth(
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -369,23 +294,15 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'add(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getSeqNum(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'getSeqNum()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    isNotTopLevel(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
-    isNotTopLevel(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'isNotTopLevel()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    isTopLevel(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'isTopLevel()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    isTopLevel(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     mult(
       x: BigNumberish,
@@ -393,20 +310,9 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'mult(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     payTo(
       addr: string,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'payTo(address)'(
-      addr: string,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     pythag(
@@ -415,20 +321,12 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'pythag(uint256,uint256)'(
-      x: BigNumberish,
-      y: BigNumberish,
-      overrides?: CallOverrides
+    withdraw5000(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    withdraw5000(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'withdraw5000()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    withdrawMyEth(overrides?: PayableOverrides): Promise<PopulatedTransaction>
-
-    'withdrawMyEth()'(
-      overrides?: PayableOverrides
+    withdrawMyEth(
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

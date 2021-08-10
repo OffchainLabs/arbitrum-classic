@@ -63,6 +63,7 @@ async function promptUserToContinue() {
     case 'N': {
       console.log('Selected: No')
       process.exit(1)
+      break
     }
     default: {
       console.log('Please input (Y)es or (N)o.')
@@ -164,13 +165,13 @@ async function main() {
   // TODO: update templates in creators
 
   // TODO: deploy new instances, then update connected contracts
-  const updateTx = await rollupInstance.updateConnectedContracts(
-    [
-      // [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
-    ],
-    [true, true, true, true, true, true]
-  )
-  const updateReceipt = await updateTx.wait()
+  // const updateTx = await rollupInstance.updateConnectedContracts(
+  //   [
+  // [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
+  //   ],
+  //   [true, true, true, true, true, true]
+  // )
+  // const updateReceipt = await updateTx.wait()
 }
 
 main()

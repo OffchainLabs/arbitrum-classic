@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface SequencerInboxInterface extends ethers.utils.Interface {
   functions: {
@@ -167,16 +166,46 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
   ): EventFragment
 }
 
-export class SequencerInbox extends Contract {
+export class SequencerInbox extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: SequencerInboxInterface
 
@@ -186,15 +215,7 @@ export class SequencerInbox extends Contract {
       lengths: BigNumberish[],
       sectionsMetadata: BigNumberish[],
       afterAcc: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'addSequencerL2Batch(bytes,uint256[],uint256[],bytes32)'(
-      transactions: BytesLike,
-      lengths: BigNumberish[],
-      sectionsMetadata: BigNumberish[],
-      afterAcc: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     addSequencerL2BatchFromOrigin(
@@ -202,20 +223,10 @@ export class SequencerInbox extends Contract {
       lengths: BigNumberish[],
       sectionsMetadata: BigNumberish[],
       afterAcc: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'addSequencerL2BatchFromOrigin(bytes,uint256[],uint256[],bytes32)'(
-      transactions: BytesLike,
-      lengths: BigNumberish[],
-      sectionsMetadata: BigNumberish[],
-      afterAcc: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     delayedInbox(overrides?: CallOverrides): Promise<[string]>
-
-    'delayedInbox()'(overrides?: CallOverrides): Promise<[string]>
 
     forceInclusion(
       _totalDelayedMessagesRead: BigNumberish,
@@ -226,61 +237,27 @@ export class SequencerInbox extends Contract {
       sender: string,
       messageDataHash: BytesLike,
       delayedAcc: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'forceInclusion(uint256,uint8,uint256[2],uint256,uint256,address,bytes32,bytes32)'(
-      _totalDelayedMessagesRead: BigNumberish,
-      kind: BigNumberish,
-      l1BlockAndTimestamp: [BigNumberish, BigNumberish],
-      inboxSeqNum: BigNumberish,
-      gasPriceL1: BigNumberish,
-      sender: string,
-      messageDataHash: BytesLike,
-      delayedAcc: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     getInboxAccsLength(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'getInboxAccsLength()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>
-
-    'inboxAccs(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>
 
     initialize(
       _delayedInbox: string,
       _sequencer: string,
       _rollup: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(address,address,address)'(
-      _delayedInbox: string,
-      _sequencer: string,
-      _rollup: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     isMaster(overrides?: CallOverrides): Promise<[boolean]>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
-
     maxDelayBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'maxDelayBlocks()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     maxDelaySeconds(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'maxDelaySeconds()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     messageCount(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'messageCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     proveBatchContainsSequenceNumber(
       proof: BytesLike,
@@ -288,35 +265,16 @@ export class SequencerInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, string]>
 
-    'proveBatchContainsSequenceNumber(bytes,uint256)'(
-      proof: BytesLike,
-      inboxCount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, string]>
-
     rollup(overrides?: CallOverrides): Promise<[string]>
-
-    'rollup()'(overrides?: CallOverrides): Promise<[string]>
 
     sequencer(overrides?: CallOverrides): Promise<[string]>
 
-    'sequencer()'(overrides?: CallOverrides): Promise<[string]>
-
     setSequencer(
       newSequencer: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setSequencer(address)'(
-      newSequencer: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     totalDelayedMessagesRead(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'totalDelayedMessagesRead()'(
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
   }
 
   addSequencerL2Batch(
@@ -324,15 +282,7 @@ export class SequencerInbox extends Contract {
     lengths: BigNumberish[],
     sectionsMetadata: BigNumberish[],
     afterAcc: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'addSequencerL2Batch(bytes,uint256[],uint256[],bytes32)'(
-    transactions: BytesLike,
-    lengths: BigNumberish[],
-    sectionsMetadata: BigNumberish[],
-    afterAcc: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   addSequencerL2BatchFromOrigin(
@@ -340,20 +290,10 @@ export class SequencerInbox extends Contract {
     lengths: BigNumberish[],
     sectionsMetadata: BigNumberish[],
     afterAcc: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'addSequencerL2BatchFromOrigin(bytes,uint256[],uint256[],bytes32)'(
-    transactions: BytesLike,
-    lengths: BigNumberish[],
-    sectionsMetadata: BigNumberish[],
-    afterAcc: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   delayedInbox(overrides?: CallOverrides): Promise<string>
-
-  'delayedInbox()'(overrides?: CallOverrides): Promise<string>
 
   forceInclusion(
     _totalDelayedMessagesRead: BigNumberish,
@@ -364,61 +304,27 @@ export class SequencerInbox extends Contract {
     sender: string,
     messageDataHash: BytesLike,
     delayedAcc: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'forceInclusion(uint256,uint8,uint256[2],uint256,uint256,address,bytes32,bytes32)'(
-    _totalDelayedMessagesRead: BigNumberish,
-    kind: BigNumberish,
-    l1BlockAndTimestamp: [BigNumberish, BigNumberish],
-    inboxSeqNum: BigNumberish,
-    gasPriceL1: BigNumberish,
-    sender: string,
-    messageDataHash: BytesLike,
-    delayedAcc: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
 
-  'getInboxAccsLength()'(overrides?: CallOverrides): Promise<BigNumber>
-
   inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
-
-  'inboxAccs(uint256)'(
-    arg0: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>
 
   initialize(
     _delayedInbox: string,
     _sequencer: string,
     _rollup: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(address,address,address)'(
-    _delayedInbox: string,
-    _sequencer: string,
-    _rollup: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   isMaster(overrides?: CallOverrides): Promise<boolean>
 
-  'isMaster()'(overrides?: CallOverrides): Promise<boolean>
-
   maxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
-
-  'maxDelayBlocks()'(overrides?: CallOverrides): Promise<BigNumber>
 
   maxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
 
-  'maxDelaySeconds()'(overrides?: CallOverrides): Promise<BigNumber>
-
   messageCount(overrides?: CallOverrides): Promise<BigNumber>
-
-  'messageCount()'(overrides?: CallOverrides): Promise<BigNumber>
 
   proveBatchContainsSequenceNumber(
     proof: BytesLike,
@@ -426,33 +332,16 @@ export class SequencerInbox extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, string]>
 
-  'proveBatchContainsSequenceNumber(bytes,uint256)'(
-    proof: BytesLike,
-    inboxCount: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<[BigNumber, string]>
-
   rollup(overrides?: CallOverrides): Promise<string>
-
-  'rollup()'(overrides?: CallOverrides): Promise<string>
 
   sequencer(overrides?: CallOverrides): Promise<string>
 
-  'sequencer()'(overrides?: CallOverrides): Promise<string>
-
   setSequencer(
     newSequencer: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setSequencer(address)'(
-    newSequencer: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   totalDelayedMessagesRead(overrides?: CallOverrides): Promise<BigNumber>
-
-  'totalDelayedMessagesRead()'(overrides?: CallOverrides): Promise<BigNumber>
 
   callStatic: {
     addSequencerL2Batch(
@@ -463,23 +352,7 @@ export class SequencerInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'addSequencerL2Batch(bytes,uint256[],uint256[],bytes32)'(
-      transactions: BytesLike,
-      lengths: BigNumberish[],
-      sectionsMetadata: BigNumberish[],
-      afterAcc: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     addSequencerL2BatchFromOrigin(
-      transactions: BytesLike,
-      lengths: BigNumberish[],
-      sectionsMetadata: BigNumberish[],
-      afterAcc: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'addSequencerL2BatchFromOrigin(bytes,uint256[],uint256[],bytes32)'(
       transactions: BytesLike,
       lengths: BigNumberish[],
       sectionsMetadata: BigNumberish[],
@@ -489,21 +362,7 @@ export class SequencerInbox extends Contract {
 
     delayedInbox(overrides?: CallOverrides): Promise<string>
 
-    'delayedInbox()'(overrides?: CallOverrides): Promise<string>
-
     forceInclusion(
-      _totalDelayedMessagesRead: BigNumberish,
-      kind: BigNumberish,
-      l1BlockAndTimestamp: [BigNumberish, BigNumberish],
-      inboxSeqNum: BigNumberish,
-      gasPriceL1: BigNumberish,
-      sender: string,
-      messageDataHash: BytesLike,
-      delayedAcc: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'forceInclusion(uint256,uint8,uint256[2],uint256,uint256,address,bytes32,bytes32)'(
       _totalDelayedMessagesRead: BigNumberish,
       kind: BigNumberish,
       l1BlockAndTimestamp: [BigNumberish, BigNumberish],
@@ -517,23 +376,9 @@ export class SequencerInbox extends Contract {
 
     getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
 
-    'getInboxAccsLength()'(overrides?: CallOverrides): Promise<BigNumber>
-
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
-    'inboxAccs(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     initialize(
-      _delayedInbox: string,
-      _sequencer: string,
-      _rollup: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(address,address,address)'(
       _delayedInbox: string,
       _sequencer: string,
       _rollup: string,
@@ -542,19 +387,11 @@ export class SequencerInbox extends Contract {
 
     isMaster(overrides?: CallOverrides): Promise<boolean>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<boolean>
-
     maxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
-
-    'maxDelayBlocks()'(overrides?: CallOverrides): Promise<BigNumber>
 
     maxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
 
-    'maxDelaySeconds()'(overrides?: CallOverrides): Promise<BigNumber>
-
     messageCount(overrides?: CallOverrides): Promise<BigNumber>
-
-    'messageCount()'(overrides?: CallOverrides): Promise<BigNumber>
 
     proveBatchContainsSequenceNumber(
       proof: BytesLike,
@@ -562,63 +399,90 @@ export class SequencerInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, string]>
 
-    'proveBatchContainsSequenceNumber(bytes,uint256)'(
-      proof: BytesLike,
-      inboxCount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, string]>
-
     rollup(overrides?: CallOverrides): Promise<string>
-
-    'rollup()'(overrides?: CallOverrides): Promise<string>
 
     sequencer(overrides?: CallOverrides): Promise<string>
 
-    'sequencer()'(overrides?: CallOverrides): Promise<string>
-
     setSequencer(newSequencer: string, overrides?: CallOverrides): Promise<void>
 
-    'setSequencer(address)'(
-      newSequencer: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     totalDelayedMessagesRead(overrides?: CallOverrides): Promise<BigNumber>
-
-    'totalDelayedMessagesRead()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   filters: {
     DelayedInboxForced(
-      firstMessageNum: BigNumberish | null,
-      beforeAcc: BytesLike | null,
-      newMessageCount: null,
-      totalDelayedMessagesRead: null,
-      afterAccAndDelayed: null,
-      seqBatchIndex: null
-    ): EventFilter
+      firstMessageNum?: BigNumberish | null,
+      beforeAcc?: BytesLike | null,
+      newMessageCount?: null,
+      totalDelayedMessagesRead?: null,
+      afterAccAndDelayed?: null,
+      seqBatchIndex?: null
+    ): TypedEventFilter<
+      [BigNumber, string, BigNumber, BigNumber, [string, string], BigNumber],
+      {
+        firstMessageNum: BigNumber
+        beforeAcc: string
+        newMessageCount: BigNumber
+        totalDelayedMessagesRead: BigNumber
+        afterAccAndDelayed: [string, string]
+        seqBatchIndex: BigNumber
+      }
+    >
 
-    SequencerAddressUpdated(newAddress: null): EventFilter
+    SequencerAddressUpdated(
+      newAddress?: null
+    ): TypedEventFilter<[string], { newAddress: string }>
 
     SequencerBatchDelivered(
-      firstMessageNum: BigNumberish | null,
-      beforeAcc: BytesLike | null,
-      newMessageCount: null,
-      afterAcc: null,
-      transactions: null,
-      lengths: null,
-      sectionsMetadata: null,
-      seqBatchIndex: null,
-      sequencer: null
-    ): EventFilter
+      firstMessageNum?: BigNumberish | null,
+      beforeAcc?: BytesLike | null,
+      newMessageCount?: null,
+      afterAcc?: null,
+      transactions?: null,
+      lengths?: null,
+      sectionsMetadata?: null,
+      seqBatchIndex?: null,
+      sequencer?: null
+    ): TypedEventFilter<
+      [
+        BigNumber,
+        string,
+        BigNumber,
+        string,
+        string,
+        BigNumber[],
+        BigNumber[],
+        BigNumber,
+        string
+      ],
+      {
+        firstMessageNum: BigNumber
+        beforeAcc: string
+        newMessageCount: BigNumber
+        afterAcc: string
+        transactions: string
+        lengths: BigNumber[]
+        sectionsMetadata: BigNumber[]
+        seqBatchIndex: BigNumber
+        sequencer: string
+      }
+    >
 
     SequencerBatchDeliveredFromOrigin(
-      firstMessageNum: BigNumberish | null,
-      beforeAcc: BytesLike | null,
-      newMessageCount: null,
-      afterAcc: null,
-      seqBatchIndex: null
-    ): EventFilter
+      firstMessageNum?: BigNumberish | null,
+      beforeAcc?: BytesLike | null,
+      newMessageCount?: null,
+      afterAcc?: null,
+      seqBatchIndex?: null
+    ): TypedEventFilter<
+      [BigNumber, string, BigNumber, string, BigNumber],
+      {
+        firstMessageNum: BigNumber
+        beforeAcc: string
+        newMessageCount: BigNumber
+        afterAcc: string
+        seqBatchIndex: BigNumber
+      }
+    >
   }
 
   estimateGas: {
@@ -627,15 +491,7 @@ export class SequencerInbox extends Contract {
       lengths: BigNumberish[],
       sectionsMetadata: BigNumberish[],
       afterAcc: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'addSequencerL2Batch(bytes,uint256[],uint256[],bytes32)'(
-      transactions: BytesLike,
-      lengths: BigNumberish[],
-      sectionsMetadata: BigNumberish[],
-      afterAcc: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     addSequencerL2BatchFromOrigin(
@@ -643,20 +499,10 @@ export class SequencerInbox extends Contract {
       lengths: BigNumberish[],
       sectionsMetadata: BigNumberish[],
       afterAcc: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'addSequencerL2BatchFromOrigin(bytes,uint256[],uint256[],bytes32)'(
-      transactions: BytesLike,
-      lengths: BigNumberish[],
-      sectionsMetadata: BigNumberish[],
-      afterAcc: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     delayedInbox(overrides?: CallOverrides): Promise<BigNumber>
-
-    'delayedInbox()'(overrides?: CallOverrides): Promise<BigNumber>
 
     forceInclusion(
       _totalDelayedMessagesRead: BigNumberish,
@@ -667,61 +513,27 @@ export class SequencerInbox extends Contract {
       sender: string,
       messageDataHash: BytesLike,
       delayedAcc: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'forceInclusion(uint256,uint8,uint256[2],uint256,uint256,address,bytes32,bytes32)'(
-      _totalDelayedMessagesRead: BigNumberish,
-      kind: BigNumberish,
-      l1BlockAndTimestamp: [BigNumberish, BigNumberish],
-      inboxSeqNum: BigNumberish,
-      gasPriceL1: BigNumberish,
-      sender: string,
-      messageDataHash: BytesLike,
-      delayedAcc: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
 
-    'getInboxAccsLength()'(overrides?: CallOverrides): Promise<BigNumber>
-
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>
-
-    'inboxAccs(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
 
     initialize(
       _delayedInbox: string,
       _sequencer: string,
       _rollup: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(address,address,address)'(
-      _delayedInbox: string,
-      _sequencer: string,
-      _rollup: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     isMaster(overrides?: CallOverrides): Promise<BigNumber>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<BigNumber>
-
     maxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
-
-    'maxDelayBlocks()'(overrides?: CallOverrides): Promise<BigNumber>
 
     maxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
 
-    'maxDelaySeconds()'(overrides?: CallOverrides): Promise<BigNumber>
-
     messageCount(overrides?: CallOverrides): Promise<BigNumber>
-
-    'messageCount()'(overrides?: CallOverrides): Promise<BigNumber>
 
     proveBatchContainsSequenceNumber(
       proof: BytesLike,
@@ -729,33 +541,16 @@ export class SequencerInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'proveBatchContainsSequenceNumber(bytes,uint256)'(
-      proof: BytesLike,
-      inboxCount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     rollup(overrides?: CallOverrides): Promise<BigNumber>
-
-    'rollup()'(overrides?: CallOverrides): Promise<BigNumber>
 
     sequencer(overrides?: CallOverrides): Promise<BigNumber>
 
-    'sequencer()'(overrides?: CallOverrides): Promise<BigNumber>
-
     setSequencer(
       newSequencer: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setSequencer(address)'(
-      newSequencer: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     totalDelayedMessagesRead(overrides?: CallOverrides): Promise<BigNumber>
-
-    'totalDelayedMessagesRead()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -764,15 +559,7 @@ export class SequencerInbox extends Contract {
       lengths: BigNumberish[],
       sectionsMetadata: BigNumberish[],
       afterAcc: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'addSequencerL2Batch(bytes,uint256[],uint256[],bytes32)'(
-      transactions: BytesLike,
-      lengths: BigNumberish[],
-      sectionsMetadata: BigNumberish[],
-      afterAcc: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     addSequencerL2BatchFromOrigin(
@@ -780,20 +567,10 @@ export class SequencerInbox extends Contract {
       lengths: BigNumberish[],
       sectionsMetadata: BigNumberish[],
       afterAcc: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'addSequencerL2BatchFromOrigin(bytes,uint256[],uint256[],bytes32)'(
-      transactions: BytesLike,
-      lengths: BigNumberish[],
-      sectionsMetadata: BigNumberish[],
-      afterAcc: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     delayedInbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'delayedInbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     forceInclusion(
       _totalDelayedMessagesRead: BigNumberish,
@@ -804,33 +581,12 @@ export class SequencerInbox extends Contract {
       sender: string,
       messageDataHash: BytesLike,
       delayedAcc: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'forceInclusion(uint256,uint8,uint256[2],uint256,uint256,address,bytes32,bytes32)'(
-      _totalDelayedMessagesRead: BigNumberish,
-      kind: BigNumberish,
-      l1BlockAndTimestamp: [BigNumberish, BigNumberish],
-      inboxSeqNum: BigNumberish,
-      gasPriceL1: BigNumberish,
-      sender: string,
-      messageDataHash: BytesLike,
-      delayedAcc: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     getInboxAccsLength(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'getInboxAccsLength()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     inboxAccs(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'inboxAccs(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -839,33 +595,16 @@ export class SequencerInbox extends Contract {
       _delayedInbox: string,
       _sequencer: string,
       _rollup: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address,address,address)'(
-      _delayedInbox: string,
-      _sequencer: string,
-      _rollup: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     maxDelayBlocks(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'maxDelayBlocks()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     maxDelaySeconds(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'maxDelaySeconds()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     messageCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'messageCount()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     proveBatchContainsSequenceNumber(
       proof: BytesLike,
@@ -873,35 +612,16 @@ export class SequencerInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'proveBatchContainsSequenceNumber(bytes,uint256)'(
-      proof: BytesLike,
-      inboxCount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     rollup(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'rollup()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     sequencer(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'sequencer()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     setSequencer(
       newSequencer: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setSequencer(address)'(
-      newSequencer: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     totalDelayedMessagesRead(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'totalDelayedMessagesRead()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
   }

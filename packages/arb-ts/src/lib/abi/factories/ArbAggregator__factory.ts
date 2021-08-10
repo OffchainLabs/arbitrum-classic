@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ArbAggregator } from '../ArbAggregator'
-
-export class ArbAggregator__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ArbAggregator {
-    return new Contract(address, _abi, signerOrProvider) as ArbAggregator
-  }
-}
+import type { ArbAggregator, ArbAggregatorInterface } from '../ArbAggregator'
 
 const _abi = [
   {
@@ -118,3 +108,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ArbAggregator__factory {
+  static readonly abi = _abi
+  static createInterface(): ArbAggregatorInterface {
+    return new utils.Interface(_abi) as ArbAggregatorInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ArbAggregator {
+    return new Contract(address, _abi, signerOrProvider) as ArbAggregator
+  }
+}

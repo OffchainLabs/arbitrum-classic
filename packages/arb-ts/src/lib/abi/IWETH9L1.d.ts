@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface IWETH9L1Interface extends ethers.utils.Interface {
   functions: {
@@ -82,176 +81,123 @@ interface IWETH9L1Interface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'Withdrawal'): EventFragment
 }
 
-export class IWETH9L1 extends Contract {
+export class IWETH9L1 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: IWETH9L1Interface
 
   functions: {
     allowance(guy: string, overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'allowance(address)'(
-      guy: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
     approve(
       guy: string,
       wad: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'approve(address,uint256)'(
-      guy: string,
-      wad: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     balanceOf(guy: string, overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'balanceOf(address)'(
-      guy: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
-    deposit(overrides?: PayableOverrides): Promise<ContractTransaction>
-
-    'deposit()'(overrides?: PayableOverrides): Promise<ContractTransaction>
+    deposit(
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     totalSupply(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'totalSupply()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     transfer(
       dst: string,
       wad: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transfer(address,uint256)'(
-      dst: string,
-      wad: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     transferFrom(
       src: string,
       dst: string,
       wad: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transferFrom(address,address,uint256)'(
-      src: string,
-      dst: string,
-      wad: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     withdraw(
       _amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'withdraw(uint256)'(
-      _amount: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
   allowance(guy: string, overrides?: CallOverrides): Promise<BigNumber>
 
-  'allowance(address)'(
-    guy: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
   approve(
     guy: string,
     wad: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'approve(address,uint256)'(
-    guy: string,
-    wad: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   balanceOf(guy: string, overrides?: CallOverrides): Promise<BigNumber>
 
-  'balanceOf(address)'(
-    guy: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
-  deposit(overrides?: PayableOverrides): Promise<ContractTransaction>
-
-  'deposit()'(overrides?: PayableOverrides): Promise<ContractTransaction>
+  deposit(
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   totalSupply(overrides?: CallOverrides): Promise<BigNumber>
-
-  'totalSupply()'(overrides?: CallOverrides): Promise<BigNumber>
 
   transfer(
     dst: string,
     wad: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transfer(address,uint256)'(
-    dst: string,
-    wad: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   transferFrom(
     src: string,
     dst: string,
     wad: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transferFrom(address,address,uint256)'(
-    src: string,
-    dst: string,
-    wad: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   withdraw(
     _amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'withdraw(uint256)'(
-    _amount: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
     allowance(guy: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'allowance(address)'(
-      guy: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     approve(
-      guy: string,
-      wad: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    'approve(address,uint256)'(
       guy: string,
       wad: BigNumberish,
       overrides?: CallOverrides
@@ -259,18 +205,9 @@ export class IWETH9L1 extends Contract {
 
     balanceOf(guy: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'balanceOf(address)'(
-      guy: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     deposit(overrides?: CallOverrides): Promise<void>
 
-    'deposit()'(overrides?: CallOverrides): Promise<void>
-
     totalSupply(overrides?: CallOverrides): Promise<BigNumber>
-
-    'totalSupply()'(overrides?: CallOverrides): Promise<BigNumber>
 
     transfer(
       dst: string,
@@ -278,20 +215,7 @@ export class IWETH9L1 extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    'transfer(address,uint256)'(
-      dst: string,
-      wad: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
     transferFrom(
-      src: string,
-      dst: string,
-      wad: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    'transferFrom(address,address,uint256)'(
       src: string,
       dst: string,
       wad: BigNumberish,
@@ -299,89 +223,71 @@ export class IWETH9L1 extends Contract {
     ): Promise<boolean>
 
     withdraw(_amount: BigNumberish, overrides?: CallOverrides): Promise<void>
-
-    'withdraw(uint256)'(
-      _amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
   }
 
   filters: {
-    Approval(src: string | null, guy: string | null, wad: null): EventFilter
+    Approval(
+      src?: string | null,
+      guy?: string | null,
+      wad?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { src: string; guy: string; wad: BigNumber }
+    >
 
-    Deposit(dst: string | null, wad: null): EventFilter
+    Deposit(
+      dst?: string | null,
+      wad?: null
+    ): TypedEventFilter<[string, BigNumber], { dst: string; wad: BigNumber }>
 
-    Transfer(src: string | null, dst: string | null, wad: null): EventFilter
+    Transfer(
+      src?: string | null,
+      dst?: string | null,
+      wad?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { src: string; dst: string; wad: BigNumber }
+    >
 
-    Withdrawal(src: string | null, wad: null): EventFilter
+    Withdrawal(
+      src?: string | null,
+      wad?: null
+    ): TypedEventFilter<[string, BigNumber], { src: string; wad: BigNumber }>
   }
 
   estimateGas: {
     allowance(guy: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'allowance(address)'(
-      guy: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     approve(
       guy: string,
       wad: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'approve(address,uint256)'(
-      guy: string,
-      wad: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     balanceOf(guy: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'balanceOf(address)'(
-      guy: string,
-      overrides?: CallOverrides
+    deposit(
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    deposit(overrides?: PayableOverrides): Promise<BigNumber>
-
-    'deposit()'(overrides?: PayableOverrides): Promise<BigNumber>
-
     totalSupply(overrides?: CallOverrides): Promise<BigNumber>
-
-    'totalSupply()'(overrides?: CallOverrides): Promise<BigNumber>
 
     transfer(
       dst: string,
       wad: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'transfer(address,uint256)'(
-      dst: string,
-      wad: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     transferFrom(
       src: string,
       dst: string,
       wad: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'transferFrom(address,address,uint256)'(
-      src: string,
-      dst: string,
-      wad: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    withdraw(_amount: BigNumberish, overrides?: Overrides): Promise<BigNumber>
-
-    'withdraw(uint256)'(
+    withdraw(
       _amount: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
@@ -391,21 +297,10 @@ export class IWETH9L1 extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'allowance(address)'(
-      guy: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     approve(
       guy: string,
       wad: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'approve(address,uint256)'(
-      guy: string,
-      wad: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     balanceOf(
@@ -413,53 +308,28 @@ export class IWETH9L1 extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'balanceOf(address)'(
-      guy: string,
-      overrides?: CallOverrides
+    deposit(
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    deposit(overrides?: PayableOverrides): Promise<PopulatedTransaction>
-
-    'deposit()'(overrides?: PayableOverrides): Promise<PopulatedTransaction>
-
     totalSupply(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'totalSupply()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     transfer(
       dst: string,
       wad: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transfer(address,uint256)'(
-      dst: string,
-      wad: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     transferFrom(
       src: string,
       dst: string,
       wad: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transferFrom(address,address,uint256)'(
-      src: string,
-      dst: string,
-      wad: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     withdraw(
       _amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'withdraw(uint256)'(
-      _amount: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

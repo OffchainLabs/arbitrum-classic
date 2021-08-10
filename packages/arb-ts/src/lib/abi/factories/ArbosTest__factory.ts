@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ArbosTest } from '../ArbosTest'
-
-export class ArbosTest__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ArbosTest {
-    return new Contract(address, _abi, signerOrProvider) as ArbosTest
-  }
-}
+import type { ArbosTest, ArbosTestInterface } from '../ArbosTest'
 
 const _abi = [
   {
@@ -95,3 +85,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ArbosTest__factory {
+  static readonly abi = _abi
+  static createInterface(): ArbosTestInterface {
+    return new utils.Interface(_abi) as ArbosTestInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ArbosTest {
+    return new Contract(address, _abi, signerOrProvider) as ArbosTest
+  }
+}

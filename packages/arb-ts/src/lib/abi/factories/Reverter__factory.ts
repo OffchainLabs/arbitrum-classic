@@ -2,39 +2,16 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Signer, BigNumberish } from 'ethers'
+import {
+  Signer,
+  utils,
+  BigNumberish,
+  Contract,
+  ContractFactory,
+  Overrides,
+} from 'ethers'
 import { Provider, TransactionRequest } from '@ethersproject/providers'
-import { Contract, ContractFactory, Overrides } from '@ethersproject/contracts'
-
-import type { Reverter } from '../Reverter'
-
-export class Reverter__factory extends ContractFactory {
-  constructor(signer?: Signer) {
-    super(_abi, _bytecode, signer)
-  }
-
-  deploy(mode: BigNumberish, overrides?: Overrides): Promise<Reverter> {
-    return super.deploy(mode, overrides || {}) as Promise<Reverter>
-  }
-  getDeployTransaction(
-    mode: BigNumberish,
-    overrides?: Overrides
-  ): TransactionRequest {
-    return super.getDeployTransaction(mode, overrides || {})
-  }
-  attach(address: string): Reverter {
-    return super.attach(address) as Reverter
-  }
-  connect(signer: Signer): Reverter__factory {
-    return super.connect(signer) as Reverter__factory
-  }
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): Reverter {
-    return new Contract(address, _abi, signerOrProvider) as Reverter
-  }
-}
+import type { Reverter, ReverterInterface } from '../Reverter'
 
 const _abi = [
   {
@@ -52,3 +29,39 @@ const _abi = [
 
 const _bytecode =
   '0x6080604052348015600f57600080fd5b5060405161010538038061010583398181016040526020811015603157600080fd5b81019080805190602001909291905050506000811460b7576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040180806020018281038252600a8152602001807f4d6f6465206e6f7420300000000000000000000000000000000000000000000081525060200191505060405180910390fd5b50603f806100c66000396000f3fe6080604052600080fdfea26469706673582212208b2b2b48d14e07cb5b82927e63706de5e6555048cc4e0623d5b515bcdbeab25564736f6c634300060b0033'
+
+export class Reverter__factory extends ContractFactory {
+  constructor(signer?: Signer) {
+    super(_abi, _bytecode, signer)
+  }
+
+  deploy(
+    mode: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<Reverter> {
+    return super.deploy(mode, overrides || {}) as Promise<Reverter>
+  }
+  getDeployTransaction(
+    mode: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): TransactionRequest {
+    return super.getDeployTransaction(mode, overrides || {})
+  }
+  attach(address: string): Reverter {
+    return super.attach(address) as Reverter
+  }
+  connect(signer: Signer): Reverter__factory {
+    return super.connect(signer) as Reverter__factory
+  }
+  static readonly bytecode = _bytecode
+  static readonly abi = _abi
+  static createInterface(): ReverterInterface {
+    return new utils.Interface(_abi) as ReverterInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): Reverter {
+    return new Contract(address, _abi, signerOrProvider) as Reverter
+  }
+}

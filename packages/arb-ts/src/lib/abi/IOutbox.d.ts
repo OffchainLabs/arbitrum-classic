@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface IOutboxInterface extends ethers.utils.Interface {
   functions: {
@@ -77,101 +76,89 @@ interface IOutboxInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'OutboxEntryCreated'): EventFragment
 }
 
-export class IOutbox extends Contract {
+export class IOutbox extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: IOutboxInterface
 
   functions: {
     l2ToL1Block(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'l2ToL1Block()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     l2ToL1EthBlock(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     l2ToL1Sender(overrides?: CallOverrides): Promise<[string]>
 
-    'l2ToL1Sender()'(overrides?: CallOverrides): Promise<[string]>
-
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'l2ToL1Timestamp()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     processOutgoingMessages(
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'processOutgoingMessages(bytes,uint256[])'(
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
   l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
-  'l2ToL1Block()'(overrides?: CallOverrides): Promise<BigNumber>
-
   l2ToL1EthBlock(overrides?: CallOverrides): Promise<BigNumber>
-
-  'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
   l2ToL1Sender(overrides?: CallOverrides): Promise<string>
 
-  'l2ToL1Sender()'(overrides?: CallOverrides): Promise<string>
-
   l2ToL1Timestamp(overrides?: CallOverrides): Promise<BigNumber>
-
-  'l2ToL1Timestamp()'(overrides?: CallOverrides): Promise<BigNumber>
 
   processOutgoingMessages(
     sendsData: BytesLike,
     sendLengths: BigNumberish[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'processOutgoingMessages(bytes,uint256[])'(
-    sendsData: BytesLike,
-    sendLengths: BigNumberish[],
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
     l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
-    'l2ToL1Block()'(overrides?: CallOverrides): Promise<BigNumber>
-
     l2ToL1EthBlock(overrides?: CallOverrides): Promise<BigNumber>
-
-    'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
     l2ToL1Sender(overrides?: CallOverrides): Promise<string>
 
-    'l2ToL1Sender()'(overrides?: CallOverrides): Promise<string>
-
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<BigNumber>
 
-    'l2ToL1Timestamp()'(overrides?: CallOverrides): Promise<BigNumber>
-
     processOutgoingMessages(
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'processOutgoingMessages(bytes,uint256[])'(
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
       overrides?: CallOverrides
@@ -180,79 +167,65 @@ export class IOutbox extends Contract {
 
   filters: {
     OutBoxTransactionExecuted(
-      destAddr: string | null,
-      l2Sender: string | null,
-      outboxIndex: BigNumberish | null,
-      transactionIndex: null
-    ): EventFilter
+      destAddr?: string | null,
+      l2Sender?: string | null,
+      outboxIndex?: BigNumberish | null,
+      transactionIndex?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, BigNumber],
+      {
+        destAddr: string
+        l2Sender: string
+        outboxIndex: BigNumber
+        transactionIndex: BigNumber
+      }
+    >
 
     OutboxEntryCreated(
-      batchNum: BigNumberish | null,
-      outboxIndex: null,
-      outputRoot: null,
-      numInBatch: null
-    ): EventFilter
+      batchNum?: BigNumberish | null,
+      outboxIndex?: null,
+      outputRoot?: null,
+      numInBatch?: null
+    ): TypedEventFilter<
+      [BigNumber, BigNumber, string, BigNumber],
+      {
+        batchNum: BigNumber
+        outboxIndex: BigNumber
+        outputRoot: string
+        numInBatch: BigNumber
+      }
+    >
   }
 
   estimateGas: {
     l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
-    'l2ToL1Block()'(overrides?: CallOverrides): Promise<BigNumber>
-
     l2ToL1EthBlock(overrides?: CallOverrides): Promise<BigNumber>
-
-    'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
     l2ToL1Sender(overrides?: CallOverrides): Promise<BigNumber>
 
-    'l2ToL1Sender()'(overrides?: CallOverrides): Promise<BigNumber>
-
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<BigNumber>
-
-    'l2ToL1Timestamp()'(overrides?: CallOverrides): Promise<BigNumber>
 
     processOutgoingMessages(
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'processOutgoingMessages(bytes,uint256[])'(
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
     l2ToL1Block(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'l2ToL1Block()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     l2ToL1EthBlock(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     l2ToL1Sender(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'l2ToL1Sender()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'l2ToL1Timestamp()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
 
     processOutgoingMessages(
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'processOutgoingMessages(bytes,uint256[])'(
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }
