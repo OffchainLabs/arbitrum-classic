@@ -20,21 +20,34 @@ project (fuzz_target LANGUAGES CXX)
 
 set(SHARED_SOURCE utils.cpp utils.hpp)
 
-set(GO_SRCS ../../arb-util/lib/proofchecker/proofchecker.go)
+set(GO_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../arb-util/lib/proofchecker)
+set(GO_SRCS ${GO_SRC_DIR}/proofchecker.go)
 set(GO_LIBNAME libproofchecker.dylib)
 set(GOPATH ${CMAKE_CURRENT_BINARY_DIR})
+
+if(UNIX AND NOT APPLE)
+    set(LINUX TRUE)
+endif()
+
+if(LINUX) 
+    SET(LIBNAME soname)
+    # linux stuff here
+elseif(APPLE)
+    SET(LIBNAME install_name)
+else()
+    message(FATAL_ERROR "not support on non-unix systems")
+endif()
 
 # Custom command for 'go build -buildmode=c-shared ...'
 # to create a library from Go codes.
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${GO_LIBNAME}
   DEPENDS ${GO_SRCS}
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMAND go build 
-  # -ldflags '-extldflags -Wl,-install_name,${CMAKE_CURRENT_BINARY_DIR}/${GO_LIBNAME}'
-  -linkshared
+  WORKING_DIRECTORY ${GO_SRC_DIR}
+  COMMAND go build
   -buildmode=c-shared
+  -ldflags '-extldflags -Wl,-${LIBNAME},${CMAKE_CURRENT_BINARY_DIR}/${GO_LIBNAME}'
   -o "${CMAKE_CURRENT_BINARY_DIR}/${GO_LIBNAME}"
-  ${CMAKE_GO_FLAGS} ${GO_SRCS}
+  ${CMAKE_GO_FLAGS} ./...
   COMMENT "Building Go library")
 
 add_custom_target(lib_proofchecker_go DEPENDS ${GO_LIBNAME} libproofchecker.h)
