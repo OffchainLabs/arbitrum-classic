@@ -326,7 +326,7 @@ func (fb *Fireblocks) CreateNewTransaction(destinationType accounttype.AccountTy
 
 	var result CreateTransactionResponse
 	response, err := ioutil.ReadAll(resp.Body)
-	fmt.Println("Response: ", string(response))
+	logger.Debug().RawJSON("body", response).Msg("fireblocks response")
 	if err != nil {
 		return nil, errors.Wrapf(err, "error reading fireblocks create transaction response")
 	}
@@ -424,6 +424,13 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 	uri.Path = path
 	uri.RawQuery = params.Encode()
 
+	logger.
+		Debug().
+		Str("url", uri.String()).
+		Str("token", token).
+		RawJSON("body", body).
+		Msg("fireblocks request")
+
 	client := &http.Client{}
 	var req *http.Request
 	req, err = http.NewRequest(method, uri.String(), bytes.NewBuffer(body))
@@ -496,7 +503,6 @@ func (fb *Fireblocks) signJWT(path string, body []byte) (string, error) {
 	}
 
 	bodyHash := sha256.Sum256([]byte(body))
-	fmt.Println("body: (", string(body), ")[", len(body), "], Hash ", hex.EncodeToString(bodyHash[:]))
 	claims := fireblocksClaims{
 		Uri:      newPath,
 		Nonce:    rand.Int63(),

@@ -20,9 +20,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"math/big"
-	"strings"
 	"sync"
-	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
@@ -163,18 +161,6 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 
 		logger.Info().Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Send()
 		return addr, tx, err
-	}
-
-	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
-		// Increment nonce and try again
-		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Msg("incrementing nonce and submitting tx again")
-
-		t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
-		auth.Nonce = t.auth.Nonce
-		err = t.sendTx(ctx, tx)
-		err = errors.WithStack(err)
-
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	if err != nil {
