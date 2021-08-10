@@ -2,19 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { L2ArbitrumMessenger } from '../L2ArbitrumMessenger'
-
-export class L2ArbitrumMessenger__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): L2ArbitrumMessenger {
-    return new Contract(address, _abi, signerOrProvider) as L2ArbitrumMessenger
-  }
-}
+import type {
+  L2ArbitrumMessenger,
+  L2ArbitrumMessengerInterface,
+} from '../L2ArbitrumMessenger'
 
 const _abi = [
   {
@@ -49,3 +42,16 @@ const _abi = [
     type: 'event',
   },
 ]
+
+export class L2ArbitrumMessenger__factory {
+  static readonly abi = _abi
+  static createInterface(): L2ArbitrumMessengerInterface {
+    return new utils.Interface(_abi) as L2ArbitrumMessengerInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): L2ArbitrumMessenger {
+    return new Contract(address, _abi, signerOrProvider) as L2ArbitrumMessenger
+  }
+}

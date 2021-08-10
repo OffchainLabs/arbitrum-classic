@@ -222,7 +222,7 @@ func startup() error {
 	var batcherMode rpc.BatcherMode
 	if config.Node.Type == "forwarder" {
 		logger.Info().Str("forwardTxURL", config.Node.Forwarder.Target).Msg("Arbitrum node starting in forwarder mode")
-		batcherMode = rpc.ForwarderBatcherMode{NodeURL: config.Node.Forwarder.Target}
+		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
 	} else {
 		var auth *bind.TransactOpts
 		auth, dataSigner, err = cmdhelp.GetKeystore(config.Persistent.Chain, wallet, config.GasPrice, l1ChainId)
@@ -243,11 +243,10 @@ func startup() error {
 
 		if config.Node.Type == "sequencer" {
 			batcherMode = rpc.SequencerBatcherMode{
-				Auth:                       auth,
-				Core:                       mon.Core,
-				InboxReader:                inboxReader,
-				DelayedMessagesTargetDelay: big.NewInt(config.Node.Sequencer.DelayedMessagesTargetDelay),
-				CreateBatchBlockInterval:   big.NewInt(config.Node.Sequencer.CreateBatchBlockInterval),
+				Auth:        auth,
+				Core:        mon.Core,
+				InboxReader: inboxReader,
+				Config:      config.Node.Sequencer,
 			}
 		} else {
 			inboxAddress := common.HexToAddress(config.Node.Aggregator.InboxAddress)
@@ -284,7 +283,6 @@ func startup() error {
 			batcherMode,
 			dataSigner,
 			config.Feed.Output,
-			config.GasPriceUrl,
 		)
 		lockoutConf := config.Node.Sequencer.Lockout
 		if err == nil && lockoutConf.Redis != "" {

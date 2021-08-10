@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface ValidatorWalletCreatorInterface extends ethers.utils.Interface {
   functions: {
@@ -73,123 +72,107 @@ interface ValidatorWalletCreatorInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'WalletCreated'): EventFragment
 }
 
-export class ValidatorWalletCreator extends Contract {
+export class ValidatorWalletCreator extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: ValidatorWalletCreatorInterface
 
   functions: {
-    createWallet(overrides?: Overrides): Promise<ContractTransaction>
-
-    'createWallet()'(overrides?: Overrides): Promise<ContractTransaction>
+    createWallet(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     owner(overrides?: CallOverrides): Promise<[string]>
 
-    'owner()'(overrides?: CallOverrides): Promise<[string]>
-
-    renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     setTemplate(
       _template: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setTemplate(address)'(
-      _template: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     template(overrides?: CallOverrides): Promise<[string]>
 
-    'template()'(overrides?: CallOverrides): Promise<[string]>
-
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
-  createWallet(overrides?: Overrides): Promise<ContractTransaction>
-
-  'createWallet()'(overrides?: Overrides): Promise<ContractTransaction>
+  createWallet(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   owner(overrides?: CallOverrides): Promise<string>
 
-  'owner()'(overrides?: CallOverrides): Promise<string>
-
-  renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-  'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+  renounceOwnership(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   setTemplate(
     _template: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setTemplate(address)'(
-    _template: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   template(overrides?: CallOverrides): Promise<string>
 
-  'template()'(overrides?: CallOverrides): Promise<string>
-
   transferOwnership(
     newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transferOwnership(address)'(
-    newOwner: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
     createWallet(overrides?: CallOverrides): Promise<string>
 
-    'createWallet()'(overrides?: CallOverrides): Promise<string>
-
     owner(overrides?: CallOverrides): Promise<string>
-
-    'owner()'(overrides?: CallOverrides): Promise<string>
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>
 
-    'renounceOwnership()'(overrides?: CallOverrides): Promise<void>
-
     setTemplate(_template: string, overrides?: CallOverrides): Promise<void>
-
-    'setTemplate(address)'(
-      _template: string,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     template(overrides?: CallOverrides): Promise<string>
 
-    'template()'(overrides?: CallOverrides): Promise<string>
-
     transferOwnership(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'transferOwnership(address)'(
       newOwner: string,
       overrides?: CallOverrides
     ): Promise<void>
@@ -197,89 +180,70 @@ export class ValidatorWalletCreator extends Contract {
 
   filters: {
     OwnershipTransferred(
-      previousOwner: string | null,
-      newOwner: string | null
-    ): EventFilter
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >
 
-    TemplateUpdated(): EventFilter
+    TemplateUpdated(): TypedEventFilter<[], {}>
 
     WalletCreated(
-      walletAddress: string | null,
-      userAddress: string | null,
-      adminProxy: null
-    ): EventFilter
+      walletAddress?: string | null,
+      userAddress?: string | null,
+      adminProxy?: null
+    ): TypedEventFilter<
+      [string, string, string],
+      { walletAddress: string; userAddress: string; adminProxy: string }
+    >
   }
 
   estimateGas: {
-    createWallet(overrides?: Overrides): Promise<BigNumber>
-
-    'createWallet()'(overrides?: Overrides): Promise<BigNumber>
+    createWallet(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     owner(overrides?: CallOverrides): Promise<BigNumber>
 
-    'owner()'(overrides?: CallOverrides): Promise<BigNumber>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
-    renounceOwnership(overrides?: Overrides): Promise<BigNumber>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<BigNumber>
-
-    setTemplate(_template: string, overrides?: Overrides): Promise<BigNumber>
-
-    'setTemplate(address)'(
+    setTemplate(
       _template: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     template(overrides?: CallOverrides): Promise<BigNumber>
 
-    'template()'(overrides?: CallOverrides): Promise<BigNumber>
-
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
-    createWallet(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'createWallet()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    createWallet(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     setTemplate(
       _template: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setTemplate(address)'(
-      _template: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     template(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'template()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

@@ -70,16 +70,14 @@ func SetupLockout(
 	}
 	newBatcher := &LockoutBatcher{
 		sequencerBatcher: seqBatcher,
-		currentBatcher: &errorBatcher{
-			err: errors.New("sequencer lockout manager starting up"),
-		},
-		currentSeq:  "[starting up]",
-		core:        core,
-		inboxReader: inboxReader,
-		config:      config,
-		redis:       redis,
-		errChan:     errChan,
+		currentSeq:       "[starting up]",
+		core:             core,
+		inboxReader:      inboxReader,
+		config:           config,
+		redis:            redis,
+		errChan:          errChan,
 	}
+	newBatcher.currentBatcher = newBatcher.getErrorBatcher(errors.New("sequencer lockout manager starting up"))
 	newBatcher.sequencerBatcher.LockoutManager = newBatcher
 	go newBatcher.lockoutManager(ctx)
 	return newBatcher, nil
@@ -87,15 +85,20 @@ func SetupLockout(
 
 const ACCEPTABLE_SEQ_NUM_GAP int64 = 0
 
+func (b *LockoutBatcher) getErrorBatcher(err error) *errorBatcher {
+	return &errorBatcher{
+		err:        err,
+		aggregator: b.sequencerBatcher.Aggregator(),
+	}
+}
+
 func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 	holdingMutex := false
 	defer (func() {
 		if !holdingMutex {
 			b.mutex.Lock()
 		}
-		b.currentBatcher = &errorBatcher{
-			err: errors.New("sequencer lockout manager shutting down"),
-		}
+		b.currentBatcher = b.getErrorBatcher(errors.New("sequencer lockout manager starting up"))
 		backgroundContext := context.Background()
 		b.redis.releaseLockout(backgroundContext, &b.lockoutExpiresAt)
 		b.redis.releaseLiveliness(backgroundContext, &b.livelinessExpiresAt)
@@ -227,21 +230,19 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			if selectedSeq == "" {
 				msg := "no prioritized sequencers online"
 				logger.Warn().Msg(msg)
-				b.currentBatcher = &errorBatcher{
-					err: errors.New(msg),
-				}
+				b.currentBatcher = b.getErrorBatcher(errors.New(msg))
 				b.currentSeq = selectedSeq
 				b.mutex.Unlock()
 				holdingMutex = false
 			} else if b.redis.getLockout(ctx) == selectedSeq {
 				logger.Info().Str("rpc", selectedSeq).Msg("forwarding to new sequencer")
 				var err error
-				b.currentBatcher, err = batcher.NewForwarder(ctx, selectedSeq)
+				b.currentBatcher, err = batcher.NewForwarder(ctx, configuration.Forwarder{Target: selectedSeq})
 				if err == nil {
 					b.currentSeq = selectedSeq
 				} else {
 					logger.Warn().Err(err).Msg("failed to connect to active sequencer")
-					b.currentBatcher = &errorBatcher{err: err}
+					b.currentBatcher = b.getErrorBatcher(err)
 				}
 				// Note that we don't release the mutex if the selected sequencer doesn't have the lockout
 				b.mutex.Unlock()
@@ -282,9 +283,7 @@ func (b *LockoutBatcher) getBatcher() batcher.TransactionBatcher {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
 	if b.currentBatcher == b.sequencerBatcher && !b.hasSequencerLockout() {
-		return &errorBatcher{
-			err: errors.New("sequencer lockout expired"),
-		}
+		return b.getErrorBatcher(errors.New("sequencer lockout expired"))
 	}
 	return b.currentBatcher
 }
@@ -314,7 +313,8 @@ func (b *LockoutBatcher) Start(ctx context.Context) {
 }
 
 type errorBatcher struct {
-	err error
+	err        error
+	aggregator *common.Address
 }
 
 func (b *errorBatcher) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
@@ -334,7 +334,7 @@ func (b *errorBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event
 }
 
 func (b *errorBatcher) Aggregator() *common.Address {
-	return nil
+	return b.aggregator
 }
 
 func (b *errorBatcher) Start(ctx context.Context) {

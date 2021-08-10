@@ -14,21 +14,20 @@ import {
   Contract,
   ContractTransaction,
   Overrides,
-  PayableOverrides,
   CallOverrides,
 } from '@ethersproject/contracts'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface IaeWETHInterface extends ethers.utils.Interface {
+interface IArbStandardTokenInterface extends ethers.utils.Interface {
   functions: {
     'bridgeBurn(address,uint256)': FunctionFragment
+    'bridgeInit(address,bytes)': FunctionFragment
     'bridgeMint(address,uint256)': FunctionFragment
-    'deposit()': FunctionFragment
     'l1Address()': FunctionFragment
-    'transferToGateway(address,uint256)': FunctionFragment
-    'withdraw(uint256)': FunctionFragment
+    'migrate(address,uint256)': FunctionFragment
+    'withdraw(address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -36,34 +35,34 @@ interface IaeWETHInterface extends ethers.utils.Interface {
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(
+    functionFragment: 'bridgeInit',
+    values: [string, BytesLike]
+  ): string
+  encodeFunctionData(
     functionFragment: 'bridgeMint',
     values: [string, BigNumberish]
   ): string
-  encodeFunctionData(functionFragment: 'deposit', values?: undefined): string
   encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'transferToGateway',
+    functionFragment: 'migrate',
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'withdraw',
-    values: [BigNumberish]
+    values: [string, BigNumberish]
   ): string
 
   decodeFunctionResult(functionFragment: 'bridgeBurn', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'bridgeInit', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'deposit', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'transferToGateway',
-    data: BytesLike
-  ): Result
+  decodeFunctionResult(functionFragment: 'migrate', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {}
 }
 
-export class IaeWETH extends Contract {
+export class IArbStandardToken extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -74,7 +73,7 @@ export class IaeWETH extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: IaeWETHInterface
+  interface: IArbStandardTokenInterface
 
   functions: {
     bridgeBurn(
@@ -86,6 +85,18 @@ export class IaeWETH extends Contract {
     'bridgeBurn(address,uint256)'(
       account: string,
       amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -101,33 +112,31 @@ export class IaeWETH extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    deposit(overrides?: PayableOverrides): Promise<ContractTransaction>
-
-    'deposit()'(overrides?: PayableOverrides): Promise<ContractTransaction>
-
     l1Address(overrides?: CallOverrides): Promise<[string]>
 
     'l1Address()'(overrides?: CallOverrides): Promise<[string]>
 
-    transferToGateway(
-      _from: string,
+    migrate(
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'transferToGateway(address,uint256)'(
-      _from: string,
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     withdraw(
-      _amount: BigNumberish,
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'withdraw(uint256)'(
-      _amount: BigNumberish,
+    'withdraw(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
@@ -144,6 +153,18 @@ export class IaeWETH extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  bridgeInit(
+    _l1Address: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'bridgeInit(address,bytes)'(
+    _l1Address: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   bridgeMint(
     account: string,
     amount: BigNumberish,
@@ -156,33 +177,31 @@ export class IaeWETH extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  deposit(overrides?: PayableOverrides): Promise<ContractTransaction>
-
-  'deposit()'(overrides?: PayableOverrides): Promise<ContractTransaction>
-
   l1Address(overrides?: CallOverrides): Promise<string>
 
   'l1Address()'(overrides?: CallOverrides): Promise<string>
 
-  transferToGateway(
-    _from: string,
+  migrate(
+    destination: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'transferToGateway(address,uint256)'(
-    _from: string,
+  'migrate(address,uint256)'(
+    destination: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   withdraw(
-    _amount: BigNumberish,
+    account: string,
+    amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'withdraw(uint256)'(
-    _amount: BigNumberish,
+  'withdraw(address,uint256)'(
+    account: string,
+    amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -199,6 +218,18 @@ export class IaeWETH extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -211,30 +242,31 @@ export class IaeWETH extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    deposit(overrides?: CallOverrides): Promise<void>
-
-    'deposit()'(overrides?: CallOverrides): Promise<void>
-
     l1Address(overrides?: CallOverrides): Promise<string>
 
     'l1Address()'(overrides?: CallOverrides): Promise<string>
 
-    transferToGateway(
-      _from: string,
+    migrate(
+      destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'transferToGateway(address,uint256)'(
-      _from: string,
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    withdraw(_amount: BigNumberish, overrides?: CallOverrides): Promise<void>
+    withdraw(
+      account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
 
-    'withdraw(uint256)'(
-      _amount: BigNumberish,
+    'withdraw(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
   }
@@ -254,6 +286,18 @@ export class IaeWETH extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -266,30 +310,31 @@ export class IaeWETH extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    deposit(overrides?: PayableOverrides): Promise<BigNumber>
-
-    'deposit()'(overrides?: PayableOverrides): Promise<BigNumber>
-
     l1Address(overrides?: CallOverrides): Promise<BigNumber>
 
     'l1Address()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    transferToGateway(
-      _from: string,
+    migrate(
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'transferToGateway(address,uint256)'(
-      _from: string,
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    withdraw(_amount: BigNumberish, overrides?: Overrides): Promise<BigNumber>
+    withdraw(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
 
-    'withdraw(uint256)'(
-      _amount: BigNumberish,
+    'withdraw(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
   }
@@ -307,6 +352,18 @@ export class IaeWETH extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -319,33 +376,31 @@ export class IaeWETH extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    deposit(overrides?: PayableOverrides): Promise<PopulatedTransaction>
-
-    'deposit()'(overrides?: PayableOverrides): Promise<PopulatedTransaction>
-
     l1Address(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'l1Address()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    transferToGateway(
-      _from: string,
+    migrate(
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'transferToGateway(address,uint256)'(
-      _from: string,
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     withdraw(
-      _amount: BigNumberish,
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'withdraw(uint256)'(
-      _amount: BigNumberish,
+    'withdraw(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
   }

@@ -5,7 +5,7 @@ import * as fs from 'fs'
 import 'hardhat-deploy'
 
 import '@nomiclabs/hardhat-waffle'
-import 'hardhat-typechain'
+import '@typechain/hardhat'
 import 'solidity-coverage'
 import 'hardhat-spdx-license-identifier'
 import 'hardhat-gas-reporter'
