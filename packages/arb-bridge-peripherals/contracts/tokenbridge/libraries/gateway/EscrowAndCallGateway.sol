@@ -22,8 +22,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../ITransferAndCall.sol";
 
-// import "./TokenGateway.sol";
-
 abstract contract EscrowAndCallGateway {
     using Address for address;
 
