@@ -10,6 +10,10 @@ Arbitrum nodes support the [Ethereum JSON-RPC API](https://eth.wiki/json-rpc/API
 
 For Ethereum/Arbitrum "bridge" functionality — methods that involve communicating between the L1 Ethereum chain and the L2 Arbitrum chain (i.e., depositing and withdrawing assets), we provide our own libraries for convenience.
 
+## Demos
+
+See our [Tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) repo for client-side integration demos.
+
 ## Arbitrum Integration
 
 #### Ethers.js
@@ -47,7 +51,7 @@ var arbWeb3Provider = new Web3('http://ArbNodeUrl.com')
 
 Accessing bridging methods can be done via our `arb-ts` library, or by simply connecting to the relevant contracts directly.
 
-#### 1. arb-ts
+#### arb-ts
 
 **Installation**:
 
@@ -76,17 +80,3 @@ const bridge = new Bridge(
 ```
 
 See [library documentation here](https://arb-ts-docs.netlify.app/), or [tests](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-ts/integration_test/arb-bridge.test.ts) for sample usage.
-
-(Note that we've deprecated the old `arb-provider-ethers` library; arb-ts is the recommended replacement)
-
-#### 2. Alternative: Direct Contract Instantiation
-
-Typechain interfaces for all contracts listed above are made available via arb-ts. i.e.,
-
-```ts
-import { ArbSys__factory } from 'arb-ts'
-
-const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Signer)
-
-arbSys.withdrawEth('0xmyaddress')
-```

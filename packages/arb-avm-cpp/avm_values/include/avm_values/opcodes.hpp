@@ -498,8 +498,9 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
 constexpr size_t MaxValidOpcode =
     static_cast<size_t>(std::numeric_limits<uint8_t>::max());
 
+// Size of the array should be 1 greater than the max valid opcode
 template <typename T>
-using OpCodeArray = std::array<T, MaxValidOpcode>;
+using OpCodeArray = std::array<T, MaxValidOpcode + 1>;
 
 inline OpCodeArray<uint64_t> initializeGasCosts() {
     OpCodeArray<uint64_t> arr;
