@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,11 +40,12 @@ int main(int argc, char* argv[]) {
                      "avm_runner --mexe filename [--inbox filename]\n";
         return 1;
     }
+    ArbCoreConfig coreConfig{};
     auto mode = std::string(argv[1]);
     std::string filename = argv[2];
 
     DBDeleter deleter;
-    ArbStorage storage{temp_db_path};
+    ArbStorage storage{temp_db_path, coreConfig};
 
     if (mode == "--hexops") {
         std::ifstream file(filename, std::ios::binary);
@@ -119,8 +120,8 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
-    std::cout << "Ran " << assertion.stepCount << " steps in "
-              << assertion.gasCount << " gas ending in state "
+    std::cout << "Ran " << assertion.step_count << " steps in "
+              << assertion.gas_count << " gas ending in state "
               << static_cast<int>(mach->currentStatus()) << "\n";
 
     auto tx = storage.makeReadWriteTransaction();
@@ -128,6 +129,10 @@ int main(int argc, char* argv[]) {
     tx->commit();
 
     auto mach2 = storage.getMachine(mach->hash(), value_cache);
+    if (!mach2) {
+        std::cerr << "Error loading machine: " << hex(mach->hash());
+        throw std::runtime_error("Error loading machine");
+    }
     execConfig.inbox_messages = std::vector<MachineMessage>();
     mach2->machine_state.context = AssertionContext{execConfig};
     mach2->run();

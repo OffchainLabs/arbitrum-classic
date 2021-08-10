@@ -55,23 +55,34 @@ struct ParsedBuffer {
     std::vector<uint256_t> nodes;
 };
 
-using ParsedTupVal =
-    std::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer>;
+class ParsedTupValVector;
+using ParsedTupVal = std::variant<ParsedTupValVector,
+                                  uint256_t,
+                                  CodePointStub,
+                                  Buffer,
+                                  ValueHash,
+                                  ParsedBuffer>;
+
+class ParsedTupValVector : public std::vector<ParsedTupVal> {};
 
 using ParsedBufVal = std::variant<Buffer, ParsedBuffer>;
 
-using ParsedSerializedVal = std::variant<uint256_t,
+using ParsedSerializedVal = std::variant<std::vector<ParsedTupVal>,
+                                         uint256_t,
                                          CodePointStub,
                                          Buffer,
-                                         std::vector<ParsedTupVal>,
                                          ParsedBuffer>;
+
+bool shouldInlineTuple(const Tuple& tuple,
+                       const std::vector<unsigned char>& seed);
 
 DbResult<value> getValueRecord(const ReadTransaction& tx,
                                const ParsedSerializedVal& record,
                                std::set<uint64_t>& segment_ids,
                                ValueCache& value_cache);
 ParsedSerializedVal parseRecord(const char*& buf);
-std::vector<value> serializeValue(const value& val,
+std::vector<value> serializeValue(const std::vector<unsigned char>& seed,
+                                  const value& val,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>& segment_counts);
 DeleteResults deleteValueRecord(ReadWriteTransaction& tx,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,20 +39,20 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
       inbox_messages_consumed(0) {}
 
 MachineStateKeys::MachineStateKeys(const MachineState& machine)
-    : static_hash(hash_value(machine.static_val)),
+    : output(machine.output),
+      pc(machine.pc, machine.loadCurrentInstruction()),
+      static_hash(hash_value(machine.static_val)),
       register_hash(hash_value(machine.registerVal)),
       datastack_hash(machine.stack.hash()),
       auxstack_hash(machine.auxstack.hash()),
       arb_gas_remaining(machine.arb_gas_remaining),
-      pc(machine.pc, machine.loadCurrentInstruction()),
-      err_pc(machine.errpc),
-      status(machine.state),
-      output(machine.output) {}
+      state(machine.state),
+      err_pc(machine.errpc) {}
 
 uint256_t MachineStateKeys::machineHash() const {
-    if (status == Status::Halted)
+    if (state == Status::Halted)
         return 0;
-    if (status == Status::Error)
+    if (state == Status::Error)
         return 1;
 
     std::array<unsigned char, 32 * 7> data{};
@@ -100,17 +100,18 @@ MachineState::MachineState(std::shared_ptr<CoreCode> code_, value static_val_)
       static_val(std::move(static_val_)),
       arb_gas_remaining(max_arb_gas_remaining) {}
 
-MachineState::MachineState(std::shared_ptr<Code> code_,
+MachineState::MachineState(MachineOutput output_,
+                           CodePointRef pc_,
+                           std::shared_ptr<Code> code_,
                            value register_val_,
                            value static_val_,
                            Datastack stack_,
                            Datastack auxstack_,
                            uint256_t arb_gas_remaining_,
                            Status state_,
-                           CodePointRef pc_,
-                           CodePointStub errpc_,
-                           MachineOutput output_)
-    : pc(pc_),
+                           CodePointStub errpc_)
+    : output(output_),
+      pc(pc_),
       code(std::move(code_)),
       registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
@@ -118,8 +119,7 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
       auxstack(std::move(auxstack_)),
       arb_gas_remaining(arb_gas_remaining_),
       state(state_),
-      errpc(errpc_),
-      output(std::move(output_)) {}
+      errpc(errpc_) {}
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
@@ -174,11 +174,11 @@ std::vector<unsigned char> MachineState::marshalState() const {
 }
 
 void insertSizes(std::vector<unsigned char>& buf,
-                 int sz1,
-                 int sz2,
-                 int sz3,
-                 int sz4) {
-    int acc = 1;
+                 uint32_t sz1,
+                 uint32_t sz2,
+                 uint32_t sz3,
+                 uint32_t sz4) {
+    uint32_t acc = 1;
     buf.push_back(static_cast<uint8_t>(acc));
     acc += sz1 / 32;
     buf.push_back(static_cast<uint8_t>(acc));
@@ -882,4 +882,27 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
 
 uint256_t MachineState::getTotalMessagesRead() const {
     return output.fully_processed_inbox.count;
+}
+
+bool MachineOutput::operator==(const MachineOutput& other) const {
+    return fully_processed_inbox == other.fully_processed_inbox &&
+           total_steps == other.total_steps &&
+           arb_gas_used == other.arb_gas_used && send_acc == other.send_acc &&
+           log_acc == other.log_acc && send_count == other.send_count &&
+           log_count == other.log_count &&
+           l1_block_number == other.l1_block_number &&
+           l2_block_number == other.l2_block_number &&
+           last_inbox_timestamp == other.last_inbox_timestamp &&
+           last_sideload == other.last_sideload;
+}
+bool MachineOutput::operator!=(const MachineOutput& other) const {
+    return !(*this == other);
+}
+
+bool InboxState::operator==(const InboxState& other) const {
+    return count == other.count && accumulator == other.accumulator;
+}
+
+bool InboxState::operator!=(const InboxState& other) const {
+    return !(*this == other);
 }

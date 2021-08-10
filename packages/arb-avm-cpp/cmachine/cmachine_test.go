@@ -1,5 +1,5 @@
 /*
-* Copyright 2019, Offchain Labs, Inc.
+* Copyright 2019-2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import (
 	"math/big"
 	"os"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 func TestMachineCreation(t *testing.T) {
@@ -40,7 +42,8 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	arbStorage, err := NewArbStorage(dePath)
+	coreConfig := configuration.DefaultCoreSettings()
+	arbStorage, err := NewArbStorage(dePath, coreConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

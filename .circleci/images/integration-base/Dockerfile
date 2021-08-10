@@ -1,7 +1,7 @@
 FROM debian:bullseye-slim
 
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
-    apt-get install -y curl git librocksdb-dev libgmp-dev sudo netcat-openbsd nodejs npm gcc g++ && \
+    apt-get install -y curl git librocksdb-dev libgmp-dev libssl-dev sudo netcat-openbsd nodejs npm gcc g++ && \
     rm -rf /var/lib/apt/lists/* && \
     curl https://dl.google.com/go/go1.15.2.linux-amd64.tar.gz --output go1.15.2.linux-amd64.tar.gz && \
     tar -xf go1.15.2.linux-amd64.tar.gz && \

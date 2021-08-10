@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,6 +89,9 @@ struct InboxState {
         accumulator = message.accumulator;
         count += 1;
     }
+
+    bool operator==(const InboxState& other) const;
+    bool operator!=(const InboxState& other) const;
 };
 
 struct MachineOutput {
@@ -99,47 +102,55 @@ struct MachineOutput {
     uint256_t log_acc;
     uint256_t send_count;
     uint256_t log_count;
+    uint256_t l1_block_number;
+    uint256_t l2_block_number;
+    uint256_t last_inbox_timestamp;
     std::optional<uint256_t> last_sideload;
+
+    bool operator==(const MachineOutput& other) const;
+    bool operator!=(const MachineOutput& other) const;
 };
 
 struct MachineStateKeys {
+    MachineOutput output;
+    CodePointStub pc;
     uint256_t static_hash;
     uint256_t register_hash;
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
     uint256_t arb_gas_remaining;
-    CodePointStub pc;
+    Status state;
     CodePointStub err_pc;
-    Status status;
-    MachineOutput output;
 
-    MachineStateKeys(uint256_t static_hash_,
+    MachineStateKeys(MachineOutput output_,
+                     CodePointStub pc_,
+                     uint256_t static_hash_,
                      uint256_t register_hash_,
                      uint256_t datastack_hash_,
                      uint256_t auxstack_hash_,
                      uint256_t arb_gas_remaining_,
-                     CodePointStub pc_,
-                     CodePointStub err_pc_,
-                     Status status_,
-                     MachineOutput output_)
-        : static_hash(static_hash_),
+                     Status state_,
+                     CodePointStub err_pc_)
+        : output(output_),
+          pc(pc_),
+          static_hash(static_hash_),
           register_hash(register_hash_),
           datastack_hash(datastack_hash_),
           auxstack_hash(auxstack_hash_),
           arb_gas_remaining(arb_gas_remaining_),
-          pc(pc_),
-          err_pc(err_pc_),
-          status(status_),
-          output(std::move(output_)) {}
+          state(state_),
+          err_pc(err_pc_) {}
 
-    MachineStateKeys(const MachineState& machine);
+    explicit MachineStateKeys(const MachineState& machine);
 
-    uint256_t getTotalMessagesRead() const;
-    uint256_t getInboxAcc() const;
-    uint256_t machineHash() const;
+    [[nodiscard]] uint256_t getTotalMessagesRead() const;
+    [[nodiscard]] uint256_t getInboxAcc() const;
+    [[nodiscard]] uint256_t machineHash() const;
 };
 
 struct MachineState {
+    MachineOutput output;
+
     CodePointRef pc{0, 0};
     std::shared_ptr<Code> code;
     mutable std::optional<CodeSegmentSnapshot> loaded_segment;
@@ -151,8 +162,6 @@ struct MachineState {
     Status state{Status::Extensive};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
 
-    MachineOutput output;
-
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
@@ -161,16 +170,16 @@ struct MachineState {
 
     MachineState(std::shared_ptr<CoreCode> code_, value static_val);
 
-    MachineState(std::shared_ptr<Code> code_,
+    MachineState(MachineOutput output_,
+                 CodePointRef pc_,
+                 std::shared_ptr<Code> code_,
                  value register_val_,
                  value static_val,
                  Datastack stack_,
                  Datastack auxstack_,
                  uint256_t arb_gas_remaining_,
                  Status state_,
-                 CodePointRef pc_,
-                 CodePointStub errpc_,
-                 MachineOutput output_);
+                 CodePointStub errpc_);
 
     uint256_t getMachineSize() const;
     OneStepProof marshalForProof() const;

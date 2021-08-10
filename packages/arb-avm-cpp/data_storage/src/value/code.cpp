@@ -194,8 +194,8 @@ RawCodeSegmentData prepareToSaveCodeSegment(
         op_data.push_back(op.immediate ? 1 : 0);
         op_data.push_back(static_cast<unsigned char>(op.opcode));
         if (op.immediate) {
-            auto values =
-                serializeValue(*op.immediate, op_data, segment_counts);
+            auto values = serializeValue(tx.getSecretHashSeed(), *op.immediate,
+                                         op_data, segment_counts);
             // Save the immediate values, that weren't already saved for this
             // code segment
             for (const auto& val : values) {

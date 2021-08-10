@@ -64,7 +64,7 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     execConfig.max_gas = gas_count_target;
     mach.machine_state.context = AssertionContext(execConfig);
     auto assertion = mach.run();
-    REQUIRE(assertion.gasCount <= gas_count_target);
+    REQUIRE(assertion.gas_count <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
     REQUIRE(val == value{uint256_t{4}});
     REQUIRE(mach.machine_state.stack.stacksize() == 0);
@@ -72,7 +72,8 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
 
 TEST_CASE("Code works correctly") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
                                         value{Tuple()}));
     auto mach = storage.getInitialMachine();
@@ -82,7 +83,8 @@ TEST_CASE("Code works correctly") {
 
 TEST_CASE("Code serialization") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
                                         value{Tuple()}));
     ValueCache value_cache{1, 0};

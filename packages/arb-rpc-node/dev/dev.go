@@ -44,6 +44,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -51,7 +52,14 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
 func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
-	mon, err := monitor.NewMonitor(dir, arbosPath)
+	nodeCacheConfig := configuration.NodeCache{
+		AllowSlowLookup: true,
+		LRUSize:         1000,
+		TimedExpire:     20 * time.Minute,
+	}
+	coreConfig := configuration.DefaultCoreSettings()
+
+	mon, err := monitor.NewMonitor(dir, arbosPath, coreConfig)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}
@@ -62,7 +70,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.
 		return nil, nil, nil, nil, err
 	}
 
-	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 10*time.Millisecond)
+	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 10*time.Millisecond, &nodeCacheConfig)
 	if err != nil {
 		mon.Close()
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")

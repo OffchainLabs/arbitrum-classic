@@ -34,11 +34,15 @@ struct DeleteResults;
 
 class Machine;
 
-DbResult<MachineStateKeys> getMachineStateKeys(
+DbResult<std::variant<MachineStateKeys, MachineOutput>> getMachineStateKeys(
     const ReadTransaction& transaction,
     uint256_t machineHash);
-MachineStateKeys extractMachineStateKeys(
-    std::vector<unsigned char>::const_iterator iter);
+MachineOutput extractMachineOutput(
+    std::vector<unsigned char>::const_iterator& iter);
+std::variant<MachineStateKeys, MachineOutput> extractMachineStateKeys(
+    const std::vector<unsigned char>& data);
+void serializeMachineOutput(const MachineOutput& output_data,
+                            std::vector<unsigned char>& state_data_vector);
 void serializeMachineStateKeys(const MachineStateKeys& state_data,
                                std::vector<unsigned char>& state_data_vector);
 std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(

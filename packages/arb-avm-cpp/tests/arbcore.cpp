@@ -74,12 +74,13 @@ void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
                      uint256_t prev_message_count,
                      uint256_t prev_inbox_acc,
                      uint256_t target_message_count,
-                     int send_count,
-                     int log_count) {
+                     uint256_t send_count,
+                     uint256_t log_count) {
     auto initial_count_res = arbCore->messageEntryInsertedCount();
     REQUIRE(initial_count_res.status.ok());
 
     std::vector<std::vector<unsigned char>> raw_seq_batch_items;
+    raw_seq_batch_items.reserve(seq_batch_items.size());
     for (const auto& batch_item : seq_batch_items) {
         raw_seq_batch_items.push_back(serializeForCore(batch_item));
     }
@@ -130,11 +131,12 @@ TEST_CASE("ArbCore tests") {
         "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
 
     uint64_t logs_count = 0;
+    ArbCoreConfig coreConfig{};
 
     for (const auto& filename : files) {
         INFO("Testing " << filename);
 
-        ArbStorage storage(dbpath);
+        ArbStorage storage(dbpath, coreConfig);
         REQUIRE(storage.initialize(arb_os_path).ok());
         auto arbCore = storage.getArbCore();
         REQUIRE(arbCore->startThread());
@@ -233,6 +235,31 @@ TEST_CASE("ArbCore tests") {
         //        REQUIRE(before_sideload.status.ok());
         //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
         //                    .op.opcode == OpCode::SIDELOAD);
+
+        auto final_output = arbCore->getLastMachineOutput();
+
+        // Create a new arbCore and verify it gets to the same point
+        storage.closeArbStorage();
+        storage = ArbStorage(dbpath, coreConfig);
+        REQUIRE(storage.initialize(arb_os_path).ok());
+        arbCore = storage.getArbCore();
+        logs_count = uint64_t(arbCore->getLastMachineOutput().log_count);
+        if (!sends.empty()) {
+            // If there were sends, the block must have ended, so there should
+            // be a checkpoint present
+            REQUIRE(
+                arbCore->getLastMachineOutput().fully_processed_inbox.count >
+                0);
+        }
+        REQUIRE(arbCore->startThread());
+
+        int n = 0;
+        while (arbCore->getLastMachineOutput().arb_gas_used <
+               final_output.arb_gas_used) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            REQUIRE(n++ < 100);
+        }
+        REQUIRE(arbCore->getLastMachineOutput() == final_output);
     }
 }
 
@@ -268,7 +295,8 @@ TEST_CASE("ArbCore tests") {
 TEST_CASE("ArbCore inbox") {
     DBDeleter deleter;
 
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
             .ok());
@@ -301,8 +329,7 @@ TEST_CASE("ArbCore inbox") {
     auto cursor_machine_hash = cursor.data->machineHash();
     REQUIRE(cursor_machine_hash.has_value());
 
-    auto cursor_machine =
-        arbCore->takeExecutionCursorMachine(*cursor.data.get());
+    auto cursor_machine = arbCore->takeExecutionCursorMachine(*cursor.data);
     REQUIRE(cursor_machine);
     REQUIRE(cursor_machine_hash.value() == cursor_machine->hash());
 
@@ -311,7 +338,8 @@ TEST_CASE("ArbCore inbox") {
 }
 
 TEST_CASE("ArbCore backwards reorg") {
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
             .ok());

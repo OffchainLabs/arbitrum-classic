@@ -88,7 +88,8 @@ void getTupleValues(const ReadTransaction& transaction,
 
 TEST_CASE("Save value") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
@@ -108,7 +109,8 @@ TEST_CASE("Save value") {
 
 TEST_CASE("Save tuple") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
@@ -133,7 +135,8 @@ TEST_CASE("Save tuple") {
 
 TEST_CASE("Save and get value") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     ValueCache value_cache{1, 0};
 
@@ -161,7 +164,8 @@ TEST_CASE("Save and get value") {
 
 TEST_CASE("Save and get tuple values") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     ValueCache value_cache{1, 0};
 
@@ -217,7 +221,8 @@ TEST_CASE("Save and get tuple values") {
 
 TEST_CASE("Save And Get Tuple") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
@@ -263,25 +268,32 @@ TEST_CASE("Save And Get Tuple") {
         REQUIRE(hash(tuple) != hash(inner_tuple));
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        if (!shouldInlineTuple(inner_tuple, transaction->getSecretHashSeed())) {
+            getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        }
     }
     SECTION("save 2 tuples in tuple") {
         ValueCache value_cache{1, 0};
-        uint256_t num = 1;
-        value inner_tuple = Tuple::createTuple(num);
-        uint256_t num2 = 2;
-        value inner_tuple2 = Tuple::createTuple(num2);
+        uint256_t num = 2;
+        Tuple inner_tuple = Tuple::createTuple(num);
+        uint256_t num2 = 3;
+        Tuple inner_tuple2 = Tuple::createTuple(num2);
         auto tuple = Tuple(inner_tuple, inner_tuple2);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple2, 1, true, value_cache);
+        if (!shouldInlineTuple(inner_tuple, transaction->getSecretHashSeed())) {
+            getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        }
+        if (!shouldInlineTuple(inner_tuple2,
+                               transaction->getSecretHashSeed())) {
+            getTuple(*transaction, inner_tuple2, 1, true, value_cache);
+        }
     }
     SECTION("save saved tuple in tuple") {
         ValueCache value_cache{1, 0};
         auto transaction2 = storage.makeReadWriteTransaction();
-        uint256_t num = 1;
-        value inner_tuple = Tuple::createTuple(num);
+        uint256_t num = 4;
+        Tuple inner_tuple = Tuple::createTuple(num);
         value tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, inner_tuple, 1, true);
         getTuple(*transaction, inner_tuple, 1, true, value_cache);
@@ -289,8 +301,12 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 1, true, value_cache);
 
         // Use different cache to get real reference count
+        uint64_t expected_refs = 2;
+        if (shouldInlineTuple(inner_tuple, transaction2->getSecretHashSeed())) {
+            expected_refs--;
+        }
         ValueCache value_cache2{1, 0};
-        getTuple(*transaction, inner_tuple, 2, true, value_cache2);
+        getTuple(*transaction, inner_tuple, expected_refs, true, value_cache2);
 
         // Test cache
         getTuple(*transaction, inner_tuple, 0, true, value_cache2);
@@ -299,7 +315,8 @@ TEST_CASE("Save And Get Tuple") {
 
 TEST_CASE("Checkpoint Benchmark") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     uint256_t num = 1;
     value tuple = Tuple::createTuple(num);
@@ -334,12 +351,18 @@ void checkSavedState(const ReadWriteTransaction& transaction,
                      const Machine& expected_machine,
                      uint32_t expected_ref_count) {
     auto results = getMachineStateKeys(transaction, expected_machine.hash());
-    REQUIRE(std::holds_alternative<CountedData<MachineStateKeys>>(results));
-    auto res = std::get<CountedData<MachineStateKeys>>(results);
+    REQUIRE(std::holds_alternative<
+            CountedData<std::variant<MachineStateKeys, MachineOutput>>>(
+        results));
+    auto res =
+        std::get<CountedData<std::variant<MachineStateKeys, MachineOutput>>>(
+            results);
     REQUIRE(res.reference_count == expected_ref_count);
 
-    auto data = res.data;
-    REQUIRE(data.status == expected_machine.machine_state.state);
+    auto variantdata = res.data;
+    REQUIRE(std::holds_alternative<MachineStateKeys>(variantdata));
+    auto data = std::get<MachineStateKeys>(variantdata);
+    REQUIRE(data.state == expected_machine.machine_state.state);
     REQUIRE(data.pc.pc == expected_machine.machine_state.pc);
     REQUIRE(
         data.datastack_hash ==
@@ -349,6 +372,12 @@ void checkSavedState(const ReadWriteTransaction& transaction,
         hash(expected_machine.machine_state.auxstack.getTupleRepresentation()));
     REQUIRE(data.register_hash ==
             hash_value(expected_machine.machine_state.registerVal));
+    REQUIRE(data.output.l1_block_number ==
+            expected_machine.machine_state.output.l1_block_number);
+    REQUIRE(data.output.l2_block_number ==
+            expected_machine.machine_state.output.l2_block_number);
+    REQUIRE(data.output.last_inbox_timestamp ==
+            expected_machine.machine_state.output.last_inbox_timestamp);
 
     ValueCache value_cache{1, 0};
     REQUIRE(!std::holds_alternative<rocksdb::Status>(
@@ -385,58 +414,10 @@ void deleteCheckpoint(ReadWriteTransaction& transaction,
     checkDeletedCheckpoint(transaction, deleted_machine);
 }
 
-Machine getComplexMachine() {
-    auto core_code = std::make_shared<CoreCode>();
-    auto code = std::make_shared<RunningCode>(core_code);
-    auto stub = code->addSegment();
-    stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
-    stub = code->addOperation(stub.pc, Operation(OpCode::MUL));
-    stub = code->addOperation(stub.pc, Operation(OpCode::SUB));
-    uint256_t register_val = 100;
-    auto static_val = Tuple(register_val, Tuple());
-
-    CodePointStub code_point_stub({0, 1}, 654546);
-
-    Datastack data_stack;
-    data_stack.push(register_val);
-    Datastack aux_stack;
-    aux_stack.push(register_val);
-    aux_stack.push(code_point_stub);
-
-    uint256_t arb_gas_remaining = 534574678365;
-
-    CodePointRef pc{0, 0};
-    CodePointStub err_pc({0, 0}, 968769876);
-    Status state = Status::Extensive;
-
-    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65};
-
-    return Machine(MachineState(std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc, output));
-}
-
-Machine getDefaultMachine() {
-    auto core_code = std::make_shared<CoreCode>();
-    auto code = std::make_shared<RunningCode>(core_code);
-    code->addSegment();
-    auto static_val = Tuple();
-    auto register_val = Tuple();
-    auto data_stack = Tuple();
-    auto aux_stack = Tuple();
-    uint256_t arb_gas_remaining = 534574678365;
-    CodePointRef pc(0, 0);
-    CodePointStub err_pc({0, 0}, 968769876);
-    Status state = Status::Extensive;
-    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34};
-    return Machine(MachineState(std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc, output));
-}
-
 TEST_CASE("Save Machinestatedata") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("default") {
@@ -451,7 +432,8 @@ TEST_CASE("Save Machinestatedata") {
 
 TEST_CASE("Get Machinestate data") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("default") {
@@ -468,7 +450,8 @@ TEST_CASE("Get Machinestate data") {
 
 TEST_CASE("Delete checkpoint") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("default") {
@@ -506,5 +489,21 @@ TEST_CASE("Delete checkpoint") {
         checkSavedState(*transaction, machine, 1);
         auto res2 = deleteMachine(*transaction, machine.hash());
         checkDeletedCheckpoint(*transaction, machine);
+    }
+}
+
+TEST_CASE("Secret hash seed") {
+    DBDeleter deleter;
+    ArbCoreConfig coreConfig{};
+    std::vector<unsigned char> seed;
+    {
+        ArbStorage storage(dbpath, coreConfig);
+        seed = storage.makeReadTransaction()->getSecretHashSeed();
+        REQUIRE(seed.size() == 32);
+        REQUIRE(seed != std::vector<unsigned char>(32, 0));
+    }
+    {
+        ArbStorage storage(dbpath, coreConfig);
+        REQUIRE(seed == storage.makeReadTransaction()->getSecretHashSeed());
     }
 }

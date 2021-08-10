@@ -24,6 +24,7 @@
 #include <data_storage/executioncursor.hpp>
 #include <data_storage/messageentry.hpp>
 #include <data_storage/readsnapshottransaction.hpp>
+#include <data_storage/sideloadcache.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
@@ -58,6 +59,29 @@ struct RawMessageInfo {
           accumulator(accumulator_) {}
 };
 
+struct ArbCoreConfig {
+    // Maximum number of messages to process at a time
+    uint32_t message_process_count{10};
+
+    // Checkpoint loaded from disk if difference greater than cost,
+    // otherwise just run machine until gas reached
+    uint256_t checkpoint_load_gas_cost{1'000'000};
+
+    // Frequency to save checkpoint to database
+    uint256_t min_gas_checkpoint_frequency{1'000'000};
+
+    // How long to keep items in memory cache
+    uint32_t timed_cache_expiration_seconds{60 * 20};
+
+    // Number of items to keep in LRU cache
+    uint32_t lru_sideload_cache_size{20};
+
+    // Print extra debug messages to stderr
+    bool debug{false};
+
+    ArbCoreConfig() {}
+};
+
 class ArbCore {
    public:
     typedef enum {
@@ -84,6 +108,8 @@ class ArbCore {
 
    private:
     std::unique_ptr<std::thread> core_thread;
+
+    ArbCoreConfig coreConfig{};
 
     // Core thread input
     std::atomic<bool> arbcore_abort{false};
@@ -118,8 +144,9 @@ class ArbCore {
 
     // Cache a machine ready to sideload view transactions just after recent
     // blocks
-    std::shared_mutex sideload_cache_mutex;
-    std::map<uint256_t, std::unique_ptr<Machine>> sideload_cache;
+    std::shared_mutex lru_sideload_cache_mutex;
+    std::map<uint256_t, std::unique_ptr<Machine>> lru_sideload_cache;
+    SideloadCache timed_sideload_cache;
 
     // Core thread inbox status input/output. Core thread will update if and
     // only if set to MESSAGES_READY
@@ -153,11 +180,12 @@ class ArbCore {
 
    public:
     ArbCore() = delete;
-    explicit ArbCore(std::shared_ptr<DataStorage> data_storage_);
+    ArbCore(std::shared_ptr<DataStorage> data_storage_,
+            const ArbCoreConfig& coreConfig);
 
     ~ArbCore() { abortThread(); }
     rocksdb::Status initialize(const LoadedExecutable& executable);
-    bool initialized() const;
+    [[nodiscard]] bool initialized() const;
     void operator()();
 
    public:
@@ -167,19 +195,26 @@ class ArbCore {
 
    private:
     // Private database interaction
+    [[nodiscard]] ValueResult<uint256_t> schemaVersion(
+        ReadTransaction& tx) const;
+    rocksdb::Status updateSchemaVersion(ReadWriteTransaction& tx,
+                                        const uint256_t& schema_version);
     rocksdb::Status saveAssertion(ReadWriteTransaction& tx,
                                   const Assertion& assertion,
                                   uint256_t arb_gas_used);
-    std::variant<rocksdb::Status, MachineStateKeys> getCheckpoint(
-        ReadTransaction& tx,
-        const uint256_t& arb_gas_used) const;
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
-        const uint256_t& total_gas,
-        bool after_gas);
+        const uint256_t& total_gas);
     rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
-                                                bool use_latest,
+                                                bool initial_start,
                                                 ValueCache& cache);
+    rocksdb::Status reorgToTimestampOrBefore(const uint256_t& timestamp,
+                                             bool initial_start,
+                                             ValueCache& cache);
+    rocksdb::Status reorgCheckpoints(
+        const std::function<bool(const MachineOutput&)>& check_output,
+        bool initial_start,
+        ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(
         const ReadTransaction& transaction,
@@ -229,10 +264,11 @@ class ArbCore {
     // Logs Cursor interaction
     bool logsCursorRequest(size_t cursor_index, uint256_t count);
     ValueResult<logscursor_logs> logsCursorGetLogs(size_t cursor_index);
-    bool logsCursorCheckError(size_t cursor_index) const;
+    [[nodiscard]] bool logsCursorCheckError(size_t cursor_index) const;
     std::string logsCursorClearError(size_t cursor_index);
     bool logsCursorConfirmReceived(size_t cursor_index);
-    ValueResult<uint256_t> logsCursorPosition(size_t cursor_index) const;
+    [[nodiscard]] ValueResult<uint256_t> logsCursorPosition(
+        size_t cursor_index) const;
 
    private:
     // Logs cursor internal functions
@@ -270,26 +306,26 @@ class ArbCore {
         ExecutionCursor& execution_cursor);
 
    public:
-    ValueResult<uint256_t> logInsertedCount() const;
-    ValueResult<uint256_t> sendInsertedCount() const;
-    ValueResult<uint256_t> messageEntryInsertedCount() const;
-    ValueResult<uint256_t> delayedMessageEntryInsertedCount() const;
-    ValueResult<uint256_t> totalDelayedMessagesSequenced() const;
+    [[nodiscard]] ValueResult<uint256_t> logInsertedCount() const;
+    [[nodiscard]] ValueResult<uint256_t> sendInsertedCount() const;
+    [[nodiscard]] ValueResult<uint256_t> messageEntryInsertedCount() const;
+    [[nodiscard]] ValueResult<uint256_t> delayedMessageEntryInsertedCount()
+        const;
+    [[nodiscard]] ValueResult<uint256_t> totalDelayedMessagesSequenced() const;
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,
                                             ValueCache& valueCache);
-    ValueResult<std::vector<std::vector<unsigned char>>> getSends(
+    [[nodiscard]] ValueResult<std::vector<std::vector<unsigned char>>> getSends(
         uint256_t index,
         uint256_t count) const;
 
-    ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
-        uint256_t index,
-        uint256_t count) const;
-    ValueResult<std::vector<std::vector<unsigned char>>> getSequencerBatchItems(
-        uint256_t index) const;
-    ValueResult<uint256_t> getSequencerBlockNumberAt(
+    [[nodiscard]] ValueResult<std::vector<std::vector<unsigned char>>>
+    getMessages(uint256_t index, uint256_t count) const;
+    [[nodiscard]] ValueResult<std::vector<std::vector<unsigned char>>>
+    getSequencerBatchItems(uint256_t index) const;
+    [[nodiscard]] ValueResult<uint256_t> getSequencerBlockNumberAt(
         uint256_t sequence_number) const;
-    ValueResult<std::vector<unsigned char>> genInboxProof(
+    [[nodiscard]] ValueResult<std::vector<unsigned char>> genInboxProof(
         uint256_t seq_num,
         uint256_t batch_index,
         uint256_t batch_end_count) const;
@@ -302,43 +338,40 @@ class ArbCore {
         uint256_t index1,
         uint256_t index2);
 
-    ValueResult<size_t> countMatchingBatchAccs(
+    [[nodiscard]] ValueResult<size_t> countMatchingBatchAccs(
         std::vector<std::pair<uint256_t, uint256_t>> seq_nums_and_accs) const;
 
-    ValueResult<uint256_t> getDelayedMessagesToSequence(
+    [[nodiscard]] ValueResult<uint256_t> getDelayedMessagesToSequence(
         uint256_t max_block_number) const;
 
    private:
-    ValueResult<std::vector<RawMessageInfo>> getMessagesImpl(
+    [[nodiscard]] ValueResult<std::vector<RawMessageInfo>> getMessagesImpl(
         const ReadConsistentTransaction& tx,
         uint256_t index,
         uint256_t count,
         std::optional<uint256_t> start_acc) const;
-    ValueResult<uint256_t> getNextSequencerBatchItemAccumulator(
+    [[nodiscard]] ValueResult<uint256_t> getNextSequencerBatchItemAccumulator(
         const ReadTransaction& tx,
         uint256_t sequence_number) const;
 
-    template <typename T>
-    rocksdb::Status resolveStagedMessage(const ReadTransaction& tx,
-                                         T& machine_state);
     // Private database interaction
-    ValueResult<uint256_t> logInsertedCountImpl(
+    [[nodiscard]] ValueResult<uint256_t> logInsertedCountImpl(
         const ReadTransaction& tx) const;
 
     ValueResult<uint256_t> logProcessedCount(ReadTransaction& tx) const;
     rocksdb::Status updateLogProcessedCount(ReadWriteTransaction& tx,
                                             rocksdb::Slice value_slice);
-    ValueResult<uint256_t> sendInsertedCountImpl(
+    [[nodiscard]] ValueResult<uint256_t> sendInsertedCountImpl(
         const ReadTransaction& tx) const;
 
     ValueResult<uint256_t> sendProcessedCount(ReadTransaction& tx) const;
     rocksdb::Status updateSendProcessedCount(ReadWriteTransaction& tx,
                                              rocksdb::Slice value_slice);
-    ValueResult<uint256_t> messageEntryInsertedCountImpl(
+    [[nodiscard]] ValueResult<uint256_t> messageEntryInsertedCountImpl(
         const ReadTransaction& tx) const;
-    ValueResult<uint256_t> delayedMessageEntryInsertedCountImpl(
+    [[nodiscard]] ValueResult<uint256_t> delayedMessageEntryInsertedCountImpl(
         const ReadTransaction& tx) const;
-    ValueResult<uint256_t> totalDelayedMessagesSequencedImpl(
+    [[nodiscard]] ValueResult<uint256_t> totalDelayedMessagesSequencedImpl(
         const ReadTransaction& tx) const;
 
     rocksdb::Status saveLogs(ReadWriteTransaction& tx,
@@ -348,20 +381,21 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& sends);
 
    private:
-    rocksdb::Status addMessages(const message_data_struct& data,
-                                ValueCache& cache);
+    ValueResult<std::optional<uint256_t>> addMessages(
+        const message_data_struct& data,
+        ValueCache& cache);
     ValueResult<std::vector<value>> getLogsNoLock(ReadTransaction& tx,
                                                   uint256_t index,
                                                   uint256_t count,
                                                   ValueCache& valueCache);
 
-    ValueResult<std::vector<MachineMessage>> readNextMessages(
+    [[nodiscard]] ValueResult<std::vector<MachineMessage>> readNextMessages(
         const ReadConsistentTransaction& tx,
         const InboxState& fully_processed_inbox,
         size_t count) const;
 
-    bool isValid(const ReadTransaction& tx,
-                 const InboxState& fully_processed_inbox) const;
+    [[nodiscard]] bool isValid(const ReadTransaction& tx,
+                               const InboxState& fully_processed_inbox) const;
 
     std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionMachine(
         ReadTransaction& tx,
@@ -371,11 +405,14 @@ class ArbCore {
                                            const uint256_t& log_index);
     rocksdb::Status updateSendInsertedCount(ReadWriteTransaction& tx,
                                             const uint256_t& send_index);
+    bool runMachineWithMessages(MachineExecutionConfig& execConfig,
+                                size_t max_message_batch_size);
 
    public:
     // Public sideload interaction
     ValueResult<std::unique_ptr<Machine>> getMachineForSideload(
-        const uint256_t& block_number);
+        const uint256_t& block_number,
+        bool allow_slow_lookup);
 
     ValueResult<uint256_t> getSideloadPosition(ReadTransaction& tx,
                                                const uint256_t& block_number);
@@ -391,7 +428,7 @@ class ArbCore {
     rocksdb::Status logsCursorSaveCurrentTotalCount(ReadWriteTransaction& tx,
                                                     size_t cursor_index,
                                                     uint256_t count);
-    ValueResult<uint256_t> logsCursorGetCurrentTotalCount(
+    [[nodiscard]] ValueResult<uint256_t> logsCursorGetCurrentTotalCount(
         const ReadTransaction& tx,
         size_t cursor_index) const;
 };
