@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
@@ -34,30 +34,9 @@ import (
 )
 
 var (
-	EthHeightGauge = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: "arbitrum",
-		Subsystem: "ethereum",
-		Name:      "block_height",
-		Help:      "Current best block in the anchoring Ethereum chain.",
-	})
-	DelayedCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "arbitrum",
-		Subsystem: "inbox",
-		Name:      "delayed",
-		Help:      "Number of Delayed Inbox Messages Processed",
-	})
-	BatchesCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "arbitrum",
-		Subsystem: "inbox",
-		Name:      "processed",
-		Help:      "Number of Inbox Message Batches",
-	})
-	MessageGauge = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: "arbitrum",
-		Subsystem: "inbox",
-		Name:      "messages",
-		Help:      "Total Messages Inserted",
-	})
+	EthHeightGauge = metrics.NewRegisteredGauge("arbitrum/ethereum/block_height", nil)
+	DelayedCounter = metrics.NewRegisteredCounter("arbitrum/inbox/delayed", nil)
+	BatchesCounter = metrics.NewRegisteredCounter("arbitrum/inbox/processed", nil)
 )
 
 const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
@@ -210,7 +189,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			}
 		}
 
-		EthHeightGauge.Set(float64(currentHeight.Uint64()))
+		EthHeightGauge.Inc(currentHeight.Int64())
 		if ir.healthChan != nil && currentHeight != nil {
 			ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: new(big.Int).Set(currentHeight)}
 		}
@@ -354,9 +333,8 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					from = from.Add(to, big.NewInt(1))
 				}
 			}
-			DelayedCounter.Add(float64(len(delayedMessages)))
-			BatchesCounter.Add(float64(len(sequencerBatches)))
-			MessageGauge.Set(float64(ir.db.MachineMessagesRead().Uint64()))
+			DelayedCounter.Inc(int64(len(delayedMessages)))
+			BatchesCounter.Inc(int64(len(sequencerBatches)))
 		}
 		sleepChan := time.After(time.Second * 5)
 	FeedReadLoop:

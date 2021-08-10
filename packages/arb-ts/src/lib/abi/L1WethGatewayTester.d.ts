@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface L1WethGatewayTesterInterface extends ethers.utils.Interface {
   functions: {
@@ -187,16 +186,46 @@ interface L1WethGatewayTesterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'WithdrawRedirected'): EventFragment
 }
 
-export class L1WethGatewayTester extends Contract {
+export class L1WethGatewayTester extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: L1WethGatewayTesterInterface
 
@@ -206,22 +235,9 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    'calculateL2TokenAddress(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
     counterpartGateway(overrides?: CallOverrides): Promise<[string]>
 
-    'counterpartGateway()'(overrides?: CallOverrides): Promise<[string]>
-
     encodeWithdrawal(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    'encodeWithdrawal(uint256,address)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       overrides?: CallOverrides
@@ -233,30 +249,12 @@ export class L1WethGatewayTester extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     gasReserveIfCallRevert(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     getExternalCall(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      _initialData: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string, string] & { target: string; data: string }>
-
-    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _initialData: BytesLike,
@@ -272,36 +270,16 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
 
-    'getOutboundCalldata(address,address,address,uint256,bytes)'(
-      _l1Token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string] & { outboundCalldata: string }>
-
     inboundEscrowAndCall(
       _l2Address: string,
       _amount: BigNumberish,
       _from: string,
       _to: string,
       _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     inbox(overrides?: CallOverrides): Promise<[string]>
-
-    'inbox()'(overrides?: CallOverrides): Promise<[string]>
 
     initialize(
       _l1Counterpart: string,
@@ -309,25 +287,12 @@ export class L1WethGatewayTester extends Contract {
       _inbox: string,
       _l1Weth: string,
       _l2Weth: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(address,address,address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
-      _l1Weth: string,
-      _l2Weth: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     l1Weth(overrides?: CallOverrides): Promise<[string]>
 
-    'l1Weth()'(overrides?: CallOverrides): Promise<[string]>
-
     l2Weth(overrides?: CallOverrides): Promise<[string]>
-
-    'l2Weth()'(overrides?: CallOverrides): Promise<[string]>
 
     outboundTransfer(
       _l1Token: string,
@@ -336,17 +301,7 @@ export class L1WethGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _l1Token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     parseInboundData(
@@ -356,39 +311,20 @@ export class L1WethGatewayTester extends Contract {
       [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
     >
 
-    'parseInboundData(bytes)'(
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
-    >
-
-    postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
-
-    'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
-    'redirectedExits(bytes32)'(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string, string] & { _newTo: string; _newData: string }>
-
     router(overrides?: CallOverrides): Promise<[string]>
-
-    'router()'(overrides?: CallOverrides): Promise<[string]>
 
     setInboxUse(
       _shouldUseInbox: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setInboxUse(bool)'(
-      _shouldUseInbox: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     transferExitAndCall(
@@ -397,16 +333,7 @@ export class L1WethGatewayTester extends Contract {
       _newDestination: string,
       _newData: BytesLike,
       _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      _newDestination: string,
-      _newData: BytesLike,
-      _data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
@@ -415,22 +342,9 @@ export class L1WethGatewayTester extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  'calculateL2TokenAddress(address)'(
-    l1ERC20: string,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   counterpartGateway(overrides?: CallOverrides): Promise<string>
 
-  'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
-
   encodeWithdrawal(
-    _exitNum: BigNumberish,
-    _initialDestination: string,
-    overrides?: CallOverrides
-  ): Promise<string>
-
-  'encodeWithdrawal(uint256,address)'(
     _exitNum: BigNumberish,
     _initialDestination: string,
     overrides?: CallOverrides
@@ -442,30 +356,12 @@ export class L1WethGatewayTester extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-    _token: string,
-    _from: string,
-    _to: string,
-    _amount: BigNumberish,
-    _data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
 
-  'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
-
   getExternalCall(
-    _exitNum: BigNumberish,
-    _initialDestination: string,
-    _initialData: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<[string, string] & { target: string; data: string }>
-
-  'getExternalCall(uint256,address,bytes)'(
     _exitNum: BigNumberish,
     _initialDestination: string,
     _initialData: BytesLike,
@@ -481,36 +377,16 @@ export class L1WethGatewayTester extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  'getOutboundCalldata(address,address,address,uint256,bytes)'(
-    _l1Token: string,
-    _from: string,
-    _to: string,
-    _amount: BigNumberish,
-    _data: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   inboundEscrowAndCall(
     _l2Address: string,
     _amount: BigNumberish,
     _from: string,
     _to: string,
     _data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-    _l2Address: string,
-    _amount: BigNumberish,
-    _from: string,
-    _to: string,
-    _data: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   inbox(overrides?: CallOverrides): Promise<string>
-
-  'inbox()'(overrides?: CallOverrides): Promise<string>
 
   initialize(
     _l1Counterpart: string,
@@ -518,25 +394,12 @@ export class L1WethGatewayTester extends Contract {
     _inbox: string,
     _l1Weth: string,
     _l2Weth: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(address,address,address,address,address)'(
-    _l1Counterpart: string,
-    _l1Router: string,
-    _inbox: string,
-    _l1Weth: string,
-    _l2Weth: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   l1Weth(overrides?: CallOverrides): Promise<string>
 
-  'l1Weth()'(overrides?: CallOverrides): Promise<string>
-
   l2Weth(overrides?: CallOverrides): Promise<string>
-
-  'l2Weth()'(overrides?: CallOverrides): Promise<string>
 
   outboundTransfer(
     _l1Token: string,
@@ -545,17 +408,7 @@ export class L1WethGatewayTester extends Contract {
     _maxGas: BigNumberish,
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-    _l1Token: string,
-    _to: string,
-    _amount: BigNumberish,
-    _maxGas: BigNumberish,
-    _gasPriceBid: BigNumberish,
-    _data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   parseInboundData(
@@ -563,37 +416,20 @@ export class L1WethGatewayTester extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, string] & { _exitNum: BigNumber; _extraData: string }>
 
-  'parseInboundData(bytes)'(
-    _data: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<[BigNumber, string] & { _exitNum: BigNumber; _extraData: string }>
-
-  postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
-
-  'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+  postUpgradeInit(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   redirectedExits(
     arg0: BytesLike,
     overrides?: CallOverrides
   ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
-  'redirectedExits(bytes32)'(
-    arg0: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<[string, string] & { _newTo: string; _newData: string }>
-
   router(overrides?: CallOverrides): Promise<string>
-
-  'router()'(overrides?: CallOverrides): Promise<string>
 
   setInboxUse(
     _shouldUseInbox: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setInboxUse(bool)'(
-    _shouldUseInbox: boolean,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   transferExitAndCall(
@@ -602,16 +438,7 @@ export class L1WethGatewayTester extends Contract {
     _newDestination: string,
     _newData: BytesLike,
     _data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transferExitAndCall(uint256,address,address,bytes,bytes)'(
-    _exitNum: BigNumberish,
-    _initialDestination: string,
-    _newDestination: string,
-    _newData: BytesLike,
-    _data: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
@@ -620,22 +447,9 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    'calculateL2TokenAddress(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     counterpartGateway(overrides?: CallOverrides): Promise<string>
 
-    'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
-
     encodeWithdrawal(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'encodeWithdrawal(uint256,address)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       overrides?: CallOverrides
@@ -650,18 +464,7 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
-
-    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
 
     getExternalCall(
       _exitNum: BigNumberish,
@@ -670,23 +473,7 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<[string, string] & { target: string; data: string }>
 
-    'getExternalCall(uint256,address,bytes)'(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      _initialData: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string, string] & { target: string; data: string }>
-
     getOutboundCalldata(
-      _l1Token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'getOutboundCalldata(address,address,address,uint256,bytes)'(
       _l1Token: string,
       _from: string,
       _to: string,
@@ -704,18 +491,7 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     inbox(overrides?: CallOverrides): Promise<string>
-
-    'inbox()'(overrides?: CallOverrides): Promise<string>
 
     initialize(
       _l1Counterpart: string,
@@ -726,34 +502,11 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address,address,address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
-      _l1Weth: string,
-      _l2Weth: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     l1Weth(overrides?: CallOverrides): Promise<string>
-
-    'l1Weth()'(overrides?: CallOverrides): Promise<string>
 
     l2Weth(overrides?: CallOverrides): Promise<string>
 
-    'l2Weth()'(overrides?: CallOverrides): Promise<string>
-
     outboundTransfer(
-      _l1Token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
       _l1Token: string,
       _to: string,
       _amount: BigNumberish,
@@ -770,51 +523,21 @@ export class L1WethGatewayTester extends Contract {
       [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
     >
 
-    'parseInboundData(bytes)'(
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
-    >
-
     postUpgradeInit(overrides?: CallOverrides): Promise<void>
-
-    'postUpgradeInit()'(overrides?: CallOverrides): Promise<void>
 
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
-    'redirectedExits(bytes32)'(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string, string] & { _newTo: string; _newData: string }>
-
     router(overrides?: CallOverrides): Promise<string>
-
-    'router()'(overrides?: CallOverrides): Promise<string>
 
     setInboxUse(
       _shouldUseInbox: boolean,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setInboxUse(bool)'(
-      _shouldUseInbox: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     transferExitAndCall(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      _newDestination: string,
-      _newData: BytesLike,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
@@ -826,46 +549,88 @@ export class L1WethGatewayTester extends Contract {
 
   filters: {
     InboundTransferFinalized(
-      token: null,
-      _from: string | null,
-      _to: string | null,
-      _transferId: BigNumberish | null,
-      _amount: null,
-      _data: null
-    ): EventFilter
+      token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _transferId?: BigNumberish | null,
+      _amount?: null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber, string],
+      {
+        token: string
+        _from: string
+        _to: string
+        _transferId: BigNumber
+        _amount: BigNumber
+        _data: string
+      }
+    >
 
     OutboundTransferInitiated(
-      token: null,
-      _from: string | null,
-      _to: string | null,
-      _transferId: BigNumberish | null,
-      _amount: null,
-      _data: null
-    ): EventFilter
+      token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _transferId?: BigNumberish | null,
+      _amount?: null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber, string],
+      {
+        token: string
+        _from: string
+        _to: string
+        _transferId: BigNumber
+        _amount: BigNumber
+        _data: string
+      }
+    >
 
     TransferAndCallTriggered(
-      success: null,
-      _from: string | null,
-      _to: string | null,
-      _amount: null,
-      callHookData: null
-    ): EventFilter
+      success?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _amount?: null,
+      callHookData?: null
+    ): TypedEventFilter<
+      [boolean, string, string, BigNumber, string],
+      {
+        success: boolean
+        _from: string
+        _to: string
+        _amount: BigNumber
+        callHookData: string
+      }
+    >
 
     TxToL2(
-      _from: string | null,
-      _to: string | null,
-      _seqNum: BigNumberish | null,
-      _data: null
-    ): EventFilter
+      _from?: string | null,
+      _to?: string | null,
+      _seqNum?: BigNumberish | null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string],
+      { _from: string; _to: string; _seqNum: BigNumber; _data: string }
+    >
 
     WithdrawRedirected(
-      from: string | null,
-      to: string | null,
-      exitNum: BigNumberish | null,
-      newData: null,
-      data: null,
-      madeExternalCall: null
-    ): EventFilter
+      from?: string | null,
+      to?: string | null,
+      exitNum?: BigNumberish | null,
+      newData?: null,
+      data?: null,
+      madeExternalCall?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string, string, boolean],
+      {
+        from: string
+        to: string
+        exitNum: BigNumber
+        newData: string
+        data: string
+        madeExternalCall: boolean
+      }
+    >
   }
 
   estimateGas: {
@@ -874,22 +639,9 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'calculateL2TokenAddress(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     counterpartGateway(overrides?: CallOverrides): Promise<BigNumber>
 
-    'counterpartGateway()'(overrides?: CallOverrides): Promise<BigNumber>
-
     encodeWithdrawal(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'encodeWithdrawal(uint256,address)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       overrides?: CallOverrides
@@ -901,30 +653,12 @@ export class L1WethGatewayTester extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
 
-    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
-
     getExternalCall(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      _initialData: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _initialData: BytesLike,
@@ -940,36 +674,16 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'getOutboundCalldata(address,address,address,uint256,bytes)'(
-      _l1Token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     inboundEscrowAndCall(
       _l2Address: string,
       _amount: BigNumberish,
       _from: string,
       _to: string,
       _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     inbox(overrides?: CallOverrides): Promise<BigNumber>
-
-    'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initialize(
       _l1Counterpart: string,
@@ -977,25 +691,12 @@ export class L1WethGatewayTester extends Contract {
       _inbox: string,
       _l1Weth: string,
       _l2Weth: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(address,address,address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
-      _l1Weth: string,
-      _l2Weth: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     l1Weth(overrides?: CallOverrides): Promise<BigNumber>
 
-    'l1Weth()'(overrides?: CallOverrides): Promise<BigNumber>
-
     l2Weth(overrides?: CallOverrides): Promise<BigNumber>
-
-    'l2Weth()'(overrides?: CallOverrides): Promise<BigNumber>
 
     outboundTransfer(
       _l1Token: string,
@@ -1004,17 +705,7 @@ export class L1WethGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _l1Token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     parseInboundData(
@@ -1022,37 +713,20 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'parseInboundData(bytes)'(
-      _data: BytesLike,
-      overrides?: CallOverrides
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
-
-    postUpgradeInit(overrides?: Overrides): Promise<BigNumber>
-
-    'postUpgradeInit()'(overrides?: Overrides): Promise<BigNumber>
 
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'redirectedExits(bytes32)'(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     router(overrides?: CallOverrides): Promise<BigNumber>
-
-    'router()'(overrides?: CallOverrides): Promise<BigNumber>
 
     setInboxUse(
       _shouldUseInbox: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setInboxUse(bool)'(
-      _shouldUseInbox: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     transferExitAndCall(
@@ -1061,16 +735,7 @@ export class L1WethGatewayTester extends Contract {
       _newDestination: string,
       _newData: BytesLike,
       _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      _newDestination: string,
-      _newData: BytesLike,
-      _data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
@@ -1080,24 +745,9 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'calculateL2TokenAddress(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     counterpartGateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'counterpartGateway()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     encodeWithdrawal(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'encodeWithdrawal(uint256,address)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       overrides?: CallOverrides
@@ -1109,34 +759,14 @@ export class L1WethGatewayTester extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     gasReserveIfCallRevert(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'gasReserveIfCallRevert()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getExternalCall(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      _initialData: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _initialData: BytesLike,
@@ -1152,36 +782,16 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'getOutboundCalldata(address,address,address,uint256,bytes)'(
-      _l1Token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     inboundEscrowAndCall(
       _l2Address: string,
       _amount: BigNumberish,
       _from: string,
       _to: string,
       _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     initialize(
       _l1Counterpart: string,
@@ -1189,25 +799,12 @@ export class L1WethGatewayTester extends Contract {
       _inbox: string,
       _l1Weth: string,
       _l2Weth: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address,address,address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
-      _l1Weth: string,
-      _l2Weth: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     l1Weth(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'l1Weth()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     l2Weth(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'l2Weth()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     outboundTransfer(
       _l1Token: string,
@@ -1216,17 +813,7 @@ export class L1WethGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _l1Token: string,
-      _to: string,
-      _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
-      _data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     parseInboundData(
@@ -1234,37 +821,20 @@ export class L1WethGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'parseInboundData(bytes)'(
-      _data: BytesLike,
-      overrides?: CallOverrides
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
-
-    postUpgradeInit(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'postUpgradeInit()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'redirectedExits(bytes32)'(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     setInboxUse(
       _shouldUseInbox: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setInboxUse(bool)'(
-      _shouldUseInbox: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     transferExitAndCall(
@@ -1273,16 +843,7 @@ export class L1WethGatewayTester extends Contract {
       _newDestination: string,
       _newData: BytesLike,
       _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
-      _exitNum: BigNumberish,
-      _initialDestination: string,
-      _newDestination: string,
-      _newData: BytesLike,
-      _data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

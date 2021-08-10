@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IRollupCore } from '../IRollupCore'
-
-export class IRollupCore__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IRollupCore {
-    return new Contract(address, _abi, signerOrProvider) as IRollupCore
-  }
-}
+import type { IRollupCore, IRollupCoreInterface } from '../IRollupCore'
 
 const _abi = [
   {
@@ -344,3 +334,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class IRollupCore__factory {
+  static readonly abi = _abi
+  static createInterface(): IRollupCoreInterface {
+    return new utils.Interface(_abi) as IRollupCoreInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IRollupCore {
+    return new Contract(address, _abi, signerOrProvider) as IRollupCore
+  }
+}

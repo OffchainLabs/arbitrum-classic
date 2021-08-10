@@ -45,7 +45,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
@@ -289,7 +288,7 @@ func startup() error {
 	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
 
 	if deleteDir {
-		client := web3.NewEthClient(srv, true, metrics.NewMetricsConfig(nil))
+		client := web3.NewEthClient(srv, true)
 		arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 		if err != nil {
 			return err
@@ -360,7 +359,7 @@ func startup() error {
 	plugins := make(map[string]interface{})
 	plugins["evm"] = dev.NewEVM(backend)
 
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, true, plugins, metrics.NewMetricsConfig(nil))
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, true, plugins)
 	if err != nil {
 		return err
 	}

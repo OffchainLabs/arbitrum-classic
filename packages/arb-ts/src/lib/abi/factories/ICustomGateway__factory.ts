@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ICustomGateway } from '../ICustomGateway'
-
-export class ICustomGateway__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ICustomGateway {
-    return new Contract(address, _abi, signerOrProvider) as ICustomGateway
-  }
-}
+import type { ICustomGateway, ICustomGatewayInterface } from '../ICustomGateway'
 
 const _abi = [
   {
@@ -56,3 +46,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ICustomGateway__factory {
+  static readonly abi = _abi
+  static createInterface(): ICustomGatewayInterface {
+    return new utils.Interface(_abi) as ICustomGatewayInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ICustomGateway {
+    return new Contract(address, _abi, signerOrProvider) as ICustomGateway
+  }
+}

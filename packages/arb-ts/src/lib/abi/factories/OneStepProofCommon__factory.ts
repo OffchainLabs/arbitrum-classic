@@ -2,19 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { OneStepProofCommon } from '../OneStepProofCommon'
-
-export class OneStepProofCommon__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): OneStepProofCommon {
-    return new Contract(address, _abi, signerOrProvider) as OneStepProofCommon
-  }
-}
+import type {
+  OneStepProofCommon,
+  OneStepProofCommonInterface,
+} from '../OneStepProofCommon'
 
 const _abi = [
   {
@@ -111,3 +104,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class OneStepProofCommon__factory {
+  static readonly abi = _abi
+  static createInterface(): OneStepProofCommonInterface {
+    return new utils.Interface(_abi) as OneStepProofCommonInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): OneStepProofCommon {
+    return new Contract(address, _abi, signerOrProvider) as OneStepProofCommon
+  }
+}
