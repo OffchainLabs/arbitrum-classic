@@ -486,14 +486,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.StringSlice("feed.input.url", []string{}, "URL of sequencer feed source")
 
-	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
-	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
-	f.Bool("healthcheck.l1-node", false, "enable checking the health of the L1 node")
-	f.Bool("healthcheck.metrics", false, "serve healthcheck statistics over metrics interface")
-	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
-	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
-	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
-
 	f.Bool("metrics", false, "enable metrics")
 	f.String("metrics-server.addr", "127.0.0.1", "metrics server address")
 	f.String("metrics-server.port", "6070", "metrics server address")
