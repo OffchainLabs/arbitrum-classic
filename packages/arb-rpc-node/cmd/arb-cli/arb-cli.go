@@ -317,10 +317,15 @@ func enableValidators(rollup ethcommon.Address, validators []ethcommon.Address) 
 		return err
 	}
 	var vals []bool
+	owner, err := admin.Owner(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	fmt.Println("Rollup owner is", owner)
 	for _ = range validators {
 		vals = append(vals, true)
 	}
-	tx, err := admin.SetValidator(config.auth, validators, []bool{true, true})
+	tx, err := admin.SetValidator(config.auth, validators, vals)
 	if err != nil {
 		return err
 	}
@@ -920,7 +925,7 @@ func run(ctx context.Context) error {
 	}
 	fmt.Println("Sending from address", auth.From)
 	auth.Context = context.Background()
-	auth.GasPrice = big.NewInt(405800000)
+	auth.GasPrice = big.NewInt(1405800000)
 	config = &Config{
 		client: client,
 		auth:   auth,
