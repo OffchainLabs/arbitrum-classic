@@ -152,19 +152,8 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	// Actually send transaction
 	err = t.sendTx(ctx, tx)
 
-	if auth.Nonce == nil {
-		// Not incrementing nonce, so nothing else to do
-		if err != nil {
-			logger.Error().Err(err).Str("nonce", "nil").Msg("error when nonce not set")
-			return addr, nil, err
-		}
-
-		logger.Info().Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Send()
-		return addr, tx, err
-	}
-
 	if err != nil {
-		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Send()
+		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Hex("to", tx.To().Bytes()).Hex("data", tx.Data()).Str("nonce", auth.Nonce.String()).Msg("unable to send transaction")
 		return addr, nil, err
 	}
 
