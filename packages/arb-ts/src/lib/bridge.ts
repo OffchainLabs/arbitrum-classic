@@ -197,9 +197,8 @@ export class Bridge {
     overrides?: PayableOverrides
   ) {
     const l1ChainId = await this.l1Signer.getChainId()
-    const { l1WethGateway: l1WethGatewayAddress } = networks[
-      l1ChainId
-    ].tokenBridge
+    const { l1WethGateway: l1WethGatewayAddress } =
+      networks[l1ChainId].tokenBridge
 
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
@@ -435,10 +434,11 @@ export class Bridge {
       console.warn('retryable ticket failed', l2Txn)
       throw new Error('l2 txn failed')
     }
-    const redemptionTxHash = await BridgeHelper.calculateL2RetryableTransactionHash(
-      inboxSeqNum[0],
-      this.l2Provider
-    )
+    const redemptionTxHash =
+      await BridgeHelper.calculateL2RetryableTransactionHash(
+        inboxSeqNum[0],
+        this.l2Provider
+      )
     console.log(`Ensuring txn hasn't been redeemed:`)
 
     const redemptionRec = await this.l2Provider.getTransactionReceipt(

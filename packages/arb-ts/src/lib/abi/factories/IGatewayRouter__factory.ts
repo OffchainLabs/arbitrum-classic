@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IGatewayRouter } from '../IGatewayRouter'
-
-export class IGatewayRouter__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IGatewayRouter {
-    return new Contract(address, _abi, signerOrProvider) as IGatewayRouter
-  }
-}
+import type { IGatewayRouter, IGatewayRouterInterface } from '../IGatewayRouter'
 
 const _abi = [
   {
@@ -219,3 +209,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class IGatewayRouter__factory {
+  static readonly abi = _abi
+  static createInterface(): IGatewayRouterInterface {
+    return new utils.Interface(_abi) as IGatewayRouterInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IGatewayRouter {
+    return new Contract(address, _abi, signerOrProvider) as IGatewayRouter
+  }
+}
