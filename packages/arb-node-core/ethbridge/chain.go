@@ -66,7 +66,7 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutil
 				}
 			}
 			receipt, err := client.TransactionReceipt(ctx, txHash)
-			if receipt == nil && err == nil {
+			if receipt == nil {
 				if rbfInfo != nil {
 					// an alternative tx might've gotten confirmed
 					nonce, err := client.NonceAt(ctx, rbfInfo.account, nil)

@@ -326,10 +326,10 @@ func (fb *Fireblocks) CreateNewTransaction(destinationType accounttype.AccountTy
 
 	var result CreateTransactionResponse
 	response, err := ioutil.ReadAll(resp.Body)
-	logger.Debug().RawJSON("body", response).Msg("fireblocks response")
 	if err != nil {
 		return nil, errors.Wrapf(err, "error reading fireblocks create transaction response")
 	}
+	logger.Info().RawJSON("body", response).Msg("fireblocks response")
 	err = json.NewDecoder(strings.NewReader(string(response))).Decode(&result)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error decoding fireblocks create transaction response")
@@ -396,7 +396,6 @@ func (fb *Fireblocks) sendRequest(method string, path string, params url.Values,
 		}
 	}
 
-	logger.Debug().RawJSON("request", jsonData).Msg("creating new fireblocks transaction")
 	for i := 0; i < 3; i++ {
 		resp, err := fb.sendRequestImpl(method, path, params, jsonData)
 		if err != nil && strings.Contains(err.Error(), "nonce was already used") {
@@ -425,7 +424,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 	uri.RawQuery = params.Encode()
 
 	logger.
-		Debug().
+		Info().
 		Str("url", uri.String()).
 		Str("token", token).
 		RawJSON("body", body).
