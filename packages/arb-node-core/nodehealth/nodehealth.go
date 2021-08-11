@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nodehealth
 
 import (
@@ -16,10 +32,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
+	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 //Nodehealth configuration struct
@@ -38,12 +52,8 @@ type configStruct struct {
 	//Disable checking the OpenEthereum node
 	disableOpenEthereumCheck bool
 
-	//Map to dynamically allocate Prometheus Histograms
-	prometheusHistograms map[string]*prometheus.HistogramVec
-	//Prometheus Registerer to register histograms on
-	prometheusRegisterer prometheus.Registerer
-	//Prometheus Registery to handle the exposed service
-	prometheusRegistry *prometheus.Registry
+	// Store of metrics produced from healthcheck
+	registry metrics.Registry
 
 	//Aggregator Healthcheck Config
 	//Rate to poll the remote APIs at
@@ -159,13 +169,12 @@ type OpenEthereumPeerNetwork struct {
 //Log structure for passing messages on healthChan to logger
 type Log struct {
 	//Different message types we could be sent
-	Err     error
-	Sev     string
-	Var     string
-	Comp    string
-	Debug   bool
-	Config  bool
-	Metrics bool
+	Err    error
+	Sev    string
+	Var    string
+	Comp   string
+	Debug  bool
+	Config bool
 
 	//Potential variable types a client could want to log to reduce casting
 	ValStr    string
@@ -176,7 +185,7 @@ type Log struct {
 }
 
 // Default configuration values for the healthcheck server
-func newConfig(prometheusRegistry *prometheus.Registry, prometheusRegisterer prometheus.Registerer) *configStruct {
+func newConfig(registry metrics.Registry) *configStruct {
 	config := configStruct{}
 	const init = false
 
@@ -202,9 +211,7 @@ func newConfig(prometheusRegistry *prometheus.Registry, prometheusRegisterer pro
 	const printConfigMsg = false
 
 	//Load configuration into struct
-	config.prometheusHistograms = make(map[string]*prometheus.HistogramVec)
-	config.prometheusRegisterer = prometheusRegisterer
-	config.prometheusRegistry = prometheusRegistry
+	config.registry = registry
 
 	config.init = init
 	config.healthcheckRPC = healthcheckRPC
@@ -296,9 +303,7 @@ func logger(ctx context.Context, config *configStruct, state *healthState, logMs
 		logMessage := <-logMsgChan
 
 		//Check messsage type
-		if logMessage.Metrics {
-			metricsHandler(config, logMessage)
-		} else if logMessage.Config {
+		if logMessage.Config {
 			updateConfig(config, logMessage)
 		} else {
 			//Check if the InboxReader is sending logs
@@ -311,32 +316,6 @@ func logger(ctx context.Context, config *configStruct, state *healthState, logMs
 
 func Init(healthChan chan Log) {
 	healthChan <- Log{Config: true, Var: "init"}
-}
-
-//Send a function's runtime over the health channel
-func LogTime(comp string, function string, start time.Time, healthChan chan Log) {
-	healthChan <- Log{Metrics: true, Comp: comp, Var: function, ValTime: time.Since(start)}
-}
-
-//Create a histogram for a functions runtime and add it to the registry
-func metricsHandler(config *configStruct, logMessage Log) {
-	//Check if the prometheus histogram already exists
-	_, ok := config.prometheusHistograms[logMessage.Comp]
-	if !ok {
-		//Initialize a histogram for the function if it doesn't exist
-		config.prometheusHistograms[logMessage.Comp] = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Namespace: "kovan4-0",
-			Name:      logMessage.Comp,
-			Help:      logMessage.Comp + " latency distributions.",
-			Buckets:   prometheus.ExponentialBuckets(1, 10, 4),
-		}, []string{logMessage.Comp})
-
-		//Register the histogram with the prometheus registry
-		config.prometheusRegisterer.MustRegister(config.prometheusHistograms[logMessage.Comp])
-	}
-
-	//Observe the function's runtime using the function name as the label
-	config.prometheusHistograms[logMessage.Comp].WithLabelValues(logMessage.Var).Observe(float64(logMessage.ValTime.Milliseconds()))
 }
 
 //Update the inboxReader state struct using a value from the health channel
@@ -853,7 +832,7 @@ func waitConfig(config *configStruct) {
 //Start the healthcheck
 func startHealthCheck(ctx context.Context, config *configStruct, state *healthState) error {
 	//Create the main healthcheck handler
-	health := healthcheck.NewMetricsHandler(config.prometheusRegisterer, "healthcheck")
+	health := NewMetricsHandler(metrics.DefaultRegistry, "arbitrum")
 
 	//Create an HTTP server mux to serve the endpoints
 	httpMux := http.NewServeMux()
@@ -875,14 +854,6 @@ func startHealthCheck(ctx context.Context, config *configStruct, state *healthSt
 
 	//Define which healthchecks to use for the readiness API and expose the readiness API
 	nodeReadinessChecks(health, config, httpMux, asyncUpstream)
-
-	//Create an endpoint to serve the prometheus endpoint
-	if config.healthcheckMetrics {
-		httpMux.Handle("/metrics", promhttp.HandlerFor(
-			config.prometheusRegistry,
-			promhttp.HandlerOpts{},
-		))
-	}
 
 	//Create the HTTP server
 	httpServer := &http.Server{
@@ -912,12 +883,12 @@ func startHealthCheck(ctx context.Context, config *configStruct, state *healthSt
 }
 
 // NodeHealthCheck Create a node healthcheck that listens on the given channel
-func StartNodeHealthCheck(ctx context.Context, logMsgChan <-chan Log, prometheusRegistry *prometheus.Registry, prometheusRegisterer prometheus.Registerer) error {
+func StartNodeHealthCheck(ctx context.Context, logMsgChan <-chan Log, registry metrics.Registry) error {
 	//Create the configuration struct
 	state := newHealthState()
 
 	//Load the default configuration
-	config := newConfig(prometheusRegistry, prometheusRegisterer)
+	config := newConfig(registry)
 
 	//Start the channel logger
 	go logger(ctx, config, state, logMsgChan)
