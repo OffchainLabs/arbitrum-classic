@@ -33,7 +33,7 @@ Transaction receipts contain the following extra fields
 
 #### L1 Block Number
 
-The Layer 1 block number for the transaction, as specified in [Time in Arbitrum](Time_In_Arbitrum.md).
+The Layer 1 block number for the transaction, as specified in [Time in Arbitrum](Time_In_Arbitrum).
 
 #### Fee Stats
 
