@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -93,6 +94,14 @@ func (r *DelayedBridgeWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int
 		return nil, errors.WithStack(err)
 	}
 	return latestHeader.Number, nil
+}
+
+func (r *DelayedBridgeWatcher) GetAccumulator(ctx context.Context, sequenceNumber *big.Int, blockNumber *big.Int) (common.Hash, error) {
+	opts := &bind.CallOpts{
+		Context:     ctx,
+		BlockNumber: blockNumber,
+	}
+	return r.con.InboxAccs(opts, sequenceNumber)
 }
 
 func (r *DelayedBridgeWatcher) LookupMessagesInRange(ctx context.Context, from, to *big.Int) ([]*DeliveredInboxMessage, error) {
