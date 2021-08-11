@@ -180,7 +180,7 @@ func TestSequencerBatcher(t *testing.T) {
 	config := configuration.Config{
 		Node: configuration.Node{
 			Sequencer: configuration.Sequencer{
-				CreateBatchBlockInterval:   50,
+				CreateBatchBlockInterval:   40,
 				DelayedMessagesTargetDelay: 1,
 			},
 		},
@@ -296,6 +296,7 @@ func TestSequencerBatcher(t *testing.T) {
 	}
 
 	txs := generateTxs(t, 10, 10, l2ChainId)
+	totalDelayedCount := big.NewInt(1)
 	for i, tx := range txs {
 		if err := batcher.SendTransaction(ctx, tx); err != nil {
 			t.Fatal(err)
@@ -306,6 +307,7 @@ func TestSequencerBatcher(t *testing.T) {
 		} else if i%2 == 0 {
 			delayedCount = 2
 		}
+		totalDelayedCount.Add(totalDelayedCount, big.NewInt(int64(delayedCount)))
 		for i := 0; i < delayedCount; i++ {
 			_, err = delayedInbox.SendL2MessageFromOrigin(ctx, []byte{})
 			test.FailIfError(t, err)
@@ -317,13 +319,28 @@ func TestSequencerBatcher(t *testing.T) {
 		client.Commit()
 	}
 
+	timeout := time.Now().Add(time.Second * 20)
+	for {
+		delayedMsgCount, err := seqInbox.TotalDelayedMessagesRead(&bind.CallOpts{Context: ctx})
+		test.FailIfError(t, err)
+		if delayedMsgCount.Cmp(totalDelayedCount) >= 0 {
+			break
+		}
+		if time.Now().After(timeout) {
+			t.Fatal("Exceeded delayed message sequencing timeout")
+		}
+
+		time.Sleep(time.Second)
+		client.Commit()
+	}
+
 	msgCount1, err := seqMon.Core.GetMessageCount()
 	test.FailIfError(t, err)
-	if msgCount1.Cmp(big.NewInt(26)) < 0 {
+	if msgCount1.Cmp(big.NewInt(30)) < 0 {
 		t.Error("Not enough messages, only got", msgCount1.String())
 	}
 
-	timeout := time.Now().Add(time.Second * 30)
+	timeout = time.Now().Add(time.Second * 30)
 	for {
 		msgCount2, err := otherMon.Core.GetMessageCount()
 		test.FailIfError(t, err)

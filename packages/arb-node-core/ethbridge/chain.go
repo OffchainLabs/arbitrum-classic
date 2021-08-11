@@ -193,7 +193,7 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 		logger.Warn().Err(err).Hex("tx", tx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
 	}
-	if receipt.Status != 1 {
+	if receipt != nil && receipt.Status != 1 {
 		logger.Warn().Hex("tx", tx.Hash().Bytes()).Msg("failed transaction")
 		callMsg := ethereum.CallMsg{
 			From:      from,
