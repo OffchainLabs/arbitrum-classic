@@ -17,6 +17,7 @@
 package cmdhelp
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"math"
 	"math/big"
@@ -58,11 +59,15 @@ func GetKeystore(
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "error loading feed private key")
 		}
-		auth, err = bind.NewKeyedTransactorWithChainID(privateKey, chainId)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error creating feed auth object")
-		}
 
+		publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
+		if !ok {
+			return nil, nil, errors.Wrap(err, "error generating public address of feed private key")
+		}
+		logger.
+			Info().
+			Hex("signer", crypto.PubkeyToAddress(*publicKeyECDSA).Bytes()).
+			Msg("feed signer specified")
 		signer = func(data []byte) ([]byte, error) {
 			return crypto.Sign(data, privateKey)
 		}
@@ -70,6 +75,7 @@ func GetKeystore(
 
 	if len(walletConfig.FireblocksSSLKey) != 0 {
 		fromAddress := ethcommon.HexToAddress(config.Fireblocks.SourceAddress)
+		logger.Info().Hex("address", fromAddress.Bytes()).Msg("fireblocks enabled")
 		auth = &bind.TransactOpts{
 			From: fromAddress,
 			Signer: func(address ethcommon.Address, tx *types.Transaction) (*types.Transaction, error) {
@@ -84,6 +90,9 @@ func GetKeystore(
 
 		if len(config.Wallet.FeedPrivateKey) == 0 {
 			// Separate key for signing feed not provided
+			logger.
+				Info().
+				Msg("feed signer not specified and using fireblocks, so signing disabled")
 			signer = func(data []byte) ([]byte, error) {
 				// Fireblocks cannot sign arbitrary data
 				return make([]byte, 32), nil
@@ -99,8 +108,15 @@ func GetKeystore(
 			return nil, nil, err
 		}
 
-		signer = func(data []byte) ([]byte, error) {
-			return crypto.Sign(data, privateKey)
+		if len(config.Wallet.FeedPrivateKey) == 0 {
+			// Separate key for signing feed not provided
+			logger.
+				Info().
+				Hex("signer", auth.From.Bytes()).
+				Msg("private key used as signer")
+			signer = func(data []byte) ([]byte, error) {
+				return crypto.Sign(data, privateKey)
+			}
 		}
 	} else {
 		ks := keystore.NewKeyStore(
@@ -146,17 +162,21 @@ func GetKeystore(
 			logger.Info().Hex("address", account.Address.Bytes()).Msg("created new wallet")
 		}
 
-		if len(config.Wallet.FeedPrivateKey) == 0 {
-			// Separate key for signing feed not provided
-			signer = func(data []byte) ([]byte, error) {
-				return ks.SignHash(account, data)
-			}
-		}
-
 		var err error
 		auth, err = bind.NewKeyStoreTransactorWithChainID(ks, account, chainId)
 		if err != nil {
 			return nil, nil, err
+		}
+
+		if len(config.Wallet.FeedPrivateKey) == 0 {
+			// Separate key for signing feed not provided
+			logger.
+				Info().
+				Hex("signer", auth.From.Bytes()).
+				Msg("wallet used as signer")
+			signer = func(data []byte) ([]byte, error) {
+				return ks.SignHash(account, data)
+			}
 		}
 	}
 
