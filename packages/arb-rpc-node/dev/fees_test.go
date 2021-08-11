@@ -34,12 +34,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, common.Address, func()) {
