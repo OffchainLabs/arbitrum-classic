@@ -17,7 +17,6 @@
 package cmdhelp
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -35,6 +34,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/pkg/errors"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "cmdhelp").Logger()
@@ -53,6 +53,21 @@ func GetKeystore(
 	var signer = func(data []byte) ([]byte, error) { return nil, errors.New("undefined signer") }
 	var auth *bind.TransactOpts
 
+	if len(config.Wallet.FeedPrivateKey) != 0 {
+		privateKey, err := crypto.HexToECDSA(config.Wallet.PrivateKey)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "error loading feed private key")
+		}
+		auth, err = bind.NewKeyedTransactorWithChainID(privateKey, chainId)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "error creating feed auth object")
+		}
+
+		signer = func(data []byte) ([]byte, error) {
+			return crypto.Sign(data, privateKey)
+		}
+	}
+
 	if len(walletConfig.FireblocksSSLKey) != 0 {
 		fromAddress := ethcommon.HexToAddress(config.Fireblocks.SourceAddress)
 		auth = &bind.TransactOpts{
@@ -67,9 +82,12 @@ func GetKeystore(
 			},
 		}
 
-		signer = func(data []byte) ([]byte, error) {
-			// Fireblocks cannot sign arbitrary data
-			return make([]byte, 32), nil
+		if len(config.Wallet.FeedPrivateKey) == 0 {
+			// Separate key for signing feed not provided
+			signer = func(data []byte) ([]byte, error) {
+				// Fireblocks cannot sign arbitrary data
+				return make([]byte, 32), nil
+			}
 		}
 	} else if len(config.Wallet.PrivateKey) != 0 {
 		privateKey, err := crypto.HexToECDSA(config.Wallet.PrivateKey)
@@ -125,11 +143,14 @@ func GetKeystore(
 				return nil, nil, err
 			}
 
+			logger.Info().Hex("address", account.Address.Bytes()).Msg("created new wallet")
+		}
+
+		if len(config.Wallet.FeedPrivateKey) == 0 {
+			// Separate key for signing feed not provided
 			signer = func(data []byte) ([]byte, error) {
 				return ks.SignHash(account, data)
 			}
-
-			logger.Info().Hex("address", account.Address.Bytes()).Msg("created new wallet")
 		}
 
 		var err error

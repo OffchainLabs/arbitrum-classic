@@ -157,6 +157,7 @@ type Validator struct {
 type Wallet struct {
 	Password                 string `koanf:"password"`
 	PrivateKey               string `koanf:"private-key"`
+	FeedPrivateKey           string `koanf:"feed-private-key,omitempty"`
 	FireblocksSSLKey         string `koanf:"fireblocks-ssl-key,omitempty"`
 	FireblocksSSLKeyPassword string `koanf:"fireblocks-ssl-key-password,omitempty"`
 }
@@ -660,10 +661,11 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	if out.Conf.Dump {
 		// Print out current configuration
 
-		// Don't keep printing configuration file and don't print wallet password
+		// Don't keep printing configuration file and don't print wallet passwords
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"conf.dump":       false,
-			"wallet.password": "",
+			"conf.dump":                          false,
+			"wallet.password":                    "",
+			"wallet.fireblocks-ssl-key-password": "",
 		}, "."), nil)
 
 		c, err := k.Marshal(json.Parser())
@@ -675,12 +677,9 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 		os.Exit(1)
 	}
 
-	// Don't pass around password with normal configuration
+	// Don't pass around wallet contents with normal configuration
 	wallet := out.Wallet
-	out.Wallet.Password = ""
-	out.Wallet.PrivateKey = ""
-	out.Wallet.FireblocksSSLKeyPassword = ""
-	out.Wallet.FireblocksSSLKey = ""
+	out.Wallet = Wallet{}
 
 	return &out, &wallet, nil
 }
