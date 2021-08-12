@@ -123,10 +123,23 @@ func startup() error {
 		fmt.Println("Missing --rollup.machine.filename")
 	}
 
+	rpcMode := web3.NormalMode
+
+	if config.Node.DisableMutating {
+		rpcMode = web3.NonMutatingMode
+	}
+
 	if config.Node.Type == "forwarder" {
 		if config.Node.Forwarder.Target == "" {
 			badConfig = true
 			fmt.Println("Forwarder node needs --node.forwarder.target")
+		}
+		if config.Node.Forwarder.ForwardingOnly {
+			if rpcMode == web3.NonMutatingMode {
+				badConfig = true
+				fmt.Println("Cannot both set forwarding only mode and disable mutating transactions")
+			}
+			rpcMode = web3.ForwardingOnlyMode
 		}
 	} else if config.Node.Type == "aggregator" {
 		if config.Node.Aggregator.InboxAddress == "" {
@@ -309,7 +322,7 @@ func startup() error {
 	}
 
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil)
 	if err != nil {
 		return err
 	}
