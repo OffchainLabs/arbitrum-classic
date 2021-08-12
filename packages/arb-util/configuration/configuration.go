@@ -157,6 +157,7 @@ type Validator struct {
 
 type Wallet struct {
 	FeedPathname             string `koanf:"feed-pathname"`
+	FeedPassword             string `koanf:"feed-password"`
 	FeedPrivateKey           string `koanf:"feed-private-key"`
 	FireblocksSSLKey         string `koanf:"fireblocks-ssl-key,omitempty"`
 	FireblocksSSLKeyPassword string `koanf:"fireblocks-ssl-key-password,omitempty"`
@@ -212,7 +213,7 @@ func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *b
 
 	AddForwarderTarget(f)
 
-	return ParseNonRelay(ctx, f, false)
+	return ParseNonRelay(ctx, f, "wallets-cli")
 }
 
 func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -238,7 +239,8 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
-	return ParseNonRelay(ctx, f, false)
+
+	return ParseNonRelay(ctx, f, "wallets")
 }
 
 func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -251,10 +253,10 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
 
-	return ParseNonRelay(ctx, f, false)
+	return ParseNonRelay(ctx, f, "wallets-validator")
 }
 
-func ParseNonRelay(ctx context.Context, f *flag.FlagSet, simpleCLI bool) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
@@ -268,6 +270,12 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, simpleCLI bool) (*Confi
 
 	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 	f.String("persistent.chain", "", "path that chain specific state is located")
+
+	f.String("wallet.feed-pathname", "wallets-feed", "path to store wallet for signing feed in")
+	f.String("wallet.feed-private-key", "", "private key for signing feed with")
+	f.String("wallet.pathname", defaultWalletPathname, "path to store wallet in")
+	f.String("wallet.password", "", "password for wallet")
+	f.String("wallet.private-key", "", "wallet private key string")
 
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
@@ -303,6 +311,13 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, simpleCLI bool) (*Confi
 		}
 	}
 	logger.Info().Str("l1url", l1URL).Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
+
+	err = k.Load(confmap.Provider(map[string]interface{}{
+		"wallet.pathname": defaultWalletPathname,
+	}, "."), nil)
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "error setting default wallet pathname")
+	}
 
 	rollupAddress := k.String("rollup.address")
 	if len(rollupAddress) != 0 {
@@ -390,6 +405,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, simpleCLI bool) (*Confi
 	// Make machine relative to storage directory if not already absolute
 	out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
 
+	// Make wallet directories relative to storage directory if not already aabsolute
+	out.Wallet.Pathname = path.Join(out.Persistent.GlobalConfig, out.Wallet.Pathname)
+	out.Wallet.FeedPathname = path.Join(out.Persistent.GlobalConfig, out.Wallet.FeedPathname)
+
 	_, err = os.Stat(out.Rollup.Machine.Filename)
 	if os.IsNotExist(err) && len(out.Rollup.Machine.URL) != 0 {
 		// Machine does not exist, so load it from provided URL
@@ -458,14 +477,6 @@ func AddHealthcheckOptions(f *flag.FlagSet) {
 	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
 }
 
-func AddWalletOptions(f *flag.FlagSet) {
-	f.String("wallet.feed-pathname", "wallet-feed", "path to store wallet for signing feed in")
-	f.String("wallet.feed-private-key", "", "private key for signing feed with")
-	f.String("wallet.pathname", "", "path to store wallet in")
-	f.String("wallet.password", "", "password for wallet")
-	f.String("wallet.private-key", "", "wallet private key string")
-}
-
 func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Bool("conf.dump", false, "print out currently active configuration file")
 	f.String("conf.env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
@@ -488,8 +499,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("log.core", "info", "log level for general arb node logging")
 
 	f.Bool("pprof-enable", false, "enable profiling server")
-
-	AddWalletOptions(f)
 
 	err := f.Parse(os.Args[1:])
 	if err != nil {
