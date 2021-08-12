@@ -787,7 +787,9 @@ void ArbCore::operator()() {
                     if (block > sideload_cache_size) {
                         delete_under = block - sideload_cache_size;
                     }
-                    while (it != sideload_cache.lower_bound(delete_under)) {
+                    auto delete_under_iter =
+                        sideload_cache.lower_bound(delete_under);
+                    while (it != delete_under_iter) {
                         it = sideload_cache.erase(it);
                     }
                 }
