@@ -90,7 +90,7 @@ func NewTransactAuthAdvanced(
 		}
 		fb := fireblocks.New(config.Fireblocks.AssetId, config.Fireblocks.BaseURL, *sourceType, config.Fireblocks.SourceId, config.Fireblocks.APIKey, signKey)
 		sendTx = func(ctx context.Context, tx *types.Transaction) error {
-			response, err := fb.CreateNewContractCall(accounttype.OneTimeAddress, tx.To().Hex(), "", ethcommon.Bytes2Hex(tx.Data()))
+			response, err := fb.CreateNewContractCall(accounttype.OneTimeAddress, tx.To().Hex(), "", tx.Value(), ethcommon.Bytes2Hex(tx.Data()))
 			if err != nil {
 				return err
 			}

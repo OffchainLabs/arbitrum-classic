@@ -225,7 +225,7 @@ func startup() error {
 	select {
 	case <-cancelChan:
 		return nil
-	case <-stakerManager.RunInBackground(ctx):
+	case <-stakerManager.RunInBackground(ctx, config.Validator.StakerDelay):
 		return nil
 	}
 }

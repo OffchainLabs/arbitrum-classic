@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -304,17 +305,19 @@ func (fb *Fireblocks) ListVaultAccounts() (*[]VaultAccount, error) {
 	return &result, err
 }
 
-func (fb *Fireblocks) CreateNewContractCall(destinationType accounttype.AccountType, destinationId string, destinationTag string, callData string) (*CreateTransactionResponse, error) {
-	return fb.CreateNewTransaction(destinationType, destinationId, destinationTag, "0", operationtype.ContractCall, callData)
+func (fb *Fireblocks) CreateNewContractCall(destinationType accounttype.AccountType, destinationId string, destinationTag string, amount *big.Int, callData string) (*CreateTransactionResponse, error) {
+	return fb.CreateNewTransaction(destinationType, destinationId, destinationTag, amount, operationtype.ContractCall, callData)
 }
 
-func (fb *Fireblocks) CreateNewTransaction(destinationType accounttype.AccountType, destinationId string, destinationTag string, amount string, operation operationtype.OperationType, callData string) (*CreateTransactionResponse, error) {
+func (fb *Fireblocks) CreateNewTransaction(destinationType accounttype.AccountType, destinationId string, destinationTag string, amountWei *big.Int, operation operationtype.OperationType, callData string) (*CreateTransactionResponse, error) {
+	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	amountEth := new(big.Rat).SetFrac(amountWei, divisor)
 
 	body := &CreateNewTransactionBody{
 		AssetId:         fb.assetId,
 		Source:          TransferPeerPath{Type: fb.sourceType, Id: fb.sourceId},
 		Destination:     *NewDestinationTransferPeerPath(destinationType, destinationId, destinationTag),
-		Amount:          amount,
+		Amount:          amountEth.FloatString(18),
 		Operation:       operation,
 		ExtraParameters: TransactionExtraParameters{ContractCallData: callData},
 	}
@@ -329,7 +332,7 @@ func (fb *Fireblocks) CreateNewTransaction(destinationType accounttype.AccountTy
 	if err != nil {
 		return nil, errors.Wrapf(err, "error reading fireblocks create transaction response")
 	}
-	logger.Info().RawJSON("body", response).Msg("fireblocks response")
+	logger.Info().RawJSON("body", response).Msg("received fireblocks response")
 	err = json.NewDecoder(strings.NewReader(string(response))).Decode(&result)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error decoding fireblocks create transaction response")
@@ -423,13 +426,6 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 	uri.Path = path
 	uri.RawQuery = params.Encode()
 
-	logger.
-		Info().
-		Str("url", uri.String()).
-		Str("token", token).
-		RawJSON("body", body).
-		Msg("fireblocks request")
-
 	client := &http.Client{}
 	var req *http.Request
 	req, err = http.NewRequest(method, uri.String(), bytes.NewBuffer(body))
@@ -489,6 +485,14 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 			Msg("error returned when posting fireblocks request")
 		return nil, fmt.Errorf("status '%s' fireblocks response", resp.Status)
 	}
+
+	logger.
+		Info().
+		Str("url", uri.String()).
+		Str("token", token).
+		RawJSON("body", body).
+		Str("status", resp.Status).
+		Msg("sent fireblocks request")
 
 	return resp, nil
 }

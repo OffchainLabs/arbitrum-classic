@@ -149,17 +149,20 @@ type Rollup struct {
 }
 
 type Validator struct {
-	Strategy             string `koanf:"strategy"`
-	UtilsAddress         string `koanf:"utils-address"`
-	WalletFactoryAddress string `koanf:"wallet-factory-address"`
+	Strategy             string        `koanf:"strategy"`
+	UtilsAddress         string        `koanf:"utils-address"`
+	StakerDelay          time.Duration `koanf:"staker-delay"`
+	WalletFactoryAddress string        `koanf:"wallet-factory-address"`
 }
 
 type Wallet struct {
-	Password                 string `koanf:"password"`
-	PrivateKey               string `koanf:"private-key"`
-	FeedPrivateKey           string `koanf:"feed-private-key,omitempty"`
+	FeedPathname             string `koanf:"feed-pathname"`
+	FeedPrivateKey           string `koanf:"feed-private-key"`
 	FireblocksSSLKey         string `koanf:"fireblocks-ssl-key,omitempty"`
 	FireblocksSSLKeyPassword string `koanf:"fireblocks-ssl-key-password,omitempty"`
+	Pathname                 string `koanf:"pathname"`
+	Password                 string `koanf:"password"`
+	PrivateKey               string `koanf:"private-key"`
 }
 
 type Log struct {
@@ -204,23 +207,12 @@ func (c *Config) GetValidatorDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "validator_db")
 }
 
-func ParseCLI() (*Config, *Wallet, error) {
+func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	AddForwarderTarget(f)
-	AddWalletOptions(f)
 
-	k, err := beginCommonParse(f)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	out, wallet, err := endCommonParse(k)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return out, wallet, nil
+	return ParseNonRelay(ctx, f, false)
 }
 
 func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -246,7 +238,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
-	return ParseNonRelay(ctx, f)
+	return ParseNonRelay(ctx, f, false)
 }
 
 func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -256,12 +248,13 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "strategy for validator to use")
+	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
 
-	return ParseNonRelay(ctx, f)
+	return ParseNonRelay(ctx, f, false)
 }
 
-func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet, simpleCLI bool) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
@@ -330,7 +323,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 				"validator.utils-address":          "0x2B36F23ce0bAbD57553b26Da4C7a0585bac65DC1",
 				"validator.wallet-factory-address": "0xe17d8Fa6BC62590f840C5Dd35f300F77D55CC178",
 			}, "."), nil)
-
 			if err != nil {
 				return nil, nil, nil, nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
 			}
@@ -349,7 +341,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 				"validator.utils-address":          "0xbb14D9837f6E596167638Ba0963B9Ba8351F68CD",
 				"validator.wallet-factory-address": "0x5533D1578a39690B6aC692673F771b3fc668f0a3",
 			}, "."), nil)
-
 			if err != nil {
 				return nil, nil, nil, nil, errors.Wrap(err, "error setting testnet.rinkeby rollup parameters")
 			}
@@ -468,6 +459,9 @@ func AddHealthcheckOptions(f *flag.FlagSet) {
 }
 
 func AddWalletOptions(f *flag.FlagSet) {
+	f.String("wallet.feed-pathname", "wallet-feed", "path to store wallet for signing feed in")
+	f.String("wallet.feed-private-key", "", "private key for signing feed with")
+	f.String("wallet.pathname", "", "path to store wallet in")
 	f.String("wallet.password", "", "password for wallet")
 	f.String("wallet.private-key", "", "wallet private key string")
 }
@@ -494,6 +488,8 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("log.core", "info", "log level for general arb node logging")
 
 	f.Bool("pprof-enable", false, "enable profiling server")
+
+	AddWalletOptions(f)
 
 	err := f.Parse(os.Args[1:])
 	if err != nil {

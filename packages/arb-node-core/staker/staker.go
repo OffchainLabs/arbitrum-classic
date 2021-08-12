@@ -78,7 +78,7 @@ func NewStaker(
 	}, val.delayedBridge, nil
 }
 
-func (s *Staker) RunInBackground(ctx context.Context) chan bool {
+func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration) chan bool {
 	done := make(chan bool)
 	go func() {
 		defer func() {
@@ -97,7 +97,11 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 			}
 			if err != nil {
 				logger.Warn().Err(err).Send()
-				<-time.After(backoff)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(backoff):
+				}
 				if backoff < 60*time.Second {
 					backoff *= 2
 				}
@@ -106,9 +110,13 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 				backoff = time.Second
 			}
 			// Force a GC run to clean up any execution cursors while we wait
-			delay := time.After(time.Minute)
+			delay := time.After(stakerDelay)
 			runtime.GC()
-			<-delay
+			select {
+			case <-ctx.Done():
+				return
+			case <-delay:
+			}
 		}
 	}()
 	return done
