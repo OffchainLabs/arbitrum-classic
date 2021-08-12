@@ -489,7 +489,7 @@ func (ac *ArbCore) GetMachineForSideload(blockNumber uint64) (machine.Machine, e
 	cMachine := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber))
 
 	if cMachine == nil {
-		return nil, errors.Errorf("error getting machine for sideload")
+		return nil, errors.Errorf("missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )")
 	}
 
 	return WrapCMachine(cMachine), nil

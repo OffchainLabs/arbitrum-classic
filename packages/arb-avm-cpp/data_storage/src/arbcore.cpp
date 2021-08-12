@@ -47,7 +47,7 @@ constexpr auto send_processed_key = std::array<char, 1>{-63};
 constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-66};
 
-constexpr auto sideload_cache_size = 20;
+constexpr auto sideload_cache_size = 1'000;
 constexpr uint256_t checkpoint_load_gas_cost = 1'000'000'000;
 constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 }  // namespace
@@ -780,20 +780,15 @@ void ArbCore::operator()() {
                     std::unique_lock<std::shared_mutex> lock(
                         sideload_cache_mutex);
                     sideload_cache[block] = std::make_unique<Machine>(*machine);
-                    // Remove any sideload_cache entries that are either more
-                    // than sideload_cache_size blocks old, or in the future
-                    // (meaning they've been reorg'd out).
+                    // Remove any sideload_cache entries that are more
+                    // than sideload_cache_size blocks old
                     auto it = sideload_cache.begin();
-                    while (it != sideload_cache.end()) {
-                        // Note: we check if block > sideload_cache_size here
-                        // to prevent an underflow in the following check.
-                        if ((block > sideload_cache_size &&
-                             it->first < block - sideload_cache_size) ||
-                            it->first > block) {
-                            it = sideload_cache.erase(it);
-                        } else {
-                            it++;
-                        }
+                    uint256_t delete_under = 0;
+                    if (block > sideload_cache_size) {
+                        delete_under = block - sideload_cache_size;
+                    }
+                    while (it != sideload_cache.lower_bound(delete_under)) {
+                        it = sideload_cache.erase(it);
                     }
                 }
 
@@ -2732,6 +2727,9 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
             return {rocksdb::Status::OK(),
                     std::make_unique<Machine>(*it->second)};
         }
+
+        // Doesn't find it in cache, so return error
+        return {rocksdb::Status::NotFound(), nullptr};
     }
 
     uint256_t gas_target;
