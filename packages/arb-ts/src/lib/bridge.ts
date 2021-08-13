@@ -186,13 +186,17 @@ export class Bridge {
 
   /**
    * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
+   * If doing a deposit through the WETH gateway when using  a network not in networks.ts, should specify isWethDeposit: true
    */
   public async deposit(
     erc20L1Address: string,
     amount: BigNumber,
     retryableGasArgs: RetryableGasArgs = {},
     destinationAddress?: string,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides,
+    options = {
+      isWethDeposit: false,
+    }
   ) {
     const l1ChainId = await this.l1Signer.getChainId()
     const { l1WethGateway: l1WethGatewayAddress } =
@@ -209,7 +213,10 @@ export class Bridge {
 
     let estimateGasCallValue = constants.Zero
 
-    if (l1WethGatewayAddress === expectedL1GatewayAddress) {
+    if (
+      l1WethGatewayAddress === expectedL1GatewayAddress ||
+      options.isWethDeposit
+    ) {
       // forwarded deposited eth as call value for weth deposit
 
       estimateGasCallValue = amount
@@ -698,20 +705,24 @@ export class Bridge {
       }
     )
   }
-  public async getL1GatewaySetEventData() {
+  public async getL1GatewaySetEventData(_l1GatewayRouterAddress?: string) {
     const l1ChainId = await this.l1Signer.getChainId()
     const l1GatewayRouterAddress =
-      networks[l1ChainId].tokenBridge.l1GatewayRouter
+      networks[l1ChainId].tokenBridge.l1GatewayRouter || _l1GatewayRouterAddress
+    if (!l1GatewayRouterAddress)
+      throw new Error('No l2GatewayRouterAddress provided')
     return BridgeHelper.getGatewaySetEventData(
       l1GatewayRouterAddress,
       this.l1Provider
     )
   }
 
-  public async getL2GatewaySetEventData() {
+  public async getL2GatewaySetEventData(_l2GatewayRouterAddress?: string) {
     const l1ChainId = await this.l1Signer.getChainId()
     const l2GatewayRouterAddress =
-      networks[l1ChainId].tokenBridge.l2GatewayRouter
+      networks[l1ChainId].tokenBridge.l2GatewayRouter || _l2GatewayRouterAddress
+    if (!l2GatewayRouterAddress)
+      throw new Error('No l2GatewayRouterAddress provided')
     return BridgeHelper.getGatewaySetEventData(
       l2GatewayRouterAddress,
       this.l2Provider
