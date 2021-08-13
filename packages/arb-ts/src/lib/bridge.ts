@@ -195,7 +195,14 @@ export class Bridge {
       await potentialWethGateway.l1Weth()
       return true
     } catch (err) {
-      return false
+      if (err.code === 'CALL_EXCEPTION') {
+        return false
+      } else {
+        console.warn(err)
+        throw new Error(
+          `looksLikeWethGateway threw with unexpected error code: ${err.code}`
+        )
+      }
     }
   }
 
