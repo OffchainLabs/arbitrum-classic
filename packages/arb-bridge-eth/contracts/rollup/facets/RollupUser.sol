@@ -205,7 +205,6 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             // Don't allow an assertion to use above a maximum amount of gas
             require(gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
         }
-
         createNewNode(
             assertion,
             assertionBytes32Fields,
@@ -214,7 +213,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             CreateNodeDataFrame({
                 arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
                 confirmPeriodBlocks: confirmPeriodBlocks,
-                prevNode: latestStakedNode(msg.sender),
+                prevNode: latestStakedNode(msg.sender), // Ensure staker is staked on the previous node
                 sequencerInbox: sequencerBridge,
                 rollupEventBridge: rollupEventBridge,
                 nodeFactory: nodeFactory
@@ -253,7 +252,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     }
 
     /**
-     * @notice Reduce the amount staked for the sender
+     * @notice Reduce the amount staked for the sender (difference between initial amount staked and target is creditted back to the sender).
      * @param target Target amount of stake for the staker. If this is below the current minimum, it will be set to minimum instead
      */
     function reduceDeposit(uint256 target) external onlyValidator whenNotPaused {
@@ -369,15 +368,18 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         uint256 remainingLoserStake = amountStaked(losingStaker);
         uint256 winnerStake = amountStaked(winningStaker);
         if (remainingLoserStake > winnerStake) {
+            // If loser has a higher stake than the winner, refund the difference
             remainingLoserStake = remainingLoserStake.sub(reduceStakeTo(losingStaker, winnerStake));
         }
 
+        // Reward the winner with half the remaining stake
         uint256 amountWon = remainingLoserStake / 2;
         increaseStakeBy(winningStaker, amountWon);
         remainingLoserStake = remainingLoserStake.sub(amountWon);
         clearChallenge(winningStaker);
-
+        // Credit the other half to the owner address
         increaseWithdrawableFunds(owner, remainingLoserStake);
+        // Turning loser into zombie renders the loser's remaining stake inaccessible
         turnIntoZombie(losingStaker);
     }
 

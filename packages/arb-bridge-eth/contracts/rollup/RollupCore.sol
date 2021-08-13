@@ -525,7 +525,6 @@ contract RollupCore is IRollupCore {
         INodeFactory nodeFactory;
     }
 
-    // TODO: Configure this value based on the cost of sends and add test
     uint8 internal constant MAX_SEND_COUNT = 100;
 
     function createNewNode(
