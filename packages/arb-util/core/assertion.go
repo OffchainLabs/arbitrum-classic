@@ -99,7 +99,10 @@ func (a *Assertion) ExecutionHash() common.Hash {
 	)
 }
 
+func (a *Assertion) GasUsed() *big.Int {
+	return new(big.Int).Sub(a.After.TotalGasConsumed, a.Before.TotalGasConsumed)
+}
+
 func (a *Assertion) CheckTime(arbGasSpeedLimitPerBlock *big.Int) *big.Int {
-	gasUsed := new(big.Int).Sub(a.After.TotalGasConsumed, a.Before.TotalGasConsumed)
-	return new(big.Int).Div(gasUsed, arbGasSpeedLimitPerBlock)
+	return new(big.Int).Div(a.GasUsed(), arbGasSpeedLimitPerBlock)
 }

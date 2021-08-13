@@ -154,6 +154,11 @@ type Log struct {
 	Core string `koanf:"core"`
 }
 
+type Metrics struct {
+	Addr string `koanf:"addr"`
+	Port string `koanf:"port"`
+}
+
 type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               Conf        `koanf:"conf"`
@@ -171,6 +176,10 @@ type Config struct {
 	Validator     Validator  `koanf:"validator"`
 	WaitToCatchUp bool       `koanf:"wait-to-catch-up"`
 	Wallet        Wallet     `koanf:"wallet"`
+
+	// The following field needs to be top level for compatibility with the underlying go-ethereum lib
+	Metrics       bool    `koanf:"metrics"`
+	MetricsServer Metrics `koanf:"metrics-server"`
 }
 
 func (c *Config) GetNodeDatabasePath() string {
@@ -428,11 +437,14 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
 	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
 	f.Bool("healthcheck.l1-node", false, "enable checking the health of the L1 node")
-	f.Bool("healthcheck.metrics", false, "enable prometheus endpoint")
+	f.Bool("healthcheck.metrics", false, "serve healthcheck statistics over metrics interface")
 	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
 	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
 
+	f.Bool("metrics", false, "enable metrics")
+	f.String("metrics-server.addr", "127.0.0.1", "metrics server address")
+	f.String("metrics-server.port", "6070", "metrics server address")
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
 

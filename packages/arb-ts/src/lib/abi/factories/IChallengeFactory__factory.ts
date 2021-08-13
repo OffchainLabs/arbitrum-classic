@@ -2,19 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IChallengeFactory } from '../IChallengeFactory'
-
-export class IChallengeFactory__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IChallengeFactory {
-    return new Contract(address, _abi, signerOrProvider) as IChallengeFactory
-  }
-}
+import type {
+  IChallengeFactory,
+  IChallengeFactoryInterface,
+} from '../IChallengeFactory'
 
 const _abi = [
   {
@@ -77,3 +70,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class IChallengeFactory__factory {
+  static readonly abi = _abi
+  static createInterface(): IChallengeFactoryInterface {
+    return new utils.Interface(_abi) as IChallengeFactoryInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IChallengeFactory {
+    return new Contract(address, _abi, signerOrProvider) as IChallengeFactory
+  }
+}

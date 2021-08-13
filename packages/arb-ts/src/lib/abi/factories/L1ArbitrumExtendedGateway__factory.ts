@@ -2,23 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { L1ArbitrumExtendedGateway } from '../L1ArbitrumExtendedGateway'
-
-export class L1ArbitrumExtendedGateway__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): L1ArbitrumExtendedGateway {
-    return new Contract(
-      address,
-      _abi,
-      signerOrProvider
-    ) as L1ArbitrumExtendedGateway
-  }
-}
+import type {
+  L1ArbitrumExtendedGateway,
+  L1ArbitrumExtendedGatewayInterface,
+} from '../L1ArbitrumExtendedGateway'
 
 const _abi = [
   {
@@ -584,3 +573,20 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class L1ArbitrumExtendedGateway__factory {
+  static readonly abi = _abi
+  static createInterface(): L1ArbitrumExtendedGatewayInterface {
+    return new utils.Interface(_abi) as L1ArbitrumExtendedGatewayInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): L1ArbitrumExtendedGateway {
+    return new Contract(
+      address,
+      _abi,
+      signerOrProvider
+    ) as L1ArbitrumExtendedGateway
+  }
+}

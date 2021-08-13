@@ -1,16 +1,13 @@
-import { utils, constants } from 'ethers'
+import { utils } from 'ethers'
 
 import { expect } from 'chai'
 import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
 
-import { testRetryableTicket, prettyLog, warn } from './testHelpers'
-const { Zero, AddressZero } = constants
+import { testRetryableTicket, prettyLog } from './testHelpers'
 import {
   instantiateBridgeWithRandomWallet,
   fundL1,
-  wait,
   fundL2,
-  preFundAmount,
   skipIfMainnet,
 } from './testHelpers'
 
@@ -23,11 +20,8 @@ describe('WETH', async () => {
     const wethToWrap = utils.parseEther('0.00001')
     const wethToWithdraw = utils.parseEther('0.00000001')
 
-    const {
-      bridge,
-      l1Network,
-      l2Network,
-    } = await instantiateBridgeWithRandomWallet()
+    const { bridge, l1Network, l2Network } =
+      await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
 
     const l2Weth = AeWETH__factory.connect(
@@ -46,9 +40,8 @@ describe('WETH', async () => {
     )
     const withdrawRec = await withdrawRes.wait()
     expect(withdrawRec.status).to.equal(1)
-    const withdrawEventData = bridge.getWithdrawalsInL2Transaction(
-      withdrawRec
-    )[0]
+    const withdrawEventData =
+      bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
 
     expect(withdrawEventData).to.exist
 
@@ -62,11 +55,7 @@ describe('WETH', async () => {
   })
 
   it('deposits WETH', async () => {
-    const {
-      bridge,
-      l1Network,
-      l2Network,
-    } = await instantiateBridgeWithRandomWallet()
+    const { bridge, l1Network } = await instantiateBridgeWithRandomWallet()
     const l1WethAddress = l1Network.tokenBridge.l1Weth
 
     const wethToWrap = utils.parseEther('0.0001')
@@ -81,7 +70,7 @@ describe('WETH', async () => {
     const res = await l1WETH.deposit({
       value: wethToWrap,
     })
-    const rec = await res.wait()
+    await res.wait()
     prettyLog('wrapped some ether')
 
     const approveRes = await bridge.approveToken(l1WethAddress)

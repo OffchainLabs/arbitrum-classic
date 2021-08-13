@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface IChallengeInterface extends ethers.utils.Interface {
   functions: {
@@ -85,37 +84,59 @@ interface IChallengeInterface extends ethers.utils.Interface {
   events: {}
 }
 
-export class IChallenge extends Contract {
+export class IChallenge extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: IChallengeInterface
 
   functions: {
     asserter(overrides?: CallOverrides): Promise<[string]>
 
-    'asserter()'(overrides?: CallOverrides): Promise<[string]>
-
     challenger(overrides?: CallOverrides): Promise<[string]>
 
-    'challenger()'(overrides?: CallOverrides): Promise<[string]>
-
-    clearChallenge(overrides?: Overrides): Promise<ContractTransaction>
-
-    'clearChallenge()'(overrides?: Overrides): Promise<ContractTransaction>
+    clearChallenge(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     currentResponderTimeLeft(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'currentResponderTimeLeft()'(
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
 
     initializeChallenge(
       _executors: string[],
@@ -128,47 +149,25 @@ export class IChallenge extends Contract {
       _challengerTimeLeft: BigNumberish,
       _sequencerBridge: string,
       _delayedBridge: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
-      _executors: string[],
-      _resultReceiver: string,
-      _executionHash: BytesLike,
-      _maxMessageCount: BigNumberish,
-      _asserter: string,
-      _challenger: string,
-      _asserterTimeLeft: BigNumberish,
-      _challengerTimeLeft: BigNumberish,
-      _sequencerBridge: string,
-      _delayedBridge: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     lastMoveBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'lastMoveBlock()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    timeout(overrides?: Overrides): Promise<ContractTransaction>
-
-    'timeout()'(overrides?: Overrides): Promise<ContractTransaction>
+    timeout(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
   }
 
   asserter(overrides?: CallOverrides): Promise<string>
 
-  'asserter()'(overrides?: CallOverrides): Promise<string>
-
   challenger(overrides?: CallOverrides): Promise<string>
 
-  'challenger()'(overrides?: CallOverrides): Promise<string>
-
-  clearChallenge(overrides?: Overrides): Promise<ContractTransaction>
-
-  'clearChallenge()'(overrides?: Overrides): Promise<ContractTransaction>
+  clearChallenge(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   currentResponderTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
-
-  'currentResponderTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
 
   initializeChallenge(
     _executors: string[],
@@ -181,47 +180,23 @@ export class IChallenge extends Contract {
     _challengerTimeLeft: BigNumberish,
     _sequencerBridge: string,
     _delayedBridge: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
-    _executors: string[],
-    _resultReceiver: string,
-    _executionHash: BytesLike,
-    _maxMessageCount: BigNumberish,
-    _asserter: string,
-    _challenger: string,
-    _asserterTimeLeft: BigNumberish,
-    _challengerTimeLeft: BigNumberish,
-    _sequencerBridge: string,
-    _delayedBridge: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   lastMoveBlock(overrides?: CallOverrides): Promise<BigNumber>
 
-  'lastMoveBlock()'(overrides?: CallOverrides): Promise<BigNumber>
-
-  timeout(overrides?: Overrides): Promise<ContractTransaction>
-
-  'timeout()'(overrides?: Overrides): Promise<ContractTransaction>
+  timeout(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   callStatic: {
     asserter(overrides?: CallOverrides): Promise<string>
 
-    'asserter()'(overrides?: CallOverrides): Promise<string>
-
     challenger(overrides?: CallOverrides): Promise<string>
-
-    'challenger()'(overrides?: CallOverrides): Promise<string>
 
     clearChallenge(overrides?: CallOverrides): Promise<void>
 
-    'clearChallenge()'(overrides?: CallOverrides): Promise<void>
-
     currentResponderTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
-
-    'currentResponderTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initializeChallenge(
       _executors: string[],
@@ -237,27 +212,9 @@ export class IChallenge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
-      _executors: string[],
-      _resultReceiver: string,
-      _executionHash: BytesLike,
-      _maxMessageCount: BigNumberish,
-      _asserter: string,
-      _challenger: string,
-      _asserterTimeLeft: BigNumberish,
-      _challengerTimeLeft: BigNumberish,
-      _sequencerBridge: string,
-      _delayedBridge: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     lastMoveBlock(overrides?: CallOverrides): Promise<BigNumber>
 
-    'lastMoveBlock()'(overrides?: CallOverrides): Promise<BigNumber>
-
     timeout(overrides?: CallOverrides): Promise<void>
-
-    'timeout()'(overrides?: CallOverrides): Promise<void>
   }
 
   filters: {}
@@ -265,19 +222,13 @@ export class IChallenge extends Contract {
   estimateGas: {
     asserter(overrides?: CallOverrides): Promise<BigNumber>
 
-    'asserter()'(overrides?: CallOverrides): Promise<BigNumber>
-
     challenger(overrides?: CallOverrides): Promise<BigNumber>
 
-    'challenger()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    clearChallenge(overrides?: Overrides): Promise<BigNumber>
-
-    'clearChallenge()'(overrides?: Overrides): Promise<BigNumber>
+    clearChallenge(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     currentResponderTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
-
-    'currentResponderTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initializeChallenge(
       _executors: string[],
@@ -290,50 +241,26 @@ export class IChallenge extends Contract {
       _challengerTimeLeft: BigNumberish,
       _sequencerBridge: string,
       _delayedBridge: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
-      _executors: string[],
-      _resultReceiver: string,
-      _executionHash: BytesLike,
-      _maxMessageCount: BigNumberish,
-      _asserter: string,
-      _challenger: string,
-      _asserterTimeLeft: BigNumberish,
-      _challengerTimeLeft: BigNumberish,
-      _sequencerBridge: string,
-      _delayedBridge: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     lastMoveBlock(overrides?: CallOverrides): Promise<BigNumber>
 
-    'lastMoveBlock()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    timeout(overrides?: Overrides): Promise<BigNumber>
-
-    'timeout()'(overrides?: Overrides): Promise<BigNumber>
+    timeout(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
   }
 
   populateTransaction: {
     asserter(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'asserter()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     challenger(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'challenger()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    clearChallenge(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'clearChallenge()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    currentResponderTimeLeft(
-      overrides?: CallOverrides
+    clearChallenge(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'currentResponderTimeLeft()'(
+    currentResponderTimeLeft(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -348,29 +275,13 @@ export class IChallenge extends Contract {
       _challengerTimeLeft: BigNumberish,
       _sequencerBridge: string,
       _delayedBridge: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
-      _executors: string[],
-      _resultReceiver: string,
-      _executionHash: BytesLike,
-      _maxMessageCount: BigNumberish,
-      _asserter: string,
-      _challenger: string,
-      _asserterTimeLeft: BigNumberish,
-      _challengerTimeLeft: BigNumberish,
-      _sequencerBridge: string,
-      _delayedBridge: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     lastMoveBlock(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'lastMoveBlock()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    timeout(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'timeout()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    timeout(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
   }
 }

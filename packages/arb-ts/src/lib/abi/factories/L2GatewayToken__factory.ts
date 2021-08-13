@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { L2GatewayToken } from '../L2GatewayToken'
-
-export class L2GatewayToken__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): L2GatewayToken {
-    return new Contract(address, _abi, signerOrProvider) as L2GatewayToken
-  }
-}
+import type { L2GatewayToken, L2GatewayTokenInterface } from '../L2GatewayToken'
 
 const _abi = [
   {
@@ -485,3 +475,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class L2GatewayToken__factory {
+  static readonly abi = _abi
+  static createInterface(): L2GatewayTokenInterface {
+    return new utils.Interface(_abi) as L2GatewayTokenInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): L2GatewayToken {
+    return new Contract(address, _abi, signerOrProvider) as L2GatewayToken
+  }
+}

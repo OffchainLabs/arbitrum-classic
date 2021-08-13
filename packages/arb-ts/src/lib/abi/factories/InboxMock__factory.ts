@@ -2,36 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Signer } from 'ethers'
+import { Signer, utils, Contract, ContractFactory, Overrides } from 'ethers'
 import { Provider, TransactionRequest } from '@ethersproject/providers'
-import { Contract, ContractFactory, Overrides } from '@ethersproject/contracts'
-
-import type { InboxMock } from '../InboxMock'
-
-export class InboxMock__factory extends ContractFactory {
-  constructor(signer?: Signer) {
-    super(_abi, _bytecode, signer)
-  }
-
-  deploy(overrides?: Overrides): Promise<InboxMock> {
-    return super.deploy(overrides || {}) as Promise<InboxMock>
-  }
-  getDeployTransaction(overrides?: Overrides): TransactionRequest {
-    return super.getDeployTransaction(overrides || {})
-  }
-  attach(address: string): InboxMock {
-    return super.attach(address) as InboxMock
-  }
-  connect(signer: Signer): InboxMock__factory {
-    return super.connect(signer) as InboxMock__factory
-  }
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): InboxMock {
-    return new Contract(address, _abi, signerOrProvider) as InboxMock
-  }
-}
+import type { InboxMock, InboxMockInterface } from '../InboxMock'
 
 const _abi = [
   {
@@ -157,3 +130,37 @@ const _abi = [
 
 const _bytecode =
   '0x6080604052600080546001600160a01b031916905534801561002057600080fd5b50610239806100306000396000f3fe60806040526004361061004a5760003560e01c806311b383ac1461004f578063679b6ded1461008457806380648b0214610141578063ab5d894314610172578063e78cea9214610172575b600080fd5b34801561005b57600080fd5b506100826004803603602081101561007257600080fd5b50356001600160a01b0316610187565b005b61012f600480360361010081101561009b57600080fd5b6001600160a01b038235811692602081013592604082013592606083013581169260808101359091169160a08201359160c081013591810190610100810160e08201356401000000008111156100f057600080fd5b82018360208201111561010257600080fd5b8035906020019184600183028401116401000000008311171561012457600080fd5b5090925090506101a9565b60408051918252519081900360200190f35b34801561014d57600080fd5b506101566101f0565b604080516001600160a01b039092168252519081900360200190f35b34801561017e57600080fd5b506101566101ff565b600080546001600160a01b0319166001600160a01b0392909216919091179055565b6040805188815290516000917f7efacbad201ebbc50ec0ce4b474c54b735a31b1bac996acff50df7de0314e8f9919081900360200190a15060009998505050505050505050565b6000546001600160a01b031690565b309056fea264697066735822122068d76dabdb97ccebd30c4764937bea5c056bc2c0612275f2ddb900552bf64b0d64736f6c634300060b0033'
+
+export class InboxMock__factory extends ContractFactory {
+  constructor(signer?: Signer) {
+    super(_abi, _bytecode, signer)
+  }
+
+  deploy(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<InboxMock> {
+    return super.deploy(overrides || {}) as Promise<InboxMock>
+  }
+  getDeployTransaction(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): TransactionRequest {
+    return super.getDeployTransaction(overrides || {})
+  }
+  attach(address: string): InboxMock {
+    return super.attach(address) as InboxMock
+  }
+  connect(signer: Signer): InboxMock__factory {
+    return super.connect(signer) as InboxMock__factory
+  }
+  static readonly bytecode = _bytecode
+  static readonly abi = _abi
+  static createInterface(): InboxMockInterface {
+    return new utils.Interface(_abi) as InboxMockInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): InboxMock {
+    return new Contract(address, _abi, signerOrProvider) as InboxMock
+  }
+}

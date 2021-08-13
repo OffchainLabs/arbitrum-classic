@@ -15,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -26,9 +25,9 @@ type EthClient struct {
 	filter *filters.PublicFilterAPI
 }
 
-func NewEthClient(srv *aggregator.Server, ganacheMode bool, metricsConfig *metrics.MetricsConfig) *EthClient {
+func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
 	return &EthClient{
-		srv:    NewServer(srv, ganacheMode, metricsConfig),
+		srv:    NewServer(srv, ganacheMode),
 		events: filters.NewEventSystem(srv, false),
 		filter: filters.NewPublicFilterAPI(srv, false, 2*time.Minute),
 	}

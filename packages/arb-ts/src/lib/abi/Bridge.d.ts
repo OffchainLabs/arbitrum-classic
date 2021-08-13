@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface BridgeInterface extends ethers.utils.Interface {
   functions: {
@@ -147,47 +146,60 @@ interface BridgeInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment
 }
 
-export class Bridge extends Contract {
+export class Bridge extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: BridgeInterface
 
   functions: {
     activeOutbox(overrides?: CallOverrides): Promise<[string]>
 
-    'activeOutbox()'(overrides?: CallOverrides): Promise<[string]>
-
     allowedInboxList(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    'allowedInboxList(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string]>
 
     allowedInboxes(inbox: string, overrides?: CallOverrides): Promise<[boolean]>
 
-    'allowedInboxes(address)'(
-      inbox: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
     allowedOutboxList(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    'allowedOutboxList(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string]>
@@ -197,258 +209,129 @@ export class Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<[boolean]>
 
-    'allowedOutboxes(address)'(
-      outbox: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
     deliverMessageToInbox(
       kind: BigNumberish,
       sender: string,
       messageDataHash: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'deliverMessageToInbox(uint8,address,bytes32)'(
-      kind: BigNumberish,
-      sender: string,
-      messageDataHash: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     executeCall(
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'executeCall(address,uint256,bytes)'(
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
-    'inboxAccs(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    initialize(overrides?: Overrides): Promise<ContractTransaction>
-
-    'initialize()'(overrides?: Overrides): Promise<ContractTransaction>
+    initialize(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     messageCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'messageCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     owner(overrides?: CallOverrides): Promise<[string]>
 
-    'owner()'(overrides?: CallOverrides): Promise<[string]>
-
-    renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     setInbox(
       inbox: string,
       enabled: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setInbox(address,bool)'(
-      inbox: string,
-      enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setOutbox(
       outbox: string,
       enabled: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setOutbox(address,bool)'(
-      outbox: string,
-      enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
   activeOutbox(overrides?: CallOverrides): Promise<string>
-
-  'activeOutbox()'(overrides?: CallOverrides): Promise<string>
 
   allowedInboxList(
     arg0: BigNumberish,
     overrides?: CallOverrides
   ): Promise<string>
 
-  'allowedInboxList(uint256)'(
-    arg0: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   allowedInboxes(inbox: string, overrides?: CallOverrides): Promise<boolean>
-
-  'allowedInboxes(address)'(
-    inbox: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
 
   allowedOutboxList(
     arg0: BigNumberish,
     overrides?: CallOverrides
   ): Promise<string>
 
-  'allowedOutboxList(uint256)'(
-    arg0: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   allowedOutboxes(outbox: string, overrides?: CallOverrides): Promise<boolean>
-
-  'allowedOutboxes(address)'(
-    outbox: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
 
   deliverMessageToInbox(
     kind: BigNumberish,
     sender: string,
     messageDataHash: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'deliverMessageToInbox(uint8,address,bytes32)'(
-    kind: BigNumberish,
-    sender: string,
-    messageDataHash: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   executeCall(
     destAddr: string,
     amount: BigNumberish,
     data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'executeCall(address,uint256,bytes)'(
-    destAddr: string,
-    amount: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
-  'inboxAccs(uint256)'(
-    arg0: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>
-
-  initialize(overrides?: Overrides): Promise<ContractTransaction>
-
-  'initialize()'(overrides?: Overrides): Promise<ContractTransaction>
+  initialize(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   messageCount(overrides?: CallOverrides): Promise<BigNumber>
 
-  'messageCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
   owner(overrides?: CallOverrides): Promise<string>
 
-  'owner()'(overrides?: CallOverrides): Promise<string>
-
-  renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-  'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+  renounceOwnership(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   setInbox(
     inbox: string,
     enabled: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setInbox(address,bool)'(
-    inbox: string,
-    enabled: boolean,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setOutbox(
     outbox: string,
     enabled: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setOutbox(address,bool)'(
-    outbox: string,
-    enabled: boolean,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   transferOwnership(
     newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transferOwnership(address)'(
-    newOwner: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
     activeOutbox(overrides?: CallOverrides): Promise<string>
-
-    'activeOutbox()'(overrides?: CallOverrides): Promise<string>
 
     allowedInboxList(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>
 
-    'allowedInboxList(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     allowedInboxes(inbox: string, overrides?: CallOverrides): Promise<boolean>
-
-    'allowedInboxes(address)'(
-      inbox: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
 
     allowedOutboxList(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>
 
-    'allowedOutboxList(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     allowedOutboxes(outbox: string, overrides?: CallOverrides): Promise<boolean>
-
-    'allowedOutboxes(address)'(
-      outbox: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
 
     deliverMessageToInbox(
       kind: BigNumberish,
@@ -457,21 +340,7 @@ export class Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'deliverMessageToInbox(uint8,address,bytes32)'(
-      kind: BigNumberish,
-      sender: string,
-      messageDataHash: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     executeCall(
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[boolean, string] & { success: boolean; returnData: string }>
-
-    'executeCall(address,uint256,bytes)'(
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
@@ -480,34 +349,15 @@ export class Bridge extends Contract {
 
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
-    'inboxAccs(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     initialize(overrides?: CallOverrides): Promise<void>
-
-    'initialize()'(overrides?: CallOverrides): Promise<void>
 
     messageCount(overrides?: CallOverrides): Promise<BigNumber>
 
-    'messageCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
     owner(overrides?: CallOverrides): Promise<string>
-
-    'owner()'(overrides?: CallOverrides): Promise<string>
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>
 
-    'renounceOwnership()'(overrides?: CallOverrides): Promise<void>
-
     setInbox(
-      inbox: string,
-      enabled: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setInbox(address,bool)'(
       inbox: string,
       enabled: boolean,
       overrides?: CallOverrides
@@ -519,18 +369,7 @@ export class Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setOutbox(address,bool)'(
-      outbox: string,
-      enabled: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     transferOwnership(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'transferOwnership(address)'(
       newOwner: string,
       overrides?: CallOverrides
     ): Promise<void>
@@ -538,48 +377,44 @@ export class Bridge extends Contract {
 
   filters: {
     MessageDelivered(
-      messageIndex: BigNumberish | null,
-      beforeInboxAcc: BytesLike | null,
-      inbox: null,
-      kind: null,
-      sender: null,
-      messageDataHash: null
-    ): EventFilter
+      messageIndex?: BigNumberish | null,
+      beforeInboxAcc?: BytesLike | null,
+      inbox?: null,
+      kind?: null,
+      sender?: null,
+      messageDataHash?: null
+    ): TypedEventFilter<
+      [BigNumber, string, string, number, string, string],
+      {
+        messageIndex: BigNumber
+        beforeInboxAcc: string
+        inbox: string
+        kind: number
+        sender: string
+        messageDataHash: string
+      }
+    >
 
     OwnershipTransferred(
-      previousOwner: string | null,
-      newOwner: string | null
-    ): EventFilter
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >
   }
 
   estimateGas: {
     activeOutbox(overrides?: CallOverrides): Promise<BigNumber>
-
-    'activeOutbox()'(overrides?: CallOverrides): Promise<BigNumber>
 
     allowedInboxList(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'allowedInboxList(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     allowedInboxes(inbox: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'allowedInboxes(address)'(
-      inbox: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     allowedOutboxList(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'allowedOutboxList(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -589,108 +424,56 @@ export class Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'allowedOutboxes(address)'(
-      outbox: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     deliverMessageToInbox(
       kind: BigNumberish,
       sender: string,
       messageDataHash: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'deliverMessageToInbox(uint8,address,bytes32)'(
-      kind: BigNumberish,
-      sender: string,
-      messageDataHash: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     executeCall(
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'executeCall(address,uint256,bytes)'(
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>
 
-    'inboxAccs(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
+    initialize(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
-
-    initialize(overrides?: Overrides): Promise<BigNumber>
-
-    'initialize()'(overrides?: Overrides): Promise<BigNumber>
 
     messageCount(overrides?: CallOverrides): Promise<BigNumber>
 
-    'messageCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
     owner(overrides?: CallOverrides): Promise<BigNumber>
 
-    'owner()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    renounceOwnership(overrides?: Overrides): Promise<BigNumber>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<BigNumber>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     setInbox(
       inbox: string,
       enabled: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setInbox(address,bool)'(
-      inbox: string,
-      enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setOutbox(
       outbox: string,
       enabled: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setOutbox(address,bool)'(
-      outbox: string,
-      enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
     activeOutbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'activeOutbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     allowedInboxList(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'allowedInboxList(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -700,17 +483,7 @@ export class Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'allowedInboxes(address)'(
-      inbox: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     allowedOutboxList(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'allowedOutboxList(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -720,37 +493,18 @@ export class Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'allowedOutboxes(address)'(
-      outbox: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     deliverMessageToInbox(
       kind: BigNumberish,
       sender: string,
       messageDataHash: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'deliverMessageToInbox(uint8,address,bytes32)'(
-      kind: BigNumberish,
-      sender: string,
-      messageDataHash: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     executeCall(
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'executeCall(address,uint256,bytes)'(
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     inboxAccs(
@@ -758,59 +512,33 @@ export class Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'inboxAccs(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
+    initialize(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
-
-    initialize(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'initialize()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     messageCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'messageCount()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     setInbox(
       inbox: string,
       enabled: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setInbox(address,bool)'(
-      inbox: string,
-      enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setOutbox(
       outbox: string,
       enabled: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setOutbox(address,bool)'(
-      outbox: string,
-      enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }
