@@ -198,10 +198,7 @@ export class Bridge {
       if (err.code === 'CALL_EXCEPTION') {
         return false
       } else {
-        console.warn(err)
-        throw new Error(
-          `looksLikeWethGateway threw with unexpected error code: ${err.code}`
-        )
+        throw err
       }
     }
   }
