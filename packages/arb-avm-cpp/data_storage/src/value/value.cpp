@@ -112,7 +112,11 @@ ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
                 break;
             }
             case HASH_PRE_IMAGE: {
-                val = ValueHash{deserializeUint256t(buf)};
+                auto ty = static_cast<ValueTypes>(*buf);
+                ++buf;
+                auto hash = deserializeUint256t(buf);
+                auto size = deserializeUint256t(buf);
+                val = UnloadedValue{ty, hash, size};
                 break;
             }
             default: {
@@ -177,7 +181,9 @@ std::vector<value> serializeValue(
             } else {
                 // Only put a reference to the inner tuple in this one
                 value_vector.push_back(HASH_PRE_IMAGE);
+                value_vector.push_back(TUPLE);
                 marshal_uint256_t(hash(nested_tup), value_vector);
+                marshal_uint256_t(nested_tup.getSize(), value_vector);
                 // Mark the inner tuple as needing separate saving
                 ret.push_back(nested);
             }
@@ -239,9 +245,9 @@ void deleteParsedValue(std::vector<ParsedTupVal> tup,
         // We only need to delete tuples and buffers as all other values
         // are "primitives"/"trivial" types in that they're recorded inline
         // and don't reference anything else
-        if (std::holds_alternative<ValueHash>(val)) {
+        if (std::holds_alternative<UnloadedValue>(val)) {
             // Delete the referenced hash in a later pass
-            vals_to_delete.push_back(std::get<ValueHash>(val).hash);
+            vals_to_delete.push_back(std::get<UnloadedValue>(val).hash);
         } else if (std::holds_alternative<ParsedBuffer>(val)) {
             // Delete any buffer nodes in a later pass
             auto parsed = std::get<ParsedBuffer>(val);
@@ -317,23 +323,25 @@ GetResults applyValue(value&& val,
 }
 
 GetResults processVal(const ReadTransaction& tx,
-                      const ValueHash& val_hash,
+                      const UnloadedValue& val_info,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>& segment_ids,
                       const uint32_t,
-                      ValueCache& val_cache);
+                      ValueCache& val_cache,
+                      bool lazy_load);
 
 GetResults processVal(const ReadTransaction& tx,
                       const ParsedBuffer& val,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
                       const uint32_t reference_count,
-                      ValueCache& val_cache);
+                      ValueCache& val_cache,
+                      bool lazy_load);
 
 GetResults getStoredValue(const ReadTransaction& tx,
-                          const ValueHash& val_hash) {
+                          const UnloadedValue& val_info) {
     std::array<unsigned char, 32> hash_key;
-    marshal_uint256_t(val_hash.hash, hash_key);
+    marshal_uint256_t(val_info.hash, hash_key);
     auto key = vecToSlice(hash_key);
     auto results = getRefCountedData(tx, key);
     return results;
@@ -344,7 +352,8 @@ GetResults processVal(const ReadTransaction&,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
                       const uint32_t reference_count,
-                      ValueCache&) {
+                      ValueCache&,
+                      bool) {
     return applyValue(val, reference_count, val_stack);
 }
 
@@ -365,7 +374,8 @@ GetResults processVal(const ReadTransaction&,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
                       const uint32_t reference_count,
-                      ValueCache&) {
+                      ValueCache&,
+                      bool) {
     return applyValue(val, reference_count, val_stack);
 }
 
@@ -390,7 +400,7 @@ Buffer processBuffer(const ReadTransaction& tx,
             vec.push_back(std::get<Buffer>(cached_val.value()));
             continue;
         }
-        auto val_hash = ValueHash{node_hash};
+        auto val_hash = UnloadedValue{BUFFER, node_hash, 1};
         // Value not in cache, so need to load from database
         auto results = getStoredValue(tx, val_hash);
         if (!results.status.ok()) {
@@ -425,7 +435,8 @@ GetResults processVal(const ReadTransaction& tx,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
                       const uint32_t reference_count,
-                      ValueCache& val_cache) {
+                      ValueCache& val_cache,
+                      bool) {
     return applyValue(processBuffer(tx, val, val_cache), reference_count,
                       val_stack);
 }
@@ -445,7 +456,8 @@ GetResults processVal(const ReadTransaction&,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>& segment_ids,
                       const uint32_t reference_count,
-                      ValueCache&) {
+                      ValueCache&,
+                      bool) {
     segment_ids.insert(val.pc.segment);
 
     return applyValue(val, reference_count, val_stack);
@@ -470,7 +482,8 @@ GetResults processVal(const ReadTransaction&,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
                       const uint32_t reference_count,
-                      ValueCache&) {
+                      ValueCache&,
+                      bool) {
     // Add empty tuple to stack, will be filled in as values are processed
     val_stack.emplace_back(Tuple::createSizedTuple(val.size()),
                            reference_count);
@@ -489,22 +502,28 @@ GetResults processFirstVal(const ReadTransaction& tx,
                            const uint32_t reference_count,
                            ValueCache& value_cache) {
     return processVal(tx, val, val_stack, segment_ids, reference_count,
-                      value_cache);
+                      value_cache, false);
 }
 
 GetResults processVal(const ReadTransaction& tx,
-                      const ValueHash& val_hash,
+                      const UnloadedValue& val_info,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>& segment_ids,
                       const uint32_t,
-                      ValueCache& val_cache) {
-    if (auto val = val_cache.loadIfExists(val_hash.hash)) {
+                      ValueCache& val_cache,
+                      bool lazy_load) {
+    if (auto val = val_cache.loadIfExists(val_info.hash)) {
         // Use cached value
         return applyValue(std::move(*val), 0, val_stack);
     }
 
+    if (lazy_load) {
+        // Don't load value immediately; load on demand
+        return applyValue(val_info, 0, val_stack);
+    }
+
     // Value not in cache, so need to load from database
-    auto results = getStoredValue(tx, val_hash);
+    auto results = getStoredValue(tx, val_info);
     if (!results.status.ok()) {
         return results;
     }
@@ -515,25 +534,25 @@ GetResults processVal(const ReadTransaction& tx,
     return std::visit(
         [&](const auto& val) {
             return processVal(tx, val, val_stack, segment_ids,
-                              results.reference_count, val_cache);
+                              results.reference_count, val_cache, lazy_load);
         },
         record);
 }
 
 GetResults processFirstVal(const ReadTransaction& tx,
-                           const ValueHash& val_hash,
+                           const UnloadedValue& val_info,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>& segment_ids,
                            const uint32_t,
                            ValueCache& val_cache) {
-    if (auto val = val_cache.loadIfExists(val_hash.hash)) {
+    if (auto val = val_cache.loadIfExists(val_info.hash)) {
         // Use cached value
         val_stack.emplace_back(std::move(*val), 0);
         return GetResults{0, rocksdb::Status::OK(), {}};
     }
 
     // Value not in cache, so need to load from database
-    auto results = getStoredValue(tx, val_hash);
+    auto results = getStoredValue(tx, val_info);
     if (!results.status.ok()) {
         return results;
     }
@@ -551,7 +570,8 @@ GetResults processFirstVal(const ReadTransaction& tx,
 DbResult<value> getValueInternal(const ReadTransaction& tx,
                                  std::vector<ValueBeingParsed> val_stack,
                                  std::set<uint64_t>& segment_ids,
-                                 ValueCache& value_cache) {
+                                 ValueCache& value_cache,
+                                 bool lazy_load) {
     if (val_stack[0].raw_vals.empty()) {
         // First value has no child values, so just return single value without
         // populating cache
@@ -570,7 +590,7 @@ DbResult<value> getValueInternal(const ReadTransaction& tx,
             auto results = std::visit(
                 [&](const auto& val) {
                     return processVal(tx, val, val_stack, segment_ids, 0,
-                                      value_cache);
+                                      value_cache, lazy_load);
                 },
                 next);
             if (!results.status.ok()) {
@@ -602,7 +622,8 @@ DbResult<value> getValueInternal(const ReadTransaction& tx,
 DbResult<value> getValueRecord(const ReadTransaction& tx,
                                const ParsedSerializedVal& record,
                                std::set<uint64_t>& segment_ids,
-                               ValueCache& value_cache) {
+                               ValueCache& value_cache,
+                               bool lazy_load) {
     std::vector<ValueBeingParsed> val_stack{};
     std::visit(
         [&](const auto& val) {
@@ -610,27 +631,35 @@ DbResult<value> getValueRecord(const ReadTransaction& tx,
                                    value_cache);
         },
         record);
-    return getValueInternal(tx, std::move(val_stack), segment_ids, value_cache);
+    return getValueInternal(tx, std::move(val_stack), segment_ids, value_cache,
+                            lazy_load);
 }
 
 DbResult<value> getValueImpl(const ReadTransaction& tx,
                              const uint256_t value_hash,
                              std::set<uint64_t>& segment_ids,
-                             ValueCache& value_cache) {
+                             ValueCache& value_cache,
+                             bool lazy_load) {
     std::vector<ValueBeingParsed> val_stack{};
 
     // Initialize val_stack with first value from database
-    auto result = processFirstVal(tx, ValueHash{value_hash}, val_stack,
-                                  segment_ids, 0, value_cache);
+    auto result =
+        processFirstVal(tx, UnloadedValue{HASH_PRE_IMAGE, value_hash, 0},
+                        val_stack, segment_ids, 0, value_cache);
     if (!result.status.ok()) {
         return result.status;
     }
-    auto res =
-        getValueInternal(tx, std::move(val_stack), segment_ids, value_cache);
+    auto res = getValueInternal(tx, std::move(val_stack), segment_ids,
+                                value_cache, lazy_load);
     if (std::holds_alternative<rocksdb::Status>(res)) {
         return res;
     }
-    auto res_hash = hash_value(std::get<CountedData<value>>(res).data);
+    auto& val = std::get<CountedData<value>>(res).data;
+    if (std::holds_alternative<UnloadedValue>(val)) {
+        throw std::runtime_error(
+            "attempting to get value resulted in unloaded value");
+    }
+    auto res_hash = hash_value(val);
     assert(res_hash == value_hash);
     if (res_hash != value_hash) {
         throw std::runtime_error("deserialized with incorrect hash");
@@ -640,9 +669,10 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
 
 DbResult<value> getValue(const ReadTransaction& tx,
                          const uint256_t value_hash,
-                         ValueCache& value_cache) {
+                         ValueCache& value_cache,
+                         bool lazy_load) {
     std::set<uint64_t> segment_ids{};
-    return getValueImpl(tx, value_hash, segment_ids, value_cache);
+    return getValueImpl(tx, value_hash, segment_ids, value_cache, lazy_load);
 }
 
 SaveResults saveValueImpl(ReadWriteTransaction& tx,

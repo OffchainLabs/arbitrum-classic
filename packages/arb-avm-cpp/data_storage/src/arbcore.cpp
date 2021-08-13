@@ -712,6 +712,8 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
     return rocksdb::Status::NotFound();
 }
 
+constexpr bool ENABLE_LAZY_LOADING = true;
+
 template <class T>
 std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     const ReadTransaction& transaction,
@@ -720,7 +722,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     std::set<uint64_t> segment_ids;
 
     auto static_results = ::getValueImpl(transaction, state_data.static_hash,
-                                         segment_ids, value_cache);
+                                         segment_ids, value_cache, false);
 
     if (std::holds_alternative<rocksdb::Status>(static_results)) {
         std::stringstream ss;
@@ -730,8 +732,9 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         throw std::runtime_error(ss.str());
     }
 
-    auto register_results = ::getValueImpl(
-        transaction, state_data.register_hash, segment_ids, value_cache);
+    auto register_results =
+        ::getValueImpl(transaction, state_data.register_hash, segment_ids,
+                       value_cache, ENABLE_LAZY_LOADING);
     if (std::holds_alternative<rocksdb::Status>(register_results)) {
         std::stringstream ss;
         ss << "failed loaded core machine register with hash "
@@ -742,7 +745,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     }
 
     auto stack_results = ::getValueImpl(transaction, state_data.datastack_hash,
-                                        segment_ids, value_cache);
+                                        segment_ids, value_cache, false);
     if (std::holds_alternative<rocksdb::Status>(stack_results) ||
         !std::holds_alternative<Tuple>(
             std::get<CountedData<value>>(stack_results).data)) {
@@ -751,7 +754,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     }
 
     auto auxstack_results = ::getValueImpl(
-        transaction, state_data.auxstack_hash, segment_ids, value_cache);
+        transaction, state_data.auxstack_hash, segment_ids, value_cache, false);
     if (std::holds_alternative<rocksdb::Status>(auxstack_results)) {
         std::cerr << "failed to load machine auxstack" << std::endl;
         throw std::runtime_error("failed to load machine auxstack");
@@ -776,8 +779,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
                 // If the segment is already loaded, no need to restore it
                 continue;
             }
-            auto segment =
-                getCodeSegment(transaction, *it, next_segment_ids, value_cache);
+            auto segment = getCodeSegment(transaction, *it, next_segment_ids,
+                                          value_cache, ENABLE_LAZY_LOADING);
             core_code->restoreExistingSegment(std::move(segment));
             loaded_segment = true;
         }
@@ -1151,7 +1154,7 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(ReadTransaction& tx,
 
     std::vector<value> logs;
     for (const auto& hash : hash_result.data) {
-        auto val_result = getValue(tx, hash, valueCache);
+        auto val_result = getValue(tx, hash, valueCache, false);
         if (std::holds_alternative<rocksdb::Status>(val_result)) {
             return {std::get<rocksdb::Status>(val_result), {}};
         }

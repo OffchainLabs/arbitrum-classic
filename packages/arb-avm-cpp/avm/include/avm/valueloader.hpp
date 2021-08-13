@@ -23,7 +23,7 @@ class ValueLoader {
    public:
     // Throws an exception if the tuple cannot be loaded
     virtual value loadValue(const uint256_t&) {
-        throw std::runtime_error("Default value loader impl");
+        throw std::runtime_error("Value loader not defined");
     }
 };
 

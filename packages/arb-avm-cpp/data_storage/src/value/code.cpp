@@ -262,7 +262,8 @@ std::shared_ptr<UnsafeCodeSegment> getCodeSegment(
     const ReadTransaction& tx,
     uint64_t segment_id,
     std::set<uint64_t>& segment_ids,
-    ValueCache& value_cache) {
+    ValueCache& value_cache,
+    bool lazy_load) {
     auto key_vec = segment_metadata_key(segment_id);
     rocksdb::PinnableSlice val;
     auto s = tx.refCountedGet(vecToSlice(key_vec), &val);
@@ -280,7 +281,7 @@ std::shared_ptr<UnsafeCodeSegment> getCodeSegment(
             ops.emplace_back(raw_op.opcode);
         } else {
             auto imm = getValueRecord(tx, *raw_op.parsed_immediate, segment_ids,
-                                      value_cache);
+                                      value_cache, lazy_load);
             if (std::holds_alternative<rocksdb::Status>(imm)) {
                 throw std::runtime_error("failed to load immediate value");
             }

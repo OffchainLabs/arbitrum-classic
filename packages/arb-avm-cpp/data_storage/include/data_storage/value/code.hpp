@@ -37,7 +37,8 @@ std::shared_ptr<UnsafeCodeSegment> getCodeSegment(
     const ReadTransaction& tx,
     uint64_t segment_id,
     std::set<uint64_t>& segment_ids,
-    ValueCache& value_cache);
+    ValueCache& value_cache,
+    bool lazy_load);
 rocksdb::Status saveCode(ReadWriteTransaction& tx,
                          const Code& code,
                          std::map<uint64_t, uint64_t>& segment_counts);

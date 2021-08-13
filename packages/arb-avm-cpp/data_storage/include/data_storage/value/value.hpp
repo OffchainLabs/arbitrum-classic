@@ -38,17 +38,15 @@ DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
 DbResult<value> getValueImpl(const ReadTransaction& tx,
                              uint256_t value_hash,
                              std::set<uint64_t>& segment_ids,
-                             ValueCache& value_cache);
+                             ValueCache& value_cache,
+                             bool lazy_load);
 
 DbResult<value> getValue(const ReadTransaction& tx,
                          uint256_t value_hash,
-                         ValueCache& value_cache);
+                         ValueCache& value_cache,
+                         bool lazy_load);
 SaveResults saveValue(ReadWriteTransaction& tx, const value& val);
 DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash);
-
-struct ValueHash {
-    uint256_t hash;
-};
 
 struct ParsedBuffer {
     uint64_t depth;
@@ -60,7 +58,7 @@ using ParsedTupVal = std::variant<ParsedTupValVector,
                                   uint256_t,
                                   CodePointStub,
                                   Buffer,
-                                  ValueHash,
+                                  UnloadedValue,
                                   ParsedBuffer>;
 
 class ParsedTupValVector : public std::vector<ParsedTupVal> {};
@@ -79,7 +77,8 @@ bool shouldInlineTuple(const Tuple& tuple,
 DbResult<value> getValueRecord(const ReadTransaction& tx,
                                const ParsedSerializedVal& record,
                                std::set<uint64_t>& segment_ids,
-                               ValueCache& value_cache);
+                               ValueCache& value_cache,
+                               bool lazy_load);
 ParsedSerializedVal parseRecord(const char*& buf);
 std::vector<value> serializeValue(const std::vector<unsigned char>& seed,
                                   const value& val,

@@ -77,7 +77,13 @@ Tuple assumeTuple(MachineState& m, const value& val) {
     if (!tup) {
         auto uv = std::get_if<UnloadedValue>(&val);
         if (uv && uv->type == TUPLE) {
-            return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
+            try {
+                return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
+            } catch (const std::exception& e) {
+                std::cerr << "FATAL: Failed to lazy load value: " << e.what()
+                          << std::endl;
+                __builtin_trap();
+            }
         }
         throw bad_pop_type{};
     }
@@ -89,7 +95,13 @@ Tuple assumeTuple(MachineState& m, value& val) {
     if (!tup) {
         auto uv = std::get_if<UnloadedValue>(&val);
         if (uv && uv->type == TUPLE) {
-            return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
+            try {
+                return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
+            } catch (const std::exception& e) {
+                std::cerr << "FATAL: Failed to lazy load value: " << e.what()
+                          << std::endl;
+                __builtin_trap();
+            }
         }
         throw bad_pop_type{};
     }

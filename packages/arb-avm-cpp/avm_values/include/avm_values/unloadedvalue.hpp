@@ -20,8 +20,8 @@
 #include <avm_values/valuetype.hpp>
 
 struct UnloadedValue {
-    uint256_t hash;
     ValueTypes type;
+    uint256_t hash;
     uint256_t value_size;
 };
 

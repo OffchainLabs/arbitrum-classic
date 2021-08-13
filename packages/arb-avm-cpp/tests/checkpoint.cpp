@@ -41,7 +41,8 @@ DbResult<value> getValue(const ReadTransaction& transaction,
                          uint32_t expected_ref_count,
                          bool expected_status,
                          ValueCache& value_cache) {
-    auto res = getValue(transaction, hash_value(value_target), value_cache);
+    auto res =
+        getValue(transaction, hash_value(value_target), value_cache, false);
     if (expected_status) {
         REQUIRE(std::holds_alternative<CountedData<value>>(res));
         REQUIRE(std::get<CountedData<value>>(res).reference_count ==
@@ -74,7 +75,7 @@ void getTupleValues(const ReadTransaction& transaction,
                     uint256_t tuple_hash,
                     std::vector<uint256_t> value_hashes,
                     ValueCache& value_cache) {
-    auto results = getValue(transaction, tuple_hash, value_cache);
+    auto results = getValue(transaction, tuple_hash, value_cache, false);
     REQUIRE(std::holds_alternative<CountedData<value>>(results));
     auto val = std::get<CountedData<value>>(results).data;
     REQUIRE(std::holds_alternative<Tuple>(val));
@@ -328,12 +329,12 @@ TEST_CASE("Checkpoint Benchmark") {
 
     auto tuple_hash = hash_value(tuple);
     // Initial get to populate cache
-    getValue(*transaction, tuple_hash, value_cache);
+    getValue(*transaction, tuple_hash, value_cache, false);
 
     BENCHMARK_ADVANCED("restoreCheckpoint1")
     (Catch::Benchmark::Chronometer meter) {
         meter.measure([&transaction, tuple_hash, &value_cache] {
-            return getValue(*transaction, tuple_hash, value_cache);
+            return getValue(*transaction, tuple_hash, value_cache, false);
         });
     };
 }
@@ -381,11 +382,11 @@ void checkSavedState(const ReadWriteTransaction& transaction,
 
     ValueCache value_cache{1, 0};
     REQUIRE(!std::holds_alternative<rocksdb::Status>(
-        getValue(transaction, data.datastack_hash, value_cache)));
+        getValue(transaction, data.datastack_hash, value_cache, false)));
     REQUIRE(!std::holds_alternative<rocksdb::Status>(
-        getValue(transaction, data.auxstack_hash, value_cache)));
+        getValue(transaction, data.auxstack_hash, value_cache, false)));
     REQUIRE(!std::holds_alternative<rocksdb::Status>(
-        getValue(transaction, data.register_hash, value_cache)));
+        getValue(transaction, data.register_hash, value_cache, false)));
 }
 
 void checkDeletedCheckpoint(ReadTransaction& transaction,
@@ -399,12 +400,12 @@ void checkDeletedCheckpoint(ReadTransaction& transaction,
         deleted_machine.machine_state.auxstack.getTupleRepresentation();
     ValueCache value_cache{1, 0};
     REQUIRE(std::holds_alternative<rocksdb::Status>(
-        getValue(transaction, hash(datastack_tup), value_cache)));
+        getValue(transaction, hash(datastack_tup), value_cache, false)));
     REQUIRE(std::holds_alternative<rocksdb::Status>(
-        getValue(transaction, hash(auxstack_tup), value_cache)));
+        getValue(transaction, hash(auxstack_tup), value_cache, false)));
     REQUIRE(std::holds_alternative<rocksdb::Status>(getValue(
         transaction, hash_value(deleted_machine.machine_state.registerVal),
-        value_cache)));
+        value_cache, false)));
 }
 
 void deleteCheckpoint(ReadWriteTransaction& transaction,
