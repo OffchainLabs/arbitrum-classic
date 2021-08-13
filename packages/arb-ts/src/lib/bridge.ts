@@ -23,6 +23,8 @@ import { PayableOverrides } from '@ethersproject/contracts'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
+import { L1WethGateway__factory } from './abi/factories/L1WethGateway__factory'
+
 import networks from './networks'
 
 interface RetryableGasArgs {
@@ -184,19 +186,28 @@ export class Bridge {
     return this.l1Bridge.depositETH(value, maxSubmissionPrice, overrides)
   }
 
+  private async looksLikeWethGateway(potentialWethGatewayAddress: string) {
+    try {
+      const potentialWethGateway = L1WethGateway__factory.connect(
+        potentialWethGatewayAddress,
+        this.l1Provider
+      )
+      await potentialWethGateway.l1Weth()
+      return true
+    } catch (err) {
+      return false
+    }
+  }
+
   /**
    * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
-   * If doing a deposit through the WETH gateway when using  a network not in networks.ts, should specify isWethDeposit: true
    */
   public async deposit(
     erc20L1Address: string,
     amount: BigNumber,
     retryableGasArgs: RetryableGasArgs = {},
     destinationAddress?: string,
-    overrides?: PayableOverrides,
-    options = {
-      isWethDeposit: false,
-    }
+    overrides?: PayableOverrides
   ) {
     const l1ChainId = await this.l1Signer.getChainId()
     const { l1WethGateway: l1WethGatewayAddress } =
@@ -213,12 +224,13 @@ export class Bridge {
 
     let estimateGasCallValue = constants.Zero
 
+    // If no l1WethGatewayAddress in networks.config, we check if it's a weth gateway directly
     if (
       l1WethGatewayAddress === expectedL1GatewayAddress ||
-      options.isWethDeposit
+      (!l1WethGatewayAddress &&
+        (await this.looksLikeWethGateway(expectedL1GatewayAddress)))
     ) {
       // forwarded deposited eth as call value for weth deposit
-
       estimateGasCallValue = amount
     }
 
