@@ -114,6 +114,7 @@ type RPC struct {
 	Addr string `koanf:"addr"`
 	Port string `koanf:"port"`
 	Path string `koanf:"path"`
+	Mode string `koanf:"mode"`
 }
 
 type S3 struct {
@@ -139,20 +140,18 @@ type WS struct {
 }
 
 type Forwarder struct {
-	Target         string `koanf:"target"`
-	Submitter      string `koanf:"submitter-address"`
-	ForwardingOnly bool   `koanf:"forwarding-only"`
+	Target    string `koanf:"target"`
+	Submitter string `koanf:"submitter-address"`
 }
 
 type Node struct {
-	Aggregator      Aggregator `koanf:"aggregator"`
-	ChainID         uint64     `koanf:"chain-id"`
-	Forwarder       Forwarder  `koanf:"forwarder"`
-	RPC             RPC        `koanf:"rpc"`
-	Sequencer       Sequencer  `koanf:"sequencer"`
-	Type            string     `koanf:"type"`
-	WS              WS         `koanf:"ws"`
-	DisableMutating bool       `koanf:"disable-mutating"`
+	Aggregator Aggregator `koanf:"aggregator"`
+	ChainID    uint64     `koanf:"chain-id"`
+	Forwarder  Forwarder  `koanf:"forwarder"`
+	RPC        RPC        `koanf:"rpc"`
+	Sequencer  Sequencer  `koanf:"sequencer"`
+	Type       string     `koanf:"type"`
+	WS         WS         `koanf:"ws"`
 }
 
 type Persistent struct {
@@ -231,11 +230,10 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
-	f.Bool("node.forwarder.forwarding-only", false, "only enable the parts of the RPC that forward to the forwarder target")
-	f.Bool("node.disable-mutating", false, "disable mutating transactions (eth_sendRawTransaction)")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
+	f.String("node.rpc.mode", "full", "RPC mode: either full, non-mutating (no eth_sendRawTransaction), or forwarding-only (only requests forwarded upstream are permitted)")
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.continue-batch-posting-block-interval", 2, "block interval to post the next batch after posting a partial one")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
