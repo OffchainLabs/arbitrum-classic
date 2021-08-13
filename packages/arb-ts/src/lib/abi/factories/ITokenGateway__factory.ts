@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ITokenGateway } from '../ITokenGateway'
-
-export class ITokenGateway__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ITokenGateway {
-    return new Contract(address, _abi, signerOrProvider) as ITokenGateway
-  }
-}
+import type { ITokenGateway, ITokenGatewayInterface } from '../ITokenGateway'
 
 const _abi = [
   {
@@ -206,3 +196,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ITokenGateway__factory {
+  static readonly abi = _abi
+  static createInterface(): ITokenGatewayInterface {
+    return new utils.Interface(_abi) as ITokenGatewayInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ITokenGateway {
+    return new Contract(address, _abi, signerOrProvider) as ITokenGateway
+  }
+}

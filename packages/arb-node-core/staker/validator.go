@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -39,12 +40,13 @@ func NewValidator(
 	wallet *ethbridge.ValidatorWallet,
 	fromBlock int64,
 	validatorUtilsAddress common.Address,
+	callOpts bind.CallOpts,
 ) (*Validator, error) {
 	builder, err := ethbridge.NewBuilderBackend(wallet)
 	if err != nil {
 		return nil, err
 	}
-	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), fromBlock, client, builder)
+	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), fromBlock, client, builder, callOpts)
 	_ = rollup
 	if err != nil {
 		return nil, err
@@ -69,6 +71,7 @@ func NewValidator(
 		validatorUtilsAddress.ToEthAddress(),
 		wallet.RollupAddress().ToEthAddress(),
 		client,
+		callOpts,
 	)
 	if err != nil {
 		return nil, err
@@ -88,11 +91,23 @@ func NewValidator(
 	}, nil
 }
 
-func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, error) {
+// removeOldStakers removes the stakes of all currently staked validators except
+// its own if dontRemoveSelf is true
+func (v *Validator) removeOldStakers(ctx context.Context, dontRemoveSelf bool) (*types.Transaction, error) {
 	stakersToEliminate, err := v.validatorUtils.RefundableStakers(ctx)
 	if err != nil {
 		return nil, err
 	}
+	if dontRemoveSelf {
+		for i, staker := range stakersToEliminate {
+			if staker == v.wallet.Address() {
+				stakersToEliminate[i] = stakersToEliminate[len(stakersToEliminate)-1]
+				stakersToEliminate = stakersToEliminate[:len(stakersToEliminate)-1]
+				break
+			}
+		}
+	}
+
 	if len(stakersToEliminate) == 0 {
 		return nil, nil
 	}
@@ -429,14 +444,6 @@ func (v *Validator) generateBatchEndProof(count *big.Int) ([]byte, error) {
 	proof = append(proof, prefixHash.Bytes()...)
 	proof = append(proof, hashing.SoliditySHA3(message.Data).Bytes()...)
 	return proof, nil
-}
-
-func (v *Validator) GetInitialMachineHash(ctx context.Context) ([32]byte, error) {
-	creationEvent, err := v.rollup.LookupCreation(ctx)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return creationEvent.MachineHash, nil
 }
 
 func getBlockID(ctx context.Context, client ethutils.EthClient, number *big.Int) (*common.BlockId, error) {

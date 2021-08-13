@@ -5,14 +5,14 @@
 import { Contract, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
-import type { IWETH9L2 } from '../IWETH9L2'
+import type { IERC1820Registry } from '../IERC1820Registry'
 
-export class IWETH9L2__factory {
+export class IERC1820Registry__factory {
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): IWETH9L2 {
-    return new Contract(address, _abi, signerOrProvider) as IWETH9L2
+  ): IERC1820Registry {
+    return new Contract(address, _abi, signerOrProvider) as IERC1820Registry
   }
 }
 
@@ -23,23 +23,23 @@ const _abi = [
       {
         indexed: true,
         internalType: 'address',
-        name: 'src',
+        name: 'account',
         type: 'address',
       },
       {
         indexed: true,
-        internalType: 'address',
-        name: 'guy',
-        type: 'address',
+        internalType: 'bytes32',
+        name: 'interfaceHash',
+        type: 'bytes32',
       },
       {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'wad',
-        type: 'uint256',
+        indexed: true,
+        internalType: 'address',
+        name: 'implementer',
+        type: 'address',
       },
     ],
-    name: 'Approval',
+    name: 'InterfaceImplementerSet',
     type: 'event',
   },
   {
@@ -48,77 +48,38 @@ const _abi = [
       {
         indexed: true,
         internalType: 'address',
-        name: 'dst',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'wad',
-        type: 'uint256',
-      },
-    ],
-    name: 'Deposit',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'src',
+        name: 'account',
         type: 'address',
       },
       {
         indexed: true,
         internalType: 'address',
-        name: 'dst',
+        name: 'newManager',
         type: 'address',
       },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'wad',
-        type: 'uint256',
-      },
     ],
-    name: 'Transfer',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'src',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'wad',
-        type: 'uint256',
-      },
-    ],
-    name: 'Withdrawal',
+    name: 'ManagerChanged',
     type: 'event',
   },
   {
     inputs: [
       {
         internalType: 'address',
-        name: 'guy',
+        name: 'account',
         type: 'address',
       },
+      {
+        internalType: 'bytes32',
+        name: '_interfaceHash',
+        type: 'bytes32',
+      },
     ],
-    name: 'allowance',
+    name: 'getInterfaceImplementer',
     outputs: [
       {
-        internalType: 'uint256',
+        internalType: 'address',
         name: '',
-        type: 'uint256',
+        type: 'address',
       },
     ],
     stateMutability: 'view',
@@ -128,16 +89,35 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'guy',
+        name: 'account',
+        type: 'address',
+      },
+    ],
+    name: 'getManager',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
         type: 'address',
       },
       {
-        internalType: 'uint256',
-        name: 'wad',
-        type: 'uint256',
+        internalType: 'bytes4',
+        name: 'interfaceId',
+        type: 'bytes4',
       },
     ],
-    name: 'approve',
+    name: 'implementsERC165Interface',
     outputs: [
       {
         internalType: 'bool',
@@ -145,69 +125,72 @@ const _abi = [
         type: 'bool',
       },
     ],
-    stateMutability: 'nonpayable',
+    stateMutability: 'view',
     type: 'function',
   },
   {
     inputs: [
       {
         internalType: 'address',
-        name: 'guy',
+        name: 'account',
         type: 'address',
       },
+      {
+        internalType: 'bytes4',
+        name: 'interfaceId',
+        type: 'bytes4',
+      },
     ],
-    name: 'balanceOf',
+    name: 'implementsERC165InterfaceNoCache',
     outputs: [
       {
-        internalType: 'uint256',
+        internalType: 'bool',
         name: '',
-        type: 'uint256',
+        type: 'bool',
       },
     ],
     stateMutability: 'view',
     type: 'function',
   },
   {
-    inputs: [],
-    name: 'deposit',
+    inputs: [
+      {
+        internalType: 'string',
+        name: 'interfaceName',
+        type: 'string',
+      },
+    ],
+    name: 'interfaceHash',
+    outputs: [
+      {
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
+    ],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes32',
+        name: '_interfaceHash',
+        type: 'bytes32',
+      },
+      {
+        internalType: 'address',
+        name: 'implementer',
+        type: 'address',
+      },
+    ],
+    name: 'setInterfaceImplementer',
     outputs: [],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'totalSupply',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'dst',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: 'wad',
-        type: 'uint256',
-      },
-    ],
-    name: 'transfer',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
     stateMutability: 'nonpayable',
     type: 'function',
   },
@@ -215,40 +198,34 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'src',
+        name: 'account',
         type: 'address',
       },
       {
         internalType: 'address',
-        name: 'dst',
+        name: 'newManager',
         type: 'address',
       },
-      {
-        internalType: 'uint256',
-        name: 'wad',
-        type: 'uint256',
-      },
     ],
-    name: 'transferFrom',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
+    name: 'setManager',
+    outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },
   {
     inputs: [
       {
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes4',
+        name: 'interfaceId',
+        type: 'bytes4',
       },
     ],
-    name: 'withdraw',
+    name: 'updateERC165Cache',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

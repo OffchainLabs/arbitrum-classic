@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
     }
 
     ValueCache value_cache{1, 0};
-    auto mach = storage.getInitialMachine(value_cache);
+    auto mach = storage.getInitialMachine();
 
     std::vector<MachineMessage> inbox_messages;
     if (argc == 5) {

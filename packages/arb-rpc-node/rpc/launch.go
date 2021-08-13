@@ -44,7 +44,7 @@ type BatcherMode interface {
 }
 
 type ForwarderBatcherMode struct {
-	NodeURL string
+	Config configuration.Forwarder
 }
 
 func (b ForwarderBatcherMode) isBatcherMode() {}
@@ -64,11 +64,10 @@ type StatelessBatcherMode struct {
 func (b StatelessBatcherMode) isBatcherMode() {}
 
 type SequencerBatcherMode struct {
-	Auth                       *bind.TransactOpts
-	Core                       core.ArbCore
-	InboxReader                *monitor.InboxReader
-	DelayedMessagesTargetDelay *big.Int
-	CreateBatchBlockInterval   *big.Int
+	Auth        *bind.TransactOpts
+	Core        core.ArbCore
+	InboxReader *monitor.InboxReader
+	Config      configuration.Sequencer
 }
 
 func (b SequencerBatcherMode) isBatcherMode() {}
@@ -83,13 +82,12 @@ func SetupBatcher(
 	batcherMode BatcherMode,
 	dataSigner func([]byte) ([]byte, error),
 	broadcasterSettings configuration.FeedOutput,
-	gasPriceUrl string,
 ) (batcher.TransactionBatcher, error) {
 	switch batcherMode := batcherMode.(type) {
 	case ForwarderBatcherMode:
-		return batcher.NewForwarder(ctx, batcherMode.NodeURL)
+		return batcher.NewForwarder(ctx, batcherMode.Config)
 	case StatelessBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, gasPriceUrl)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +97,7 @@ func SetupBatcher(
 		}
 		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime), nil
 	case StatefulBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, gasPriceUrl)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
 		if err != nil {
 			return nil, err
 		}
@@ -129,13 +127,11 @@ func SetupBatcher(
 			l2ChainId,
 			batcherMode.InboxReader,
 			client,
-			batcherMode.DelayedMessagesTargetDelay,
-			batcherMode.CreateBatchBlockInterval,
+			batcherMode.Config,
 			seqInbox,
 			batcherMode.Auth,
 			dataSigner,
 			feedBroadcaster,
-			gasPriceUrl,
 		)
 		if err != nil {
 			return nil, err

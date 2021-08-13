@@ -493,12 +493,10 @@ char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
                                             const void* total_gas_used_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    ValueCache cache{1, 0};
     auto total_gas_used = receiveUint256(total_gas_used_ptr);
 
     try {
-        auto executionCursor =
-            arbcore->getExecutionCursor(total_gas_used, cache);
+        auto executionCursor = arbcore->getExecutionCursor(total_gas_used);
         if (!executionCursor.status.ok()) {
             std::cerr << "Failed to load execution cursor "
                       << executionCursor.status.ToString() << std::endl;
@@ -520,9 +518,8 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     auto max_gas = receiveUint256(max_gas_ptr);
     try {
-        ValueCache cache{1, 0};
         auto status = arbCore->advanceExecutionCursor(*executionCursor, max_gas,
-                                                      go_over_gas, cache);
+                                                      go_over_gas);
         if (!status.ok()) {
             return false;
         }
@@ -550,18 +547,16 @@ CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
-    ValueCache cache{1, 0};
     return static_cast<void*>(
-        arbCore->takeExecutionCursorMachine(*executionCursor, cache).release());
+        arbCore->takeExecutionCursorMachine(*executionCursor).release());
 }
 
 CMachine* arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
                                        uint64_t block_number) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    ValueCache cache{1, 0};
 
     try {
-        auto machine = arbcore->getMachineForSideload(block_number, cache);
+        auto machine = arbcore->getMachineForSideload(block_number);
         if (!machine.status.ok()) {
             std::cerr << "Failed to load machine for sideload "
                       << machine.status.ToString() << std::endl;

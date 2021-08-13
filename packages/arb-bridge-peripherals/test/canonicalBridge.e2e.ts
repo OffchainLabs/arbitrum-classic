@@ -136,9 +136,8 @@ describe('Bridge peripherals end-to-end', () => {
     const l2TokenAddress = await l2RouterTestBridge.calculateL2TokenAddress(
       token.address
     )
-    const l2TokenAddressFromL1Router = await l1RouterTestBridge.calculateL2TokenAddress(
-      token.address
-    )
+    const l2TokenAddressFromL1Router =
+      await l1RouterTestBridge.calculateL2TokenAddress(token.address)
     assert.equal(
       l2TokenAddressFromL1Router,
       l2TokenAddress,
@@ -147,7 +146,7 @@ describe('Bridge peripherals end-to-end', () => {
 
     const l2Token = await Token.attach(l2TokenAddress)
     const l2Balance = await l2Token.balanceOf(accounts[0].address)
-    assert.equal(l2Balance, tokenAmount, 'Tokens not minted')
+    assert.equal(l2Balance.toNumber(), tokenAmount, 'Tokens not minted')
   })
 
   it('should withdraw erc20 tokens from L2 without router', async function () {

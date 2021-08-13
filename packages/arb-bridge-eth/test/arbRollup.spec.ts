@@ -18,16 +18,12 @@
 import { ethers, deployments, run } from 'hardhat'
 import { Signer, BigNumberish, Contract, BytesLike, BigNumber } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
-import { TransactionResponse } from '@ethersproject/providers'
 import { assert, expect } from 'chai'
-import { Rollup } from '../build/types/Rollup'
-import { Node as NodeCon } from '../build/types/Node'
-import { RollupCreatorNoProxy } from '../build/types/RollupCreatorNoProxy'
-import { RollupCreatorNoProxy__factory } from '../build/types/factories/RollupCreatorNoProxy__factory'
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
 import { initializeAccounts } from './utils'
 import { hexConcat, zeroPad } from '@ethersproject/bytes'
+import { RollupUserFacet } from '../build/types'
 
 import {
   Node,
@@ -93,7 +89,7 @@ async function createRollup(
   shouldDebug = process.env['ROLLUP_DEBUG'] === '1',
   rollupConfig?: RollupConfig
 ): Promise<{
-  rollupCon: Rollup
+  rollupCon: RollupUserFacet
   blockCreated: number
 }> {
   if (!rollupConfig) rollupConfig = await getDefaultConfig()
@@ -104,9 +100,9 @@ async function createRollup(
   if (shouldDebug) {
     // this deploys the rollup contracts without proxies to facilitate debugging
     const ChallengeFactory = await deployments.get('ChallengeFactory')
-    const RollupCreatorNoProxy = (await ethers.getContractFactory(
+    const RollupCreatorNoProxy = await ethers.getContractFactory(
       'RollupCreatorNoProxy'
-    )) as RollupCreatorNoProxy__factory
+    )
     rollupCreator = await RollupCreatorNoProxy.deploy(
       ChallengeFactory.address,
       ...rollupConfig
@@ -115,7 +111,9 @@ async function createRollup(
   } else {
     rollupCreator = await ethers.getContractAt(
       'RollupCreator',
-      (await deployments.get('RollupCreator')).address
+      (
+        await deployments.get('RollupCreator')
+      ).address
     )
     const createRollupTx = await rollupCreator.createRollup(...rollupConfig)
     receipt = await createRollupTx.wait()
@@ -129,7 +127,7 @@ async function createRollup(
     receipt.logs[receipt.logs.length - 1]
   )
   expect(ev.name).to.equal('RollupCreated')
-  const parsedEv = (ev as any) as { args: { rollupAddress: string } }
+  const parsedEv = ev as any as { args: { rollupAddress: string } }
 
   const Rollup = (await ethers.getContractFactory('RollupUserFacet')).connect(
     accounts[8]
@@ -148,7 +146,7 @@ async function createRollup(
     [true, true, true]
   )
 
-  const rollupCon = Rollup.attach(parsedEv.args.rollupAddress) as Rollup
+  const rollupCon = Rollup.attach(parsedEv.args.rollupAddress)
 
   return {
     rollupCon: rollupCon,
@@ -257,7 +255,7 @@ const initNewRollup = async () => {
   const nodeAddress = await rollup.getNode(originalNode)
 
   const NodeContract = await ethers.getContractFactory('Node')
-  const node = NodeContract.attach(nodeAddress) as NodeCon
+  const node = NodeContract.attach(nodeAddress)
 
   const newState = new NodeState(
     new ExecutionState(0, initialVmState, 0, 0, 0, zerobytes32, zerobytes32),
@@ -341,20 +339,22 @@ describe('ArbRollup', () => {
   it('should validate facets in initialization', async function () {
     const rollupCreator = await ethers.getContractAt(
       'RollupCreator',
-      (await deployments.get('RollupCreator')).address
+      (
+        await deployments.get('RollupCreator')
+      ).address
     )
     const rollupLogic = await rollupCreator.rollupTemplate()
 
     const TransparentProxy = await ethers.getContractFactory(
       'TransparentUpgradeableProxy'
     )
-    let freshRollup = await TransparentProxy.deploy(
+    const proxy = await TransparentProxy.deploy(
       rollupLogic,
       await accounts[9].getAddress(),
       '0x'
     )
-    freshRollup = (await ethers.getContractFactory('Rollup')).attach(
-      freshRollup.address
+    const freshRollup = (await ethers.getContractFactory('Rollup')).attach(
+      proxy.address
     )
 
     await expect(
@@ -531,9 +531,9 @@ describe('ArbRollup', () => {
       receipt.logs![receipt.logs!.length - 1]
     )
     expect(ev.name).to.equal('RollupChallengeStarted')
-    const parsedEv = (ev as any) as { args: { challengeContract: string } }
+    const parsedEv = ev as any as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+    challenge = Challenge.attach(parsedEv.args.challengeContract)
   })
 
   it('should make a new node', async function () {
@@ -586,9 +586,9 @@ describe('ArbRollup', () => {
       receipt.logs![receipt.logs!.length - 1]
     )
     expect(ev.name).to.equal('RollupChallengeStarted')
-    const parsedEv = (ev as any) as { args: { challengeContract: string } }
+    const parsedEv = ev as any as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+    challenge = Challenge.attach(parsedEv.args.challengeContract)
 
     await expect(
       rollup.rollup.completeChallenge(
@@ -764,9 +764,9 @@ describe('ArbRollup', () => {
       receipt.logs![receipt.logs!.length - 1]
     )
     expect(ev.name).to.equal('RollupChallengeStarted')
-    const parsedEv = (ev as any) as { args: { challengeContract: string } }
+    const parsedEv = ev as any as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+    challenge = Challenge.attach(parsedEv.args.challengeContract)
 
     const preCode = await ethers.provider.getCode(challenge.address)
     expect(preCode).to.not.equal('0x')

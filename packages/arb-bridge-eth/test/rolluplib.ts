@@ -8,7 +8,7 @@ import {
 } from '@ethersproject/contracts'
 import { BytesLike } from '@ethersproject/bytes'
 
-import { Rollup } from '../build/types/Rollup'
+import { RollupUserFacet } from '../build/types/RollupUserFacet'
 import { Bridge } from '../build/types/Bridge'
 import { hexDataLength } from '@ethersproject/bytes'
 
@@ -275,7 +275,7 @@ export interface NodeCreatedEvent {
 }
 
 export class RollupContract {
-  constructor(public rollup: Rollup) {}
+  constructor(public rollup: RollupUserFacet) {}
 
   connect(signerOrProvider: Signer | Provider | string): RollupContract {
     return new RollupContract(this.rollup.connect(signerOrProvider))
@@ -321,7 +321,7 @@ export class RollupContract {
     if (ev.name != 'NodeCreated') {
       throw 'wrong event type'
     }
-    const parsedEv = (ev as any) as {
+    const parsedEv = ev as any as {
       args: NodeCreatedEvent
     }
     const node = new Node(
@@ -396,12 +396,12 @@ export class RollupContract {
     return this.rollup.returnOldDeposit(stakerAddress)
   }
 
-  removeZombieStaker(
-    nodeNum: BigNumberish,
-    stakerAddress: string
-  ): Promise<ContractTransaction> {
-    return this.rollup.removeZombieStaker(nodeNum, stakerAddress)
-  }
+  // removeZombieStaker(
+  //   nodeNum: BigNumberish,
+  //   stakerAddress: string
+  // ): Promise<ContractTransaction> {
+  //   return this.rollup.removeZombieStaker(nodeNum, stakerAddress)
+  // }
 
   latestConfirmed(): Promise<BigNumber> {
     return this.rollup.latestConfirmed()
@@ -411,13 +411,13 @@ export class RollupContract {
     return this.rollup.getNode(index)
   }
 
-  async inboxMaxValue(): Promise<BytesLike> {
-    const bridgeAddress = await this.rollup.bridge()
-    const Bridge = await ethers.getContractFactory('Bridge')
-    const bridge = Bridge.attach(bridgeAddress) as Bridge
-    const inboxInfo = await bridge.inboxInfo()
-    return inboxInfo[1]
-  }
+  // async inboxMaxValue(): Promise<BytesLike> {
+  //   const bridgeAddress = await this.rollup.delayedBridge()
+  //   const Bridge = await ethers.getContractFactory('Bridge')
+  //   const bridge = Bridge.attach(bridgeAddress) as Bridge
+  //   const inboxInfo = await bridge.inboxInfo()
+  //   return inboxInfo[1]
+  // }
 
   currentRequiredStake(): Promise<BigNumber> {
     return this.rollup.currentRequiredStake()

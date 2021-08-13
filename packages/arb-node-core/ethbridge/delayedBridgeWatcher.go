@@ -113,6 +113,10 @@ func (r *DelayedBridgeWatcher) LookupMessagesInRange(ctx context.Context, from, 
 	return r.logsToDeliveredMessages(ctx, logs)
 }
 
+func (r *DelayedBridgeWatcher) FromBlock() int64 {
+	return r.fromBlock
+}
+
 func (r *DelayedBridgeWatcher) LookupMessageBlock(ctx context.Context, messageNum *big.Int) (*common.BlockId, error) {
 	var msgNumBytes ethcommon.Hash
 	copy(msgNumBytes[:], math.U256Bytes(messageNum))

@@ -278,11 +278,13 @@ func startup() error {
 	}
 
 	batcherMode := rpc.SequencerBatcherMode{
-		Auth:                       seqAuth,
-		Core:                       mon.Core,
-		InboxReader:                inboxReader,
-		DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
-		CreateBatchBlockInterval:   big.NewInt(*createBatchBlockInterval),
+		Auth:        seqAuth,
+		Core:        mon.Core,
+		InboxReader: inboxReader,
+		Config: configuration.Sequencer{
+			CreateBatchBlockInterval:   *createBatchBlockInterval,
+			DelayedMessagesTargetDelay: *delayedMessagesTargetDelay,
+		},
 	}
 	settings := configuration.FeedOutput{
 		Addr:          "127.0.0.1",
@@ -314,7 +316,6 @@ func startup() error {
 		batcherMode,
 		signer,
 		settings,
-		"",
 	)
 	if err != nil {
 		return err

@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface INodeInterface extends ethers.utils.Interface {
   functions: {
@@ -165,59 +164,71 @@ interface INodeInterface extends ethers.utils.Interface {
   events: {}
 }
 
-export class INode extends Contract {
+export class INode extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: INodeInterface
 
   functions: {
     addStaker(
       staker: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'addStaker(address)'(
-      staker: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     challengeHash(overrides?: CallOverrides): Promise<[string]>
 
-    'challengeHash()'(overrides?: CallOverrides): Promise<[string]>
-
     childCreated(
       arg0: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'childCreated(uint256)'(
-      arg0: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     confirmData(overrides?: CallOverrides): Promise<[string]>
 
-    'confirmData()'(overrides?: CallOverrides): Promise<[string]>
-
     deadlineBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'deadlineBlock()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    destroy(overrides?: Overrides): Promise<ContractTransaction>
-
-    'destroy()'(overrides?: Overrides): Promise<ContractTransaction>
+    destroy(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     firstChildBlock(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'firstChildBlock()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     initialize(
       _rollup: string,
@@ -226,119 +237,61 @@ export class INode extends Contract {
       _confirmData: BytesLike,
       _prev: BigNumberish,
       _deadlineBlock: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(address,bytes32,bytes32,bytes32,uint256,uint256)'(
-      _rollup: string,
-      _stateHash: BytesLike,
-      _challengeHash: BytesLike,
-      _confirmData: BytesLike,
-      _prev: BigNumberish,
-      _deadlineBlock: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     latestChildNumber(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'latestChildNumber()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     newChildConfirmDeadline(
       deadline: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'newChildConfirmDeadline(uint256)'(
-      deadline: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     noChildConfirmedBeforeBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'noChildConfirmedBeforeBlock()'(
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
     prev(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'prev()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     removeStaker(
       staker: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'removeStaker(address)'(
-      staker: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     requirePastChildConfirmDeadline(overrides?: CallOverrides): Promise<[void]>
 
-    'requirePastChildConfirmDeadline()'(
-      overrides?: CallOverrides
-    ): Promise<[void]>
-
     requirePastDeadline(overrides?: CallOverrides): Promise<[void]>
 
-    'requirePastDeadline()'(overrides?: CallOverrides): Promise<[void]>
-
-    resetChildren(overrides?: Overrides): Promise<ContractTransaction>
-
-    'resetChildren()'(overrides?: Overrides): Promise<ContractTransaction>
+    resetChildren(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     stakerCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'stakerCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     stakers(staker: string, overrides?: CallOverrides): Promise<[boolean]>
 
-    'stakers(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
     stateHash(overrides?: CallOverrides): Promise<[string]>
-
-    'stateHash()'(overrides?: CallOverrides): Promise<[string]>
   }
 
-  addStaker(staker: string, overrides?: Overrides): Promise<ContractTransaction>
-
-  'addStaker(address)'(
+  addStaker(
     staker: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   challengeHash(overrides?: CallOverrides): Promise<string>
 
-  'challengeHash()'(overrides?: CallOverrides): Promise<string>
-
   childCreated(
     arg0: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'childCreated(uint256)'(
-    arg0: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   confirmData(overrides?: CallOverrides): Promise<string>
 
-  'confirmData()'(overrides?: CallOverrides): Promise<string>
-
   deadlineBlock(overrides?: CallOverrides): Promise<BigNumber>
 
-  'deadlineBlock()'(overrides?: CallOverrides): Promise<BigNumber>
-
-  destroy(overrides?: Overrides): Promise<ContractTransaction>
-
-  'destroy()'(overrides?: Overrides): Promise<ContractTransaction>
+  destroy(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   firstChildBlock(overrides?: CallOverrides): Promise<BigNumber>
-
-  'firstChildBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
   initialize(
     _rollup: string,
@@ -347,112 +300,53 @@ export class INode extends Contract {
     _confirmData: BytesLike,
     _prev: BigNumberish,
     _deadlineBlock: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(address,bytes32,bytes32,bytes32,uint256,uint256)'(
-    _rollup: string,
-    _stateHash: BytesLike,
-    _challengeHash: BytesLike,
-    _confirmData: BytesLike,
-    _prev: BigNumberish,
-    _deadlineBlock: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   latestChildNumber(overrides?: CallOverrides): Promise<BigNumber>
 
-  'latestChildNumber()'(overrides?: CallOverrides): Promise<BigNumber>
-
   newChildConfirmDeadline(
     deadline: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'newChildConfirmDeadline(uint256)'(
-    deadline: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   noChildConfirmedBeforeBlock(overrides?: CallOverrides): Promise<BigNumber>
 
-  'noChildConfirmedBeforeBlock()'(overrides?: CallOverrides): Promise<BigNumber>
-
   prev(overrides?: CallOverrides): Promise<BigNumber>
-
-  'prev()'(overrides?: CallOverrides): Promise<BigNumber>
 
   removeStaker(
     staker: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'removeStaker(address)'(
-    staker: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   requirePastChildConfirmDeadline(overrides?: CallOverrides): Promise<void>
 
-  'requirePastChildConfirmDeadline()'(overrides?: CallOverrides): Promise<void>
-
   requirePastDeadline(overrides?: CallOverrides): Promise<void>
 
-  'requirePastDeadline()'(overrides?: CallOverrides): Promise<void>
-
-  resetChildren(overrides?: Overrides): Promise<ContractTransaction>
-
-  'resetChildren()'(overrides?: Overrides): Promise<ContractTransaction>
+  resetChildren(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
-  'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
   stakers(staker: string, overrides?: CallOverrides): Promise<boolean>
 
-  'stakers(address)'(
-    staker: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
-
   stateHash(overrides?: CallOverrides): Promise<string>
-
-  'stateHash()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
     addStaker(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'addStaker(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     challengeHash(overrides?: CallOverrides): Promise<string>
-
-    'challengeHash()'(overrides?: CallOverrides): Promise<string>
 
     childCreated(arg0: BigNumberish, overrides?: CallOverrides): Promise<void>
 
-    'childCreated(uint256)'(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     confirmData(overrides?: CallOverrides): Promise<string>
-
-    'confirmData()'(overrides?: CallOverrides): Promise<string>
 
     deadlineBlock(overrides?: CallOverrides): Promise<BigNumber>
 
-    'deadlineBlock()'(overrides?: CallOverrides): Promise<BigNumber>
-
     destroy(overrides?: CallOverrides): Promise<void>
 
-    'destroy()'(overrides?: CallOverrides): Promise<void>
-
     firstChildBlock(overrides?: CallOverrides): Promise<BigNumber>
-
-    'firstChildBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initialize(
       _rollup: string,
@@ -464,113 +358,56 @@ export class INode extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address,bytes32,bytes32,bytes32,uint256,uint256)'(
-      _rollup: string,
-      _stateHash: BytesLike,
-      _challengeHash: BytesLike,
-      _confirmData: BytesLike,
-      _prev: BigNumberish,
-      _deadlineBlock: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     latestChildNumber(overrides?: CallOverrides): Promise<BigNumber>
-
-    'latestChildNumber()'(overrides?: CallOverrides): Promise<BigNumber>
 
     newChildConfirmDeadline(
       deadline: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'newChildConfirmDeadline(uint256)'(
-      deadline: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     noChildConfirmedBeforeBlock(overrides?: CallOverrides): Promise<BigNumber>
-
-    'noChildConfirmedBeforeBlock()'(
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
 
     prev(overrides?: CallOverrides): Promise<BigNumber>
 
-    'prev()'(overrides?: CallOverrides): Promise<BigNumber>
-
     removeStaker(staker: string, overrides?: CallOverrides): Promise<void>
-
-    'removeStaker(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     requirePastChildConfirmDeadline(overrides?: CallOverrides): Promise<void>
 
-    'requirePastChildConfirmDeadline()'(
-      overrides?: CallOverrides
-    ): Promise<void>
-
     requirePastDeadline(overrides?: CallOverrides): Promise<void>
-
-    'requirePastDeadline()'(overrides?: CallOverrides): Promise<void>
 
     resetChildren(overrides?: CallOverrides): Promise<void>
 
-    'resetChildren()'(overrides?: CallOverrides): Promise<void>
-
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
-
-    'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
 
     stakers(staker: string, overrides?: CallOverrides): Promise<boolean>
 
-    'stakers(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
     stateHash(overrides?: CallOverrides): Promise<string>
-
-    'stateHash()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {}
 
   estimateGas: {
-    addStaker(staker: string, overrides?: Overrides): Promise<BigNumber>
-
-    'addStaker(address)'(
+    addStaker(
       staker: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     challengeHash(overrides?: CallOverrides): Promise<BigNumber>
 
-    'challengeHash()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    childCreated(arg0: BigNumberish, overrides?: Overrides): Promise<BigNumber>
-
-    'childCreated(uint256)'(
+    childCreated(
       arg0: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     confirmData(overrides?: CallOverrides): Promise<BigNumber>
 
-    'confirmData()'(overrides?: CallOverrides): Promise<BigNumber>
-
     deadlineBlock(overrides?: CallOverrides): Promise<BigNumber>
 
-    'deadlineBlock()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    destroy(overrides?: Overrides): Promise<BigNumber>
-
-    'destroy()'(overrides?: Overrides): Promise<BigNumber>
+    destroy(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     firstChildBlock(overrides?: CallOverrides): Promise<BigNumber>
-
-    'firstChildBlock()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initialize(
       _rollup: string,
@@ -579,124 +416,64 @@ export class INode extends Contract {
       _confirmData: BytesLike,
       _prev: BigNumberish,
       _deadlineBlock: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(address,bytes32,bytes32,bytes32,uint256,uint256)'(
-      _rollup: string,
-      _stateHash: BytesLike,
-      _challengeHash: BytesLike,
-      _confirmData: BytesLike,
-      _prev: BigNumberish,
-      _deadlineBlock: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     latestChildNumber(overrides?: CallOverrides): Promise<BigNumber>
 
-    'latestChildNumber()'(overrides?: CallOverrides): Promise<BigNumber>
-
     newChildConfirmDeadline(
       deadline: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'newChildConfirmDeadline(uint256)'(
-      deadline: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     noChildConfirmedBeforeBlock(overrides?: CallOverrides): Promise<BigNumber>
 
-    'noChildConfirmedBeforeBlock()'(
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     prev(overrides?: CallOverrides): Promise<BigNumber>
 
-    'prev()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    removeStaker(staker: string, overrides?: Overrides): Promise<BigNumber>
-
-    'removeStaker(address)'(
+    removeStaker(
       staker: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     requirePastChildConfirmDeadline(
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'requirePastChildConfirmDeadline()'(
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     requirePastDeadline(overrides?: CallOverrides): Promise<BigNumber>
 
-    'requirePastDeadline()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    resetChildren(overrides?: Overrides): Promise<BigNumber>
-
-    'resetChildren()'(overrides?: Overrides): Promise<BigNumber>
+    resetChildren(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
-    'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
     stakers(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'stakers(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     stateHash(overrides?: CallOverrides): Promise<BigNumber>
-
-    'stateHash()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
     addStaker(
       staker: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'addStaker(address)'(
-      staker: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     challengeHash(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'challengeHash()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     childCreated(
       arg0: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'childCreated(uint256)'(
-      arg0: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     confirmData(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'confirmData()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     deadlineBlock(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'deadlineBlock()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    destroy(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'destroy()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    destroy(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     firstChildBlock(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'firstChildBlock()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
 
     initialize(
       _rollup: string,
@@ -705,62 +482,28 @@ export class INode extends Contract {
       _confirmData: BytesLike,
       _prev: BigNumberish,
       _deadlineBlock: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address,bytes32,bytes32,bytes32,uint256,uint256)'(
-      _rollup: string,
-      _stateHash: BytesLike,
-      _challengeHash: BytesLike,
-      _confirmData: BytesLike,
-      _prev: BigNumberish,
-      _deadlineBlock: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     latestChildNumber(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'latestChildNumber()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     newChildConfirmDeadline(
       deadline: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'newChildConfirmDeadline(uint256)'(
-      deadline: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     noChildConfirmedBeforeBlock(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'noChildConfirmedBeforeBlock()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     prev(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'prev()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     removeStaker(
       staker: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'removeStaker(address)'(
-      staker: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     requirePastChildConfirmDeadline(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'requirePastChildConfirmDeadline()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -768,30 +511,17 @@ export class INode extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'requirePastDeadline()'(
-      overrides?: CallOverrides
+    resetChildren(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    resetChildren(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'resetChildren()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
     stakerCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'stakerCount()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     stakers(
       staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'stakers(address)'(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     stateHash(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'stateHash()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }
