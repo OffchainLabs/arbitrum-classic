@@ -21,6 +21,7 @@
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/status.hpp>
+#include <avm/valueloader.hpp>
 
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
@@ -153,6 +154,7 @@ struct MachineState {
 
     CodePointRef pc{0, 0};
     std::shared_ptr<Code> code;
+    ValueLoader value_loader;
     mutable std::optional<CodeSegmentSnapshot> loaded_segment;
     value registerVal;
     value static_val;
@@ -191,7 +193,7 @@ struct MachineState {
 
     CodePoint loadCurrentInstruction() const;
     const Operation& loadCurrentOperation() const;
-    uint256_t nextGasCost() const;
+    uint256_t nextGasCost();
 
     uint256_t getTotalMessagesRead() const;
 
@@ -201,7 +203,7 @@ struct MachineState {
 
    private:
     void marshalBufferProof(OneStepProof& proof) const;
-    uint256_t gasCost(const Operation& op) const;
+    uint256_t gasCost(const Operation& op);
 };
 
 #endif /* machinestate_hpp */

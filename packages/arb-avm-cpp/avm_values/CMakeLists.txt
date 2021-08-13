@@ -23,6 +23,7 @@ set(LIB_HEADERS
   include/avm_values/exceptions.hpp
   include/avm_values/tuple.hpp
   include/avm_values/tuplestub.hpp
+  include/avm_values/unloadedvalue.hpp
   include/avm_values/value.hpp
   include/avm_values/valuetype.hpp
   include/avm_values/bigint.hpp

@@ -450,12 +450,12 @@ const Operation& MachineState::loadCurrentOperation() const {
     return loaded_segment->loadOperation(pc.pc);
 }
 
-uint256_t MachineState::nextGasCost() const {
+uint256_t MachineState::nextGasCost() {
     auto& op = loadCurrentOperation();
     return gasCost(op);
 }
 
-uint256_t MachineState::gasCost(const Operation& op) const {
+uint256_t MachineState::gasCost(const Operation& op) {
     auto base_gas = instructionGasCosts()[static_cast<size_t>(op.opcode)];
     if (op.opcode == OpCode::ECPAIRING) {
         base_gas += machineoperation::ec_pairing_variable_gas_cost(*this);

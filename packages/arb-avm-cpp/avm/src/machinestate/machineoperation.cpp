@@ -72,17 +72,25 @@ uint64_t assumeInt64(uint256_t& val) {
     return static_cast<uint64_t>(val);
 }
 
-const Tuple& assumeTuple(const value& val) {
+Tuple assumeTuple(MachineState& m, const value& val) {
     auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
+        auto uv = std::get_if<UnloadedValue>(&val);
+        if (uv && uv->type == TUPLE) {
+            return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
+        }
         throw bad_pop_type{};
     }
     return *tup;
 }
 
-Tuple& assumeTuple(value& val) {
+Tuple assumeTuple(MachineState& m, value& val) {
     auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
+        auto uv = std::get_if<UnloadedValue>(&val);
+        if (uv && uv->type == TUPLE) {
+            return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
+        }
         throw bad_pop_type{};
     }
     return *tup;
@@ -408,6 +416,7 @@ struct ValueTypeVisitor {
         return TUPLE;
     }
     ValueTypes operator()(const Buffer&) const { return BUFFER; }
+    ValueTypes operator()(const UnloadedValue& val) const { return val.type; }
 };
 
 void typeOp(MachineState& m) {
@@ -465,7 +474,7 @@ Tuple decodeKeccakState(const uint64_t* state) {
 
 void keccakF(MachineState& m) {
     m.stack.prepForMod(1);
-    auto& tup = assumeTuple(m.stack[0]);
+    auto tup = assumeTuple(m, m.stack[0]);
     uint64_t state[25];
 
     internal::encodeKeccakState(tup, state);
@@ -648,7 +657,7 @@ void tget(MachineState& m) {
     m.stack.prepForMod(2);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
-    auto& tup = assumeTuple(m.stack[1]);
+    auto tup = assumeTuple(m, m.stack[1]);
     m.stack[1] = tup.get_element(index);
     m.stack.popClear();
     ++m.pc;
@@ -658,7 +667,7 @@ void tset(MachineState& m) {
     m.stack.prepForMod(3);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
-    auto& tup = assumeTuple(m.stack[1]);
+    auto tup = assumeTuple(m, m.stack[1]);
     tup.set_element(index, std::move(m.stack[2]));
     m.stack[2] = std::move(tup);
     m.stack.popClear();
@@ -670,7 +679,7 @@ void xget(MachineState& m) {
     m.stack.prepForMod(1);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
-    auto& tup = assumeTuple(m.auxstack[0]);
+    auto tup = assumeTuple(m, m.auxstack[0]);
     m.stack[0] = tup.get_element(index);
     ++m.pc;
 }
@@ -680,7 +689,7 @@ void xset(MachineState& m) {
     m.auxstack.prepForMod(1);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
-    auto& tup = assumeTuple(m.auxstack[0]);
+    auto tup = assumeTuple(m, m.auxstack[0]);
     tup.set_element(index, std::move(m.stack[1]));
     m.auxstack[0] = std::move(tup);
     m.stack.popClear();
@@ -690,7 +699,7 @@ void xset(MachineState& m) {
 
 void tlen(MachineState& m) {
     m.stack.prepForMod(1);
-    m.stack[0] = assumeTuple(m.stack[0]).tuple_size();
+    m.stack[0] = assumeTuple(m, m.stack[0]).tuple_size();
     ++m.pc;
 }
 
@@ -793,16 +802,16 @@ void ec_pairing(MachineState& m) {
 
     std::vector<std::pair<G1Point, G2Point>> points;
 
-    const Tuple* val = &assumeTuple(m.stack[0]);
+    auto val = assumeTuple(m, m.stack[0]);
     for (int i = 0; i < max_ec_pairing_points; i++) {
-        if (val->tuple_size() == 0) {
+        if (val.tuple_size() == 0) {
             break;
         }
-        if (val->tuple_size() != 2) {
+        if (val.tuple_size() != 2) {
             throw bad_pop_type{};
         }
-        auto& next = assumeTuple(val->get_element_unsafe(0));
-        val = &assumeTuple(val->get_element_unsafe(1));
+        auto next = assumeTuple(m, val.get_element_unsafe(0));
+        val = assumeTuple(m, val.get_element_unsafe(1));
 
         if (next.tuple_size() != 6) {
             throw bad_pop_type{};
@@ -816,7 +825,7 @@ void ec_pairing(MachineState& m) {
                    assumeInt(next.get_element_unsafe(5))};
         points.emplace_back(g1, g2);
     }
-    if (val->tuple_size() != 0) {
+    if (val.tuple_size() != 0) {
         throw bad_pop_type{};
     }
 
@@ -830,7 +839,7 @@ void ec_pairing(MachineState& m) {
     ++m.pc;
 }
 
-uint64_t ec_pairing_variable_gas_cost(const MachineState& m) {
+uint64_t ec_pairing_variable_gas_cost(MachineState& m) {
     // The fixed cost of the the pairing opcode is applied elsewhere
     uint64_t gas_cost = 0;
     if (m.stack.stacksize() == 0) {
@@ -839,14 +848,14 @@ uint64_t ec_pairing_variable_gas_cost(const MachineState& m) {
     try {
         const value* val = &m.stack[0];
         for (int i = 0; i < max_ec_pairing_points; i++) {
-            const Tuple* tup = &assumeTuple(*val);
-            if (tup->tuple_size() == 0) {
+            auto tup = assumeTuple(m, *val);
+            if (tup.tuple_size() == 0) {
                 break;
             }
-            if (tup->tuple_size() != 2) {
+            if (tup.tuple_size() != 2) {
                 throw bad_pop_type{};
             }
-            val = &tup->get_element_unsafe(1);
+            val = &tup.get_element_unsafe(1);
             gas_cost += ec_pair_gas_cost;
         }
     } catch (const std::exception&) {
