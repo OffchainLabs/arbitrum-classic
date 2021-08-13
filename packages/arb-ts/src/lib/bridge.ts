@@ -69,30 +69,28 @@ export class Bridge {
     const l1Network = networks[l1ChainId]
     const l2Network = networks[l2ChainId]
 
-    if (l1Network) {
-      if (l1Network.isArbitrum)
-        throw new Error('Connected to an Arbitrum networks as the L1...')
-      l1GatewayRouterAddress = l1Network.tokenBridge.l1GatewayRouter
-    } else if (!l1GatewayRouterAddress) {
-      throw new Error(
-        'Network not in config, and no l1GatewayRouter Address provided'
-      )
-    }
-
-    if (l2Network) {
-      if (!l2Network.isArbitrum)
-        throw new Error('Connected to an L1 network as the L2...')
-      l2GatewayRouterAddress = l2Network.tokenBridge.l2GatewayRouter
-    } else if (!l2GatewayRouterAddress) {
-      throw new Error(
-        'Network not in config, and no l2GatewayRouter address provided'
-      )
-    }
-
     if (l1Network && l2Network) {
       if (l1Network.partnerChainID !== l2Network.chainID)
         throw new Error('L1 and L2 networks are not connected')
+      if (l1Network.isArbitrum)
+        throw new Error('Connected to an Arbitrum networks as the L1...')
+      if (!l2Network.isArbitrum)
+        throw new Error('Connected to an L1 network as the L2...')
+
+      l1GatewayRouterAddress = l1Network.tokenBridge.l1GatewayRouter
+
+      l2GatewayRouterAddress = l2Network.tokenBridge.l2GatewayRouter
     }
+
+    if (!l2GatewayRouterAddress)
+      throw new Error(
+        'Network not in config, and no l2GatewayRouter address provided'
+      )
+
+    if (!l1GatewayRouterAddress)
+      throw new Error(
+        'Network not in config, and no l1GatewayRouter Address provided'
+      )
 
     // check routers are deployed
     const l1RouterCode = await ethSigner.provider.getCode(

@@ -26,7 +26,7 @@ const main = async () => {
   const { l1Signer, l2Signer } = bridge
   const l1SignerAddress = await l1Signer.getAddress()
 
-  const l1InboxAddr = tokenBridge.inbox
+  const l1InboxAddr = await bridge.l1Bridge.getInbox()
   const l1GatewayRouterAddr = tokenBridge.l1GatewayRouter
   const l2GatewayRouterAddr = tokenBridge.l2GatewayRouter
   const l1ProxyAdminAddr = tokenBridge.l1ProxyAdmin
