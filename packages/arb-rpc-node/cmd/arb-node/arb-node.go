@@ -88,7 +88,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, walletConfig, l1Client, l1ChainId, err := configuration.ParseNode(ctx)
+	config, walletConfig, feedSignerConfig, l1Client, l1ChainId, err := configuration.ParseNode(ctx)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		((config.Node.Type != "sequencer") && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
@@ -230,7 +230,7 @@ func startup() error {
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
 	} else {
 		var auth *bind.TransactOpts
-		auth, dataSigner, err = cmdhelp.GetKeystore(config, walletConfig, l1ChainId)
+		auth, dataSigner, err = cmdhelp.GetKeystore(config, walletConfig, feedSignerConfig, l1ChainId, true)
 		if err != nil {
 			return errors.Wrap(err, "error running GetKeystore")
 		}

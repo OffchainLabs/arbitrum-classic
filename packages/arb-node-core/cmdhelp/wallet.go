@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -48,30 +47,12 @@ var logger = log.With().Caller().Stack().Str("component", "cmdhelp").Logger()
 func GetKeystore(
 	config *configuration.Config,
 	walletConfig *configuration.Wallet,
+	feedSignerConfig *configuration.FeedSigner,
 	chainId *big.Int,
+	signerRequired bool,
 ) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
-	var account accounts.Account
 	var signer = func(data []byte) ([]byte, error) { return nil, errors.New("undefined signer") }
 	var auth *bind.TransactOpts
-
-	if len(config.Wallet.FeedPrivateKey) != 0 {
-		privateKey, err := crypto.HexToECDSA(config.Wallet.PrivateKey)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error loading feed private key")
-		}
-
-		publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
-		if !ok {
-			return nil, nil, errors.Wrap(err, "error generating public address of feed private key")
-		}
-		logger.
-			Info().
-			Hex("signer", crypto.PubkeyToAddress(*publicKeyECDSA).Bytes()).
-			Msg("feed signer specified")
-		signer = func(data []byte) ([]byte, error) {
-			return crypto.Sign(data, privateKey)
-		}
-	}
 
 	if len(walletConfig.FireblocksSSLKey) != 0 {
 		fromAddress := ethcommon.HexToAddress(config.Fireblocks.SourceAddress)
@@ -88,14 +69,35 @@ func GetKeystore(
 			},
 		}
 
-		if len(config.Wallet.FeedPrivateKey) == 0 {
-			// Separate key for signing feed not provided
+		if len(feedSignerConfig.PrivateKey) != 0 {
+			privateKey, err := crypto.HexToECDSA(config.Wallet.PrivateKey)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "error loading feed private key")
+			}
+
+			publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
+			if !ok {
+				return nil, nil, errors.Wrap(err, "error generating public address of feed private key")
+			}
 			logger.
 				Info().
-				Msg("feed signer not specified and using fireblocks, so signing disabled")
+				Hex("signer", crypto.PubkeyToAddress(*publicKeyECDSA).Bytes()).
+				Msg("feed private key used as signer")
 			signer = func(data []byte) ([]byte, error) {
-				// Fireblocks cannot sign arbitrary data
-				return make([]byte, 32), nil
+				return crypto.Sign(data, privateKey)
+			}
+		} else if signerRequired {
+			ks, account, err := openKeystore("feed signer", feedSignerConfig.Pathname, feedSignerConfig.Password)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			logger.
+				Info().
+				Hex("signer", account.Address.Bytes()).
+				Msg("feed signer wallet used as signer")
+			signer = func(data []byte) ([]byte, error) {
+				return ks.SignHash(account, data)
 			}
 		}
 	} else if len(config.Wallet.PrivateKey) != 0 {
@@ -108,75 +110,30 @@ func GetKeystore(
 			return nil, nil, err
 		}
 
-		if len(config.Wallet.FeedPrivateKey) == 0 {
-			// Separate key for signing feed not provided
-			logger.
-				Info().
-				Hex("signer", auth.From.Bytes()).
-				Msg("private key used as signer")
-			signer = func(data []byte) ([]byte, error) {
-				return crypto.Sign(data, privateKey)
-			}
+		logger.
+			Info().
+			Hex("signer", auth.From.Bytes()).
+			Msg("private key used as signer")
+		signer = func(data []byte) ([]byte, error) {
+			return crypto.Sign(data, privateKey)
 		}
 	} else {
-		ks := keystore.NewKeyStore(
-			filepath.Join(config.Persistent.Chain, "wallets"),
-			keystore.StandardScryptN,
-			keystore.StandardScryptP,
-		)
-
-		if len(ks.Accounts()) > 0 {
-			account = ks.Accounts()[0]
+		ks, account, err := openKeystore("account", walletConfig.Pathname, walletConfig.Password)
+		if err != nil {
+			return nil, nil, err
 		}
 
-		if ks.Unlock(account, walletConfig.Password) != nil {
-			if len(walletConfig.Password) == 0 {
-				// Wallet doesn't exist and no password provided
-				if len(ks.Accounts()) == 0 {
-					fmt.Print("Enter new account password: ")
-				} else {
-					fmt.Print("Enter account password: ")
-				}
-
-				bytePassword, err := terminal.ReadPassword(syscall.Stdin)
-				if err != nil {
-					return nil, nil, err
-				}
-				passphrase := string(bytePassword)
-
-				walletConfig.Password = strings.TrimSpace(passphrase)
-			}
-
-			if len(ks.Accounts()) == 0 {
-				var err error
-				account, err = ks.NewAccount(walletConfig.Password)
-				if err != nil {
-					return nil, nil, err
-				}
-			}
-			err := ks.Unlock(account, walletConfig.Password)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			logger.Info().Hex("address", account.Address.Bytes()).Msg("created new wallet")
-		}
-
-		var err error
 		auth, err = bind.NewKeyStoreTransactorWithChainID(ks, account, chainId)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		if len(config.Wallet.FeedPrivateKey) == 0 {
-			// Separate key for signing feed not provided
-			logger.
-				Info().
-				Hex("signer", auth.From.Bytes()).
-				Msg("wallet used as signer")
-			signer = func(data []byte) ([]byte, error) {
-				return ks.SignHash(account, data)
-			}
+		logger.
+			Info().
+			Hex("signer", account.Address.Bytes()).
+			Msg("wallet used as signer")
+		signer = func(data []byte) ([]byte, error) {
+			return ks.SignHash(account, data)
 		}
 	}
 
@@ -186,6 +143,54 @@ func GetKeystore(
 	}
 
 	return auth, signer, nil
+}
+
+func openKeystore(description string, walletPath string, walletPassword string) (*keystore.KeyStore, accounts.Account, error) {
+	ks := keystore.NewKeyStore(
+		walletPath,
+		keystore.StandardScryptN,
+		keystore.StandardScryptP,
+	)
+
+	var account accounts.Account
+	if len(ks.Accounts()) > 0 {
+		account = ks.Accounts()[0]
+	}
+
+	if ks.Unlock(account, walletPassword) != nil {
+		if len(walletPassword) == 0 {
+			if len(ks.Accounts()) == 0 {
+				// Wallet doesn't exist and no password provided
+				fmt.Printf("Enter new %s password: ", description)
+			} else {
+				// Wallet exists and no password provided
+				fmt.Printf("Enter %s password: ", description)
+			}
+
+			bytePassword, err := terminal.ReadPassword(syscall.Stdin)
+			if err != nil {
+				return nil, accounts.Account{}, err
+			}
+			passphrase := string(bytePassword)
+
+			walletPassword = strings.TrimSpace(passphrase)
+		}
+
+		if len(ks.Accounts()) == 0 {
+			var err error
+			account, err = ks.NewAccount(walletPassword)
+			if err != nil {
+				return nil, accounts.Account{}, err
+			}
+		}
+		err := ks.Unlock(account, walletPassword)
+		if err != nil {
+			return nil, accounts.Account{}, err
+		}
+
+		logger.Info().Hex("address", account.Address.Bytes()).Str("description", description).Msg("created new wallet")
+	}
+	return ks, account, nil
 }
 
 const WalletArgsString = "[--wallet.password=pass] [--wallet.gasprice==FloatInGwei]"

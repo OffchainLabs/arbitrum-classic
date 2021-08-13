@@ -106,11 +106,18 @@ type S3 struct {
 }
 
 type Sequencer struct {
-	CreateBatchBlockInterval          int64   `koanf:"create-batch-block-interval"`
-	ContinueBatchPostingBlockInterval int64   `koanf:"continue-batch-posting-block-interval"`
-	DelayedMessagesTargetDelay        int64   `koanf:"delayed-messages-target-delay"`
-	ReorgOutHugeMessages              bool    `koanf:"reorg-out-huge-messages"`
-	Lockout                           Lockout `koanf:"lockout"`
+	CreateBatchBlockInterval          int64      `koanf:"create-batch-block-interval"`
+	ContinueBatchPostingBlockInterval int64      `koanf:"continue-batch-posting-block-interval"`
+	DelayedMessagesTargetDelay        int64      `koanf:"delayed-messages-target-delay"`
+	FeedSigner                        FeedSigner `koanf:"feed-signer"`
+	ReorgOutHugeMessages              bool       `koanf:"reorg-out-huge-messages"`
+	Lockout                           Lockout    `koanf:"lockout"`
+}
+
+type FeedSigner struct {
+	Pathname   string `koanf:"pathname"`
+	Password   string `koanf:"password"`
+	PrivateKey string `koanf:"private-key"`
 }
 
 type WS struct {
@@ -156,9 +163,6 @@ type Validator struct {
 }
 
 type Wallet struct {
-	FeedPathname             string `koanf:"feed-pathname"`
-	FeedPassword             string `koanf:"feed-password"`
-	FeedPrivateKey           string `koanf:"feed-private-key"`
 	FireblocksSSLKey         string `koanf:"fireblocks-ssl-key,omitempty"`
 	FireblocksSSLKeyPassword string `koanf:"fireblocks-ssl-key-password,omitempty"`
 	Pathname                 string `koanf:"pathname"`
@@ -208,7 +212,7 @@ func (c *Config) GetValidatorDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "validator_db")
 }
 
-func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseCLI(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	AddForwarderTarget(f)
@@ -216,7 +220,7 @@ func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *b
 	return ParseNonRelay(ctx, f, "wallets-cli")
 }
 
-func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNode(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
@@ -243,7 +247,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	return ParseNonRelay(ctx, f, "wallets")
 }
 
-func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseValidator(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
@@ -256,7 +260,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	return ParseNonRelay(ctx, f, "wallets-validator")
 }
 
-func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *FeedSigner, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
@@ -271,8 +275,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 	f.String("persistent.chain", "", "path that chain specific state is located")
 
-	f.String("wallet.feed-pathname", "wallets-feed", "path to store wallet for signing feed in")
-	f.String("wallet.feed-private-key", "", "private key for signing feed with")
 	f.String("wallet.pathname", defaultWalletPathname, "path to store wallet in")
 	f.String("wallet.password", "", "password for wallet")
 	f.String("wallet.private-key", "", "wallet private key string")
@@ -283,17 +285,17 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 	k, err := beginCommonParse(f)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	l1URL := k.String("l1.url")
 	if len(l1URL) == 0 {
-		return nil, nil, nil, nil, errors.New("required parameter --l1.url is missing")
+		return nil, nil, nil, nil, nil, errors.New("required parameter --l1.url is missing")
 	}
 
 	l1Client, err := ethutils.NewRPCEthClient(l1URL)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrapf(err, "error connecting to ethereum L1 node: %s", l1URL)
+		return nil, nil, nil, nil, nil, errors.Wrapf(err, "error connecting to ethereum L1 node: %s", l1URL)
 	}
 
 	var l1ChainId *big.Int
@@ -306,7 +308,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 		select {
 		case <-ctx.Done():
-			return nil, nil, nil, nil, errors.New("ctx cancelled getting chain ID")
+			return nil, nil, nil, nil, nil, errors.New("ctx cancelled getting chain ID")
 		case <-time.After(5 * time.Second):
 		}
 	}
@@ -316,7 +318,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		"wallet.pathname": defaultWalletPathname,
 	}, "."), nil)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error setting default wallet pathname")
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "error setting default wallet pathname")
 	}
 
 	rollupAddress := k.String("rollup.address")
@@ -339,7 +341,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 				"validator.wallet-factory-address": "0xe17d8Fa6BC62590f840C5Dd35f300F77D55CC178",
 			}, "."), nil)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
+				return nil, nil, nil, nil, nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
 			}
 		} else if l1ChainId.Cmp(big.NewInt(4)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
@@ -357,26 +359,26 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 				"validator.wallet-factory-address": "0x5533D1578a39690B6aC692673F771b3fc668f0a3",
 			}, "."), nil)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "error setting testnet.rinkeby rollup parameters")
+				return nil, nil, nil, nil, nil, errors.Wrap(err, "error setting testnet.rinkeby rollup parameters")
 			}
 		} else {
-			return nil, nil, nil, nil, fmt.Errorf("connected to unrecognized ethereum network with chain ID: %v", l1ChainId)
+			return nil, nil, nil, nil, nil, fmt.Errorf("connected to unrecognized ethereum network with chain ID: %v", l1ChainId)
 		}
 	}
 
 	if err := applyOverrides(f, k); err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
-	out, wallet, err := endCommonParse(k)
+	out, wallet, feedSigner, err := endCommonParse(k)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	// Fixup directories
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to read users home directory")
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "Unable to read users home directory")
 	}
 
 	// Make persistent storage directory relative to home directory if not already absolute
@@ -385,7 +387,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	}
 	err = os.MkdirAll(out.Persistent.GlobalConfig, os.ModePerm)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create global configuration directory")
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "Unable to create global configuration directory")
 	}
 
 	// Make chain directory relative to persistent storage directory if not already absolute
@@ -394,7 +396,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	}
 	err = os.MkdirAll(out.Persistent.Chain, os.ModePerm)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create chain directory")
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "Unable to create chain directory")
 	}
 
 	if len(out.Rollup.Machine.Filename) == 0 {
@@ -405,9 +407,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	// Make machine relative to storage directory if not already absolute
 	out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
 
-	// Make wallet directories relative to storage directory if not already aabsolute
+	// Make wallet directories relative to storage directory if not already absolute
 	out.Wallet.Pathname = path.Join(out.Persistent.GlobalConfig, out.Wallet.Pathname)
-	out.Wallet.FeedPathname = path.Join(out.Persistent.GlobalConfig, out.Wallet.FeedPathname)
+	out.Node.Sequencer.FeedSigner.Pathname = path.Join(out.Persistent.GlobalConfig, out.Node.Sequencer.FeedSigner.Pathname)
 
 	_, err = os.Stat(out.Rollup.Machine.Filename)
 	if os.IsNotExist(err) && len(out.Rollup.Machine.URL) != 0 {
@@ -416,24 +418,24 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 		resp, err := http.Get(out.Rollup.Machine.URL)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrapf(err, "unable to get machine from: %s", out.Rollup.Machine.URL)
+			return nil, nil, nil, nil, nil, errors.Wrapf(err, "unable to get machine from: %s", out.Rollup.Machine.URL)
 		}
 		if resp.StatusCode != 200 {
-			return nil, nil, nil, nil, fmt.Errorf("HTTP status '%v' when trying to get machine from: %s", resp.Status, out.Rollup.Machine.URL)
+			return nil, nil, nil, nil, nil, fmt.Errorf("HTTP status '%v' when trying to get machine from: %s", resp.Status, out.Rollup.Machine.URL)
 		}
 
 		fileOut, err := os.Create(out.Rollup.Machine.Filename)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrapf(err, "unable to open file '%s' for machine", out.Rollup.Machine.Filename)
+			return nil, nil, nil, nil, nil, errors.Wrapf(err, "unable to open file '%s' for machine", out.Rollup.Machine.Filename)
 		}
 
 		_, err = io.Copy(fileOut, resp.Body)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrapf(err, "unable to output machine to: %s", out.Rollup.Machine.Filename)
+			return nil, nil, nil, nil, nil, errors.Wrapf(err, "unable to output machine to: %s", out.Rollup.Machine.Filename)
 		}
 	}
 
-	return out, wallet, l1Client, l1ChainId, nil
+	return out, wallet, feedSigner, l1Client, l1ChainId, nil
 }
 
 func ParseRelay() (*Config, error) {
@@ -446,7 +448,7 @@ func ParseRelay() (*Config, error) {
 		return nil, err
 	}
 
-	out, _, err := endCommonParse(k)
+	out, _, _, err := endCommonParse(k)
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +617,7 @@ func loadS3Variables(k *koanf.Koanf) error {
 	}), nil)
 }
 
-func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
+func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, *FeedSigner, error) {
 	var out Config
 	decoderConfig := mapstructure.DecoderConfig{
 		ErrorUnused: true,
@@ -629,27 +631,27 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	}
 	err := k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if out.Fireblocks != (Fireblocks{}) {
 		if len(out.Fireblocks.APIKey) == 0 {
-			return nil, nil, errors.New("fireblocks configured but missing fireblocks.api-key")
+			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.api-key")
 		}
 		if len(out.Fireblocks.BaseURL) == 0 {
-			return nil, nil, errors.New("fireblocks configured but missing fireblocks.base-url")
+			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.base-url")
 		}
 		if len(out.Wallet.FireblocksSSLKey) == 0 {
-			return nil, nil, errors.New("fireblocks configured but missing fireblocks.ssl-key")
+			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.ssl-key")
 		}
 		if len(out.Fireblocks.SourceAddress) == 0 {
-			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-address")
+			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.source-address")
 		}
 		if len(out.Fireblocks.SourceId) == 0 {
-			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-id")
+			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.source-id")
 		}
 		if len(out.Fireblocks.SourceType) == 0 {
-			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-type")
+			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.source-type")
 		}
 
 		out.Wallet.FireblocksSSLKey = strings.Replace(out.Wallet.FireblocksSSLKey, "\\n", "\n", -1)
@@ -660,14 +662,15 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 
 		// Don't keep printing configuration file and don't print wallet passwords
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"conf.dump":                          false,
-			"wallet.password":                    "",
-			"wallet.fireblocks-ssl-key-password": "",
+			"conf.dump":                           false,
+			"node.sequencer.feed-signer.password": "",
+			"wallet.password":                     "",
+			"wallet.fireblocks-ssl-key-password":  "",
 		}, "."), nil)
 
 		c, err := k.Marshal(json.Parser())
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "unable to marshal config file to JSON")
+			return nil, nil, nil, errors.Wrap(err, "unable to marshal config file to JSON")
 		}
 
 		fmt.Println(string(c))
@@ -677,6 +680,8 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	// Don't pass around wallet contents with normal configuration
 	wallet := out.Wallet
 	out.Wallet = Wallet{}
+	feedSigner := out.Node.Sequencer.FeedSigner
+	out.Node.Sequencer.FeedSigner = FeedSigner{}
 
-	return &out, &wallet, nil
+	return &out, &wallet, &feedSigner, nil
 }
