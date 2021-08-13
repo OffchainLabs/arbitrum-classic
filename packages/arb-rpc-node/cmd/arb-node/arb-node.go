@@ -123,23 +123,10 @@ func startup() error {
 		fmt.Println("Missing --rollup.machine.filename")
 	}
 
-	rpcMode := web3.NormalMode
-
-	if config.Node.DisableMutating {
-		rpcMode = web3.NonMutatingMode
-	}
-
 	if config.Node.Type == "forwarder" {
 		if config.Node.Forwarder.Target == "" {
 			badConfig = true
 			fmt.Println("Forwarder node needs --node.forwarder.target")
-		}
-		if config.Node.Forwarder.ForwardingOnly {
-			if rpcMode == web3.NonMutatingMode {
-				badConfig = true
-				fmt.Println("Cannot both set forwarding only mode and disable mutating transactions")
-			}
-			rpcMode = web3.ForwardingOnlyMode
 		}
 	} else if config.Node.Type == "aggregator" {
 		if config.Node.Aggregator.InboxAddress == "" {
@@ -152,6 +139,18 @@ func startup() error {
 	} else {
 		badConfig = true
 		fmt.Printf("Unrecognized node type %s", config.Node.Type)
+	}
+
+	var rpcMode web3.RpcMode
+	if config.Node.RPC.Mode == "full" {
+		rpcMode = web3.NormalMode
+	} else if config.Node.RPC.Mode == "non-mutating" {
+		rpcMode = web3.NonMutatingMode
+	} else if config.Node.RPC.Mode == "forwarding-only" {
+		rpcMode = web3.ForwardingOnlyMode
+	} else {
+		badConfig = true
+		fmt.Printf("Unrecognized RPC mode %s", config.Node.RPC.Mode)
 	}
 
 	if badConfig {
