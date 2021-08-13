@@ -210,18 +210,6 @@ func TestArbOSFees(t *testing.T) {
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
 		},
-		// Reverted since insufficient funds
-		{
-			GasPrice: big.NewInt(0),
-			Gas:      1000000000,
-			To:       &contractDest,
-			Value:    big.NewInt(0),
-			Data:     common.RandBytes(100000),
-
-			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode},
-			nonzeroComputation: []bool{true, false, false, false},
-			correctStorageUsed: 0,
-		},
 	}
 	valueTransfered := big.NewInt(0)
 	for _, tx := range rawTxes {
@@ -665,9 +653,6 @@ func TestArbOSFees(t *testing.T) {
 
 		aggregatorDiff := calcDiffSigned(l1ToAgg, new(big.Rat).SetInt(aggBal))
 		networkDiff := calcDiffSigned(totalToNetworkFee, new(big.Rat).SetInt(netFeeRecipientBal))
-
-		// 
-		// agg should get 
 		
 		if new(big.Rat).Abs(aggregatorDiff).Cmp(big.NewRat(1, 100)) > 0 {
 			as_float, _ := aggregatorDiff.Float64()
