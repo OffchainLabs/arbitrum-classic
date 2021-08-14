@@ -217,7 +217,7 @@ func ParseCLI(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethutils.RPC
 
 	AddForwarderTarget(f)
 
-	return ParseNonRelay(ctx, f, "wallets-cli")
+	return ParseNonRelay(ctx, f, "cli_wallets")
 }
 
 func ParseNode(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethutils.RPCEthClient, *big.Int, error) {
@@ -257,7 +257,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethuti
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
 
-	return ParseNonRelay(ctx, f, "wallets-validator")
+	return ParseNonRelay(ctx, f, "validator_wallets")
 }
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *FeedSigner, *ethutils.RPCEthClient, *big.Int, error) {
