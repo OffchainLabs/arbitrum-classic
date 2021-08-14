@@ -187,6 +187,11 @@ std::vector<value> serializeValue(
                 // Mark the inner tuple as needing separate saving
                 ret.push_back(nested);
             }
+        } else if (auto uv = std::get_if<UnloadedValue>(&nested)) {
+            value_vector.push_back(HASH_PRE_IMAGE);
+            value_vector.push_back(static_cast<uint8_t>(uv->type));
+            marshal_uint256_t(uv->hash, value_vector);
+            marshal_uint256_t(uv->value_size, value_vector);
         } else {
             auto res = serializeValue(secret_hash_seed, nested, value_vector,
                                       segment_counts);
@@ -202,6 +207,12 @@ std::vector<value> serializeValue(const std::vector<unsigned char>&,
                                   std::vector<unsigned char>&,
                                   std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
+}
+std::vector<value> serializeValue(const std::vector<unsigned char>&,
+                                  const UnloadedValue&,
+                                  std::vector<unsigned char>&,
+                                  std::map<uint64_t, uint64_t>&) {
+    throw std::runtime_error("Can't serialize unloaded value in db");
 }
 std::vector<value> serializeValue(const std::vector<unsigned char>&,
                                   const Buffer& b,
@@ -690,6 +701,10 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
         auto key = vecToSlice(hash_key);
         SaveResults save_ret = incrementReference(tx, key);
         if (save_ret.status.IsNotFound()) {
+            if (std::holds_alternative<UnloadedValue>(next_item)) {
+                throw std::runtime_error(
+                    "Attempted to save unknown unloaded value");
+            }
             std::vector<unsigned char> value_vector{};
             auto new_items_to_save =
                 serializeValue(tx.getSecretHashSeed(), next_item, value_vector,

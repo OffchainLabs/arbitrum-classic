@@ -31,3 +31,7 @@ value CoreValueLoader::loadValue(const uint256_t& hash) {
     }
     return std::get<CountedData<value>>(res).data;
 }
+
+std::unique_ptr<AbstractValueLoader> CoreValueLoader::clone() const {
+    return std::make_unique<CoreValueLoader>(data_storage, cache);
+}

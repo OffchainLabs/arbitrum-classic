@@ -20,13 +20,44 @@
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 
-class ValueLoader {
+class AbstractValueLoader {
    public:
-    virtual ~ValueLoader() = default;
+    virtual ~AbstractValueLoader() = default;
 
     // Throws an exception if the tuple cannot be loaded
-    virtual value loadValue(const uint256_t&) {
-        throw std::runtime_error("Value loader not defined");
+    virtual value loadValue(const uint256_t& hash) = 0;
+
+    virtual std::unique_ptr<AbstractValueLoader> clone() const = 0;
+};
+
+class ValueLoader : public AbstractValueLoader {
+   protected:
+    std::unique_ptr<AbstractValueLoader> impl;
+
+   public:
+    ValueLoader() : impl(nullptr) {}
+    ValueLoader(std::unique_ptr<AbstractValueLoader> impl_)
+        : impl(std::move(impl_)) {}
+    ValueLoader(const ValueLoader& other) : impl(std::move(other.clone())) {}
+
+    ValueLoader& operator=(const ValueLoader& other) {
+        impl = std::move(other.clone());
+        return *this;
+    }
+
+    value loadValue(const uint256_t& hash) override {
+        if (!impl) {
+            throw std::runtime_error("Value loader needed but not defined");
+        }
+        return impl->loadValue(hash);
+    }
+
+    std::unique_ptr<AbstractValueLoader> clone() const override {
+        if (impl) {
+            return impl->clone();
+        } else {
+            return nullptr;
+        }
     }
 };
 

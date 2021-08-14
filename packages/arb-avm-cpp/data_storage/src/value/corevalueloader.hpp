@@ -22,11 +22,13 @@
 #include <data_storage/datastorage.hpp>
 #include <data_storage/value/valuecache.hpp>
 
-class CoreValueLoader : public ValueLoader {
+class CoreValueLoader : public AbstractValueLoader {
    public:
     CoreValueLoader(std::shared_ptr<DataStorage>, ValueCache);
 
     value loadValue(const uint256_t& hash) override;
+
+    std::unique_ptr<AbstractValueLoader> clone() const override;
 
    protected:
     std::shared_ptr<DataStorage> data_storage;
