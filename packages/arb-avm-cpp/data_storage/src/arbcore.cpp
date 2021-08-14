@@ -43,6 +43,7 @@ constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
 constexpr auto send_processed_key = std::array<char, 1>{-63};
+constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-66};
 
 constexpr auto sideload_cache_size = 20;
@@ -147,6 +148,15 @@ bool ArbCore::deliverMessages(
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
+
+    {
+        ReadTransaction tx(data_storage);
+        auto schema_result = schemaVersion(tx);
+        if (schema_result.status.ok() && schema_result.data > 0) {
+            std::cerr << "Error: cannot use new database schema" << std::endl;
+            return rocksdb::Status::Aborted();
+        }
+    }
 
     auto status = reorgToMessageCountOrBefore(0, true, cache);
     if (status.ok()) {
@@ -887,6 +897,10 @@ void ArbCore::operator()() {
 
     // Error occurred, make sure machine stops cleanly
     machine->abortMachine();
+    for (auto& logs_cursor : logs_cursors) {
+        logs_cursor.error_string = "arbcore thread aborted";
+        logs_cursor.status = DataCursor::ERROR;
+    }
 }
 
 rocksdb::Status ArbCore::saveLogs(ReadWriteTransaction& tx,
@@ -1842,6 +1856,10 @@ ValueResult<uint256_t> ArbCore::sendProcessedCount(ReadTransaction& tx) const {
 rocksdb::Status ArbCore::updateSendProcessedCount(ReadWriteTransaction& tx,
                                                   rocksdb::Slice value_slice) {
     return tx.statePut(vecToSlice(send_processed_key), value_slice);
+}
+
+ValueResult<uint256_t> ArbCore::schemaVersion(ReadTransaction& tx) const {
+    return tx.stateGetUint256(vecToSlice(schema_version_key));
 }
 
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {
