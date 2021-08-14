@@ -42,6 +42,7 @@ set(LIB_HEADERS
 
 set(LIB_PRIVATE_HEADERS
   src/value/referencecount.hpp
+  src/value/corevalueloader.hpp
 )
 
 set(LIB_SOURCES
@@ -60,6 +61,7 @@ set(LIB_SOURCES
   src/value/referencecount.cpp
   src/value/value.cpp
   src/value/valuecache.cpp
+  src/value/corevalueloader.cpp
 )
 
 add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES})

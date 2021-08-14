@@ -14,19 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef valueloader_hpp
-#define valueloader_hpp
+#include "corevalueloader.hpp"
 
-#include <avm_values/value.hpp>
+CoreValueLoader::CoreValueLoader(std::shared_ptr<DataStorage> data_storage_,
+                                 ValueCache cache_)
+    : data_storage(data_storage_), cache(cache_) {}
 
-class ValueLoader {
-   public:
-    virtual ~ValueLoader() = default;
-
-    // Throws an exception if the tuple cannot be loaded
-    virtual value loadValue(const uint256_t&) {
-        throw std::runtime_error("Value loader not defined");
-    }
-};
-
-#endif /* valueloader_hpp */
+value CoreValueLoader::loadValue(const uint256_t& hash) {
+    throw std::runtime_error("unimplemented");
+}
