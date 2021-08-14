@@ -54,8 +54,7 @@ ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
     : coreConfig(coreConfig_),
       data_storage(std::move(data_storage_)),
       core_code(std::make_shared<CoreCode>(getNextSegmentID(data_storage))),
-      timed_sideload_cache(coreConfig.timed_cache_expiration_seconds),
-      execution_cursor_value_cache(4, 0) {
+      timed_sideload_cache(coreConfig.timed_cache_expiration_seconds) {
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
     }
@@ -500,13 +499,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                         if (std::holds_alternative<rocksdb::Status>(setup)) {
                             setup = getMachineUsingStateKeys<MachineThread>(
                                 tx, checkpoint, cache);
-                            if (initial_start) {
-                                // First call, so seed value cache
-                                std::lock_guard<std::mutex> guard(
-                                    execution_cursor_value_cache_mutex);
-                                execution_cursor_value_cache.initializeFrom(
-                                    cache);
-                            }
                         }
 
                         // Machine loaded from database or from
@@ -1813,12 +1805,12 @@ std::unique_ptr<Machine>& ArbCore::resolveExecutionCursorMachine(
     const ReadTransaction& tx,
     ExecutionCursor& execution_cursor) {
     if (std::holds_alternative<MachineStateKeys>(execution_cursor.machine)) {
-        std::lock_guard<std::mutex> guard(execution_cursor_value_cache_mutex);
         auto machine_state_keys =
             std::get<MachineStateKeys>(execution_cursor.machine);
-        execution_cursor.machine = getMachineUsingStateKeys<Machine>(
-            tx, machine_state_keys, execution_cursor_value_cache);
-        execution_cursor_value_cache.nextCache();
+        // Cache isn't very relevant as we're lazy loading
+        auto cache = ValueCache(1, 0);
+        execution_cursor.machine =
+            getMachineUsingStateKeys<Machine>(tx, machine_state_keys, cache);
     }
     return std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
 }

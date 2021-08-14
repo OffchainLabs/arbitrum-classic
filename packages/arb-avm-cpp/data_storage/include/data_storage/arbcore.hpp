@@ -175,10 +175,6 @@ class ArbCore {
     // Not protected by mutex! Must only be used by the main ArbCore thread.
     uint256_t last_old_machine_cache_gas;
 
-    // Value cache for execution cursors
-    ValueCache execution_cursor_value_cache;
-    std::mutex execution_cursor_value_cache_mutex;
-
    public:
     ArbCore() = delete;
     ArbCore(std::shared_ptr<DataStorage> data_storage_,
