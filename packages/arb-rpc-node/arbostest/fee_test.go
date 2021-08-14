@@ -198,16 +198,16 @@ func TestArbOSFees(t *testing.T) {
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
 		},
-		// Reverted storage allocating function call
+		// Reverted since insufficient funds
 		{
 			GasPrice: big.NewInt(0),
-			Gas:      100000000,
+			Gas:      1000000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
-			Data:     makeFuncData(t, gasUsedABI.Methods["fail"]),
+			Data:     common.RandBytes(100000),
 
-			resultType:         []evm.ResultType{evm.RevertCode},
-			nonzeroComputation: []bool{true},
+			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode},
+			nonzeroComputation: []bool{true, false, false, false},
 			correctStorageUsed: 0,
 		},
 	}
@@ -389,8 +389,11 @@ func TestArbOSFees(t *testing.T) {
 			if res.ResultCode != resType {
 				t.Fatal("unexpected result got", res.ResultCode, "but expected", resType, "for", index, i)
 			}
-			unpaid := checkGas(t, res, aggregator, index == 3)
-			amountUnpaid = amountUnpaid.Add(amountUnpaid, unpaid)
+			if res.ResultCode != evm.InsufficientGasFundsCode {
+				// we don't include intentionally unpaid fees as in test 6
+				unpaid := checkGas(t, res, aggregator, index == 3)
+				amountUnpaid = amountUnpaid.Add(amountUnpaid, unpaid)
+			}
 		}
 		return extractedResults, snap, amountUnpaid
 	}
@@ -572,7 +575,7 @@ func TestArbOSFees(t *testing.T) {
 		}
 	}
 
-	checkTotalReceived := func(snap *snapshot.Snapshot, results []*evm.TxResult) (*big.Int, *big.Int) {
+	checkTotalReceived := func(snap *snapshot.Snapshot, results []*evm.TxResult) (*big.Int, *big.Int, *big.Int) {
 		t.Helper()
 		aggBal, err := snap.GetBalance(aggregator)
 		test.FailIfError(t, err)
@@ -584,21 +587,28 @@ func TestArbOSFees(t *testing.T) {
 		totalPaidL1Calldata := big.NewInt(0)
 		totalPaidL2Computation := big.NewInt(0)
 		totalPaidL2Storage := big.NewInt(0)
+		totalPaidUnderfunded := big.NewInt(0)
 		for _, res := range results {
-			totalPaidL1Tx = totalPaidL1Tx.Add(totalPaidL1Tx, res.FeeStats.Paid.L1Transaction)
-			totalPaidL1Calldata = totalPaidL1Calldata.Add(totalPaidL1Calldata, res.FeeStats.Paid.L1Calldata)
-			totalPaidL2Computation = totalPaidL2Computation.Add(totalPaidL2Computation, res.FeeStats.Paid.L2Computation)
-			totalPaidL2Storage = totalPaidL2Storage.Add(totalPaidL2Storage, res.FeeStats.Paid.L2Storage)
+			if res.ResultCode == evm.InsufficientGasFundsCode {
+				totalPaidUnderfunded.Add(totalPaidUnderfunded, res.FeeStats.Paid.L1Transaction)
+				totalPaidUnderfunded.Add(totalPaidUnderfunded, res.FeeStats.Paid.L1Calldata)
+			} else {
+				totalPaidL1Tx.Add(totalPaidL1Tx, res.FeeStats.Paid.L1Transaction)
+				totalPaidL1Calldata.Add(totalPaidL1Calldata, res.FeeStats.Paid.L1Calldata)
+			}
+			totalPaidL2Computation.Add(totalPaidL2Computation, res.FeeStats.Paid.L2Computation)
+			totalPaidL2Storage.Add(totalPaidL2Storage, res.FeeStats.Paid.L2Storage)
 		}
 		totalL1Paid := new(big.Int).Add(totalPaidL1Tx, totalPaidL1Calldata)
 		totalL2Paid := new(big.Int).Add(totalPaidL2Computation, totalPaidL2Storage)
 		totalPaid := new(big.Int).Add(totalL1Paid, totalL2Paid)
+		totalPaid.Add(totalPaid, totalPaidUnderfunded)
 
 		totalReceived := new(big.Int).Add(aggBal, netFeeRecipientBal)
 		if totalPaid.Cmp(totalReceived) != 0 {
 			t.Error("total paid was", totalPaid, "but aggregator + network received", totalReceived)
 		}
-		return totalL1Paid, totalL2Paid
+		return totalL1Paid, totalL2Paid, totalPaidUnderfunded
 	}
 
 	checkNoCongestionFee(noFeeSnap)
@@ -635,7 +645,7 @@ func TestArbOSFees(t *testing.T) {
 
 	checkTotalReceived(noFeeSnap, noFeeResults)
 	checkTotalReceived(feeSnap, feeResults)
-	l1PaidWithAgg, l2PaidWithAgg := checkTotalReceived(feeWithAggSnap, feeWithAggResults)
+	l1PaidWithAgg, l2PaidWithAgg, l1PaidUnderfunded := checkTotalReceived(feeWithAggSnap, feeWithAggResults)
 	{
 		t.Helper()
 		aggBal, err := feeWithAggSnap.GetBalance(aggregator)
@@ -650,6 +660,9 @@ func TestArbOSFees(t *testing.T) {
 		l1ToNetwork := new(big.Rat).Sub(new(big.Rat).SetInt(l1PaidWithAgg), l1ToAgg)
 
 		totalToNetworkFee := new(big.Rat).Add(l1ToNetwork, new(big.Rat).SetInt(l2PaidWithAgg))
+
+		// add back in the underpaid amounts, since they break the ratio
+		totalToNetworkFee.Add(totalToNetworkFee, new(big.Rat).SetInt(l1PaidUnderfunded))
 
 		aggregatorDiff := calcDiffSigned(l1ToAgg, new(big.Rat).SetInt(aggBal))
 		networkDiff := calcDiffSigned(totalToNetworkFee, new(big.Rat).SetInt(netFeeRecipientBal))
