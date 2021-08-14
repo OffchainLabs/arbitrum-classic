@@ -17,6 +17,7 @@
 #ifndef valueloader_hpp
 #define valueloader_hpp
 
+#include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 
 class ValueLoader {

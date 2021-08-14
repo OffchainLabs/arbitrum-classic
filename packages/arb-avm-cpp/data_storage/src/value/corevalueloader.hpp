@@ -26,10 +26,11 @@ class CoreValueLoader : public ValueLoader {
    public:
     CoreValueLoader(std::shared_ptr<DataStorage>, ValueCache);
 
-    virtual value loadValue(const uint256_t& hash);
+    value loadValue(const uint256_t& hash) override;
 
    protected:
     std::shared_ptr<DataStorage> data_storage;
+    ValueCache cache;
 };
 
 #endif /* corevalueloader_hpp */

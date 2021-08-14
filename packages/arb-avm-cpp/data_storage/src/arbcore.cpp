@@ -16,6 +16,8 @@
 
 #include <data_storage/arbcore.hpp>
 
+#include "value/corevalueloader.hpp"
+
 #include <avm/inboxmessage.hpp>
 #include <avm/machinethread.hpp>
 #include <data_storage/datastorage.hpp>
@@ -144,6 +146,10 @@ bool ArbCore::deliverMessages(
     return true;
 }
 
+ValueLoader ArbCore::makeValueLoader() const {
+    return CoreValueLoader(data_storage, ValueCache{1, 0});
+}
+
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
@@ -164,6 +170,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     core_code->addSegment(executable.code);
     core_machine = std::make_unique<MachineThread>(
         MachineState{core_code, executable.static_val});
+    core_machine->machine_state.value_loader = makeValueLoader();
     core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
 
     last_machine = std::make_unique<Machine>(*core_machine);
@@ -790,6 +797,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         state_data.output,
         state_data.pc.pc,
         std::make_shared<RunningCode>(core_code),
+        makeValueLoader(),
         std::move(std::get<CountedData<value>>(register_results).data),
         std::move(std::get<CountedData<value>>(static_results).data),
         Datastack(

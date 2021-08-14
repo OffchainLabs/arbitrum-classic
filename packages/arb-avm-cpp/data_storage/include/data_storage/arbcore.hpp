@@ -18,6 +18,7 @@
 #define arbcore_hpp
 
 #include <avm/machine.hpp>
+#include <avm/valueloader.hpp>
 #include <avm_values/bigint.hpp>
 #include <data_storage/datacursor.hpp>
 #include <data_storage/datastorage.hpp>
@@ -220,6 +221,8 @@ class ArbCore {
         const ReadTransaction& transaction,
         const MachineStateKeys& state_data,
         ValueCache& value_cache) const;
+
+    ValueLoader makeValueLoader() const;
 
    public:
     // To be deprecated, use checkpoints instead

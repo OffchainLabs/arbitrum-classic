@@ -16,10 +16,18 @@
 
 #include "corevalueloader.hpp"
 
+#include <data_storage/value/value.hpp>
+
 CoreValueLoader::CoreValueLoader(std::shared_ptr<DataStorage> data_storage_,
                                  ValueCache cache_)
     : data_storage(data_storage_), cache(cache_) {}
 
 value CoreValueLoader::loadValue(const uint256_t& hash) {
-    throw std::runtime_error("unimplemented");
+    ReadTransaction tx(data_storage);
+    auto res = getValue(tx, hash, cache, true);
+    if (auto status = std::get_if<rocksdb::Status>(&res)) {
+        throw std::runtime_error(std::string("Value loading failed: ") +
+                                 status->ToString());
+    }
+    return std::get<CountedData<value>>(res).data;
 }

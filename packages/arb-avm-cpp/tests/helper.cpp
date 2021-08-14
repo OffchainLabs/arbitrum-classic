@@ -43,9 +43,9 @@ Machine getComplexMachine() {
     auto output =
         MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65, 72, 73, 74};
 
-    return Machine(MachineState(output, pc, std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, err_pc));
+    return Machine(MachineState(output, pc, std::move(code), ValueLoader(),
+                                register_val, std::move(static_val), data_stack,
+                                aux_stack, arb_gas_remaining, state, err_pc));
 }
 
 Machine getDefaultMachine() {
@@ -62,7 +62,7 @@ Machine getDefaultMachine() {
     Status state = Status::Extensive;
     auto output =
         MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34, 72, 73, 74};
-    return Machine(MachineState(output, pc, std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, err_pc));
+    return Machine(MachineState(output, pc, std::move(code), ValueLoader(),
+                                register_val, std::move(static_val), data_stack,
+                                aux_stack, arb_gas_remaining, state, err_pc));
 }
