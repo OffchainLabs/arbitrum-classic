@@ -178,8 +178,8 @@ func NewSequencerBatcher(
 	return batcher, nil
 }
 
-func (b *SequencerBatcher) PendingTransactionCount(_ context.Context, _ common.Address) *uint64 {
-	return nil
+func (b *SequencerBatcher) PendingTransactionCount(_ context.Context, _ common.Address) (*uint64, error) {
+	return nil, nil
 }
 
 func (b *SequencerBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {

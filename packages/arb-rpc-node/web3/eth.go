@@ -121,7 +121,10 @@ func (s *Server) getTransactionCountInner(ctx context.Context, address *common.A
 	account := arbcommon.NewAddressFromEth(*address)
 
 	if blockNum.BlockNumber != nil && *blockNum.BlockNumber == rpc.PendingBlockNumber {
-		pending := s.srv.PendingTransactionCount(ctx, account)
+		pending, err := s.srv.PendingTransactionCount(ctx, account)
+		if err != nil {
+			return 0, err
+		}
 		if pending != nil {
 			return hexutil.Uint64(*pending), nil
 		}

@@ -309,7 +309,7 @@ func (b *LockoutBatcher) getBatcher() batcher.TransactionBatcher {
 	return b.currentBatcher
 }
 
-func (b *LockoutBatcher) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
+func (b *LockoutBatcher) PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error) {
 	return b.getBatcher().PendingTransactionCount(ctx, account)
 }
 
@@ -338,8 +338,8 @@ type errorBatcher struct {
 	aggregator *common.Address
 }
 
-func (b *errorBatcher) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
-	return nil
+func (b *errorBatcher) PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error) {
+	return nil, b.err
 }
 
 func (b *errorBatcher) SendTransaction(ctx context.Context, tx *types.Transaction) error {
