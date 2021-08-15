@@ -18,13 +18,16 @@
 #define corevalueloader_hpp
 
 #include <avm/valueloader.hpp>
+#include <avm_values/code.hpp>
 #include <avm_values/value.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/value/valuecache.hpp>
 
 class CoreValueLoader : public AbstractValueLoader {
    public:
-    CoreValueLoader(std::shared_ptr<DataStorage>, ValueCache);
+    CoreValueLoader(std::shared_ptr<DataStorage>,
+                    std::shared_ptr<CoreCode>,
+                    ValueCache);
 
     value loadValue(const uint256_t& hash) override;
 
@@ -32,6 +35,7 @@ class CoreValueLoader : public AbstractValueLoader {
 
    protected:
     std::shared_ptr<DataStorage> data_storage;
+    std::shared_ptr<CoreCode> core_code;
     ValueCache cache;
 };
 

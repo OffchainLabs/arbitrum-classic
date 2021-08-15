@@ -146,8 +146,8 @@ bool ArbCore::deliverMessages(
 }
 
 ValueLoader ArbCore::makeValueLoader() const {
-    return ValueLoader(
-        std::make_unique<CoreValueLoader>(data_storage, ValueCache{1, 0}));
+    return ValueLoader(std::make_unique<CoreValueLoader>(
+        data_storage, core_code, ValueCache{1, 0}));
 }
 
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
@@ -712,8 +712,6 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
     return rocksdb::Status::NotFound();
 }
 
-constexpr bool ENABLE_LAZY_LOADING = true;
-
 template <class T>
 std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     const ReadTransaction& transaction,
@@ -770,22 +768,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     segment_ids.insert(state_data.pc.pc.segment);
     segment_ids.insert(state_data.err_pc.pc.segment);
 
-    bool loaded_segment = true;
-    while (loaded_segment) {
-        loaded_segment = false;
-        std::set<uint64_t> next_segment_ids;
-        for (auto it = segment_ids.rbegin(); it != segment_ids.rend(); ++it) {
-            if (core_code->containsSegment(*it)) {
-                // If the segment is already loaded, no need to restore it
-                continue;
-            }
-            auto segment = getCodeSegment(transaction, *it, next_segment_ids,
-                                          value_cache, ENABLE_LAZY_LOADING);
-            core_code->restoreExistingSegment(std::move(segment));
-            loaded_segment = true;
-        }
-        segment_ids = std::move(next_segment_ids);
-    };
+    restoreCodeSegments(transaction, core_code, value_cache, segment_ids);
+
     auto state = MachineState{
         state_data.output,
         state_data.pc.pc,

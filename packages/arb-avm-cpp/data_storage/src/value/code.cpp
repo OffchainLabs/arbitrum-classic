@@ -258,6 +258,28 @@ std::vector<uint256_t> loadHashes(const ReadTransaction& tx,
 }
 }  // namespace
 
+void restoreCodeSegments(const ReadTransaction& transaction,
+                         const std::shared_ptr<CoreCode>& core_code,
+                         ValueCache& value_cache,
+                         std::set<uint64_t> segment_ids) {
+    bool loaded_segment = true;
+    while (loaded_segment) {
+        loaded_segment = false;
+        std::set<uint64_t> next_segment_ids;
+        for (auto it = segment_ids.rbegin(); it != segment_ids.rend(); ++it) {
+            if (core_code->containsSegment(*it)) {
+                // If the segment is already loaded, no need to restore it
+                continue;
+            }
+            auto segment = getCodeSegment(transaction, *it, next_segment_ids,
+                                          value_cache, ENABLE_LAZY_LOADING);
+            core_code->restoreExistingSegment(std::move(segment));
+            loaded_segment = true;
+        }
+        segment_ids = std::move(next_segment_ids);
+    }
+}
+
 std::shared_ptr<UnsafeCodeSegment> getCodeSegment(
     const ReadTransaction& tx,
     uint64_t segment_id,
