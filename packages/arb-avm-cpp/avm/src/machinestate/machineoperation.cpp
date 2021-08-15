@@ -19,111 +19,112 @@
 #include <avm/machinestate/ecops.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
-
 #include <PicoSHA2/picosha2.h>
 #include <ethash/keccak.h>
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
 
-#include <iostream>
-#include <fstream>
-#include <stdlib.h>
 #include <netdb.h>
+#include <stdlib.h>
+#include <fstream>
+#include <iostream>
 
 #include "tee/eigentee.h"
 #include "tee/tee_task.hpp"
 
-eigen_enclave_info_t *g_enclave_info = NULL;
-eigen_auditor_set_t *g_auditors = NULL;
+eigen_enclave_info_t* g_enclave_info = NULL;
+eigen_auditor_set_t* g_auditors = NULL;
 int32_t g_tms_port = 8082;
 
-int submit_task(const char* method, const char* args, const char* uid,
-  const char* token, char** output, size_t* output_size) {
+int submit_task(const char* method,
+                const char* args,
+                const char* uid,
+                const char* token,
+                char** output,
+                size_t* output_size) {
+    struct sockaddr_in tms_addr;
+    char recvbuf[2048] = {0};
+    int ret;
+    struct hostent* hptr;
+    const char* fns_hostname = "fns";
 
-  struct sockaddr_in tms_addr;
-  char recvbuf[2048] = {0};
-  int ret;
-  struct hostent *hptr;
-  const char* fns_hostname = "fns";
-    
-  if((hptr = gethostbyname(fns_hostname)) == NULL) {
-    printf("[TEESDK] gethostbyname error for host: %s\n", fns_hostname);
-    return EXIT_FAILURE;
-  }
-  
-  printf("[TEESDK] official hostname:%s\n",hptr->h_name);
-    
-  if (!hptr->h_addr_list[0]) {
-    printf("[TEESDK] empty address\n");
-    return EXIT_FAILURE;
-  }
+    if ((hptr = gethostbyname(fns_hostname)) == NULL) {
+        printf("[TEESDK] gethostbyname error for host: %s\n", fns_hostname);
+        return EXIT_FAILURE;
+    }
 
-  tms_addr.sin_family = AF_INET;
-  // tms_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-  tms_addr.sin_addr.s_addr = *(u_long *) hptr->h_addr_list[0];
-  tms_addr.sin_port = htons(g_tms_port);
+    printf("[TEESDK] official hostname:%s\n", hptr->h_name);
 
-  printf("[+] This is a single-party task: %s\n", method);
+    if (!hptr->h_addr_list[0]) {
+        printf("[TEESDK] empty address\n");
+        return EXIT_FAILURE;
+    }
 
-  eigen_t *context = eigen_context_new(g_enclave_info, uid, token,
-                                           (struct sockaddr *)&tms_addr);
-  if (context == NULL) {
-    return EXIT_FAILURE;
-  }
+    tms_addr.sin_family = AF_INET;
+    // tms_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    tms_addr.sin_addr.s_addr = *(u_long*)hptr->h_addr_list[0];
+    tms_addr.sin_port = htons(g_tms_port);
 
-  eigen_task_t *task = eigen_create_task(context, method);
-  if (task == NULL) {
-    return EXIT_FAILURE;
-  }
-  printf("args: %s, size=%lu\n", args, strlen(args));
-  // BUG result truncating
-  ret = eigen_task_invoke_with_payload(task, args, strlen(args),
-	recvbuf, sizeof(recvbuf));
-  if (ret <= 0) {
-    return EXIT_FAILURE;
-  }
+    printf("[+] This is a single-party task: %s\n", method);
 
-  printf("Response: %s\n", recvbuf);
-  *output_size = strlen(recvbuf);
-  *output = (char*)malloc(strlen(recvbuf) + 1);
-  memset(*output, 0, *output_size);
-  memcpy(*output, recvbuf, *output_size);
+    eigen_t* context = eigen_context_new(g_enclave_info, uid, token,
+                                         (struct sockaddr*)&tms_addr);
+    if (context == NULL) {
+        return EXIT_FAILURE;
+    }
 
-  eigen_task_free(task);
-  eigen_context_free(context);
-  return 0;
+    eigen_task_t* task = eigen_create_task(context, method);
+    if (task == NULL) {
+        return EXIT_FAILURE;
+    }
+    printf("args: %s, size=%lu\n", args, strlen(args));
+    // BUG result truncating
+    ret = eigen_task_invoke_with_payload(task, args, strlen(args), recvbuf,
+                                         sizeof(recvbuf));
+    if (ret <= 0) {
+        return EXIT_FAILURE;
+    }
+
+    printf("Response: %s\n", recvbuf);
+    *output_size = strlen(recvbuf);
+    *output = (char*)malloc(strlen(recvbuf) + 1);
+    memset(*output, 0, *output_size);
+    memcpy(*output, recvbuf, *output_size);
+
+    eigen_task_free(task);
+    eigen_context_free(context);
+    return 0;
 }
 
 int init(const char* pub, const char* pri, const char* conf, int32_t port1) {
-  eigen_init();
+    eigen_init();
 
-  g_auditors = eigen_auditor_set_new();
-  eigen_auditor_set_add_auditor(
-      g_auditors, pub, pri);
+    g_auditors = eigen_auditor_set_new();
+    eigen_auditor_set_add_auditor(g_auditors, pub, pri);
 
-  if (g_auditors == NULL) {
-    return EXIT_FAILURE;
-  }
+    if (g_auditors == NULL) {
+        return EXIT_FAILURE;
+    }
 
-  g_enclave_info = eigen_enclave_info_load(g_auditors, conf);
+    g_enclave_info = eigen_enclave_info_load(g_auditors, conf);
 
-  if (g_enclave_info ==  NULL) {
-    return EXIT_FAILURE;
-  }
-  g_tms_port = port1;
+    if (g_enclave_info == NULL) {
+        return EXIT_FAILURE;
+    }
+    g_tms_port = port1;
 
-  return 0;
+    return 0;
 }
 
 int release() {
-  eigen_enclave_info_free(g_enclave_info);
-  eigen_auditor_set_free(g_auditors);
-  return 0;
+    eigen_enclave_info_free(g_enclave_info);
+    eigen_auditor_set_free(g_auditors);
+    return 0;
 }
 
-static bool is_file_exist(const char *fileName) {
-  std::ifstream infile(fileName);
-  return infile.good();
+static bool is_file_exist(const char* fileName) {
+    std::ifstream infile(fileName);
+    return infile.good();
 }
 
 // Many opcode implementations were inspired from the Apache 2.0 licensed EVM
@@ -967,14 +968,42 @@ void log(MachineState& m) {
     ++m.pc;
 }
 
+static std::string get_string_from_tuple(const value& val) {
+    const Tuple* tuple = &assumeTuple(val);
+    value v = tuple->get_element(2);
+    value vlen = tuple->get_element(0);
+    value voffset = tuple->get_element(1);
+    uint256_t len = assumeInt(vlen);
+    uint256_t offset = assumeInt(voffset);
+    Buffer buf = assumeBuffer(v);
+
+    std::string data;
+
+    for (uint64_t i = 0; i < len; i++) {
+        data.push_back(buf.get(i + uint64_t(offset)));
+    }
+
+    return data;
+}
+
+static Buffer convert_string_to_buffer(const std::string& s) {
+    std::vector<uint8_t> v(s.length());
+    std::copy(s.begin(), s.end(), v.begin());
+    return Buffer::fromData(v);
+}
+
+const static std::unordered_map<std::string, int> OPEARTOR_ARITY = {
+    {"add_cipher_cipher", 2}, {"add_cipher_plain", 2}, {"sub_cipher_cipher", 2},
+    {"sub_cipher_plain", 2},  {"encrypt", 1},          {"decrypt", 1}};
+
 void ecall(MachineState& m) {
     m.stack.prepForMod(1);
     std::cerr << "[INFO] ecall called: " << m.stack[0] << std::endl;
     const Tuple* tuple = &assumeTuple(m.stack[0]);
-    uint256_t arg1 = assumeInt(tuple->get_element(0));
-    uint256_t arg2 = assumeInt(tuple->get_element(1));
-    uint256_t arg3 = assumeInt(tuple->get_element(2));
-    uint256_t arg4 = assumeInt(tuple->get_element(3));
+    std::string arg1 = get_string_from_tuple(tuple->get_element(0));
+    std::string arg2 = get_string_from_tuple(tuple->get_element(1));
+    std::string arg3 = get_string_from_tuple(tuple->get_element(2));
+    std::string arg4 = get_string_from_tuple(tuple->get_element(3));
 
     std::cerr << "ECALL arg1 = " << arg1 << ", arg2 = " << arg2
               << ", arg3 = " << arg3 << ", arg4 = " << arg4 << std::endl;
@@ -988,29 +1017,26 @@ void ecall(MachineState& m) {
     const char *uid = "uid";
     const char *token = "token";
 #else
-    const char *pub = getenv("TEESDK_PUB");
-    const char *pri = getenv("TEESDK_PRI");
-    const char *conf = getenv("TEESDK_CONF");
-    const char *uid = getenv("TEESDK_UID");
-    const char *token = getenv("TEESDK_TOKEN");
+    const char* pub = getenv("TEESDK_PUB");
+    const char* pri = getenv("TEESDK_PRI");
+    const char* conf = getenv("TEESDK_CONF");
+    const char* uid = getenv("TEESDK_UID");
+    const char* token = getenv("TEESDK_TOKEN");
 #endif
     // If env is set with invalid value, fast failue
     // Just check the file exists
     if (!is_file_exist(pub) || !is_file_exist(pri) || !is_file_exist(conf)) {
         std::cerr << "[TEESDK] ENV is not set with valid value, fail:"
-                  << " TEESDK_PUB: " << pub
-                  << " TEESDK_PRI: " << pri
-                  << " TEESDK_CONF: " << conf
-                  << std::endl;
-        Tuple res = Tuple(1, 0, 0, 0);
- 
-        m.stack.push(res);
+                  << " TEESDK_PUB: " << pub << " TEESDK_PRI: " << pri
+                  << " TEESDK_CONF: " << conf << std::endl;
+        m.stack.popClear();
+        // Returns a empty Buffer
+        m.stack.push(Tuple(0, Buffer()));
         ++m.pc;
-        std::cerr << "ecall done: " << res << std::endl;
         return;
     }
 
-    char *output = NULL; // malloc from `submit_task`
+    char* output = NULL;  // malloc from `submit_task`
     size_t outputsize = 0;
     int32_t port = 8082;
     int result = 0;
@@ -1025,128 +1051,53 @@ void ecall(MachineState& m) {
         std::cerr << "[TEESDK] init fail: " << result << std::endl;
     }
 
-    std::string method_string;
-    std::string args_string;
+    std::string method_string = "operator";
+    std::ostringstream oss;
 
-    switch (intx::narrow_cast<std::size_t>(arg1)) {
-    case 0: // EigenTEERegister
-        method_string = "EigenTEERegister";
-        break;
-    case 1: // AddCipherCipher
-        method_string = "operator";
-        args_string = "add_cipher_cipher,2,";
-        args_string += intx::to_string(arg2);
-        args_string += ",";
-        args_string += intx::to_string(arg3);
-        break;
-    case 2: // AddCipherPlain
-        method_string = "operator";
-        args_string = "add_cipher_plain,2,";
-        args_string += intx::to_string(arg2);
-        args_string += ",";
-        args_string += intx::to_string(arg3);
-        break;
-    case 3: // SubCipherCipher
-        method_string = "operator";
-        args_string = "sub_cipher_cipher,2,";
-        args_string += intx::to_string(arg2);
-        args_string += ",";
-        args_string += intx::to_string(arg3);
-        break;
-    case 4: // SubCipherPlain
-        method_string = "operator";
-        args_string = "sub_cipher_plain,2,";
-        args_string += intx::to_string(arg2);
-        args_string += ",";
-        args_string += intx::to_string(arg3);
-        break;
-    case 11: // Encrypt
-        method_string = "operator";
-        args_string = "encrypt,1,";
-        args_string += intx::to_string(arg2);
-        break;
-    case 12: // Deccrypt
-        method_string = "operator";
-        args_string = "decrypt,1,";
-        args_string += intx::to_string(arg2);
-        break;
-    default:
-        method_string = "echo";
-        break;
+    if (OPEARTOR_ARITY.count(arg1)) {
+        oss << arg1 << "," << OPEARTOR_ARITY.at(arg1) << ",";
+
+        switch (OPEARTOR_ARITY.at(arg1)) {
+            case 1:
+                oss << arg2;
+                break;
+            case 2:
+                oss << arg2 << "," << arg3;
+                break;
+            case 3:
+                oss << arg2 << "," << arg3 << "," << arg4;
+                break;
+            default:
+                std::cerr << "[TEESDK] arity of " << arg1 << " is "
+                          << OPEARTOR_ARITY.at(arg1)
+                          << ", it is not supported now" << std::endl;
+                m.stack.popClear();
+                // Returns a empty Buffer
+                m.stack.push(Tuple(0, Buffer()));
+                ++m.pc;
+                return;
+        }
     }
 
     if (result == 0) {
-        result = submit_task(method_string.c_str(), args_string.c_str(), uid, token, &output, &outputsize);
+        result = submit_task(method_string.c_str(), oss.str().c_str(), uid,
+                             token, &output, &outputsize);
 
         if (result != 0) {
             std::cerr << "[TEESDK] submit_task fail: " << result << std::endl;
+            m.stack.popClear();
+            // Returns a empty Buffer
+            m.stack.push(Tuple(0, Buffer()));
+            ++m.pc;
+            return;
         }
     }
 
-    uint256_t out_arg1 = 0;
-    uint256_t out_arg2 = 0;
-    uint256_t out_arg3 = 0;
-    uint256_t out_arg4 = 0;
-    uint256_t temp;
-
-    if (result == 0) {
-        // XXX: the string should end with '\0'
-        std::cerr << "[TEESDK] submit_task output " << "[" << outputsize << "]: " << output << std::endl;
-
-        // Success
-        out_arg1 = 0;
-
-        switch (intx::narrow_cast<std::size_t>(arg1)) {
-        case 0:
-            // EigenTEERegister
-            break;
-        case 1: // AddCipherCipher
-        case 2: // AddCipherPlain
-        case 3: // SubCipherCipher
-        case 4: // SubCipherPlain
-        case 11: // Encrypt
-        case 12: // Deccrypt
-            for (size_t i = 0; i < outputsize; i++) {
-                if (i == 0) {
-                    temp = output[0] - '0';
-                }
-                else {
-                    temp = temp * 10 + output[i] - '0';
-                }
-            }
-            out_arg2 = temp;
-            break;
-        default:
-            out_arg1 = 1;
-            break;
-        }
-    }
-    else {
-        // Fail
-        out_arg1 = 1;
-    }
-
-	
-	// TODO: Release should be called when it should be called.
-    // if (result == 0) {
-    //     // XXX: the string should end with '\0'
-    //     std::cerr << "[TEESDK] submit_task output " << "[" << outputsize << "]: " << output << std::endl;
-
-    //     result = release();
-
-    //     if (result != 0) {
-    //         std::cerr << "[TEESDK] release fail: " << result << std::endl;
-    //     }
-    // }
     m.stack.popClear();
-
-    // TODO: something is calculated here
-
-    Tuple res = Tuple(out_arg1, out_arg2, out_arg3, out_arg4);
- 
+    std::string s(output, outputsize);
+    Tuple res = Tuple(uint256_t(s.length()), convert_string_to_buffer(s));
     m.stack.push(res);
     ++m.pc;
-    std::cerr << "ecall done: " << res << std::endl;
 }
 
 void debug(MachineState& m) {
