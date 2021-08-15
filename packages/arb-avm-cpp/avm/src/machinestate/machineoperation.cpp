@@ -1000,13 +1000,13 @@ void ecall(MachineState& m) {
     m.stack.prepForMod(1);
     std::cerr << "[INFO] ecall called: " << m.stack[0] << std::endl;
     const Tuple* tuple = &assumeTuple(m.stack[0]);
-    std::string arg1 = get_string_from_tuple(tuple->get_element(0));
-    std::string arg2 = get_string_from_tuple(tuple->get_element(1));
-    std::string arg3 = get_string_from_tuple(tuple->get_element(2));
-    std::string arg4 = get_string_from_tuple(tuple->get_element(3));
+    std::string operator_string = get_string_from_tuple(tuple->get_element(0));
+    std::string arg1 = get_string_from_tuple(tuple->get_element(1));
+    std::string arg2 = get_string_from_tuple(tuple->get_element(2));
+    std::string arg3 = get_string_from_tuple(tuple->get_element(3));
 
-    std::cerr << "ECALL arg1 = " << arg1 << ", arg2 = " << arg2
-              << ", arg3 = " << arg3 << ", arg4 = " << arg4 << std::endl;
+    std::cerr << "ECALL operator = " << operator_string << ", arg1 = " << arg1
+              << ", arg2 = " << arg2 << ", arg3 = " << arg3 << std::endl;
 #if 0
     // FIXME: This code wiil be removed in the future, it is used for early debug
     const char *pub = "/app/release/services/auditors/godzilla/godzilla.public.der";
@@ -1054,18 +1054,18 @@ void ecall(MachineState& m) {
     std::string method_string = "operator";
     std::ostringstream oss;
 
-    if (OPEARTOR_ARITY.count(arg1)) {
-        oss << arg1 << "," << OPEARTOR_ARITY.at(arg1) << ",";
+    if (OPEARTOR_ARITY.count(operator_string)) {
+        oss << operator_string << "," << OPEARTOR_ARITY.at(operator_string) << ",";
 
-        switch (OPEARTOR_ARITY.at(arg1)) {
+        switch (OPEARTOR_ARITY.at(operator_string)) {
             case 1:
-                oss << arg2;
+                oss << arg1;
                 break;
             case 2:
-                oss << arg2 << "," << arg3;
+                oss << arg1 << "," << arg2;
                 break;
             case 3:
-                oss << arg2 << "," << arg3 << "," << arg4;
+                oss << arg1 << "," << arg2 << "," << arg3;
                 break;
             default:
                 std::cerr << "[TEESDK] arity of " << arg1 << " is "
