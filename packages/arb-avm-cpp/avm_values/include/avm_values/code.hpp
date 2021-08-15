@@ -76,8 +76,26 @@ struct CodeSegmentData {
     CodePoint loadCodePoint(uint64_t pc) const {
         uint256_t prev_hash;
 
+        if (pc >= operations.size()) {
+            std::cerr << "Missing operation at pc " << pc
+                      << " (cached hashes size " << cached_hashes.size()
+                      << ", operations size " << operations.size() << ")"
+                      << std::endl;
+            assert(false);
+            throw std::runtime_error("Missing operation");
+        }
+
         if (pc / 10 > 0) {
-            prev_hash = cached_hashes.at(pc / 10 - 1);
+            auto idx = pc / 10 - 1;
+            if (idx >= cached_hashes.size()) {
+                std::cerr << "Missing cached code point hash at pc " << pc
+                          << " (cached hashes size " << cached_hashes.size()
+                          << ", operations size " << operations.size() << ")"
+                          << std::endl;
+                assert(false);
+                throw std::runtime_error("Missing cached code point hash");
+            }
+            prev_hash = cached_hashes.at(idx);
         }
         for (uint64_t i = (pc / 10) * 10; i < pc; i++) {
             prev_hash = hash(CodePoint(operations[i], prev_hash));
