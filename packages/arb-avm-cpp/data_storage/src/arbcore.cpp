@@ -825,7 +825,9 @@ void ArbCore::operator()() {
                             tx.createRocksdbCheckpoint(checkpoint_dir.string());
                         if (!status.ok()) {
                             std::cerr << "Unable to save checkpoint into "
-                                      << checkpoint_dir << std::endl;
+                                      << checkpoint_dir
+                                      << ", error: " << status.ToString()
+                                      << std::endl;
                         } else {
                             auto save_elapsed =
                                 seconds_since_epoch() - current_seconds;

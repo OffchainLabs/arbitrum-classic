@@ -112,7 +112,6 @@ TEST_CASE("ARBOS test vectors") {
             REQUIRE(mach->hash() == mach2->hash());
             storage.closeArbStorage();
 
-            ArbCoreConfig coreConfig{};
             ArbStorage storage2(dbpath, coreConfig);
             auto mach3 = storage2.getMachine(mach->hash(), value_cache);
             REQUIRE(mach->hash() == mach3->hash());
