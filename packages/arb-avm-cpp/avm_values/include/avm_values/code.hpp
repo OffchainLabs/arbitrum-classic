@@ -299,12 +299,23 @@ struct CoreCodeImpl {
 
     const std::shared_ptr<UnsafeCodeSegment>& getSegment(
         uint64_t segment_num) const {
-        return segments.at(segment_num);
+        auto it = segments.find(segment_num);
+        if (it == segments.end()) {
+            std::cerr << "ERROR: CoreCodeImpl missing segment " << segment_num
+                      << std::endl;
+            throw std::runtime_error("CoreCodeImpl missing segment");
+        } else {
+            std::cerr << "CoreCodeImpl retrieved segment " << segment_num
+                      << std::endl;
+        }
+        return it->second;
     }
 
     uint64_t nextSegmentNum() { return next_segment_num++; }
 
     void storeSegment(std::shared_ptr<UnsafeCodeSegment> segment) {
+        std::cerr << "CoreCodeImpl storing segment " << segment->segmentID()
+                  << std::endl;
         segments[segment->segmentID()] = std::move(segment);
     }
 
@@ -328,7 +339,16 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
 
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        auto& segment = impl->segments.at(segment_num);
+        auto it = impl->segments.find(segment_num);
+        if (it == impl->segments.end()) {
+            std::cerr << "ERROR: CoreCode missing segment " << segment_num
+                      << std::endl;
+            throw std::runtime_error("CoreCode missing segment");
+        } else {
+            std::cerr << "CoreCode retrieved segment " << segment_num
+                      << std::endl;
+        }
+        auto& segment = it->second;
         return {segment, segment->size(), segment->data.cached_hashes.size()};
     }
 
@@ -346,6 +366,8 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
         if (segment_id >= impl->next_segment_num) {
             throw std::runtime_error("code segment loaded incorrectly");
         }
+        std::cerr << "CoreCode restoring existing segment " << segment_id
+                  << std::endl;
         if (impl->segments.find(segment->segmentID()) == impl->segments.end()) {
             impl->segments[segment_id] = std::move(segment);
         }
@@ -375,6 +397,8 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
     void addSegment(std::shared_ptr<UnsafeCodeSegment> segment) {
         const std::lock_guard<std::mutex> lock(mutex);
         assert(segment->segmentID() == impl->next_segment_num);
+        std::cerr << "CoreCode adding segment " << segment->segmentID()
+                  << std::endl;
         impl->segments[impl->next_segment_num] = std::move(segment);
         impl->next_segment_num++;
     }
@@ -413,6 +437,16 @@ struct RunningCodeImpl {
     }
 
     void storeSegment(std::shared_ptr<UnsafeCodeSegment> segment) {
+        if (segment->segmentID() != nextSegmentNum()) {
+            std::cerr << "RunningCodeImpl attempted to store segment "
+                      << segment->segmentID() << " in position "
+                      << nextSegmentNum() << std::endl;
+            throw std::runtime_error(
+                "RunningCodeImpl attemted to store segment in wrong position");
+            assert(false);
+        }
+        std::cerr << "RunningCodeImpl storing segment " << segment->segmentID()
+                  << std::endl;
         segment_list.push_back(std::move(segment));
     }
 };
@@ -435,6 +469,9 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
         auto it = segment_counts.lower_bound(impl->first_segment);
         auto end = segment_counts.end();
         for (; it != end; ++it) {
+            std::cerr << "Filling in segment " << it->first
+                      << " from RunningCode " << (void*)this << " to CoreCode"
+                      << std::endl;
             auto inserted = parent_segments.insert(
                 std::make_pair(it->first, impl->getSegment(it->first)));
             // Verify that the element didn't exist previously
@@ -468,21 +505,35 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);
         if (segment_num < impl->first_segment) {
+            std::cerr << "Retrieving segment " << segment_num
+                      << " from RunningCode " << (void*)this << " via CoreCode"
+                      << std::endl;
             return parent->loadCodeSegment(segment_num);
         }
+        std::cerr << "Retrieving segment " << segment_num
+                  << " from RunningCode " << (void*)this << " locally"
+                  << std::endl;
         return loadCodeSegmentImpl(segment_num);
     }
 
     CodePoint loadCodePoint(const CodePointRef& ref) const {
         const std::lock_guard<std::mutex> lock(mutex);
         if (ref.segment < impl->first_segment) {
+            std::cerr << "Retrieving code point in segment " << ref.segment
+                      << " from RunningCode " << (void*)this << " via CoreCode"
+                      << std::endl;
             return parent->loadCodePoint(ref);
         }
+        std::cerr << "Retrieving code point in segment " << ref.segment
+                  << " from RunningCode " << (void*)this << " locally"
+                  << std::endl;
         return loadCodePointImpl(ref);
     }
 
     CodePointStub addSegment() {
         const std::lock_guard<std::mutex> lock(mutex);
+        std::cerr << "Adding segment to RunningCode " << (void*)this
+                  << std::endl;
         return addSegmentImpl();
     }
 
