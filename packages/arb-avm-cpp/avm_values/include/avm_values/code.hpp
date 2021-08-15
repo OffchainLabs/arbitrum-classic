@@ -322,9 +322,6 @@ struct CoreCodeImpl {
             std::cerr << "ERROR: CoreCodeImpl missing segment " << segment_num
                       << std::endl;
             throw std::runtime_error("CoreCodeImpl missing segment");
-        } else {
-            std::cerr << "CoreCodeImpl retrieved segment " << segment_num
-                      << std::endl;
         }
         return it->second;
     }
@@ -362,9 +359,6 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
             std::cerr << "ERROR: CoreCode missing segment " << segment_num
                       << std::endl;
             throw std::runtime_error("CoreCode missing segment");
-        } else {
-            std::cerr << "CoreCode retrieved segment " << segment_num
-                      << std::endl;
         }
         auto& segment = it->second;
         return {segment, segment->size(), segment->data.cached_hashes.size()};
@@ -456,15 +450,15 @@ struct RunningCodeImpl {
 
     void storeSegment(std::shared_ptr<UnsafeCodeSegment> segment) {
         if (segment->segmentID() != nextSegmentNum()) {
-            std::cerr << "RunningCodeImpl attempted to store segment "
-                      << segment->segmentID() << " in position "
-                      << nextSegmentNum() << std::endl;
+            std::cerr << "RunningCodeImpl " << (void*)this
+                      << " attempted to store segment " << segment->segmentID()
+                      << " in position " << nextSegmentNum() << std::endl;
             throw std::runtime_error(
                 "RunningCodeImpl attemted to store segment in wrong position");
             assert(false);
         }
-        std::cerr << "RunningCodeImpl storing segment " << segment->segmentID()
-                  << std::endl;
+        std::cerr << "RunningCodeImpl " << (void*)this << " storing segment "
+                  << segment->segmentID() << std::endl;
         segment_list.push_back(std::move(segment));
     }
 };
@@ -477,7 +471,11 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
    public:
     RunningCode(std::shared_ptr<Code> parent_)
         : CodeBase<RunningCodeImpl>(parent_->initialSegmentForChildCode()),
-          parent(std::move(parent_)) {}
+          parent(std::move(parent_)) {
+        std::cerr << "Initialized RunningCode " << (void*)this
+                  << " with RunningCodeImpl " << (void*)impl.get()
+                  << " with first segment " << impl->first_segment << std::endl;
+    }
 
     uint64_t fillInCode(
         std::unordered_map<uint64_t, std::shared_ptr<UnsafeCodeSegment>>&
@@ -523,28 +521,16 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);
         if (segment_num < impl->first_segment) {
-            std::cerr << "Retrieving segment " << segment_num
-                      << " from RunningCode " << (void*)this << " via CoreCode"
-                      << std::endl;
             return parent->loadCodeSegment(segment_num);
         }
-        std::cerr << "Retrieving segment " << segment_num
-                  << " from RunningCode " << (void*)this << " locally"
-                  << std::endl;
         return loadCodeSegmentImpl(segment_num);
     }
 
     CodePoint loadCodePoint(const CodePointRef& ref) const {
         const std::lock_guard<std::mutex> lock(mutex);
         if (ref.segment < impl->first_segment) {
-            std::cerr << "Retrieving code point in segment " << ref.segment
-                      << " from RunningCode " << (void*)this << " via CoreCode"
-                      << std::endl;
             return parent->loadCodePoint(ref);
         }
-        std::cerr << "Retrieving code point in segment " << ref.segment
-                  << " from RunningCode " << (void*)this << " locally"
-                  << std::endl;
         return loadCodePointImpl(ref);
     }
 
