@@ -52,7 +52,7 @@
     "@types/chai": "^4.2.11",
     "@types/mocha": "^7.0.2",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
-    "@typescript-eslint/parser": "^4.29.0",
+    "@typescript-eslint/parser": "^4.29.1",
     "axios": "^0.21.1",
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",
