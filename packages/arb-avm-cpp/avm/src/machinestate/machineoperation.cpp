@@ -77,13 +77,7 @@ Tuple assumeTuple(MachineState& m, const value& val) {
     if (!tup) {
         auto uv = std::get_if<UnloadedValue>(&val);
         if (uv && uv->type == TUPLE) {
-            try {
-                return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
-            } catch (const std::exception& e) {
-                std::cerr << "FATAL: Failed to lazy load value: " << e.what()
-                          << std::endl;
-                __builtin_trap();
-            }
+            return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
         }
         throw bad_pop_type{};
     }
@@ -95,13 +89,7 @@ Tuple assumeTuple(MachineState& m, value& val) {
     if (!tup) {
         auto uv = std::get_if<UnloadedValue>(&val);
         if (uv && uv->type == TUPLE) {
-            try {
-                return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
-            } catch (const std::exception& e) {
-                std::cerr << "FATAL: Failed to lazy load value: " << e.what()
-                          << std::endl;
-                __builtin_trap();
-            }
+            return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
         }
         throw bad_pop_type{};
     }
@@ -870,7 +858,7 @@ uint64_t ec_pairing_variable_gas_cost(MachineState& m) {
             val = &tup.get_element_unsafe(1);
             gas_cost += ec_pair_gas_cost;
         }
-    } catch (const std::exception&) {
+    } catch (const avm_exception&) {
     }
 
     return gas_cost;

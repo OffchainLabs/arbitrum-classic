@@ -539,7 +539,7 @@ BlockReason MachineState::runOne() {
             // Charge an error instruction instead
             arb_gas_remaining += gas_cost;
             output.arb_gas_used -= gas_cost;
-        } catch (const std::exception&) {
+        } catch (const avm_exception&) {
             state = Status::Error;
         }
 
