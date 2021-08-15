@@ -38,6 +38,34 @@ type Conf struct {
 	String    string `koanf:"string"`
 }
 
+type Core struct {
+	Cache                  CoreCache     `koanf:"cache"`
+	CheckpointLoadGasCost  int           `koanf:"checkpoint-load-gas-cost"`
+	Debug                  bool          `koanf:"debug"`
+	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
+	MessageProcessCount    int           `koanf:"message-process-count"`
+	SaveRocksdbInterval    time.Duration `koanf:"save-rocksdb-interval"`
+	SaveRocksdbPath        string        `koanf:"save-rocksdb-path"`
+}
+
+type CoreCache struct {
+	LRUSize     int           `koanf:"lru-size"`
+	TimedExpire time.Duration `koanf:"timed-expire"`
+}
+
+// DefaultCoreSettings is useful in unit tests
+func DefaultCoreSettings() *Core {
+	return &Core{
+		Cache: CoreCache{
+			LRUSize:     1000,
+			TimedExpire: 20 * time.Minute,
+		},
+		CheckpointLoadGasCost:  1_000_000,
+		GasCheckpointFrequency: 1_000_000,
+		MessageProcessCount:    10,
+	}
+}
+
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
 	URLs    []string      `koanf:"url"`
@@ -162,6 +190,7 @@ type Metrics struct {
 type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               Conf        `koanf:"conf"`
+	Core               Core        `koanf:"core"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
@@ -229,6 +258,9 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 }
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
+	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
+
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
@@ -361,6 +393,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 	if len(out.Rollup.Machine.Filename) == 0 {
 		// Machine not provided, so use default
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
+	}
+
+	// Make rocksdb backup directory relative to persistent storage directory if not already absolute
+	if !filepath.IsAbs(out.Core.SaveRocksdbPath) {
+		out.Core.SaveRocksdbPath = path.Join(out.Persistent.Chain, out.Core.SaveRocksdbPath)
 	}
 
 	// Make machine relative to storage directory if not already absolute
