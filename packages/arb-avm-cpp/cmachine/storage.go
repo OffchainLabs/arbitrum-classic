@@ -37,6 +37,20 @@ type ArbStorage struct {
 	c unsafe.Pointer
 }
 
+func ResetAllExceptInbox(dbPath string, execPath string) error {
+	cDbPath := C.CString(dbPath)
+	defer C.free(unsafe.Pointer(cDbPath))
+	cExecPath := C.CString(execPath)
+	defer C.free(unsafe.Pointer(cExecPath))
+
+	ok := C.resetAllExceptInbox(cDbPath, cExecPath)
+	if ok == 0 {
+		return errors.New("unable to reset all except inbox")
+	}
+
+	return nil
+}
+
 func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, error) {
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
@@ -61,6 +75,8 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		C.int(debugInt),
 		C.int(saveRocksdbIntervalSeconds),
 		cSaveRocksdbPath,
+		C.int64_t(coreConfig.Profile.ReorgTo),
+		C.int64_t(coreConfig.Profile.RunUntil),
 	)
 
 	if cArbStorage == nil {

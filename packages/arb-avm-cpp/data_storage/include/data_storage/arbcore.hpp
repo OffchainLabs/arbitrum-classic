@@ -81,7 +81,16 @@ struct ArbCoreConfig {
     uint64_t save_rocksdb_interval{0};
 
     // Rocksdb checkpoints will be saved in save_rocksdb_path/timestamp/
-    std::string save_rocksdb_path;
+    std::string save_rocksdb_path{};
+
+    // If any profile_* parameters are non-zero, program will exit after
+    // all profile conditions are satisfied.
+
+    // Reorg database to message
+    uint64_t profile_reorg_to{0};
+
+    // Run until message reached
+    uint64_t profile_run_until{0};
 
     ArbCoreConfig() = default;
 };

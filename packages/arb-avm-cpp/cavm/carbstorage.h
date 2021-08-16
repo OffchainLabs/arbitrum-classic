@@ -24,6 +24,7 @@
 extern "C" {
 #endif
 
+int resetAllExceptInbox(const char* db_path, const char* executable_path);
 CArbStorage* createArbStorage(const char* db_path,
                               int32_t message_process_count,
                               int32_t checkpoint_load_gas_cost,
@@ -32,7 +33,9 @@ CArbStorage* createArbStorage(const char* db_path,
                               int32_t lru_cache_size,
                               int32_t debug,
                               int32_t save_rocksdb_interval,
-                              const char* save_rocksdb_path);
+                              const char* save_rocksdb_path,
+                              int64_t profile_reorg_to,
+                              int64_t profile_run_until);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);

@@ -28,6 +28,22 @@
 #include <iostream>
 #include <string>
 
+int resetAllExceptInbox(const char* db_path, const char* executable_path) {
+    try {
+        auto status = resetDBExceptInbox(db_path, executable_path);
+        if (!status.ok()) {
+            std::cerr << "Error resetting DB except inbox: "
+                      << status.ToString() << std::endl;
+            return 0;
+        }
+
+        return 1;
+    } catch (const std::exception& e) {
+        std::cerr << "Error creating storage: " << e.what() << std::endl;
+        return 0;
+    }
+}
+
 CArbStorage* createArbStorage(const char* db_path,
                               int32_t message_process_count,
                               int32_t checkpoint_load_gas_cost,
@@ -36,7 +52,9 @@ CArbStorage* createArbStorage(const char* db_path,
                               int32_t lru_cache_size,
                               int32_t debug,
                               int32_t save_rocksdb_interval,
-                              const char* save_rocksdb_path) {
+                              const char* save_rocksdb_path,
+                              int64_t profile_reorg_to,
+                              int64_t profile_run_until) {
     auto string_filename = std::string(db_path);
     auto string_save_rocksdb_path = std::string(save_rocksdb_path);
     ArbCoreConfig coreConfig{};
@@ -48,6 +66,8 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.debug = debug;
     coreConfig.save_rocksdb_interval = save_rocksdb_interval;
     coreConfig.save_rocksdb_path = string_save_rocksdb_path;
+    coreConfig.profile_reorg_to = profile_reorg_to;
+    coreConfig.profile_run_until = profile_run_until;
 
     try {
         auto storage = new ArbStorage(string_filename, coreConfig);

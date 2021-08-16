@@ -41,6 +41,7 @@ type Conf struct {
 type Core struct {
 	Cache                  CoreCache     `koanf:"cache"`
 	CheckpointLoadGasCost  int           `koanf:"checkpoint-load-gas-cost"`
+	Profile                CoreProfile   `koanf:"profile"`
 	Debug                  bool          `koanf:"debug"`
 	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
 	MessageProcessCount    int           `koanf:"message-process-count"`
@@ -51,6 +52,12 @@ type Core struct {
 type CoreCache struct {
 	LRUSize     int           `koanf:"lru-size"`
 	TimedExpire time.Duration `koanf:"timed-expire"`
+}
+
+type CoreProfile struct {
+	ReorgTo             int64 `koanf:"reorg-to"`
+	ResetAllExceptInbox bool  `koanf:"reset-all-except-inbox"`
+	RunUntil            int64 `koanf:"run-until"`
 }
 
 // DefaultCoreSettings is useful in unit tests
@@ -258,6 +265,9 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 }
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+	f.Uint64("core.profile.reorg-to", 0, "reorg to message")
+	f.Bool("core.profile.reset-all-except-inbox", false, "delete everything in database except inbox")
+	f.Uint64("core.profile.run-until", 0, "run until message")
 	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
 	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
 
