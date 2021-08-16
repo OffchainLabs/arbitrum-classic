@@ -40,7 +40,7 @@
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@types/promise-poller": "^1.7.0",
+    "@types/promise-poller": "^1.7.1",
     "@uniswap/token-lists": "^1.0.0-beta.24",
     "dotenv": "^10.0.0",
     "ethers": "^5.1.0"
