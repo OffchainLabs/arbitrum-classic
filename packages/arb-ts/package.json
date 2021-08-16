@@ -36,7 +36,7 @@
     "cancelRetryable": "ts-node scripts/cancelRetryable.ts"
   },
   "dependencies": {
-    "@ethersproject/address": "^5.0.8",
+    "@ethersproject/address": "^5.4.0",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
