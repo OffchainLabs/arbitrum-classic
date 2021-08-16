@@ -11,7 +11,7 @@
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.1",
-    "@types/yargs": "^15.0.5",
+    "@types/yargs": "^17.0.2",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
     "arb-ts": "^0.0.28",
