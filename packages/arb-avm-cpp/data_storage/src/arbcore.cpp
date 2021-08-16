@@ -29,6 +29,7 @@
 #include <data_storage/value/valuecache.hpp>
 
 #include <ethash/keccak.hpp>
+#include <filesystem>
 #include <iomanip>
 #include <set>
 #include <sstream>
@@ -43,6 +44,7 @@ constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
 constexpr auto send_processed_key = std::array<char, 1>{-63};
+constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-66};
 
 constexpr auto sideload_cache_size = 20;
@@ -50,8 +52,10 @@ constexpr uint256_t checkpoint_load_gas_cost = 1'000'000'000;
 constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 }  // namespace
 
-ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
-    : data_storage(std::move(data_storage_)),
+ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
+                 const ArbCoreConfig& coreConfig_)
+    : coreConfig(coreConfig_),
+      data_storage(std::move(data_storage_)),
       code(std::make_shared<Code>(getNextSegmentID(data_storage))),
       execution_cursor_value_cache(4, 0) {
     if (logs_cursors.size() > 255) {
@@ -147,6 +151,15 @@ bool ArbCore::deliverMessages(
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
+
+    {
+        ReadTransaction tx(data_storage);
+        auto schema_result = schemaVersion(tx);
+        if (schema_result.status.ok() && schema_result.data > 0) {
+            std::cerr << "Error: cannot use new database schema" << std::endl;
+            return rocksdb::Status::Aborted();
+        }
+    }
 
     auto status = reorgToMessageCountOrBefore(0, true, cache);
     if (status.ok()) {
@@ -670,6 +683,14 @@ void ArbCore::operator()() {
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
     size_t max_message_batch_size = 10;
+    uint64_t next_rocksdb_save_timestamp = 0;
+    std::filesystem::path save_rocksdb_path(coreConfig.save_rocksdb_path);
+
+    if (coreConfig.save_rocksdb_interval > 0) {
+        next_rocksdb_save_timestamp =
+            seconds_since_epoch() + coreConfig.save_rocksdb_interval;
+        std::filesystem::create_directories(save_rocksdb_path);
+    }
 
     uint256_t last_checkpoint_gas = maxCheckpointGas();
     while (!arbcore_abort) {
@@ -793,6 +814,32 @@ void ArbCore::operator()() {
                         << "Last checkpoint gas used: " << last_checkpoint_gas
                         << std::endl;
                     cache.nextCache();
+
+                    // Check if database copy needs to be saved to disk
+                    auto current_seconds = seconds_since_epoch();
+                    if (next_rocksdb_save_timestamp != 0 &&
+                        current_seconds >= next_rocksdb_save_timestamp) {
+                        auto timestamp_dir = std::to_string(current_seconds);
+                        auto checkpoint_dir = save_rocksdb_path / timestamp_dir;
+                        status =
+                            tx.createRocksdbCheckpoint(checkpoint_dir.string());
+                        if (!status.ok()) {
+                            std::cerr << "Unable to save checkpoint into "
+                                      << checkpoint_dir
+                                      << ", error: " << status.ToString()
+                                      << std::endl;
+                        } else {
+                            auto save_elapsed =
+                                seconds_since_epoch() - current_seconds;
+                            std::cerr << "Saving rocksdb checkpoint in "
+                                      << checkpoint_dir << " took "
+                                      << save_elapsed << " seconds"
+                                      << std::endl;
+                        }
+
+                        next_rocksdb_save_timestamp =
+                            current_seconds + coreConfig.save_rocksdb_interval;
+                    }
                 }
 
                 // Machine was stopped to save sideload, update execConfig
@@ -887,6 +934,10 @@ void ArbCore::operator()() {
 
     // Error occurred, make sure machine stops cleanly
     machine->abortMachine();
+    for (auto& logs_cursor : logs_cursors) {
+        logs_cursor.error_string = "arbcore thread aborted";
+        logs_cursor.status = DataCursor::ERROR;
+    }
 }
 
 rocksdb::Status ArbCore::saveLogs(ReadWriteTransaction& tx,
@@ -1844,6 +1895,10 @@ rocksdb::Status ArbCore::updateSendProcessedCount(ReadWriteTransaction& tx,
     return tx.statePut(vecToSlice(send_processed_key), value_slice);
 }
 
+ValueResult<uint256_t> ArbCore::schemaVersion(ReadTransaction& tx) const {
+    return tx.stateGetUint256(vecToSlice(schema_version_key));
+}
+
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {
     ReadTransaction tx(data_storage);
 
@@ -2705,4 +2760,10 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
 
     ReadSnapshotTransaction tx(data_storage);
     return {status, takeExecutionCursorMachineImpl(tx, *execution_cursor)};
+}
+
+uint64_t seconds_since_epoch() {
+    return std::chrono::duration_cast<std::chrono::seconds>(
+               std::chrono::system_clock::now().time_since_epoch())
+        .count();
 }

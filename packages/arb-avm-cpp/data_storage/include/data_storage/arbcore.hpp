@@ -18,6 +18,7 @@
 #define arbcore_hpp
 
 #include <avm/machine.hpp>
+#include <avm/machinethread.hpp>
 #include <avm_values/bigint.hpp>
 #include <data_storage/datacursor.hpp>
 #include <data_storage/datastorage.hpp>
@@ -27,9 +28,7 @@
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
-#include <utility>
 
-#include <avm/machinethread.hpp>
 #include <map>
 #include <memory>
 #include <queue>
@@ -58,6 +57,35 @@ struct RawMessageInfo {
           accumulator(accumulator_) {}
 };
 
+struct ArbCoreConfig {
+    // Maximum number of messages to process at a time
+    uint32_t message_process_count{10};
+
+    // Checkpoint loaded from disk if difference greater than cost,
+    // otherwise just run machine until gas reached
+    uint256_t checkpoint_load_gas_cost{1'000'000};
+
+    // Frequency to save checkpoint to database
+    uint256_t min_gas_checkpoint_frequency{1'000'000};
+
+    // How long to keep items in memory cache
+    uint32_t timed_cache_expiration_seconds{60 * 20};
+
+    // Number of items to keep in LRU cache
+    uint32_t lru_sideload_cache_size{20};
+
+    // Print extra debug messages to stderr
+    bool debug{false};
+
+    // Number of seconds to wait between saving rocksdb checkpoint, 0 to disable
+    uint64_t save_rocksdb_interval{0};
+
+    // Rocksdb checkpoints will be saved in save_rocksdb_path/timestamp/
+    std::string save_rocksdb_path;
+
+    ArbCoreConfig() = default;
+};
+
 class ArbCore {
    public:
     typedef enum {
@@ -84,6 +112,8 @@ class ArbCore {
 
    private:
     std::unique_ptr<std::thread> core_thread;
+
+    ArbCoreConfig coreConfig{};
 
     // Core thread input
     std::atomic<bool> arbcore_abort{false};
@@ -153,11 +183,12 @@ class ArbCore {
 
    public:
     ArbCore() = delete;
-    explicit ArbCore(std::shared_ptr<DataStorage> data_storage_);
+    ArbCore(std::shared_ptr<DataStorage> data_storage_,
+            const ArbCoreConfig& coreConfig);
 
     ~ArbCore() { abortThread(); }
     rocksdb::Status initialize(const LoadedExecutable& executable);
-    bool initialized() const;
+    [[nodiscard]] bool initialized() const;
     void operator()();
 
    public:
@@ -334,6 +365,7 @@ class ArbCore {
     ValueResult<uint256_t> sendProcessedCount(ReadTransaction& tx) const;
     rocksdb::Status updateSendProcessedCount(ReadWriteTransaction& tx,
                                              rocksdb::Slice value_slice);
+    ValueResult<uint256_t> schemaVersion(ReadTransaction& tx) const;
     ValueResult<uint256_t> messageEntryInsertedCountImpl(
         const ReadTransaction& tx) const;
     ValueResult<uint256_t> delayedMessageEntryInsertedCountImpl(
@@ -395,6 +427,8 @@ class ArbCore {
         const ReadTransaction& tx,
         size_t cursor_index) const;
 };
+
+uint64_t seconds_since_epoch();
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,
                                                     uint256_t log_index);
