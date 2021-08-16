@@ -23,7 +23,7 @@ const main = async () => {
   const l2ProxyAdminAddr = l2Network.tokenBridge.l2ProxyAdmin
   const l1GatewayRouterAddr = l1Network.tokenBridge.l1GatewayRouter
   const l2GatewayRouterAddr = l2Network.tokenBridge.l2GatewayRouter
-  const l1InboxAddr = await bridge.l1Bridge.getInbox()
+  const l1InboxAddr = (await bridge.l1Bridge.getInbox()).address
 
   const l1Router = (
     await ethers.getContractAt('L1GatewayRouter', l1GatewayRouterAddr)
