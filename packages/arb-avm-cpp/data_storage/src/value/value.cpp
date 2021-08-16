@@ -670,11 +670,7 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
         throw std::runtime_error(
             "attempting to get value resulted in unloaded value");
     }
-    auto res_hash = hash_value(val);
-    assert(res_hash == value_hash);
-    if (res_hash != value_hash) {
-        throw std::runtime_error("deserialized with incorrect hash");
-    }
+    assert(hash_value(val) == value_hash);
     return res;
 }
 
