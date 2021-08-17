@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var codeFile string
@@ -42,7 +43,8 @@ func TestCheckpoint(t *testing.T) {
 		}
 	}()
 
-	arbStorage, err := NewArbStorage(dePath)
+	coreConfig := configuration.DefaultCoreSettings()
+	arbStorage, err := NewArbStorage(dePath, coreConfig)
 	if err != nil {
 		t.Fatal(err)
 	}

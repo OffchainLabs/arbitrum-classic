@@ -18,8 +18,24 @@
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/utils.hpp>
 
+#include <rocksdb/utilities/checkpoint.h>
+
 ReadTransaction::ReadTransaction(std::shared_ptr<DataStorage> store)
     : transaction(Transaction::makeTransaction(std::move(store))) {}
+
+rocksdb::Status ReadTransaction::createRocksdbCheckpoint(
+    const std::string& checkpoint_dir) const {
+    rocksdb::Checkpoint* checkpoint;
+    auto status = rocksdb::Checkpoint::Create(
+        transaction->datastorage->txn_db.get(), &checkpoint);
+    if (!status.ok()) {
+        return status;
+    }
+
+    status = checkpoint->CreateCheckpoint(checkpoint_dir);
+
+    return rocksdb::Status::OK();
+}
 
 rocksdb::Status ReadTransaction::defaultGet(const rocksdb::Slice& key,
                                             std::string* value) const {

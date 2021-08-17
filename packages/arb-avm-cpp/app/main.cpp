@@ -40,11 +40,12 @@ int main(int argc, char* argv[]) {
                      "avm_runner --mexe filename [--inbox filename]\n";
         return 1;
     }
+    ArbCoreConfig coreConfig{};
     auto mode = std::string(argv[1]);
     std::string filename = argv[2];
 
     DBDeleter deleter;
-    ArbStorage storage{temp_db_path};
+    ArbStorage storage{temp_db_path, coreConfig};
 
     if (mode == "--hexops") {
         std::ifstream file(filename, std::ios::binary);
