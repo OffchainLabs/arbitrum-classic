@@ -101,7 +101,7 @@ type txTemplate struct {
 }
 
 func TestArbOSFees(t *testing.T) {
-	skipBelowVersion(t, 22)
+	skipBelowVersion(t, 35)
 
 	var countCalldataFunc func(data []byte) int
 	var l1GasPerL2Calldata *big.Int
