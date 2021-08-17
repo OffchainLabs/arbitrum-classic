@@ -124,12 +124,18 @@ type S3 struct {
 	SecretKey string `koanf:"secret-key"`
 }
 
+type L1PostingStrategy struct {
+	HighGasThreshold   float64 `koanf:"high-gas-threshold"`
+	HighGasDelayBlocks int64   `koanf:"high-gas-delay-blocks"`
+}
+
 type Sequencer struct {
-	CreateBatchBlockInterval          int64   `koanf:"create-batch-block-interval"`
-	ContinueBatchPostingBlockInterval int64   `koanf:"continue-batch-posting-block-interval"`
-	DelayedMessagesTargetDelay        int64   `koanf:"delayed-messages-target-delay"`
-	ReorgOutHugeMessages              bool    `koanf:"reorg-out-huge-messages"`
-	Lockout                           Lockout `koanf:"lockout"`
+	CreateBatchBlockInterval          int64             `koanf:"create-batch-block-interval"`
+	ContinueBatchPostingBlockInterval int64             `koanf:"continue-batch-posting-block-interval"`
+	DelayedMessagesTargetDelay        int64             `koanf:"delayed-messages-target-delay"`
+	ReorgOutHugeMessages              bool              `koanf:"reorg-out-huge-messages"`
+	Lockout                           Lockout           `koanf:"lockout"`
+	L1PostingStrategy                 L1PostingStrategy `koanf:"l1-posting-strategy"`
 }
 
 type WS struct {
@@ -169,9 +175,10 @@ type Rollup struct {
 }
 
 type Validator struct {
-	Strategy             string `koanf:"strategy"`
-	UtilsAddress         string `koanf:"utils-address"`
-	WalletFactoryAddress string `koanf:"wallet-factory-address"`
+	Strategy             string            `koanf:"strategy"`
+	UtilsAddress         string            `koanf:"utils-address"`
+	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
+	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
 }
 
 type Wallet struct {
@@ -220,10 +227,16 @@ func (c *Config) GetValidatorDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "validator_db")
 }
 
+func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
+	f.Float64(prefix+"l1-posting-strategy.high-gas-threshold", 150, "gwei threshold at which to consider gas price high and delay batch posting")
+	f.Int64(prefix+"l1-posting-strategy.high-gas-delay-blocks", 270, "wait up to this many more blocks when gas costs are high")
+}
+
 func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
+	AddL1PostingStrategyOptions(f, "node.sequencer.")
 
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
@@ -251,6 +264,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
+	AddL1PostingStrategyOptions(f, "validator.")
 
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "strategy for validator to use")
