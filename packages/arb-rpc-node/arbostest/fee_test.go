@@ -69,21 +69,6 @@ func addEnableFeesMessages(ib *InboxBuilder) {
 	}
 }
 
-func countCalldataUnitsOld(data []byte) int {
-	return len(data)
-}
-
-func countCalldataUnitsNew(data []byte) int {
-	units := 0
-	for _, val := range data {
-		if val == 0 {
-			units += 4
-		} else {
-			units += 16
-		}
-	}
-	return units
-}
 
 type txTemplate struct {
 	GasPrice *big.Int
@@ -103,11 +88,17 @@ type txTemplate struct {
 func TestArbOSFees(t *testing.T) {
 	skipBelowVersion(t, 35)
 
-	var countCalldataFunc func(data []byte) int
-	var l1GasPerL2Calldata *big.Int
-	t.Log("Using new calldata accounting")
-	countCalldataFunc = countCalldataUnitsNew
-	l1GasPerL2Calldata = big.NewInt(1)
+	countCalldataUnits := func(data []byte) int {
+		units := 0
+		for _, val := range data {
+			if val == 0 {
+				units += 4
+			} else {
+				units += 16
+			}
+		}
+		return units
+	}
 
 	privKey, err := crypto.GenerateKey()
 	failIfError(t, err)
@@ -198,6 +189,18 @@ func TestArbOSFees(t *testing.T) {
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
 		},
+		// Reverted storage allocating function call
+		{
+			GasPrice: big.NewInt(0),
+			Gas:      100000000,
+			To:       &contractDest,
+			Value:    big.NewInt(0),
+			Data:     makeFuncData(t, gasUsedABI.Methods["fail"]),
+
+			resultType:         []evm.ResultType{evm.RevertCode},
+			nonzeroComputation: []bool{true},
+			correctStorageUsed: 0,
+		},
 		// Reverted since insufficient funds
 		{
 			GasPrice: big.NewInt(0),
@@ -237,7 +240,7 @@ func TestArbOSFees(t *testing.T) {
 			SpeedLimitPerSecond:    new(big.Int).SetUint64(config.ArbGasSpeedLimitPerSecond),
 			L1GasPerL2Tx:           big.NewInt(3700),
 			ArbGasPerL2Tx:          big.NewInt(0),
-			L1GasPerL2Calldata:     l1GasPerL2Calldata,
+			L1GasPerL2Calldata:     big.NewInt(1),
 			ArbGasPerL2Calldata:    big.NewInt(0),
 			L1GasPerStorage:        big.NewInt(2000),
 			ArbGasPerStorage:       big.NewInt(0),
@@ -295,7 +298,7 @@ func TestArbOSFees(t *testing.T) {
 	for i, compressedTx := range buildCompressedTxes() {
 		l2, err := message.NewL2Message(compressedTx)
 		failIfError(t, err)
-		rawTxes[i].calldata = countCalldataFunc(l2.Data)
+		rawTxes[i].calldata = countCalldataUnits(l2.Data)
 	}
 
 	addUserTxesLoc := func(ib *InboxBuilder, agg common.Address) {
@@ -351,7 +354,7 @@ func TestArbOSFees(t *testing.T) {
 			msg := message.NewSafeL2Message(l2msg)
 			feeWithContractTxIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)
 			chainTime.BlockNum = common.NewTimeBlocksInt(int64(len(feeWithContractTxIB.Messages)))
-			contractTxData = append(contractTxData, countCalldataFunc(msg.Data))
+			contractTxData = append(contractTxData, countCalldataUnits(msg.Data))
 		}
 	}
 
