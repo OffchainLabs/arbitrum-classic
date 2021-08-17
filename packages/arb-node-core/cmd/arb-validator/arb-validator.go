@@ -166,14 +166,14 @@ func startup() error {
 		}
 	}
 
-	valAuth, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
+	valAuth, fb, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
 	validatorAddress := ethcommon.Address{}
 	if chainState.ValidatorWallet == "" {
 		for {
-			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, config.Rollup.FromBlock, valAuth, l1Client)
+			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, config.Rollup.FromBlock, valAuth, l1Client, fb)
 			if err == nil {
 				break
 			}
@@ -211,7 +211,7 @@ func startup() error {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth, fb)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
 	}

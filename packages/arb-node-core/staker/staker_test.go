@@ -183,22 +183,22 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	validatorWalletFactory, _, _, err := ethbridgecontracts.DeployValidatorWalletCreator(auth, client)
 	test.FailIfError(t, err)
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, &configuration.Config{}, &configuration.Wallet{})
+	valAuth, fb, err := ethbridge.NewTransactAuth(ctx, client, auth, &configuration.Config{}, &configuration.Wallet{})
 	test.FailIfError(t, err)
-	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, &configuration.Config{}, &configuration.Wallet{})
+	val2Auth, fb2, err := ethbridge.NewTransactAuth(ctx, client, auth2, &configuration.Config{}, &configuration.Wallet{})
 	test.FailIfError(t, err)
 
-	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client)
+	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client, fb)
 	test.FailIfError(t, err)
 
 	// Should lookup WalletCreated event
-	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client)
+	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client, fb)
 	test.FailIfError(t, err)
 	if validatorAddress != checkValidatorAddress {
 		t.Error("CreateValidatorWallet didn't reuse existing wallet")
 	}
 
-	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), val2Auth, client)
+	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), val2Auth, client, fb2)
 	test.FailIfError(t, err)
 	if validatorAddress == validatorAddress2 {
 		t.Error("CreateValidatorWallet reused existing wallet for different address")
@@ -220,7 +220,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
 
-	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth)
+	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth, fb)
 	test.FailIfError(t, err)
 
 	staker.Validator.GasThreshold = big.NewInt(0)
@@ -268,7 +268,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	faultyCore := challenge.NewFaultyCore(mon.Core, faultConfig)
 
-	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, val2Auth)
+	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, val2Auth, fb)
 	test.FailIfError(t, err)
 
 	faultyStaker.Validator.GasThreshold = big.NewInt(0)

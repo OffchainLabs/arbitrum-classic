@@ -23,6 +23,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/rs/zerolog"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -50,7 +52,11 @@ type Fireblocks struct {
 	sourceType accounttype.AccountType
 }
 
-type CreateNewTransactionBody struct {
+type StatusBody struct {
+	Success bool `json:"success"`
+}
+
+type CreateTransactionBody struct {
 	AssetId         string                          `json:"assetId"`
 	Source          TransferPeerPath                `json:"source"`
 	Destination     DestinationTransferPeerPath     `json:"destination"`
@@ -282,12 +288,12 @@ func (fb *Fireblocks) ListTransactions() (*[]TransactionDetails, error) {
 	}
 
 	var result []TransactionDetails
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	err = fb.parseBody(resp.Body, &result)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "list transactions")
 	}
 
-	return &result, err
+	return &result, nil
 }
 
 func (fb *Fireblocks) ListVaultAccounts() (*[]VaultAccount, error) {
@@ -297,23 +303,23 @@ func (fb *Fireblocks) ListVaultAccounts() (*[]VaultAccount, error) {
 	}
 
 	var result []VaultAccount
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	err = fb.parseBody(resp.Body, &result)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "list vault accounts")
 	}
 
-	return &result, err
+	return &result, nil
 }
 
-func (fb *Fireblocks) CreateNewContractCall(destinationType accounttype.AccountType, destinationId string, destinationTag string, amount *big.Int, callData string) (*CreateTransactionResponse, error) {
-	return fb.CreateNewTransaction(destinationType, destinationId, destinationTag, amount, operationtype.ContractCall, callData)
+func (fb *Fireblocks) CreateContractCall(destinationType accounttype.AccountType, destinationId string, destinationTag string, amount *big.Int, callData string) (*CreateTransactionResponse, error) {
+	return fb.CreateTransaction(destinationType, destinationId, destinationTag, amount, operationtype.ContractCall, callData)
 }
 
-func (fb *Fireblocks) CreateNewTransaction(destinationType accounttype.AccountType, destinationId string, destinationTag string, amountWei *big.Int, operation operationtype.OperationType, callData string) (*CreateTransactionResponse, error) {
+func (fb *Fireblocks) CreateTransaction(destinationType accounttype.AccountType, destinationId string, destinationTag string, amountWei *big.Int, operation operationtype.OperationType, callData string) (*CreateTransactionResponse, error) {
 	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 	amountEth := new(big.Rat).SetFrac(amountWei, divisor)
 
-	body := &CreateNewTransactionBody{
+	body := &CreateTransactionBody{
 		AssetId:         fb.assetId,
 		Source:          TransferPeerPath{Type: fb.sourceType, Id: fb.sourceId},
 		Destination:     *NewDestinationTransferPeerPath(destinationType, destinationId, destinationTag),
@@ -328,31 +334,55 @@ func (fb *Fireblocks) CreateNewTransaction(destinationType accounttype.AccountTy
 	}
 
 	var result CreateTransactionResponse
-	response, err := ioutil.ReadAll(resp.Body)
+	err = fb.parseBody(resp.Body, &result)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error reading fireblocks create transaction response")
-	}
-	logger.Info().RawJSON("body", response).Msg("received fireblocks response")
-	err = json.NewDecoder(strings.NewReader(string(response))).Decode(&result)
-	if err != nil {
-		return nil, errors.Wrapf(err, "error decoding fireblocks create transaction response")
+		return nil, errors.Wrap(err, "create transaction")
 	}
 
-	return &result, err
+	return &result, nil
 }
 
-func (fb *Fireblocks) CancelTransaction(txid string) (string, error) {
+func (fb *Fireblocks) GetTransactionByExternalId(externalId string) (*TransactionDetails, error) {
+	resp, err := fb.postRequest("/v1/transactions/external_tx_id/"+externalId, url.Values{}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result TransactionDetails
+	err = fb.parseBody(resp.Body, &result)
+	if err != nil {
+		return nil, errors.Wrap(err, "get transaction by external id")
+	}
+
+	return &result, nil
+}
+
+func (fb *Fireblocks) IsTransactionStatusFailed(status string) bool {
+	if status == "CANCELLED" || status == "REJECTED" || status == "BLOCKED" || status == "FAILED" {
+		return true
+	}
+
+	return false
+}
+
+func (fb *Fireblocks) CancelTransaction(txid string) error {
 
 	resp, err := fb.postRequest("/v1/transactions/"+txid+"/cancel", url.Values{}, nil)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
+	var result StatusBody
+	err = fb.parseBody(resp.Body, &result)
 	if err != nil {
-		return "", err
+		return errors.Wrap(err, "cancel transaction")
 	}
-	return string(data), err
+
+	if !result.Success {
+		return fmt.Errorf("transaction %s not cancelled", txid)
+	}
+
+	return nil
 }
 
 type DropTransactionRequestBody struct {
@@ -360,7 +390,7 @@ type DropTransactionRequestBody struct {
 	RequestedFee string `json:"requestedFee,omitempty"`
 }
 
-func (fb *Fireblocks) DropTransaction(txid string, feeLevel string, requestedFee string) (string, error) {
+func (fb *Fireblocks) DropTransaction(txid string, feeLevel string, requestedFee string) error {
 	var body DropTransactionRequestBody
 	if len(feeLevel) > 0 {
 		body.FeeLevel = feeLevel
@@ -371,14 +401,20 @@ func (fb *Fireblocks) DropTransaction(txid string, feeLevel string, requestedFee
 
 	resp, err := fb.postRequest("/v1/transactions/"+txid+"/cancel", url.Values{}, body)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
+	var result StatusBody
+	err = fb.parseBody(resp.Body, &result)
 	if err != nil {
-		return "", err
+		return errors.Wrap(err, "drop transaction")
 	}
-	return string(data), err
+
+	if !result.Success {
+		return fmt.Errorf("transaction %s not dropped", txid)
+	}
+
+	return nil
 }
 
 func (fb *Fireblocks) getRequest(path string, params url.Values) (*http.Response, error) {
@@ -412,6 +448,7 @@ func (fb *Fireblocks) sendRequest(method string, path string, params url.Values,
 
 	return nil, errors.New("too many fireblocks duplicate nonce errors")
 }
+
 func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Values, body []byte) (*http.Response, error) {
 	token, err := fb.signJWT(path, body)
 	if err != nil {
@@ -477,6 +514,16 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 			return nil, fmt.Errorf("nonce was already used")
 		}
 
+		if resp.StatusCode == 404 {
+			logger.
+				Warn().
+				Str("url", uri.String()).
+				Str("status", resp.Status).
+				Str("body", bodyStr).
+				Msg("fireblocks requested object not found")
+			return nil, fmt.Errorf("status '%s' fireblocks requested object not found", resp.Status)
+		}
+
 		logger.
 			Error().
 			Str("url", uri.String()).
@@ -487,7 +534,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 	}
 
 	logger.
-		Info().
+		Debug().
 		Str("url", uri.String()).
 		Str("token", token).
 		RawJSON("body", body).
@@ -505,7 +552,7 @@ func (fb *Fireblocks) signJWT(path string, body []byte) (string, error) {
 		body = []byte("null")
 	}
 
-	bodyHash := sha256.Sum256([]byte(body))
+	bodyHash := sha256.Sum256(body)
 	claims := fireblocksClaims{
 		Uri:      newPath,
 		Nonce:    rand.Int63(),
@@ -518,4 +565,25 @@ func (fb *Fireblocks) signJWT(path string, body []byte) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 
 	return token.SignedString(fb.signKey)
+}
+
+func (fb *Fireblocks) parseBody(body io.Reader, result interface{}) error {
+	if logger.GetLevel() == zerolog.DebugLevel {
+		response, err := ioutil.ReadAll(body)
+		if err != nil {
+			return errors.Wrapf(err, "error reading fireblocks response")
+		}
+		logger.Debug().RawJSON("body", response).Msgf("received fireblocks response")
+		err = json.NewDecoder(strings.NewReader(string(response))).Decode(&result)
+		if err != nil {
+			return errors.Wrapf(err, "error decoding fireblocks response")
+		}
+	} else {
+		err := json.NewDecoder(body).Decode(&result)
+		if err != nil {
+			return errors.Wrapf(err, "error decoding fireblocks response")
+		}
+	}
+
+	return nil
 }

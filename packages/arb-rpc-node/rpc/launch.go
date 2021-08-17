@@ -87,7 +87,7 @@ func SetupBatcher(
 	case ForwarderBatcherMode:
 		return batcher.NewForwarder(ctx, batcherMode.Config)
 	case StatelessBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
+		auth, fb, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -95,9 +95,9 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime), nil
+		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime, fb), nil
 	case StatefulBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
+		auth, fb, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +105,7 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewStatefulBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime)
+		return batcher.NewStatefulBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime, fb)
 	case SequencerBatcherMode:
 		rollup, err := ethbridgecontracts.NewRollupUserFacet(rollupAddress.ToEthAddress(), client)
 		if err != nil {

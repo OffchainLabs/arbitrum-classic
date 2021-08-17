@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package ethbridge
 import (
 	"context"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 )
 
 type ArbAddresses struct {
@@ -51,7 +53,7 @@ type attemptRbfInfo struct {
 	nonce   uint64
 }
 
-func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
+func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, rbfInfo *attemptRbfInfo, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
 	lastRbf := time.Now()
 	for {
 		select {
@@ -63,6 +65,47 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutil
 					txHash = newTxHash
 				} else {
 					logger.Warn().Err(err).Msg("failed to replace by fee")
+				}
+			}
+			if fb != nil {
+				details, err := fb.GetTransactionByExternalId(txHash.String())
+				if err != nil && strings.Contains(err.Error(), "not found") {
+					logger.
+						Warn().
+						Err(err).
+						Str("account", rbfInfo.account.String()).
+						Hex("txhash", txHash.Bytes()).
+						Msg("fireblocks transaction by external id not found")
+					if rbfInfo != nil {
+						// an alternative tx might've gotten confirmed
+						nonce, err := client.NonceAt(ctx, rbfInfo.account, nil)
+						if err == nil {
+							if nonce >= rbfInfo.nonce {
+								return nil, nil
+							}
+						} else {
+							logger.Warn().Err(err).Str("account", rbfInfo.account.String()).Msg("Issue getting pending nonce with fireblocks")
+						}
+					}
+					continue
+				} else if details.Status == "REJECTED" {
+					logger.
+						Error().
+						Err(err).
+						Str("account", rbfInfo.account.String()).
+						Str("rejected-by", details.RejectedBy).
+						Hex("txhash", txHash.Bytes()).
+						Msg("fireblocks transaction rejected")
+					return nil, errors.Wrapf(err, "fireblocks transaction rejected by: %s", details.RejectedBy)
+				} else if fb.IsTransactionStatusFailed(details.Status) {
+					logger.
+						Error().
+						Err(err).
+						Str("account", rbfInfo.account.String()).
+						Str("status", details.Status).
+						Hex("txhash", txHash.Bytes()).
+						Msg("fireblocks transaction failed")
+					return nil, errors.Wrapf(err, "fireblocks transaction failed: %s", details.Status)
 				}
 			}
 			receipt, err := client.TransactionReceipt(ctx, txHash)
@@ -99,8 +142,8 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutil
 	}
 }
 
-func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash) (*types.Receipt, error) {
-	return waitForReceiptWithResultsSimpleInternal(ctx, client, txHash, nil)
+func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
+	return waitForReceiptWithResultsSimpleInternal(ctx, client, txHash, nil, fb)
 }
 
 func increaseByPercent(original *big.Int, percentage int64) *big.Int {
@@ -109,7 +152,7 @@ func increaseByPercent(original *big.Int, percentage int64) *big.Int {
 	return threshold
 }
 
-func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string, auth *TransactAuth) (*types.Receipt, error) {
+func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string, auth *TransactAuth, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
 	var rbfInfo *attemptRbfInfo
 	if auth != nil {
 		attemptRbf := func() (ethcommon.Hash, error) {
@@ -188,7 +231,7 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 			nonce:   tx.Nonce(),
 		}
 	}
-	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, tx.Hash(), rbfInfo)
+	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, tx.Hash(), rbfInfo, fb)
 	if err != nil {
 		logger.Warn().Err(err).Hex("tx", tx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
@@ -213,6 +256,6 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 	return receipt, nil
 }
 
-func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
-	return WaitForReceiptWithResultsAndReplaceByFee(ctx, client, from, tx, methodName, nil)
+func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
+	return WaitForReceiptWithResultsAndReplaceByFee(ctx, client, from, tx, methodName, nil, fb)
 }

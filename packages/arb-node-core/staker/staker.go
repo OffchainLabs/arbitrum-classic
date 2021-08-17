@@ -32,6 +32,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
@@ -52,6 +53,7 @@ type Staker struct {
 	fromBlock       int64
 	baseCallOpts    bind.CallOpts
 	auth            *ethbridge.TransactAuth
+	fb              *fireblocks.Fireblocks
 }
 
 func NewStaker(
@@ -64,6 +66,7 @@ func NewStaker(
 	strategy Strategy,
 	callOpts bind.CallOpts,
 	auth *ethbridge.TransactAuth,
+	fb *fireblocks.Fireblocks,
 ) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress, callOpts)
 	if err != nil {
@@ -75,6 +78,7 @@ func NewStaker(
 		fromBlock:    fromBlock,
 		baseCallOpts: callOpts,
 		auth:         auth,
+		fb:           fb,
 	}, val.delayedBridge, nil
 }
 
@@ -89,7 +93,7 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			tx, err := s.Act(ctx)
 			if err == nil && tx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
-				_, err = ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking", s.auth)
+				_, err = ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking", s.auth, s.fb)
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
 					logger.Info().Str("hash", tx.Hash().String()).Msg("Successfully executed transaction")

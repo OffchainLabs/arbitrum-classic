@@ -461,7 +461,7 @@ func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator
 	if err != nil {
 		return errors.Wrap(err, "error calling SetFairGasPriceSender")
 	}
-	_, err = ethbridge.WaitForReceiptWithResultsSimple(context.Background(), client, tx.Hash())
+	_, err = ethbridge.WaitForReceiptWithResultsSimple(context.Background(), client, tx.Hash(), nil)
 	if err != nil {
 		return errors.Wrap(err, "error getting SetFairGasPriceSender receipt")
 	}

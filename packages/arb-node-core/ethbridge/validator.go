@@ -31,6 +31,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 )
 
 var validatorABI abi.ABI
@@ -156,7 +157,7 @@ func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []co
 	})
 }
 
-func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethcommon.Address, fromBlock int64, auth *TransactAuth, client ethutils.EthClient) (ethcommon.Address, error) {
+func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethcommon.Address, fromBlock int64, auth *TransactAuth, client ethutils.EthClient, fb *fireblocks.Fireblocks) (ethcommon.Address, error) {
 	walletCreator, err := ethbridgecontracts.NewValidatorWalletCreator(validatorWalletFactoryAddr, client)
 	if err != nil {
 		return ethcommon.Address{}, errors.WithStack(err)
@@ -196,7 +197,7 @@ func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethco
 		simulatedBackend.Commit()
 	}
 
-	receipt, err := WaitForReceiptWithResults(ctx, client, auth.auth.From, tx, "CreateWallet")
+	receipt, err := WaitForReceiptWithResults(ctx, client, auth.auth.From, tx, "CreateWallet", fb)
 	if err != nil {
 		return ethcommon.Address{}, err
 	}

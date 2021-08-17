@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -71,6 +72,7 @@ type SequencerBatcher struct {
 	createBatchBlockInterval        *big.Int
 	LockoutManager                  SequencerLockoutManager
 	config                          *configuration.Config
+	fb                              *fireblocks.Fireblocks
 
 	sequencer common.Address
 	signer    types.Signer
@@ -127,7 +129,7 @@ func NewSequencerBatcher(
 		return nil, errors.New("Transaction auth isn't for sequencer")
 	}
 
-	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, config, walletConfig)
+	transactAuth, fb, err := ethbridge.NewTransactAuth(ctx, client, auth, config, walletConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +175,7 @@ func NewSequencerBatcher(
 		lastCreatedBatchAt:            chainTime.BlockNum.AsInt(),
 		publishingBatchAtomic:         0,
 		pendingBatchGasEstimateAtomic: int64(gasCostBase),
+		fb:                            fb,
 	}
 
 	return batcher, nil
@@ -757,7 +760,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	atomic.StoreInt32(&b.publishingBatchAtomic, 1)
 	go (func() {
 		defer atomic.StoreInt32(&b.publishingBatchAtomic, 0)
-		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin", b.auth)
+		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin", b.auth, b.fb)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error waiting for batch receipt")
 			return

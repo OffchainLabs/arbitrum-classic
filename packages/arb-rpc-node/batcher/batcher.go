@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 )
 
@@ -110,6 +111,7 @@ func NewStatefulBatcher(
 	receiptFetcher ethutils.ReceiptFetcher,
 	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
+	fb *fireblocks.Fireblocks,
 ) (*Batcher, error) {
 	signer := types.NewEIP155Signer(chainId)
 	batch, err := newStatefulBatch(db, maxBatchSize, signer)
@@ -123,6 +125,7 @@ func NewStatefulBatcher(
 		globalInbox,
 		maxBatchTime,
 		batch,
+		fb,
 	), nil
 }
 
@@ -133,6 +136,7 @@ func NewStatelessBatcher(
 	receiptFetcher ethutils.ReceiptFetcher,
 	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
+	fb *fireblocks.Fireblocks,
 ) *Batcher {
 	signer := types.NewEIP155Signer(chainId)
 	return newBatcher(
@@ -142,6 +146,7 @@ func NewStatelessBatcher(
 		globalInbox,
 		maxBatchTime,
 		newStatelessBatch(db, maxBatchSize, signer),
+		fb,
 	)
 }
 
@@ -152,6 +157,7 @@ func newBatcher(
 	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
 	pendingBatch batch,
+	fb *fireblocks.Fireblocks,
 ) *Batcher {
 	server := &Batcher{
 		signer:             types.NewEIP155Signer(chainId),
@@ -205,7 +211,7 @@ func newBatcher(
 			case <-ticker.C:
 				server.Lock()
 				if server.pendingSentBatches.Len() > 0 {
-					if err := server.checkForNextBatch(ctx, receiptFetcher); err != nil {
+					if err := server.checkForNextBatch(ctx, receiptFetcher, fb); err != nil {
 						log.Error().Err(err).Msg("error checking for submitted batch")
 					}
 				}
@@ -269,7 +275,7 @@ func (m *Batcher) maybeSubmitBatch(ctx context.Context, maxBatchTime time.Durati
 }
 
 // checkForNextBatch expects the mutex to be held on entry and leaves it unlocked on return
-func (m *Batcher) checkForNextBatch(ctx context.Context, receiptFetcher ethutils.ReceiptFetcher) error {
+func (m *Batcher) checkForNextBatch(ctx context.Context, receiptFetcher ethutils.ReceiptFetcher, fb *fireblocks.Fireblocks) error {
 	// Note: this is the only place where items can be removed
 	// from pendingSentBatches, so pendingSentBatches.Front() is
 	// guaranteed not to change when the server lock is released
@@ -280,7 +286,7 @@ func (m *Batcher) checkForNextBatch(ctx context.Context, receiptFetcher ethutils
 	batch := m.pendingSentBatches.Front().Value.(*pendingSentBatch)
 	txHash := batch.txHash.ToEthHash()
 	m.Unlock()
-	receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, txHash)
+	receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, txHash, fb)
 	if err != nil {
 		m.Lock()
 		return err

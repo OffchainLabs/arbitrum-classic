@@ -56,7 +56,7 @@ func NewTransactAuthAdvanced(
 	config *configuration.Config,
 	walletConfig *configuration.Wallet,
 	usePendingNonce bool,
-) (*TransactAuth, error) {
+) (*TransactAuth, *fireblocks.Fireblocks, error) {
 	if auth.Nonce == nil {
 		var nonce uint64
 		var err error
@@ -67,12 +67,13 @@ func NewTransactAuthAdvanced(
 			nonce, err = client.NonceAt(ctx, auth.From, blockNum)
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get nonce")
+			return nil, nil, errors.Wrap(err, "failed to get nonce")
 		}
 		auth.Nonce = new(big.Int).SetUint64(nonce)
 	}
 	var sendTx func(ctx context.Context, tx *types.Transaction) error
 
+	var fb *fireblocks.Fireblocks
 	if len(walletConfig.FireblocksSSLKey) != 0 {
 		var signKey *rsa.PrivateKey
 		var err error
@@ -82,25 +83,25 @@ func NewTransactAuthAdvanced(
 			signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(walletConfig.FireblocksSSLKey))
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "problem with fireblocks privatekey")
+			return nil, nil, errors.Wrap(err, "problem with fireblocks privatekey")
 		}
 		sourceType, err := accounttype.New(config.Fireblocks.SourceType)
 		if err != nil {
-			return nil, errors.Wrap(err, "problem with fireblocks source-type")
+			return nil, nil, errors.Wrap(err, "problem with fireblocks source-type")
 		}
-		fb := fireblocks.New(config.Fireblocks.AssetId, config.Fireblocks.BaseURL, *sourceType, config.Fireblocks.SourceId, config.Fireblocks.APIKey, signKey)
+		fb = fireblocks.New(config.Fireblocks.AssetId, config.Fireblocks.BaseURL, *sourceType, config.Fireblocks.SourceId, config.Fireblocks.APIKey, signKey)
 		sendTx = func(ctx context.Context, tx *types.Transaction) error {
-			response, err := fb.CreateNewContractCall(accounttype.OneTimeAddress, tx.To().Hex(), "", tx.Value(), ethcommon.Bytes2Hex(tx.Data()))
+			txResponse, err := fb.CreateContractCall(accounttype.OneTimeAddress, tx.To().Hex(), "", tx.Value(), ethcommon.Bytes2Hex(tx.Data()))
 			if err != nil {
 				return err
 			}
 
-			if response.Status == "CANCELLED" || response.Status == "REJECTED" || response.Status == "BLOCKED" || response.Status == "FAILED" {
+			if fb.IsTransactionStatusFailed(txResponse.Status) {
 				logger.
 					Error().
 					Hex("data", tx.Data()).
-					Str("id", response.Id).
-					Str("status", response.Status).
+					Str("id", txResponse.Id).
+					Str("status", txResponse.Status).
 					Msg("fireblocks transaction failed")
 				return errors.New("fireblocks transaction failed")
 			}
@@ -123,7 +124,7 @@ func NewTransactAuthAdvanced(
 	return &TransactAuth{
 		auth:   auth,
 		sendTx: sendTx,
-	}, nil
+	}, fb, nil
 }
 
 func NewTransactAuth(
@@ -132,7 +133,7 @@ func NewTransactAuth(
 	auth *bind.TransactOpts,
 	config *configuration.Config,
 	walletConfig *configuration.Wallet,
-) (*TransactAuth, error) {
+) (*TransactAuth, *fireblocks.Fireblocks, error) {
 	return NewTransactAuthAdvanced(ctx, client, auth, config, walletConfig, true)
 }
 
