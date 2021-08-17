@@ -878,6 +878,18 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			// The previous batch is still waiting on confirmation; don't attempt to create another yet
 			creatingBatch = false
 		}
+		if creatingBatch && blockNum.Cmp(new(big.Int).Add(targetCreateBatch, big.NewInt(b.config.L1PostingStrategy.HighGasDelayBlocks))) < 0 {
+			gasPrice, err := b.client.SuggestGasPrice(ctx)
+			if err != nil {
+				logger.Warn().Err(err).Msg("error getting gas price")
+			} else {
+				gasPriceFloat := float64(gasPrice.Int64()) / 1e9
+				if gasPriceFloat >= b.config.L1PostingStrategy.HighGasThreshold {
+					logger.Info().Float64("gasPrice", gasPriceFloat).Float64("highGasPriceConfig", b.config.L1PostingStrategy.HighGasThreshold).Msg("not posting batch yet as gas price is high")
+					creatingBatch = false
+				}
+			}
+		}
 		targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
 		sequencedDelayed := false
 		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
