@@ -444,12 +444,10 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) err
 		}
 	}
 	delayedAcc, err := b.db.GetDelayedInboxAcc(new(big.Int).Sub(newDelayedCount, big.NewInt(1)))
-	logger.Log().Msg(fmt.Sprintf("Duanbing DelayedInboxAcc %#v", delayedAcc))
 	if err != nil {
 		return err
 	}
 	batchItem := inbox.NewDelayedItem(lastSeqNum, newDelayedCount, prevAcc, oldDelayedCount, delayedAcc)
-	logger.Log().Msg(fmt.Sprintf("Duanbing NewDelayedItem %#v", batchItem))
 	logger.Info().
 		Str("old", oldDelayedCount.String()).
 		Str("new", newDelayedCount.String()).
@@ -463,10 +461,8 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) err
 		big.NewInt(0),
 		b.latestChainTime.Clone(),
 	)
-	logger.Log().Msg(fmt.Sprintf("Duanbing endOfBlockMessage %#v", endOfBlockMessage))
 	endBlockBatchItem := inbox.NewSequencerItem(newDelayedCount, endOfBlockMessage, batchItem.Accumulator)
 	seqBatchItems := []inbox.SequencerBatchItem{batchItem, endBlockBatchItem}
-	logger.Log().Msg(fmt.Sprintf("Duanbing seqBatchItems %#v", seqBatchItems))
 	err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return err
