@@ -412,8 +412,8 @@ TEST_CASE("ArbCore duplicate code segments") {
     waitForDelivery(arbCore);
 
     int i = 0;
-    while (arbCore->getLastMachineOutput().last_sideload != 123 ||
-           arbCore->machineIdle()) {
+    while (arbCore->getLastMachineOutput().last_sideload != 0x123 ||
+           !arbCore->machineIdle()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         REQUIRE(i++ < 10);
     }
