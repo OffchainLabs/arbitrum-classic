@@ -56,7 +56,7 @@ const uint256_t& assumeInt(const value& val) {
     return *aNum;
 }
 
-const CodePointStub& assumeCodePoint(const value& val) {
+CodePointStub& assumeCodePoint(value& val) {
     auto cp = std::get_if<CodePointStub>(&val);
     if (!cp) {
         throw bad_pop_type{};
@@ -543,6 +543,7 @@ void rset(MachineState& m) {
 void jump(MachineState& m) {
     m.stack.prepForMod(1);
     auto& target = assumeCodePoint(m.stack[0]);
+    m.code->resolveCodePointStub(target);
     m.pc = target.pc;
     m.stack.popClear();
 }
@@ -550,6 +551,7 @@ void jump(MachineState& m) {
 void cjump(MachineState& m) {
     m.stack.prepForMod(2);
     auto& target = assumeCodePoint(m.stack[0]);
+    m.code->resolveCodePointStub(target);
     auto& cond = assumeInt(m.stack[1]);
     if (cond != 0) {
         m.pc = target.pc;
@@ -944,6 +946,7 @@ void pushinsn(MachineState& m) {
         m.state = Status::Error;
         return;
     }
+    m.code->resolveCodePointStub(*target);
     auto& op_int = assumeInt(m.stack[0]);
     auto op = static_cast<uint8_t>(op_int);
     m.stack[1] = m.code->addOperation(target->pc, {static_cast<OpCode>(op)});
@@ -958,6 +961,7 @@ void pushinsnimm(MachineState& m) {
         m.state = Status::Error;
         return;
     }
+    m.code->resolveCodePointStub(*target);
     auto& op_int = assumeInt(m.stack[0]);
     auto op = static_cast<uint8_t>(op_int);
     m.stack[2] = m.code->addOperation(

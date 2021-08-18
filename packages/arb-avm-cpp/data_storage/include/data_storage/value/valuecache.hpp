@@ -28,14 +28,8 @@
 
 class ValueCache {
    private:
-    struct ValueCacheHasher {
-        std::size_t operator()(const uint256_t& hash) const noexcept {
-            return intx::narrow_cast<std::size_t>(hash);
-        }
-    };
-
     // Treat as a ring buffer with first element currently being populated
-    std::vector<std::unordered_map<uint256_t, value, ValueCacheHasher>> caches;
+    std::vector<std::unordered_map<uint256_t, value, HashHasher>> caches;
     size_t saving_cache_index{0};
     size_t max_cache_size{0};
 

@@ -170,7 +170,8 @@ struct RawCodeSegmentData {
 RawCodeSegmentData prepareToSaveCodeSegment(
     ReadWriteTransaction& tx,
     const CodeSegmentSnapshot& snapshot,
-    std::map<uint64_t, uint64_t>& segment_counts) {
+    std::map<uint64_t, uint64_t>& segment_counts,
+    const Code& code) {
     uint64_t segment_id = snapshot.segmentID();
     auto key = segment_metadata_key(segment_id);
     CodeSegmentMetadata metadata{};
@@ -195,11 +196,11 @@ RawCodeSegmentData prepareToSaveCodeSegment(
         op_data.push_back(static_cast<unsigned char>(op.opcode));
         if (op.immediate) {
             auto values = serializeValue(tx.getSecretHashSeed(), *op.immediate,
-                                         op_data, segment_counts);
+                                         op_data, segment_counts, code);
             // Save the immediate values, that weren't already saved for this
             // code segment
             for (const auto& val : values) {
-                auto result = saveValueImpl(tx, val, segment_counts);
+                auto result = saveValueImpl(tx, val, segment_counts, code);
                 if (!result.status.ok()) {
                     throw std::runtime_error("failed to save immediate value");
                 }
@@ -448,8 +449,9 @@ rocksdb::Status saveCode(ReadWriteTransaction& tx,
                 }
                 uint64_t current_segment_count =
                     next_segment_counts[segment_id];
-                code_segments_to_save[segment_id] = prepareToSaveCodeSegment(
-                    tx, snapshots.segments[segment_id], next_segment_counts);
+                code_segments_to_save[segment_id] =
+                    prepareToSaveCodeSegment(tx, snapshots.segments[segment_id],
+                                             next_segment_counts, code);
                 // Ignore internal references to this segment
                 next_segment_counts[segment_id] = current_segment_count;
                 return true;
