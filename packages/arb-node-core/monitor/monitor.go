@@ -95,7 +95,7 @@ func NewStartedMonitor(dbDir, contractFile string, coreConfig *configuration.Cor
 	if err != nil {
 		return nil, err
 	}
-	return nil, m.StartCore(contractFile)
+	return m, m.StartCore(contractFile)
 }
 
 func (m *Monitor) StartCore(contractFile string) error {
