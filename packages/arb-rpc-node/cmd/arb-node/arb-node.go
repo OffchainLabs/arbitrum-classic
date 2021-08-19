@@ -27,9 +27,6 @@ import (
 	"time"
 
 	gosundheit "github.com/AppsFlyer/go-sundheit"
-	"github.com/AppsFlyer/go-sundheit/checks"
-	healthhttp "github.com/AppsFlyer/go-sundheit/http"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/pkg/errors"
@@ -51,7 +48,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/healthcheck"
 )
@@ -273,34 +269,15 @@ func startup() error {
 		Int64("fromBlock", config.Rollup.FromBlock).
 		Msg("Launching arbitrum node")
 
-	healthCheck := healthcheck.New(metrics.NewPrefixedChildRegistry(metricsConfig.Registry, "health/"))
-	if err := healthCheck.RegisterCheck(NodeInitializationHealth{metrics: nodeMetrics}); err != nil {
+	health, err := healthcheck.NewNodeHealth(config.Healthcheck, metricsConfig.Registry)
+	if err != nil {
+		return err
+	}
+	if err := health.Ready.RegisterCheck(NodeInitializationHealth{metrics: nodeMetrics}); err != nil {
 		return err
 	}
 
-	syncedCheck := healthcheck.New(metrics.NewPrefixedChildRegistry(metricsConfig.Registry, "sync_health/"))
-	if err := syncedCheck.RegisterCheck(&checks.CustomCheck{
-		CheckName: "ready",
-		CheckFunc: func(ctx context.Context) (details interface{}, err error) {
-			if !healthCheck.IsHealthy() {
-				return nil, errors.New("core system not ready")
-			}
-			return nil, nil
-		},
-	}); err != nil {
-		return err
-	}
-
-	if config.Healthcheck.Enable {
-		go func() {
-			mux := http.NewServeMux()
-			mux.Handle("/health/ready", healthhttp.HandleHealthJSON(healthCheck))
-			mux.Handle("/synced/ready", healthhttp.HandleHealthJSON(syncedCheck))
-			if err := http.ListenAndServe(config.Healthcheck.Addr+":"+config.Healthcheck.Port, mux); err != nil {
-				log.Error().Err(err).Msg("healthcheck server failed")
-			}
-		}()
-	}
+	health.Launch()
 
 	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), &config.Core)
 	if err != nil {
@@ -318,10 +295,7 @@ func startup() error {
 		return err
 	}
 
-	if err := syncedCheck.RegisterCheck(monitor.NewInboxSyncedCheck(mon.Metrics, config.Healthcheck)); err != nil {
-		return err
-	}
-	if err := syncedCheck.RegisterCheck(core.NewMessagesSyncedCheck(mon.Metrics.Core, config.Healthcheck)); err != nil {
+	if err := mon.Metrics.RegisterSyncChecks(config.Healthcheck, health.Synced); err != nil {
 		return err
 	}
 
@@ -336,11 +310,11 @@ func startup() error {
 		return err
 	}
 
-	if err := syncedCheck.RegisterCheck(txdb.NewSyncedCheck(mon.Metrics.Core, db.Metrics, config.Healthcheck)); err != nil {
+	if err := health.Synced.RegisterCheck(txdb.NewSyncedCheck(mon.Metrics.Core, db.Metrics, config.Healthcheck)); err != nil {
 		return err
 	}
 
-	if err := healthCheck.RegisterCheck(ethutils.NewL1ReadyCheck(l1URL, config.Healthcheck)); err != nil {
+	if err := health.Ready.RegisterCheck(ethutils.NewL1ReadyCheck(l1URL, config.Healthcheck)); err != nil {
 		return err
 	}
 
@@ -354,28 +328,10 @@ func startup() error {
 			broadcastClient.ConnectInBackground(ctx, sequencerFeed)
 		}
 	}
-	var inboxReader *monitor.InboxReader
-	for {
-		l1Client, err := ethutils.NewRPCEthClient(l1URL)
-		if err != nil {
-			return err
-		}
-		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), sequencerFeed)
-		if err == nil {
-			break
-		}
-		logger.Warn().Err(err).
-			Str("url", config.L1.URL).
-			Str("rollup", config.Rollup.Address).
-			Str("bridgeUtils", config.BridgeUtilsAddress).
-			Int64("fromBlock", config.Rollup.FromBlock).
-			Msg("failed to start inbox reader, waiting and retrying")
 
-		select {
-		case <-ctx.Done():
-			return errors.New("ctx cancelled StartInboxReader retry loop")
-		case <-time.After(5 * time.Second):
-		}
+	inboxReader, err := mon.TryStartInboxReaderLoop(ctx, l1URL, sequencerFeed, config)
+	if err != nil {
+		return err
 	}
 
 	nodeMetrics.StartedInboxReader.Update(1)
@@ -427,7 +383,7 @@ func startup() error {
 
 	if config.WaitToCatchUp {
 		for {
-			if syncedCheck.IsHealthy() {
+			if health.Synced.IsHealthy() {
 				break
 			}
 			time.Sleep(time.Second * 5)
@@ -481,7 +437,7 @@ func startup() error {
 
 	nodeMetrics.StartedBatcher.Update(1)
 
-	if err := healthCheck.RegisterCheck(batcherHealthcheck); err != nil {
+	if err := health.Ready.RegisterCheck(batcherHealthcheck); err != nil {
 		return err
 	}
 

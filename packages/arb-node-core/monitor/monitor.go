@@ -19,7 +19,9 @@ package monitor
 import (
 	"context"
 	"math/big"
+	"time"
 
+	gosundheit "github.com/AppsFlyer/go-sundheit"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -51,6 +53,16 @@ func (m *Metrics) Register(r metrics.Registry) error {
 	}
 	inboxRegistry := metrics.NewPrefixedChildRegistry(r, "inbox/")
 	return m.Inbox.Register(inboxRegistry)
+}
+
+func (m *Metrics) RegisterSyncChecks(config configuration.Healthcheck, health gosundheit.Health) error {
+	if err := health.RegisterCheck(NewInboxSyncedCheck(m, config)); err != nil {
+		return err
+	}
+	if err := health.RegisterCheck(core.NewMessagesSyncedCheck(m.Core, config)); err != nil {
+		return err
+	}
+	return nil
 }
 
 type Monitor struct {
@@ -159,4 +171,31 @@ func (m *Monitor) StartInboxReader(
 	reader.Start(ctx)
 	m.Reader = reader
 	return reader, nil
+}
+
+func (m *Monitor) TryStartInboxReaderLoop(ctx context.Context, l1URL string, sequencerFeed chan broadcaster.BroadcastFeedMessage, config *configuration.Config) (*InboxReader, error) {
+	tryCreate := func() (*InboxReader, error) {
+		l1Client, err := ethutils.NewRPCEthClient(l1URL)
+		if err != nil {
+			return nil, err
+		}
+		return m.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), sequencerFeed)
+	}
+	for {
+		inboxReader, err := tryCreate()
+		if err == nil {
+			return inboxReader, nil
+		}
+		logger.Warn().Err(err).
+			Str("url", config.L1.URL).
+			Str("rollup", config.Rollup.Address).
+			Str("bridgeUtils", config.BridgeUtilsAddress).
+			Msg("failed to start inbox reader, waiting and retrying")
+
+		select {
+		case <-ctx.Done():
+			return nil, errors.New("ctx cancelled StartInboxReader retry loop")
+		case <-time.After(5 * time.Second):
+		}
+	}
 }
