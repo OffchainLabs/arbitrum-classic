@@ -40,7 +40,7 @@
 #endif
 
 namespace {
-constexpr uint256_t arbcore_schema_version = 1;
+constexpr uint256_t arbcore_schema_version = 2;
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
