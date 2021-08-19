@@ -19,9 +19,9 @@ type Config struct {
 	Registry metrics.Registry
 }
 
-func NewMetricsConfig(config configuration.Metrics) *Config {
-	if metrics.Enabled {
-		exp.Setup(config.Addr + ":" + config.Port)
+func NewMetricsConfig(config configuration.MetricsServer) *Config {
+	if config.Enable {
+		exp.Setup(config.Endpoint.Addr + ":" + config.Endpoint.Port)
 	}
 
 	registry := metrics.DefaultRegistry

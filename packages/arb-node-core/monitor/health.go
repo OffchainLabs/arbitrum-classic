@@ -21,11 +21,20 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 type InboxSynced struct {
 	Metrics *Metrics
 	MaxDiff int64
+}
+
+func NewInboxSyncedCheck(metrics *Metrics, config configuration.Healthcheck) InboxSynced {
+	return InboxSynced{
+		Metrics: metrics,
+		MaxDiff: config.MaxInboxSyncDiff,
+	}
 }
 
 func (c InboxSynced) Execute(context.Context) (interface{}, error) {

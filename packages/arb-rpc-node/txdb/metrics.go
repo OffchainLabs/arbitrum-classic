@@ -21,25 +21,25 @@ import (
 )
 
 type Metrics struct {
-	LatestLog   metrics.Gauge
-	LogsAdded   metrics.Counter
-	LogsDeleted metrics.Counter
-	LatestBlock metrics.Gauge
-	BlocksAdded metrics.Counter
+	LogsAddedTotal metrics.Gauge
+	LogsAdded      metrics.Counter
+	LogsDeleted    metrics.Counter
+	LatestBlock    metrics.Gauge
+	BlocksAdded    metrics.Counter
 }
 
 func NewMetrics() *Metrics {
 	return &Metrics{
-		LatestLog:   metrics.NewGauge(),
-		LogsAdded:   metrics.NewCounter(),
-		LogsDeleted: metrics.NewCounter(),
-		LatestBlock: metrics.NewGauge(),
-		BlocksAdded: metrics.NewCounter(),
+		LogsAddedTotal: metrics.NewGauge(),
+		LogsAdded:      metrics.NewCounter(),
+		LogsDeleted:    metrics.NewCounter(),
+		LatestBlock:    metrics.NewGauge(),
+		BlocksAdded:    metrics.NewCounter(),
 	}
 }
 
 func (m *Metrics) Register(r metrics.Registry) error {
-	if err := r.Register("latest_log", m.LatestLog); err != nil {
+	if err := r.Register("logs_added_total", m.LogsAddedTotal); err != nil {
 		return err
 	}
 	if err := r.Register("logs_added", m.LogsAdded); err != nil {

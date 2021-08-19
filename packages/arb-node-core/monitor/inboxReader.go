@@ -36,8 +36,8 @@ type InboxMetrics struct {
 	Initialized     metrics.Gauge
 	EthHeight       metrics.Gauge
 	L1MessageCount  metrics.Gauge
-	Delayed         metrics.Gauge
-	Batches         metrics.Gauge
+	DelayedAdded    metrics.Counter
+	BatchesAdded    metrics.Counter
 	NextBlockToRead metrics.Gauge
 }
 
@@ -46,8 +46,8 @@ func NewInboxMetrics() *InboxMetrics {
 		Initialized:     metrics.NewGauge(),
 		EthHeight:       metrics.NewGauge(),
 		L1MessageCount:  metrics.NewGauge(),
-		Delayed:         metrics.NewGauge(),
-		Batches:         metrics.NewGauge(),
+		DelayedAdded:    metrics.NewCounter(),
+		BatchesAdded:    metrics.NewCounter(),
 		NextBlockToRead: metrics.NewGauge(),
 	}
 }
@@ -62,10 +62,10 @@ func (m *InboxMetrics) Register(r metrics.Registry) error {
 	if err := r.Register("l1_message_count", m.L1MessageCount); err != nil {
 		return err
 	}
-	if err := r.Register("processed", m.Batches); err != nil {
+	if err := r.Register("batched_added", m.BatchesAdded); err != nil {
 		return err
 	}
-	if err := r.Register("delayed", m.Delayed); err != nil {
+	if err := r.Register("delayed_added", m.DelayedAdded); err != nil {
 		return err
 	}
 	if err := r.Register("next_block_to_read", m.NextBlockToRead); err != nil {
@@ -338,8 +338,8 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					from = from.Add(to, big.NewInt(1))
 				}
 			}
-			ir.Metrics.Delayed.Inc(int64(len(delayedMessages)))
-			ir.Metrics.Batches.Inc(int64(len(sequencerBatches)))
+			ir.Metrics.DelayedAdded.Inc(int64(len(delayedMessages)))
+			ir.Metrics.BatchesAdded.Inc(int64(len(sequencerBatches)))
 		}
 		sleepChan := time.After(time.Second * 5)
 	FeedReadLoop:

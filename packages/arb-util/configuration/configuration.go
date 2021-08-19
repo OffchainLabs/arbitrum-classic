@@ -101,11 +101,11 @@ type Feed struct {
 
 type Healthcheck struct {
 	Addr          string `koanf:"addr"`
+	Port          string `koanf:"port"`
 	Enable        bool   `koanf:"enable"`
 	L1Node        bool   `koanf:"l1-node"`
 	Metrics       bool   `koanf:"metrics"`
 	MetricsPrefix string `koanf:"metrics-prefix"`
-	Port          string `koanf:"port"`
 	Sequencer     bool   `koanf:"sequencer"`
 }
 

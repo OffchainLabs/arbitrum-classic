@@ -1,6 +1,8 @@
 package healthcheck
 
 import (
+	"time"
+
 	gosundheit "github.com/AppsFlyer/go-sundheit"
 	"github.com/ethereum/go-ethereum/metrics"
 )
@@ -10,12 +12,14 @@ type Health struct {
 }
 
 func New(registry metrics.Registry) gosundheit.Health {
-	return gosundheit.New(gosundheit.WithHealthListeners(NewMetricsListener(registry)))
+	return gosundheit.New(gosundheit.WithHealthListeners(NewMetricsListener(registry)), gosundheit.ExecutionPeriod(10*time.Second))
 }
 
 func (h *Health) RegisterCheck(check gosundheit.Check, opts ...gosundheit.CheckOption) error {
 	if metrics.Enabled {
-		return h.impl.RegisterCheck(check, opts...)
+		allOpts := opts
+		allOpts = append(allOpts)
+		return h.impl.RegisterCheck(check, allOpts...)
 	}
 	return nil
 }

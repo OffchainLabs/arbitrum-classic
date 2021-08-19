@@ -115,6 +115,15 @@ func (m *NodeMetrics) Register(r metrics.Registry) error {
 	if err := r.Register("loaded_db", m.LoadedDB); err != nil {
 		return err
 	}
+	if err := r.Register("started_inbox_reader", m.StartedInboxReader); err != nil {
+		return err
+	}
+	if err := r.Register("started_batcher", m.StartedBatcher); err != nil {
+		return err
+	}
+	if err := r.Register("started_rpc", m.StartedRPC); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -145,21 +154,12 @@ func (c NodeInitializationHealth) Name() string {
 	return "node-initialization"
 }
 
-type HealthConfiguration struct {
-	MaxInboxSyncDiff         int64
-	MaxMessagesSyncDiff      int64
-	MaxLogsProcessedSyncDiff int64
-	MaxL1BlockDiff           int64
-	MaxL2BlockDiff           int64
-}
-
 func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	healthConfig := HealthConfiguration{}
-
 	config, walletConfig, l1URL, l1ChainId, err := configuration.ParseNode(ctx)
+
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		((config.Node.Type != "sequencer") && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
@@ -229,6 +229,11 @@ func startup() error {
 		fmt.Println("wait to catch up needs --metrics")
 	}
 
+	if config.Healthcheck.Enable && !config.Metrics {
+		badConfig = true
+		fmt.Println("healthcheck needs --metrics")
+	}
+
 	if badConfig {
 		return nil
 	}
@@ -255,7 +260,7 @@ func startup() error {
 
 	metricsConfig := arbmetrics.NewMetricsConfig(config.MetricsServer)
 	nodeMetrics := NewNodeMetrics()
-	if err := metricsConfig.Register(nodeMetrics); err != nil {
+	if err := metricsConfig.RegisterWithPrefix(nodeMetrics, "node_launch/"); err != nil {
 		return err
 	}
 
@@ -286,18 +291,16 @@ func startup() error {
 		return err
 	}
 
-	go func() {
-		mux := http.NewServeMux()
-		// register a health endpoint
-
-		mux.Handle("/health/ready", healthhttp.HandleHealthJSON(healthCheck))
-		mux.Handle("/admin/synced/ready", healthhttp.HandleHealthJSON(syncedCheck))
-
-		// serve HTTP
-		if err := http.ListenAndServe(":8080", mux); err != nil {
-			log.Error().Err(err).Msg("healthcheck server failed")
-		}
-	}()
+	if config.Healthcheck.Enable {
+		go func() {
+			mux := http.NewServeMux()
+			mux.Handle("/health/ready", healthhttp.HandleHealthJSON(healthCheck))
+			mux.Handle("/synced/ready", healthhttp.HandleHealthJSON(syncedCheck))
+			if err := http.ListenAndServe(config.Healthcheck.Addr+":"+config.Healthcheck.Port, mux); err != nil {
+				log.Error().Err(err).Msg("healthcheck server failed")
+			}
+		}()
+	}
 
 	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), &config.Core)
 	if err != nil {
@@ -315,16 +318,10 @@ func startup() error {
 		return err
 	}
 
-	if err := syncedCheck.RegisterCheck(monitor.InboxSynced{
-		Metrics: mon.Metrics,
-		MaxDiff: healthConfig.MaxInboxSyncDiff,
-	}); err != nil {
+	if err := syncedCheck.RegisterCheck(monitor.NewInboxSyncedCheck(mon.Metrics, config.Healthcheck)); err != nil {
 		return err
 	}
-	if err := syncedCheck.RegisterCheck(core.MessagesSynced{
-		Metrics: mon.Metrics.Core,
-		MaxDiff: healthConfig.MaxMessagesSyncDiff,
-	}); err != nil {
+	if err := syncedCheck.RegisterCheck(core.NewMessagesSyncedCheck(mon.Metrics.Core, config.Healthcheck)); err != nil {
 		return err
 	}
 
@@ -335,23 +332,15 @@ func startup() error {
 	}
 	defer db.Close()
 
-	if err := metricsConfig.RegisterWithPrefix(db.Metrics, "txdb"); err != nil {
+	if err := metricsConfig.RegisterWithPrefix(db.Metrics, "txdb/"); err != nil {
 		return err
 	}
 
-	if err := syncedCheck.RegisterCheck(txdb.Synced{
-		CoreMetrics: mon.Metrics.Core,
-		Metrics:     db.Metrics,
-		MaxDiff:     healthConfig.MaxLogsProcessedSyncDiff,
-	}); err != nil {
+	if err := syncedCheck.RegisterCheck(txdb.NewSyncedCheck(mon.Metrics.Core, db.Metrics, config.Healthcheck)); err != nil {
 		return err
 	}
 
-	l1Health := ethutils.L1Ready{
-		Url:          l1URL,
-		MaxBlockDiff: uint64(healthConfig.MaxL1BlockDiff),
-	}
-	if err := healthCheck.RegisterCheck(l1Health); err != nil {
+	if err := healthCheck.RegisterCheck(ethutils.NewL1ReadyCheck(l1URL, config.Healthcheck)); err != nil {
 		return err
 	}
 
@@ -397,11 +386,7 @@ func startup() error {
 	if config.Node.Type == "forwarder" {
 		logger.Info().Str("forwardTxURL", config.Node.Forwarder.Target).Msg("Arbitrum node starting in forwarder mode")
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
-		batcherHealthcheck = batcher.ForwarderHealth{
-			Url:          config.Node.Forwarder.Target,
-			MaxBlockDiff: healthConfig.MaxL2BlockDiff,
-			TxDBMetrics:  db.Metrics,
-		}
+		batcherHealthcheck = batcher.NewForwarderCheck(config.Node.Forwarder.Target, db.Metrics, config.Healthcheck)
 	} else {
 		var auth *bind.TransactOpts
 		auth, dataSigner, err = cmdhelp.GetKeystore(config, walletConfig, l1ChainId, true)

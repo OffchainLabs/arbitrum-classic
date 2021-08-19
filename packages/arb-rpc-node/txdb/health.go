@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
 
@@ -31,9 +32,17 @@ type Synced struct {
 	MaxDiff     int64
 }
 
+func NewSyncedCheck(coreMetrics *core.Metrics, metrics *Metrics, config configuration.Healthcheck) Synced {
+	return Synced{
+		CoreMetrics: coreMetrics,
+		Metrics:     metrics,
+		MaxDiff:     config.MaxLogsProcessedSyncDiff,
+	}
+}
+
 func (c Synced) Execute(context.Context) (interface{}, error) {
 	logsOutput := c.CoreMetrics.LogCount.Value()
-	logsProcessed := c.Metrics.LatestLog.Value()
+	logsProcessed := c.Metrics.LogsAddedTotal.Value()
 	details := fmt.Sprintf("txdb processed %v/%v logs", logsProcessed, logsOutput)
 	if logsOutput-logsProcessed > c.MaxDiff {
 		return details, errors.New("txdb not synced")

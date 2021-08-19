@@ -176,7 +176,7 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 		}
 		logIndex++
 	}
-	db.Metrics.LatestLog.Update(int64(logIndex) - 1)
+	db.Metrics.LogsAddedTotal.Update(int64(logIndex))
 	db.Metrics.LogsAdded.Inc(int64(len(avmLogs)))
 	return nil
 }

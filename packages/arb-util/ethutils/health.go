@@ -23,6 +23,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 type OpenEthereumNetPeers struct {
@@ -66,6 +68,13 @@ func (p ParityPeers) Name() string {
 type L1Ready struct {
 	Url          string
 	MaxBlockDiff uint64
+}
+
+func NewL1ReadyCheck(url string, config configuration.Healthcheck) L1Ready {
+	return L1Ready{
+		Url:          url,
+		MaxBlockDiff: uint64(config.MaxL1BlockDiff),
+	}
 }
 
 func (c L1Ready) Execute(ctx context.Context) (interface{}, error) {

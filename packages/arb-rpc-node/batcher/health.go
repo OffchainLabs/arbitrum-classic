@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 type ForwarderHealth struct {
@@ -31,6 +32,15 @@ type ForwarderHealth struct {
 	ReadyUrl     string
 	MaxBlockDiff int64
 	TxDBMetrics  *txdb.Metrics
+}
+
+func NewForwarderCheck(url string, txDBMetrics *txdb.Metrics, config configuration.Healthcheck) ForwarderHealth {
+	return ForwarderHealth{
+		Url:          url,
+		ReadyUrl:     config.ForwarderReadyURL,
+		MaxBlockDiff: config.MaxL2BlockDiff,
+		TxDBMetrics:  txDBMetrics,
+	}
 }
 
 func (c ForwarderHealth) Execute(ctx context.Context) (interface{}, error) {
@@ -58,15 +68,12 @@ func (c ForwarderHealth) Execute(ctx context.Context) (interface{}, error) {
 	if err != nil {
 		return "failed getting target block", err
 	}
-	// If we're tracking local view of the block number, compare it to the target block
-	if c.TxDBMetrics != nil {
-		blockDiff := c.TxDBMetrics.LatestBlock.Value() - int64(targetBlockNum)
-		if blockDiff > c.MaxBlockDiff {
-			return nil, errors.Errorf("Target is %v blocks behind with target max %v", blockDiff, c.MaxBlockDiff)
-		}
-		if blockDiff < 0 && -blockDiff > c.MaxBlockDiff {
-			return nil, errors.Errorf("Target is %v blocks ahead with target max %v", -blockDiff, c.MaxBlockDiff)
-		}
+	blockDiff := c.TxDBMetrics.LatestBlock.Value() - int64(targetBlockNum)
+	if blockDiff > c.MaxBlockDiff {
+		return nil, errors.Errorf("Target is %v blocks behind with target max %v", blockDiff, c.MaxBlockDiff)
+	}
+	if blockDiff < 0 && -blockDiff > c.MaxBlockDiff {
+		return nil, errors.Errorf("Target is %v blocks ahead with target max %v", -blockDiff, c.MaxBlockDiff)
 	}
 	return nil, nil
 }
