@@ -291,10 +291,10 @@ func (b *Backend) waitForBlockCount(blockCount uint64) error {
 	return nil
 }
 
-func (b *Backend) PendingTransactionCount(_ context.Context, _ common.Address) *uint64 {
+func (b *Backend) PendingTransactionCount(_ context.Context, _ common.Address) (*uint64, error) {
 	b.Lock()
 	defer b.Unlock()
-	return nil
+	return nil, nil
 }
 
 func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) error {

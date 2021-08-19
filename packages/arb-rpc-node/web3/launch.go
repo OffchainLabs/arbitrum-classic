@@ -26,29 +26,45 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 )
 
-func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, ganacheMode bool, plugins map[string]interface{}) (*rpc.Server, error) {
+type RpcMode int
+
+const (
+	NormalMode RpcMode = iota
+	GanacheMode
+	ForwardingOnlyMode
+	NonMutatingMode
+)
+
+func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, mode RpcMode, plugins map[string]interface{}) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
-	ethServer := NewServer(server, ganacheMode)
+	ethServer := NewServer(server, mode == GanacheMode)
+	forwarderServer := NewForwarderServer(server, ethServer, mode)
 
-	if err := s.RegisterName("eth", ethServer); err != nil {
+	if err := s.RegisterName("eth", forwarderServer); err != nil {
 		return nil, err
 	}
 
-	if err := s.RegisterName("eth", filters.NewPublicFilterAPI(server, false, 2*time.Minute)); err != nil {
-		return nil, err
-	}
+	if mode != ForwardingOnlyMode {
+		if err := s.RegisterName("eth", ethServer); err != nil {
+			return nil, err
+		}
 
-	if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys)); err != nil {
-		return nil, err
-	}
+		if err := s.RegisterName("eth", filters.NewPublicFilterAPI(server, false, 2*time.Minute)); err != nil {
+			return nil, err
+		}
 
-	if err := s.RegisterName("arb", &Arb{srv: server}); err != nil {
-		return nil, err
-	}
+		if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys, mode == NonMutatingMode)); err != nil {
+			return nil, err
+		}
 
-	if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys)); err != nil {
-		return nil, err
+		if err := s.RegisterName("arb", &Arb{srv: server}); err != nil {
+			return nil, err
+		}
+
+		if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys)); err != nil {
+			return nil, err
+		}
 	}
 
 	net := &Net{chainId: server.ChainId().Uint64()}

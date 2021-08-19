@@ -147,6 +147,7 @@ type WS struct {
 type Forwarder struct {
 	Target    string `koanf:"target"`
 	Submitter string `koanf:"submitter-address"`
+	RpcMode   string `koanf:"rpc-mode"`
 }
 
 type Node struct {
@@ -242,6 +243,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
+	f.String("node.forwarder.rpc-mode", "full", "RPC mode: either full, non-mutating (no eth_sendRawTransaction), or forwarding-only (only requests forwarded upstream are permitted)")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
