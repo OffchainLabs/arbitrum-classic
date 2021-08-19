@@ -138,42 +138,44 @@ type CreateTransactionResponse struct {
 }
 
 type TransactionDetails struct {
-	Id                            string                   `json:"id"`
-	AssetId                       string                   `json:"assetId"`
-	Source                        TransferPeerPathResponse `json:"source"`
-	Destination                   TransferPeerPathResponse `json:"destination"`
-	RequestedAmount               int64                    `json:"requestedAmount"`
-	AmountInfo                    AmountInfo               `json:"amountInfo"`
-	FeeInfo                       FeeInfo                  `json:"feeInfo"`
-	Amount                        int64                    `json:"amount"`
-	NetAmount                     float32                  `json:"NetAmount"`
-	AmountUSD                     float32                  `json:"amountUSD"`
-	ServiceFee                    float32                  `json:"serviceFee"`
-	NetworkFee                    float32                  `json:"networkFee"`
-	CreatedAt                     int64                    `json:"createdAt"`
-	LastUpdate                    int64                    `json:"lastUpdate"`
-	Status                        string                   `json:"transactionStatus"`
-	TxHash                        string                   `json:"txHash"`
-	SubStatus                     string                   `json:"transactionSubStatus"`
-	DestinationAddress            string                   `json:"destinationAddress"`
-	DestinationAddressDescription string                   `json:"destinationAddressDescription"`
-	DestinationTag                string                   `json:"destinationTag"`
-	SignedBy                      []string                 `json:"signedBy"`
-	CreatedBy                     string                   `json:"createdBy"`
-	RejectedBy                    string                   `json:"rejectedBy"`
-	AddressType                   string                   `json:"addressType"`
-	Note                          string                   `json:"note"`
-	ExchangeTxId                  string                   `json:"exchangeTxId"`
-	FeeCurrency                   string                   `json:"feeCurrency"`
-	Operation                     string                   `json:"operation"`
-	AmlScreeningResult            AmlScreeningResult       `json:"amlScreeningResult"`
-	CustomerRefId                 string                   `json:"customerRefId"`
-	NumOfConfirmations            int                      `json:"numOfConfirmations"`
-	NetworkRecords                []string                 `json:"networkRecords"`
-	ReplacedTxHash                string                   `json:"replacedTxHash"`
-	Destinations                  []DestinationsResponse   `json:"destinations"`
-	SignedMessages                []SignedMessage          `json:"signedMessages"`
-	ExtraParameters               string                   `json:"extraParameters"`
+	AddressType                   string                     `json:"addressType"`
+	AmlScreeningResult            AmlScreeningResult         `json:"amlScreeningResult"`
+	Amount                        int64                      `json:"amount"`
+	AmountInfo                    AmountInfo                 `json:"amountInfo"`
+	AmountUSD                     float32                    `json:"amountUSD"`
+	AssetId                       string                     `json:"assetId"`
+	CreatedAt                     int64                      `json:"createdAt"`
+	CreatedBy                     string                     `json:"createdBy"`
+	CustomerRefId                 string                     `json:"customerRefId"`
+	Destination                   TransferPeerPathResponse   `json:"destination"`
+	DestinationAddress            string                     `json:"destinationAddress"`
+	DestinationAddressDescription string                     `json:"destinationAddressDescription"`
+	DestinationTag                string                     `json:"destinationTag"`
+	Destinations                  []DestinationsResponse     `json:"destinations"`
+	ExchangeTxId                  string                     `json:"exchangeTxId"`
+	ExtraParameters               TransactionExtraParameters `json:"extraParameters"`
+	Fee                           float32                    `json:"fee"`
+	FeeCurrency                   string                     `json:"feeCurrency"`
+	FeeInfo                       FeeInfo                    `json:"feeInfo"`
+	Id                            string                     `json:"id"`
+	LastUpdated                   int64                      `json:"lastUpdated"`
+	NetAmount                     float32                    `json:"NetAmount"`
+	NetworkFee                    float32                    `json:"networkFee"`
+	NetworkRecords                []NetworkRecord            `json:"networkRecords"`
+	Note                          string                     `json:"note"`
+	NumOfConfirmations            int                        `json:"numOfConfirmations"`
+	Operation                     string                     `json:"operation"`
+	RejectedBy                    string                     `json:"rejectedBy"`
+	ReplacedTxHash                string                     `json:"replacedTxHash"`
+	RequestedAmount               int64                      `json:"requestedAmount"`
+	ServiceFee                    float32                    `json:"serviceFee"`
+	SignedBy                      []string                   `json:"signedBy"`
+	SignedMessages                []SignedMessage            `json:"signedMessages"`
+	Source                        TransferPeerPathResponse   `json:"source"`
+	SourceAddress                 string                     `json:"sourceAddress"`
+	Status                        string                     `json:"transactionStatus"`
+	SubStatus                     string                     `json:"transactionSubStatus"`
+	TxHash                        string                     `json:"txHash"`
 }
 
 type TransferPeerPathResponse struct {
@@ -199,12 +201,14 @@ type NetworkRecord struct {
 	Source             TransferPeerPathResponse `json:"source"`
 	Destination        TransferPeerPathResponse `json:"destination"`
 	TxHash             string                   `json:"txHash"`
-	NetworkFee         int64                    `json:"networkFee"`
+	NetworkFee         string                   `json:"networkFee"`
 	AssetId            string                   `json:"assetId"`
-	NetAmount          int64                    `json:"netAmount"`
+	NetAmount          string                   `json:"netAmount"`
+	IsDropped          bool                     `json:"isDropped"`
 	Status             string                   `json:"status"`
 	Type               string                   `json:"type"`
 	DestinationAddress string                   `json:"destinationAddress"`
+	AmountUSD          string                   `json:"amountUSD"`
 }
 
 type AmlScreeningResult struct {
@@ -342,6 +346,21 @@ func (fb *Fireblocks) CreateTransaction(destinationType accounttype.AccountType,
 	return &result, nil
 }
 
+func (fb *Fireblocks) GetTransaction(id string) (*TransactionDetails, error) {
+	resp, err := fb.getRequest("/v1/transactions/"+id, url.Values{})
+	if err != nil {
+		return nil, err
+	}
+
+	var result TransactionDetails
+	err = fb.parseBody(resp.Body, &result)
+	if err != nil {
+		return nil, errors.Wrap(err, "get transaction by external id")
+	}
+
+	return &result, nil
+}
+
 func (fb *Fireblocks) GetTransactionByExternalId(externalId string) (*TransactionDetails, error) {
 	resp, err := fb.postRequest("/v1/transactions/external_tx_id/"+externalId, url.Values{}, nil)
 	if err != nil {
@@ -449,8 +468,8 @@ func (fb *Fireblocks) sendRequest(method string, path string, params url.Values,
 	return nil, errors.New("too many fireblocks duplicate nonce errors")
 }
 
-func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Values, body []byte) (*http.Response, error) {
-	token, err := fb.signJWT(path, body)
+func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Values, requestBody []byte) (*http.Response, error) {
+	token, err := fb.signJWT(path, requestBody)
 	if err != nil {
 		return nil, err
 	}
@@ -465,7 +484,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 
 	client := &http.Client{}
 	var req *http.Request
-	req, err = http.NewRequest(method, uri.String(), bytes.NewBuffer(body))
+	req, err = http.NewRequest(method, uri.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
 		logger.
 			Error().
@@ -486,30 +505,33 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 		logger.
 			Error().
 			Err(err).
+			Str("method", method).
 			Str("url", fb.baseUrl).
 			Msg("error doing fireblocks request")
 		return nil, err
 	}
 
 	if resp.StatusCode >= 300 {
-		body, err := ioutil.ReadAll(resp.Body)
+		responseBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			logger.
 				Error().
 				Err(err).
+				Str("method", method).
 				Str("url", uri.String()).
 				Str("status", resp.Status).
 				Msg("error reading body after sending fireblocks request")
 			return nil, fmt.Errorf("status '%s' receiving fireblocks response", resp.Status)
 		}
 
-		bodyStr := string(body)
-		if strings.Contains(bodyStr, "nonce was already used") {
+		responseBodyStr := string(responseBody)
+		if strings.Contains(responseBodyStr, "nonce was already used") {
 			logger.
 				Warn().
+				Str("method", method).
 				Str("url", uri.String()).
 				Str("status", resp.Status).
-				Str("body", bodyStr).
+				Str("body", responseBodyStr).
 				Msg("error returned when posting fireblocks request")
 			return nil, fmt.Errorf("nonce was already used")
 		}
@@ -517,27 +539,29 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 		if resp.StatusCode == 404 {
 			logger.
 				Warn().
+				Str("method", method).
 				Str("url", uri.String()).
 				Str("status", resp.Status).
-				Str("body", bodyStr).
+				Str("body", responseBodyStr).
 				Msg("fireblocks requested object not found")
 			return nil, fmt.Errorf("status '%s' fireblocks requested object not found", resp.Status)
 		}
 
 		logger.
 			Error().
+			Str("method", method).
 			Str("url", uri.String()).
 			Str("status", resp.Status).
-			Str("body", bodyStr).
+			Str("body", responseBodyStr).
 			Msg("error returned when posting fireblocks request")
 		return nil, fmt.Errorf("status '%s' fireblocks response", resp.Status)
 	}
 
 	logger.
-		Debug().
+		Info().
+		Str("method", method).
 		Str("url", uri.String()).
-		Str("token", token).
-		RawJSON("body", body).
+		RawJSON("body", requestBody).
 		Str("status", resp.Status).
 		Msg("sent fireblocks request")
 
@@ -573,7 +597,7 @@ func (fb *Fireblocks) parseBody(body io.Reader, result interface{}) error {
 		if err != nil {
 			return errors.Wrapf(err, "error reading fireblocks response")
 		}
-		logger.Debug().RawJSON("body", response).Msgf("received fireblocks response")
+		logger.Info().RawJSON("body", response).Msgf("received fireblocks response")
 		err = json.NewDecoder(strings.NewReader(string(response))).Decode(&result)
 		if err != nil {
 			return errors.Wrapf(err, "error decoding fireblocks response")
