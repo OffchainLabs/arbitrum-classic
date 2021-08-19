@@ -24,17 +24,20 @@ import (
 	"strings"
 	"time"
 
+	healthhttp "github.com/AppsFlyer/go-sundheit/http"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/arbmetrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/healthcheck"
 )
 
 var logger zerolog.Logger
@@ -104,6 +107,18 @@ func startup() error {
 		return err
 	}
 	defer arbRelay.Stop()
+
+	metricsConfig := arbmetrics.NewMetricsConfig(config.MetricsServer)
+	health := healthcheck.New(metricsConfig.Registry)
+	if config.Healthcheck.Enable {
+		go func() {
+			mux := http.NewServeMux()
+			mux.Handle("/health/ready", healthhttp.HandleHealthJSON(health))
+			if err := http.ListenAndServe(config.Healthcheck.Endpoint.Addr+":"+config.Healthcheck.Endpoint.Port, mux); err != nil {
+				log.Error().Err(err).Msg("healthcheck server failed")
+			}
+		}()
+	}
 
 	select {
 	case <-cancelChan:
