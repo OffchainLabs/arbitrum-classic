@@ -68,7 +68,7 @@ void saveDataStack(const Datastack& data_stack) {
     auto transaction = storage.makeReadWriteTransaction();
 
     auto tuple_ret = data_stack.getTupleRepresentation();
-    auto results = saveValue(*transaction, tuple_ret);
+    auto results = saveValue(*transaction, tuple_ret, CoreCode());
 
     REQUIRE(transaction->commit().ok());
     REQUIRE(results.status.ok());
@@ -82,8 +82,8 @@ void saveDataStackTwice(const Datastack& data_stack) {
     auto transaction = storage.makeReadWriteTransaction();
 
     auto tuple_ret = data_stack.getTupleRepresentation();
-    auto results = saveValue(*transaction, tuple_ret);
-    auto results2 = saveValue(*transaction, tuple_ret);
+    auto results = saveValue(*transaction, tuple_ret, CoreCode());
+    auto results2 = saveValue(*transaction, tuple_ret, CoreCode());
 
     REQUIRE(transaction->commit().ok());
     REQUIRE(results2.status.ok());
@@ -94,7 +94,7 @@ void saveAndGetDataStack(ReadWriteTransaction& transaction,
                          const Datastack& data_stack,
                          uint256_t expected_hash) {
     auto tuple_ret = data_stack.getTupleRepresentation();
-    auto results = saveValue(transaction, tuple_ret);
+    auto results = saveValue(transaction, tuple_ret, CoreCode());
     REQUIRE(results.status.ok());
     transaction.commit();
 
@@ -107,8 +107,8 @@ void saveTwiceAndGetDataStack(ReadWriteTransaction& transaction,
                               const Datastack& data_stack,
                               uint256_t expected_hash) {
     auto tuple_ret = data_stack.getTupleRepresentation();
-    auto results = saveValue(transaction, tuple_ret);
-    auto results2 = saveValue(transaction, tuple_ret);
+    auto results = saveValue(transaction, tuple_ret, CoreCode());
+    auto results2 = saveValue(transaction, tuple_ret, CoreCode());
     REQUIRE(results.status.ok());
     REQUIRE(results2.status.ok());
     transaction.commit();
@@ -127,7 +127,7 @@ TEST_CASE("Initialize datastack") {
 
     SECTION("default") {
         auto tuple_ret = data_stack.getTupleRepresentation();
-        auto results = saveValue(*transaction, tuple_ret);
+        auto results = saveValue(*transaction, tuple_ret, CoreCode());
         transaction->commit();
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
                             0);
@@ -136,7 +136,7 @@ TEST_CASE("Initialize datastack") {
         Tuple tuple;
         data_stack.push(tuple);
         auto tuple_ret = data_stack.getTupleRepresentation();
-        auto results = saveValue(*transaction, tuple_ret);
+        auto results = saveValue(*transaction, tuple_ret, CoreCode());
         transaction->commit();
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
                             1);
@@ -148,7 +148,7 @@ TEST_CASE("Initialize datastack") {
         data_stack.push(num);
         data_stack.push(tuple);
         auto tuple_ret = data_stack.getTupleRepresentation();
-        auto results = saveValue(*transaction, tuple_ret);
+        auto results = saveValue(*transaction, tuple_ret, CoreCode());
         transaction->commit();
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
                             2);
@@ -160,7 +160,7 @@ TEST_CASE("Initialize datastack") {
         data_stack.push(code_point_stub);
         data_stack.push(tuple);
         auto tuple_ret = data_stack.getTupleRepresentation();
-        auto results = saveValue(*transaction, tuple_ret);
+        auto results = saveValue(*transaction, tuple_ret, CoreCode());
         transaction->commit();
         initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
                             2);

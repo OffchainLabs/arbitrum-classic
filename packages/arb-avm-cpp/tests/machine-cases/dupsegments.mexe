@@ -1,0 +1,28 @@
+{"version": 2, "static_val": {"Tuple": []}, "extensions": [], "code": [
+    {"opcode": 119, "immediate": null},
+    {"opcode": 120, "immediate": {"Int": "74"}},
+    {"opcode":  59, "immediate": {"Tuple": [{"Tuple": []}]}},
+    {"opcode":  81, "immediate": {"Int": "0"}},
+
+    {"opcode": 119, "immediate": null},
+    {"opcode": 120, "immediate": {"Int": "74"}},
+    {"opcode":  59, "immediate": {"Tuple": [{"Tuple": []}]}},
+    {"opcode":  81, "immediate": {"Int": "0"}},
+
+    {"opcode":  59, "immediate": {"Tuple": [{"Tuple": []}, {"Tuple": []}]}},
+    {"opcode":  81, "immediate": {"Int": "0"}},
+    {"opcode":  81, "immediate": {"Int": "1"}},
+
+    {"opcode":  59, "immediate": null, "_comment": "The stack now looks like ((x), (y)) where x and y are code points with the same hash but different segments"},
+    {"opcode":  59, "immediate": null, "_comment": "Next, we read an inbox message, then sideload, to force a checkpoint"},
+
+    {"opcode": 114, "immediate": null},
+    {"opcode":  48, "immediate": null},
+    {"opcode": 123, "immediate": {"Int": "123"}},
+    {"opcode":  48, "immediate": null},
+
+    {"opcode":  59, "immediate": null, "_comment": "Now, attempt use the first code point"},
+    {"opcode":  80, "immediate": {"Int": "0"}},
+    {"opcode":  80, "immediate": {"Int": "0"}},
+    {"opcode":  52, "immediate": null}
+]}

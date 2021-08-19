@@ -68,4 +68,10 @@ uint256_t getSize(const value& val);
 
 value assembleValueFromDeserialized(std::vector<DeserializedValue> values);
 
+struct HashHasher {
+    std::size_t operator()(const uint256_t& hash) const noexcept {
+        return intx::narrow_cast<std::size_t>(hash);
+    }
+};
+
 #endif /* value_hpp */

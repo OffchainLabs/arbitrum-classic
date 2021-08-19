@@ -163,7 +163,7 @@ Buffer checkBuffer(ArbStorage& storage, Buffer& buf) {
     ValueCache value_cache{1, 0};
     {
         auto transaction = storage.makeReadWriteTransaction();
-        auto results = saveValue(*transaction, buf);
+        auto results = saveValue(*transaction, buf, CoreCode());
         transaction->commit();
         REQUIRE(results.status.ok());
     }

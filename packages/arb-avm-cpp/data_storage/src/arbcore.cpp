@@ -1074,7 +1074,7 @@ rocksdb::Status ArbCore::saveLogs(ReadWriteTransaction& tx,
 
     auto log_index = log_result.data;
     for (const auto& val : vals) {
-        auto value_result = saveValue(tx, val);
+        auto value_result = saveValue(tx, val, *core_code);
         if (!value_result.status.ok()) {
             return value_result.status;
         }
