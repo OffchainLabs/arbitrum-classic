@@ -385,3 +385,42 @@ TEST_CASE("ArbCore backwards reorg") {
     REQUIRE(arbCore->getLastMachine()
                 ->machine_state.output.fully_processed_inbox.count == 0);
 }
+
+TEST_CASE("ArbCore duplicate code segments") {
+    DBDeleter deleter;
+
+    ArbCoreConfig coreConfig{};
+    coreConfig.min_gas_checkpoint_frequency = 1;
+    ArbStorage storage(dbpath, coreConfig);
+    REQUIRE(storage
+                .initialize(std::string{machine_test_cases_path} +
+                            "/dupsegments.mexe")
+                .ok());
+    auto arbCore = storage.getArbCore();
+    REQUIRE(arbCore->startThread());
+
+    auto message = InboxMessage(0, {}, 0, 0, 0, 0, {});
+
+    std::vector<std::vector<unsigned char>> rawSeqBatchItems;
+    for (const auto& batch_item : buildBatch(std::vector(1, message))) {
+        rawSeqBatchItems.push_back(serializeForCore(batch_item));
+    }
+
+    REQUIRE(arbCore->deliverMessages(0, 0, rawSeqBatchItems,
+                                     std::vector<std::vector<unsigned char>>(),
+                                     std::nullopt));
+    waitForDelivery(arbCore);
+
+    int i = 0;
+    while (arbCore->getLastMachineOutput().last_sideload != 0x123 ||
+           !arbCore->machineIdle()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        REQUIRE(i++ < 10);
+    }
+
+    auto cursor =
+        arbCore->getExecutionCursor(std::numeric_limits<uint256_t>::max());
+    REQUIRE(cursor.status.ok());
+    REQUIRE(std::get<std::unique_ptr<Machine>>(cursor.data->machine)
+                ->currentStatus() == Status::Halted);
+}

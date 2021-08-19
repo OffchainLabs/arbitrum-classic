@@ -31,7 +31,8 @@ class Transaction;
 
 SaveResults saveValueImpl(ReadWriteTransaction& transaction,
                           const value& val,
-                          std::map<uint64_t, uint64_t>& segment_counts);
+                          std::map<uint64_t, uint64_t>& segment_counts,
+                          const Code& code);
 DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
                               const uint256_t& value_hash,
                               std::map<uint64_t, uint64_t>& segment_counts);
@@ -43,7 +44,9 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
 DbResult<value> getValue(const ReadTransaction& tx,
                          uint256_t value_hash,
                          ValueCache& value_cache);
-SaveResults saveValue(ReadWriteTransaction& tx, const value& val);
+SaveResults saveValue(ReadWriteTransaction& tx,
+                      const value& val,
+                      const Code& code);
 DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash);
 
 struct ValueHash {
@@ -84,7 +87,8 @@ ParsedSerializedVal parseRecord(const char*& buf);
 std::vector<value> serializeValue(const std::vector<unsigned char>& seed,
                                   const value& val,
                                   std::vector<unsigned char>& value_vector,
-                                  std::map<uint64_t, uint64_t>& segment_counts);
+                                  std::map<uint64_t, uint64_t>& segment_counts,
+                                  const Code& code);
 DeleteResults deleteValueRecord(ReadWriteTransaction& tx,
                                 const ParsedSerializedVal& val,
                                 std::map<uint64_t, uint64_t>& segment_counts);
