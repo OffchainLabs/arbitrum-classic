@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	golog "log"
 	"math/big"
@@ -25,18 +26,22 @@ import (
 	"strings"
 	"time"
 
+	gosundheit "github.com/AppsFlyer/go-sundheit"
+	"github.com/AppsFlyer/go-sundheit/checks"
+	healthhttp "github.com/AppsFlyer/go-sundheit/http"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/arbmetrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
@@ -46,13 +51,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/healthcheck"
 )
 
 var logger zerolog.Logger
 
 var pprofMux *http.ServeMux
-
-const largeChannelBuffer = 200
 
 func init() {
 	pprofMux = http.DefaultServeMux
@@ -84,11 +90,76 @@ func printSampleUsage() {
 	fmt.Printf("          or:       sequencer: arb-node --l1.url=<L1 RPC> --node.type=sequencer [optional arguments] %s\n", cmdhelp.WalletArgsString)
 }
 
+type NodeMetrics struct {
+	OpenedDB           metrics.Gauge
+	LoadedDB           metrics.Gauge
+	StartedInboxReader metrics.Gauge
+	StartedBatcher     metrics.Gauge
+	StartedRPC         metrics.Gauge
+}
+
+func NewNodeMetrics() *NodeMetrics {
+	return &NodeMetrics{
+		OpenedDB:           metrics.NewGauge(),
+		LoadedDB:           metrics.NewGauge(),
+		StartedInboxReader: metrics.NewGauge(),
+		StartedBatcher:     metrics.NewGauge(),
+		StartedRPC:         metrics.NewGauge(),
+	}
+}
+
+func (m *NodeMetrics) Register(r metrics.Registry) error {
+	if err := r.Register("opened_db", m.OpenedDB); err != nil {
+		return err
+	}
+	if err := r.Register("loaded_db", m.LoadedDB); err != nil {
+		return err
+	}
+	return nil
+}
+
+type NodeInitializationHealth struct {
+	metrics *NodeMetrics
+}
+
+func (c NodeInitializationHealth) Execute(context.Context) (interface{}, error) {
+	if c.metrics.OpenedDB.Value() != 1 {
+		return nil, errors.New("db not opened")
+	}
+	if c.metrics.LoadedDB.Value() != 1 {
+		return nil, errors.New("db not finished loading")
+	}
+	if c.metrics.StartedInboxReader.Value() != 1 {
+		return nil, errors.New("inbox reader not started")
+	}
+	if c.metrics.StartedBatcher.Value() != 1 {
+		return nil, errors.New("batcher not started")
+	}
+	if c.metrics.StartedRPC.Value() != 1 {
+		return nil, errors.New("rpc not started")
+	}
+	return nil, nil
+}
+
+func (c NodeInitializationHealth) Name() string {
+	return "node-initialization"
+}
+
+type HealthConfiguration struct {
+	MaxInboxSyncDiff         int64
+	MaxMessagesSyncDiff      int64
+	MaxLogsProcessedSyncDiff int64
+	MaxL1BlockDiff           int64
+	MaxL2BlockDiff           int64
+}
+
 func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, walletConfig, l1Client, l1ChainId, err := configuration.ParseNode(ctx)
+	healthConfig := HealthConfiguration{}
+
+	config, walletConfig, l1URL, l1ChainId, err := configuration.ParseNode(ctx)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		((config.Node.Type != "sequencer") && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
@@ -153,6 +224,11 @@ func startup() error {
 		fmt.Printf("Unrecognized node type %s", config.Node.Type)
 	}
 
+	if config.WaitToCatchUp && !config.Metrics {
+		badConfig = true
+		fmt.Println("wait to catch up needs --metrics")
+	}
+
 	if badConfig {
 		return nil
 	}
@@ -177,6 +253,12 @@ func startup() error {
 		}()
 	}
 
+	metricsConfig := arbmetrics.NewMetricsConfig(config.MetricsServer)
+	nodeMetrics := NewNodeMetrics()
+	if err := metricsConfig.Register(nodeMetrics); err != nil {
+		return err
+	}
+
 	l2ChainId := new(big.Int).SetUint64(config.Node.ChainID)
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
 	logger.Info().
@@ -186,31 +268,92 @@ func startup() error {
 		Int64("fromBlock", config.Rollup.FromBlock).
 		Msg("Launching arbitrum node")
 
-	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
+	healthCheck := healthcheck.New(metrics.NewPrefixedChildRegistry(metricsConfig.Registry, "health/"))
+	if err := healthCheck.RegisterCheck(NodeInitializationHealth{metrics: nodeMetrics}); err != nil {
+		return err
+	}
+
+	syncedCheck := healthcheck.New(metrics.NewPrefixedChildRegistry(metricsConfig.Registry, "sync_health/"))
+	if err := syncedCheck.RegisterCheck(&checks.CustomCheck{
+		CheckName: "ready",
+		CheckFunc: func(ctx context.Context) (details interface{}, err error) {
+			if !healthCheck.IsHealthy() {
+				return nil, errors.New("core system not ready")
+			}
+			return nil, nil
+		},
+	}); err != nil {
+		return err
+	}
+
+	go func() {
+		mux := http.NewServeMux()
+		// register a health endpoint
+
+		mux.Handle("/health/ready", healthhttp.HandleHealthJSON(healthCheck))
+		mux.Handle("/admin/synced/ready", healthhttp.HandleHealthJSON(syncedCheck))
+
+		// serve HTTP
+		if err := http.ListenAndServe(":8080", mux); err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
+
+	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
 	defer mon.Close()
 
-	metricsConfig := metrics.NewMetricsConfig(config.MetricsServer, &config.Healthcheck.MetricsPrefix)
-	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics}
-	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer}
-	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node}
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
-
-	if config.Node.Type == "forwarder" {
-		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: config.Node.Forwarder.Target}
+	nodeMetrics.OpenedDB.Update(1)
+	if err := mon.StartCore(config.Rollup.Machine.Filename); err != nil {
+		return err
 	}
-	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
-	nodehealth.Init(healthChan)
+	nodeMetrics.LoadedDB.Update(1)
 
-	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry)
-		if err != nil {
-			log.Error().Err(err).Msg("healthcheck server failed")
-		}
-	}()
+	if err := metricsConfig.Register(mon.Metrics); err != nil {
+		return err
+	}
+
+	if err := syncedCheck.RegisterCheck(monitor.InboxSynced{
+		Metrics: mon.Metrics,
+		MaxDiff: healthConfig.MaxInboxSyncDiff,
+	}); err != nil {
+		return err
+	}
+	if err := syncedCheck.RegisterCheck(core.MessagesSynced{
+		Metrics: mon.Metrics.Core,
+		MaxDiff: healthConfig.MaxMessagesSyncDiff,
+	}); err != nil {
+		return err
+	}
+
+	nodeStore := mon.Storage.GetNodeStore()
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond, &config.Node.Cache)
+	if err != nil {
+		return errors.Wrap(err, "error opening txdb")
+	}
+	defer db.Close()
+
+	if err := metricsConfig.RegisterWithPrefix(db.Metrics, "txdb"); err != nil {
+		return err
+	}
+
+	if err := syncedCheck.RegisterCheck(txdb.Synced{
+		CoreMetrics: mon.Metrics.Core,
+		Metrics:     db.Metrics,
+		MaxDiff:     healthConfig.MaxLogsProcessedSyncDiff,
+	}); err != nil {
+		return err
+	}
+
+	l1Health := ethutils.L1Ready{
+		Url:          l1URL,
+		MaxBlockDiff: uint64(healthConfig.MaxL1BlockDiff),
+	}
+	if err := healthCheck.RegisterCheck(l1Health); err != nil {
+		return err
+	}
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	if len(config.Feed.Input.URLs) == 0 {
@@ -224,7 +367,11 @@ func startup() error {
 	}
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), healthChan, sequencerFeed)
+		l1Client, err := ethutils.NewRPCEthClient(l1URL)
+		if err != nil {
+			return err
+		}
+		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), sequencerFeed)
 		if err == nil {
 			break
 		}
@@ -242,11 +389,19 @@ func startup() error {
 		}
 	}
 
+	nodeMetrics.StartedInboxReader.Update(1)
+
 	var dataSigner func([]byte) ([]byte, error)
 	var batcherMode rpc.BatcherMode
+	var batcherHealthcheck gosundheit.Check
 	if config.Node.Type == "forwarder" {
 		logger.Info().Str("forwardTxURL", config.Node.Forwarder.Target).Msg("Arbitrum node starting in forwarder mode")
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
+		batcherHealthcheck = batcher.ForwarderHealth{
+			Url:          config.Node.Forwarder.Target,
+			MaxBlockDiff: healthConfig.MaxL2BlockDiff,
+			TxDBMetrics:  db.Metrics,
+		}
 	} else {
 		var auth *bind.TransactOpts
 		auth, dataSigner, err = cmdhelp.GetKeystore(config, walletConfig, l1ChainId, true)
@@ -255,7 +410,10 @@ func startup() error {
 		}
 
 		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
-
+		l1Client, err := ethutils.NewRPCEthClient(l1URL)
+		if err != nil {
+			return err
+		}
 		if err := ethbridge.WaitForBalance(
 			ctx,
 			l1Client,
@@ -278,25 +436,26 @@ func startup() error {
 			} else {
 				batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
 			}
+			batcherHealthcheck = batcher.BatcherHealth{}
 		}
 	}
 
-	nodeStore := mon.Storage.GetNodeStore()
-	metricsConfig.RegisterNodeStoreMetrics(nodeStore)
-	metricsConfig.RegisterArbCoreMetrics(mon.Core)
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond, &config.Node.Cache)
-	if err != nil {
-		return errors.Wrap(err, "error opening txdb")
-	}
-	defer db.Close()
-
 	if config.WaitToCatchUp {
-		inboxReader.WaitToCatchUp(ctx)
+		for {
+			if syncedCheck.IsHealthy() {
+				break
+			}
+			time.Sleep(time.Second * 5)
+		}
 	}
 
 	var batch batcher.TransactionBatcher
 	errChan := make(chan error, 1)
 	for {
+		l1Client, err := ethutils.NewRPCEthClient(l1URL)
+		if err != nil {
+			return err
+		}
 		batch, err = rpc.SetupBatcher(
 			ctx,
 			l1Client,
@@ -315,9 +474,11 @@ func startup() error {
 			if lockoutConf.Redis != "" {
 				// Setup the lockout. This will take care of the initial delayed sequence.
 				batch, err = rpc.SetupLockout(ctx, seqBatcher, mon.Core, inboxReader, lockoutConf, errChan)
+				batcherHealthcheck = batcher.LockoutSequencerHealth{}
 			} else if ok {
 				// Ensure we sequence delayed messages before opening the RPC.
 				err = seqBatcher.SequenceDelayedMessages(ctx, false)
+				batcherHealthcheck = batcher.SequencerHealth{}
 			}
 		}
 		if err == nil {
@@ -333,6 +494,12 @@ func startup() error {
 		}
 	}
 
+	nodeMetrics.StartedBatcher.Update(1)
+
+	if err := healthCheck.RegisterCheck(batcherHealthcheck); err != nil {
+		return err
+	}
+
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
 	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil)
 	if err != nil {
@@ -344,6 +511,7 @@ func startup() error {
 			errChan <- err
 		}
 	}()
+	nodeMetrics.StartedRPC.Update(1)
 
 	select {
 	case err := <-txDBErrChan:

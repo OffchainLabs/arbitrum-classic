@@ -305,7 +305,7 @@ func (c *Config) GetValidatorDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "validator_db")
 }
 
-func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseCLI(ctx context.Context) (*Config, *Wallet, string, *big.Int, error) {
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	AddForwarderTarget(f)
@@ -318,7 +318,7 @@ func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
 	f.Int64(prefix+"l1-posting-strategy.high-gas-delay-blocks", 270, "wait up to this many more blocks when gas costs are high")
 }
 
-func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNode(ctx context.Context) (*Config, *Wallet, string, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
@@ -354,7 +354,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	return ParseNonRelay(ctx, f, "rpc-wallet")
 }
 
-func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseValidator(ctx context.Context) (*Config, *Wallet, string, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
@@ -369,7 +369,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	return ParseNonRelay(ctx, f, "validator-wallet")
 }
 
-func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, string, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Bool("core.profile.just-metadata", false, "just print database metadata and exit")
@@ -412,17 +412,17 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 	k, err := beginCommonParse(f)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, "", nil, err
 	}
 
 	l1URL := k.String("l1.url")
 	if len(l1URL) == 0 {
-		return nil, nil, nil, nil, errors.New("required parameter --l1.url is missing")
+		return nil, nil, "", nil, errors.New("required parameter --l1.url is missing")
 	}
 
 	l1Client, err := ethutils.NewRPCEthClient(l1URL)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrapf(err, "error connecting to ethereum L1 node: %s", l1URL)
+		return nil, nil, "", nil, errors.Wrapf(err, "error connecting to ethereum L1 node: %s", l1URL)
 	}
 
 	var l1ChainId *big.Int
@@ -435,7 +435,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 		select {
 		case <-ctx.Done():
-			return nil, nil, nil, nil, errors.New("ctx cancelled getting chain ID")
+			return nil, nil, "", nil, errors.New("ctx cancelled getting chain ID")
 		case <-time.After(5 * time.Second):
 		}
 	}
@@ -461,7 +461,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 				"validator.wallet-factory-address": "0xe17d8Fa6BC62590f840C5Dd35f300F77D55CC178",
 			}, "."), nil)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
+				return nil, nil, "", nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
 			}
 		} else if l1ChainId.Cmp(big.NewInt(4)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
@@ -479,26 +479,26 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 				"validator.wallet-factory-address": "0x5533D1578a39690B6aC692673F771b3fc668f0a3",
 			}, "."), nil)
 			if err != nil {
-				return nil, nil, nil, nil, errors.Wrap(err, "error setting testnet.rinkeby rollup parameters")
+				return nil, nil, "", nil, errors.Wrap(err, "error setting testnet.rinkeby rollup parameters")
 			}
 		} else {
-			return nil, nil, nil, nil, fmt.Errorf("connected to unrecognized ethereum network with chain ID: %v", l1ChainId)
+			return nil, nil, "", nil, fmt.Errorf("connected to unrecognized ethereum network with chain ID: %v", l1ChainId)
 		}
 	}
 
 	if err := applyOverrides(f, k); err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, "", nil, err
 	}
 
 	out, wallet, err := endCommonParse(k)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, "", nil, err
 	}
 
 	// Fixup directories
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to read users home directory")
+		return nil, nil, "", nil, errors.Wrap(err, "Unable to read users home directory")
 	}
 
 	// Make persistent storage directory relative to home directory if not already absolute
@@ -507,7 +507,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	}
 	err = os.MkdirAll(out.Persistent.GlobalConfig, os.ModePerm)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create global configuration directory")
+		return nil, nil, "", nil, errors.Wrap(err, "Unable to create global configuration directory")
 	}
 
 	// Make chain directory relative to persistent storage directory if not already absolute
@@ -516,7 +516,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	}
 	err = os.MkdirAll(out.Persistent.Chain, os.ModePerm)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create chain directory")
+		return nil, nil, "", nil, errors.Wrap(err, "Unable to create chain directory")
 	}
 
 	if len(out.Rollup.Machine.Filename) == 0 {
@@ -549,24 +549,24 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 		resp, err := http.Get(out.Rollup.Machine.URL)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrapf(err, "unable to get machine from: %s", out.Rollup.Machine.URL)
+			return nil, nil, "", nil, errors.Wrapf(err, "unable to get machine from: %s", out.Rollup.Machine.URL)
 		}
 		if resp.StatusCode != 200 {
-			return nil, nil, nil, nil, fmt.Errorf("HTTP status '%v' when trying to get machine from: %s", resp.Status, out.Rollup.Machine.URL)
+			return nil, nil, "", nil, fmt.Errorf("HTTP status '%v' when trying to get machine from: %s", resp.Status, out.Rollup.Machine.URL)
 		}
 
 		fileOut, err := os.Create(out.Rollup.Machine.Filename)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrapf(err, "unable to open file '%s' for machine", out.Rollup.Machine.Filename)
+			return nil, nil, "", nil, errors.Wrapf(err, "unable to open file '%s' for machine", out.Rollup.Machine.Filename)
 		}
 
 		_, err = io.Copy(fileOut, resp.Body)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrapf(err, "unable to output machine to: %s", out.Rollup.Machine.Filename)
+			return nil, nil, "", nil, errors.Wrapf(err, "unable to output machine to: %s", out.Rollup.Machine.Filename)
 		}
 	}
 
-	return out, wallet, l1Client, l1ChainId, nil
+	return out, wallet, l1URL, l1ChainId, nil
 }
 
 func ParseRelay() (*Config, error) {

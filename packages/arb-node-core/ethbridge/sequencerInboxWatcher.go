@@ -396,3 +396,7 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 func (r *SequencerInboxWatcher) GetMaxDelayBlocks(ctx context.Context) (*big.Int, error) {
 	return r.con.MaxDelayBlocks(&bind.CallOpts{Context: ctx})
 }
+
+func (r *SequencerInboxWatcher) MessageCount(ctx context.Context) (*big.Int, error) {
+	return r.con.MessageCount(&bind.CallOpts{Context: ctx})
+}

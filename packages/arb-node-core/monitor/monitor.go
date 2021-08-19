@@ -20,16 +20,16 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
+	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -39,33 +39,64 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "monitor").Logger()
 
+type Metrics struct {
+	Inbox *InboxMetrics
+	Core  *core.Metrics
+}
+
+func (m *Metrics) Register(r metrics.Registry) error {
+	coreRegistry := metrics.NewPrefixedChildRegistry(r, "core/")
+	if err := m.Core.Register(coreRegistry); err != nil {
+		return err
+	}
+	inboxRegistry := metrics.NewPrefixedChildRegistry(r, "inbox/")
+	return m.Inbox.Register(inboxRegistry)
+}
+
 type Monitor struct {
 	Storage machine.ArbStorage
 	Core    core.ArbCore
 	Reader  *InboxReader
+	Metrics *Metrics
 }
 
-func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
+func NewMonitor(dbDir string, coreConfig *configuration.Core) (*Monitor, error) {
 	storage, err := cmachine.NewArbStorage(dbDir, coreConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	err = storage.Initialize(contractFile)
-	if err != nil {
-		return nil, err
-	}
-
 	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		return nil, errors.New("error starting ArbCore thread")
-	}
 
 	return &Monitor{
 		Storage: storage,
 		Core:    arbCore,
+		Metrics: &Metrics{
+			Core:  core.NewArbCoreMetrics(arbCore),
+			Inbox: NewInboxMetrics(),
+		},
 	}, nil
+}
+
+func NewStartedMonitor(dbDir, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
+	m, err := NewMonitor(dbDir, coreConfig)
+	if err != nil {
+		return nil, err
+	}
+	return nil, m.StartCore(contractFile)
+}
+
+func (m *Monitor) StartCore(contractFile string) error {
+	err := m.Storage.Initialize(contractFile)
+	if err != nil {
+		return err
+	}
+
+	started := m.Core.StartThread()
+	if !started {
+		return errors.New("error starting ArbCore thread")
+	}
+	return nil
 }
 
 func (m *Monitor) Close() {
@@ -82,7 +113,6 @@ func (m *Monitor) StartInboxReader(
 	rollupAddress common.Address,
 	fromBlock int64,
 	bridgeUtilsAddress common.Address,
-	healthChan chan nodehealth.Log,
 	sequencerFeed chan broadcaster.BroadcastFeedMessage,
 ) (*InboxReader, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), fromBlock, ethClient, bind.CallOpts{})
@@ -122,7 +152,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, bridgeUtils, m.Core, healthChan, sequencerFeed)
+	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, bridgeUtils, m.Core, sequencerFeed, m.Metrics.Inbox)
 	if err != nil {
 		return nil, err
 	}

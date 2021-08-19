@@ -26,32 +26,66 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-var (
-	EthHeightGauge = metrics.NewRegisteredGauge("arbitrum/ethereum/block_height", nil)
-	DelayedCounter = metrics.NewRegisteredCounter("arbitrum/inbox/delayed", nil)
-	BatchesCounter = metrics.NewRegisteredCounter("arbitrum/inbox/processed", nil)
-)
+type InboxMetrics struct {
+	Initialized     metrics.Gauge
+	EthHeight       metrics.Gauge
+	L1MessageCount  metrics.Gauge
+	Delayed         metrics.Gauge
+	Batches         metrics.Gauge
+	NextBlockToRead metrics.Gauge
+}
 
-const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
+func NewInboxMetrics() *InboxMetrics {
+	return &InboxMetrics{
+		Initialized:     metrics.NewGauge(),
+		EthHeight:       metrics.NewGauge(),
+		L1MessageCount:  metrics.NewGauge(),
+		Delayed:         metrics.NewGauge(),
+		Batches:         metrics.NewGauge(),
+		NextBlockToRead: metrics.NewGauge(),
+	}
+}
+
+func (m *InboxMetrics) Register(r metrics.Registry) error {
+	if err := r.Register("initialized", m.Initialized); err != nil {
+		return err
+	}
+	if err := r.Register("l1_block_height", m.EthHeight); err != nil {
+		return err
+	}
+	if err := r.Register("l1_message_count", m.L1MessageCount); err != nil {
+		return err
+	}
+	if err := r.Register("processed", m.Batches); err != nil {
+		return err
+	}
+	if err := r.Register("delayed", m.Delayed); err != nil {
+		return err
+	}
+	if err := r.Register("next_block_to_read", m.NextBlockToRead); err != nil {
+		return err
+	}
+	return nil
+}
+
+const RECENT_FEED_ITEM_TTL = time.Second * 10
 
 type InboxReader struct {
 	// Only in run thread
 	db                 core.ArbCore
 	firstMessageBlock  *big.Int
-	caughtUp           bool
-	caughtUpTarget     *big.Int
-	healthChan         chan nodehealth.Log
 	lastCount          *big.Int
 	lastAcc            common.Hash
 	sequencerFeedQueue []broadcaster.SequencerFeedItem
 	recentFeedItems    map[common.Hash]time.Time
+
+	Metrics *InboxMetrics
 
 	// Only in main thread
 	running    bool
@@ -62,7 +96,6 @@ type InboxReader struct {
 	delayedBridge        *ethbridge.DelayedBridgeWatcher
 	sequencerInbox       *ethbridge.SequencerInboxWatcher
 	bridgeUtils          *ethbridge.BridgeUtils
-	caughtUpChan         chan bool
 	MessageDeliveryMutex sync.Mutex
 	BroadcastFeed        chan broadcaster.BroadcastFeedMessage
 }
@@ -73,8 +106,8 @@ func NewInboxReader(
 	sequencerInbox *ethbridge.SequencerInboxWatcher,
 	bridgeUtils *ethbridge.BridgeUtils,
 	db core.ArbCore,
-	healthChan chan nodehealth.Log,
 	broadcastFeed chan broadcaster.BroadcastFeedMessage,
+	inboxMetrics *InboxMetrics,
 ) (*InboxReader, error) {
 	firstMessageBlock := bridge.FromBlock()
 	if firstMessageBlock <= 1 {
@@ -91,9 +124,8 @@ func NewInboxReader(
 		db:                db,
 		firstMessageBlock: big.NewInt(firstMessageBlock),
 		recentFeedItems:   make(map[common.Hash]time.Time),
+		Metrics:           inboxMetrics,
 		completed:         make(chan bool, 1),
-		caughtUpChan:      make(chan bool, 1),
-		healthChan:        healthChan,
 		BroadcastFeed:     broadcastFeed,
 	}, nil
 }
@@ -127,17 +159,6 @@ func (ir *InboxReader) IsRunning() bool {
 	return ir.running
 }
 
-// WaitToCatchUp may only be called once
-func (ir *InboxReader) WaitToCatchUp(ctx context.Context) {
-	select {
-	case <-ir.caughtUpChan:
-		return
-	case <-ctx.Done():
-		return
-	}
-
-}
-
 const inboxReaderDelay int64 = 4
 
 func (ir *InboxReader) getMessages(ctx context.Context) error {
@@ -145,9 +166,8 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if ir.healthChan != nil && from != nil {
-		ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: new(big.Int).Set(from)}
-	}
+
+	ir.Metrics.NextBlockToRead.Update(from.Int64())
 	blocksToFetch := uint64(100)
 	for {
 		select {
@@ -160,10 +180,27 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		ir.Metrics.EthHeight.Inc(currentHeight.Int64())
+
+		latestCount, err := ir.sequencerInbox.MessageCount(ctx)
+		if err != nil {
+			return err
+		}
+		ir.Metrics.L1MessageCount.Update(latestCount.Int64())
+
+		ir.Metrics.Initialized.Update(1)
 
 		reorgingDelayed := false
 		reorgingSequencer := false
-		if ir.caughtUp {
+
+		localCount, err := ir.db.GetMessageCount()
+		if err != nil {
+			return err
+		}
+
+		// TODO: Lee is this the correct check? It seems like this check should be more
+		// often, but I'm not sure what condition should be used
+		if latestCount.Cmp(localCount) == 0 {
 			latestDelayed, latestSeq, err := ir.bridgeUtils.GetCountsAndAccumulators(ctx)
 			if err != nil {
 				return err
@@ -189,29 +226,11 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			}
 		}
 
-		EthHeightGauge.Inc(currentHeight.Int64())
-		if ir.healthChan != nil && currentHeight != nil {
-			ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: new(big.Int).Set(currentHeight)}
-		}
-
 		for {
 			select {
 			case <-ctx.Done():
 				return nil
 			default:
-			}
-			if !ir.caughtUp && ir.caughtUpTarget != nil {
-				arbCorePosition := ir.db.MachineMessagesRead()
-				if ir.healthChan != nil {
-					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
-					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: true}
-					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: false}
-					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "arbCorePosition", ValBigInt: new(big.Int).Set(arbCorePosition)}
-				}
-				if arbCorePosition.Cmp(ir.caughtUpTarget) >= 0 {
-					ir.caughtUp = true
-					ir.caughtUpChan <- true
-				}
 			}
 			if from.Cmp(currentHeight) >= 0 {
 				break
@@ -227,17 +246,6 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			sequencerBatches, err := ir.sequencerInbox.LookupBatchesInRange(ctx, from, to)
 			if err != nil {
 				return err
-			}
-			if ir.caughtUpTarget == nil && to.Cmp(currentHeight) == 0 {
-				if len(sequencerBatches) > 0 {
-					ir.caughtUpTarget = sequencerBatches[len(sequencerBatches)-1].GetAfterCount()
-				} else {
-					dbMessageCount, err := ir.db.GetMessageCount()
-					if err != nil {
-						return err
-					}
-					ir.caughtUpTarget = dbMessageCount
-				}
 			}
 			if len(sequencerBatches) > 0 {
 				batchAccs := make([]common.Hash, 0, len(sequencerBatches)+1)
@@ -283,9 +291,6 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 						reorgingDelayed = true
 					}
 				}
-			}
-			if ir.healthChan != nil && ir.caughtUpTarget != nil {
-				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
 			}
 			if len(sequencerBatches) < 5 {
 				blocksToFetch += 20
@@ -333,8 +338,8 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					from = from.Add(to, big.NewInt(1))
 				}
 			}
-			DelayedCounter.Inc(int64(len(delayedMessages)))
-			BatchesCounter.Inc(int64(len(sequencerBatches)))
+			ir.Metrics.Delayed.Inc(int64(len(delayedMessages)))
+			ir.Metrics.Batches.Inc(int64(len(sequencerBatches)))
 		}
 		sleepChan := time.After(time.Second * 5)
 	FeedReadLoop:
