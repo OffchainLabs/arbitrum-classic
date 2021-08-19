@@ -220,7 +220,8 @@ func startup() error {
 		}
 	}()
 
-	mon, err := monitor.NewMonitor(dbPath, arbosPath)
+	coreConfig := configuration.DefaultCoreSettings()
+	mon, err := monitor.NewMonitor(dbPath, arbosPath, coreConfig)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}

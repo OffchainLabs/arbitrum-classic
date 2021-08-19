@@ -17,6 +17,7 @@
 package cmachine
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"math/big"
 	"os"
 	"testing"
@@ -40,7 +41,8 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	arbStorage, err := NewArbStorage(dePath)
+	coreConfig := configuration.DefaultCoreSettings()
+	arbStorage, err := NewArbStorage(dePath, coreConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
