@@ -216,10 +216,12 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 			return err
 		}
 
-		for i := oldHeight; i > reorgBlockHeight; i-- {
-			db.snapshotLRUCache.Remove(i)
+		if db.snapshotLRUCache != nil {
+			for i := oldHeight; i > reorgBlockHeight; i-- {
+				db.snapshotLRUCache.Remove(i)
+			}
+			db.snapshotLRUCache.Remove(reorgBlockHeight)
 		}
-		db.snapshotLRUCache.Remove(reorgBlockHeight)
 	}
 
 	return nil
@@ -468,9 +470,11 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
-	cachedSnap, found := db.snapshotLRUCache.Get(info.Header.Number.Uint64())
-	if found {
-		return cachedSnap.(*snapshot.Snapshot), nil
+	if db.snapshotLRUCache != nil {
+		cachedSnap, found := db.snapshotLRUCache.Get(info.Header.Number.Uint64())
+		if found {
+			return cachedSnap.(*snapshot.Snapshot), nil
+		}
 	}
 	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64(), db.allowSlowLookup)
 	if err != nil || mach == nil {
@@ -484,7 +488,9 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if err != nil {
 		return nil, err
 	}
-	db.snapshotLRUCache.Add(info.Header.Number.Uint64(), snap)
+	if db.snapshotLRUCache != nil {
+		db.snapshotLRUCache.Add(info.Header.Number.Uint64(), snap)
+	}
 	return snap, nil
 }
 
