@@ -446,14 +446,6 @@ func (v *Validator) generateBatchEndProof(count *big.Int) ([]byte, error) {
 	return proof, nil
 }
 
-func (v *Validator) GetInitialMachineHash(ctx context.Context) ([32]byte, error) {
-	creationEvent, err := v.rollup.LookupCreation(ctx)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return creationEvent.MachineHash, nil
-}
-
 func getBlockID(ctx context.Context, client ethutils.EthClient, number *big.Int) (*common.BlockId, error) {
 	blockInfo, err := client.BlockInfoByNumber(ctx, number)
 	if err != nil {

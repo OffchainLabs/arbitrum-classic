@@ -41,12 +41,16 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
 
+	cSaveRocksdbPath := C.CString(coreConfig.SaveRocksdbPath)
+	defer C.free(unsafe.Pointer(cSaveRocksdbPath))
+
 	debugInt := 0
 	if coreConfig.Debug {
 		debugInt = 1
 	}
 
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
+	saveRocksdbIntervalSeconds := int(coreConfig.SaveRocksdbInterval.Seconds())
 	cArbStorage := C.createArbStorage(
 		cDbPath,
 		C.int(coreConfig.MessageProcessCount),
@@ -55,6 +59,8 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		C.int(cacheExpirationSeconds),
 		C.int(coreConfig.Cache.LRUSize),
 		C.int(debugInt),
+		C.int(saveRocksdbIntervalSeconds),
+		cSaveRocksdbPath,
 	)
 
 	if cArbStorage == nil {
@@ -73,7 +79,7 @@ func (s *ArbStorage) Initialize(contractPath string) error {
 	success := C.initializeArbStorage(s.c, cContractPath)
 
 	if success == 0 {
-		return errors.Errorf("failed to initialize storage with mexe '%v', possibly incorrect L1 node?", contractPath)
+		return errors.Errorf("failed to initialize storage with mexe '%v', possibly corrupt database or incorrect L1 node?", contractPath)
 	}
 	return nil
 }

@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface OutboxEntryInterface extends ethers.utils.Interface {
   functions: {
@@ -65,127 +64,103 @@ interface OutboxEntryInterface extends ethers.utils.Interface {
   events: {}
 }
 
-export class OutboxEntry extends Contract {
+export class OutboxEntry extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: OutboxEntryInterface
 
   functions: {
-    destroy(overrides?: Overrides): Promise<ContractTransaction>
-
-    'destroy()'(overrides?: Overrides): Promise<ContractTransaction>
+    destroy(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     initialize(
       _root: BytesLike,
       _numInBatch: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(bytes32,uint256)'(
-      _root: BytesLike,
-      _numInBatch: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     isMaster(overrides?: CallOverrides): Promise<[boolean]>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
-
     numRemaining(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'numRemaining()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
     root(overrides?: CallOverrides): Promise<[string]>
-
-    'root()'(overrides?: CallOverrides): Promise<[string]>
 
     spendOutput(
       _root: BytesLike,
       _id: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'spendOutput(bytes32,bytes32)'(
-      _root: BytesLike,
-      _id: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     spentOutput(arg0: BytesLike, overrides?: CallOverrides): Promise<[boolean]>
-
-    'spentOutput(bytes32)'(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
   }
 
-  destroy(overrides?: Overrides): Promise<ContractTransaction>
-
-  'destroy()'(overrides?: Overrides): Promise<ContractTransaction>
+  destroy(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   initialize(
     _root: BytesLike,
     _numInBatch: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(bytes32,uint256)'(
-    _root: BytesLike,
-    _numInBatch: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   isMaster(overrides?: CallOverrides): Promise<boolean>
 
-  'isMaster()'(overrides?: CallOverrides): Promise<boolean>
-
   numRemaining(overrides?: CallOverrides): Promise<BigNumber>
 
-  'numRemaining()'(overrides?: CallOverrides): Promise<BigNumber>
-
   root(overrides?: CallOverrides): Promise<string>
-
-  'root()'(overrides?: CallOverrides): Promise<string>
 
   spendOutput(
     _root: BytesLike,
     _id: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'spendOutput(bytes32,bytes32)'(
-    _root: BytesLike,
-    _id: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   spentOutput(arg0: BytesLike, overrides?: CallOverrides): Promise<boolean>
 
-  'spentOutput(bytes32)'(
-    arg0: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<boolean>
-
   callStatic: {
     destroy(overrides?: CallOverrides): Promise<void>
 
-    'destroy()'(overrides?: CallOverrides): Promise<void>
-
     initialize(
-      _root: BytesLike,
-      _numInBatch: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(bytes32,uint256)'(
       _root: BytesLike,
       _numInBatch: BigNumberish,
       overrides?: CallOverrides
@@ -193,134 +168,71 @@ export class OutboxEntry extends Contract {
 
     isMaster(overrides?: CallOverrides): Promise<boolean>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<boolean>
-
     numRemaining(overrides?: CallOverrides): Promise<BigNumber>
-
-    'numRemaining()'(overrides?: CallOverrides): Promise<BigNumber>
 
     root(overrides?: CallOverrides): Promise<string>
 
-    'root()'(overrides?: CallOverrides): Promise<string>
-
     spendOutput(
-      _root: BytesLike,
-      _id: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'spendOutput(bytes32,bytes32)'(
       _root: BytesLike,
       _id: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     spentOutput(arg0: BytesLike, overrides?: CallOverrides): Promise<boolean>
-
-    'spentOutput(bytes32)'(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<boolean>
   }
 
   filters: {}
 
   estimateGas: {
-    destroy(overrides?: Overrides): Promise<BigNumber>
-
-    'destroy()'(overrides?: Overrides): Promise<BigNumber>
+    destroy(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     initialize(
       _root: BytesLike,
       _numInBatch: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(bytes32,uint256)'(
-      _root: BytesLike,
-      _numInBatch: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     isMaster(overrides?: CallOverrides): Promise<BigNumber>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<BigNumber>
-
     numRemaining(overrides?: CallOverrides): Promise<BigNumber>
 
-    'numRemaining()'(overrides?: CallOverrides): Promise<BigNumber>
-
     root(overrides?: CallOverrides): Promise<BigNumber>
-
-    'root()'(overrides?: CallOverrides): Promise<BigNumber>
 
     spendOutput(
       _root: BytesLike,
       _id: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'spendOutput(bytes32,bytes32)'(
-      _root: BytesLike,
-      _id: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     spentOutput(arg0: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
-
-    'spentOutput(bytes32)'(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
   }
 
   populateTransaction: {
-    destroy(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'destroy()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    destroy(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     initialize(
       _root: BytesLike,
       _numInBatch: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(bytes32,uint256)'(
-      _root: BytesLike,
-      _numInBatch: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     numRemaining(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'numRemaining()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     root(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'root()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     spendOutput(
       _root: BytesLike,
       _id: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'spendOutput(bytes32,bytes32)'(
-      _root: BytesLike,
-      _id: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     spentOutput(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'spentOutput(bytes32)'(
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>

@@ -18,6 +18,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/rs/zerolog v1.23.0
+	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
+	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
+	gotest.tools/gotestsum v1.7.0 // indirect
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util

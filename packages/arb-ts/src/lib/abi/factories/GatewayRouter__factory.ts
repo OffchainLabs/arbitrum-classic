@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { GatewayRouter } from '../GatewayRouter'
-
-export class GatewayRouter__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): GatewayRouter {
-    return new Contract(address, _abi, signerOrProvider) as GatewayRouter
-  }
-}
+import type { GatewayRouter, GatewayRouterInterface } from '../GatewayRouter'
 
 const _abi = [
   {
@@ -398,3 +388,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class GatewayRouter__factory {
+  static readonly abi = _abi
+  static createInterface(): GatewayRouterInterface {
+    return new utils.Interface(_abi) as GatewayRouterInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): GatewayRouter {
+    return new Contract(address, _abi, signerOrProvider) as GatewayRouter
+  }
+}

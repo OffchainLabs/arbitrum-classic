@@ -2,19 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IMessageProvider } from '../IMessageProvider'
-
-export class IMessageProvider__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IMessageProvider {
-    return new Contract(address, _abi, signerOrProvider) as IMessageProvider
-  }
-}
+import type {
+  IMessageProvider,
+  IMessageProviderInterface,
+} from '../IMessageProvider'
 
 const _abi = [
   {
@@ -50,3 +43,16 @@ const _abi = [
     type: 'event',
   },
 ]
+
+export class IMessageProvider__factory {
+  static readonly abi = _abi
+  static createInterface(): IMessageProviderInterface {
+    return new utils.Interface(_abi) as IMessageProviderInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IMessageProvider {
+    return new Contract(address, _abi, signerOrProvider) as IMessageProvider
+  }
+}

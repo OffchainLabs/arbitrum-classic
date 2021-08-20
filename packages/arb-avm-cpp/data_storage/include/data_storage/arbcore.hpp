@@ -18,6 +18,7 @@
 #define arbcore_hpp
 
 #include <avm/machine.hpp>
+#include <avm/machinethread.hpp>
 #include <avm/valueloader.hpp>
 #include <avm_values/bigint.hpp>
 #include <data_storage/datacursor.hpp>
@@ -29,9 +30,7 @@
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
-#include <utility>
 
-#include <avm/machinethread.hpp>
 #include <map>
 #include <memory>
 #include <queue>
@@ -80,7 +79,13 @@ struct ArbCoreConfig {
     // Print extra debug messages to stderr
     bool debug{false};
 
-    ArbCoreConfig() {}
+    // Number of seconds to wait between saving rocksdb checkpoint, 0 to disable
+    uint64_t save_rocksdb_interval{0};
+
+    // Rocksdb checkpoints will be saved in save_rocksdb_path/timestamp/
+    std::string save_rocksdb_path;
+
+    ArbCoreConfig() = default;
 };
 
 class ArbCore {
@@ -178,7 +183,7 @@ class ArbCore {
    public:
     ArbCore() = delete;
     ArbCore(std::shared_ptr<DataStorage> data_storage_,
-            const ArbCoreConfig& coreConfig);
+            ArbCoreConfig coreConfig);
 
     ~ArbCore() { abortThread(); }
     rocksdb::Status initialize(const LoadedExecutable& executable);
@@ -431,6 +436,8 @@ class ArbCore {
         const ReadTransaction& tx,
         size_t cursor_index) const;
 };
+
+uint64_t seconds_since_epoch();
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,
                                                     uint256_t log_index);

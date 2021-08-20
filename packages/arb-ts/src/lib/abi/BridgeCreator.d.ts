@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface BridgeCreatorInterface extends ethers.utils.Interface {
   functions: {
@@ -119,16 +118,46 @@ interface BridgeCreatorInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TemplatesUpdated'): EventFragment
 }
 
-export class BridgeCreator extends Contract {
+export class BridgeCreator extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: BridgeCreatorInterface
 
@@ -137,52 +166,28 @@ export class BridgeCreator extends Contract {
       adminProxy: string,
       rollup: string,
       sequencer: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'createBridge(address,address,address)'(
-      adminProxy: string,
-      rollup: string,
-      sequencer: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     delayedBridgeTemplate(overrides?: CallOverrides): Promise<[string]>
 
-    'delayedBridgeTemplate()'(overrides?: CallOverrides): Promise<[string]>
-
     inboxTemplate(overrides?: CallOverrides): Promise<[string]>
-
-    'inboxTemplate()'(overrides?: CallOverrides): Promise<[string]>
 
     outboxTemplate(overrides?: CallOverrides): Promise<[string]>
 
-    'outboxTemplate()'(overrides?: CallOverrides): Promise<[string]>
-
     owner(overrides?: CallOverrides): Promise<[string]>
 
-    'owner()'(overrides?: CallOverrides): Promise<[string]>
-
-    renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     rollupEventBridgeTemplate(overrides?: CallOverrides): Promise<[string]>
 
-    'rollupEventBridgeTemplate()'(overrides?: CallOverrides): Promise<[string]>
-
     sequencerInboxTemplate(overrides?: CallOverrides): Promise<[string]>
-
-    'sequencerInboxTemplate()'(overrides?: CallOverrides): Promise<[string]>
 
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     updateTemplates(
@@ -191,16 +196,7 @@ export class BridgeCreator extends Contract {
       _inboxTemplate: string,
       _rollupEventBridgeTemplate: string,
       _outboxTemplate: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateTemplates(address,address,address,address,address)'(
-      _delayedBridgeTemplate: string,
-      _sequencerInboxTemplate: string,
-      _inboxTemplate: string,
-      _rollupEventBridgeTemplate: string,
-      _outboxTemplate: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
@@ -208,52 +204,28 @@ export class BridgeCreator extends Contract {
     adminProxy: string,
     rollup: string,
     sequencer: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'createBridge(address,address,address)'(
-    adminProxy: string,
-    rollup: string,
-    sequencer: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   delayedBridgeTemplate(overrides?: CallOverrides): Promise<string>
 
-  'delayedBridgeTemplate()'(overrides?: CallOverrides): Promise<string>
-
   inboxTemplate(overrides?: CallOverrides): Promise<string>
-
-  'inboxTemplate()'(overrides?: CallOverrides): Promise<string>
 
   outboxTemplate(overrides?: CallOverrides): Promise<string>
 
-  'outboxTemplate()'(overrides?: CallOverrides): Promise<string>
-
   owner(overrides?: CallOverrides): Promise<string>
 
-  'owner()'(overrides?: CallOverrides): Promise<string>
-
-  renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-  'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+  renounceOwnership(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   rollupEventBridgeTemplate(overrides?: CallOverrides): Promise<string>
 
-  'rollupEventBridgeTemplate()'(overrides?: CallOverrides): Promise<string>
-
   sequencerInboxTemplate(overrides?: CallOverrides): Promise<string>
-
-  'sequencerInboxTemplate()'(overrides?: CallOverrides): Promise<string>
 
   transferOwnership(
     newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transferOwnership(address)'(
-    newOwner: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   updateTemplates(
@@ -262,16 +234,7 @@ export class BridgeCreator extends Contract {
     _inboxTemplate: string,
     _rollupEventBridgeTemplate: string,
     _outboxTemplate: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateTemplates(address,address,address,address,address)'(
-    _delayedBridgeTemplate: string,
-    _sequencerInboxTemplate: string,
-    _inboxTemplate: string,
-    _rollupEventBridgeTemplate: string,
-    _outboxTemplate: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
@@ -282,61 +245,26 @@ export class BridgeCreator extends Contract {
       overrides?: CallOverrides
     ): Promise<[string, string, string, string, string]>
 
-    'createBridge(address,address,address)'(
-      adminProxy: string,
-      rollup: string,
-      sequencer: string,
-      overrides?: CallOverrides
-    ): Promise<[string, string, string, string, string]>
-
     delayedBridgeTemplate(overrides?: CallOverrides): Promise<string>
-
-    'delayedBridgeTemplate()'(overrides?: CallOverrides): Promise<string>
 
     inboxTemplate(overrides?: CallOverrides): Promise<string>
 
-    'inboxTemplate()'(overrides?: CallOverrides): Promise<string>
-
     outboxTemplate(overrides?: CallOverrides): Promise<string>
-
-    'outboxTemplate()'(overrides?: CallOverrides): Promise<string>
 
     owner(overrides?: CallOverrides): Promise<string>
 
-    'owner()'(overrides?: CallOverrides): Promise<string>
-
     renounceOwnership(overrides?: CallOverrides): Promise<void>
-
-    'renounceOwnership()'(overrides?: CallOverrides): Promise<void>
 
     rollupEventBridgeTemplate(overrides?: CallOverrides): Promise<string>
 
-    'rollupEventBridgeTemplate()'(overrides?: CallOverrides): Promise<string>
-
     sequencerInboxTemplate(overrides?: CallOverrides): Promise<string>
-
-    'sequencerInboxTemplate()'(overrides?: CallOverrides): Promise<string>
 
     transferOwnership(
       newOwner: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     updateTemplates(
-      _delayedBridgeTemplate: string,
-      _sequencerInboxTemplate: string,
-      _inboxTemplate: string,
-      _rollupEventBridgeTemplate: string,
-      _outboxTemplate: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'updateTemplates(address,address,address,address,address)'(
       _delayedBridgeTemplate: string,
       _sequencerInboxTemplate: string,
       _inboxTemplate: string,
@@ -348,11 +276,14 @@ export class BridgeCreator extends Contract {
 
   filters: {
     OwnershipTransferred(
-      previousOwner: string | null,
-      newOwner: string | null
-    ): EventFilter
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >
 
-    TemplatesUpdated(): EventFilter
+    TemplatesUpdated(): TypedEventFilter<[], {}>
   }
 
   estimateGas: {
@@ -360,52 +291,28 @@ export class BridgeCreator extends Contract {
       adminProxy: string,
       rollup: string,
       sequencer: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'createBridge(address,address,address)'(
-      adminProxy: string,
-      rollup: string,
-      sequencer: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     delayedBridgeTemplate(overrides?: CallOverrides): Promise<BigNumber>
 
-    'delayedBridgeTemplate()'(overrides?: CallOverrides): Promise<BigNumber>
-
     inboxTemplate(overrides?: CallOverrides): Promise<BigNumber>
-
-    'inboxTemplate()'(overrides?: CallOverrides): Promise<BigNumber>
 
     outboxTemplate(overrides?: CallOverrides): Promise<BigNumber>
 
-    'outboxTemplate()'(overrides?: CallOverrides): Promise<BigNumber>
-
     owner(overrides?: CallOverrides): Promise<BigNumber>
 
-    'owner()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    renounceOwnership(overrides?: Overrides): Promise<BigNumber>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<BigNumber>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     rollupEventBridgeTemplate(overrides?: CallOverrides): Promise<BigNumber>
 
-    'rollupEventBridgeTemplate()'(overrides?: CallOverrides): Promise<BigNumber>
-
     sequencerInboxTemplate(overrides?: CallOverrides): Promise<BigNumber>
-
-    'sequencerInboxTemplate()'(overrides?: CallOverrides): Promise<BigNumber>
 
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     updateTemplates(
@@ -414,16 +321,7 @@ export class BridgeCreator extends Contract {
       _inboxTemplate: string,
       _rollupEventBridgeTemplate: string,
       _outboxTemplate: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateTemplates(address,address,address,address,address)'(
-      _delayedBridgeTemplate: string,
-      _sequencerInboxTemplate: string,
-      _inboxTemplate: string,
-      _rollupEventBridgeTemplate: string,
-      _outboxTemplate: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
@@ -432,45 +330,24 @@ export class BridgeCreator extends Contract {
       adminProxy: string,
       rollup: string,
       sequencer: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'createBridge(address,address,address)'(
-      adminProxy: string,
-      rollup: string,
-      sequencer: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     delayedBridgeTemplate(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'delayedBridgeTemplate()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     inboxTemplate(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'inboxTemplate()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     outboxTemplate(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'outboxTemplate()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    rollupEventBridgeTemplate(
-      overrides?: CallOverrides
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'rollupEventBridgeTemplate()'(
+    rollupEventBridgeTemplate(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -478,18 +355,9 @@ export class BridgeCreator extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'sequencerInboxTemplate()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     updateTemplates(
@@ -498,16 +366,7 @@ export class BridgeCreator extends Contract {
       _inboxTemplate: string,
       _rollupEventBridgeTemplate: string,
       _outboxTemplate: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateTemplates(address,address,address,address,address)'(
-      _delayedBridgeTemplate: string,
-      _sequencerInboxTemplate: string,
-      _inboxTemplate: string,
-      _rollupEventBridgeTemplate: string,
-      _outboxTemplate: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

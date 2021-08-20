@@ -9,16 +9,15 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface WhitelistConsumerInterface extends ethers.utils.Interface {
   functions: {
@@ -45,48 +44,64 @@ interface WhitelistConsumerInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
 }
 
-export class WhitelistConsumer extends Contract {
+export class WhitelistConsumer extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: WhitelistConsumerInterface
 
   functions: {
     updateWhitelistSource(
       newSource: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateWhitelistSource(address)'(
-      newSource: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     whitelist(overrides?: CallOverrides): Promise<[string]>
-
-    'whitelist()'(overrides?: CallOverrides): Promise<[string]>
   }
 
   updateWhitelistSource(
     newSource: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateWhitelistSource(address)'(
-    newSource: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   whitelist(overrides?: CallOverrides): Promise<string>
-
-  'whitelist()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
     updateWhitelistSource(
@@ -94,49 +109,30 @@ export class WhitelistConsumer extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'updateWhitelistSource(address)'(
-      newSource: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     whitelist(overrides?: CallOverrides): Promise<string>
-
-    'whitelist()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
-    WhitelistSourceUpdated(newSource: null): EventFilter
+    WhitelistSourceUpdated(
+      newSource?: null
+    ): TypedEventFilter<[string], { newSource: string }>
   }
 
   estimateGas: {
     updateWhitelistSource(
       newSource: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateWhitelistSource(address)'(
-      newSource: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     whitelist(overrides?: CallOverrides): Promise<BigNumber>
-
-    'whitelist()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
     updateWhitelistSource(
       newSource: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateWhitelistSource(address)'(
-      newSource: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     whitelist(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'whitelist()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

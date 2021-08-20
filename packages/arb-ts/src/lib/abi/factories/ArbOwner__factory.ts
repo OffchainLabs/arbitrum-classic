@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ArbOwner } from '../ArbOwner'
-
-export class ArbOwner__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ArbOwner {
-    return new Contract(address, _abi, signerOrProvider) as ArbOwner
-  }
-}
+import type { ArbOwner, ArbOwnerInterface } from '../ArbOwner'
 
 const _abi = [
   {
@@ -387,3 +377,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ArbOwner__factory {
+  static readonly abi = _abi
+  static createInterface(): ArbOwnerInterface {
+    return new utils.Interface(_abi) as ArbOwnerInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ArbOwner {
+    return new Contract(address, _abi, signerOrProvider) as ArbOwner
+  }
+}
