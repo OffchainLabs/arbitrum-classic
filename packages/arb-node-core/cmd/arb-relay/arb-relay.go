@@ -21,6 +21,7 @@ import (
 	"fmt"
 	golog "log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -75,7 +76,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, err := configuration.ParseRelay()
+	config, err := configuration.ParseRelay(os.Args[1:])
 	if err != nil || len(config.Feed.Input.URLs) == 0 {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage: arb-relay --conf=<filename> \n")

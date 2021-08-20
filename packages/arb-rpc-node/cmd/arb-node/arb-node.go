@@ -155,7 +155,6 @@ func startup() error {
 	defer cancelFunc()
 
 	config, walletConfig, l1URL, l1ChainId, err := configuration.ParseNode(ctx)
-
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		((config.Node.Type != "sequencer") && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
