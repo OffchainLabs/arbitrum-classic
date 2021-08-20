@@ -29,7 +29,7 @@ import (
 
 type ArbOutputLookup interface {
 	GetLogCount() (*big.Int, error)
-	GetLogs(startIndex, count *big.Int) ([]value.Value, error)
+	GetLogs(startIndex, count *big.Int) ([]ValueAndInbox, error)
 
 	GetSendCount() (*big.Int, error)
 	GetSends(startIndex, count *big.Int) ([][]byte, error)

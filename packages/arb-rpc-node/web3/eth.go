@@ -33,6 +33,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
@@ -290,22 +291,22 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 	return s.getBlock(info, includeTxData)
 }
 
-func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, error) {
+func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, core.InboxState, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
-	res, err := s.srv.GetRequestResult(requestId)
+	res, inbox, err := s.srv.GetRequestResult(requestId)
 	if err != nil || res == nil {
-		return nil, nil, err
+		return nil, nil, core.InboxState{}, err
 	}
 	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
-		return nil, nil, err
+		return nil, nil, core.InboxState{}, err
 	}
-	return res, info, nil
+	return res, info, inbox, nil
 }
 
 func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
-	res, info, err := s.getTransactionInfoByHash(txHash)
+	res, info, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -344,8 +345,13 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 	return s.getTransactionByBlockAndIndex(info, index)
 }
 
-func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionReceiptResult, error) {
-	res, info, err := s.getTransactionInfoByHash(txHash)
+type ArbGetTxReceiptOpts struct {
+	ReturnBatchInfo bool `json:"returnBatchInfo"`
+}
+
+func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes, opts *ArbGetTxReceiptOpts) (*GetTransactionReceiptResult, error) {
+	// TODO: if ReturnBatchInfo is true, use inbox state to lookup batch event
+	res, info, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}

@@ -31,9 +31,9 @@ struct Assertion {
     uint64_t step_count;
     uint64_t gas_count;
     uint64_t inbox_messages_consumed;
-    std::vector<std::vector<uint8_t>> sends;
-    std::vector<value> logs;
-    std::vector<value> debug_prints;
+    std::vector<MachineEmission<std::vector<uint8_t>>> sends;
+    std::vector<MachineEmission<value>> logs;
+    std::vector<MachineEmission<value>> debug_prints;
     std::optional<uint256_t> sideload_block_number;
 };
 

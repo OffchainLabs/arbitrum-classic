@@ -60,8 +60,12 @@ class ReadTransaction {
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> delayedMessageGetIterator(
         rocksdb::Slice* lower_bound = nullptr,
         rocksdb::Slice* upper_bound = nullptr) const;
-    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> logGetIterator() const;
-    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sendGetIterator() const;
+    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> logGetIterator(
+        rocksdb::Slice* lower_bound = nullptr,
+        rocksdb::Slice* upper_bound = nullptr) const;
+    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sendGetIterator(
+        rocksdb::Slice* lower_bound = nullptr,
+        rocksdb::Slice* upper_bound = nullptr) const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sideloadGetIterator()
         const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> aggregatorGetIterator()

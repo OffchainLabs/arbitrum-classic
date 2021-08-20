@@ -104,7 +104,7 @@ func (m *Server) LatestBlockHeader() (*types.Header, error) {
 
 // GetMessageResult returns the value output by the VM in response to the
 // l2message with the given hash
-func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, error) {
+func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, core.InboxState, error) {
 	return m.db.GetRequest(requestId)
 }
 
@@ -145,10 +145,10 @@ func (m *Server) GetMachineBlockResults(block *machine.BlockInfo) (*evm.BlockInf
 
 func (m *Server) GetTxInBlockAtIndexResults(res *machine.BlockInfo, index uint64) (*evm.TxResult, error) {
 	avmLog, err := core.GetZeroOrOneLog(m.db.Lookup, new(big.Int).SetUint64(res.InitialLogIndex()+index))
-	if err != nil || avmLog == nil {
+	if err != nil || avmLog.Value == nil {
 		return nil, err
 	}
-	evmRes, err := evm.NewTxResultFromValue(avmLog)
+	evmRes, err := evm.NewTxResultFromValue(avmLog.Value)
 	if err != nil {
 		return nil, err
 	}

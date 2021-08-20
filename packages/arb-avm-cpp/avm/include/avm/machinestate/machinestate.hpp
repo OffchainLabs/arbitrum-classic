@@ -32,12 +32,31 @@
 class MachineExecutionConfig;
 struct MachineState;
 
+struct InboxState {
+    uint256_t count;
+    uint256_t accumulator;
+
+    void addMessage(const MachineMessage& message) {
+        accumulator = message.accumulator;
+        count += 1;
+    }
+
+    bool operator==(const InboxState& other) const;
+    bool operator!=(const InboxState& other) const;
+};
+
+template <typename T>
+struct MachineEmission {
+    T val;
+    InboxState inbox;
+};
+
 struct AssertionContext {
     std::vector<MachineMessage> inbox_messages;
 
-    std::vector<std::vector<uint8_t>> sends;
-    std::vector<value> logs;
-    std::vector<value> debug_prints;
+    std::vector<MachineEmission<std::vector<uint8_t>>> sends;
+    std::vector<MachineEmission<value>> logs;
+    std::vector<MachineEmission<value>> debug_prints;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload{false};
     uint256_t max_gas;
@@ -79,19 +98,6 @@ struct AssertionContext {
 struct OneStepProof {
     std::vector<unsigned char> standard_proof;
     std::vector<unsigned char> buffer_proof;
-};
-
-struct InboxState {
-    uint256_t count;
-    uint256_t accumulator;
-
-    void addMessage(const MachineMessage& message) {
-        accumulator = message.accumulator;
-        count += 1;
-    }
-
-    bool operator==(const InboxState& other) const;
-    bool operator!=(const InboxState& other) const;
 };
 
 struct MachineOutput {

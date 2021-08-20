@@ -118,10 +118,12 @@ ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
         }
 
         std::vector<std::vector<unsigned char>> data;
-        for (const auto& val : logs.data) {
-            std::vector<unsigned char> marshalled_value;
-            marshal_value(val, marshalled_value);
-            data.push_back(move(marshalled_value));
+        for (const auto& log : logs.data) {
+            std::vector<unsigned char> marshalled_log;
+            marshal_uint256_t(log.inbox.count, marshalled_log);
+            marshal_uint256_t(log.inbox.accumulator, marshalled_log);
+            marshal_value(log.val, marshalled_log);
+            data.push_back(move(marshalled_log));
         }
         return {returnCharVectorVector(data), true};
     } catch (const std::exception& e) {
@@ -413,17 +415,21 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
 
         std::vector<std::vector<unsigned char>> marshalled_logs;
         marshalled_logs.reserve(result.data.logs.size());
-        for (const auto& val : result.data.logs) {
+        for (const auto& log : result.data.logs) {
             std::vector<unsigned char> marshalled_value;
-            marshal_value(val, marshalled_value);
+            marshal_uint256_t(log.inbox.count, marshalled_value);
+            marshal_uint256_t(log.inbox.accumulator, marshalled_value);
+            marshal_value(log.val, marshalled_value);
             marshalled_logs.push_back(move(marshalled_value));
         }
 
         std::vector<std::vector<unsigned char>> marshalled_deleted_logs;
         marshalled_deleted_logs.reserve(result.data.deleted_logs.size());
-        for (const auto& val : result.data.deleted_logs) {
+        for (const auto& log : result.data.deleted_logs) {
             std::vector<unsigned char> marshalled_value;
-            marshal_value(val, marshalled_value);
+            marshal_uint256_t(log.inbox.count, marshalled_value);
+            marshal_uint256_t(log.inbox.accumulator, marshalled_value);
+            marshal_value(log.val, marshalled_value);
             marshalled_deleted_logs.push_back(move(marshalled_value));
         }
 

@@ -98,8 +98,8 @@ class ArbCore {
 
     struct logscursor_logs {
         uint256_t first_log_index;
-        std::vector<value> logs;
-        std::vector<value> deleted_logs;
+        std::vector<MachineEmission<value>> logs;
+        std::vector<MachineEmission<value>> deleted_logs;
     };
 
    private:
@@ -317,9 +317,8 @@ class ArbCore {
     [[nodiscard]] ValueResult<uint256_t> delayedMessageEntryInsertedCount()
         const;
     [[nodiscard]] ValueResult<uint256_t> totalDelayedMessagesSequenced() const;
-    ValueResult<std::vector<value>> getLogs(uint256_t index,
-                                            uint256_t count,
-                                            ValueCache& valueCache);
+    ValueResult<std::vector<MachineEmission<value>>>
+    getLogs(uint256_t index, uint256_t count, ValueCache& valueCache);
     [[nodiscard]] ValueResult<std::vector<std::vector<unsigned char>>> getSends(
         uint256_t index,
         uint256_t count) const;
@@ -380,19 +379,20 @@ class ArbCore {
         const ReadTransaction& tx) const;
 
     rocksdb::Status saveLogs(ReadWriteTransaction& tx,
-                             const std::vector<value>& val);
+                             const std::vector<MachineEmission<value>>& val);
     rocksdb::Status saveSends(
         ReadWriteTransaction& tx,
-        const std::vector<std::vector<unsigned char>>& sends);
+        const std::vector<MachineEmission<std::vector<unsigned char>>>& sends);
 
    private:
     ValueResult<std::optional<uint256_t>> addMessages(
         const message_data_struct& data,
         ValueCache& cache);
-    ValueResult<std::vector<value>> getLogsNoLock(ReadTransaction& tx,
-                                                  uint256_t index,
-                                                  uint256_t count,
-                                                  ValueCache& valueCache);
+    ValueResult<std::vector<MachineEmission<value>>> getLogsNoLock(
+        ReadTransaction& tx,
+        uint256_t index,
+        uint256_t count,
+        ValueCache& valueCache);
 
     [[nodiscard]] ValueResult<std::vector<MachineMessage>> readNextMessages(
         const ReadConsistentTransaction& tx,
