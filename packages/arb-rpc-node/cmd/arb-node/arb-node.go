@@ -272,7 +272,7 @@ func startup() error {
 	nodeStore := mon.Storage.GetNodeStore()
 	metricsConfig.RegisterNodeStoreMetrics(nodeStore)
 	metricsConfig.RegisterArbCoreMetrics(mon.Core)
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond, &config.Node.Cache)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
