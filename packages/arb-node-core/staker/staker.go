@@ -144,6 +144,7 @@ func (s *Staker) shouldAct(ctx context.Context) bool {
 		s.lastActCalledBlock = latestBlockNum
 	}
 	blocksSinceActCalled := new(big.Int).Sub(latestBlockNum, s.lastActCalledBlock)
+	s.lastActCalledBlock = latestBlockNum
 	if gasPriceHigh {
 		// We're eating into the high gas buffer to delay our tx
 		s.highGasBlocksBuffer.Sub(s.highGasBlocksBuffer, blocksSinceActCalled)
