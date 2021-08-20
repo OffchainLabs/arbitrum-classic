@@ -215,7 +215,8 @@ std::vector<value> serializeValue(const std::vector<unsigned char>&,
 std::vector<value> serializeValue(const std::vector<unsigned char>&,
                                   const UnloadedValue&,
                                   std::vector<unsigned char>&,
-                                  std::map<uint64_t, uint64_t>&) {
+                                  std::map<uint64_t, uint64_t>&,
+                                  const Code&) {
     throw std::runtime_error("Can't serialize unloaded value in db");
 }
 std::vector<value> serializeValue(const std::vector<unsigned char>&,
