@@ -32,6 +32,7 @@
 #include <iomanip>
 #include <set>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #ifdef __linux__
@@ -52,8 +53,8 @@ constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 }  // namespace
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
-                 const ArbCoreConfig& coreConfig_)
-    : coreConfig(coreConfig_),
+                 ArbCoreConfig coreConfig_)
+    : coreConfig(std::move(coreConfig_)),
       data_storage(std::move(data_storage_)),
       core_code(std::make_shared<CoreCode>(getNextSegmentID(data_storage))),
       timed_sideload_cache(coreConfig.timed_cache_expiration_seconds),
@@ -155,9 +156,22 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     {
         ReadTransaction tx(data_storage);
         auto schema_result = schemaVersion(tx);
-        if (schema_result.status.ok() && schema_result.data > 0) {
-            std::cerr << "Error: cannot use new database schema" << std::endl;
-            return rocksdb::Status::Aborted();
+        if (!schema_result.status.ok()) {
+            auto logs_result = logInsertedCountImpl(tx);
+            if (logs_result.status.ok()) {
+                // Old database that does not have schema version
+                std::cerr << "Error getting schema version: "
+                          << schema_result.status.ToString()
+                          << ", delete database and try again" << std::endl;
+                return rocksdb::Status::Corruption();
+            }
+        } else if (schema_result.data != arbcore_schema_version) {
+            // Database has schema version that does not match
+            std::cerr << "Database version " << schema_result.data
+                      << " does not match expected version "
+                      << arbcore_schema_version
+                      << ", delete database and try again" << std::endl;
+            return rocksdb::Status::Corruption();
         }
     }
 
@@ -446,23 +460,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
 
         if (!checkpoint_it->Valid()) {
             return rocksdb::Status::NotFound();
-        }
-
-        // At this point we know database has already been initialized, so
-        // check schema version
-        auto schema_result = schemaVersion(tx);
-        if (!schema_result.status.ok()) {
-            std::cerr << "Error getting schema version: "
-                      << schema_result.status.ToString()
-                      << ", delete database and try again" << std::endl;
-            return rocksdb::Status::Corruption();
-        }
-        if (schema_result.data != arbcore_schema_version) {
-            std::cerr << "Database version " << schema_result.data
-                      << " does not match expected version "
-                      << arbcore_schema_version
-                      << ", delete database and try again" << std::endl;
-            return rocksdb::Status::Corruption();
         }
 
         // Delete each checkpoint until at or below message_sequence_number

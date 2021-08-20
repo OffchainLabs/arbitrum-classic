@@ -186,7 +186,7 @@ class ArbCore {
    public:
     ArbCore() = delete;
     ArbCore(std::shared_ptr<DataStorage> data_storage_,
-            const ArbCoreConfig& coreConfig);
+            ArbCoreConfig coreConfig);
 
     ~ArbCore() { abortThread(); }
     rocksdb::Status initialize(const LoadedExecutable& executable);
