@@ -152,12 +152,20 @@ type Forwarder struct {
 
 type Node struct {
 	Aggregator Aggregator `koanf:"aggregator"`
+	Cache      NodeCache  `koanf:"cache"`
 	ChainID    uint64     `koanf:"chain-id"`
 	Forwarder  Forwarder  `koanf:"forwarder"`
 	RPC        RPC        `koanf:"rpc"`
 	Sequencer  Sequencer  `koanf:"sequencer"`
 	Type       string     `koanf:"type"`
 	WS         WS         `koanf:"ws"`
+}
+
+type NodeCache struct {
+	AllowSlowLookup  bool          `koanf:"allow-slow-lookup"`
+	LRUSize          int           `koanf:"lru-size"`
+	TimedInitialSize int           `koanf:"timed-initial-size"`
+	TimedExpire      time.Duration `koanf:"timed-expire"`
 }
 
 type Persistent struct {
