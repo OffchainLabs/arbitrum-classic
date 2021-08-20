@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface ArbOwnerInterface extends ethers.utils.Interface {
   functions: {
@@ -255,478 +254,285 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   events: {}
 }
 
-export class ArbOwner extends Contract {
+export class ArbOwner extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: ArbOwnerInterface
 
   functions: {
     addAllowedSender(
       addr: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'addAllowedSender(address)'(
-      addr: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     addToReserveFunds(
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'addToReserveFunds()'(
-      overrides?: PayableOverrides
+    allowAllSenders(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    allowAllSenders(overrides?: Overrides): Promise<ContractTransaction>
-
-    'allowAllSenders()'(overrides?: Overrides): Promise<ContractTransaction>
-
-    allowOnlyOwnerToSend(overrides?: Overrides): Promise<ContractTransaction>
-
-    'allowOnlyOwnerToSend()'(
-      overrides?: Overrides
+    allowOnlyOwnerToSend(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     bindAddressToPluggable(
       addr: string,
       pluggableId: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'bindAddressToPluggable(address,uint256)'(
-      addr: string,
-      pluggableId: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     continueCodeUpload(
       marshalledCode: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'continueCodeUpload(bytes)'(
-      marshalledCode: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     deployContract(
       constructorData: BytesLike,
       deemedSender: string,
       deemedNonce: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'deployContract(bytes,address,uint256)'(
-      constructorData: BytesLike,
-      deemedSender: string,
-      deemedNonce: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     finishCodeUploadAsArbosUpgrade(
       newCodeHash: BytesLike,
       oldCodeHash: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
-      newCodeHash: BytesLike,
-      oldCodeHash: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     finishCodeUploadAsPluggable(
       id: BigNumberish,
       keepState: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'finishCodeUploadAsPluggable(uint256,bool)'(
-      id: BigNumberish,
-      keepState: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     getAllAllowedSenders(overrides?: CallOverrides): Promise<[string]>
 
-    'getAllAllowedSenders()'(overrides?: CallOverrides): Promise<[string]>
-
     getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<[string]>
-
-    'getAllFairGasPriceSenders()'(overrides?: CallOverrides): Promise<[string]>
 
     getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
-    'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
-
     getTotalOfEthBalances(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     getUploadedCodeHash(overrides?: CallOverrides): Promise<[string]>
 
-    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<[string]>
-
     giveOwnership(
       newOwnerAddr: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'giveOwnership(address)'(
-      newOwnerAddr: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     isAllowedSender(addr: string, overrides?: CallOverrides): Promise<[boolean]>
-
-    'isAllowedSender(address)'(
-      addr: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
 
     isFairGasPriceSender(
       addr: string,
       overrides?: CallOverrides
     ): Promise<[boolean]>
 
-    'isFairGasPriceSender(address)'(
-      addr: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
     removeAllowedSender(
       addr: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'removeAllowedSender(address)'(
-      addr: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setFairGasPriceSender(
       addr: string,
       isFairGasPriceSender: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setFairGasPriceSender(address,bool)'(
-      addr: string,
-      isFairGasPriceSender: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setFeeRecipients(
       netFeeRecipient: string,
       congestionFeeRecipient: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setFeeRecipients(address,address)'(
-      netFeeRecipient: string,
-      congestionFeeRecipient: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setFeesEnabled(
       enabled: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setFeesEnabled(bool)'(
-      enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setGasAccountingParams(
       speedLimitPerBlock: BigNumberish,
       gasPoolMax: BigNumberish,
       maxTxGasLimit: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setGasAccountingParams(uint256,uint256,uint256)'(
-      speedLimitPerBlock: BigNumberish,
-      gasPoolMax: BigNumberish,
-      maxTxGasLimit: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setL1GasPriceEstimate(
       priceInGwei: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setL1GasPriceEstimate(uint256)'(
-      priceInGwei: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setSecondsPerSend(
       blocksPerSend: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'setSecondsPerSend(uint256)'(
-      blocksPerSend: BigNumberish,
-      overrides?: Overrides
+    startCodeUpload(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
-
-    startCodeUpload(overrides?: Overrides): Promise<ContractTransaction>
-
-    'startCodeUpload()'(overrides?: Overrides): Promise<ContractTransaction>
   }
 
   addAllowedSender(
     addr: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'addAllowedSender(address)'(
-    addr: string,
-    overrides?: Overrides
+  addToReserveFunds(
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  addToReserveFunds(overrides?: PayableOverrides): Promise<ContractTransaction>
-
-  'addToReserveFunds()'(
-    overrides?: PayableOverrides
+  allowAllSenders(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  allowAllSenders(overrides?: Overrides): Promise<ContractTransaction>
-
-  'allowAllSenders()'(overrides?: Overrides): Promise<ContractTransaction>
-
-  allowOnlyOwnerToSend(overrides?: Overrides): Promise<ContractTransaction>
-
-  'allowOnlyOwnerToSend()'(overrides?: Overrides): Promise<ContractTransaction>
+  allowOnlyOwnerToSend(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   bindAddressToPluggable(
     addr: string,
     pluggableId: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'bindAddressToPluggable(address,uint256)'(
-    addr: string,
-    pluggableId: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   continueCodeUpload(
     marshalledCode: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'continueCodeUpload(bytes)'(
-    marshalledCode: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   deployContract(
     constructorData: BytesLike,
     deemedSender: string,
     deemedNonce: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'deployContract(bytes,address,uint256)'(
-    constructorData: BytesLike,
-    deemedSender: string,
-    deemedNonce: BigNumberish,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   finishCodeUploadAsArbosUpgrade(
     newCodeHash: BytesLike,
     oldCodeHash: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
-    newCodeHash: BytesLike,
-    oldCodeHash: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   finishCodeUploadAsPluggable(
     id: BigNumberish,
     keepState: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'finishCodeUploadAsPluggable(uint256,bool)'(
-    id: BigNumberish,
-    keepState: boolean,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   getAllAllowedSenders(overrides?: CallOverrides): Promise<string>
 
-  'getAllAllowedSenders()'(overrides?: CallOverrides): Promise<string>
-
   getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<string>
-
-  'getAllFairGasPriceSenders()'(overrides?: CallOverrides): Promise<string>
 
   getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
-  'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
-
   getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
-
-  'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<BigNumber>
 
   getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
 
-  'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<string>
-
   giveOwnership(
     newOwnerAddr: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'giveOwnership(address)'(
-    newOwnerAddr: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   isAllowedSender(addr: string, overrides?: CallOverrides): Promise<boolean>
-
-  'isAllowedSender(address)'(
-    addr: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
 
   isFairGasPriceSender(
     addr: string,
     overrides?: CallOverrides
   ): Promise<boolean>
 
-  'isFairGasPriceSender(address)'(
-    addr: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>
-
   removeAllowedSender(
     addr: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'removeAllowedSender(address)'(
-    addr: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setFairGasPriceSender(
     addr: string,
     isFairGasPriceSender: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setFairGasPriceSender(address,bool)'(
-    addr: string,
-    isFairGasPriceSender: boolean,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setFeeRecipients(
     netFeeRecipient: string,
     congestionFeeRecipient: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setFeeRecipients(address,address)'(
-    netFeeRecipient: string,
-    congestionFeeRecipient: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setFeesEnabled(
     enabled: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setFeesEnabled(bool)'(
-    enabled: boolean,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setGasAccountingParams(
     speedLimitPerBlock: BigNumberish,
     gasPoolMax: BigNumberish,
     maxTxGasLimit: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setGasAccountingParams(uint256,uint256,uint256)'(
-    speedLimitPerBlock: BigNumberish,
-    gasPoolMax: BigNumberish,
-    maxTxGasLimit: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setL1GasPriceEstimate(
     priceInGwei: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setL1GasPriceEstimate(uint256)'(
-    priceInGwei: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setSecondsPerSend(
     blocksPerSend: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'setSecondsPerSend(uint256)'(
-    blocksPerSend: BigNumberish,
-    overrides?: Overrides
+  startCodeUpload(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
-
-  startCodeUpload(overrides?: Overrides): Promise<ContractTransaction>
-
-  'startCodeUpload()'(overrides?: Overrides): Promise<ContractTransaction>
 
   callStatic: {
     addAllowedSender(addr: string, overrides?: CallOverrides): Promise<void>
 
-    'addAllowedSender(address)'(
-      addr: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     addToReserveFunds(overrides?: CallOverrides): Promise<void>
-
-    'addToReserveFunds()'(overrides?: CallOverrides): Promise<void>
 
     allowAllSenders(overrides?: CallOverrides): Promise<void>
 
-    'allowAllSenders()'(overrides?: CallOverrides): Promise<void>
-
     allowOnlyOwnerToSend(overrides?: CallOverrides): Promise<void>
 
-    'allowOnlyOwnerToSend()'(overrides?: CallOverrides): Promise<void>
-
     bindAddressToPluggable(
-      addr: string,
-      pluggableId: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'bindAddressToPluggable(address,uint256)'(
       addr: string,
       pluggableId: BigNumberish,
       overrides?: CallOverrides
@@ -737,19 +543,7 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'continueCodeUpload(bytes)'(
-      marshalledCode: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     deployContract(
-      constructorData: BytesLike,
-      deemedSender: string,
-      deemedNonce: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'deployContract(bytes,address,uint256)'(
       constructorData: BytesLike,
       deemedSender: string,
       deemedNonce: BigNumberish,
@@ -762,19 +556,7 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
-      newCodeHash: BytesLike,
-      oldCodeHash: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     finishCodeUploadAsPluggable(
-      id: BigNumberish,
-      keepState: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'finishCodeUploadAsPluggable(uint256,bool)'(
       id: BigNumberish,
       keepState: boolean,
       overrides?: CallOverrides
@@ -782,57 +564,27 @@ export class ArbOwner extends Contract {
 
     getAllAllowedSenders(overrides?: CallOverrides): Promise<string>
 
-    'getAllAllowedSenders()'(overrides?: CallOverrides): Promise<string>
-
     getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<string>
-
-    'getAllFairGasPriceSenders()'(overrides?: CallOverrides): Promise<string>
 
     getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
-    'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
-
     getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
 
-    'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<BigNumber>
-
     getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
-
-    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<string>
 
     giveOwnership(
       newOwnerAddr: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'giveOwnership(address)'(
-      newOwnerAddr: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     isAllowedSender(addr: string, overrides?: CallOverrides): Promise<boolean>
-
-    'isAllowedSender(address)'(
-      addr: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
 
     isFairGasPriceSender(
       addr: string,
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    'isFairGasPriceSender(address)'(
-      addr: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
     removeAllowedSender(addr: string, overrides?: CallOverrides): Promise<void>
-
-    'removeAllowedSender(address)'(
-      addr: string,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     setFairGasPriceSender(
       addr: string,
@@ -840,19 +592,7 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setFairGasPriceSender(address,bool)'(
-      addr: string,
-      isFairGasPriceSender: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     setFeeRecipients(
-      netFeeRecipient: string,
-      congestionFeeRecipient: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setFeeRecipients(address,address)'(
       netFeeRecipient: string,
       congestionFeeRecipient: string,
       overrides?: CallOverrides
@@ -860,19 +600,7 @@ export class ArbOwner extends Contract {
 
     setFeesEnabled(enabled: boolean, overrides?: CallOverrides): Promise<void>
 
-    'setFeesEnabled(bool)'(
-      enabled: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     setGasAccountingParams(
-      speedLimitPerBlock: BigNumberish,
-      gasPoolMax: BigNumberish,
-      maxTxGasLimit: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setGasAccountingParams(uint256,uint256,uint256)'(
       speedLimitPerBlock: BigNumberish,
       gasPoolMax: BigNumberish,
       maxTxGasLimit: BigNumberish,
@@ -884,326 +612,179 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setL1GasPriceEstimate(uint256)'(
-      priceInGwei: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     setSecondsPerSend(
       blocksPerSend: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setSecondsPerSend(uint256)'(
-      blocksPerSend: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     startCodeUpload(overrides?: CallOverrides): Promise<void>
-
-    'startCodeUpload()'(overrides?: CallOverrides): Promise<void>
   }
 
   filters: {}
 
   estimateGas: {
-    addAllowedSender(addr: string, overrides?: Overrides): Promise<BigNumber>
-
-    'addAllowedSender(address)'(
+    addAllowedSender(
       addr: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    addToReserveFunds(overrides?: PayableOverrides): Promise<BigNumber>
+    addToReserveFunds(
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
-    'addToReserveFunds()'(overrides?: PayableOverrides): Promise<BigNumber>
+    allowAllSenders(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
-    allowAllSenders(overrides?: Overrides): Promise<BigNumber>
-
-    'allowAllSenders()'(overrides?: Overrides): Promise<BigNumber>
-
-    allowOnlyOwnerToSend(overrides?: Overrides): Promise<BigNumber>
-
-    'allowOnlyOwnerToSend()'(overrides?: Overrides): Promise<BigNumber>
+    allowOnlyOwnerToSend(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     bindAddressToPluggable(
       addr: string,
       pluggableId: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'bindAddressToPluggable(address,uint256)'(
-      addr: string,
-      pluggableId: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     continueCodeUpload(
       marshalledCode: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'continueCodeUpload(bytes)'(
-      marshalledCode: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     deployContract(
       constructorData: BytesLike,
       deemedSender: string,
       deemedNonce: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'deployContract(bytes,address,uint256)'(
-      constructorData: BytesLike,
-      deemedSender: string,
-      deemedNonce: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     finishCodeUploadAsArbosUpgrade(
       newCodeHash: BytesLike,
       oldCodeHash: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
-      newCodeHash: BytesLike,
-      oldCodeHash: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     finishCodeUploadAsPluggable(
       id: BigNumberish,
       keepState: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'finishCodeUploadAsPluggable(uint256,bool)'(
-      id: BigNumberish,
-      keepState: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     getAllAllowedSenders(overrides?: CallOverrides): Promise<BigNumber>
 
-    'getAllAllowedSenders()'(overrides?: CallOverrides): Promise<BigNumber>
-
     getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<BigNumber>
-
-    'getAllFairGasPriceSenders()'(overrides?: CallOverrides): Promise<BigNumber>
 
     getFeeRecipients(overrides?: CallOverrides): Promise<BigNumber>
 
-    'getFeeRecipients()'(overrides?: CallOverrides): Promise<BigNumber>
-
     getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
-
-    'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<BigNumber>
 
     getUploadedCodeHash(overrides?: CallOverrides): Promise<BigNumber>
 
-    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<BigNumber>
-
     giveOwnership(
       newOwnerAddr: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'giveOwnership(address)'(
-      newOwnerAddr: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     isAllowedSender(addr: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'isAllowedSender(address)'(
-      addr: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
 
     isFairGasPriceSender(
       addr: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'isFairGasPriceSender(address)'(
+    removeAllowedSender(
       addr: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    removeAllowedSender(addr: string, overrides?: Overrides): Promise<BigNumber>
-
-    'removeAllowedSender(address)'(
-      addr: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setFairGasPriceSender(
       addr: string,
       isFairGasPriceSender: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setFairGasPriceSender(address,bool)'(
-      addr: string,
-      isFairGasPriceSender: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setFeeRecipients(
       netFeeRecipient: string,
       congestionFeeRecipient: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'setFeeRecipients(address,address)'(
-      netFeeRecipient: string,
-      congestionFeeRecipient: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    setFeesEnabled(enabled: boolean, overrides?: Overrides): Promise<BigNumber>
-
-    'setFeesEnabled(bool)'(
+    setFeesEnabled(
       enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setGasAccountingParams(
       speedLimitPerBlock: BigNumberish,
       gasPoolMax: BigNumberish,
       maxTxGasLimit: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setGasAccountingParams(uint256,uint256,uint256)'(
-      speedLimitPerBlock: BigNumberish,
-      gasPoolMax: BigNumberish,
-      maxTxGasLimit: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setL1GasPriceEstimate(
       priceInGwei: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setL1GasPriceEstimate(uint256)'(
-      priceInGwei: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setSecondsPerSend(
       blocksPerSend: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'setSecondsPerSend(uint256)'(
-      blocksPerSend: BigNumberish,
-      overrides?: Overrides
+    startCodeUpload(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
-
-    startCodeUpload(overrides?: Overrides): Promise<BigNumber>
-
-    'startCodeUpload()'(overrides?: Overrides): Promise<BigNumber>
   }
 
   populateTransaction: {
     addAllowedSender(
       addr: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'addAllowedSender(address)'(
-      addr: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     addToReserveFunds(
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'addToReserveFunds()'(
-      overrides?: PayableOverrides
+    allowAllSenders(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    allowAllSenders(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'allowAllSenders()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    allowOnlyOwnerToSend(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'allowOnlyOwnerToSend()'(
-      overrides?: Overrides
+    allowOnlyOwnerToSend(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     bindAddressToPluggable(
       addr: string,
       pluggableId: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'bindAddressToPluggable(address,uint256)'(
-      addr: string,
-      pluggableId: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     continueCodeUpload(
       marshalledCode: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'continueCodeUpload(bytes)'(
-      marshalledCode: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     deployContract(
       constructorData: BytesLike,
       deemedSender: string,
       deemedNonce: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'deployContract(bytes,address,uint256)'(
-      constructorData: BytesLike,
-      deemedSender: string,
-      deemedNonce: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     finishCodeUploadAsArbosUpgrade(
       newCodeHash: BytesLike,
       oldCodeHash: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
-      newCodeHash: BytesLike,
-      oldCodeHash: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     finishCodeUploadAsPluggable(
       id: BigNumberish,
       keepState: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'finishCodeUploadAsPluggable(uint256,bool)'(
-      id: BigNumberish,
-      keepState: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     getAllAllowedSenders(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getAllAllowedSenders()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -1211,21 +792,9 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'getAllFairGasPriceSenders()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getFeeRecipients(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'getFeeRecipients()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getTotalOfEthBalances(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getTotalOfEthBalances()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -1233,26 +802,12 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'getUploadedCodeHash()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     giveOwnership(
       newOwnerAddr: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'giveOwnership(address)'(
-      newOwnerAddr: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     isAllowedSender(
-      addr: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'isAllowedSender(address)'(
       addr: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -1262,91 +817,47 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'isFairGasPriceSender(address)'(
-      addr: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     removeAllowedSender(
       addr: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'removeAllowedSender(address)'(
-      addr: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setFairGasPriceSender(
       addr: string,
       isFairGasPriceSender: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setFairGasPriceSender(address,bool)'(
-      addr: string,
-      isFairGasPriceSender: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setFeeRecipients(
       netFeeRecipient: string,
       congestionFeeRecipient: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setFeeRecipients(address,address)'(
-      netFeeRecipient: string,
-      congestionFeeRecipient: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setFeesEnabled(
       enabled: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setFeesEnabled(bool)'(
-      enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setGasAccountingParams(
       speedLimitPerBlock: BigNumberish,
       gasPoolMax: BigNumberish,
       maxTxGasLimit: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setGasAccountingParams(uint256,uint256,uint256)'(
-      speedLimitPerBlock: BigNumberish,
-      gasPoolMax: BigNumberish,
-      maxTxGasLimit: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setL1GasPriceEstimate(
       priceInGwei: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setL1GasPriceEstimate(uint256)'(
-      priceInGwei: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setSecondsPerSend(
       blocksPerSend: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'setSecondsPerSend(uint256)'(
-      blocksPerSend: BigNumberish,
-      overrides?: Overrides
+    startCodeUpload(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
-
-    startCodeUpload(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'startCodeUpload()'(overrides?: Overrides): Promise<PopulatedTransaction>
   }
 }

@@ -155,6 +155,11 @@ class Tuple {
         return tpl->data[pos];
     }
 
+    [[nodiscard]] value& get_element_mutable_unsafe(const uint64_t pos) const {
+        tpl->deferredHashing = true;
+        return tpl->data[pos];
+    }
+
     [[nodiscard]] HashPreImage getHashPreImage() const {
         if (!tpl) {
             return zeroPreimage();

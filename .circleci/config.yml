@@ -68,7 +68,7 @@ jobs:
       - save_cache: *save_go_cache
   arb-ts:
     docker:
-      - image: offchainlabs/frontend-base:0.1.0
+      - image: offchainlabs/frontend-base:0.3.0
     environment:
       TEST_RESULTS: *test-path
     steps:
@@ -96,7 +96,7 @@ jobs:
           path: *test-path
   ethbridge:
     docker:
-      - image: offchainlabs/ethbridge-base:0.2.1
+      - image: offchainlabs/frontend-base:0.3.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -274,7 +274,7 @@ jobs:
 
   arb-bridge-peripherals:
     docker:
-      - image: offchainlabs/integration-base:0.3.3
+      - image: offchainlabs/integration-base:0.3.4
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:

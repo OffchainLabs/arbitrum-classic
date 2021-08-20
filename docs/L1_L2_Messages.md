@@ -211,6 +211,10 @@ This ArbRetryableTx interface is instantiated and exposed `bridge` class of [arb
 myBridge.ArbRetryableTx.redeem('mytxid')
 ```
 
+### Demo
+
+See [Greeter](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/greeter) for a simple demo illustrating the use of retryable tickets.
+
 ## Arbitrum to Ethereum
 
 ### Explanation
@@ -309,6 +313,8 @@ Anytime after the dispute window passes, any user can execute the L1 message by 
     )
 ```
 
-Note that convenience methods for the steps outlined here are provided in the [arb-ts](https://arb-ts-docs.netlify.app/) client side library.
+### Demo
 
-For relevant example usage, see [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts.md) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
+See [outbox-execute](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/outbox-execute) for client side interactions with the outbox using the [arb-ts](https://arb-ts-docs.netlify.app/) library.
+
+See also [integration tests](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts/integration_test) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).

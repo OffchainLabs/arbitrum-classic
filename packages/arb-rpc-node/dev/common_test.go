@@ -27,11 +27,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 var arbosfile *string
@@ -106,7 +106,7 @@ func NewTestDevNode(
 	test.FailIfError(t, err)
 	initMsg, err := message.NewInitMessage(params, owner, config)
 	test.FailIfError(t, err)
-	_, err = backend.AddInboxMessage(initMsg, rollupAddress)
+	_, err = backend.AddInboxMessage(initMsg, common.Address{})
 	test.FailIfError(t, err)
 
 	go func() {

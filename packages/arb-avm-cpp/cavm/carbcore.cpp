@@ -560,15 +560,17 @@ CMachineResult arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
         auto machine =
             arbcore->getMachineForSideload(block_number, allow_slow_lookup);
         if (!machine.status.ok()) {
+            if (machine.status.IsNotFound() && !allow_slow_lookup) {
+                // Machine not found in memory cache and database lookup
+                // disabled
+                return {nullptr, 1};
+            }
+
             std::cerr << "Failed to load machine for sideload "
                       << machine.status.ToString() << std::endl;
             return {nullptr, 0};
         }
 
-        if (!machine.data) {
-            // Machine not found in memory cache and database lookup disabled
-            return {nullptr, 1};
-        }
         return {static_cast<void*>(machine.data.release()), 0};
     } catch (const std::exception& e) {
         std::cerr << "Exception while loading machine for sideload " << e.what()

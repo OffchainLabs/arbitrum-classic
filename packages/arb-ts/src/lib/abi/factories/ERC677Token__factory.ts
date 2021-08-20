@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ERC677Token } from '../ERC677Token'
-
-export class ERC677Token__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ERC677Token {
-    return new Contract(address, _abi, signerOrProvider) as ERC677Token
-  }
-}
+import type { ERC677Token, ERC677TokenInterface } from '../ERC677Token'
 
 const _abi = [
   {
@@ -348,3 +338,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ERC677Token__factory {
+  static readonly abi = _abi
+  static createInterface(): ERC677TokenInterface {
+    return new utils.Interface(_abi) as ERC677TokenInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ERC677Token {
+    return new Contract(address, _abi, signerOrProvider) as ERC677Token
+  }
+}

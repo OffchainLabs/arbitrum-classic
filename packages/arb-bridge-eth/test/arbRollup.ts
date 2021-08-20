@@ -21,9 +21,6 @@ import { ContractTransaction } from '@ethersproject/contracts'
 import { TransactionResponse } from '@ethersproject/providers'
 import { assert, expect } from 'chai'
 import { Rollup } from '../build/types/Rollup'
-import { Node as NodeCon } from '../build/types/Node'
-import { RollupCreatorNoProxy } from '../build/types/RollupCreatorNoProxy'
-import { RollupCreatorNoProxy__factory } from '../build/types/factories/RollupCreatorNoProxy__factory'
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
 import { initializeAccounts } from './utils'
@@ -35,6 +32,7 @@ import {
   Assertion,
   RollupContract,
 } from './rolluplib'
+import { RollupUserFacet } from '../build/types'
 
 const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
@@ -55,13 +53,13 @@ let challenge: Challenge
 let accounts: Signer[]
 
 async function createRollup(): Promise<{
-  rollupCon: Rollup
+  rollupCon: RollupUserFacet
   blockCreated: number
 }> {
   const ChallengeFactory = await deployments.get('ChallengeFactory')
-  const RollupCreatorNoProxy = (await ethers.getContractFactory(
+  const RollupCreatorNoProxy = await ethers.getContractFactory(
     'RollupCreatorNoProxy'
-  )) as RollupCreatorNoProxy__factory
+  )
   const rollupCreator = await RollupCreatorNoProxy.deploy(
     ChallengeFactory.address,
     initialVmState,
@@ -77,7 +75,9 @@ async function createRollup(): Promise<{
     '0x'
   )
 
-  const receipt = await (rollupCreator.deployTransaction as TransactionResponse).wait()
+  const receipt = await (
+    rollupCreator.deployTransaction as TransactionResponse
+  ).wait()
   if (receipt.logs == undefined) {
     throw Error('expected receipt to have logs')
   }
@@ -86,7 +86,7 @@ async function createRollup(): Promise<{
     receipt.logs[receipt.logs.length - 1]
   )
   expect(ev.name).to.equal('RollupCreated')
-  const parsedEv = (ev as any) as { args: { rollupAddress: string } }
+  const parsedEv = ev as any as { args: { rollupAddress: string } }
 
   const Rollup = (await ethers.getContractFactory('RollupUserFacet')).connect(
     accounts[8]
@@ -105,7 +105,7 @@ async function createRollup(): Promise<{
     [true, true, true]
   )
 
-  const rollupCon = Rollup.attach(parsedEv.args.rollupAddress) as Rollup
+  const rollupCon = Rollup.attach(parsedEv.args.rollupAddress)
 
   return {
     rollupCon: rollupCon,
@@ -177,7 +177,7 @@ describe('ArbRollup', () => {
     const nodeAddress = await rollup.getNode(originalNode)
 
     const NodeContract = await ethers.getContractFactory('Node')
-    const node = NodeContract.attach(nodeAddress) as NodeCon
+    const node = NodeContract.attach(nodeAddress)
 
     const newState = new NodeState(
       new ExecutionState(0, initialVmState, 0, 0, 0, zerobytes32, zerobytes32),
@@ -294,9 +294,9 @@ describe('ArbRollup', () => {
       receipt.logs![receipt.logs!.length - 1]
     )
     expect(ev.name).to.equal('RollupChallengeStarted')
-    const parsedEv = (ev as any) as { args: { challengeContract: string } }
+    const parsedEv = ev as any as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+    challenge = Challenge.attach(parsedEv.args.challengeContract)
   })
 
   it('should make a new node', async function () {
@@ -349,9 +349,9 @@ describe('ArbRollup', () => {
       receipt.logs![receipt.logs!.length - 1]
     )
     expect(ev.name).to.equal('RollupChallengeStarted')
-    const parsedEv = (ev as any) as { args: { challengeContract: string } }
+    const parsedEv = ev as any as { args: { challengeContract: string } }
     const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(parsedEv.args.challengeContract) as Challenge
+    challenge = Challenge.attach(parsedEv.args.challengeContract)
   })
 
   it('challenger should reply in challenge', async function () {

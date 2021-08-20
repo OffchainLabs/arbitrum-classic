@@ -37,7 +37,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
@@ -297,10 +296,10 @@ func (b *Backend) waitForBlockCount(blockCount uint64) error {
 	return nil
 }
 
-func (b *Backend) PendingTransactionCount(_ context.Context, _ common.Address) *uint64 {
+func (b *Backend) PendingTransactionCount(_ context.Context, _ common.Address) (*uint64, error) {
 	b.Lock()
 	defer b.Unlock()
-	return nil
+	return nil, nil
 }
 
 func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) error {
@@ -457,7 +456,7 @@ func (b *L1Emulator) IncreaseTime(amount int64) {
 
 func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator ethcommon.Address) error {
 
-	client := web3.NewEthClient(srv, true, metrics.NewMetricsConfig(nil))
+	client := web3.NewEthClient(srv, true)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
 		return errors.Wrap(err, "error connecting to arb owner")
