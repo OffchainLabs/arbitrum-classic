@@ -18,12 +18,14 @@ import (
 
 type Accounts struct {
 	srv         *Server
+	fwdSrv      *ForwarderServer
 	addresses   []common.Address
 	privateKeys map[common.Address]*ecdsa.PrivateKey
 	signer      types.Signer
+	nonMutating bool
 }
 
-func NewAccounts(ethServer *Server, privateKeys []*ecdsa.PrivateKey) *Accounts {
+func NewAccounts(ethServer *Server, privateKeys []*ecdsa.PrivateKey, nonMutating bool) *Accounts {
 	keys := make(map[common.Address]*ecdsa.PrivateKey)
 	addresses := make([]common.Address, 0, len(privateKeys))
 	for _, privKey := range privateKeys {
@@ -36,6 +38,7 @@ func NewAccounts(ethServer *Server, privateKeys []*ecdsa.PrivateKey) *Accounts {
 		addresses:   addresses,
 		privateKeys: keys,
 		signer:      types.NewEIP155Signer(new(big.Int).SetUint64(uint64(ethServer.ChainId()))),
+		nonMutating: nonMutating,
 	}
 }
 
@@ -54,6 +57,10 @@ type SendTransactionArgs struct {
 }
 
 func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArgs) (common.Hash, error) {
+	if s.nonMutating {
+		return common.Hash{}, errors.New(nonMutatingModeError)
+	}
+
 	sender := s.addresses[0]
 	if args.From != nil {
 		sender = *args.From
@@ -69,7 +76,7 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 	} else {
 		pending := rpc.PendingBlockNumber
 		block := rpc.BlockNumberOrHash{BlockNumber: &pending}
-		rawNonce, err := s.srv.GetTransactionCount(ctx, &sender, block)
+		rawNonce, err := s.fwdSrv.GetTransactionCount(ctx, &sender, block)
 		if err != nil {
 			return common.Hash{}, err
 		}

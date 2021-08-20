@@ -181,7 +181,7 @@ func (m *Server) Aggregator() *common.Address {
 	return m.batch.Aggregator()
 }
 
-func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
+func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error) {
 	return m.batch.PendingTransactionCount(ctx, account)
 }
 
@@ -189,7 +189,12 @@ func (m *Server) ChainDb() ethdb.Database {
 	return nil
 }
 
-func (m *Server) HeaderByNumber(_ context.Context, blockNumber rpc.BlockNumber) (*types.Header, error) {
+func (m *Server) HeaderByNumber(ctx context.Context, blockNumber rpc.BlockNumber) (*types.Header, error) {
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("context cancelled")
+	default:
+	}
 	height, err := m.BlockNum(&blockNumber)
 	if err != nil {
 		return nil, err
