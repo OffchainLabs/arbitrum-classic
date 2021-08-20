@@ -282,10 +282,14 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 }
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+	f.String("bridge-utils-address", "", "bridgeutils contract address")
+
 	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
 	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
 
-	f.String("bridge-utils-address", "", "bridgeutils contract address")
+	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
+	f.Int("node.cache.lru-size", 20, "number of recently used L2 blocks to hold in lru memory cache")
+	//f.Duration("node.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in timed memory cache")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 
