@@ -1,26 +1,13 @@
-import {
-  providers,
-  utils,
-  Wallet,
-  BigNumber,
-  constants,
-  ethers,
-  ContractReceipt,
-} from 'ethers'
+import { BigNumber } from 'ethers'
 import { Bridge } from '../src/lib/bridge'
-import { Network } from '../src/lib/networks'
 
 import { expect } from 'chai'
-import config from './config'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 
-import yargs from 'yargs/yargs'
-import chalk from 'chalk'
 import {
   fundL1,
   fundL2,
   testRetryableTicket,
-  prettyLog,
   warn,
   instantiateBridgeWithRandomWallet,
   fundL2Token,
@@ -28,7 +15,6 @@ import {
   skipIfMainnet,
   existentTestERC20,
 } from './testHelpers'
-const { Zero, AddressZero } = constants
 
 describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', function () {
@@ -63,9 +49,8 @@ describe('standard ERC20', () => {
     const withdrawRec = await withdrawRes.wait()
 
     expect(withdrawRec.status).to.equal(1)
-    const withdrawEventData = bridge.getWithdrawalsInL2Transaction(
-      withdrawRec
-    )[0]
+    const withdrawEventData =
+      bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
 
     expect(withdrawEventData).to.exist
 
@@ -86,10 +71,10 @@ const depositTokenTest = async (bridge: Bridge) => {
     bridge.l1Signer
   )
   const mintRes = await testToken.mint()
-  const mintRec = await mintRes.wait()
+  await mintRes.wait()
 
   const approveRes = await bridge.approveToken(existentTestERC20)
-  const approveRec = await approveRes.wait()
+  await approveRes.wait()
 
   const data = await bridge.getAndUpdateL1TokenData(existentTestERC20)
   const allowed = data.ERC20 && data.ERC20.allowed

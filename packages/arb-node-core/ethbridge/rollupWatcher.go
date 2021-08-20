@@ -26,13 +26,13 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -112,7 +112,7 @@ func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: big.NewInt(r.fromBlock),
-		ToBlock:   nil,
+		ToBlock:   big.NewInt(r.fromBlock),
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
 	}

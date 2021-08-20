@@ -27,23 +27,24 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/ethereum/go-ethereum/metrics"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 func deployRollup(
@@ -61,7 +62,7 @@ func deployRollup(
 	sequencerDelayBlocks *big.Int,
 	sequencerDelaySeconds *big.Int,
 	extraConfig []byte,
-) ethcommon.Address {
+) (ethcommon.Address, *big.Int) {
 	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
 	test.FailIfError(t, err)
 	osp2Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof2(auth, client)
@@ -95,7 +96,7 @@ func deployRollup(
 	createEv, err := rollupCreator.ParseRollupCreated(*receipt.Logs[len(receipt.Logs)-1])
 	test.FailIfError(t, err)
 
-	return createEv.RollupAddress
+	return createEv.RollupAddress, receipt.BlockNumber
 }
 
 type ExpectedChallengeEnd uint8
@@ -156,7 +157,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	sequencer := common.NewAddressFromEth(seqAuth.From)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
-	rollupAddr := deployRollup(
+	rollupAddr, rollupBlock := deployRollup(
 		t,
 		auth,
 		client,
@@ -182,22 +183,22 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	validatorWalletFactory, _, _, err := ethbridgecontracts.DeployValidatorWalletCreator(auth, client)
 	test.FailIfError(t, err)
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
 	test.FailIfError(t, err)
-	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, "")
+	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2)
 	test.FailIfError(t, err)
 
-	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, 0, valAuth, client)
+	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client)
 	test.FailIfError(t, err)
 
 	// Should lookup WalletCreated event
-	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, 0, valAuth, client)
+	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client)
 	test.FailIfError(t, err)
 	if validatorAddress != checkValidatorAddress {
 		t.Error("CreateValidatorWallet didn't reuse existing wallet")
 	}
 
-	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, 0, val2Auth, client)
+	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), val2Auth, client)
 	test.FailIfError(t, err)
 	if validatorAddress == validatorAddress2 {
 		t.Error("CreateValidatorWallet reused existing wallet for different address")
@@ -219,7 +220,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
 
-	staker, _, err := NewStaker(ctx, mon.Core, client, val, 0, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth)
+	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth, configuration.Validator{})
 	test.FailIfError(t, err)
 
 	staker.Validator.GasThreshold = big.NewInt(0)
@@ -267,12 +268,12 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	faultyCore := challenge.NewFaultyCore(mon.Core, faultConfig)
 
-	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, 0, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, val2Auth)
+	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, val2Auth, configuration.Validator{})
 	test.FailIfError(t, err)
 
 	faultyStaker.Validator.GasThreshold = big.NewInt(0)
 
-	registry := prometheus.NewRegistry()
+	registry := metrics.NewRegistry()
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
@@ -282,14 +283,14 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	nodehealth.Init(healthChan)
 
 	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, registry, registry)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, registry)
 		test.FailIfError(t, err)
 	}()
 
 	// Make a dummy feed for now
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), 0, common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed)
 	test.FailIfError(t, err)
 
 	for i := 1; i <= 10; i++ {

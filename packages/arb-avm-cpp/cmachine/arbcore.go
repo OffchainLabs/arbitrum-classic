@@ -486,12 +486,11 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 }
 
 func (ac *ArbCore) GetMachineForSideload(blockNumber uint64, allowSlowLookup bool) (machine.Machine, error) {
-	allowSlowLookupInt := 0
+	CallowSlowLookup := 0
 	if allowSlowLookup {
-		allowSlowLookupInt = 1
+		CallowSlowLookup = 1
 	}
-
-	cMachineResult := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber), C.int(allowSlowLookupInt))
+	cMachineResult := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber), C.int(CallowSlowLookup))
 
 	if cMachineResult.slow_error == 1 {
 		return nil, errors.Errorf("missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )")

@@ -107,15 +107,13 @@ func startup() error {
 	// Dummy sequencerFeed since validator doesn't use it
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 
-	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.MetricsPrefix)
-	metricsConfig.RegisterSystemMetrics()
-	metricsConfig.RegisterStaticMetrics()
+	metricsConfig := metrics.NewMetricsConfig(config.MetricsServer, &config.Healthcheck.MetricsPrefix)
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 
 	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry, metricsConfig.Registerer)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
@@ -168,7 +166,7 @@ func startup() error {
 		}
 	}
 
-	valAuth, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config.GasPriceUrl, false)
+	valAuth, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
@@ -208,7 +206,7 @@ func startup() error {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth, config.Validator)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
 	}

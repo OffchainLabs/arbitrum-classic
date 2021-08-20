@@ -26,7 +26,7 @@ const main = async () => {
   const { l1Signer, l2Signer } = bridge
   const l1SignerAddress = await l1Signer.getAddress()
 
-  const l1InboxAddr = tokenBridge.inbox
+  const l1InboxAddr = await bridge.l1Bridge.getInbox()
   const l1GatewayRouterAddr = tokenBridge.l1GatewayRouter
   const l2GatewayRouterAddr = tokenBridge.l2GatewayRouter
   const l1ProxyAdminAddr = tokenBridge.l1ProxyAdmin
@@ -76,22 +76,28 @@ const main = async () => {
   ).connect(l2Signer)
 
   console.log('deploying L1 proxy')
-  let l1WethGatewayProxy = await L1TransparentUpgradeableProxy.deploy(
-    l1WethGateway.address,
-    l1ProxyAdminAddr,
-    '0x'
+  const l1WethGatewayProxyDeployment =
+    await L1TransparentUpgradeableProxy.deploy(
+      l1WethGateway.address,
+      l1ProxyAdminAddr,
+      '0x'
+    )
+  await l1WethGatewayProxyDeployment.deployed()
+  const l1WethGatewayProxy = L1WethGateway.attach(
+    l1WethGatewayProxyDeployment.address
   )
-  await l1WethGatewayProxy.deployed()
-  l1WethGatewayProxy = L1WethGateway.attach(l1WethGatewayProxy.address)
 
   console.log('deploying L2 proxy')
-  let l2WethGatewayProxy = await L2TransparentUpgradeableProxy.deploy(
-    l2WethGateway.address,
-    l2ProxyAdminAddr,
-    '0x'
+  const l2WethGatewayProxyDeployment =
+    await L2TransparentUpgradeableProxy.deploy(
+      l2WethGateway.address,
+      l2ProxyAdminAddr,
+      '0x'
+    )
+  await l2WethGatewayProxyDeployment.deployed()
+  const l2WethGatewayProxy = L2WethGateway.attach(
+    l2WethGatewayProxyDeployment.address
   )
-  await l2WethGatewayProxy.deployed()
-  l2WethGatewayProxy = L2WethGateway.attach(l2WethGatewayProxy.address)
 
   console.log({
     l1WethGatewayProxy: l1WethGatewayProxy.address,

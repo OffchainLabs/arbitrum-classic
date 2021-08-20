@@ -146,3 +146,7 @@ Note that in the system described above, one pair of Gateway contracts handles t
 Take our wrapped Ether implementation, for example: here, a single WETH contract on L1 is connected to a single WETH contract on L2. When transferring WETH from one domain to another, the L1/L2 Gateway architecture is used to unwrap the WETH on domain A, transfer the now-unwrapped Ether, and then re-wrap it on domain B. This ensures that WETH can behave on Arbitrum the way users are used to it behaving on Ethereum, while ensuring that all WETH tokens are always fully collateralized on the layer in which they reside.
 
 No matter the complexity of a particular token's bridging needs, a gateway can in principle be created it to accommodate it within our canonical bridging system.
+
+### Demos
+
+See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token_deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token_withdraw) for demos of interacting with the bridge architecture via [arb-ts](https://arb-ts-docs.netlify.app/).

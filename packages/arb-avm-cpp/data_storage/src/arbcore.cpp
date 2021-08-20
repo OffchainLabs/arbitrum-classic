@@ -28,9 +28,11 @@
 #include <data_storage/value/valuecache.hpp>
 
 #include <ethash/keccak.hpp>
+#include <filesystem>
 #include <iomanip>
 #include <set>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #ifdef __linux__
@@ -45,11 +47,14 @@ constexpr auto send_inserted_key = std::array<char, 1>{-62};
 constexpr auto send_processed_key = std::array<char, 1>{-63};
 constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-120};
+
+constexpr uint256_t checkpoint_load_gas_cost = 1'000'000'000;
+constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 }  // namespace
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
-                 const ArbCoreConfig& coreConfig_)
-    : coreConfig(coreConfig_),
+                 ArbCoreConfig coreConfig_)
+    : coreConfig(std::move(coreConfig_)),
       data_storage(std::move(data_storage_)),
       core_code(std::make_shared<CoreCode>(getNextSegmentID(data_storage))),
       timed_sideload_cache(coreConfig.timed_cache_expiration_seconds),
@@ -147,6 +152,28 @@ bool ArbCore::deliverMessages(
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
+
+    {
+        ReadTransaction tx(data_storage);
+        auto schema_result = schemaVersion(tx);
+        if (!schema_result.status.ok()) {
+            auto logs_result = logInsertedCountImpl(tx);
+            if (logs_result.status.ok()) {
+                // Old database that does not have schema version
+                std::cerr << "Error getting schema version: "
+                          << schema_result.status.ToString()
+                          << ", delete database and try again" << std::endl;
+                return rocksdb::Status::Corruption();
+            }
+        } else if (schema_result.data != arbcore_schema_version) {
+            // Database has schema version that does not match
+            std::cerr << "Database version " << schema_result.data
+                      << " does not match expected version "
+                      << arbcore_schema_version
+                      << ", delete database and try again" << std::endl;
+            return rocksdb::Status::Corruption();
+        }
+    }
 
     auto status = reorgToTimestampOrBefore(
         timed_sideload_cache.expiredTimestamp(), true, cache);
@@ -433,23 +460,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
 
         if (!checkpoint_it->Valid()) {
             return rocksdb::Status::NotFound();
-        }
-
-        // At this point we know database has already been initialized, so
-        // check schema version
-        auto schema_result = schemaVersion(tx);
-        if (!schema_result.status.ok()) {
-            std::cerr << "Error getting schema version: "
-                      << schema_result.status.ToString()
-                      << ", delete database and try again" << std::endl;
-            return rocksdb::Status::Corruption();
-        }
-        if (schema_result.data != arbcore_schema_version) {
-            std::cerr << "Database version " << schema_result.data
-                      << " does not match expected version "
-                      << arbcore_schema_version
-                      << ", delete database and try again" << std::endl;
-            return rocksdb::Status::Corruption();
         }
 
         // Delete each checkpoint until at or below message_sequence_number
@@ -824,6 +834,14 @@ void ArbCore::operator()() {
     ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
+    uint64_t next_rocksdb_save_timestamp = 0;
+    std::filesystem::path save_rocksdb_path(coreConfig.save_rocksdb_path);
+
+    if (coreConfig.save_rocksdb_interval > 0) {
+        next_rocksdb_save_timestamp =
+            seconds_since_epoch() + coreConfig.save_rocksdb_interval;
+        std::filesystem::create_directories(save_rocksdb_path);
+    }
 
     uint256_t next_checkpoint_gas =
         maxCheckpointGas() + coreConfig.min_gas_checkpoint_frequency;
@@ -926,21 +944,18 @@ void ArbCore::operator()() {
                         lru_sideload_cache_mutex);
                     lru_sideload_cache[block] =
                         std::make_unique<Machine>(*core_machine);
-                    // Remove any sideload_cache entries that are either more
-                    // than sideload_cache_size blocks old, or in the future
-                    // (meaning they've been reorg'd out).
+                    // Remove any sideload_cache entries that are more
+                    // than sideload_cache_size blocks old
                     auto it = lru_sideload_cache.begin();
-                    while (it != lru_sideload_cache.end()) {
-                        // Note: we check if block > sideload_cache_size here
-                        // to prevent an underflow in the following check.
-                        if ((block > coreConfig.lru_sideload_cache_size &&
-                             it->first <
-                                 block - coreConfig.lru_sideload_cache_size) ||
-                            it->first > block) {
-                            it = lru_sideload_cache.erase(it);
-                        } else {
-                            it++;
-                        }
+                    uint256_t delete_under = 0;
+                    if (block > coreConfig.lru_sideload_cache_size) {
+                        delete_under =
+                            block - coreConfig.lru_sideload_cache_size;
+                    }
+                    auto delete_under_iter =
+                        lru_sideload_cache.lower_bound(delete_under);
+                    while (it != delete_under_iter) {
+                        it = lru_sideload_cache.erase(it);
                     }
                 }
 
@@ -967,6 +982,32 @@ void ArbCore::operator()() {
                         << ", L2 block: "
                         << *last_assertion.sideload_block_number << std::endl;
                     cache.nextCache();
+
+                    // Check if database copy needs to be saved to disk
+                    auto current_seconds = seconds_since_epoch();
+                    if (next_rocksdb_save_timestamp != 0 &&
+                        current_seconds >= next_rocksdb_save_timestamp) {
+                        auto timestamp_dir = std::to_string(current_seconds);
+                        auto checkpoint_dir = save_rocksdb_path / timestamp_dir;
+                        status =
+                            tx.createRocksdbCheckpoint(checkpoint_dir.string());
+                        if (!status.ok()) {
+                            std::cerr << "Unable to save checkpoint into "
+                                      << checkpoint_dir
+                                      << ", error: " << status.ToString()
+                                      << std::endl;
+                        } else {
+                            auto save_elapsed =
+                                seconds_since_epoch() - current_seconds;
+                            std::cerr << "Saving rocksdb checkpoint in "
+                                      << checkpoint_dir << " took "
+                                      << save_elapsed << " seconds"
+                                      << std::endl;
+                        }
+
+                        next_rocksdb_save_timestamp =
+                            current_seconds + coreConfig.save_rocksdb_interval;
+                    }
                 }
 
                 // Machine was stopped to save sideload, update execConfig
@@ -1029,6 +1070,10 @@ void ArbCore::operator()() {
 
     // Error occurred, make sure machine stops cleanly
     core_machine->abortMachine();
+    for (auto& logs_cursor : logs_cursors) {
+        logs_cursor.error_string = "arbcore thread aborted";
+        logs_cursor.status = DataCursor::ERROR;
+    }
 }
 
 bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
@@ -2884,6 +2929,11 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
             return {rocksdb::Status::OK(),
                     std::make_unique<Machine>(*it->second)};
         }
+
+        if (!allow_slow_lookup) {
+            // Don't try to query database
+            return {rocksdb::Status::NotFound(), nullptr};
+        }
     }
 
     if (!allow_slow_lookup) {
@@ -2917,4 +2967,10 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
 
     ReadSnapshotTransaction tx(data_storage);
     return {status, takeExecutionCursorMachineImpl(tx, *execution_cursor)};
+}
+
+uint64_t seconds_since_epoch() {
+    return std::chrono::duration_cast<std::chrono::seconds>(
+               std::chrono::system_clock::now().time_since_epoch())
+        .count();
 }

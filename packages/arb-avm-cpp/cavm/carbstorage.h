@@ -30,7 +30,9 @@ CArbStorage* createArbStorage(const char* db_path,
                               int32_t min_gas_checkpoint_frequency,
                               int32_t cache_expiration_seconds,
                               int32_t lru_cache_size,
-                              int debug);
+                              int32_t debug,
+                              int32_t save_rocksdb_interval,
+                              const char* save_rocksdb_path);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);

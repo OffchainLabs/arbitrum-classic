@@ -63,9 +63,8 @@ describe('Custom ERC20', () => {
     const withdrawRec = await withdrawRes.wait()
 
     expect(withdrawRec.status).to.equal(1)
-    const withdrawEventData = bridge.getWithdrawalsInL2Transaction(
-      withdrawRec
-    )[0]
+    const withdrawEventData =
+      bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
 
     expect(withdrawEventData).to.exist
 

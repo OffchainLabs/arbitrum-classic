@@ -155,8 +155,8 @@ void marshalState(std::vector<unsigned char>& buf,
     stackPreImage.marshal(buf);
     auxStackPreImage.marshal(buf);
 
-    ::marshalForProof(registerVal, MarshalLevel::STUB, buf, code);
-    ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
+    ::marshalForProof(registerVal, 0, buf, code);
+    ::marshalForProof(staticVal, 0, buf, code);
     marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
 }
@@ -211,13 +211,14 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
             static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff));
     }
     auto proof1 = buffer.makeProof(loc);
-    auto nproof1 = nbuffer1.makeNormalizationProof();
 
     if (aligned) {
+        auto nproof1 = nbuffer.makeNormalizationProof();
         insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
     } else {
+        auto nproof1 = nbuffer1.makeNormalizationProof();
         auto proof2 = nbuffer1.makeProof(loc + (wordSize - 1));
         auto nproof2 = nbuffer.makeNormalizationProof();
         insertSizes(buf, proof1.size(), nproof1.size(), proof2.size(),
@@ -359,7 +360,7 @@ OneStepProof MachineState::marshalForProof() const {
     auto& current_op = currentInstruction.op;
     auto opcode = current_op.opcode;
 
-    std::vector<MarshalLevel> stackPops = [&]() {
+    std::vector<size_t> stackPops = [&]() {
         auto it = InstructionStackPops.find(opcode);
         if (it == InstructionStackPops.end()) {
             return InstructionStackPops.at(OpCode::ERROR);
@@ -367,7 +368,7 @@ OneStepProof MachineState::marshalForProof() const {
         return it->second;
     }();
 
-    std::vector<MarshalLevel> auxStackPops = [&]() {
+    std::vector<size_t> auxStackPops = [&]() {
         auto it = InstructionAuxStackPops.find(opcode);
         if (it == InstructionAuxStackPops.end()) {
             return InstructionAuxStackPops.at(OpCode::ERROR);
@@ -375,9 +376,7 @@ OneStepProof MachineState::marshalForProof() const {
         return it->second;
     }();
 
-    if (stackPops.size() > stack.stacksize()) {
-    }
-    MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
+    size_t immediateMarshalLevel = 0;
     if (current_op.immediate && !stackPops.empty()) {
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.cbegin());

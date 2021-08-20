@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { RollupBase } from '../RollupBase'
-
-export class RollupBase__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): RollupBase {
-    return new Contract(address, _abi, signerOrProvider) as RollupBase
-  }
-}
+import type { RollupBase, RollupBaseInterface } from '../RollupBase'
 
 const _abi = [
   {
@@ -810,3 +800,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class RollupBase__factory {
+  static readonly abi = _abi
+  static createInterface(): RollupBaseInterface {
+    return new utils.Interface(_abi) as RollupBaseInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): RollupBase {
+    return new Contract(address, _abi, signerOrProvider) as RollupBase
+  }
+}
