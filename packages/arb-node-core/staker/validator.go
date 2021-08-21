@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -385,7 +384,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	var seqBatchProof []byte
 	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
-		batch, err := challenge.LookupBatchContaining(ctx, v.lookup, v.sequencerInbox, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+		batch, err := v.sequencerInbox.LookupBatchContaining(ctx, v.lookup, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
 		if err != nil {
 			return nil, false, err
 		}

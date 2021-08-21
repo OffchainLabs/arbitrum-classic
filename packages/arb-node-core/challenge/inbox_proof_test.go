@@ -198,7 +198,7 @@ func TestInboxProof(t *testing.T) {
 		t.Log("Proving inbox opcode")
 
 		seqNum := beforeCursor.TotalMessagesRead()
-		batch, err := LookupBatchContaining(context.Background(), arbCore.Core, sequencerInboxWatcher, seqNum)
+		batch, err := sequencerInboxWatcher.LookupBatchContaining(context.Background(), arbCore.Core, seqNum)
 		test.FailIfError(t, err)
 		if batch == nil {
 			t.Fatal("Failed to lookup batch containing message")

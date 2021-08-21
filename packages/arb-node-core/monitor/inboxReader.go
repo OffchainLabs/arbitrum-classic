@@ -138,6 +138,10 @@ func (ir *InboxReader) WaitToCatchUp(ctx context.Context) {
 
 }
 
+func (ir *InboxReader) GetSequencerInboxWatcher() *ethbridge.SequencerInboxWatcher {
+	return ir.sequencerInbox
+}
+
 const inboxReaderDelay int64 = 4
 
 func (ir *InboxReader) getMessages(ctx context.Context) error {

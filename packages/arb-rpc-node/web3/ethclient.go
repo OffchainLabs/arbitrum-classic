@@ -27,7 +27,7 @@ type EthClient struct {
 
 func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
 	return &EthClient{
-		srv:    NewServer(srv, ganacheMode),
+		srv:    NewServer(srv, ganacheMode, nil),
 		events: filters.NewEventSystem(srv, false),
 		filter: filters.NewPublicFilterAPI(srv, false, 2*time.Minute),
 	}

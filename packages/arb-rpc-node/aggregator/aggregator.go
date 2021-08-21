@@ -288,3 +288,7 @@ func (m *Server) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 func (m *Server) SubscribeBlockProcessingEvent(ch chan<- []*types.Log) event.Subscription {
 	return m.scope.Track(m.db.SubscribeBlockProcessingEvent(ch))
 }
+
+func (m *Server) GetLookup() core.ArbCoreLookup {
+	return m.db.Lookup
+}

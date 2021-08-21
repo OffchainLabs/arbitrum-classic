@@ -354,7 +354,7 @@ func startup() error {
 		return err
 	}
 
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.NormalMode, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.NormalMode, nil, inboxReader)
 	if err != nil {
 		return err
 	}

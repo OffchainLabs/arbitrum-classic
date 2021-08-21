@@ -320,8 +320,13 @@ func startup() error {
 		}
 	}
 
+	var web3InboxReaderRef *monitor.InboxReader
+	if config.Node.RPC.EnableL1Calls {
+		web3InboxReaderRef = inboxReader
+	}
+
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil, web3InboxReaderRef)
 	if err != nil {
 		return err
 	}

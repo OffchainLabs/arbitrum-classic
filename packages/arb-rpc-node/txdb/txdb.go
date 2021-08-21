@@ -48,7 +48,7 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
 type TxDB struct {
-	Lookup          core.ArbOutputLookup
+	Lookup          core.ArbCoreLookup
 	allowSlowLookup bool
 	as              machine.NodeStore
 	logReader       *core.LogReader
