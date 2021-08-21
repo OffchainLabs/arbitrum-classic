@@ -379,9 +379,21 @@ func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes
 			return nil, err
 		}
 		if batch != nil {
-			l1InboxBatchInfo = &L1InboxBatchInfo{
-				BlockNumber: (*hexutil.Big)(batch.GetBlockNumber()),
-				Accumulator: batch.GetAfterAcc().ToEthHash(),
+			currentBlockHeight, err := s.sequencerInboxWatcher.CurrentBlockHeight(ctx)
+			if err != nil {
+				return nil, err
+			}
+			rawLog := batch.GetRawLog()
+			blockNum := new(big.Int).SetUint64(rawLog.BlockNumber)
+			confirmations := new(big.Int).Sub(currentBlockHeight, blockNum)
+			if confirmations.Sign() >= 0 {
+				l1InboxBatchInfo = &L1InboxBatchInfo{
+					Confirmations: (*hexutil.Big)(confirmations),
+					BlockNumber:   (*hexutil.Big)(blockNum),
+					InboxAddress:  s.sequencerInboxWatcher.Address(),
+					LogTopics:     rawLog.Topics,
+					LogData:       rawLog.Data,
+				}
 			}
 		}
 	}

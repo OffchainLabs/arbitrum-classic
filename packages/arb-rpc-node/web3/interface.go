@@ -55,8 +55,11 @@ type FeeStatsResult struct {
 }
 
 type L1InboxBatchInfo struct {
-	Accumulator common.Hash  `json:"accumulator"`
-	BlockNumber *hexutil.Big `json:"blockNumber"`
+	Confirmations *hexutil.Big   `json:"confirmations"`
+	BlockNumber   *hexutil.Big   `json:"blockNumber"`
+	InboxAddress  common.Address `json:"inboxAddress"`
+	LogTopics     []common.Hash  `json:"logTopics"`
+	LogData       hexutil.Bytes  `json:"logData"`
 }
 
 // Receipt represents the results of a transaction.

@@ -87,7 +87,7 @@ func (r *SequencerInboxWatcher) CurrentBlockHeight(ctx context.Context) (*big.In
 }
 
 type SequencerBatchRef interface {
-	GetBlockNumber() *big.Int
+	GetRawLog() types.Log
 	GetBatchIndex() *big.Int
 	GetBeforeCount() *big.Int
 	GetBeforeAcc() common.Hash
@@ -114,7 +114,7 @@ func (r *SequencerInboxWatcher) LookupBatchesInRange(ctx context.Context, from, 
 }
 
 type SequencerBatch struct {
-	blockNumber        *big.Int
+	rawLog             types.Log
 	transactionsData   []byte
 	transactionLengths []*big.Int
 	sectionsMetadata   []*big.Int
@@ -123,12 +123,11 @@ type SequencerBatch struct {
 	BeforeAcc          common.Hash
 	AfterCount         *big.Int
 	AfterAcc           common.Hash
-	DelayedAcc         common.Hash
 	Sequencer          common.Address
 }
 
-func (b SequencerBatch) GetBlockNumber() *big.Int {
-	return b.blockNumber
+func (b SequencerBatch) GetRawLog() types.Log {
+	return b.rawLog
 }
 
 func (b SequencerBatch) GetBatchIndex() *big.Int {
@@ -271,9 +270,7 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 }
 
 type sequencerBatchOriginRef struct {
-	blockNumber *big.Int
-	blockHash   ethcommon.Hash
-	txIndex     uint
+	rawLog      types.Log
 	batchIndex  *big.Int
 	beforeCount *big.Int
 	beforeAcc   common.Hash
@@ -282,8 +279,8 @@ type sequencerBatchOriginRef struct {
 	delayedAcc  common.Hash
 }
 
-func (b sequencerBatchOriginRef) GetBlockNumber() *big.Int {
-	return b.blockNumber
+func (b sequencerBatchOriginRef) GetRawLog() types.Log {
+	return b.rawLog
 }
 
 func (b sequencerBatchOriginRef) GetBatchIndex() *big.Int {
@@ -312,7 +309,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 	}
 	refs := make([]SequencerBatchRef, 0, len(logs))
 	for _, log := range logs {
-		blockNum := new(big.Int).SetUint64(log.BlockNumber)
 		if log.Topics[0] == sequencerBatchDeliveredID {
 			parsed, err := r.con.ParseSequencerBatchDelivered(log)
 			if err != nil {
@@ -320,7 +316,7 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			}
 
 			refs = append(refs, SequencerBatch{
-				blockNumber:        blockNum,
+				rawLog:             log,
 				transactionsData:   parsed.Transactions,
 				transactionLengths: parsed.Lengths,
 				sectionsMetadata:   parsed.SectionsMetadata,
@@ -337,9 +333,7 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				return nil, errors.WithStack(err)
 			}
 			refs = append(refs, sequencerBatchOriginRef{
-				blockNumber: blockNum,
-				blockHash:   log.BlockHash,
-				txIndex:     log.TxIndex,
+				rawLog:      log,
 				batchIndex:  parsed.SeqBatchIndex,
 				beforeCount: parsed.FirstMessageNum,
 				beforeAcc:   parsed.BeforeAcc,
@@ -355,11 +349,12 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
+			blockNum := new(big.Int).SetUint64(log.BlockNumber)
 			blockTime := new(big.Int).SetUint64(header.Time)
 			delayedAccInt := new(big.Int).SetBytes(parsed.AfterAccAndDelayed[1][:])
 			sectionsMetadata := []*big.Int{big.NewInt(0), blockNum, blockTime, parsed.TotalDelayedMessagesRead, delayedAccInt}
 			refs = append(refs, SequencerBatch{
-				blockNumber:      blockNum,
+				rawLog:           log,
 				sectionsMetadata: sectionsMetadata,
 				BatchIndex:       parsed.SeqBatchIndex,
 				BeforeCount:      parsed.FirstMessageNum,
@@ -380,7 +375,7 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 	}
 	ref := genericRef.(sequencerBatchOriginRef)
 
-	tx, err := r.client.TransactionInBlock(ctx, ref.blockHash, ref.txIndex)
+	tx, err := r.client.TransactionInBlock(ctx, ref.rawLog.BlockHash, ref.rawLog.TxIndex)
 	if err != nil {
 		return SequencerBatch{}, errors.WithStack(err)
 	}
@@ -396,7 +391,7 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		return SequencerBatch{}, err
 	}
 	return SequencerBatch{
-		blockNumber:        ref.blockNumber,
+		rawLog:             ref.rawLog,
 		transactionsData:   args["transactions"].([]byte),
 		transactionLengths: args["lengths"].([]*big.Int),
 		sectionsMetadata:   args["sectionsMetadata"].([]*big.Int),
@@ -404,7 +399,6 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		BeforeAcc:          ref.beforeAcc,
 		AfterCount:         ref.afterCount,
 		AfterAcc:           ref.afterAcc,
-		DelayedAcc:         ref.delayedAcc,
 		Sequencer:          common.NewAddressFromEth(sender),
 	}, nil
 }
