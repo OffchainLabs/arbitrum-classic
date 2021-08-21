@@ -373,12 +373,23 @@ func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes
 		if s.sequencerInboxWatcher == nil {
 			return nil, errors.New("RPC L1 lookups disabled")
 		}
+		lookup := s.srv.GetLookup()
 		seqNum := new(big.Int).Sub(inboxState.Count, big.NewInt(1))
-		batch, err := s.sequencerInboxWatcher.LookupBatchContaining(ctx, s.srv.GetLookup(), seqNum)
+		batch, err := s.sequencerInboxWatcher.LookupBatchContaining(ctx, lookup, seqNum)
 		if err != nil {
 			return nil, err
 		}
 		if batch != nil {
+			if batch.GetAfterCount().Cmp(inboxState.Count) < 0 {
+				return nil, errors.New("retrieved too early sequencer batch")
+			}
+			expectedTxAcc, expectedBatchAcc, err := lookup.GetInboxAccPair(seqNum, new(big.Int).Sub(batch.GetAfterCount(), big.NewInt(1)))
+			if err != nil {
+				return nil, err
+			}
+			if expectedTxAcc != inboxState.Accumulator || expectedBatchAcc != batch.GetAfterAcc() {
+				return nil, errors.New("inconsistent sequencer inbox state")
+			}
 			currentBlockHeight, err := s.sequencerInboxWatcher.CurrentBlockHeight(ctx)
 			if err != nil {
 				return nil, err
