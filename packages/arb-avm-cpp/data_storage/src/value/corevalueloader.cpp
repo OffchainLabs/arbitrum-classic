@@ -37,5 +37,6 @@ value CoreValueLoader::loadValue(const uint256_t& hash) {
 }
 
 std::unique_ptr<AbstractValueLoader> CoreValueLoader::clone() const {
-    return std::make_unique<CoreValueLoader>(data_storage, core_code, cache);
+    return std::make_unique<CoreValueLoader>(data_storage, core_code,
+                                             ValueCache{1, 0});
 }
