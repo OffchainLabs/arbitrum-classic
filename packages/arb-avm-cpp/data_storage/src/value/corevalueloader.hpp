@@ -25,9 +25,7 @@
 
 class CoreValueLoader : public AbstractValueLoader {
    public:
-    CoreValueLoader(std::shared_ptr<DataStorage>,
-                    std::shared_ptr<CoreCode>,
-                    ValueCache);
+    CoreValueLoader(std::shared_ptr<DataStorage>, std::shared_ptr<CoreCode>);
 
     value loadValue(const uint256_t& hash) override;
 
@@ -36,7 +34,6 @@ class CoreValueLoader : public AbstractValueLoader {
    protected:
     std::shared_ptr<DataStorage> data_storage;
     std::shared_ptr<CoreCode> core_code;
-    ValueCache cache;
 };
 
 #endif /* corevalueloader_hpp */
