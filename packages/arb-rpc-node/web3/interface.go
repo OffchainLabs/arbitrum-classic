@@ -57,7 +57,7 @@ type FeeStatsResult struct {
 type L1InboxBatchInfo struct {
 	Confirmations *hexutil.Big   `json:"confirmations"`
 	BlockNumber   *hexutil.Big   `json:"blockNumber"`
-	InboxAddress  common.Address `json:"inboxAddress"`
+	LogAddress    common.Address `json:"logAddress"`
 	LogTopics     []common.Hash  `json:"logTopics"`
 	LogData       hexutil.Bytes  `json:"logData"`
 }

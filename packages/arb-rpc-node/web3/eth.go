@@ -401,7 +401,7 @@ func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes
 				l1InboxBatchInfo = &L1InboxBatchInfo{
 					Confirmations: (*hexutil.Big)(confirmations),
 					BlockNumber:   (*hexutil.Big)(blockNum),
-					InboxAddress:  s.sequencerInboxWatcher.Address(),
+					LogAddress:    rawLog.Address,
 					LogTopics:     rawLog.Topics,
 					LogData:       rawLog.Data,
 				}
