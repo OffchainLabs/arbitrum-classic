@@ -326,7 +326,7 @@ int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
         std::copy(val1.begin(), val1.end(), reinterpret_cast<char*>(ret1));
 
         std::array<unsigned char, 32> val2{};
-        to_big_endian(result.data.first, val2.begin());
+        to_big_endian(result.data.second, val2.begin());
         std::copy(val2.begin(), val2.end(), reinterpret_cast<char*>(ret2));
         return true;
     } catch (const std::exception& e) {
