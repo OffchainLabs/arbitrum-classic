@@ -23,7 +23,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -106,8 +105,5 @@ func TestOwner(t *testing.T) {
 }
 
 func GiveOwnershipData(newOwnerAddr common.Address) []byte {
-	var data []byte
-	data = append(data, hashing.SoliditySHA3([]byte("ChainOwner")).Bytes()...)
-	data = append(data, message.AddressData(newOwnerAddr)...)
-	return data
+	return arbos.SetChainParameterData(arbos.ChainOwnerParamId, new(big.Int).SetBytes(newOwnerAddr.Bytes()))
 }

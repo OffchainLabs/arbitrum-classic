@@ -63,6 +63,10 @@ func GetTotalOfEthBalances() []byte {
 	return makeFuncData(getTotalOfEthBalancesABI)
 }
 
+func SetChainParameterData(paramId *big.Int, val *big.Int) []byte {
+    return makeFuncData(setChainParameterABI, paramId, val)
+}
+
 func StartArbOSUpgradeData() []byte {
 	return makeFuncData(startArbOSUpgradeABI)
 }
