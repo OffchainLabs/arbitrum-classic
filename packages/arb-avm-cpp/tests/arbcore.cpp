@@ -399,23 +399,45 @@ TEST_CASE("ArbCore duplicate code segments") {
     auto arbCore = storage.getArbCore();
     REQUIRE(arbCore->startThread());
 
-    auto message = InboxMessage(0, {}, 0, 0, 0, 0, {});
+    constexpr int CHECKPOINTS = 2;
 
-    std::vector<std::vector<unsigned char>> rawSeqBatchItems;
-    for (const auto& batch_item : buildBatch(std::vector(1, message))) {
-        rawSeqBatchItems.push_back(serializeForCore(batch_item));
+    std::vector<InboxMessage> messages;
+    for (int i = 0; i < CHECKPOINTS; i++) {
+        messages.push_back(InboxMessage(0, {}, 0, 0, i, 0, {}));
     }
+    auto batch = buildBatch(messages);
+    REQUIRE(batch.size() == CHECKPOINTS);
 
-    REQUIRE(arbCore->deliverMessages(0, 0, rawSeqBatchItems,
-                                     std::vector<std::vector<unsigned char>>(),
-                                     std::nullopt));
-    waitForDelivery(arbCore);
+    uint256_t last_acc = 0;
+    for (int i = 0; i < CHECKPOINTS; i++) {
+        auto batch_item = batch[i];
+        std::vector<std::vector<unsigned char>> rawSeqBatchItems(
+            1, serializeForCore(batch_item));
 
-    int i = 0;
-    while (arbCore->getLastMachineOutput().last_sideload != 0x123 ||
-           !arbCore->machineIdle()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        REQUIRE(i++ < 10);
+        REQUIRE(arbCore->deliverMessages(
+            i, last_acc, rawSeqBatchItems,
+            std::vector<std::vector<unsigned char>>(), std::nullopt));
+        waitForDelivery(arbCore);
+        last_acc = batch_item.accumulator;
+
+        int j = 0;
+        while (arbCore->getLastMachineOutput().last_sideload != i ||
+               !arbCore->machineIdle()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            REQUIRE(j++ < 10);
+        }
+
+        if (i == 0) {
+            // Restart ArbCore
+            storage.closeArbStorage();
+            storage = ArbStorage(dbpath, coreConfig);
+            REQUIRE(storage
+                        .initialize(std::string{machine_test_cases_path} +
+                                    "/dupsegments.mexe")
+                        .ok());
+            arbCore = storage.getArbCore();
+            REQUIRE(arbCore->startThread());
+        }
     }
 
     auto cursor =
