@@ -133,13 +133,19 @@ type S3 struct {
 	SecretKey string `koanf:"secret-key"`
 }
 
+type L1PostingStrategy struct {
+	HighGasThreshold   float64 `koanf:"high-gas-threshold"`
+	HighGasDelayBlocks int64   `koanf:"high-gas-delay-blocks"`
+}
+
 type Sequencer struct {
-	CreateBatchBlockInterval          int64      `koanf:"create-batch-block-interval"`
-	ContinueBatchPostingBlockInterval int64      `koanf:"continue-batch-posting-block-interval"`
-	DelayedMessagesTargetDelay        int64      `koanf:"delayed-messages-target-delay"`
-	FeedSigner                        FeedSigner `koanf:"feed-signer"`
-	ReorgOutHugeMessages              bool       `koanf:"reorg-out-huge-messages"`
-	Lockout                           Lockout    `koanf:"lockout"`
+	CreateBatchBlockInterval          int64             `koanf:"create-batch-block-interval"`
+	ContinueBatchPostingBlockInterval int64             `koanf:"continue-batch-posting-block-interval"`
+	DelayedMessagesTargetDelay        int64             `koanf:"delayed-messages-target-delay"`
+	FeedSigner                        FeedSigner        `koanf:"feed-signer"`
+	ReorgOutHugeMessages              bool              `koanf:"reorg-out-huge-messages"`
+	Lockout                           Lockout           `koanf:"lockout"`
+	L1PostingStrategy                 L1PostingStrategy `koanf:"l1-posting-strategy"`
 }
 
 type FeedSigner struct {
@@ -157,16 +163,25 @@ type WS struct {
 type Forwarder struct {
 	Target    string `koanf:"target"`
 	Submitter string `koanf:"submitter-address"`
+	RpcMode   string `koanf:"rpc-mode"`
 }
 
 type Node struct {
 	Aggregator Aggregator `koanf:"aggregator"`
+	Cache      NodeCache  `koanf:"cache"`
 	ChainID    uint64     `koanf:"chain-id"`
 	Forwarder  Forwarder  `koanf:"forwarder"`
 	RPC        RPC        `koanf:"rpc"`
 	Sequencer  Sequencer  `koanf:"sequencer"`
 	Type       string     `koanf:"type"`
 	WS         WS         `koanf:"ws"`
+}
+
+type NodeCache struct {
+	AllowSlowLookup  bool          `koanf:"allow-slow-lookup"`
+	LRUSize          int           `koanf:"lru-size"`
+	TimedInitialSize int           `koanf:"timed-initial-size"`
+	TimedExpire      time.Duration `koanf:"timed-expire"`
 }
 
 type Persistent struct {
@@ -184,10 +199,11 @@ type Rollup struct {
 }
 
 type Validator struct {
-	Strategy             string        `koanf:"strategy"`
-	UtilsAddress         string        `koanf:"utils-address"`
-	StakerDelay          time.Duration `koanf:"staker-delay"`
-	WalletFactoryAddress string        `koanf:"wallet-factory-address"`
+	Strategy             string            `koanf:"strategy"`
+	UtilsAddress         string            `koanf:"utils-address"`
+	StakerDelay          time.Duration     `koanf:"staker-delay"`
+	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
+	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
 }
 
 type Wallet struct {
@@ -249,16 +265,23 @@ func ParseCLI(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethutils.RPC
 	return ParseNonRelay(ctx, f, "cli_wallets")
 }
 
+func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
+	f.Float64(prefix+"l1-posting-strategy.high-gas-threshold", 150, "gwei threshold at which to consider gas price high and delay batch posting")
+	f.Int64(prefix+"l1-posting-strategy.high-gas-delay-blocks", 270, "wait up to this many more blocks when gas costs are high")
+}
+
 func ParseNode(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
 	AddForwarderTarget(f)
+	AddL1PostingStrategyOptions(f, "node.sequencer.")
 
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
+	f.String("node.forwarder.rpc-mode", "full", "RPC mode: either full, non-mutating (no eth_sendRawTransaction), or forwarding-only (only requests forwarded upstream are permitted)")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
@@ -280,6 +303,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethuti
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
+	AddL1PostingStrategyOptions(f, "validator.")
 
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "strategy for validator to use")
@@ -290,10 +314,14 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *FeedSigner, *ethuti
 }
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *FeedSigner, *ethutils.RPCEthClient, *big.Int, error) {
+	f.String("bridge-utils-address", "", "bridgeutils contract address")
+
 	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
 	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
 
-	f.String("bridge-utils-address", "", "bridgeutils contract address")
+	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
+	f.Int("node.cache.lru-size", 20, "number of recently used L2 blocks to hold in lru memory cache")
+	//f.Duration("node.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in timed memory cache")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 

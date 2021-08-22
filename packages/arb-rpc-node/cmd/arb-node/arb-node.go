@@ -123,10 +123,22 @@ func startup() error {
 		fmt.Println("Missing --rollup.machine.filename")
 	}
 
+	var rpcMode web3.RpcMode
 	if config.Node.Type == "forwarder" {
 		if config.Node.Forwarder.Target == "" {
 			badConfig = true
 			fmt.Println("Forwarder node needs --node.forwarder.target")
+		}
+
+		if config.Node.Forwarder.RpcMode == "full" {
+			rpcMode = web3.NormalMode
+		} else if config.Node.Forwarder.RpcMode == "non-mutating" {
+			rpcMode = web3.NonMutatingMode
+		} else if config.Node.Forwarder.RpcMode == "forwarding-only" {
+			rpcMode = web3.ForwardingOnlyMode
+		} else {
+			badConfig = true
+			fmt.Printf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
 		}
 	} else if config.Node.Type == "aggregator" {
 		if config.Node.Aggregator.InboxAddress == "" {
@@ -265,7 +277,7 @@ func startup() error {
 	nodeStore := mon.Storage.GetNodeStore()
 	metricsConfig.RegisterNodeStoreMetrics(nodeStore)
 	metricsConfig.RegisterArbCoreMetrics(mon.Core)
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond, &config.Node.Cache)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
@@ -315,7 +327,7 @@ func startup() error {
 	}
 
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil)
 	if err != nil {
 		return err
 	}

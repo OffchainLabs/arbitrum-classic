@@ -74,7 +74,7 @@ type batch interface {
 
 type TransactionBatcher interface {
 	// Return nil if no pending transaction count is available
-	PendingTransactionCount(ctx context.Context, account common.Address) *uint64
+	PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error)
 
 	SendTransaction(ctx context.Context, tx *types.Transaction) error
 
@@ -322,15 +322,15 @@ func (m *Batcher) PendingSnapshot() (*snapshot.Snapshot, error) {
 	return m.pendingBatch.getLatestSnap(), nil
 }
 
-func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Address) *uint64 {
+func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Address) (*uint64, error) {
 	m.Lock()
 	defer m.Unlock()
 	q, ok := m.queuedTxes.queues[account.ToEthAddress()]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	count := q.maxNonce + 1
-	return &count
+	return &count, nil
 }
 
 // SendTransaction takes a request signed transaction l2message from a client
