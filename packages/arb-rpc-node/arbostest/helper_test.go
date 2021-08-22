@@ -342,7 +342,7 @@ func makeSimpleInbox(t *testing.T, messages []message.Message) []inbox.InboxMess
 
 	ib := &InboxBuilder{}
 	options := []message.ChainConfigOption{message.ChainIDConfig{ChainId: chainId}}
-	ib.AddMessage(initMsg(t, options), chain, big.NewInt(0), chainTime)
+	ib.AddMessage(initMsg(t, options), common.Address{}, big.NewInt(0), chainTime)
 	for _, msg := range messages {
 		ib.AddMessage(msg, sender, big.NewInt(0), chainTime)
 	}
