@@ -53,18 +53,16 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
     function rollupInitialized(
         uint256 confirmPeriodBlocks,
         uint256 arbGasSpeedLimitPerBlock,
-        uint256 baseStake,
-        address stakeToken,
         address owner,
         bytes calldata extraConfig
     ) external onlyRollup {
         bytes memory initMsg =
             abi.encodePacked(
+                keccak256("ChallengePeriodEthBlocks"),
                 confirmPeriodBlocks,
+                keccak256("SpeedLimitPerSecond"),
                 arbGasSpeedLimitPerBlock / 100, // convert avm gas to arbgas
-                uint256(0),
-                baseStake,
-                uint256(uint160(bytes20(stakeToken))),
+                keccak256("ChainOwner"),
                 uint256(uint160(bytes20(owner))),
                 extraConfig
             );

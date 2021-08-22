@@ -42,10 +42,7 @@ import (
 
 func TestL2ToL1Tx(t *testing.T) {
 	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
@@ -146,6 +143,9 @@ func TestL2ToL1Tx(t *testing.T) {
 		batch, err := db.GetMessageBatch(big.NewInt(int64(i)))
 		if err != nil {
 			t.Fatal(err)
+		}
+		if batch == nil {
+			t.Fatal("message batch not found")
 		}
 		if batch.BatchNumber.Cmp(big.NewInt(int64(i))) != 0 {
 			t.Fatal("wrong batch num")

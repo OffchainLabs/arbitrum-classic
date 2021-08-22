@@ -25,10 +25,7 @@ import (
 func TestTopLevelCall(t *testing.T) {
 	skipBelowVersion(t, 30)
 	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 	senderKey, err := crypto.GenerateKey()

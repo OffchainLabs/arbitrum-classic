@@ -58,10 +58,7 @@ func TestUpgrade(t *testing.T) {
 	auth := bind.NewKeyedTransactor(privkey)
 
 	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 

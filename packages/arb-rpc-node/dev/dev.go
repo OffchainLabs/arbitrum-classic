@@ -462,9 +462,9 @@ func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator
 	if err != nil {
 		return errors.Wrap(err, "error getting SetFairGasPriceSender receipt")
 	}
-	_, err = arbOwner.SetFeesEnabled(ownerAuth, true)
+	_, err = arbOwner.SetChainParameter(ownerAuth, arbos.FeesEnabledParamId, big.NewInt(1))
 	if err != nil {
-		return errors.Wrap(err, "error calling SetFeesEnabled")
+		return errors.Wrap(err, "error calling SetChainParameter")
 	}
 	return nil
 }

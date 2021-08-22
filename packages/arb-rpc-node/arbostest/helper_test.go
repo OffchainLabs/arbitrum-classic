@@ -41,10 +41,7 @@ const printArbOSLog = false
 
 func initMsg(t *testing.T, options []message.ChainConfigOption) message.Init {
 	params := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(0),
-		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
-		MaxExecutionSteps:         0,
 		ArbGasSpeedLimitPerSecond: 1000000000,
 	}
 	init, err := message.NewInitMessage(params, owner, options)

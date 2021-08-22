@@ -24,6 +24,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 var (
@@ -32,11 +33,16 @@ var (
 	continueArbOSUpgradeABI  abi.Method
 	finishArbOSUpgradeABI    abi.Method
 	getUploadedCodeHashABI   abi.Method
-	setFeesEnabledABI        abi.Method
+	setChainParameterABI     abi.Method
 	setFairGasPriceSenderABI abi.Method
 	deployContractABI        abi.Method
 	getTotalOfEthBalancesABI abi.Method
 )
+
+var FeesEnabledParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("FeesEnabled")).Bytes())
+var ChainOwnerParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("ChainOwner")).Bytes())
+var NetworkFeeRecipientParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("NetworkFeeRecipient")).Bytes())
+var CongestionFeeRecipientParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("CongestionFeeRecipient")).Bytes())
 
 func init() {
 	arbowner, err := abi.JSON(strings.NewReader(arboscontracts.ArbOwnerABI))
@@ -49,7 +55,7 @@ func init() {
 	continueArbOSUpgradeABI = arbowner.Methods["continueCodeUpload"]
 	finishArbOSUpgradeABI = arbowner.Methods["finishCodeUploadAsArbosUpgrade"]
 	getUploadedCodeHashABI = arbowner.Methods["getUploadedCodeHash"]
-	setFeesEnabledABI = arbowner.Methods["setFeesEnabled"]
+	setChainParameterABI = arbowner.Methods["setChainParameter"]
 	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
 	deployContractABI = arbowner.Methods["deployContract"]
 	getTotalOfEthBalancesABI = arbowner.Methods["getTotalOfEthBalances"]
@@ -84,7 +90,11 @@ func SetFairGasPriceSender(sender common.Address, enable bool) []byte {
 }
 
 func SetFeesEnabled(enabled bool) []byte {
-	return makeFuncData(setFeesEnabledABI, enabled)
+	enabledInt := big.NewInt(0)
+	if enabled {
+		enabledInt.SetInt64(1)
+	}
+	return makeFuncData(setChainParameterABI, FeesEnabledParamId, enabledInt)
 }
 
 func DeployContract(constructor []byte, sender common.Address, nonce *big.Int) []byte {

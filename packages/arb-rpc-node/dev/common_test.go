@@ -94,7 +94,6 @@ func NewTestDevNode(
 			break
 		}
 	}
-	rollupAddress := common.RandAddress()
 	backend, db, cancelDevNode, txDBErrChan, err := NewDevNode(
 		ctx,
 		t.TempDir(),
@@ -119,6 +118,6 @@ func NewTestDevNode(
 		cancelDevNode()
 		cancel()
 	}
-	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
+	srv := aggregator.NewServer(backend, common.Address{}, chainId, db)
 	return backend, db, srv, closeFunc
 }

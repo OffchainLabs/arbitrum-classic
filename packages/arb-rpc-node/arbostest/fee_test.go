@@ -226,10 +226,7 @@ func TestArbOSFees(t *testing.T) {
 
 	addInitializationLoc := func(ib *InboxBuilder) {
 		config := protocol.ChainParams{
-			StakeRequirement:          big.NewInt(0),
-			StakeToken:                common.Address{},
 			GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
-			MaxExecutionSteps:         0,
 			ArbGasSpeedLimitPerSecond: 1000000000,
 		}
 
@@ -254,7 +251,7 @@ func TestArbOSFees(t *testing.T) {
 			BlockNum:  common.NewTimeBlocksInt(0),
 			Timestamp: big.NewInt(0),
 		}
-		ib.AddMessage(init, chain, big.NewInt(0), chainTime)
+		ib.AddMessage(init, common.Address{}, big.NewInt(0), chainTime)
 
 		deposit := message.EthDepositTx{
 			L2Message: message.NewSafeL2Message(message.ContractTransaction{

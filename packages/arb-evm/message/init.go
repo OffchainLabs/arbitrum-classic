@@ -17,20 +17,16 @@
 package message
 
 import (
-	"bytes"
-	"encoding/binary"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
-
-var InitOptionSetChargingParams uint64 = 2
-var InitOptionSetDefaultAggregator uint64 = 3
-var InitOptionSetChainID uint64 = 4
 
 type Init struct {
 	protocol.ChainParams
@@ -41,18 +37,7 @@ type Init struct {
 func NewInitMessage(params protocol.ChainParams, owner common.Address, config []ChainConfigOption) (Init, error) {
 	data := make([]byte, 0)
 	for _, item := range config {
-		itemData := item.AsData()
-		optionId := item.OptionCode()
-		var w bytes.Buffer
-		if err := binary.Write(&w, binary.BigEndian, &optionId); err != nil {
-			return Init{}, err
-		}
-		length := uint64(len(itemData))
-		if err := binary.Write(&w, binary.BigEndian, &length); err != nil {
-			return Init{}, err
-		}
-		data = append(data, w.Bytes()...)
-		data = append(data, itemData...)
+		data = append(data, item.AsData()...)
 	}
 	return Init{
 		ChainParams: params,
@@ -61,24 +46,34 @@ func NewInitMessage(params protocol.ChainParams, owner common.Address, config []
 	}, nil
 }
 
-func NewInitFromData(data []byte) Init {
+var challengePeriodParamId = hashing.SoliditySHA3([]byte("ChallengePeriodEthBlocks"))
+var speedLimitParamId = hashing.SoliditySHA3([]byte("SpeedLimitPerSecond"))
+var chainOwnerParamId = hashing.SoliditySHA3([]byte("ChainOwner"))
+
+func NewInitFromData(data []byte) (Init, error) {
+	paramId, data := extractUInt256(data)
+	if paramId != new(big.Int).SetBytes(challengePeriodParamId[:]) {
+		return Init{}, errors.New("Unexpected challenge period parameter id in init message")
+	}
 	gracePeriod, data := extractUInt256(data)
+	paramId, data = extractUInt256(data)
+	if paramId != new(big.Int).SetBytes(speedLimitParamId[:]) {
+		return Init{}, errors.New("Unexpected speed limit parameter id in init message")
+	}
 	arbGasSpeedLimit, data := extractUInt256(data)
-	maxExecutionSteps, data := extractUInt256(data)
-	stakeRequirement, data := extractUInt256(data)
-	stakeToken, data := extractAddress(data)
+	paramId, data = extractUInt256(data)
+		if paramId != new(big.Int).SetBytes(chainOwnerParamId[:]) {
+		return Init{}, errors.New("Unexpected owner parameter id in init message")
+	}
 	owner, data := extractAddress(data)
 	return Init{
 		ChainParams: protocol.ChainParams{
-			StakeRequirement:          stakeRequirement,
-			StakeToken:                stakeToken,
 			GracePeriod:               common.NewTimeBlocks(gracePeriod),
-			MaxExecutionSteps:         maxExecutionSteps.Uint64(),
 			ArbGasSpeedLimitPerSecond: arbGasSpeedLimit.Uint64(),
 		},
 		Owner:       owner,
 		ExtraConfig: data,
-	}
+	}, nil
 }
 
 func (m Init) Type() inbox.Type {
@@ -87,18 +82,17 @@ func (m Init) Type() inbox.Type {
 
 func (m Init) AsData() []byte {
 	data := make([]byte, 0)
+ 	data = append(data, challengePeriodParamId[:]...)
 	data = append(data, math.U256Bytes(m.GracePeriod.AsInt())...)
+	data = append(data, speedLimitParamId[:]...)
 	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.ArbGasSpeedLimitPerSecond))...)
-	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.MaxExecutionSteps))...)
-	data = append(data, math.U256Bytes(m.StakeRequirement)...)
-	data = append(data, addressData(m.StakeToken)...)
+	data = append(data, chainOwnerParamId[:]...)
 	data = append(data, addressData(m.Owner)...)
 	data = append(data, m.ExtraConfig...)
 	return data
 }
 
 type ChainConfigOption interface {
-	OptionCode() uint64
 	AsData() []byte
 }
 
@@ -115,21 +109,19 @@ type FeeConfig struct {
 	CongestionFeeRecipient common.Address
 }
 
-func (c FeeConfig) OptionCode() uint64 {
-	return InitOptionSetChargingParams
-}
-
 func (c FeeConfig) AsData() []byte {
 	data := make([]byte, 0)
+	data = append(data, speedLimitParamId[:]...)
 	data = append(data, math.U256Bytes(c.SpeedLimitPerSecond)...)
-	data = append(data, math.U256Bytes(c.L1GasPerL2Tx)...)
-	data = append(data, math.U256Bytes(c.ArbGasPerL2Tx)...)
+	data = append(data, hashing.SoliditySHA3([]byte("L1GasPerL1CalldataUnit")).Bytes()...)
 	data = append(data, math.U256Bytes(c.L1GasPerL2Calldata)...)
-	data = append(data, math.U256Bytes(c.ArbGasPerL2Calldata)...)
+	data = append(data, hashing.SoliditySHA3([]byte("L1GasPerStorage")).Bytes()...)
 	data = append(data, math.U256Bytes(c.L1GasPerStorage)...)
-	data = append(data, math.U256Bytes(c.ArbGasPerStorage)...)
+	data = append(data, hashing.SoliditySHA3([]byte("ArbGasDivisor")).Bytes()...)
 	data = append(data, math.U256Bytes(c.ArbGasDivisor)...)
+	data = append(data, hashing.SoliditySHA3([]byte("NetworkFeeRecipient")).Bytes()...)
 	data = append(data, addressData(c.NetFeeRecipient)...)
+	data = append(data, hashing.SoliditySHA3([]byte("CongestionFeeRecipient")).Bytes()...)
 	data = append(data, addressData(c.CongestionFeeRecipient)...)
 	return data
 }
@@ -138,22 +130,20 @@ type DefaultAggConfig struct {
 	Aggregator common.Address
 }
 
-func (c DefaultAggConfig) OptionCode() uint64 {
-	return InitOptionSetDefaultAggregator
-}
-
 func (c DefaultAggConfig) AsData() []byte {
-	return addressData(c.Aggregator)
+	var data []byte
+	data = append(data, hashing.SoliditySHA3([]byte("DefaultAggregator")).Bytes()...)
+	data = append(data, addressData(c.Aggregator)...)
+	return data
 }
 
 type ChainIDConfig struct {
 	ChainId *big.Int
 }
 
-func (c ChainIDConfig) OptionCode() uint64 {
-	return InitOptionSetChainID
-}
-
 func (c ChainIDConfig) AsData() []byte {
-	return math.U256Bytes(c.ChainId)
+	var data []byte
+	data = append(data, hashing.SoliditySHA3([]byte("ChainID")).Bytes()...)
+	data = append(data, math.U256Bytes(c.ChainId)...)
+	return data
 }
