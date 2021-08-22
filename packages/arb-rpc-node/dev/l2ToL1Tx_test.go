@@ -134,7 +134,8 @@ func TestL2ToL1Tx(t *testing.T) {
 		}
 		l2SendLogs = append(l2SendLogs, parsedEv)
 		if i%8 == 0 {
-			backend.l1Emulator.IncreaseTime(20)
+			// ArbOS spaces out sends every 1800 seconds by default, so advance one send
+			backend.l1Emulator.IncreaseTime(1800)
 		}
 	}
 

@@ -467,7 +467,7 @@ func TestArbOSFees(t *testing.T) {
 
 		l1CalldataDiff := calculateFeeAggDiff(noAggPrice.L1Calldata, aggPrice.L1Calldata)
 		if l1CalldataDiff.Cmp(big.NewRat(1, 100)) > 0 {
-			t.Error("tx price with agg is wrong " + l1CalldataDiff.String())
+			t.Error("tx price with agg is wrong ", i, l1CalldataDiff.String())
 		}
 
 		if noAggPrice.L2Computation.Cmp(aggPrice.L2Computation) != 0 {
