@@ -28,7 +28,6 @@ import (
 )
 
 var (
-	giveOwnershipABI         abi.Method
 	startArbOSUpgradeABI     abi.Method
 	continueArbOSUpgradeABI  abi.Method
 	finishArbOSUpgradeABI    abi.Method
@@ -50,7 +49,6 @@ func init() {
 		panic(err)
 	}
 
-	giveOwnershipABI = arbowner.Methods["giveOwnership"]
 	startArbOSUpgradeABI = arbowner.Methods["startCodeUpload"]
 	continueArbOSUpgradeABI = arbowner.Methods["continueCodeUpload"]
 	finishArbOSUpgradeABI = arbowner.Methods["finishCodeUploadAsArbosUpgrade"]
@@ -63,10 +61,6 @@ func init() {
 
 func GetTotalOfEthBalances() []byte {
 	return makeFuncData(getTotalOfEthBalancesABI)
-}
-
-func GiveOwnershipData(newOwnerAddr common.Address) []byte {
-	return makeFuncData(giveOwnershipABI, newOwnerAddr.ToEthAddress())
 }
 
 func StartArbOSUpgradeData() []byte {

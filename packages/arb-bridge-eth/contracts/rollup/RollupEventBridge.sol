@@ -67,7 +67,7 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
                 extraConfig
             );
         uint256 num =
-            bridge.deliverMessageToInbox(INITIALIZATION_MSG_TYPE, msg.sender, keccak256(initMsg));
+            bridge.deliverMessageToInbox(INITIALIZATION_MSG_TYPE, address(0), keccak256(initMsg));
         emit InboxMessageDelivered(num, initMsg);
     }
 

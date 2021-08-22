@@ -87,7 +87,7 @@ func (m Init) AsData() []byte {
 	data = append(data, speedLimitParamId[:]...)
 	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.ArbGasSpeedLimitPerSecond))...)
 	data = append(data, chainOwnerParamId[:]...)
-	data = append(data, addressData(m.Owner)...)
+	data = append(data, AddressData(m.Owner)...)
 	data = append(data, m.ExtraConfig...)
 	return data
 }
@@ -120,9 +120,9 @@ func (c FeeConfig) AsData() []byte {
 	data = append(data, hashing.SoliditySHA3([]byte("ArbGasDivisor")).Bytes()...)
 	data = append(data, math.U256Bytes(c.ArbGasDivisor)...)
 	data = append(data, hashing.SoliditySHA3([]byte("NetworkFeeRecipient")).Bytes()...)
-	data = append(data, addressData(c.NetFeeRecipient)...)
+	data = append(data, AddressData(c.NetFeeRecipient)...)
 	data = append(data, hashing.SoliditySHA3([]byte("CongestionFeeRecipient")).Bytes()...)
-	data = append(data, addressData(c.CongestionFeeRecipient)...)
+	data = append(data, AddressData(c.CongestionFeeRecipient)...)
 	return data
 }
 
@@ -133,7 +133,7 @@ type DefaultAggConfig struct {
 func (c DefaultAggConfig) AsData() []byte {
 	var data []byte
 	data = append(data, hashing.SoliditySHA3([]byte("DefaultAggregator")).Bytes()...)
-	data = append(data, addressData(c.Aggregator)...)
+	data = append(data, AddressData(c.Aggregator)...)
 	return data
 }
 

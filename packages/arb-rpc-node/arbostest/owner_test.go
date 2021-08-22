@@ -23,6 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -47,7 +48,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        arbos.GiveOwnershipData(common.RandAddress()),
+		Data:        GiveOwnershipData(common.RandAddress()),
 	}
 
 	tx3 := message.Transaction{
@@ -56,7 +57,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        arbos.GiveOwnershipData(sender),
+		Data:        GiveOwnershipData(sender),
 	}
 
 	tx4 := message.Transaction{
@@ -83,7 +84,7 @@ func TestOwner(t *testing.T) {
 	}
 
 	ib := InboxBuilder{}
-	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
+	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), chainTime)
 	ib.AddMessage(deposit, chain, big.NewInt(0), chainTime)
 	ib.AddMessage(message.NewSafeL2Message(tx1), owner, big.NewInt(0), chainTime)
 	ib.AddMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(0), chainTime)
@@ -102,4 +103,11 @@ func TestOwner(t *testing.T) {
 	if totalBalance.Cmp(depositAmount) != 0 {
 		t.Error("wrong total balance")
 	}
+}
+
+func GiveOwnershipData(newOwnerAddr common.Address) []byte {
+	var data []byte
+	data = append(data, hashing.SoliditySHA3([]byte("ChainOwner")).Bytes()...)
+	data = append(data, message.AddressData(newOwnerAddr)...)
+	return data
 }

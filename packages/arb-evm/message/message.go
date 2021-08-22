@@ -131,7 +131,7 @@ func (t GasEstimationMessage) AsData() []byte {
 func (t GasEstimationMessage) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, 3)
-	ret = append(ret, addressData(t.Aggregator)...)
+	ret = append(ret, AddressData(t.Aggregator)...)
 	ret = append(ret, math.U256Bytes(t.ComputationLimit)...)
 	ret = append(ret, t.TxData...)
 	return ret
