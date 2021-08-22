@@ -19,7 +19,6 @@ package ethbridge
 import (
 	"context"
 	"math/big"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -68,45 +67,6 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutil
 				}
 			}
 			if fb != nil {
-				details, err := fb.GetTransactionByExternalId(txHash.String())
-				if err != nil && strings.Contains(err.Error(), "not found") {
-					logger.
-						Warn().
-						Err(err).
-						Str("account", rbfInfo.account.String()).
-						Hex("txhash", txHash.Bytes()).
-						Msg("fireblocks transaction by external id not found")
-					if rbfInfo != nil {
-						// an alternative tx might've gotten confirmed
-						nonce, err := client.NonceAt(ctx, rbfInfo.account, nil)
-						if err == nil {
-							if nonce >= rbfInfo.nonce {
-								return nil, nil
-							}
-						} else {
-							logger.Warn().Err(err).Str("account", rbfInfo.account.String()).Msg("Issue getting pending nonce with fireblocks")
-						}
-					}
-					continue
-				} else if details.Status == "REJECTED" {
-					logger.
-						Error().
-						Err(err).
-						Str("account", rbfInfo.account.String()).
-						Str("rejected-by", details.RejectedBy).
-						Hex("txhash", txHash.Bytes()).
-						Msg("fireblocks transaction rejected")
-					return nil, errors.Wrapf(err, "fireblocks transaction rejected by: %s", details.RejectedBy)
-				} else if fb.IsTransactionStatusFailed(details.Status) {
-					logger.
-						Error().
-						Err(err).
-						Str("account", rbfInfo.account.String()).
-						Str("status", details.Status).
-						Hex("txhash", txHash.Bytes()).
-						Msg("fireblocks transaction failed")
-					return nil, errors.Wrapf(err, "fireblocks transaction failed: %s", details.Status)
-				}
 			}
 			receipt, err := client.TransactionReceipt(ctx, txHash)
 			if receipt == nil {

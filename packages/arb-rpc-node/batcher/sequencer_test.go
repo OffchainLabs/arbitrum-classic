@@ -201,7 +201,7 @@ func TestSequencerBatcher(t *testing.T) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, rollupBlock.Int64(), client, bind.CallOpts{})
 	test.FailIfError(t, err)
 
-	transactAuth, _, err := ethbridge.NewTransactAuth(ctx, client, auth, &config, &config.Wallet)
+	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, &config, &config.Wallet)
 	test.FailIfError(t, err)
 
 	delayedInbox, err := ethbridge.NewStandardInbox(delayedInboxAddr, client, transactAuth)

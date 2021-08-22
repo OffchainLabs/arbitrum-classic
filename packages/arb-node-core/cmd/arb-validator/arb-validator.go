@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"io/ioutil"
 	golog "log"
 	"net/http"
@@ -166,7 +167,14 @@ func startup() error {
 		}
 	}
 
-	valAuth, fb, err := ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
+	var valAuth *ethbridge.TransactAuth
+	var fb *fireblocks.Fireblocks
+	if len(config.Wallet.FireblocksSSLKey) > 0 {
+		valAuth, fb, err = ethbridge.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
+	} else {
+		valAuth, err = ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
+
+	}
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}

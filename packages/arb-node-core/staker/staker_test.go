@@ -183,22 +183,22 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	validatorWalletFactory, _, _, err := ethbridgecontracts.DeployValidatorWalletCreator(auth, client)
 	test.FailIfError(t, err)
 
-	valAuth, fb, err := ethbridge.NewTransactAuth(ctx, client, auth, &configuration.Config{}, &configuration.Wallet{})
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, &configuration.Config{}, &configuration.Wallet{})
 	test.FailIfError(t, err)
-	val2Auth, fb2, err := ethbridge.NewTransactAuth(ctx, client, auth2, &configuration.Config{}, &configuration.Wallet{})
+	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, &configuration.Config{}, &configuration.Wallet{})
 	test.FailIfError(t, err)
 
-	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client, fb)
+	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client, nil)
 	test.FailIfError(t, err)
 
 	// Should lookup WalletCreated event
-	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client, fb)
+	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client, nil)
 	test.FailIfError(t, err)
 	if validatorAddress != checkValidatorAddress {
 		t.Error("CreateValidatorWallet didn't reuse existing wallet")
 	}
 
-	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), val2Auth, client, fb2)
+	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), val2Auth, client, nil)
 	test.FailIfError(t, err)
 	if validatorAddress == validatorAddress2 {
 		t.Error("CreateValidatorWallet reused existing wallet for different address")

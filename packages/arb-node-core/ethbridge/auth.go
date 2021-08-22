@@ -19,7 +19,9 @@ package ethbridge
 import (
 	"context"
 	"crypto/rsa"
+	"encoding/hex"
 	"math/big"
+	"strings"
 	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
@@ -46,17 +48,10 @@ const (
 type TransactAuth struct {
 	sync.Mutex
 	auth   *bind.TransactOpts
-	sendTx func(ctx context.Context, tx *types.Transaction) error
+	sendTx func(ctx context.Context, tx *types.Transaction) (*types.Transaction, error)
 }
 
-func NewTransactAuthAdvanced(
-	ctx context.Context,
-	client ethutils.EthClient,
-	auth *bind.TransactOpts,
-	config *configuration.Config,
-	walletConfig *configuration.Wallet,
-	usePendingNonce bool,
-) (*TransactAuth, *fireblocks.Fireblocks, error) {
+func getNonce(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts, usePendingNonce bool) error {
 	if auth.Nonce == nil {
 		var nonce uint64
 		var err error
@@ -67,64 +62,140 @@ func NewTransactAuthAdvanced(
 			nonce, err = client.NonceAt(ctx, auth.From, blockNum)
 		}
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to get nonce")
+			return errors.Wrap(err, "failed to get nonce")
 		}
 		auth.Nonce = new(big.Int).SetUint64(nonce)
 	}
-	var sendTx func(ctx context.Context, tx *types.Transaction) error
 
-	var fb *fireblocks.Fireblocks
-	if len(walletConfig.FireblocksSSLKey) != 0 {
-		var signKey *rsa.PrivateKey
-		var err error
-		if len(walletConfig.FireblocksSSLKeyPassword) != 0 {
-			signKey, err = jwt.ParseRSAPrivateKeyFromPEMWithPassword([]byte(walletConfig.FireblocksSSLKey), walletConfig.FireblocksSSLKeyPassword)
-		} else {
-			signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(walletConfig.FireblocksSSLKey))
-		}
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "problem with fireblocks privatekey")
-		}
-		sourceType, err := accounttype.New(config.Fireblocks.SourceType)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "problem with fireblocks source-type")
-		}
-		fb = fireblocks.New(config.Fireblocks.AssetId, config.Fireblocks.BaseURL, *sourceType, config.Fireblocks.SourceId, config.Fireblocks.APIKey, signKey)
-		sendTx = func(ctx context.Context, tx *types.Transaction) error {
-			txResponse, err := fb.CreateContractCall(accounttype.OneTimeAddress, tx.To().Hex(), "", tx.Value(), ethcommon.Bytes2Hex(tx.Data()))
-			if err != nil {
-				return err
-			}
+	return nil
+}
 
-			if fb.IsTransactionStatusFailed(txResponse.Status) {
-				logger.
-					Error().
-					Hex("data", tx.Data()).
-					Str("id", txResponse.Id).
-					Str("status", txResponse.Status).
-					Msg("fireblocks transaction failed")
-				return errors.New("fireblocks transaction failed")
-			}
-			logger.Debug().Hex("data", tx.Data()).Msg("sent transaction")
-			return nil
-		}
-	} else {
-		// Send transaction normally
-		sendTx = func(ctx context.Context, tx *types.Transaction) error {
-			err := client.SendTransaction(ctx, tx)
-			if err != nil {
-				logger.Error().Err(err).Hex("data", tx.Data()).Msg("error sending transaction")
-				return err
-			}
-
-			logger.Debug().Hex("data", tx.Data()).Msg("sent transaction")
-			return nil
-		}
+func NewTransactAuthAdvanced(
+	ctx context.Context,
+	client ethutils.EthClient,
+	auth *bind.TransactOpts,
+	config *configuration.Config,
+	walletConfig *configuration.Wallet,
+	usePendingNonce bool,
+) (*TransactAuth, error) {
+	err := getNonce(ctx, client, auth, usePendingNonce)
+	if err != nil {
+		return nil, err
 	}
+
+	// Send transaction normally
+	sendTx := func(ctx context.Context, tx *types.Transaction) (*types.Transaction, error) {
+		err := client.SendTransaction(ctx, tx)
+		if err != nil {
+			logger.Error().Err(err).Hex("data", tx.Data()).Msg("error sending transaction")
+			return nil, err
+		}
+
+		logger.Debug().Hex("data", tx.Data()).Msg("sent transaction")
+		return tx, nil
+	}
+
+	return &TransactAuth{
+		auth:   auth,
+		sendTx: sendTx,
+	}, nil
+}
+
+func NewFireblocksTransactAuthAdvanced(
+	ctx context.Context,
+	client ethutils.EthClient,
+	auth *bind.TransactOpts,
+	config *configuration.Config,
+	walletConfig *configuration.Wallet,
+	usePendingNonce bool,
+) (*TransactAuth, *fireblocks.Fireblocks, error) {
+	err := getNonce(ctx, client, auth, usePendingNonce)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var signKey *rsa.PrivateKey
+	if len(walletConfig.FireblocksSSLKeyPassword) != 0 {
+		signKey, err = jwt.ParseRSAPrivateKeyFromPEMWithPassword([]byte(walletConfig.FireblocksSSLKey), walletConfig.FireblocksSSLKeyPassword)
+	} else {
+		signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(walletConfig.FireblocksSSLKey))
+	}
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "problem with fireblocks privatekey")
+	}
+	sourceType, err := accounttype.New(config.Fireblocks.SourceType)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "problem with fireblocks source-type")
+	}
+	fb := fireblocks.New(config.Fireblocks.AssetId, config.Fireblocks.BaseURL, *sourceType, config.Fireblocks.SourceId, config.Fireblocks.APIKey, signKey)
+	sendTx := func(ctx context.Context, tx *types.Transaction) (*types.Transaction, error) {
+		return fireblocksSendTransaction(ctx, fb, tx)
+	}
+
 	return &TransactAuth{
 		auth:   auth,
 		sendTx: sendTx,
 	}, fb, nil
+}
+
+func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, tx *types.Transaction) (*types.Transaction, error) {
+	txResponse, err := fb.CreateContractCall(accounttype.OneTimeAddress, tx.To().Hex(), "", tx.Value(), ethcommon.Bytes2Hex(tx.Data()))
+	if err != nil {
+		return nil, err
+	}
+	if fb.IsTransactionStatusFailed(txResponse.Status) {
+		logger.
+			Error().
+			Hex("data", tx.Data()).
+			Str("id", txResponse.Id).
+			Str("status", txResponse.Status).
+			Msg("fireblocks transaction failed")
+		return nil, errors.New("fireblocks transaction failed")
+	}
+	logger.Debug().Hex("data", tx.Data()).Msg("sent transaction")
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, errors.New("ctx done")
+		default:
+		}
+
+		details, err := fb.GetTransaction(txResponse.Id)
+		if err != nil && strings.Contains(err.Error(), "not found") {
+			logger.
+				Warn().
+				Err(err).
+				Hex("To", tx.To().Bytes()).
+				Str("id", txResponse.Id).
+				Msg("fireblocks transaction not found")
+			return nil, errors.Wrap(err, "fireblocks transaction not found")
+		}
+
+		if fb.IsTransactionStatusFailed(details.Status) {
+			logger.
+				Error().
+				Err(err).
+				Str("To", details.DestinationAddress).
+				Str("From", details.SourceAddress).
+				Str("status", details.Status).
+				Str("txhash", details.TxHash).
+				Msg("fireblocks transaction failed")
+			return nil, errors.Wrapf(err, "fireblocks transaction failed: %s", details.Status)
+		}
+
+		if len(details.TxHash) > 0 {
+			// Store transaction hash transaction signature so that it can be retrieved later
+			tx, err = tx.WithSignature(nil, []byte(details.Id))
+			if err != nil {
+				return nil, errors.Wrap(err, "error saving fireblocks id as transaction hash")
+			}
+			break
+		}
+	}
+
+	signer := NewDummyHashSigner(big.NewInt(99), hex.DecodeString(details.TxHash))
+	return tx.WithSignature(signer, []byte{})
 }
 
 func NewTransactAuth(
@@ -133,8 +204,18 @@ func NewTransactAuth(
 	auth *bind.TransactOpts,
 	config *configuration.Config,
 	walletConfig *configuration.Wallet,
-) (*TransactAuth, *fireblocks.Fireblocks, error) {
+) (*TransactAuth, error) {
 	return NewTransactAuthAdvanced(ctx, client, auth, config, walletConfig, true)
+}
+
+func NewFireblocksTransactAuth(
+	ctx context.Context,
+	client ethutils.EthClient,
+	auth *bind.TransactOpts,
+	config *configuration.Config,
+	walletConfig *configuration.Wallet,
+) (*TransactAuth, *fireblocks.Fireblocks, error) {
+	return NewFireblocksTransactAuthAdvanced(ctx, client, auth, config, walletConfig, true)
 }
 
 func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
@@ -151,7 +232,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	}
 
 	// Actually send transaction
-	err = t.sendTx(ctx, tx)
+	tx, err = t.sendTx(ctx, tx)
 
 	if err != nil {
 		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Hex("to", tx.To().Bytes()).Hex("data", tx.Data()).Str("nonce", auth.Nonce.String()).Msg("unable to send transaction")
