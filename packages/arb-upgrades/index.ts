@@ -123,7 +123,7 @@ export const initUpgrades = (
       const contractFactory = (
         await hre.ethers.getContractFactory(contractName)
       ).connect(signer)
-
+      // TODO: ensure we're on the right layer?
       const newLogic = await contractFactory.deploy()
       const deployedContract = await newLogic.deployed()
       const receipt = await deployedContract.deployTransaction.wait()
@@ -181,6 +181,11 @@ export const initUpgrades = (
     }
 
     const contractsToUpdate = Object.keys(queuedUpdatesData) as ContractNames[]
+    if (contractsToUpdate.length === 0) {
+      throw new Error(
+        'No logic implementations to upgrade to for current network / package'
+      )
+    }
     console.log(`Updating ${contractsToUpdate.length} contracts`)
 
     for (const contractName of contractsToUpdate) {
@@ -274,6 +279,15 @@ export const initUpgrades = (
     return success
   }
 
+  const deployLogicAll = async () => {
+    const { path: deploymentsPath, data: deploymentsJsonData } =
+      await getDeployments()
+    const contractsNames = Object.keys(
+      deploymentsJsonData.contracts
+    ) as ContractNames[]
+    await deployLogic(contractsNames)
+  }
+
   // TODO:
   // const verifyUpgrade = async (contractName: string) => {
   //    const validationContext = {} as RunValidation
@@ -315,5 +329,6 @@ export const initUpgrades = (
     updateImplementations,
     verifyCurrentImplementations,
     deployLogic,
+    deployLogicAll,
   }
 }
