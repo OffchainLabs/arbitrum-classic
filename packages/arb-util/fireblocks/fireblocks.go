@@ -57,22 +57,24 @@ type StatusBody struct {
 }
 
 type CreateTransactionBody struct {
-	AssetId         string                          `json:"assetId"`
-	Source          TransferPeerPath                `json:"source"`
-	Destination     DestinationTransferPeerPath     `json:"destination"`
-	Amount          string                          `json:"amount"`
-	Fee             string                          `json:"fee,omitempty"`
-	GasPrice        string                          `json:"gasPrice,omitempty"`
-	GasLimit        string                          `json:"gasLimit,omitempty"`
-	NetworkFee      string                          `json:"networkFee,omitempty"`
-	FeeLevel        string                          `json:"feeLevel,omitempty"`
-	MaxFee          string                          `json:"maxFee,omitempty"`
-	FailOnLowFee    bool                            `json:"failOnLowFee,omitempty"`
-	Note            string                          `json:"note,omitempty"`
-	Operation       operationtype.OperationType     `json:"operation,omitempty"`
-	CustomerRefId   string                          `json:"customerRefId,omitempty"`
-	Destinations    []TransactionRequestDestination `json:"destinations,omitempty"`
-	ExtraParameters TransactionExtraParameters      `json:"extraParameters"`
+	AssetId          string                          `json:"assetId"`
+	Source           TransferPeerPath                `json:"source"`
+	Destination      DestinationTransferPeerPath     `json:"destination"`
+	Amount           string                          `json:"amount"`
+	Fee              string                          `json:"fee,omitempty"`
+	GasPrice         string                          `json:"gasPrice,omitempty"`
+	GasLimit         string                          `json:"gasLimit,omitempty"`
+	MaxPriorityFee   string                          `json:"maxPriorityFee"`
+	MaxTotalGasPrice string                          `json:"maxTotalGasPrice"`
+	NetworkFee       string                          `json:"networkFee,omitempty"`
+	FeeLevel         string                          `json:"feeLevel,omitempty"`
+	MaxFee           string                          `json:"maxFee,omitempty"`
+	FailOnLowFee     bool                            `json:"failOnLowFee,omitempty"`
+	Note             string                          `json:"note,omitempty"`
+	Operation        operationtype.OperationType     `json:"operation,omitempty"`
+	CustomerRefId    string                          `json:"customerRefId,omitempty"`
+	Destinations     []TransactionRequestDestination `json:"destinations,omitempty"`
+	ExtraParameters  TransactionExtraParameters      `json:"extraParameters"`
 }
 
 type EstimateTransactionFeeRequestBody struct {
@@ -315,21 +317,51 @@ func (fb *Fireblocks) ListVaultAccounts() (*[]VaultAccount, error) {
 	return &result, nil
 }
 
-func (fb *Fireblocks) CreateContractCall(destinationType accounttype.AccountType, destinationId string, destinationTag string, amount *big.Int, callData string) (*CreateTransactionResponse, error) {
-	return fb.CreateTransaction(destinationType, destinationId, destinationTag, amount, operationtype.ContractCall, callData)
+func (fb *Fireblocks) CreateContractCall(
+	destinationType accounttype.AccountType,
+	destinationId string,
+	destinationTag string,
+	amount *big.Int,
+	maxPriorityFeeWei *big.Int,
+	maxTotalGasPriceWei *big.Int,
+	callData string,
+) (*CreateTransactionResponse, error) {
+	return fb.CreateTransaction(
+		destinationType,
+		destinationId,
+		destinationTag,
+		amount,
+		operationtype.ContractCall,
+		maxPriorityFeeWei,
+		maxTotalGasPriceWei,
+		callData,
+	)
 }
 
-func (fb *Fireblocks) CreateTransaction(destinationType accounttype.AccountType, destinationId string, destinationTag string, amountWei *big.Int, operation operationtype.OperationType, callData string) (*CreateTransactionResponse, error) {
+func (fb *Fireblocks) CreateTransaction(
+	destinationType accounttype.AccountType,
+	destinationId string,
+	destinationTag string,
+	amountWei *big.Int,
+	operation operationtype.OperationType,
+	maxPriorityFeeWei *big.Int,
+	maxTotalGasPriceWei *big.Int,
+	callData string,
+) (*CreateTransactionResponse, error) {
 	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 	amountEth := new(big.Rat).SetFrac(amountWei, divisor)
+	maxPriorityFee := new(big.Rat).SetFrac(maxPriorityFeeWei, divisor)
+	maxTotalGasPrice := new(big.Rat).SetFrac(maxTotalGasPriceWei, divisor)
 
 	body := &CreateTransactionBody{
-		AssetId:         fb.assetId,
-		Source:          TransferPeerPath{Type: fb.sourceType, Id: fb.sourceId},
-		Destination:     *NewDestinationTransferPeerPath(destinationType, destinationId, destinationTag),
-		Amount:          amountEth.FloatString(18),
-		Operation:       operation,
-		ExtraParameters: TransactionExtraParameters{ContractCallData: callData},
+		AssetId:          fb.assetId,
+		Source:           TransferPeerPath{Type: fb.sourceType, Id: fb.sourceId},
+		Destination:      *NewDestinationTransferPeerPath(destinationType, destinationId, destinationTag),
+		Amount:           amountEth.FloatString(18),
+		Operation:        operation,
+		MaxPriorityFee:   maxPriorityFee.FloatString(18),
+		MaxTotalGasPrice: maxTotalGasPrice.FloatString(18),
+		ExtraParameters:  TransactionExtraParameters{ContractCallData: callData},
 	}
 
 	resp, err := fb.postRequest("/v1/transactions", url.Values{}, body)

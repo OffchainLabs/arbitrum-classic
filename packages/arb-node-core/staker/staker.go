@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -98,13 +97,13 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 		}()
 		backoff := time.Second
 		for {
-			tx, err := s.Act(ctx)
-			if err == nil && tx != nil {
+			arbTx, err := s.Act(ctx)
+			if err == nil && arbTx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
-				_, err = ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking", s.auth, s.fb)
+				_, err = ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.fb)
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
-					logger.Info().Str("hash", tx.Hash().String()).Msg("Successfully executed transaction")
+					logger.Info().Str("hash", arbTx.Hash().String()).Msg("Successfully executed transaction")
 				}
 			}
 			if err != nil {
@@ -183,7 +182,7 @@ func (s *Staker) shouldAct(ctx context.Context) bool {
 	}
 }
 
-func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
+func (s *Staker) Act(ctx context.Context) (*ethbridge.ArbTransaction, error) {
 	if !s.shouldAct(ctx) {
 		// The fact that we're delaying acting is alreay logged in `shouldAct`
 		return nil, nil
@@ -231,13 +230,13 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	}
 	if shouldResolveNodes {
 		// Keep the stake of this validator placed if we plan on staking further
-		tx, err := s.removeOldStakers(ctx, effectiveStrategy >= StakeLatestStrategy)
-		if err != nil || tx != nil {
-			return tx, err
+		arbTx, err := s.removeOldStakers(ctx, effectiveStrategy >= StakeLatestStrategy)
+		if err != nil || arbTx != nil {
+			return arbTx, err
 		}
-		tx, err = s.resolveTimedOutChallenges(ctx)
-		if err != nil || tx != nil {
-			return tx, err
+		arbTx, err = s.resolveTimedOutChallenges(ctx)
+		if err != nil || arbTx != nil {
+			return arbTx, err
 		}
 		if err := s.resolveNextNode(ctx, rawInfo, s.fromBlock); err != nil {
 			return nil, err

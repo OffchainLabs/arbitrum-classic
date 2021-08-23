@@ -57,7 +57,7 @@ var config *Config
 
 func waitForTx(tx *types.Transaction, method string) error {
 	fmt.Println("Waiting for receipt")
-	_, err := ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, method, config.fb)
+	_, err := ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, ethbridge.NewArbTransaction(tx), method, config.fb)
 	if err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func switchFees(enabled bool) error {
 		return err
 	}
 	fmt.Println("Waiting for receipt")
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "SetFeesEnabled", config.fb)
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, ethbridge.NewArbTransaction(tx), "SetFeesEnabled", config.fb)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func setDefaultAggregator(agg ethcommon.Address) error {
 	}
 	tx, err := arbAggregator.SetDefaultAggregator(config.auth, agg)
 	fmt.Println("Waiting for receipt")
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "SetDefaultAggregator", config.fb)
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, ethbridge.NewArbTransaction(tx), "SetDefaultAggregator", config.fb)
 	if err != nil {
 		return err
 	}
@@ -242,7 +242,7 @@ func setFairGasPriceSender(sender ethcommon.Address) error {
 		return err
 	}
 	fmt.Println("Waiting for receipt")
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "SetFairGasPriceSender", config.fb)
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, ethbridge.NewArbTransaction(tx), "SetFairGasPriceSender", config.fb)
 	if err != nil {
 		return err
 	}

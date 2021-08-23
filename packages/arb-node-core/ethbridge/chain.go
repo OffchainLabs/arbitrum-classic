@@ -112,16 +112,16 @@ func increaseByPercent(original *big.Int, percentage int64) *big.Int {
 	return threshold
 }
 
-func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string, auth *TransactAuth, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
+func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, arbTx *ArbTransaction, methodName string, transactAuth *TransactAuth, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
 	var rbfInfo *attemptRbfInfo
-	if auth != nil {
+	if transactAuth != nil {
 		attemptRbf := func() (ethcommon.Hash, error) {
-			auth := auth.getAuth(ctx)
-			if auth.GasPrice.Cmp(tx.GasPrice()) <= 0 {
-				return tx.Hash(), nil
+			auth := transactAuth.getAuth(ctx)
+			if auth.GasPrice.Cmp(arbTx.GasPrice()) <= 0 {
+				return arbTx.Hash(), nil
 			}
 			var rawTx *types.Transaction
-			if tx.Type() == types.DynamicFeeTxType {
+			if arbTx.Type() == types.DynamicFeeTxType {
 				block, err := client.HeaderByNumber(ctx, nil)
 				if err != nil {
 					return ethcommon.Hash{}, err
@@ -133,26 +133,26 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 				if err != nil {
 					return ethcommon.Hash{}, err
 				}
-				if tipCap.Cmp(increaseByPercent(tx.GasTipCap(), 10)) < 0 {
+				if tipCap.Cmp(increaseByPercent(arbTx.GasTipCap(), 10)) < 0 {
 					// We only replace by fee when we'd increase the tip by 10%
-					return tx.Hash(), nil
+					return arbTx.Hash(), nil
 				}
 				feeCap := new(big.Int).Mul(block.BaseFee, big.NewInt(2))
 				feeCap.Add(feeCap, tipCap)
-				minFeeCap := increaseByPercent(tx.GasFeeCap(), 10)
+				minFeeCap := increaseByPercent(arbTx.GasFeeCap(), 10)
 				if feeCap.Cmp(minFeeCap) < 0 {
 					feeCap = minFeeCap
 				}
 				baseTx := &types.DynamicFeeTx{
-					ChainID:    tx.ChainId(),
-					Nonce:      tx.Nonce(),
+					ChainID:    arbTx.ChainId(),
+					Nonce:      arbTx.Nonce(),
 					GasTipCap:  tipCap,
 					GasFeeCap:  feeCap,
-					Gas:        tx.Gas(),
-					To:         tx.To(),
-					Value:      tx.Value(),
-					Data:       tx.Data(),
-					AccessList: tx.AccessList(),
+					Gas:        arbTx.Gas(),
+					To:         arbTx.To(),
+					Value:      arbTx.Value(),
+					Data:       arbTx.Data(),
+					AccessList: arbTx.AccessList(),
 				}
 				rawTx = types.NewTx(baseTx)
 			} else {
@@ -160,52 +160,55 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 				if err != nil {
 					return ethcommon.Hash{}, err
 				}
-				if gasPrice.Cmp(increaseByPercent(tx.GasPrice(), 10)) < 0 {
+				if gasPrice.Cmp(increaseByPercent(arbTx.GasPrice(), 10)) < 0 {
 					// We only replace by fee when we'd increase the fee by at least 10%
-					return tx.Hash(), nil
+					return arbTx.Hash(), nil
 				}
 				baseTx := &types.LegacyTx{
-					Nonce:    tx.Nonce(),
+					Nonce:    arbTx.Nonce(),
 					GasPrice: gasPrice,
-					Gas:      tx.Gas(),
-					To:       tx.To(),
-					Value:    tx.Value(),
-					Data:     tx.Data(),
+					Gas:      arbTx.Gas(),
+					To:       arbTx.To(),
+					Value:    arbTx.Value(),
+					Data:     arbTx.Data(),
 				}
 				rawTx = types.NewTx(baseTx)
 			}
-			newTx, err := auth.Signer(auth.From, rawTx)
+			signedTx, err := transactAuth.Signer(auth.From, rawTx)
 			if err != nil {
 				return ethcommon.Hash{}, err
 			}
-			err = client.SendTransaction(ctx, newTx)
+
+			newTx, err := transactAuth.SendTx(ctx, signedTx)
 			if err != nil {
 				return ethcommon.Hash{}, err
 			}
-			*tx = *newTx
-			return newTx.Hash(), nil
+
+			*arbTx = *newTx
+
+			return arbTx.Hash(), nil
 		}
 		rbfInfo = &attemptRbfInfo{
 			attempt: attemptRbf,
-			account: auth.auth.From,
-			nonce:   tx.Nonce(),
+			account: transactAuth.auth.From,
+			nonce:   arbTx.Nonce(),
 		}
 	}
-	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, tx.Hash(), rbfInfo, fb)
+	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, arbTx.Hash(), rbfInfo, fb)
 	if err != nil {
-		logger.Warn().Err(err).Hex("tx", tx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
+		logger.Warn().Err(err).Hex("tx", arbTx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
 	}
 	if receipt != nil && receipt.Status != 1 {
-		logger.Warn().Hex("tx", tx.Hash().Bytes()).Msg("failed transaction")
+		logger.Warn().Hex("tx", arbTx.Hash().Bytes()).Msg("failed transaction")
 		callMsg := ethereum.CallMsg{
 			From:      from,
-			To:        tx.To(),
-			Gas:       tx.Gas(),
-			GasTipCap: tx.GasTipCap(),
-			GasFeeCap: tx.GasFeeCap(),
-			Value:     tx.Value(),
-			Data:      tx.Data(),
+			To:        arbTx.To(),
+			Gas:       arbTx.Gas(),
+			GasTipCap: arbTx.GasTipCap(),
+			GasFeeCap: arbTx.GasFeeCap(),
+			Value:     arbTx.Value(),
+			Data:      arbTx.Data(),
 		}
 		data, err := client.CallContract(ctx, callMsg, receipt.BlockNumber)
 		if err != nil {
@@ -216,6 +219,6 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 	return receipt, nil
 }
 
-func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
+func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *ArbTransaction, methodName string, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
 	return WaitForReceiptWithResultsAndReplaceByFee(ctx, client, from, tx, methodName, nil, fb)
 }

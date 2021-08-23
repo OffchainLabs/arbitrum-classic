@@ -48,7 +48,8 @@ const (
 type TransactAuth struct {
 	sync.Mutex
 	auth   *bind.TransactOpts
-	sendTx func(ctx context.Context, tx *types.Transaction) (*types.Transaction, error)
+	SendTx func(ctx context.Context, tx *types.Transaction) (*ArbTransaction, error)
+	Signer bind.SignerFn
 }
 
 func getNonce(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts, usePendingNonce bool) error {
@@ -84,7 +85,7 @@ func NewTransactAuthAdvanced(
 	}
 
 	// Send transaction normally
-	sendTx := func(ctx context.Context, tx *types.Transaction) (*types.Transaction, error) {
+	sendTx := func(ctx context.Context, tx *types.Transaction) (*ArbTransaction, error) {
 		err := client.SendTransaction(ctx, tx)
 		if err != nil {
 			logger.Error().Err(err).Hex("data", tx.Data()).Msg("error sending transaction")
@@ -92,12 +93,14 @@ func NewTransactAuthAdvanced(
 		}
 
 		logger.Debug().Hex("data", tx.Data()).Msg("sent transaction")
-		return tx, nil
+		arbTx := NewArbTransaction(tx)
+		return arbTx, nil
 	}
 
 	return &TransactAuth{
 		auth:   auth,
-		sendTx: sendTx,
+		SendTx: sendTx,
+		Signer: auth.Signer,
 	}, nil
 }
 
@@ -128,18 +131,30 @@ func NewFireblocksTransactAuthAdvanced(
 		return nil, nil, errors.Wrap(err, "problem with fireblocks source-type")
 	}
 	fb := fireblocks.New(config.Fireblocks.AssetId, config.Fireblocks.BaseURL, *sourceType, config.Fireblocks.SourceId, config.Fireblocks.APIKey, signKey)
-	sendTx := func(ctx context.Context, tx *types.Transaction) (*types.Transaction, error) {
+	sendTx := func(ctx context.Context, tx *types.Transaction) (*ArbTransaction, error) {
 		return fireblocksSendTransaction(ctx, fb, tx)
 	}
 
 	return &TransactAuth{
 		auth:   auth,
-		sendTx: sendTx,
+		SendTx: sendTx,
+		Signer: func(addr ethcommon.Address, tx *types.Transaction) (*types.Transaction, error) {
+			// Fireblocks handles signing
+			return tx, nil
+		},
 	}, fb, nil
 }
 
-func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, tx *types.Transaction) (*types.Transaction, error) {
-	txResponse, err := fb.CreateContractCall(accounttype.OneTimeAddress, tx.To().Hex(), "", tx.Value(), ethcommon.Bytes2Hex(tx.Data()))
+func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, tx *types.Transaction) (*ArbTransaction, error) {
+	txResponse, err := fb.CreateContractCall(
+		accounttype.OneTimeAddress,
+		tx.To().Hex(),
+		"",
+		tx.Value(),
+		tx.GasTipCap(),
+		tx.GasFeeCap(),
+		ethcommon.Bytes2Hex(tx.Data()),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -185,17 +200,21 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 		}
 
 		if len(details.TxHash) > 0 {
-			// Store transaction hash transaction signature so that it can be retrieved later
-			tx, err = tx.WithSignature(nil, []byte(details.Id))
-			if err != nil {
-				return nil, errors.Wrap(err, "error saving fireblocks id as transaction hash")
+			signer := NewDummyHashSigner(big.NewInt(99))
+			txHash, err := hex.DecodeString(details.TxHash)
+			if err != nil || len(txHash) < 32 {
+				return nil, errors.Wrap(err, "error decoding txHash from fireblocks response")
 			}
-			break
+			tx, err := tx.WithSignature(signer, txHash)
+			if err != nil {
+				return nil, errors.Wrap(err, "error encoding fireblocks transaction hash into signature")
+			}
+			arbTx := NewFireblocksArbTransaction(tx, ethcommon.BytesToHash(txHash))
+			return arbTx, nil
 		}
-	}
 
-	signer := NewDummyHashSigner(big.NewInt(99), hex.DecodeString(details.TxHash))
-	return tx.WithSignature(signer, []byte{})
+		// Hash not returned, keep trying
+	}
 }
 
 func NewTransactAuth(
@@ -218,7 +237,7 @@ func NewFireblocksTransactAuth(
 	return NewFireblocksTransactAuthAdvanced(ctx, client, auth, config, walletConfig, true)
 }
 
-func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
+func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *ArbTransaction, error) {
 	auth := t.getAuth(ctx)
 
 	// Form transaction without sending it
@@ -232,10 +251,10 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	}
 
 	// Actually send transaction
-	tx, err = t.sendTx(ctx, tx)
+	arbTx, err := t.SendTx(ctx, tx)
 
 	if err != nil {
-		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Hex("to", tx.To().Bytes()).Hex("data", tx.Data()).Str("nonce", auth.Nonce.String()).Msg("unable to send transaction")
+		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Hex("to", arbTx.To().Bytes()).Hex("data", arbTx.Data()).Str("nonce", auth.Nonce.String()).Msg("unable to send transaction")
 		return addr, nil, err
 	}
 
@@ -243,16 +262,16 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 
 	// Transaction successful, increment nonce for next time
 	t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
-	return addr, tx, err
+	return addr, arbTx, err
 }
 
-func (t *TransactAuth) makeTx(ctx context.Context, txFunc func(auth *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
-	_, tx, err := t.makeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+func (t *TransactAuth) makeTx(ctx context.Context, txFunc func(auth *bind.TransactOpts) (*types.Transaction, error)) (*ArbTransaction, error) {
+	_, arbTx, err := t.makeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		tx, err := txFunc(auth)
 		return ethcommon.BigToAddress(big.NewInt(0)), tx, nil, err
 	})
 
-	return tx, err
+	return arbTx, err
 }
 
 func (t *TransactAuth) getAuth(ctx context.Context) *bind.TransactOpts {

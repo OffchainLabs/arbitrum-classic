@@ -24,7 +24,6 @@ import (
 
 type dummyHashSigner struct {
 	chainId *big.Int
-	hash    ethcommon.Hash
 }
 
 func NewDummyHashSigner(chainId *big.Int) *dummyHashSigner {
@@ -34,11 +33,10 @@ func NewDummyHashSigner(chainId *big.Int) *dummyHashSigner {
 }
 
 func (s *dummyHashSigner) Sender(tx *types.Transaction) (ethcommon.Address, error) {
-	panic("dummyHashSigner.sender not implemented")
+	panic("dummyHashSigner.Sender not implemented")
 }
 
 func (s *dummyHashSigner) SignatureValues(tx *types.Transaction, sig []byte) (*big.Int, *big.Int, *big.Int, error) {
-	copy(s.hash[:], sig[0:32])
 	R := big.NewInt(0)
 	R.SetBytes(sig[0:32])
 	return R, big.NewInt(0), big.NewInt(0), nil
@@ -49,9 +47,9 @@ func (s *dummyHashSigner) ChainID() *big.Int {
 }
 
 func (s *dummyHashSigner) Hash(tx *types.Transaction) ethcommon.Hash {
-	return s.hash
+	panic("dummyHashSigner.Hash not implemented")
 }
 
 func (s *dummyHashSigner) Equal(types.Signer) bool {
-	panic("can't compare dummyHashSigner")
+	panic("dummyHashSigner.Equal not implemented")
 }

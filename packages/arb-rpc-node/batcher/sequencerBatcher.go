@@ -745,7 +745,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
 	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Int("items", len(batchItems)).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
-	tx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc)
+	arbTx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc)
 	if err != nil {
 		return false, err
 	}
@@ -767,7 +767,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	atomic.StoreInt32(&b.publishingBatchAtomic, 1)
 	go (func() {
 		defer atomic.StoreInt32(&b.publishingBatchAtomic, 0)
-		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin", b.auth, b.fb)
+		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.sequencer.ToEthAddress(), arbTx, "addSequencerL2BatchFromOrigin", b.auth, b.fb)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error waiting for batch receipt")
 			return

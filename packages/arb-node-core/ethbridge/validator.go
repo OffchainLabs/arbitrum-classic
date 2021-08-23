@@ -85,7 +85,7 @@ func (v *ValidatorWallet) RollupAddress() common.Address {
 	return common.NewAddressFromEth(v.rollupAddress)
 }
 
-func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Transaction) (*types.Transaction, error) {
+func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Transaction) (*ArbTransaction, error) {
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = tx.Value()
 		return v.con.ExecuteTransaction(auth, tx.Data(), *tx.To(), tx.Value())
@@ -107,19 +107,19 @@ func combineTxes(txes []*types.Transaction) ([][]byte, []ethcommon.Address, []*b
 	return data, dest, amount, totalAmount
 }
 
-func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *BuilderBackend) (*types.Transaction, error) {
+func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *BuilderBackend) (*ArbTransaction, error) {
 	txes := builder.transactions
 	if len(txes) == 0 {
 		return nil, nil
 	}
 
 	if len(txes) == 1 {
-		tx, err := v.executeTransaction(ctx, txes[0])
+		arbTx, err := v.executeTransaction(ctx, txes[0])
 		if err != nil {
 			return nil, err
 		}
 		builder.transactions = nil
-		return tx, nil
+		return arbTx, nil
 	}
 
 	totalAmount := big.NewInt(0)
@@ -134,7 +134,7 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 		totalAmount = totalAmount.Add(totalAmount, tx.Value())
 	}
 
-	tx, err := v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	arbTx, err := v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = totalAmount
 		return v.con.ExecuteTransactions(auth, data, dest, amount)
 	})
@@ -142,16 +142,16 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 		return nil, err
 	}
 	builder.transactions = nil
-	return tx, nil
+	return arbTx, nil
 }
 
-func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*types.Transaction, error) {
+func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*ArbTransaction, error) {
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.ReturnOldDeposits(auth, v.rollupAddress, common.AddressArrayToEth(stakers))
 	})
 }
 
-func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []common.Address) (*types.Transaction, error) {
+func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []common.Address) (*ArbTransaction, error) {
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.TimeoutChallenges(auth, common.AddressArrayToEth(challenges))
 	})
@@ -185,7 +185,7 @@ func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethco
 		return parsed.WalletAddress, err
 	}
 
-	tx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	arbTx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return walletCreator.CreateWallet(auth)
 	})
 	if err != nil {
@@ -197,7 +197,7 @@ func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethco
 		simulatedBackend.Commit()
 	}
 
-	receipt, err := WaitForReceiptWithResults(ctx, client, auth.auth.From, tx, "CreateWallet", fb)
+	receipt, err := WaitForReceiptWithResults(ctx, client, auth.auth.From, arbTx, "CreateWallet", fb)
 	if err != nil {
 		return ethcommon.Address{}, err
 	}

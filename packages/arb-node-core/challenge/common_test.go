@@ -90,10 +90,10 @@ func executeChallenge(
 			if challengerBackend.TransactionCount() == 0 {
 				t.Fatal("should be able to transact")
 			}
-			tx, err := challengerWallet.ExecuteTransactions(ctx, challengerBackend)
+			arbTx, err := challengerWallet.ExecuteTransactions(ctx, challengerBackend)
 			test.FailIfError(t, err)
 			client.Commit()
-			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
+			receipt, err := client.TransactionReceipt(ctx, arbTx.Hash())
 			test.FailIfError(t, err)
 			t.Log("Challenger Used", receipt.GasUsed, "gas")
 			turn = ethbridge.ASSERTER_TURN
@@ -107,10 +107,10 @@ func executeChallenge(
 			if asserterBackend.TransactionCount() == 0 {
 				t.Fatal("should be able to transact")
 			}
-			tx, err := asserterWallet.ExecuteTransactions(ctx, asserterBackend)
+			arbTx, err := asserterWallet.ExecuteTransactions(ctx, asserterBackend)
 			test.FailIfError(t, err)
 			client.Commit()
-			receipt, err := client.TransactionReceipt(ctx, tx.Hash())
+			receipt, err := client.TransactionReceipt(ctx, arbTx.Hash())
 			test.FailIfError(t, err)
 			t.Log("Asserter Used", receipt.GasUsed, "gas")
 			turn = ethbridge.CHALLENGER_TURN
