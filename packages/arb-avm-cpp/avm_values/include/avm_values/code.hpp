@@ -210,6 +210,8 @@ class Code {
         Operation op) = 0;
 
     virtual CodeSnapshot snapshot() const = 0;
+
+    virtual bool containsSegment(uint64_t segment_id) const = 0;
 };
 
 template <typename T>
@@ -512,6 +514,14 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
             return parent->tryAddOperation(ref, std::move(op));
         }
         return tryAddOperationImpl(ref, std::move(op));
+    }
+
+    bool containsSegment(uint64_t segment_id) const {
+        if (segment_id < impl->first_segment) {
+            return parent->containsSegment(segment_id);
+        }
+        const std::lock_guard<std::mutex> lock(mutex);
+        return segment_id < impl->nextSegmentNum();
     }
 };
 

@@ -56,10 +56,14 @@ const uint256_t& assumeInt(const value& val) {
     return *aNum;
 }
 
-CodePointStub& assumeCodePoint(const MachineState& m, value& val) {
+CodePointStub assumeCodePoint(MachineState& m, value& val) {
     auto cp = std::get_if<CodePointStub>(&val);
     if (!cp) {
         throw bad_pop_type{};
+    }
+    if (!m.code->containsSegment(cp->pc.segment)) {
+        return std::get<CodePointStub>(
+            m.value_loader.loadValue(hash_value(*cp)));
     }
     return *cp;
 }
@@ -540,14 +544,14 @@ void rset(MachineState& m) {
 
 void jump(MachineState& m) {
     m.stack.prepForMod(1);
-    auto& target = assumeCodePoint(m, m.stack[0]);
+    auto target = assumeCodePoint(m, m.stack[0]);
     m.pc = target.pc;
     m.stack.popClear();
 }
 
 void cjump(MachineState& m) {
     m.stack.prepForMod(2);
-    auto& target = assumeCodePoint(m, m.stack[0]);
+    auto target = assumeCodePoint(m, m.stack[0]);
     auto& cond = assumeInt(m.stack[1]);
     if (cond != 0) {
         m.pc = target.pc;

@@ -519,7 +519,8 @@ TEST_CASE("OPCODE: RSET opcode is correct") {
 TEST_CASE("OPCODE: JUMP opcode is correct") {
     SECTION("jump") {
         MachineState m;
-        CodePointRef cpr{0, 2};
+        m.code = std::make_shared<CoreCode>();
+        CodePointRef cpr = m.code->addSegment().pc;
         m.stack.push(value{CodePointStub(cpr, 73665)});
         m.runOp(OpCode::JUMP);
         REQUIRE(m.stack.stacksize() == 0);
@@ -530,7 +531,8 @@ TEST_CASE("OPCODE: JUMP opcode is correct") {
 TEST_CASE("OPCODE: CJUMP opcode is correct") {
     SECTION("cjump true") {
         MachineState m;
-        CodePointRef cpr{0, 2};
+        m.code = std::make_shared<CoreCode>();
+        CodePointRef cpr = m.code->addSegment().pc;
         m.pc = {0, 3};
         m.stack.push(uint256_t{1});
         m.stack.push(value{CodePointStub(cpr, 73665)});
@@ -540,10 +542,12 @@ TEST_CASE("OPCODE: CJUMP opcode is correct") {
     }
     SECTION("cjump false") {
         MachineState m;
+        m.code = std::make_shared<CoreCode>();
+        CodePointRef cpr = m.code->addSegment().pc;
         CodePointRef initial_pc{0, 3};
         m.pc = initial_pc;
         m.stack.push(uint256_t{0});
-        m.stack.push(value{CodePointStub({0, 10}, 73665)});
+        m.stack.push(value{CodePointStub(cpr, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == initial_pc + 1);
