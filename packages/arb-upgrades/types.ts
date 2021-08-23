@@ -11,6 +11,7 @@ export interface CurrentDeployment {
   implDeploymentTxn: string
   implArbitrumCommitHash: string
   implBuildInfo: string
+  isBeacon?: boolean
 }
 
 export type QueuedUpdates = {
@@ -34,6 +35,7 @@ export enum ContractNames {
   L2GatewayRouter = 'L2GatewayRouter',
   L2CustomGateway = 'L2CustomGateway',
   L2WethGateway = 'L2WethGateway',
+  StandardArbERC20 = 'StandardArbERC20',
 
   // TODO: beacon proxy
 }

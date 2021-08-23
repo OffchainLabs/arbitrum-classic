@@ -23,6 +23,8 @@ const adminSlot =
   '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103'
 const implementationSlot =
   '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
+const beaconSlot =
+  '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50'
 
 const currentCommit = childProcess
   .execSync('git rev-parse HEAD')
@@ -199,6 +201,7 @@ export const initUpgrades = (
       }
       console.log(`Updating ${contractName} to new implementation`)
 
+      // TODO
       const upgradeTx = await proxyAdmin.upgrade(
         deploymentData.proxyAddress,
         queuedUpdateData.address
@@ -237,6 +240,20 @@ export const initUpgrades = (
       const contractName = _contractName as ContractNames
       const deploymentData = deploymentsJsonData.contracts[contractName]
 
+      if (deploymentData.isBeacon) {
+        // TODO
+        // let implementation = await hre.ethers.provider.getStorageAt(
+        //   deploymentData.proxyAddress,
+        //   implementationSlot
+        // )
+        // if (implementation.length > 42) {
+        //   implementation =
+        //     '0x' + implementation.substr(implementation.length - 40, 40)
+        // }
+        // console.log('implementation', implementation);
+        // console.log('');
+        continue
+      }
       // check proxy admin
       let admin = await hre.ethers.provider.getStorageAt(
         deploymentData.proxyAddress,
@@ -256,7 +273,6 @@ export const initUpgrades = (
         )
         success = false
       }
-
       //  check implementation
       let implementation = await hre.ethers.provider.getStorageAt(
         deploymentData.proxyAddress,
@@ -324,7 +340,6 @@ export const initUpgrades = (
 
   //    console.log('Upgrade validation complete, all is good.')
   //  }
-
   return {
     updateImplementations,
     verifyCurrentImplementations,

@@ -24,6 +24,12 @@
       "implAddress": "0xb01db0529b80b73a86ecd75ae3559844319575e5",
       "implDeploymentTxn": "0x",
       "implArbitrumCommitHash": "0x"
+    },
+    "StandardArbERC20": {
+      "proxyAddress": "0xE72ba9418b5f2Ce0A6a40501Fe77c6839Aa37333",
+      "implAddress": "0x1b193BeDB0b0A29c5759355d4193cb2838d2E170",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
     }
   }
 }
