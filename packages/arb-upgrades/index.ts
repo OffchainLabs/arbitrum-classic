@@ -208,19 +208,31 @@ export const initUpgrades = (
       if (isBeacon(contractName)) {
         const UpgradeableBeacon = (
           await hre.ethers.getContractFactory('UpgradeableBeacon')
-        ).attach(deploymentData.proxyAddress)
+        )
+          .attach(deploymentData.proxyAddress)
+          .connect(signer)
         upgradeTx = await UpgradeableBeacon.upgradeTo(queuedUpdateData.address)
       } else if (
         isRollupAdminFacet(contractName) ||
         isRollupUserFacet(contractName)
       ) {
-        // TODO:
+        const userFacetAddress = isRollupUserFacet(contractName)
+          ? queuedUpdateData.address
+          : deploymentsJsonData.contracts.RollupUserFacet
+        const adminFacetAddress = isRollupAdminFacet(contractName)
+          ? queuedUpdateData.address
+          : deploymentsJsonData.contracts.RollupAdminFacet
+        const Rollup = (await hre.ethers.getContractFactory('Rollup'))
+          .attach(deploymentData.proxyAddress)
+          .connect(signer)
+        upgradeTx = await Rollup.setFacets(adminFacetAddress, userFacetAddress)
       } else {
         upgradeTx = await proxyAdmin.upgrade(
           deploymentData.proxyAddress,
           queuedUpdateData.address
         )
       }
+
       await upgradeTx.wait()
 
       const buildInfo = await getBuildInfoString(contractName)
@@ -252,6 +264,8 @@ export const initUpgrades = (
     let success = true
     for (const _contractName in deploymentsJsonData.contracts) {
       const contractName = _contractName as ContractNames
+      // console.warn('con', contractName);
+
       const deploymentData = deploymentsJsonData.contracts[contractName]
 
       if (isBeacon(contractName)) {
@@ -269,6 +283,18 @@ export const initUpgrades = (
             'Verification failed: bad implementation',
             implementation,
             deploymentData.implAddress
+          )
+          success = false
+        }
+
+        if (
+          beaconOwner.toLowerCase() !==
+          deploymentsJsonData.proxyAdminAddress.toLowerCase()
+        ) {
+          console.log(
+            `${contractName} Verification failed: bad admin`,
+            beaconOwner,
+            deploymentsJsonData.proxyAdminAddress
           )
           success = false
         }
