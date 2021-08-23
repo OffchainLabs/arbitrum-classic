@@ -147,7 +147,6 @@ func TestStatelessBatcher(t *testing.T) {
 		mock,
 		mock,
 		time.Millisecond*200,
-		nil,
 	)
 
 	for _, tx := range txes {

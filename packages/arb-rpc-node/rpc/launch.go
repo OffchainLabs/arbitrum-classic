@@ -18,7 +18,6 @@ package rpc
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"math/big"
 	"time"
 
@@ -89,10 +88,9 @@ func SetupBatcher(
 		return batcher.NewForwarder(ctx, batcherMode.Config)
 	case StatelessBatcherMode:
 		var auth *ethbridge.TransactAuth
-		var fb *fireblocks.Fireblocks
 		var err error
 		if len(config.Wallet.FireblocksSSLKey) > 0 {
-			auth, fb, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
+			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
 		} else {
 			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
 
@@ -104,13 +102,12 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime, fb), nil
+		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, auth, inbox, maxBatchTime), nil
 	case StatefulBatcherMode:
 		var auth *ethbridge.TransactAuth
-		var fb *fireblocks.Fireblocks
 		var err error
 		if len(config.Wallet.FireblocksSSLKey) > 0 {
-			auth, fb, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
+			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
 		} else {
 			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
 
@@ -122,7 +119,7 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewStatefulBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime, fb)
+		return batcher.NewStatefulBatcher(ctx, db, l2ChainId, auth, inbox, maxBatchTime)
 	case SequencerBatcherMode:
 		rollup, err := ethbridgecontracts.NewRollupUserFacet(rollupAddress.ToEthAddress(), client)
 		if err != nil {

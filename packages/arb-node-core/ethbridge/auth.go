@@ -47,9 +47,19 @@ const (
 
 type TransactAuth struct {
 	sync.Mutex
-	auth   *bind.TransactOpts
-	SendTx func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error)
-	Signer bind.SignerFn
+	auth               *bind.TransactOpts
+	SendTx             func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error)
+	Signer             bind.SignerFn
+	transactionReceipt func(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error)
+	nonceAt            func(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error)
+}
+
+func (ta *TransactAuth) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
+	return ta.transactionReceipt(ctx, txHash)
+}
+
+func (ta *TransactAuth) NonceAt(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error) {
+	return ta.nonceAt(ctx, account, blockNumber)
 }
 
 func getNonce(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts, usePendingNonce bool) error {
@@ -98,9 +108,11 @@ func NewTransactAuthAdvanced(
 	}
 
 	return &TransactAuth{
-		auth:   auth,
-		SendTx: sendTx,
-		Signer: auth.Signer,
+		auth:               auth,
+		SendTx:             sendTx,
+		Signer:             auth.Signer,
+		transactionReceipt: client.TransactionReceipt,
+		nonceAt:            client.NonceAt,
 	}, nil
 }
 
@@ -134,6 +146,9 @@ func NewFireblocksTransactAuthAdvanced(
 	sendTx := func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
 		return fireblocksSendTransaction(ctx, fb, tx, replaceTxByHash)
 	}
+	transactionReceipt := func(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
+		return client.TransactionReceipt(ctx, txHash)
+	}
 
 	return &TransactAuth{
 		auth:   auth,
@@ -142,6 +157,8 @@ func NewFireblocksTransactAuthAdvanced(
 			// Fireblocks handles signing
 			return tx, nil
 		},
+		transactionReceipt: transactionReceipt,
+		nonceAt:            client.NonceAt,
 	}, fb, nil
 }
 

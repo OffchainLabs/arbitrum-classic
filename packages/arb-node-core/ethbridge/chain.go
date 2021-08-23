@@ -52,7 +52,7 @@ type attemptRbfInfo struct {
 	nonce   uint64
 }
 
-func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, rbfInfo *attemptRbfInfo, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
+func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher ethutils.ReceiptFetcher, txHash ethcommon.Hash, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
 	lastRbf := time.Now()
 	for {
 		select {
@@ -66,13 +66,11 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutil
 					logger.Warn().Err(err).Msg("failed to replace by fee")
 				}
 			}
-			if fb != nil {
-			}
-			receipt, err := client.TransactionReceipt(ctx, txHash)
+			receipt, err := receiptFetcher.TransactionReceipt(ctx, txHash)
 			if receipt == nil {
 				if rbfInfo != nil {
 					// an alternative tx might've gotten confirmed
-					nonce, err := client.NonceAt(ctx, rbfInfo.account, nil)
+					nonce, err := receiptFetcher.NonceAt(ctx, rbfInfo.account, nil)
 					if err == nil {
 						if nonce >= rbfInfo.nonce {
 							return nil, nil
@@ -102,8 +100,8 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, client ethutil
 	}
 }
 
-func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.ReceiptFetcher, txHash ethcommon.Hash, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
-	return waitForReceiptWithResultsSimpleInternal(ctx, client, txHash, nil, fb)
+func WaitForReceiptWithResultsSimple(ctx context.Context, receiptFetcher ethutils.ReceiptFetcher, txHash ethcommon.Hash) (*types.Receipt, error) {
+	return waitForReceiptWithResultsSimpleInternal(ctx, receiptFetcher, txHash, nil)
 }
 
 func increaseByPercent(original *big.Int, percentage int64) *big.Int {
@@ -194,7 +192,7 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 			nonce:   arbTx.Nonce(),
 		}
 	}
-	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, client, arbTx.Hash(), rbfInfo, fb)
+	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, transactAuth, arbTx.Hash(), rbfInfo)
 	if err != nil {
 		logger.Warn().Err(err).Hex("tx", arbTx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
