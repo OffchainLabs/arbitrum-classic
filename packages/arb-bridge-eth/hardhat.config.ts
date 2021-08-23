@@ -142,12 +142,18 @@ const config = {
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
     },
-    // mainnet: {
-    //   url: process.env['MAINNET_URL'],
-    //   accounts: process.env['MAINNET_PRIVKEY']
-    //     ? [process.env['MAINNET_PRIVKEY']]
-    //     : [],
-    // },
+    mainnet: {
+      url: 'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY'],
+      accounts: process.env['MAINNET_PRIVKEY']
+        ? [process.env['MAINNET_PRIVKEY']]
+        : [],
+    },
+    arbitrum1: {
+      url: 'https://arb1.arbitrum.io/rpc',
+      accounts: process.env['MAINNET_PRIVKEY']
+        ? [process.env['MAINNET_PRIVKEY']]
+        : [],
+    },
     rinkeby: {
       url: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
       accounts: process.env['DEVNET_PRIVKEY']
