@@ -37,7 +37,8 @@
     "docker:geth": "rm -rf deployments/parity && ./scripts/launch-geth",
     "verify": "hardhat etherscan-verify --api-key $(dotenv -p ETHERSCAN_API_KEY)",
     "typechain": "hardhat typechain",
-    "slither": "slither . --hardhat-artifacts-directory build/contracts"
+    "slither": "slither . --hardhat-artifacts-directory build/contracts",
+    "hardhat": "hardhat"
   },
   "dependencies": {
     "@openzeppelin/contracts": "3.4.0",

@@ -10,6 +10,7 @@ import 'solidity-coverage'
 import 'hardhat-spdx-license-identifier'
 import 'hardhat-gas-reporter'
 import '@nomiclabs/hardhat-etherscan'
+import { initUpgrades } from 'arb-upgrades'
 
 const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
 const setupVerifyTask = verifyTask.default
@@ -84,6 +85,33 @@ task('deposit', 'Deposit coins into ethbridge')
     const inbox = GlobalInbox.attach(inboxAddress).connect(wallet)
     await inbox.depositEth(dest, { value: amount })
   })
+
+task('core-deploy-logic-one', 'deploy one logic')
+  .addParam('contract', 'contract to deploy')
+  .setAction(async (args, hre) => {
+    const { contract } = args
+    const { deployLogic } = initUpgrades(hre, __dirname)
+    await deployLogic(contract)
+  })
+
+task('core-deploy-logic-all', 'deploy all logic contracts').setAction(
+  async (_, hre) => {
+    const { deployLogicAll } = initUpgrades(hre, __dirname)
+    await deployLogicAll()
+  }
+)
+
+task('core-trigger-upgrades', 'triggers upgrade').setAction(async (_, hre) => {
+  const { updateImplementations } = initUpgrades(hre, __dirname)
+  await updateImplementations()
+})
+
+task('core-verify-deployments', 'verifies implementations').setAction(
+  async (_, hre) => {
+    const { verifyCurrentImplementations } = initUpgrades(hre, __dirname)
+    await verifyCurrentImplementations()
+  }
+)
 
 const config = {
   defaultNetwork: 'hardhat',

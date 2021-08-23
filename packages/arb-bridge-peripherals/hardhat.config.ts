@@ -2,7 +2,7 @@ import * as config from 'arb-bridge-eth/hardhat.config'
 import { task } from 'hardhat/config'
 import { initUpgrades } from 'arb-upgrades'
 
-require('@openzeppelin/hardhat-upgrades')
+// require('@openzeppelin/hardhat-upgrades')
 
 task('deploy-logic-one', 'deploy one logic')
   .addParam('contract', 'contract to deploy')

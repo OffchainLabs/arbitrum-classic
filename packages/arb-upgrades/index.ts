@@ -8,6 +8,8 @@ import {
   CurrentDeployment,
   QueuedUpdate,
   isBeacon,
+  isRollupUserFacet,
+  isRollupAdminFacet,
 } from './types'
 
 // import {
@@ -51,7 +53,7 @@ export const initUpgrades = (
     data: QueuedUpdates
   }> => {
     const network = await hre.ethers.provider.getNetwork()
-    const path = `${rootDir}/deployments/${network.chainId}_queued-updates.json`
+    const path = `${rootDir}/_deployments/${network.chainId}_queued-updates.json`
     try {
       const jsonBuff = readFileSync(path)
       return { path, data: JSON.parse(jsonBuff.toString()) as QueuedUpdates }
@@ -71,7 +73,7 @@ export const initUpgrades = (
     data: CurrentDeployments
   }> => {
     const network = await hre.ethers.provider.getNetwork()
-    const path = `${rootDir}/deployments/${network.chainId}_current_deployment.json`
+    const path = `${rootDir}/_deployments/${network.chainId}_current_deployment.json`
     try {
       const jsonBuff = readFileSync(path)
       return {
@@ -208,6 +210,11 @@ export const initUpgrades = (
           await hre.ethers.getContractFactory('UpgradeableBeacon')
         ).attach(deploymentData.proxyAddress)
         upgradeTx = await UpgradeableBeacon.upgradeTo(queuedUpdateData.address)
+      } else if (
+        isRollupAdminFacet(contractName) ||
+        isRollupUserFacet(contractName)
+      ) {
+        // TODO:
       } else {
         upgradeTx = await proxyAdmin.upgrade(
           deploymentData.proxyAddress,
@@ -253,6 +260,7 @@ export const initUpgrades = (
         ).attach(deploymentData.proxyAddress)
 
         const implementation = await UpgradeableBeacon.implementation()
+        const beaconOwner = await UpgradeableBeacon.owner()
         if (
           implementation.toLowerCase() !==
           deploymentData.implAddress.toLowerCase()
@@ -266,6 +274,24 @@ export const initUpgrades = (
         }
         continue
       }
+
+      if (isRollupAdminFacet(contractName) || isRollupUserFacet(contractName)) {
+        const Rollup = (await hre.ethers.getContractFactory('Rollup')).attach(
+          deploymentsJsonData.contracts.Rollup.proxyAddress
+        )
+        const facet = isRollupUserFacet(contractName)
+          ? await Rollup.getUserFacet()
+          : await Rollup.getAdminFacet()
+        if (facet.toLowerCase() !== deploymentData.implAddress.toLowerCase()) {
+          console.log(
+            `${contractName} Verification failed; bad implementation`,
+            facet
+          )
+          success = false
+        }
+        continue
+      }
+
       // check proxy admin
       let admin = await hre.ethers.provider.getStorageAt(
         deploymentData.proxyAddress,
@@ -279,7 +305,7 @@ export const initUpgrades = (
         deploymentsJsonData.proxyAdminAddress.toLowerCase()
       ) {
         console.log(
-          'Verification failed: bad admin',
+          `${contractName} Verification failed: bad admin`,
           admin,
           deploymentsJsonData.proxyAdminAddress
         )
@@ -298,7 +324,10 @@ export const initUpgrades = (
         implementation.toLowerCase() !==
         deploymentData.implAddress.toLowerCase()
       ) {
-        console.log('Verification failed; bad implementation', implementation)
+        console.log(
+          `${contractName} Verification failed; bad implementation`,
+          implementation
+        )
         success = false
       }
     }
