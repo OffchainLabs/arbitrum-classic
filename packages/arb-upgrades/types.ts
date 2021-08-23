@@ -36,6 +36,4 @@ export enum ContractNames {
   L2CustomGateway = 'L2CustomGateway',
   L2WethGateway = 'L2WethGateway',
   StandardArbERC20 = 'StandardArbERC20',
-
-  // TODO: beacon proxy
 }
