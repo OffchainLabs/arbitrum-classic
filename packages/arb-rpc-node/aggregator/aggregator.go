@@ -181,7 +181,7 @@ func (m *Server) Aggregator() *common.Address {
 	return m.batch.Aggregator()
 }
 
-func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
+func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error) {
 	return m.batch.PendingTransactionCount(ctx, account)
 }
 

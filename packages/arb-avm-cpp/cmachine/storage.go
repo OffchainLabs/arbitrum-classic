@@ -28,8 +28,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
@@ -37,11 +37,31 @@ type ArbStorage struct {
 	c unsafe.Pointer
 }
 
-func NewArbStorage(dbPath string) (*ArbStorage, error) {
+func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, error) {
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
 
-	cArbStorage := C.createArbStorage(cDbPath)
+	cSaveRocksdbPath := C.CString(coreConfig.SaveRocksdbPath)
+	defer C.free(unsafe.Pointer(cSaveRocksdbPath))
+
+	debugInt := 0
+	if coreConfig.Debug {
+		debugInt = 1
+	}
+
+	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
+	saveRocksdbIntervalSeconds := int(coreConfig.SaveRocksdbInterval.Seconds())
+	cArbStorage := C.createArbStorage(
+		cDbPath,
+		C.int(coreConfig.MessageProcessCount),
+		C.int(coreConfig.CheckpointLoadGasCost),
+		C.int(coreConfig.GasCheckpointFrequency),
+		C.int(cacheExpirationSeconds),
+		C.int(coreConfig.Cache.LRUSize),
+		C.int(debugInt),
+		C.int(saveRocksdbIntervalSeconds),
+		cSaveRocksdbPath,
+	)
 
 	if cArbStorage == nil {
 		return nil, errors.Errorf("error creating ArbStorage %v", dbPath)

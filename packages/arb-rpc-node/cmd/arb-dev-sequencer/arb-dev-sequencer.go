@@ -94,6 +94,13 @@ func startup() error {
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 	//go http.ListenAndServe("localhost:6060", nil)
 
+	nodeCacheConfig := configuration.NodeCache{
+		AllowSlowLookup: true,
+		LRUSize:         1000,
+		TimedExpire:     20 * time.Minute,
+	}
+	coreConfig := configuration.DefaultCoreSettings()
+
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
 		return errors.Wrap(err, "error parsing arguments")
@@ -220,7 +227,7 @@ func startup() error {
 		}
 	}()
 
-	mon, err := monitor.NewMonitor(dbPath, arbosPath)
+	mon, err := monitor.NewMonitor(dbPath, arbosPath, coreConfig)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
@@ -295,7 +302,7 @@ func startup() error {
 		Workers:       2,
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond, &nodeCacheConfig)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
@@ -346,7 +353,7 @@ func startup() error {
 		return err
 	}
 
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.NormalMode, nil)
 	if err != nil {
 		return err
 	}
