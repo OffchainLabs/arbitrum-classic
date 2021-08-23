@@ -232,9 +232,12 @@ contract Challenge is Cloneable, IChallenge {
         _currentWin();
     }
 
-    bytes32 kludge1;
-    bytes32 kludge2;
-    uint256 kludge3;
+    struct ReturnContext {
+        bytes32 rootHash;
+        bytes32 startState;
+        bytes32 endState;
+        uint256 continueLength;
+    }
 
     // machineFields
     //  initialInbox
@@ -258,7 +261,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes memory _bufferProof,
         uint8 prover
     ) public onlyOnTurn {
-        bytes32 rootHash;
+        ReturnContext memory context = ReturnContext(0,0,0,0);
         {
             (uint64 gasUsed, uint256 totalMessagesRead, bytes32[7] memory proofFields) =
                 executors[prover].executeStep(
@@ -268,9 +271,9 @@ contract Challenge is Cloneable, IChallenge {
                     _executionProof,
                     _bufferProof
                 );
-            kludge1 = proofFields[4];
-            kludge2 = proofFields[5];
-            kludge3 = uint256(proofFields[6]);
+            context.startState = proofFields[4];
+            context.endState = proofFields[5];
+            context.continueLength = uint256(proofFields[6]);
 
             require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
 
@@ -298,7 +301,7 @@ contract Challenge is Cloneable, IChallenge {
                 "WRONG_END"
             );
 
-            rootHash = ChallengeLib.bisectionChunkHash(
+            context.rootHash = ChallengeLib.bisectionChunkHash(
                 _challengedSegmentStart,
                 _challengedSegmentLength,
                 oneStepProofExecutionBefore(
@@ -313,13 +316,13 @@ contract Challenge is Cloneable, IChallenge {
 
         }
 
-        verifySegmentProof(rootHash, _merkleNodes, _merkleRoute);
+        verifySegmentProof(context.rootHash, _merkleNodes, _merkleRoute);
 
-        if (kludge1 == 0 && kludge2 == 0) {
+        if (context.endState == 0 && context.startState == 0) {
             emit OneStepProofCompleted();
             _currentWin();
         } else {
-            updateNewRoot(kludge1, kludge2, kludge3);
+            updateNewRoot(context.startState, context.endState, context.continueLength);
             emit OneStepProofContinue(challengeState, _challengedSegmentStart, _challengedSegmentLength);
         }
     }

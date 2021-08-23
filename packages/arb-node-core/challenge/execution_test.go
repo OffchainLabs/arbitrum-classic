@@ -64,7 +64,7 @@ func TestWasmRunChallenge(t *testing.T) {
 	startGas := big.NewInt(0)
 	endGas := big.NewInt(2005657)
 	arbCore, shutdown := test.PrepareArbCoreGen(t, messages, "/home/sami/arbitrum/wasm-run.mexe")
-	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(700000)}
+	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(1900000)}
 	defer shutdown()
 	faultyCore := NewFaultyCore(arbCore, faultConfig)
 
@@ -81,6 +81,32 @@ func TestWasmRunChallenge(t *testing.T) {
 		time,
 		arbCore,
 		faultyCore,
+		true,
+	)
+}
+
+func TestWasmRunReversed(t *testing.T) {
+	messages := []inbox.InboxMessage{makeInitMsg()}
+	startGas := big.NewInt(0)
+	endGas := big.NewInt(2005657)
+	arbCore, shutdown := test.PrepareArbCoreGen(t, messages, "/home/sami/arbitrum/wasm-run.mexe")
+	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(1900000)}
+	defer shutdown()
+	faultyCore := NewFaultyCore(arbCore, faultConfig)
+
+	challengedNode, err := initializeChallengeData(t, arbCore, startGas, endGas)
+	if err != nil {
+		t.Fatal("Error with initializeChallengeData")
+	}
+
+	time := big.NewInt(200)
+	executeChallenge(
+		t,
+		challengedNode,
+		time,
+		time,
+		faultyCore,
+		arbCore,
 		true,
 	)
 }
