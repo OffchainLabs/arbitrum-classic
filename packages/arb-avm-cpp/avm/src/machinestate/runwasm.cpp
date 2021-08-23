@@ -314,7 +314,6 @@ wasm_trap_t* cb_set_buffer(void* env,
     WasmEnvData* dta = (WasmEnvData*)env;
     uint64_t offset;
     uint8_t v;
-    // printf("write buf...\n");
 
     if (args->data[0].kind == WASM_I32) {
         offset = args->data[0].of.i32;
@@ -336,7 +335,6 @@ wasm_trap_t* cb_write_extra(void* env,
     WasmEnvData* dta = (WasmEnvData*)env;
     uint64_t offset;
     uint8_t v;
-    // printf("wextra...\n");
 
     if (args->data[0].kind == WASM_I32) {
         offset = args->data[0].of.i32;
@@ -367,7 +365,6 @@ RunWasm::RunWasm(std::string fname) {
     wasm_byte_vec_new_uninitialized(&wasm, file_size);
     fread(wasm.data, file_size, 1, file);
     fclose(file);
-    // std::cerr << "File ????\n";
     init(wasm);
 }
 
@@ -378,27 +375,22 @@ RunWasm::RunWasm(std::vector<uint8_t> &buf) {
     for (int i = 0; i < buf.size(); i++) {
         wasm.data[i] = buf[i];
     }
-    // std::cerr << "Got size " << buf.size() << "\n";
     init(wasm);
 }
 
 void RunWasm::init(wasm_byte_vec_t wasm) {
-    // printf("Initializing... ????\n");
     wasm_config_t* config = wasm_config_new();
-    wasm_config_set_compiler(config, CRANELIFT);
-    // wasm_config_set_compiler(config, SINGLEPASS);
+    // wasm_config_set_compiler(config, CRANELIFT);
+    wasm_config_set_compiler(config, SINGLEPASS);
     wasm_engine_t* engine = wasm_engine_new_with_config(config);
     assert(engine != NULL);
-    // printf("Initialized...%x \n", engine);
 
     // With an engine we can create a *store* which is a long-lived group of
     // wasm modules.
     wasm_store_t* store = wasm_store_new(engine);
     assert(store != NULL);
-    // printf("Store...%x \n", store);
 
     // Now that we've got our binary webassembly we can compile our module.
-    printf("Compiling module...\n");
     wasm_module_t* module = wasm_module_new(store, &wasm);
     wasm_byte_vec_delete(&wasm);
     if (module == NULL) {
@@ -409,14 +401,12 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
     WasmEnvData* env = this->data;
 
     // Create external functions
-    // printf("Creating get len callback...\n");
     wasm_functype_t* callback_type_getlen =
         wasm_functype_new_0_1(wasm_valtype_new_i32());
     wasm_func_t* callback_func1 = wasm_func_new_with_env(
         store, callback_type_getlen, cb_get_length, (void*)env, NULL);
     wasm_functype_delete(callback_type_getlen);
 
-    // printf("Creating set len callback...\n");
     wasm_functype_t* callback_type_setlen =
         wasm_functype_new_1_0(wasm_valtype_new_i32());
     wasm_func_t* callback_func2 = wasm_func_new_with_env(
@@ -439,20 +429,17 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
 
     wasm_functype_delete(callback_type_setlen);
 
-    // printf("Creating get buf callback...\n");
     wasm_functype_t* callback_type_getbuf =
         wasm_functype_new_1_1(wasm_valtype_new_i32(), wasm_valtype_new_i32());
     wasm_func_t* callback_func3 = wasm_func_new_with_env(
         store, callback_type_getbuf, cb_get_buffer, (void*)env, NULL);
     wasm_functype_delete(callback_type_getbuf);
 
-    // printf("Creating set buf callback...\n");
     wasm_functype_t* callback_type_setbuf =
         wasm_functype_new_2_0(wasm_valtype_new_i32(), wasm_valtype_new_i32());
     wasm_func_t* callback_func4 = wasm_func_new_with_env(
         store, callback_type_setbuf, cb_set_buffer, (void*)env, NULL);
 
-    // printf("Creating write extra callback...\n");
     wasm_func_t* callback_func5 = wasm_func_new_with_env(
         store, callback_type_setbuf, cb_write_extra, (void*)env, NULL);
     wasm_func_t* callback_tuplebytes = wasm_func_new_with_env(
@@ -478,12 +465,10 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         store, callback_type_tuple2buffer, cb_tuple2buffer, (void*)env, NULL);
     wasm_functype_delete(callback_type_tuple2buffer);
 
-    // printf("Instantiating module...\n");
-
     wasm_importtype_vec_t import_vec;
     wasm_module_imports(module, &import_vec);
 
-    std::cerr << "Making imports " << import_vec.size << "\n";
+    // std::cerr << "Making imports " << import_vec.size << "\n";
 
     wasm_extern_t* imports[import_vec.size];
     for (uint64_t i = 0; i < import_vec.size; i++) {
@@ -529,7 +514,6 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         }
     }
     wasm_extern_vec_t imports_vec;
-    // printf("Extracting export...\n");
     wasm_extern_vec_new(&imports_vec, import_vec.size, imports);
     wasm_instance_t* instance = wasm_instance_new(store, module, &imports_vec, &this->trap);
     if (instance == NULL) {
@@ -538,10 +522,6 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
     }
 
     // Get memory from instance
-
-
-    // Lookup our `run` export function
-    // printf("Extracting export...\n");
     wasm_extern_vec_t externs;
     wasm_instance_exports(instance, &externs);
     for (uint64_t i = 0; i < externs.size; i++) {
@@ -549,12 +529,10 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         if (kind == WASM_EXTERN_FUNC) {
             run = wasm_extern_as_func(externs.data[i]);
         } else if (kind == WASM_EXTERN_MEMORY) {
-            std::cerr << "found memory\n";
+            // std::cerr << "found memory\n";
             data->memory = wasm_extern_as_memory(externs.data[i]);
         }
     }
-
-    // printf("externs %i\n", externs.size);
 
 }
 

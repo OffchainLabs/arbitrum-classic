@@ -174,14 +174,12 @@ std::vector<value> serializeValue(
     const WasmCodePoint& val,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>&) {
-    std::cerr << "serilaize wasm value\n";
     std::vector<value> ret{};
     value_vector.push_back(WASM_CODE_POINT);
     marshal_uint256_t(hash_value(*val.data), value_vector);
     ret.push_back(*val.data);
     return ret;
 }
-
 std::vector<value> serializeValue(const std::shared_ptr<HashPreImage>&,
                                   std::vector<unsigned char>&,
                                   std::map<uint64_t, uint64_t>&) {

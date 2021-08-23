@@ -710,6 +710,7 @@ contract OneStepProof2 is OneStepProofCommon {
 
         // require(Machine.hash(context.startMachine) == bytes32(uint256(0x78d4e5dcdec1a54b7b3afdabc972f706b1ca14062146c98af8a781d686e5aa92)), "init hash?");
 
+        Value.Data memory val4 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
@@ -732,8 +733,9 @@ contract OneStepProof2 is OneStepProofCommon {
         // Construct initial machine
         Machine.Data memory initialMachine = Machine.Data(
             wasm.codept,
-            mkPair(Value.newHashedValue(wasm.table, wasm.tableSize),
-              mkPair(val1, mkPair(val2, Value.newEmptyTuple()))), //    machine.dataStack,
+            mkPair(val4,
+              mkPair(Value.newHashedValue(wasm.table, wasm.tableSize),
+                mkPair(val1, mkPair(val2, Value.newEmptyTuple())))), //    machine.dataStack,
             Value.newEmptyTuple(), //    machine.auxStack,
             Value.newEmptyTuple(), //    machine.registerVal,
             Value.newInt(0), //    machine.staticVal,
@@ -757,7 +759,7 @@ contract OneStepProof2 is OneStepProofCommon {
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
         // require(context.startState == 0x8d996fa2fdf8d4ea1f698f7b34d52a846d81546abfacdc39c372839a9d5a75a2, "whats this?");
-        // require(context.endState == 0xf41b516846b3b424b09342f9e13024a2d8403516770bdea4eed15b2f1a404fa5, "end state bad");
+        require(context.endState == 0x51ed09ad2653c0c7bdde6f2ae7fbcaed24f44eed800c8ba4581ef09993f7228d, "end state bad");
         context.nextLength = len;
     }
 
@@ -789,7 +791,7 @@ contract OneStepProof2 is OneStepProofCommon {
         } else if (opCode == OP_WASMCOMPILE) {
             return (2, 0, 1000000, executeWasmCompile);
         } else if (opCode == OP_WASMRUN) {
-            return (3, 0, 1000000, executeWasmRun);
+            return (4, 0, 1000000, executeWasmRun);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
         } else {

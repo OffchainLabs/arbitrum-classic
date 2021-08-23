@@ -1048,7 +1048,7 @@ void wasm_compile(MachineState& m) {
     // RunWasm compiler{"/home/sami/arbitrum/compiler.wasm"};
     // auto res = compiler.run_wasm(md, len);
     auto res = m.compile.run_wasm(md, len);
-    std::cerr << "compile success\n";
+    // std::cerr << "compile success\n";
 
     auto bytes = buf2vec(res.buffer, res.buffer_len);
     auto wasm_bytes = buf2vec(md, len);

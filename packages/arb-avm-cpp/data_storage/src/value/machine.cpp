@@ -262,15 +262,12 @@ rocksdb::Status saveMachineState(ReadWriteTransaction& tx,
     }
 
     auto datastack_tup = machinestate.stack.getTupleRepresentation();
-    std::cerr << "saving stack\n";
     auto datastack_results = saveValueImpl(tx, datastack_tup, segment_counts);
     if (!datastack_results.status.ok()) {
         return datastack_results.status;
     }
 
-    std::cerr << "saving aux stack\n";
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
-    std::cerr << "saving aux stack ...\n";
     auto auxstack_results = saveValueImpl(tx, auxstack_tup, segment_counts);
     if (!auxstack_results.status.ok()) {
         return auxstack_results.status;
@@ -279,7 +276,6 @@ rocksdb::Status saveMachineState(ReadWriteTransaction& tx,
     ++segment_counts[machinestate.pc.segment];
     ++segment_counts[machinestate.errpc.pc.segment];
 
-    std::cerr << "saving code\n";
     auto code_status = saveCode(tx, *machinestate.code, segment_counts);
     if (!code_status.ok()) {
         return code_status;
@@ -305,10 +301,7 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
                                   transactionResult.stored_value);
     }
 
-    std::cerr << "saving machine state\n";
-
     auto status = saveMachineState(transaction, machine);
-    std::cerr << "saving machine state?\n";
 
     if (!status.ok()) {
         return {0, status};

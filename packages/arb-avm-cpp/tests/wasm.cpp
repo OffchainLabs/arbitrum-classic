@@ -69,7 +69,7 @@ TEST_CASE("wasm_compile") {
         std::cerr << "Result hash " << hexstr << "\n";
         std::cerr << "Result hash " << intx::to_string(hash1, 16) << ", " << intx::to_string(hash2, 16) << "\n";
         
-        auto m = makeWasmMachine(res, 0, Buffer());
+        auto m = makeWasmMachine(res, 0, Buffer(), 0);
         runWasmMachine(m);
 
         std::cerr << "Result stack " << m.stack[0] << "\n";
@@ -123,6 +123,7 @@ MachineState mkWasmMachine(WasmResult res) {
     state.stack.push(arg_buf.size());
     state.stack.push(vec2buf(arg_buf));
     state.stack.push(std::move(table));
+    state.stack.push(0);
     state.arb_gas_remaining = 1000000000000;
     state.output.arb_gas_used = 0;
 

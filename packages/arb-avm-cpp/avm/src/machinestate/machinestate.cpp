@@ -520,13 +520,14 @@ MachineState makeWasmMachine(uint64_t len, Buffer buf) {
     std::reverse(labels.begin(), labels.end());
 
     auto table = make_table(labels);
-    std::cerr << "Here " << intx::to_string(stub.hash, 16) << " " << labels.size() << " \n";
+    std::cerr << "Here ???? " << intx::to_string(stub.hash, 16) << " " << labels.size() << " \n";
     // std::cerr << "Table " << table << " hash " << intx::to_string(hash_value(table), 16) << "\n";
     std::cerr << "Table hash " << intx::to_string(hash_value(table), 16) << " size " << getSize(table) << "\n";
     MachineState state(code, 0);
     state.stack.push(len);
     state.stack.push(buf);
     state.stack.push(std::move(table));
+    state.stack.push(0);
     state.arb_gas_remaining = 1000000;
     state.output.arb_gas_used = 0;
 
@@ -535,12 +536,14 @@ MachineState makeWasmMachine(uint64_t len, Buffer buf) {
     return state;
 }
 
-MachineState makeWasmMachine(WasmResult &wres, uint64_t len, Buffer buf) {
+MachineState makeWasmMachine(WasmResult &wres, uint64_t len, Buffer buf, value arg) {
     auto res = wasmAvmToCode(wres);
     MachineState state(res.code, 0);
     state.stack.push(len);
     state.stack.push(buf);
     state.stack.push(std::move(res.table));
+    state.stack.push(std::move(arg));
+    std::cerr << "len " << len << "buf " << value(buf) << "arg " << arg << "\n";
     state.arb_gas_remaining = 1000000000000;
     state.output.arb_gas_used = 0;
 
@@ -716,9 +719,10 @@ MachineState MachineState::initialWasmMachine() const {
 
         return makeWasmMachine(len, buf);
     } else if (op.opcode == OpCode::WASM_RUN) {
-        auto elem0 = getStackOrImmed(0, op);
-        auto elem1 = getStackOrImmed(1, op);
-        auto elem2 = getStackOrImmed(2, op);
+        auto elem_arg = getStackOrImmed(0, op);
+        auto elem0 = getStackOrImmed(1, op);
+        auto elem1 = getStackOrImmed(2, op);
+        auto elem2 = getStackOrImmed(3, op);
         uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
         Buffer buf = *std::get_if<Buffer>(&elem1);
         WasmCodePoint cp = *std::get_if<WasmCodePoint>(&elem2);
@@ -731,7 +735,7 @@ MachineState MachineState::initialWasmMachine() const {
         RunWasm copy = compile;
         auto res = copy.run_wasm(code_buffer, code_len);
 
-        return makeWasmMachine(res, len, buf);
+        return makeWasmMachine(res, len, buf, elem_arg);
     } else if (op.opcode == OpCode::WASM_COMPILE) {
         auto elem0 = getStackOrImmed(0, op);
         auto elem1 = getStackOrImmed(1, op);
@@ -745,7 +749,7 @@ MachineState MachineState::initialWasmMachine() const {
         RunWasm copy = compile;
         auto res = copy.run_wasm(vec2buf(bytes), bytes.size());
 
-        return makeWasmMachine(res, len, buf);
+        return makeWasmMachine(res, len, buf, 0);
     }
 }
 
