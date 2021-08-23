@@ -34,11 +34,11 @@ var logger = log.With().Caller().Stack().Str("component", "message").Logger()
 
 const (
 	L2Type            inbox.Type = 3
-	InitType          inbox.Type = 4
 	EndOfBlockType    inbox.Type = 6
 	EthDepositTxType  inbox.Type = 7
 	RetryableType     inbox.Type = 9
 	GasEstimationType inbox.Type = 10
+	InitType          inbox.Type = 11
 )
 
 type Message interface {
