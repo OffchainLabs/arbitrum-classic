@@ -397,6 +397,9 @@ rocksdb::Status deleteCode(ReadWriteTransaction& tx,
                 // delete it
                 return false;
             }
+            // Assert that we don't have too many references to ourself
+            assert(total_reference_count == current_value_it->second.ref_count);
+            assert(next_segment_counts[segment_id] == 0);
             auto ops =
                 loadRawOperations(tx, segment_id, current_value_it->second);
             for (const auto& op : ops) {
@@ -405,6 +408,8 @@ rocksdb::Status deleteCode(ReadWriteTransaction& tx,
                                       next_segment_counts);
                 }
             }
+            // Ignore internal references to this segment
+            next_segment_counts.erase(segment_id);
             return true;
         });
 

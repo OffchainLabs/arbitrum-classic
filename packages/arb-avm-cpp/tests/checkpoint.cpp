@@ -269,7 +269,7 @@ TEST_CASE("Save And Get Tuple") {
         REQUIRE(hash(tuple) != hash(inner_tuple));
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        if (!shouldInlineTuple(inner_tuple, transaction->getSecretHashSeed())) {
+        if (!shouldInlineValue(inner_tuple, transaction->getSecretHashSeed())) {
             getTuple(*transaction, inner_tuple, 1, true, value_cache);
         }
     }
@@ -282,10 +282,10 @@ TEST_CASE("Save And Get Tuple") {
         auto tuple = Tuple(inner_tuple, inner_tuple2);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        if (!shouldInlineTuple(inner_tuple, transaction->getSecretHashSeed())) {
+        if (!shouldInlineValue(inner_tuple, transaction->getSecretHashSeed())) {
             getTuple(*transaction, inner_tuple, 1, true, value_cache);
         }
-        if (!shouldInlineTuple(inner_tuple2,
+        if (!shouldInlineValue(inner_tuple2,
                                transaction->getSecretHashSeed())) {
             getTuple(*transaction, inner_tuple2, 1, true, value_cache);
         }
@@ -303,7 +303,7 @@ TEST_CASE("Save And Get Tuple") {
 
         // Use different cache to get real reference count
         uint64_t expected_refs = 2;
-        if (shouldInlineTuple(inner_tuple, transaction2->getSecretHashSeed())) {
+        if (shouldInlineValue(inner_tuple, transaction2->getSecretHashSeed())) {
             expected_refs--;
         }
         ValueCache value_cache2{1, 0};

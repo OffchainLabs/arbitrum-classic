@@ -71,7 +71,7 @@ using ParsedSerializedVal = std::variant<std::vector<ParsedTupVal>,
                                          Buffer,
                                          ParsedBuffer>;
 
-bool shouldInlineTuple(const Tuple& tuple,
+bool shouldInlineValue(const value& tuple,
                        const std::vector<unsigned char>& seed);
 
 DbResult<value> getValueRecord(const ReadTransaction& tx,

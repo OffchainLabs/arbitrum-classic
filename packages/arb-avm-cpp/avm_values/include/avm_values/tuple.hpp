@@ -189,4 +189,15 @@ inline bool operator!=(const Tuple& val1, const Tuple& val2) {
 
 std::ostream& operator<<(std::ostream& os, const Tuple& val);
 
+struct ValueTypeVisitor {
+    ValueTypes operator()(const uint256_t&) const { return NUM; }
+    ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
+    ValueTypes operator()(const Tuple&) const { return TUPLE; }
+    ValueTypes operator()(const std::shared_ptr<HashPreImage>&) const {
+        return TUPLE;
+    }
+    ValueTypes operator()(const Buffer&) const { return BUFFER; }
+    ValueTypes operator()(const UnloadedValue& val) const { return val.type; }
+};
+
 #endif /* tuple_hpp */

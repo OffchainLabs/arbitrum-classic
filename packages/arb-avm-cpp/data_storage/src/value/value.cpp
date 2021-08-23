@@ -45,11 +45,18 @@ struct ValueBeingParsed {
 
 constexpr uint64_t tupleInlineNumerator = 0;
 constexpr uint64_t tupleInlineDenominator = 100;
-bool shouldInlineTuple(const Tuple& tuple,
+bool shouldInlineValue(const value& val,
                        const std::vector<unsigned char>& secret_hash_seed) {
-    auto hash = tuple.getHashPreImage().secretHash(secret_hash_seed);
-    return tuple.tuple_size() == 0 ||
-           (hash % tupleInlineDenominator) < tupleInlineNumerator;
+    if (auto tuple = std::get_if<Tuple>(&val)) {
+        auto hash = tuple->getHashPreImage().secretHash(secret_hash_seed);
+        return tuple->tuple_size() == 0 ||
+               (hash % tupleInlineDenominator) < tupleInlineNumerator;
+    } else if (std::holds_alternative<CodePointStub>(val) ||
+               std::holds_alternative<UnloadedValue>(val)) {
+        return false;
+    } else {
+        return true;
+    }
 }
 
 namespace {
@@ -158,46 +165,38 @@ std::vector<value> serializeValue(
 }
 std::vector<value> serializeValue(
     const std::vector<unsigned char>& secret_hash_seed,
-    const Tuple& val,
+    const Tuple& root,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>& segment_counts) {
     std::vector<value> ret{};
-    value_vector.push_back(TUPLE + val.tuple_size());
+    value_vector.push_back(TUPLE + root.tuple_size());
     // `to_serialize` is a stack, so we populate it in reverse order
-    std::vector<value> to_serialize(val.rbegin(), val.rend());
+    std::vector<value> to_serialize(root.rbegin(), root.rend());
     while (!to_serialize.empty()) {
         // Pull from the end of `to_serialize` as its contents are reversed
         value nested = std::move(to_serialize.back());
         to_serialize.pop_back();
-        if (std::holds_alternative<Tuple>(nested)) {
-            const auto& nested_tup = std::get<Tuple>(nested);
-            // Check if we should store the tuple in a separate DB item
-            if (shouldInlineTuple(nested_tup, secret_hash_seed)) {
+        if (shouldInlineValue(nested, secret_hash_seed)) {
+            if (const auto& nested_tup = std::get_if<Tuple>(&nested)) {
                 // Write the tuple header, then add the tuple contents
                 // to the stack of values to serialize (again in reverse)
-                value_vector.push_back(TUPLE + nested_tup.tuple_size());
-                to_serialize.insert(to_serialize.end(), nested_tup.rbegin(),
-                                    nested_tup.rend());
+                value_vector.push_back(TUPLE + nested_tup->tuple_size());
+                to_serialize.insert(to_serialize.end(), nested_tup->rbegin(),
+                                    nested_tup->rend());
             } else {
-                // Only put a reference to the inner tuple in this one
-                value_vector.push_back(HASH_PRE_IMAGE);
-                value_vector.push_back(TUPLE);
-                marshal_uint256_t(hash(nested_tup), value_vector);
-                marshal_uint256_t(nested_tup.getSize(), value_vector);
-                // Mark the inner tuple as needing separate saving
-                ret.push_back(nested);
+                auto new_ret = serializeValue(secret_hash_seed, nested,
+                                              value_vector, segment_counts);
+                ret.insert(ret.end(), new_ret.begin(), new_ret.end());
             }
-        } else if (auto uv = std::get_if<UnloadedValue>(&nested)) {
-            value_vector.push_back(HASH_PRE_IMAGE);
-            value_vector.push_back(static_cast<uint8_t>(uv->type));
-            marshal_uint256_t(uv->hash, value_vector);
-            marshal_uint256_t(uv->value_size, value_vector);
         } else {
-            auto res = serializeValue(secret_hash_seed, nested, value_vector,
-                                      segment_counts);
-            for (const auto& re : res) {
-                ret.push_back(re);
-            }
+            // Serialize reference to value
+            value_vector.push_back(HASH_PRE_IMAGE);
+            value_vector.push_back(
+                static_cast<uint8_t>(std::visit(ValueTypeVisitor{}, nested)));
+            marshal_uint256_t(hash_value(nested), value_vector);
+            marshal_uint256_t(::getSize(nested), value_vector);
+            // Mark value for separate saving
+            ret.push_back(nested);
         }
     }
     return ret;
@@ -528,7 +527,7 @@ GetResults processVal(const ReadTransaction& tx,
         return applyValue(std::move(*val), 0, val_stack);
     }
 
-    if (lazy_load) {
+    if (lazy_load && val_info.type == TUPLE) {
         // Don't load value immediately; load on demand
         return applyValue(val_info, 0, val_stack);
     }

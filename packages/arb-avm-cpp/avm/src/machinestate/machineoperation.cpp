@@ -408,17 +408,6 @@ void hashOp(MachineState& m) {
     ++m.pc;
 }
 
-struct ValueTypeVisitor {
-    ValueTypes operator()(const uint256_t&) const { return NUM; }
-    ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
-    ValueTypes operator()(const Tuple&) const { return TUPLE; }
-    ValueTypes operator()(const std::shared_ptr<HashPreImage>&) const {
-        return TUPLE;
-    }
-    ValueTypes operator()(const Buffer&) const { return BUFFER; }
-    ValueTypes operator()(const UnloadedValue& val) const { return val.type; }
-};
-
 void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
     m.stack[0] = std::visit(ValueTypeVisitor{}, m.stack[0]);
