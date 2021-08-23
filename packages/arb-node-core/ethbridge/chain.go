@@ -29,7 +29,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 )
 
 type ArbAddresses struct {
@@ -110,7 +109,15 @@ func increaseByPercent(original *big.Int, percentage int64) *big.Int {
 	return threshold
 }
 
-func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, arbTx *ArbTransaction, methodName string, transactAuth *TransactAuth, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
+func WaitForReceiptWithResultsAndReplaceByFee(
+	ctx context.Context,
+	client ethutils.EthClient,
+	from ethcommon.Address,
+	arbTx *ArbTransaction,
+	methodName string,
+	transactAuth *TransactAuth,
+	receiptFetcher ethutils.ReceiptFetcher,
+) (*types.Receipt, error) {
 	var rbfInfo *attemptRbfInfo
 	if transactAuth != nil {
 		attemptRbf := func() (ethcommon.Hash, error) {
@@ -192,7 +199,7 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 			nonce:   arbTx.Nonce(),
 		}
 	}
-	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, transactAuth, arbTx.Hash(), rbfInfo)
+	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, receiptFetcher, arbTx.Hash(), rbfInfo)
 	if err != nil {
 		logger.Warn().Err(err).Hex("tx", arbTx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
@@ -217,6 +224,6 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 	return receipt, nil
 }
 
-func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *ArbTransaction, methodName string, fb *fireblocks.Fireblocks) (*types.Receipt, error) {
-	return WaitForReceiptWithResultsAndReplaceByFee(ctx, client, from, tx, methodName, nil, fb)
+func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *ArbTransaction, methodName string, receiptFetcher ethutils.ReceiptFetcher) (*types.Receipt, error) {
+	return WaitForReceiptWithResultsAndReplaceByFee(ctx, client, from, tx, methodName, nil, receiptFetcher)
 }

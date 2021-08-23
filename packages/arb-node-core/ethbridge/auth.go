@@ -21,7 +21,6 @@ import (
 	"crypto/rsa"
 	"encoding/hex"
 	"math/big"
-	"strings"
 	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
@@ -147,6 +146,28 @@ func NewFireblocksTransactAuthAdvanced(
 		return fireblocksSendTransaction(ctx, fb, tx, replaceTxByHash)
 	}
 	transactionReceipt := func(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
+		details, err := fb.GetTransaction(txHash.String())
+		if err != nil {
+			logger.
+				Warn().
+				Err(err).
+				Str("hash", txHash.String()).
+				Str("status", details.Status).
+				Msg("error getting fireblocks transaction for receipt")
+			return nil, errors.Wrapf(err, "error getting fireblocks transaction for receipt: %s", details.Status)
+		}
+		if fb.IsTransactionStatusFailed(details.Status) {
+			logger.
+				Error().
+				Err(err).
+				Str("To", details.DestinationAddress).
+				Str("From", details.SourceAddress).
+				Str("status", details.Status).
+				Str("txhash", details.TxHash).
+				Msg("fireblocks transaction failed when getting receipt")
+			return nil, errors.Wrapf(err, "fireblocks transaction failed when getting receipt: %s", details.Status)
+		}
+
 		return client.TransactionReceipt(ctx, txHash)
 	}
 
@@ -195,14 +216,15 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 		}
 
 		details, err := fb.GetTransaction(txResponse.Id)
-		if err != nil && strings.Contains(err.Error(), "not found") {
+		if err != nil {
 			logger.
 				Warn().
 				Err(err).
-				Hex("To", tx.To().Bytes()).
+				Hex("to", tx.To().Bytes()).
 				Str("id", txResponse.Id).
-				Msg("fireblocks transaction not found")
-			return nil, errors.Wrap(err, "fireblocks transaction not found")
+				Str("status", details.Status).
+				Msg("error getting fireblocks transaction")
+			return nil, errors.Wrapf(err, "error getting fireblocks transaction: %s", details.Status)
 		}
 
 		if fb.IsTransactionStatusFailed(details.Status) {

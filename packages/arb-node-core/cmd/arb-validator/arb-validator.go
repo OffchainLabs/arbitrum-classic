@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"io/ioutil"
 	golog "log"
 	"net/http"
@@ -168,9 +167,8 @@ func startup() error {
 	}
 
 	var valAuth *ethbridge.TransactAuth
-	var fb *fireblocks.Fireblocks
 	if len(config.Wallet.FireblocksSSLKey) > 0 {
-		valAuth, fb, err = ethbridge.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
+		valAuth, _, err = ethbridge.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
 	} else {
 		valAuth, err = ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
 
@@ -181,7 +179,7 @@ func startup() error {
 	validatorAddress := ethcommon.Address{}
 	if chainState.ValidatorWallet == "" {
 		for {
-			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, config.Rollup.FromBlock, valAuth, l1Client, fb)
+			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, config.Rollup.FromBlock, valAuth, l1Client)
 			if err == nil {
 				break
 			}
@@ -219,7 +217,7 @@ func startup() error {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth, fb, config.Validator)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth, config.Validator)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
 	}

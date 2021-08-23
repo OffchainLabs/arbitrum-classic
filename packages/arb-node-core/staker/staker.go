@@ -32,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
@@ -53,7 +52,6 @@ type Staker struct {
 	fromBlock           int64
 	baseCallOpts        bind.CallOpts
 	auth                *ethbridge.TransactAuth
-	fb                  *fireblocks.Fireblocks
 	config              configuration.Validator
 	highGasBlocksBuffer *big.Int
 	lastActCalledBlock  *big.Int
@@ -69,7 +67,6 @@ func NewStaker(
 	strategy Strategy,
 	callOpts bind.CallOpts,
 	auth *ethbridge.TransactAuth,
-	fb *fireblocks.Fireblocks,
 	config configuration.Validator,
 ) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress, callOpts)
@@ -82,7 +79,6 @@ func NewStaker(
 		fromBlock:           fromBlock,
 		baseCallOpts:        callOpts,
 		auth:                auth,
-		fb:                  fb,
 		config:              config,
 		highGasBlocksBuffer: big.NewInt(config.L1PostingStrategy.HighGasDelayBlocks),
 		lastActCalledBlock:  nil,
@@ -100,7 +96,7 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			arbTx, err := s.Act(ctx)
 			if err == nil && arbTx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
-				_, err = ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.fb)
+				_, err = ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.auth)
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
 					logger.Info().Str("hash", arbTx.Hash().String()).Msg("Successfully executed transaction")

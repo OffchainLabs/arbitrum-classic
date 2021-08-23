@@ -31,7 +31,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 )
 
 var validatorABI abi.ABI
@@ -157,7 +156,13 @@ func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []co
 	})
 }
 
-func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethcommon.Address, fromBlock int64, auth *TransactAuth, client ethutils.EthClient, fb *fireblocks.Fireblocks) (ethcommon.Address, error) {
+func CreateValidatorWallet(
+	ctx context.Context,
+	validatorWalletFactoryAddr ethcommon.Address,
+	fromBlock int64,
+	transactAuth *TransactAuth,
+	client ethutils.EthClient,
+) (ethcommon.Address, error) {
 	walletCreator, err := ethbridgecontracts.NewValidatorWalletCreator(validatorWalletFactoryAddr, client)
 	if err != nil {
 		return ethcommon.Address{}, errors.WithStack(err)
@@ -168,7 +173,7 @@ func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethco
 		FromBlock: big.NewInt(fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{validatorWalletFactoryAddr},
-		Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {auth.auth.From.Hash()}},
+		Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {transactAuth.auth.From.Hash()}},
 	}
 	logs, err := client.FilterLogs(ctx, query)
 	if err != nil {
@@ -185,7 +190,7 @@ func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethco
 		return parsed.WalletAddress, err
 	}
 
-	arbTx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	arbTx, err := transactAuth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return walletCreator.CreateWallet(auth)
 	})
 	if err != nil {
@@ -197,7 +202,7 @@ func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethco
 		simulatedBackend.Commit()
 	}
 
-	receipt, err := WaitForReceiptWithResults(ctx, client, auth.auth.From, arbTx, "CreateWallet", fb)
+	receipt, err := WaitForReceiptWithResults(ctx, client, transactAuth.auth.From, arbTx, "CreateWallet", transactAuth)
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
