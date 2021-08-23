@@ -189,6 +189,18 @@ func TestArbOSFees(t *testing.T) {
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
 		},
+		// Reverted storage allocating function call
+		{
+			GasPrice: big.NewInt(0),
+			Gas:      100000000,
+			To:       &contractDest,
+			Value:    big.NewInt(0),
+			Data:     makeFuncData(t, gasUsedABI.Methods["fail"]),
+
+			resultType:         []evm.ResultType{evm.RevertCode},
+			nonzeroComputation: []bool{true},
+			correctStorageUsed: 0,
+		},
 		// Reverted since insufficient funds
 		{
 			GasPrice: big.NewInt(0),
