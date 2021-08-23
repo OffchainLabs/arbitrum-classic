@@ -24,4 +24,11 @@ task('trigger-upgrades', 'triggers upgrade').setAction(async (_, hre) => {
   await updateImplementations()
 })
 
+task('verify-deployments', 'verifies implementations').setAction(
+  async (_, hre) => {
+    const { verifyCurrentImplementations } = initUpgrades(hre, __dirname)
+    await verifyCurrentImplementations()
+  }
+)
+
 module.exports = config
