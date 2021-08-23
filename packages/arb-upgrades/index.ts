@@ -7,6 +7,7 @@ import {
   ContractNames,
   CurrentDeployment,
   QueuedUpdate,
+  isBeacon,
 } from './types'
 
 // import {
@@ -201,12 +202,18 @@ export const initUpgrades = (
       }
       console.log(`Updating ${contractName} to new implementation`)
 
-      // TODO
-      const upgradeTx = await proxyAdmin.upgrade(
-        deploymentData.proxyAddress,
-        queuedUpdateData.address
-      )
-
+      let upgradeTx: any
+      if (isBeacon(contractName)) {
+        const UpgradeableBeacon = (
+          await hre.ethers.getContractFactory('UpgradeableBeacon')
+        ).attach(deploymentData.proxyAddress)
+        upgradeTx = await UpgradeableBeacon.upgradeTo(queuedUpdateData.address)
+      } else {
+        upgradeTx = await proxyAdmin.upgrade(
+          deploymentData.proxyAddress,
+          queuedUpdateData.address
+        )
+      }
       await upgradeTx.wait()
 
       const buildInfo = await getBuildInfoString(contractName)
@@ -240,18 +247,23 @@ export const initUpgrades = (
       const contractName = _contractName as ContractNames
       const deploymentData = deploymentsJsonData.contracts[contractName]
 
-      if (deploymentData.isBeacon) {
-        // TODO
-        // let implementation = await hre.ethers.provider.getStorageAt(
-        //   deploymentData.proxyAddress,
-        //   implementationSlot
-        // )
-        // if (implementation.length > 42) {
-        //   implementation =
-        //     '0x' + implementation.substr(implementation.length - 40, 40)
-        // }
-        // console.log('implementation', implementation);
-        // console.log('');
+      if (isBeacon(contractName)) {
+        const UpgradeableBeacon = (
+          await hre.ethers.getContractFactory('UpgradeableBeacon')
+        ).attach(deploymentData.proxyAddress)
+
+        const implementation = await UpgradeableBeacon.implementation()
+        if (
+          implementation.toLowerCase() !==
+          deploymentData.implAddress.toLowerCase()
+        ) {
+          console.log(
+            'Verification failed: bad implementation',
+            implementation,
+            deploymentData.implAddress
+          )
+          success = false
+        }
         continue
       }
       // check proxy admin

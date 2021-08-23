@@ -29,8 +29,7 @@
       "proxyAddress": "0x86B4b312140B4117A7b0D252eC53Fa6D0753fE85",
       "implAddress": "0xa5a052BC1dc55118754bca1bB700675Edf1031D0",
       "implDeploymentTxn": "0x",
-      "implArbitrumCommitHash": "0x",
-      "isBeacon": true
+      "implArbitrumCommitHash": "0x"
     }
   }
 }

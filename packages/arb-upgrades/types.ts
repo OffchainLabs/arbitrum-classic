@@ -37,3 +37,21 @@ export enum ContractNames {
   L2WethGateway = 'L2WethGateway',
   StandardArbERC20 = 'StandardArbERC20',
 }
+
+export enum UpgradeableType {
+  Beacon = 'Beacon',
+  TransparentProxy = 'TransparentProxy',
+  Proxy = 'Proxy',
+}
+
+export const proxyType = (contractName: ContractNames) => {
+  switch (contractName) {
+    case ContractNames.StandardArbERC20:
+      return UpgradeableType.Beacon
+    default:
+      return UpgradeableType.TransparentProxy
+  }
+}
+
+export const isBeacon = (contractName: ContractNames) =>
+  proxyType(contractName) === UpgradeableType.Beacon
