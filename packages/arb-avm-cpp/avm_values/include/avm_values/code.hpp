@@ -200,10 +200,6 @@ class Code {
 
     virtual CodePoint loadCodePoint(const CodePointRef& ref) const = 0;
 
-    virtual void codePointStubSaved(const CodePointStub& stub) const = 0;
-
-    virtual void resolveCodePointStub(CodePointStub& stub) const = 0;
-
     virtual CodePointStub addSegment() = 0;
 
     virtual CodePointStub addOperation(const CodePointRef& ref,
@@ -319,7 +315,6 @@ struct CoreCodeImpl {
 
 class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
     mutable std::mutex mutex;
-    mutable std::unordered_map<uint256_t, CodePointRef, HashHasher> saved_stubs;
 
    public:
     CoreCode() : CodeBase<CoreCodeImpl>(0) {}
@@ -399,23 +394,6 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
     CodePointRef initialCodePointRef() const {
         const std::lock_guard<std::mutex> lock(mutex);
         return {0, impl->segments.at(0)->size() - 1};
-    }
-
-    void codePointStubSaved(const CodePointStub& stub) const override {
-        const std::lock_guard<std::mutex> lock(mutex);
-        saved_stubs.insert(std::make_pair(stub.hash, stub.pc));
-    }
-
-    void resolveCodePointStub(CodePointStub& stub) const override {
-        const std::lock_guard<std::mutex> lock(mutex);
-        if (impl->segments.find(stub.pc.segment) == impl->segments.end()) {
-            auto it = saved_stubs.find(stub.hash);
-            if (it == saved_stubs.end()) {
-                assert(false);
-                throw std::runtime_error("Failed to resolve code point stub");
-            }
-            stub.pc = it->second;
-        }
     }
 };
 
@@ -534,17 +512,6 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
             return parent->tryAddOperation(ref, std::move(op));
         }
         return tryAddOperationImpl(ref, std::move(op));
-    }
-
-    void codePointStubSaved(const CodePointStub& stub) const override {
-        parent->codePointStubSaved(stub);
-    }
-
-    void resolveCodePointStub(CodePointStub& stub) const override {
-        // We don't need a mutex here as first_segment is constant
-        if (stub.pc.segment < impl->first_segment) {
-            parent->resolveCodePointStub(stub);
-        }
     }
 };
 

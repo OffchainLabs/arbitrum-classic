@@ -238,29 +238,26 @@ std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
     std::map<uint64_t, uint64_t> segment_counts;
 
     auto& machinestate = machine.machine_state;
-    auto& code = *machine.machine_state.code;
     auto static_val_results =
-        saveValueImpl(tx, machinestate.static_val, segment_counts, code);
+        saveValueImpl(tx, machinestate.static_val, segment_counts);
     if (!static_val_results.status.ok()) {
         return {static_val_results.status, {}};
     }
 
     auto register_val_results =
-        saveValueImpl(tx, machinestate.registerVal, segment_counts, code);
+        saveValueImpl(tx, machinestate.registerVal, segment_counts);
     if (!register_val_results.status.ok()) {
         return {register_val_results.status, {}};
     }
 
     auto datastack_tup = machinestate.stack.getTupleRepresentation();
-    auto datastack_results =
-        saveValueImpl(tx, datastack_tup, segment_counts, code);
+    auto datastack_results = saveValueImpl(tx, datastack_tup, segment_counts);
     if (!datastack_results.status.ok()) {
         return {datastack_results.status, {}};
     }
 
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
-    auto auxstack_results =
-        saveValueImpl(tx, auxstack_tup, segment_counts, code);
+    auto auxstack_results = saveValueImpl(tx, auxstack_tup, segment_counts);
     if (!auxstack_results.status.ok()) {
         return {auxstack_results.status, {}};
     }
@@ -268,7 +265,8 @@ std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
     ++segment_counts[machinestate.pc.segment];
     ++segment_counts[machinestate.errpc.pc.segment];
 
-    auto code_status = saveCode(tx, code, segment_counts);
+    auto code_status =
+        saveCode(tx, *machine.machine_state.code, segment_counts);
     if (!code_status.ok()) {
         return {code_status, {}};
     }

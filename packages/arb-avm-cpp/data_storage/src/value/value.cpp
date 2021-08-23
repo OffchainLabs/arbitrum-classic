@@ -141,29 +141,26 @@ ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
 std::vector<value> serializeValue(const std::vector<unsigned char>&,
                                   const uint256_t& val,
                                   std::vector<unsigned char>& value_vector,
-                                  std::map<uint64_t, uint64_t>&,
-                                  const Code&) {
+                                  std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(NUM);
     marshal_uint256_t(val, value_vector);
     return {};
 }
-std::vector<value> serializeValue(const std::vector<unsigned char>&,
-                                  const CodePointStub& val,
-                                  std::vector<unsigned char>& value_vector,
-                                  std::map<uint64_t, uint64_t>& segment_counts,
-                                  const Code& code) {
+std::vector<value> serializeValue(
+    const std::vector<unsigned char>&,
+    const CodePointStub& val,
+    std::vector<unsigned char>& value_vector,
+    std::map<uint64_t, uint64_t>& segment_counts) {
     value_vector.push_back(CODE_POINT_STUB);
     val.marshal(value_vector);
     ++segment_counts[val.pc.segment];
-    code.codePointStubSaved(val);
     return {};
 }
 std::vector<value> serializeValue(
     const std::vector<unsigned char>& secret_hash_seed,
     const Tuple& val,
     std::vector<unsigned char>& value_vector,
-    std::map<uint64_t, uint64_t>& segment_counts,
-    const Code& code) {
+    std::map<uint64_t, uint64_t>& segment_counts) {
     std::vector<value> ret{};
     value_vector.push_back(TUPLE + val.tuple_size());
     // `to_serialize` is a stack, so we populate it in reverse order
@@ -197,7 +194,7 @@ std::vector<value> serializeValue(
             marshal_uint256_t(uv->value_size, value_vector);
         } else {
             auto res = serializeValue(secret_hash_seed, nested, value_vector,
-                                      segment_counts, code);
+                                      segment_counts);
             for (const auto& re : res) {
                 ret.push_back(re);
             }
@@ -208,22 +205,19 @@ std::vector<value> serializeValue(
 std::vector<value> serializeValue(const std::vector<unsigned char>&,
                                   const std::shared_ptr<HashPreImage>&,
                                   std::vector<unsigned char>&,
-                                  std::map<uint64_t, uint64_t>&,
-                                  const Code&) {
+                                  std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
 }
 std::vector<value> serializeValue(const std::vector<unsigned char>&,
                                   const UnloadedValue&,
                                   std::vector<unsigned char>&,
-                                  std::map<uint64_t, uint64_t>&,
-                                  const Code&) {
+                                  std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize unloaded value in db");
 }
 std::vector<value> serializeValue(const std::vector<unsigned char>&,
                                   const Buffer& b,
                                   std::vector<unsigned char>& value_vector,
-                                  std::map<uint64_t, uint64_t>&,
-                                  const Code&) {
+                                  std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
     std::vector<Buffer> res = b.serialize(value_vector);
     std::vector<value> ret{};
@@ -313,12 +307,11 @@ std::vector<value> serializeValue(
     const std::vector<unsigned char>& secret_hash_seed,
     const value& val,
     std::vector<unsigned char>& value_vector,
-    std::map<uint64_t, uint64_t>& segment_counts,
-    const Code& code) {
+    std::map<uint64_t, uint64_t>& segment_counts) {
     return std::visit(
         [&](const auto& val) {
             return serializeValue(secret_hash_seed, val, value_vector,
-                                  segment_counts, code);
+                                  segment_counts);
         },
         val);
 }
@@ -691,8 +684,7 @@ DbResult<value> getValue(const ReadTransaction& tx,
 
 SaveResults saveValueImpl(ReadWriteTransaction& tx,
                           const value& val,
-                          std::map<uint64_t, uint64_t>& segment_counts,
-                          const Code& code) {
+                          std::map<uint64_t, uint64_t>& segment_counts) {
     bool first = true;
     SaveResults ret{};
     std::vector<value> items_to_save{val};
@@ -712,7 +704,7 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
             std::vector<unsigned char> value_vector{};
             auto new_items_to_save =
                 serializeValue(tx.getSecretHashSeed(), next_item, value_vector,
-                               segment_counts, code);
+                               segment_counts);
             items_to_save.insert(items_to_save.end(), new_items_to_save.begin(),
                                  new_items_to_save.end());
             save_ret = saveValueWithRefCount(tx, 1, key, value_vector);
@@ -728,11 +720,9 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
     return ret;
 }
 
-SaveResults saveValue(ReadWriteTransaction& tx,
-                      const value& val,
-                      const Code& code) {
+SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
     std::map<uint64_t, uint64_t> segment_counts{};
-    return saveValueImpl(tx, val, segment_counts, code);
+    return saveValueImpl(tx, val, segment_counts);
 }
 
 DeleteResults deleteValues(ReadWriteTransaction& tx,

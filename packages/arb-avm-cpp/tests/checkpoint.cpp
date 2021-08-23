@@ -30,7 +30,7 @@ void saveValue(ReadWriteTransaction& transaction,
                const value& val,
                uint32_t expected_ref_count,
                bool expected_status) {
-    auto results = saveValue(transaction, val, CoreCode());
+    auto results = saveValue(transaction, val);
     transaction.commit();
     REQUIRE(results.status.ok() == expected_status);
     REQUIRE(results.reference_count == expected_ref_count);
@@ -324,7 +324,7 @@ TEST_CASE("Checkpoint Benchmark") {
     for (uint64_t i = 1; i < 100000; i++) {
         tuple = Tuple::createTuple(tuple);
     }
-    saveValue(*transaction, tuple, CoreCode());
+    saveValue(*transaction, tuple);
     ValueCache value_cache{1, 0};
 
     auto tuple_hash = hash_value(tuple);

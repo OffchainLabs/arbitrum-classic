@@ -61,9 +61,6 @@ CodePointStub& assumeCodePoint(const MachineState& m, value& val) {
     if (!cp) {
         throw bad_pop_type{};
     }
-    if (m.code) {
-        m.code->resolveCodePointStub(*cp);
-    }
     return *cp;
 }
 
