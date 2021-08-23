@@ -48,7 +48,7 @@ const (
 type TransactAuth struct {
 	sync.Mutex
 	auth   *bind.TransactOpts
-	SendTx func(ctx context.Context, tx *types.Transaction) (*ArbTransaction, error)
+	SendTx func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error)
 	Signer bind.SignerFn
 }
 
@@ -85,7 +85,7 @@ func NewTransactAuthAdvanced(
 	}
 
 	// Send transaction normally
-	sendTx := func(ctx context.Context, tx *types.Transaction) (*ArbTransaction, error) {
+	sendTx := func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
 		err := client.SendTransaction(ctx, tx)
 		if err != nil {
 			logger.Error().Err(err).Hex("data", tx.Data()).Msg("error sending transaction")
@@ -131,8 +131,8 @@ func NewFireblocksTransactAuthAdvanced(
 		return nil, nil, errors.Wrap(err, "problem with fireblocks source-type")
 	}
 	fb := fireblocks.New(config.Fireblocks.AssetId, config.Fireblocks.BaseURL, *sourceType, config.Fireblocks.SourceId, config.Fireblocks.APIKey, signKey)
-	sendTx := func(ctx context.Context, tx *types.Transaction) (*ArbTransaction, error) {
-		return fireblocksSendTransaction(ctx, fb, tx)
+	sendTx := func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
+		return fireblocksSendTransaction(ctx, fb, tx, replaceTxByHash)
 	}
 
 	return &TransactAuth{
@@ -145,7 +145,7 @@ func NewFireblocksTransactAuthAdvanced(
 	}, fb, nil
 }
 
-func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, tx *types.Transaction) (*ArbTransaction, error) {
+func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
 	txResponse, err := fb.CreateContractCall(
 		accounttype.OneTimeAddress,
 		tx.To().Hex(),
@@ -153,6 +153,7 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 		tx.Value(),
 		tx.GasTipCap(),
 		tx.GasFeeCap(),
+		replaceTxByHash,
 		ethcommon.Bytes2Hex(tx.Data()),
 	)
 	if err != nil {
@@ -195,6 +196,7 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 				Str("From", details.SourceAddress).
 				Str("status", details.Status).
 				Str("txhash", details.TxHash).
+				Str("replaceTxByHash", replaceTxByHash).
 				Msg("fireblocks transaction failed")
 			return nil, errors.Wrapf(err, "fireblocks transaction failed: %s", details.Status)
 		}
@@ -251,7 +253,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	}
 
 	// Actually send transaction
-	arbTx, err := t.SendTx(ctx, tx)
+	arbTx, err := t.SendTx(ctx, tx, "")
 
 	if err != nil {
 		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Hex("to", arbTx.To().Bytes()).Hex("data", arbTx.Data()).Str("nonce", auth.Nonce.String()).Msg("unable to send transaction")

@@ -179,7 +179,7 @@ func WaitForReceiptWithResultsAndReplaceByFee(ctx context.Context, client ethuti
 				return ethcommon.Hash{}, err
 			}
 
-			newTx, err := transactAuth.SendTx(ctx, signedTx)
+			newTx, err := transactAuth.SendTx(ctx, signedTx, arbTx.Hash().String())
 			if err != nil {
 				return ethcommon.Hash{}, err
 			}

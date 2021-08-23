@@ -73,6 +73,7 @@ type CreateTransactionBody struct {
 	Note             string                          `json:"note,omitempty"`
 	Operation        operationtype.OperationType     `json:"operation,omitempty"`
 	CustomerRefId    string                          `json:"customerRefId,omitempty"`
+	ReplaceTxByHash  string                          `json:"replaceTxByHash,omitempty"`
 	Destinations     []TransactionRequestDestination `json:"destinations,omitempty"`
 	ExtraParameters  TransactionExtraParameters      `json:"extraParameters"`
 }
@@ -324,6 +325,7 @@ func (fb *Fireblocks) CreateContractCall(
 	amount *big.Int,
 	maxPriorityFeeWei *big.Int,
 	maxTotalGasPriceWei *big.Int,
+	replaceTxByHash string,
 	callData string,
 ) (*CreateTransactionResponse, error) {
 	return fb.CreateTransaction(
@@ -334,6 +336,7 @@ func (fb *Fireblocks) CreateContractCall(
 		operationtype.ContractCall,
 		maxPriorityFeeWei,
 		maxTotalGasPriceWei,
+		replaceTxByHash,
 		callData,
 	)
 }
@@ -346,6 +349,7 @@ func (fb *Fireblocks) CreateTransaction(
 	operation operationtype.OperationType,
 	maxPriorityFeeWei *big.Int,
 	maxTotalGasPriceWei *big.Int,
+	replaceTxByHash string,
 	callData string,
 ) (*CreateTransactionResponse, error) {
 	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
@@ -361,6 +365,7 @@ func (fb *Fireblocks) CreateTransaction(
 		Operation:        operation,
 		MaxPriorityFee:   maxPriorityFee.FloatString(18),
 		MaxTotalGasPrice: maxTotalGasPrice.FloatString(18),
+		ReplaceTxByHash:  replaceTxByHash,
 		ExtraParameters:  TransactionExtraParameters{ContractCallData: callData},
 	}
 
