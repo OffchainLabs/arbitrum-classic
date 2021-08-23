@@ -27,7 +27,7 @@ import "./INode.sol";
 import "../libraries/Cloneable.sol";
 
 contract RollupEventBridge is IMessageProvider, Cloneable {
-    uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
+    uint8 internal constant INITIALIZATION_MSG_TYPE = 11;
     uint8 internal constant ROLLUP_PROTOCOL_EVENT_TYPE = 8;
 
     uint8 internal constant CREATE_NODE_EVENT = 0;
