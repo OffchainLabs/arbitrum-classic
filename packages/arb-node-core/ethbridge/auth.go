@@ -84,8 +84,6 @@ func NewTransactAuthAdvanced(
 	ctx context.Context,
 	client ethutils.EthClient,
 	auth *bind.TransactOpts,
-	config *configuration.Config,
-	walletConfig *configuration.Wallet,
 	usePendingNonce bool,
 ) (*TransactAuth, error) {
 	err := getNonce(ctx, client, auth, usePendingNonce)
@@ -119,7 +117,6 @@ func NewFireblocksTransactAuthAdvanced(
 	ctx context.Context,
 	client ethutils.EthClient,
 	auth *bind.TransactOpts,
-	config *configuration.Config,
 	walletConfig *configuration.Wallet,
 	usePendingNonce bool,
 ) (*TransactAuth, *fireblocks.Fireblocks, error) {
@@ -129,19 +126,26 @@ func NewFireblocksTransactAuthAdvanced(
 	}
 
 	var signKey *rsa.PrivateKey
-	if len(walletConfig.FireblocksSSLKeyPassword) != 0 {
-		signKey, err = jwt.ParseRSAPrivateKeyFromPEMWithPassword([]byte(walletConfig.FireblocksSSLKey), walletConfig.FireblocksSSLKeyPassword)
+	if len(walletConfig.Fireblocks.SSLKeyPassword) != 0 {
+		signKey, err = jwt.ParseRSAPrivateKeyFromPEMWithPassword([]byte(walletConfig.Fireblocks.SSLKey), walletConfig.Fireblocks.SSLKeyPassword)
 	} else {
-		signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(walletConfig.FireblocksSSLKey))
+		signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(walletConfig.Fireblocks.SSLKey))
 	}
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with fireblocks privatekey")
 	}
-	sourceType, err := accounttype.New(config.Fireblocks.SourceType)
+	sourceType, err := accounttype.New(walletConfig.Fireblocks.SourceType)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "problem with fireblocks source-type")
 	}
-	fb := fireblocks.New(config.Fireblocks.AssetId, config.Fireblocks.BaseURL, *sourceType, config.Fireblocks.SourceId, config.Fireblocks.APIKey, signKey)
+	fb := fireblocks.New(
+		walletConfig.Fireblocks.AssetId,
+		walletConfig.Fireblocks.BaseURL,
+		*sourceType,
+		walletConfig.Fireblocks.SourceId,
+		walletConfig.Fireblocks.APIKey,
+		signKey,
+	)
 	sendTx := func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
 		return fireblocksSendTransaction(ctx, fb, tx, replaceTxByHash)
 	}
@@ -241,12 +245,10 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 		}
 
 		if len(details.TxHash) > 0 {
-			signer := NewDummyHashSigner(big.NewInt(99))
 			txHash, err := hex.DecodeString(details.TxHash)
 			if err != nil || len(txHash) < 32 {
 				return nil, errors.Wrap(err, "error decoding txHash from fireblocks response")
 			}
-			tx, err := tx.WithSignature(signer, txHash)
 			if err != nil {
 				return nil, errors.Wrap(err, "error encoding fireblocks transaction hash into signature")
 			}
@@ -262,20 +264,17 @@ func NewTransactAuth(
 	ctx context.Context,
 	client ethutils.EthClient,
 	auth *bind.TransactOpts,
-	config *configuration.Config,
-	walletConfig *configuration.Wallet,
 ) (*TransactAuth, error) {
-	return NewTransactAuthAdvanced(ctx, client, auth, config, walletConfig, true)
+	return NewTransactAuthAdvanced(ctx, client, auth, true)
 }
 
 func NewFireblocksTransactAuth(
 	ctx context.Context,
 	client ethutils.EthClient,
 	auth *bind.TransactOpts,
-	config *configuration.Config,
 	walletConfig *configuration.Wallet,
 ) (*TransactAuth, *fireblocks.Fireblocks, error) {
-	return NewFireblocksTransactAuthAdvanced(ctx, client, auth, config, walletConfig, true)
+	return NewFireblocksTransactAuthAdvanced(ctx, client, auth, walletConfig, true)
 }
 
 func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *ArbTransaction, error) {

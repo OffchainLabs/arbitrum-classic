@@ -167,10 +167,10 @@ func startup() error {
 	}
 
 	var valAuth *ethbridge.TransactAuth
-	if len(config.Wallet.FireblocksSSLKey) > 0 {
-		valAuth, _, err = ethbridge.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
+	if len(config.Wallet.Fireblocks.SSLKey) > 0 {
+		valAuth, _, err = ethbridge.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, walletConfig, false)
 	} else {
-		valAuth, err = ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, config, walletConfig, false)
+		valAuth, err = ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
 
 	}
 	if err != nil {

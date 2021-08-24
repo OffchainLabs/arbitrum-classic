@@ -86,15 +86,6 @@ type Feed struct {
 	Output FeedOutput `koanf:"output"`
 }
 
-type Fireblocks struct {
-	APIKey        string `koanf:"api-key,omitempty"`
-	AssetId       string `koanf:"asset-id,omitempty"`
-	BaseURL       string `koanf:"base-url,omitempty"`
-	SourceAddress string `koanf:"source-address,omitempty"`
-	SourceId      string `koanf:"source-id,omitempty"`
-	SourceType    string `koanf:"source-type,omitempty"`
-}
-
 type Healthcheck struct {
 	Addr          string `koanf:"addr"`
 	Enable        bool   `koanf:"enable"`
@@ -206,12 +197,26 @@ type Validator struct {
 	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
 }
 
+type WalletFireblocks struct {
+	APIKey         string `koanf:"api-key,omitempty"`
+	AssetId        string `koanf:"asset-id,omitempty"`
+	BaseURL        string `koanf:"base-url,omitempty"`
+	SourceAddress  string `koanf:"source-address,omitempty"`
+	SourceId       string `koanf:"source-id,omitempty"`
+	SourceType     string `koanf:"source-type,omitempty"`
+	SSLKey         string `koanf:"ssl-key,omitempty"`
+	SSLKeyPassword string `koanf:"ssl-key-password,omitempty"`
+}
+
+type WalletLocal struct {
+	Pathname   string `koanf:"pathname"`
+	Password   string `koanf:"password"`
+	PrivateKey string `koanf:"private-key"`
+}
+
 type Wallet struct {
-	FireblocksSSLKey         string `koanf:"fireblocks-ssl-key,omitempty"`
-	FireblocksSSLKeyPassword string `koanf:"fireblocks-ssl-key-password,omitempty"`
-	Pathname                 string `koanf:"pathname"`
-	Password                 string `koanf:"password"`
-	PrivateKey               string `koanf:"private-key"`
+	Fireblocks WalletFireblocks `koanf:"fireblocks"`
+	Local      WalletLocal      `koanf:"local"`
 }
 
 type Log struct {
@@ -229,7 +234,6 @@ type Config struct {
 	Conf               Conf        `koanf:"conf"`
 	Core               Core        `koanf:"core"`
 	Feed               Feed        `koanf:"feed"`
-	Fireblocks         Fireblocks  `koanf:"fireblocks"`
 	GasPrice           float64     `koanf:"gas-price"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
 	L1                 struct {
@@ -473,7 +477,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
 
 	// Make wallet directories relative to storage directory if not already absolute
-	out.Wallet.Pathname = path.Join(out.Persistent.GlobalConfig, out.Wallet.Pathname)
+	out.Wallet.Local.Pathname = path.Join(out.Persistent.GlobalConfig, out.Wallet.Local.Pathname)
 	out.Node.Sequencer.FeedSigner.Pathname = path.Join(out.Persistent.GlobalConfig, out.Node.Sequencer.FeedSigner.Pathname)
 
 	_, err = os.Stat(out.Rollup.Machine.Filename)
@@ -699,27 +703,27 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, *FeedSigner, error) {
 		return nil, nil, nil, err
 	}
 
-	if out.Fireblocks != (Fireblocks{}) {
-		if len(out.Fireblocks.APIKey) == 0 {
+	if out.Wallet.Fireblocks != (WalletFireblocks{}) {
+		if len(out.Wallet.Fireblocks.APIKey) == 0 {
 			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.api-key")
 		}
-		if len(out.Fireblocks.BaseURL) == 0 {
+		if len(out.Wallet.Fireblocks.BaseURL) == 0 {
 			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.base-url")
 		}
-		if len(out.Wallet.FireblocksSSLKey) == 0 {
+		if len(out.Wallet.Fireblocks.SSLKey) == 0 {
 			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.ssl-key")
 		}
-		if len(out.Fireblocks.SourceAddress) == 0 {
+		if len(out.Wallet.Fireblocks.SourceAddress) == 0 {
 			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.source-address")
 		}
-		if len(out.Fireblocks.SourceId) == 0 {
+		if len(out.Wallet.Fireblocks.SourceId) == 0 {
 			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.source-id")
 		}
-		if len(out.Fireblocks.SourceType) == 0 {
+		if len(out.Wallet.Fireblocks.SourceType) == 0 {
 			return nil, nil, nil, errors.New("fireblocks configured but missing fireblocks.source-type")
 		}
 
-		out.Wallet.FireblocksSSLKey = strings.Replace(out.Wallet.FireblocksSSLKey, "\\n", "\n", -1)
+		out.Wallet.Fireblocks.SSLKey = strings.Replace(out.Wallet.Fireblocks.SSLKey, "\\n", "\n", -1)
 	}
 
 	if out.Conf.Dump {

@@ -89,11 +89,10 @@ func SetupBatcher(
 	case StatelessBatcherMode:
 		var auth *ethbridge.TransactAuth
 		var err error
-		if len(config.Wallet.FireblocksSSLKey) > 0 {
-			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
+		if len(config.Wallet.Fireblocks.SSLKey) > 0 {
+			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
 		} else {
-			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
-
+			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
 		}
 		if err != nil {
 			return nil, err
@@ -106,11 +105,10 @@ func SetupBatcher(
 	case StatefulBatcherMode:
 		var auth *ethbridge.TransactAuth
 		var err error
-		if len(config.Wallet.FireblocksSSLKey) > 0 {
-			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
+		if len(config.Wallet.Fireblocks.SSLKey) > 0 {
+			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
 		} else {
-			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, config, walletConfig)
-
+			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
 		}
 		if err != nil {
 			return nil, err

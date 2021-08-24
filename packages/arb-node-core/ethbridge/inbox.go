@@ -156,7 +156,15 @@ func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte
 	return common.NewHashFromEth(arbTx.Hash()), nil
 }
 
-func AddSequencerL2BatchFromOrigin(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, transactions []byte, lengths []*big.Int, sectionsMetadata []*big.Int, afterAcc [32]byte) (*ArbTransaction, error) {
+func AddSequencerL2BatchFromOrigin(
+	ctx context.Context,
+	inbox *ethbridgecontracts.SequencerInbox,
+	auth *TransactAuth,
+	transactions []byte,
+	lengths []*big.Int,
+	sectionsMetadata []*big.Int,
+	afterAcc [32]byte,
+) (*ArbTransaction, error) {
 	arbTx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
 	})
@@ -167,8 +175,17 @@ func AddSequencerL2BatchFromOrigin(ctx context.Context, inbox *ethbridgecontract
 }
 
 // AddSequencerL2BatchFromOriginCustomNonce is like AddSequencerL2BatchFromOrigin but with a custom nonce that will
-// be incremented on success
-func AddSequencerL2BatchFromOriginCustomNonce(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, nonce *big.Int, transactions []byte, lengths []*big.Int, sectionsMetadata []*big.Int, afterAcc [32]byte) (*ArbTransaction, error) {
+// be incremented on success.  This is to handle the case when a stuck transaction is present on startup.
+func AddSequencerL2BatchFromOriginCustomNonce(
+	ctx context.Context,
+	inbox *ethbridgecontracts.SequencerInbox,
+	auth *TransactAuth,
+	nonce *big.Int,
+	transactions []byte,
+	lengths []*big.Int,
+	sectionsMetadata []*big.Int,
+	afterAcc [32]byte,
+) (*ArbTransaction, error) {
 	rawAuth := auth.getAuth(ctx)
 	rawAuth.Nonce = nonce
 	tx, err := inbox.AddSequencerL2BatchFromOrigin(rawAuth, transactions, lengths, sectionsMetadata, afterAcc)

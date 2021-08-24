@@ -183,9 +183,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	validatorWalletFactory, _, _, err := ethbridgecontracts.DeployValidatorWalletCreator(auth, client)
 	test.FailIfError(t, err)
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, &configuration.Config{}, &configuration.Wallet{})
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
 	test.FailIfError(t, err)
-	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, &configuration.Config{}, &configuration.Wallet{})
+	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2)
 	test.FailIfError(t, err)
 
 	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client)

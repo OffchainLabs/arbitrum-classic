@@ -54,8 +54,8 @@ func GetKeystore(
 	var signer = func(data []byte) ([]byte, error) { return nil, errors.New("undefined signer") }
 	var auth *bind.TransactOpts
 
-	if len(walletConfig.FireblocksSSLKey) != 0 {
-		fromAddress := ethcommon.HexToAddress(config.Fireblocks.SourceAddress)
+	if len(walletConfig.Fireblocks.SSLKey) != 0 {
+		fromAddress := ethcommon.HexToAddress(config.Wallet.Fireblocks.SourceAddress)
 		logger.Info().Hex("address", fromAddress.Bytes()).Msg("fireblocks enabled")
 		auth = &bind.TransactOpts{
 			From: fromAddress,
@@ -70,7 +70,7 @@ func GetKeystore(
 		}
 
 		if len(feedSignerConfig.PrivateKey) != 0 {
-			privateKey, err := crypto.HexToECDSA(config.Wallet.PrivateKey)
+			privateKey, err := crypto.HexToECDSA(config.Wallet.Local.PrivateKey)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "error loading feed private key")
 			}
@@ -100,8 +100,8 @@ func GetKeystore(
 				return ks.SignHash(account, data)
 			}
 		}
-	} else if len(config.Wallet.PrivateKey) != 0 {
-		privateKey, err := crypto.HexToECDSA(config.Wallet.PrivateKey)
+	} else if len(config.Wallet.Local.PrivateKey) != 0 {
+		privateKey, err := crypto.HexToECDSA(config.Wallet.Local.PrivateKey)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -118,7 +118,7 @@ func GetKeystore(
 			return crypto.Sign(data, privateKey)
 		}
 	} else {
-		ks, account, err := openKeystore("account", walletConfig.Pathname, walletConfig.Password)
+		ks, account, err := openKeystore("account", walletConfig.Local.Pathname, walletConfig.Local.Password)
 		if err != nil {
 			return nil, nil, err
 		}

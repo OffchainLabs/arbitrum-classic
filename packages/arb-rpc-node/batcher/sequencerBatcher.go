@@ -131,10 +131,10 @@ func NewSequencerBatcher(
 
 	var transactAuth *ethbridge.TransactAuth
 	var fb *fireblocks.Fireblocks
-	if len(config.Wallet.FireblocksSSLKey) > 0 {
-		transactAuth, fb, err = ethbridge.NewFireblocksTransactAuth(ctx, client, auth, config, walletConfig)
+	if len(config.Wallet.Fireblocks.SSLKey) > 0 {
+		transactAuth, fb, err = ethbridge.NewFireblocksTransactAuth(ctx, client, auth, walletConfig)
 	} else {
-		transactAuth, err = ethbridge.NewTransactAuth(ctx, client, auth, config, walletConfig)
+		transactAuth, err = ethbridge.NewTransactAuth(ctx, client, auth)
 
 	}
 	if err != nil {
