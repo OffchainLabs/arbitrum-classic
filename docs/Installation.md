@@ -93,7 +93,7 @@ brew install autoconf automake boost cmake gmp go libtool rocksdb openssl
 ```bash
 sudo add-apt-repository -y ppa:longsleep/golang-backports
 sudo apt update
-sudo apt install -y autoconf automake cmake libboost-dev libboost-filesystem-dev libgmp-dev librocksdb-dev libssl-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libtool golang-go clang-format cmake-format
+sudo apt install -y autoconf automake cmake libboost-dev libboost-filesystem-dev libgmp-dev librocksdb-dev libssl-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libtool golang-go clang-format
 
 git clone -b v6.11.4 https://github.com/facebook/rocksdb
 cd rocksdb
