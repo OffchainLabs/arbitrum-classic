@@ -80,7 +80,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, walletConfig, feedSignerConfig, l1Client, l1ChainId, err := configuration.ParseValidator(ctx)
+	config, walletConfig, l1Client, l1ChainId, err := configuration.ParseValidator(ctx)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		len(config.Validator.UtilsAddress) == 0 || len(config.Validator.WalletFactoryAddress) == 0 ||
@@ -130,7 +130,7 @@ func startup() error {
 	bridgeUtilsAddr := ethcommon.HexToAddress(config.BridgeUtilsAddress)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
-	auth, _, err := cmdhelp.GetKeystore(config, walletConfig, feedSignerConfig, l1ChainId, false)
+	auth, _, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, false)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}

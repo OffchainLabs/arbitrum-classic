@@ -47,7 +47,6 @@ var logger = log.With().Caller().Stack().Str("component", "cmdhelp").Logger()
 func GetKeystore(
 	config *configuration.Config,
 	walletConfig *configuration.Wallet,
-	feedSignerConfig *configuration.FeedSigner,
 	chainId *big.Int,
 	signerRequired bool,
 ) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
@@ -69,7 +68,7 @@ func GetKeystore(
 			},
 		}
 
-		if len(feedSignerConfig.PrivateKey) != 0 {
+		if len(walletConfig.Fireblocks.FeedSigner.PrivateKey) != 0 {
 			privateKey, err := crypto.HexToECDSA(config.Wallet.Local.PrivateKey)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "error loading feed private key")
@@ -87,7 +86,7 @@ func GetKeystore(
 				return crypto.Sign(data, privateKey)
 			}
 		} else if signerRequired {
-			ks, account, err := openKeystore("feed signer", feedSignerConfig.Pathname, feedSignerConfig.Password)
+			ks, account, err := openKeystore("feed signer", walletConfig.Fireblocks.FeedSigner.Pathname, walletConfig.Fireblocks.FeedSigner.Password)
 			if err != nil {
 				return nil, nil, err
 			}
