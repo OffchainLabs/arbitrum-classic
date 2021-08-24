@@ -46,7 +46,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil)
+	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil, false)
 	defer cancelDevNode()
 
 	client := web3.NewEthClient(srv, true)
