@@ -31,9 +31,7 @@ const main = async () => {
   const l1SignerAddress = await l1Signer.getAddress()
   const l2SignerAddress = await l2Signer.getAddress()
 
-  // parse needed vars
-  const inboxAddress = l1Network.tokenBridge.inbox
-  if (!inboxAddress) throw new Error('Please set inbox address! INBOX_ADDRESS')
+  const inboxAddress = (await bridge.l1Bridge.getInbox()).address
 
   // set whitelistAddress to address(0) to disable whitelist
   const whitelistAddress = MAINNET_WHITELIST

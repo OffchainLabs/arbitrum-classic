@@ -27,23 +27,24 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/ethereum/go-ethereum/metrics"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 func deployRollup(
@@ -219,7 +220,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
 
-	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth)
+	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth, configuration.Validator{})
 	test.FailIfError(t, err)
 
 	staker.Validator.GasThreshold = big.NewInt(0)
@@ -267,12 +268,12 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	faultyCore := challenge.NewFaultyCore(mon.Core, faultConfig)
 
-	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, val2Auth)
+	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, val2Auth, configuration.Validator{})
 	test.FailIfError(t, err)
 
 	faultyStaker.Validator.GasThreshold = big.NewInt(0)
 
-	registry := prometheus.NewRegistry()
+	registry := metrics.NewRegistry()
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
@@ -282,7 +283,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	nodehealth.Init(healthChan)
 
 	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, registry, registry)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, registry)
 		test.FailIfError(t, err)
 	}()
 

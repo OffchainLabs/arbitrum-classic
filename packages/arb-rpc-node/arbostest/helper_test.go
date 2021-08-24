@@ -22,7 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/math"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"

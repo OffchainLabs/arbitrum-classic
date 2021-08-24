@@ -31,7 +31,7 @@ import (
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
