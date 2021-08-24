@@ -219,27 +219,10 @@ func TestL2ToL1Tx(t *testing.T) {
 	clnt.Commit()
 
 	for i, batch := range batches {
-		outboxEntryAddress, err := outbox.Outboxes(&bind.CallOpts{}, big.NewInt(int64(i)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		outboxEntry, err := ethbridgecontracts.NewOutboxEntry(outboxEntryAddress, clnt)
-		if err != nil {
-			t.Fatal(err)
-		}
-		root, err := outboxEntry.Root(&bind.CallOpts{})
-		if err != nil {
-			t.Fatal(err)
-		}
+		root, err := outbox.OutboxEntries(&bind.CallOpts{}, big.NewInt(int64(i)))
+		test.FailIfError(t, err)
 		if root != batch.Tree.Hash() {
 			t.Fatal("wrong root")
-		}
-		numRemaining, err := outboxEntry.NumRemaining(&bind.CallOpts{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if numRemaining.Cmp(batch.NumInBatch) != 0 {
-			t.Fatal("wrong num remaining")
 		}
 	}
 
