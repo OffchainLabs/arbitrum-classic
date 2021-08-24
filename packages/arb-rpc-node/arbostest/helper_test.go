@@ -19,6 +19,7 @@ package arbostest
 import (
 	"math/big"
 	"testing"
+	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
@@ -45,6 +46,7 @@ func initMsg(t *testing.T, options []message.ChainConfigOption) message.Init {
 		ArbGasSpeedLimitPerSecond: 1000000000,
 	}
 	init, err := message.NewInitMessage(params, owner, options)
+	println(hex.EncodeToString(init.AsData()))
 	test.FailIfError(t, err)
 	return init
 }
@@ -344,7 +346,7 @@ func makeSimpleInbox(t *testing.T, messages []message.Message) []inbox.InboxMess
 	options := []message.ChainConfigOption{message.ChainIDConfig{ChainId: chainId}}
 	ib.AddMessage(initMsg(t, options), common.Address{}, big.NewInt(0), chainTime)
 	for _, msg := range messages {
-		ib.AddMessage(msg, sender, big.NewInt(0), chainTime)
+		ib.AddMessage(msg, message.L1RemapAccount(sender), big.NewInt(0), chainTime)
 	}
 	return ib.Messages
 }

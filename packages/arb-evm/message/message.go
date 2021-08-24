@@ -151,3 +151,31 @@ func (t EndBlockMessage) Type() inbox.Type {
 func (t EndBlockMessage) AsData() []byte {
 	return nil
 }
+
+func L2RemapAccount(account common.Address) common.Address {
+
+	magic, _ := new(big.Int).SetString("1111000000000000000000000000000000001111", 16)	
+	overflow := new(big.Int).Exp(big.NewInt(2), big.NewInt(20*8), nil)
+	
+	translated := new(big.Int).SetBytes(account.Bytes())
+	translated.Add(translated, magic)
+	if (translated.Cmp(overflow) == 1) {
+		translated.Sub(translated, overflow)
+	}
+	
+	return common.NewAddressFromBig(translated)
+}
+
+func L1RemapAccount(account common.Address) common.Address {
+	
+	magic, _ := new(big.Int).SetString("1111000000000000000000000000000000001111", 16)
+	overflow := new(big.Int).Exp(big.NewInt(2), big.NewInt(20*8), nil)
+
+	translated := new(big.Int).SetBytes(account.Bytes())
+	translated.Sub(translated, magic)
+	if (translated.Sign() == -1) {
+		translated.Add(translated, overflow)
+	}
+	
+	return common.NewAddressFromBig(translated)
+}
