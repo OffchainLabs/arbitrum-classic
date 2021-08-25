@@ -80,17 +80,7 @@ interface TokenGatewayInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
-  events: {
-    'DepositFinalized(address,address,address,uint256)': EventFragment
-    'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
-    'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
-    'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
-  }
-
-  getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
+  events: {}
 }
 
 export class TokenGateway extends BaseContract {
@@ -251,70 +241,7 @@ export class TokenGateway extends BaseContract {
     router(overrides?: CallOverrides): Promise<string>
   }
 
-  filters: {
-    DepositFinalized(
-      l1Token?: string | null,
-      _from?: string | null,
-      _to?: string | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber],
-      { l1Token: string; _from: string; _to: string; _amount: BigNumber }
-    >
-
-    DepositInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _sequenceNumber?: BigNumberish | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _sequenceNumber: BigNumber
-        _amount: BigNumber
-      }
-    >
-
-    WithdrawalFinalized(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _exitNum?: BigNumberish | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
-    >
-
-    WithdrawalInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _l2ToL1Id?: BigNumberish | null,
-      _exitNum?: null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _l2ToL1Id: BigNumber
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
-    >
-  }
+  filters: {}
 
   estimateGas: {
     calculateL2TokenAddress(

@@ -32,74 +32,6 @@ const _abi = [
       {
         indexed: true,
         internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'DepositFinalized',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'l1Token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_sequenceNumber',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'DepositInitiated',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'l1Token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
         name: 'gateway',
         type: 'address',
       },
@@ -136,86 +68,6 @@ const _abi = [
       },
     ],
     name: 'TransferRouted',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'l1Token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_exitNum',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'WithdrawalFinalized',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'l1Token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_l2ToL1Id',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_exitNum',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'WithdrawalInitiated',
     type: 'event',
   },
   {
@@ -421,6 +273,13 @@ const _abi = [
       },
     ],
     stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'postUpgradeInit',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {

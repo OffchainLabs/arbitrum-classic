@@ -31,6 +31,7 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
     'initialize(address,address)': FunctionFragment
     'l1TokenToGateway(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'router()': FunctionFragment
     'setDefaultGateway(address)': FunctionFragment
     'setGateway(address[],address[])': FunctionFragment
@@ -68,6 +69,10 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'outboundTransfer',
     values: [string, string, BigNumberish, BytesLike]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
   ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
   encodeFunctionData(
@@ -109,6 +114,10 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'setDefaultGateway',
@@ -118,21 +127,15 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
 
   events: {
     'DefaultGatewayUpdated(address)': EventFragment
-    'DepositFinalized(address,address,address,uint256)': EventFragment
-    'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
     'GatewaySet(address,address)': EventFragment
     'TransferRouted(address,address,address,address)': EventFragment
-    'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
-    'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
+    'TxToL1(address,address,uint256,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DefaultGatewayUpdated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'GatewaySet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferRouted'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'TxToL1'): EventFragment
 }
 
 export class L2GatewayRouter extends BaseContract {
@@ -237,6 +240,10 @@ export class L2GatewayRouter extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     router(overrides?: CallOverrides): Promise<[string]>
 
     setDefaultGateway(
@@ -304,6 +311,10 @@ export class L2GatewayRouter extends BaseContract {
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  postUpgradeInit(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   router(overrides?: CallOverrides): Promise<string>
@@ -375,6 +386,8 @@ export class L2GatewayRouter extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
     router(overrides?: CallOverrides): Promise<string>
 
     setDefaultGateway(
@@ -394,33 +407,6 @@ export class L2GatewayRouter extends BaseContract {
       newDefaultGateway?: null
     ): TypedEventFilter<[string], { newDefaultGateway: string }>
 
-    DepositFinalized(
-      l1Token?: string | null,
-      _from?: string | null,
-      _to?: string | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber],
-      { l1Token: string; _from: string; _to: string; _amount: BigNumber }
-    >
-
-    DepositInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _sequenceNumber?: BigNumberish | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _sequenceNumber: BigNumber
-        _amount: BigNumber
-      }
-    >
-
     GatewaySet(
       l1Token?: string | null,
       gateway?: string | null
@@ -436,40 +422,14 @@ export class L2GatewayRouter extends BaseContract {
       { token: string; _userFrom: string; _userTo: string; gateway: string }
     >
 
-    WithdrawalFinalized(
-      l1Token?: null,
+    TxToL1(
       _from?: string | null,
       _to?: string | null,
-      _exitNum?: BigNumberish | null,
-      _amount?: null
+      _id?: BigNumberish | null,
+      _data?: null
     ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
-    >
-
-    WithdrawalInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _l2ToL1Id?: BigNumberish | null,
-      _exitNum?: null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _l2ToL1Id: BigNumber
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
+      [string, string, BigNumber, string],
+      { _from: string; _to: string; _id: BigNumber; _data: string }
     >
   }
 
@@ -530,6 +490,10 @@ export class L2GatewayRouter extends BaseContract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     router(overrides?: CallOverrides): Promise<BigNumber>
@@ -606,6 +570,10 @@ export class L2GatewayRouter extends BaseContract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>

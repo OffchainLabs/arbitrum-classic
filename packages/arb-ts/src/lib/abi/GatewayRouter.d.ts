@@ -11,6 +11,7 @@ import {
   PopulatedTransaction,
   BaseContract,
   ContractTransaction,
+  Overrides,
   PayableOverrides,
   CallOverrides,
 } from 'ethers'
@@ -29,6 +30,7 @@ interface GatewayRouterInterface extends ethers.utils.Interface {
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'l1TokenToGateway(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'router()': FunctionFragment
   }
 
@@ -68,6 +70,10 @@ interface GatewayRouterInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
+  encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
   decodeFunctionResult(
@@ -99,25 +105,21 @@ interface GatewayRouterInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'DefaultGatewayUpdated(address)': EventFragment
-    'DepositFinalized(address,address,address,uint256)': EventFragment
-    'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
     'GatewaySet(address,address)': EventFragment
     'TransferRouted(address,address,address,address)': EventFragment
-    'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
-    'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DefaultGatewayUpdated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'GatewaySet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferRouted'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
 
 export class GatewayRouter extends BaseContract {
@@ -208,6 +210,10 @@ export class GatewayRouter extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     router(overrides?: CallOverrides): Promise<[string]>
   }
 
@@ -250,6 +256,10 @@ export class GatewayRouter extends BaseContract {
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  postUpgradeInit(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   router(overrides?: CallOverrides): Promise<string>
@@ -296,6 +306,8 @@ export class GatewayRouter extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
     router(overrides?: CallOverrides): Promise<string>
   }
 
@@ -303,33 +315,6 @@ export class GatewayRouter extends BaseContract {
     DefaultGatewayUpdated(
       newDefaultGateway?: null
     ): TypedEventFilter<[string], { newDefaultGateway: string }>
-
-    DepositFinalized(
-      l1Token?: string | null,
-      _from?: string | null,
-      _to?: string | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber],
-      { l1Token: string; _from: string; _to: string; _amount: BigNumber }
-    >
-
-    DepositInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _sequenceNumber?: BigNumberish | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _sequenceNumber: BigNumber
-        _amount: BigNumber
-      }
-    >
 
     GatewaySet(
       l1Token?: string | null,
@@ -344,42 +329,6 @@ export class GatewayRouter extends BaseContract {
     ): TypedEventFilter<
       [string, string, string, string],
       { token: string; _userFrom: string; _userTo: string; gateway: string }
-    >
-
-    WithdrawalFinalized(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _exitNum?: BigNumberish | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
-    >
-
-    WithdrawalInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _l2ToL1Id?: BigNumberish | null,
-      _exitNum?: null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _l2ToL1Id: BigNumber
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
     >
   }
 
@@ -426,6 +375,10 @@ export class GatewayRouter extends BaseContract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     router(overrides?: CallOverrides): Promise<BigNumber>
@@ -477,6 +430,10 @@ export class GatewayRouter extends BaseContract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>

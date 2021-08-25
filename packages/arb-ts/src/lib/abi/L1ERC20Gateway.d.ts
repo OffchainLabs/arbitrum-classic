@@ -35,6 +35,7 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     'initialize(address,address,address,bytes32,address)': FunctionFragment
     'l2BeaconProxyFactory()': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
     'router()': FunctionFragment
     'transferExitAndCall(uint256,address,address,bytes,bytes)': FunctionFragment
@@ -99,6 +100,10 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'redirectedExits',
     values: [BytesLike]
   ): string
@@ -160,6 +165,10 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'redirectedExits',
     data: BytesLike
   ): Result
@@ -175,24 +184,20 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'whitelist', data: BytesLike): Result
 
   events: {
-    'DepositFinalized(address,address,address,uint256)': EventFragment
     'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL2(address,address,uint256,bytes)': EventFragment
     'WhitelistSourceUpdated(address)': EventFragment
     'WithdrawRedirected(address,address,uint256,bytes,bytes,bool)': EventFragment
     'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
-    'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
   }
 
-  getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawRedirected'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
 
 export class L1ERC20Gateway extends BaseContract {
@@ -313,6 +318,10 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -415,6 +424,10 @@ export class L1ERC20Gateway extends BaseContract {
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  postUpgradeInit(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   redirectedExits(
@@ -521,6 +534,8 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -552,16 +567,6 @@ export class L1ERC20Gateway extends BaseContract {
   }
 
   filters: {
-    DepositFinalized(
-      l1Token?: string | null,
-      _from?: string | null,
-      _to?: string | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber],
-      { l1Token: string; _from: string; _to: string; _amount: BigNumber }
-    >
-
     DepositInitiated(
       l1Token?: null,
       _from?: string | null,
@@ -645,25 +650,6 @@ export class L1ERC20Gateway extends BaseContract {
         _amount: BigNumber
       }
     >
-
-    WithdrawalInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _l2ToL1Id?: BigNumberish | null,
-      _exitNum?: null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _l2ToL1Id: BigNumber
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
-    >
   }
 
   estimateGas: {
@@ -739,6 +725,10 @@ export class L1ERC20Gateway extends BaseContract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     redirectedExits(
@@ -842,6 +832,10 @@ export class L1ERC20Gateway extends BaseContract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     redirectedExits(

@@ -33,6 +33,7 @@ interface L2WethGatewayInterface extends ethers.utils.Interface {
     'l1Weth()': FunctionFragment
     'l2Weth()': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'router()': FunctionFragment
   }
 
@@ -71,6 +72,10 @@ interface L2WethGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     values: [string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
   decodeFunctionResult(
@@ -105,22 +110,22 @@ interface L2WethGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'DepositFinalized(address,address,address,uint256)': EventFragment
-    'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL1(address,address,uint256,bytes)': EventFragment
-    'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
     'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL1'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
 
@@ -236,6 +241,10 @@ export class L2WethGateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     router(overrides?: CallOverrides): Promise<[string]>
   }
 
@@ -305,6 +314,10 @@ export class L2WethGateway extends BaseContract {
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  postUpgradeInit(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   router(overrides?: CallOverrides): Promise<string>
@@ -378,6 +391,8 @@ export class L2WethGateway extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
     router(overrides?: CallOverrides): Promise<string>
   }
 
@@ -390,23 +405,6 @@ export class L2WethGateway extends BaseContract {
     ): TypedEventFilter<
       [string, string, string, BigNumber],
       { l1Token: string; _from: string; _to: string; _amount: BigNumber }
-    >
-
-    DepositInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _sequenceNumber?: BigNumberish | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _sequenceNumber: BigNumber
-        _amount: BigNumber
-      }
     >
 
     TransferAndCallTriggered(
@@ -434,23 +432,6 @@ export class L2WethGateway extends BaseContract {
     ): TypedEventFilter<
       [string, string, BigNumber, string],
       { _from: string; _to: string; _id: BigNumber; _data: string }
-    >
-
-    WithdrawalFinalized(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _exitNum?: BigNumberish | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
     >
 
     WithdrawalInitiated(
@@ -542,6 +523,10 @@ export class L2WethGateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     router(overrides?: CallOverrides): Promise<BigNumber>
   }
 
@@ -614,6 +599,10 @@ export class L2WethGateway extends BaseContract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>

@@ -36,6 +36,7 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     'l1ToL2Token(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'owner()': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
     'registerTokenToL2(address,uint256,uint256,uint256,address)': FunctionFragment
     'router()': FunctionFragment
@@ -99,6 +100,10 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(functionFragment: 'owner', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'redirectedExits',
     values: [BytesLike]
@@ -164,6 +169,10 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result
   decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'redirectedExits',
     data: BytesLike
   ): Result
@@ -184,7 +193,6 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'whitelist', data: BytesLike): Result
 
   events: {
-    'DepositFinalized(address,address,address,uint256)': EventFragment
     'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
     'TokenSet(address,address)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
@@ -192,10 +200,8 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     'WhitelistSourceUpdated(address)': EventFragment
     'WithdrawRedirected(address,address,uint256,bytes,bytes,bool)': EventFragment
     'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
-    'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
   }
 
-  getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TokenSet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
@@ -203,7 +209,6 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawRedirected'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
 
 export class L1CustomGatewayTester extends BaseContract {
@@ -331,6 +336,10 @@ export class L1CustomGatewayTester extends BaseContract {
     ): Promise<ContractTransaction>
 
     owner(overrides?: CallOverrides): Promise<[string]>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     redirectedExits(
       arg0: BytesLike,
@@ -466,6 +475,10 @@ export class L1CustomGatewayTester extends BaseContract {
 
   owner(overrides?: CallOverrides): Promise<string>
 
+  postUpgradeInit(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   redirectedExits(
     arg0: BytesLike,
     overrides?: CallOverrides
@@ -600,6 +613,8 @@ export class L1CustomGatewayTester extends BaseContract {
 
     owner(overrides?: CallOverrides): Promise<string>
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -653,16 +668,6 @@ export class L1CustomGatewayTester extends BaseContract {
   }
 
   filters: {
-    DepositFinalized(
-      l1Token?: string | null,
-      _from?: string | null,
-      _to?: string | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber],
-      { l1Token: string; _from: string; _to: string; _amount: BigNumber }
-    >
-
     DepositInitiated(
       l1Token?: null,
       _from?: string | null,
@@ -754,25 +759,6 @@ export class L1CustomGatewayTester extends BaseContract {
         _amount: BigNumber
       }
     >
-
-    WithdrawalInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _l2ToL1Id?: BigNumberish | null,
-      _exitNum?: null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _l2ToL1Id: BigNumber
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
-    >
   }
 
   estimateGas: {
@@ -857,6 +843,10 @@ export class L1CustomGatewayTester extends BaseContract {
     ): Promise<BigNumber>
 
     owner(overrides?: CallOverrides): Promise<BigNumber>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     redirectedExits(
       arg0: BytesLike,
@@ -991,6 +981,10 @@ export class L1CustomGatewayTester extends BaseContract {
     ): Promise<PopulatedTransaction>
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     redirectedExits(
       arg0: BytesLike,

@@ -32,6 +32,7 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     'initialize(address,address)': FunctionFragment
     'l1ToL2Token(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'registerTokenFromL1(address[],address[])': FunctionFragment
     'router()': FunctionFragment
   }
@@ -71,6 +72,10 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     values: [string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'registerTokenFromL1',
     values: [string[], string[]]
   ): string
@@ -108,6 +113,10 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'registerTokenFromL1',
     data: BytesLike
   ): Result
@@ -115,20 +124,16 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
 
   events: {
     'DepositFinalized(address,address,address,uint256)': EventFragment
-    'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
     'TokenSet(address,address)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL1(address,address,uint256,bytes)': EventFragment
-    'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
     'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TokenSet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL1'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
 
@@ -240,6 +245,10 @@ export class L2CustomGatewayTester extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     registerTokenFromL1(
       l1Address: string[],
       l2Address: string[],
@@ -311,6 +320,10 @@ export class L2CustomGatewayTester extends BaseContract {
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  postUpgradeInit(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   registerTokenFromL1(
@@ -386,6 +399,8 @@ export class L2CustomGatewayTester extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
     registerTokenFromL1(
       l1Address: string[],
       l2Address: string[],
@@ -404,23 +419,6 @@ export class L2CustomGatewayTester extends BaseContract {
     ): TypedEventFilter<
       [string, string, string, BigNumber],
       { l1Token: string; _from: string; _to: string; _amount: BigNumber }
-    >
-
-    DepositInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _sequenceNumber?: BigNumberish | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _sequenceNumber: BigNumber
-        _amount: BigNumber
-      }
     >
 
     TokenSet(
@@ -456,23 +454,6 @@ export class L2CustomGatewayTester extends BaseContract {
     ): TypedEventFilter<
       [string, string, BigNumber, string],
       { _from: string; _to: string; _id: BigNumber; _data: string }
-    >
-
-    WithdrawalFinalized(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _exitNum?: BigNumberish | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
     >
 
     WithdrawalInitiated(
@@ -560,6 +541,10 @@ export class L2CustomGatewayTester extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     registerTokenFromL1(
       l1Address: string[],
       l2Address: string[],
@@ -637,6 +622,10 @@ export class L2CustomGatewayTester extends BaseContract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     registerTokenFromL1(

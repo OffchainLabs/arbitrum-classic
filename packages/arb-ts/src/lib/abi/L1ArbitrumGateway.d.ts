@@ -31,6 +31,7 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
     'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'inbox()': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'router()': FunctionFragment
   }
 
@@ -74,6 +75,10 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
+  encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
   decodeFunctionResult(
@@ -109,23 +114,23 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
-    'DepositFinalized(address,address,address,uint256)': EventFragment
     'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL2(address,address,uint256,bytes)': EventFragment
     'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
-    'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
   }
 
-  getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
 
 export class L1ArbitrumGateway extends BaseContract {
@@ -227,6 +232,10 @@ export class L1ArbitrumGateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     router(overrides?: CallOverrides): Promise<[string]>
   }
 
@@ -283,6 +292,10 @@ export class L1ArbitrumGateway extends BaseContract {
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  postUpgradeInit(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   router(overrides?: CallOverrides): Promise<string>
@@ -343,20 +356,12 @@ export class L1ArbitrumGateway extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
     router(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
-    DepositFinalized(
-      l1Token?: string | null,
-      _from?: string | null,
-      _to?: string | null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber],
-      { l1Token: string; _from: string; _to: string; _amount: BigNumber }
-    >
-
     DepositInitiated(
       l1Token?: null,
       _from?: string | null,
@@ -413,25 +418,6 @@ export class L1ArbitrumGateway extends BaseContract {
         l1Token: string
         _from: string
         _to: string
-        _exitNum: BigNumber
-        _amount: BigNumber
-      }
-    >
-
-    WithdrawalInitiated(
-      l1Token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _l2ToL1Id?: BigNumberish | null,
-      _exitNum?: null,
-      _amount?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, BigNumber],
-      {
-        l1Token: string
-        _from: string
-        _to: string
-        _l2ToL1Id: BigNumber
         _exitNum: BigNumber
         _amount: BigNumber
       }
@@ -494,6 +480,10 @@ export class L1ArbitrumGateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     router(overrides?: CallOverrides): Promise<BigNumber>
   }
 
@@ -553,6 +543,10 @@ export class L1ArbitrumGateway extends BaseContract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>

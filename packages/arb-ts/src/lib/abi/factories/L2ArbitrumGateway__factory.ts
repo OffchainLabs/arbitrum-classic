@@ -46,43 +46,6 @@ const _abi = [
     inputs: [
       {
         indexed: false,
-        internalType: 'address',
-        name: 'l1Token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_sequenceNumber',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'DepositInitiated',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
         internalType: 'bool',
         name: 'success',
         type: 'bool',
@@ -144,43 +107,6 @@ const _abi = [
       },
     ],
     name: 'TxToL1',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'l1Token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_exitNum',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'WithdrawalFinalized',
     type: 'event',
   },
   {
@@ -471,6 +397,13 @@ const _abi = [
       },
     ],
     stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'postUpgradeInit',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
