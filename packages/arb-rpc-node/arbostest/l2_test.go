@@ -321,7 +321,7 @@ func TestBatch(t *testing.T) {
 		}
 		senders = append(senders, sender)
 		txes = append(txes, tx)
-		hashes = append(hashes, tx.MessageID(sender, chainId))
+		hashes = append(hashes, tx.MessageID(message.L1RemapAccount(sender), chainId))
 		batchSenderSeq++
 	}
 	for _, pk := range pks[1:] {
