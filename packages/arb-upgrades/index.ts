@@ -13,16 +13,6 @@ import {
   isBeacon,
 } from './types'
 
-// import {
-//   getStorageLayout,
-//   assertUpgradeSafe,
-//   getContractVersion,
-//   assertStorageUpgradeSafe,
-//   solcInputOutputDecoder,
-//   validate,
-//   RunValidation,
-// } from '@openzeppelin/upgrades-core'
-
 const adminSlot =
   '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103'
 const implementationSlot =
@@ -203,6 +193,7 @@ export const initUpgrades = (
       )
     }
     console.log(`Updating ${contractsToUpdate.length} contracts`)
+    // TODO: explicitly check for storage layout clashes
 
     for (const contractName of contractsToUpdate) {
       const queuedUpdateData = queuedUpdatesData[contractName] as QueuedUpdate
@@ -327,42 +318,6 @@ export const initUpgrades = (
     await deployLogic(contractsNames)
   }
 
-  // TODO:
-  // const verifyUpgrade = async (contractName: string) => {
-  //    const validationContext = {} as RunValidation
-
-  //    const contractNameFull = (await artifacts.getAllFullyQualifiedNames()).find(
-  //      curr => curr.includes(contractName)
-  //    )
-
-  //    if (!contractNameFull ) {
-  //      throw new Error("Can't find artifacts for contracts")
-  //    }
-
-  //    for (const contract of contractNameFull) {
-  //      const buildInfo = await artifacts.getBuildInfo(contract)
-
-  //      const solcOutput = buildInfo.output
-  //      const solcInput = buildInfo.input
-  //      const decodeSrc = solcInputOutputDecoder(solcInput, solcOutput)
-  //      Object.assign(validationContext, validate(solcOutput, decodeSrc))
-  //    }
-
-  //    const oldVersion = getContractVersion(validationContext, oldContract)
-  //    const newVersion = getContractVersion(validationContext, newContract)
-
-  //    // verifies for errors such as setting arguments in constructors
-  //    assertUpgradeSafe([validationContext], oldVersion, { kind: 'transparent' })
-  //    assertUpgradeSafe([validationContext], newVersion, { kind: 'transparent' })
-
-  //    const oldStorage = getStorageLayout(validationContext, oldVersion)
-  //    const newStorage = getStorageLayout(validationContext, newVersion)
-
-  //    // verifies that storage layouts match
-  //    assertStorageUpgradeSafe(oldStorage, newStorage)
-
-  //    console.log('Upgrade validation complete, all is good.')
-  //  }
   return {
     updateImplementations,
     verifyCurrentImplementations,
