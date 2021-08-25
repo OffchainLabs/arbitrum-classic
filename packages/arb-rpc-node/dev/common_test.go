@@ -79,6 +79,7 @@ func NewTestDevNode(
 	params protocol.ChainParams,
 	owner common.Address,
 	config []message.ChainConfigOption,
+	oldStyleInit bool,
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
 	agg := common.RandAddress()
@@ -104,6 +105,11 @@ func NewTestDevNode(
 	)
 	test.FailIfError(t, err)
 	initMsg, err := message.NewInitMessage(params, owner, config)
+	
+	if (oldStyleInit) {
+		initMsg.OldStyle = true
+	}
+	
 	test.FailIfError(t, err)
 	_, err = backend.AddInboxMessage(initMsg, common.Address{})
 	test.FailIfError(t, err)

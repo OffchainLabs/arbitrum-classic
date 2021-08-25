@@ -34,6 +34,7 @@ var logger = log.With().Caller().Stack().Str("component", "message").Logger()
 
 const (
 	L2Type            inbox.Type = 3
+	OldInitType       inbox.Type = 4    // remove after upgrade 5
 	EndOfBlockType    inbox.Type = 6
 	EthDepositTxType  inbox.Type = 7
 	RetryableType     inbox.Type = 9
