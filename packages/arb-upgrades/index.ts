@@ -83,10 +83,8 @@ export const initUpgrades = (
         console.log(
           'New network; need to set up _current_deployments.json file'
         )
-        throw err
-      } else {
-        throw err
       }
+      throw err
     }
   }
 
