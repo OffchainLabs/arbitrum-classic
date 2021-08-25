@@ -248,7 +248,8 @@ export const initUpgrades = (
           queuedUpdateData.address
         )
       }
-      await upgradeTx.wait()
+      const rec = await upgradeTx.wait()
+      console.log('Upgrade receipt:', rec)
 
       const buildInfo = await getBuildInfoString(contractName)
 
