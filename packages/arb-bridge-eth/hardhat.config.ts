@@ -148,6 +148,12 @@ const config = {
         ? [process.env['MAINNET_PRIVKEY']]
         : [],
     },
+    fork: {
+      url: 'http://127.0.0.1:8545/',
+      accounts: process.env['MAINNET_PRIVKEY']
+        ? [process.env['MAINNET_PRIVKEY']]
+        : [],
+    },
     arbitrum1: {
       url: 'https://arb1.arbitrum.io/rpc',
       accounts: process.env['MAINNET_PRIVKEY']
