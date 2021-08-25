@@ -49,7 +49,7 @@ export interface DepositInitiated {
   l1Token: string
   _from: string
   _to: string
-  _sequenceNumber: string
+  _sequenceNumber: BigNumber
   amount: BigNumber
 }
 export interface BuddyDeployEventResult {
