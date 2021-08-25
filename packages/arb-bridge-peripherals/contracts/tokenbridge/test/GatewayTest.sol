@@ -28,6 +28,12 @@ import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
 import "../arbitrum/L2ArbitrumMessenger.sol";
 
+contract AddressMappingTest is L2ArbitrumMessenger {
+    function getL1AddressTest(address sender) external pure returns (address l1Address) {
+        return L2ArbitrumMessenger.getL1Address(sender);
+    }
+}
+
 // these contracts are used to "flatten" out communication between contracts
 // this way the token bridge can be tested fully in the base layer
 // assembly code from OZ's proxy is used to surface revert messages correctly

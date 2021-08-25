@@ -608,7 +608,7 @@ export class Bridge {
       l1TokenAddress
     )
 
-    return BridgeHelper.getOutBoundTransferInitiatedLogs(
+    return BridgeHelper.getTokenWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
       l1TokenAddress,
@@ -624,10 +624,9 @@ export class Bridge {
     gatewayAddress: string,
     destinationAddress?: string
   ) {
-    return BridgeHelper.getOutBoundTransferInitiatedLogs(
+    return BridgeHelper.getGatewayWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
-      '',
       destinationAddress
     )
   }

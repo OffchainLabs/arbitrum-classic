@@ -69,14 +69,6 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC20__factory>
     getContractFactory(
-      name: 'Pausable',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Pausable__factory>
-    getContractFactory(
-      name: 'IOneStepProof',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IOneStepProof__factory>
-    getContractFactory(
       name: 'IBridge',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IBridge__factory>
@@ -92,18 +84,6 @@ declare module 'hardhat/types/runtime' {
       name: 'IOutbox',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IOutbox__factory>
-    getContractFactory(
-      name: 'ISequencerInbox',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ISequencerInbox__factory>
-    getContractFactory(
-      name: 'IChallenge',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IChallenge__factory>
-    getContractFactory(
-      name: 'IChallengeFactory',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IChallengeFactory__factory>
     getContractFactory(
       name: 'Cloneable',
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -121,77 +101,9 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.WhitelistConsumer__factory>
     getContractFactory(
-      name: 'IRollupAdmin',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IRollupAdmin__factory>
-    getContractFactory(
-      name: 'IRollupUser',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IRollupUser__factory>
-    getContractFactory(
-      name: 'INode',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.INode__factory>
-    getContractFactory(
-      name: 'INodeFactory',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.INodeFactory__factory>
-    getContractFactory(
-      name: 'IRollupCore',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IRollupCore__factory>
-    getContractFactory(
-      name: 'Rollup',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Rollup__factory>
-    getContractFactory(
-      name: 'RollupBase',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.RollupBase__factory>
-    getContractFactory(
-      name: 'RollupCore',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.RollupCore__factory>
-    getContractFactory(
-      name: 'RollupEventBridge',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.RollupEventBridge__factory>
-    getContractFactory(
       name: 'ArbSys',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ArbSys__factory>
-    getContractFactory(
-      name: 'ArbBatchTokenMover',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ArbBatchTokenMover__factory>
-    getContractFactory(
-      name: 'EthBatchTokenReceiver',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.EthBatchTokenReceiver__factory>
-    getContractFactory(
-      name: 'BuddyDeployer',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.BuddyDeployer__factory>
-    getContractFactory(
-      name: 'L1Buddy',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.L1Buddy__factory>
-    getContractFactory(
-      name: 'Mock',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Mock__factory>
-    getContractFactory(
-      name: 'TestBuddy',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.TestBuddy__factory>
-    getContractFactory(
-      name: 'TestConstructorBuddy',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.TestConstructorBuddy__factory>
-    getContractFactory(
-      name: 'MMR',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.MMR__factory>
     getContractFactory(
       name: 'NodeInterface',
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -224,6 +136,10 @@ declare module 'hardhat/types/runtime' {
       name: 'IArbToken',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IArbToken__factory>
+    getContractFactory(
+      name: 'L2ArbitrumMessenger',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.L2ArbitrumMessenger__factory>
     getContractFactory(
       name: 'StandardArbERC20',
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -261,6 +177,10 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ICustomToken__factory>
     getContractFactory(
+      name: 'L1ArbitrumMessenger',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.L1ArbitrumMessenger__factory>
+    getContractFactory(
       name: 'AeERC20',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.AeERC20__factory>
@@ -281,21 +201,9 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ProxySetter__factory>
     getContractFactory(
-      name: 'ERC677Token',
+      name: 'EscrowAndCallGateway',
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ERC677Token__factory>
-    getContractFactory(
-      name: 'ArbitrumGateway',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ArbitrumGateway__factory>
-    getContractFactory(
-      name: 'L1ArbitrumMessenger',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.L1ArbitrumMessenger__factory>
-    getContractFactory(
-      name: 'L2ArbitrumMessenger',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.L2ArbitrumMessenger__factory>
+    ): Promise<Contracts.EscrowAndCallGateway__factory>
     getContractFactory(
       name: 'GatewayRouter',
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -305,10 +213,6 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ICustomGateway__factory>
     getContractFactory(
-      name: 'IGatewayRouter',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IGatewayRouter__factory>
-    getContractFactory(
       name: 'ITokenGateway',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ITokenGateway__factory>
@@ -317,13 +221,13 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TokenGateway__factory>
     getContractFactory(
-      name: 'IERC677',
+      name: 'ITransferAndCall',
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC677__factory>
+    ): Promise<Contracts.ITransferAndCall__factory>
     getContractFactory(
-      name: 'IERC677Receiver',
+      name: 'ITransferAndCallReceiver',
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IERC677Receiver__factory>
+    ): Promise<Contracts.ITransferAndCallReceiver__factory>
     getContractFactory(
       name: 'IWETH9',
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -333,33 +237,9 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.L2GatewayToken__factory>
     getContractFactory(
-      name: 'ConfirmRoots',
+      name: 'TransferAndCallToken',
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.ConfirmRoots__factory>
-    getContractFactory(
-      name: 'IWETH9L1',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IWETH9L1__factory>
-    getContractFactory(
-      name: 'IExitLiquidityProvider',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IExitLiquidityProvider__factory>
-    getContractFactory(
-      name: 'L1PassiveFastExitManager',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.L1PassiveFastExitManager__factory>
-    getContractFactory(
-      name: 'L1SignedLiquidityProvider',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.L1SignedLiquidityProvider__factory>
-    getContractFactory(
-      name: 'StakedLiquidityProvider',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.StakedLiquidityProvider__factory>
-    getContractFactory(
-      name: 'FastExitMock',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.FastExitMock__factory>
+    ): Promise<Contracts.TransferAndCallToken__factory>
     getContractFactory(
       name: 'L1ArbitrumTestMessenger',
       signerOrOptions?: ethers.Signer | FactoryOptions
