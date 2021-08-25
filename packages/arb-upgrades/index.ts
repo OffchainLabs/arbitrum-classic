@@ -263,7 +263,7 @@ export const initUpgrades = (
         implArbitrumCommitHash: queuedUpdateData.arbitrumCommitHash,
         implBuildInfo: buildInfo,
       }
-      console.log('Setting new tmp: deployment data:', newDeploymentData)
+      console.log('Setting new tmp: deployment data')
 
       tmpDeploymentsJsonData.contracts[contractName] = newDeploymentData
       writeFileSync(tmpDeploymentsPath, JSON.stringify(tmpDeploymentsJsonData))
