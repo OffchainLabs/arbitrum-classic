@@ -11,6 +11,7 @@ import {
   CurrentDeployment,
   QueuedUpdate,
   isBeacon,
+  getLayer,
 } from './types'
 
 const adminSlot =
@@ -124,6 +125,20 @@ export const initUpgrades = (
         }
       }
 
+      const layerOfContract = getLayer(contractName)
+      const currentLayer =
+        (
+          await hre.ethers.provider.getCode(
+            '0x0000000000000000000000000000000000000064'
+          )
+        ).length > 2
+          ? 2
+          : 1
+      if (layerOfContract !== currentLayer) {
+        throw new Error(
+          `Warning: trying to deploy ${contractName} onto the wrong layer!`
+        )
+      }
       console.log('Deploying new logic for ', contractName)
 
       const contractFactory = (

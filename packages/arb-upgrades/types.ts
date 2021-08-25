@@ -54,3 +54,16 @@ export const proxyType = (contractName: ContractNames) => {
 
 export const isBeacon = (contractName: ContractNames) =>
   proxyType(contractName) === UpgradeableType.Beacon
+
+export const getLayer = (contractName: ContractNames) => {
+  switch (contractName) {
+    case 'L2ERC20Gateway':
+    case 'L2GatewayRouter':
+    case 'L2WethGateway':
+    case 'L2CustomGateway':
+    case 'StandardArbERC20':
+      return 2
+    default:
+      return 1
+  }
+}
