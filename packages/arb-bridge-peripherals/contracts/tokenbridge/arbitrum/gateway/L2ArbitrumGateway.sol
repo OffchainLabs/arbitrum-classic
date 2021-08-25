@@ -147,15 +147,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             res = getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
             id = createOutboundTx(_from, _amount, res);
         }
-        emit OutboundTransferInitiatedV1(
-            _l1Token,
-            _from,
-            _to,
-            id,
-            currExitNum,
-            _amount,
-            _extraData
-        );
+        emit WithdrawalInitiated(_l1Token, _from, _to, id, currExitNum, _amount);
         return abi.encode(id);
     }
 
@@ -257,14 +249,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             inboundEscrowTransfer(expectedAddress, _to, _amount);
         }
 
-        emit InboundTransferFinalized(
-            _token,
-            _from,
-            _to,
-            uint256(uint160(expectedAddress)),
-            _amount,
-            _data
-        );
+        emit DepositFinalized(_token, _from, _to, _amount);
 
         return bytes("");
     }

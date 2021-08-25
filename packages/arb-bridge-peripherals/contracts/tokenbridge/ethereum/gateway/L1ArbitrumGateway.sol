@@ -80,8 +80,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
-        (uint256 exitNum, bytes memory callHookData) =
-            GatewayMessageHandler.parseToL1GatewayMsg(_data);
+        (uint256 exitNum, bytes memory callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(
+            _data
+        );
 
         (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
@@ -99,7 +100,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             inboundEscrowTransfer(_token, _to, _amount);
         }
 
-        emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
+        emit WithdrawalFinalized(_token, _from, _to, exitNum, _amount);
         return bytes("");
     }
 
@@ -212,17 +213,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
                 res
             );
         }
-        // deposits don't have an exit num from L1 to L2, only on the way back
-        uint256 currExitNum = 0;
-        emit OutboundTransferInitiatedV1(
-            _l1Token,
-            _from,
-            _to,
-            seqNum,
-            currExitNum,
-            _amount,
-            extraData
-        );
+        emit DepositInitiated(_l1Token, _from, _to, seqNum, _amount);
         return abi.encode(seqNum);
     }
 

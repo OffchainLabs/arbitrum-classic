@@ -19,7 +19,7 @@
 pragma solidity ^0.6.11;
 
 interface ITokenGateway {
-    /// @notice event deprecated in favor of OutboundTransferInitiatedV1
+    /// @notice event deprecated in favor of DepositInitiated and WithdrawalInitiated
     // event OutboundTransferInitiated(
     //     address token,
     //     address indexed _from,
@@ -29,23 +29,46 @@ interface ITokenGateway {
     //     bytes _data
     // );
 
-    event OutboundTransferInitiatedV1(
-        address token,
+    /// @notice event deprecated in favor of DepositFinalized and WithdrawalFinalized
+    // event InboundTransferFinalized(
+    //     address token,
+    //     address indexed _from,
+    //     address indexed _to,
+    //     uint256 indexed _transferId,
+    //     uint256 _amount,
+    //     bytes _data
+    // );
+
+    event DepositInitiated(
+        address l1Token,
         address indexed _from,
         address indexed _to,
-        uint256 indexed _transferId,
-        uint256 _exitNum,
-        uint256 _amount,
-        bytes _userData
+        uint256 indexed _sequenceNumber,
+        uint256 _amount
     );
 
-    event InboundTransferFinalized(
-        address token,
+    event DepositFinalized(
+        address indexed l1Token,
         address indexed _from,
         address indexed _to,
-        uint256 indexed _transferId,
-        uint256 _amount,
-        bytes _data
+        uint256 _amount
+    );
+
+    event WithdrawalInitiated(
+        address l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _l2ToL1Id,
+        uint256 _exitNum,
+        uint256 _amount
+    );
+
+    event WithdrawalFinalized(
+        address l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _exitNum,
+        uint256 _amount
     );
 
     function outboundTransfer(
