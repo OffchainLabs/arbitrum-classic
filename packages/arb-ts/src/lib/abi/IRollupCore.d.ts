@@ -153,7 +153,25 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
 
-  events: {}
+  events: {
+    'NodeConfirmed(uint256,bytes32,uint256,bytes32,uint256)': EventFragment
+    'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,uint256,bytes32,bytes32[3][2],uint256[4][2])': EventFragment
+    'NodeRejected(uint256)': EventFragment
+    'RollupChallengeStarted(address,address,address,uint256)': EventFragment
+    'RollupCreated(bytes32)': EventFragment
+    'UserStakeUpdated(address,uint256,uint256)': EventFragment
+    'UserWithdrawableFundsUpdated(address,uint256,uint256)': EventFragment
+  }
+
+  getEvent(nameOrSignatureOrTopic: 'NodeConfirmed'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'NodeCreated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'NodeRejected'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'RollupChallengeStarted'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'UserStakeUpdated'): EventFragment
+  getEvent(
+    nameOrSignatureOrTopic: 'UserWithdrawableFundsUpdated'
+  ): EventFragment
 }
 
 export class IRollupCore extends BaseContract {
@@ -374,7 +392,109 @@ export class IRollupCore extends BaseContract {
     ): Promise<BigNumber>
   }
 
-  filters: {}
+  filters: {
+    NodeConfirmed(
+      nodeNum?: BigNumberish | null,
+      afterSendAcc?: null,
+      afterSendCount?: null,
+      afterLogAcc?: null,
+      afterLogCount?: null
+    ): TypedEventFilter<
+      [BigNumber, string, BigNumber, string, BigNumber],
+      {
+        nodeNum: BigNumber
+        afterSendAcc: string
+        afterSendCount: BigNumber
+        afterLogAcc: string
+        afterLogCount: BigNumber
+      }
+    >
+
+    NodeCreated(
+      nodeNum?: BigNumberish | null,
+      parentNodeHash?: BytesLike | null,
+      nodeHash?: null,
+      executionHash?: null,
+      inboxMaxCount?: null,
+      afterInboxBatchEndCount?: null,
+      afterInboxBatchAcc?: null,
+      assertionBytes32Fields?: null,
+      assertionIntFields?: null
+    ): TypedEventFilter<
+      [
+        BigNumber,
+        string,
+        string,
+        string,
+        BigNumber,
+        BigNumber,
+        string,
+        [[string, string, string], [string, string, string]],
+        [
+          [BigNumber, BigNumber, BigNumber, BigNumber],
+          [BigNumber, BigNumber, BigNumber, BigNumber]
+        ]
+      ],
+      {
+        nodeNum: BigNumber
+        parentNodeHash: string
+        nodeHash: string
+        executionHash: string
+        inboxMaxCount: BigNumber
+        afterInboxBatchEndCount: BigNumber
+        afterInboxBatchAcc: string
+        assertionBytes32Fields: [
+          [string, string, string],
+          [string, string, string]
+        ]
+        assertionIntFields: [
+          [BigNumber, BigNumber, BigNumber, BigNumber],
+          [BigNumber, BigNumber, BigNumber, BigNumber]
+        ]
+      }
+    >
+
+    NodeRejected(
+      nodeNum?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { nodeNum: BigNumber }>
+
+    RollupChallengeStarted(
+      challengeContract?: string | null,
+      asserter?: null,
+      challenger?: null,
+      challengedNode?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber],
+      {
+        challengeContract: string
+        asserter: string
+        challenger: string
+        challengedNode: BigNumber
+      }
+    >
+
+    RollupCreated(
+      machineHash?: null
+    ): TypedEventFilter<[string], { machineHash: string }>
+
+    UserStakeUpdated(
+      user?: string | null,
+      initialBalance?: null,
+      finalBalance?: null
+    ): TypedEventFilter<
+      [string, BigNumber, BigNumber],
+      { user: string; initialBalance: BigNumber; finalBalance: BigNumber }
+    >
+
+    UserWithdrawableFundsUpdated(
+      user?: string | null,
+      initialBalance?: null,
+      finalBalance?: null
+    ): TypedEventFilter<
+      [string, BigNumber, BigNumber],
+      { user: string; initialBalance: BigNumber; finalBalance: BigNumber }
+    >
+  }
 
   estimateGas: {
     _stakerMap(

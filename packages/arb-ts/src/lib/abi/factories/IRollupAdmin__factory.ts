@@ -8,6 +8,136 @@ import type { IRollupAdmin, IRollupAdminInterface } from '../IRollupAdmin'
 
 const _abi = [
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+    ],
+    name: 'OwnerFunctionCalled',
+    type: 'event',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'nodeNum',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes32',
+        name: 'beforeSendAcc',
+        type: 'bytes32',
+      },
+      {
+        internalType: 'bytes',
+        name: 'sendsData',
+        type: 'bytes',
+      },
+      {
+        internalType: 'uint256[]',
+        name: 'sendLengths',
+        type: 'uint256[]',
+      },
+      {
+        internalType: 'uint256',
+        name: 'afterSendCount',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes32',
+        name: 'afterLogAcc',
+        type: 'bytes32',
+      },
+      {
+        internalType: 'uint256',
+        name: 'afterLogCount',
+        type: 'uint256',
+      },
+    ],
+    name: 'forceConfirmNode',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'bytes32',
+        name: 'expectedNodeHash',
+        type: 'bytes32',
+      },
+      {
+        internalType: 'bytes32[3][2]',
+        name: 'assertionBytes32Fields',
+        type: 'bytes32[3][2]',
+      },
+      {
+        internalType: 'uint256[4][2]',
+        name: 'assertionIntFields',
+        type: 'uint256[4][2]',
+      },
+      {
+        internalType: 'bytes',
+        name: 'sequencerBatchProof',
+        type: 'bytes',
+      },
+      {
+        internalType: 'uint256',
+        name: 'beforeProposedBlock',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'beforeInboxMaxCount',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'prevNode',
+        type: 'uint256',
+      },
+    ],
+    name: 'forceCreateNode',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address[]',
+        name: 'stacker',
+        type: 'address[]',
+      },
+    ],
+    name: 'forceRefundStaker',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address[]',
+        name: 'stackerA',
+        type: 'address[]',
+      },
+      {
+        internalType: 'address[]',
+        name: 'stackerB',
+        type: 'address[]',
+      },
+    ],
+    name: 'forceResolveChallenge',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'pause',
     outputs: [],

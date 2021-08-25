@@ -217,13 +217,6 @@ const _abi = [
   },
   {
     inputs: [],
-    name: 'resetChildren',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
     name: 'stakerCount',
     outputs: [
       {
