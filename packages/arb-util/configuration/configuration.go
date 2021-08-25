@@ -289,7 +289,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
 
 	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
-	f.Int("node.cache.lru-size", 20, "number of recently used L2 block snapshots to hold in lru memory cache")
+	f.Int("node.cache.lru-size", 1000, "number of recently used L2 block snapshots to hold in lru memory cache")
 	f.Int("node.cache.block-info-lru-size", 100_000, "number of recently used L2 block info to hold in lru memory cache")
 	//f.Duration("node.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in timed memory cache")
 
