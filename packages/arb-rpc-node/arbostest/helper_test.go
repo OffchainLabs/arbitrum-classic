@@ -17,9 +17,9 @@
 package arbostest
 
 import (
+	"encoding/hex"
 	"math/big"
 	"testing"
-	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
@@ -45,7 +45,7 @@ func initMsg(t *testing.T, options []message.ChainConfigOption) message.Init {
 		GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
 		ArbGasSpeedLimitPerSecond: 1000000000,
 	}
-	init, err := message.NewInitMessage(params, owner, options)
+	init, err := message.NewInitMessage(params, message.L2RemapAccount(owner), options)
 	println(hex.EncodeToString(init.AsData()))
 	test.FailIfError(t, err)
 	return init

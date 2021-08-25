@@ -36,6 +36,8 @@ var (
 	setFairGasPriceSenderABI abi.Method
 	deployContractABI        abi.Method
 	getTotalOfEthBalancesABI abi.Method
+	addChainOwnerABI         abi.Method
+	removeChainOwnerABI      abi.Method
 )
 
 var FeesEnabledParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("FeesEnabled")).Bytes())
@@ -58,6 +60,8 @@ func init() {
 	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
 	deployContractABI = arbowner.Methods["deployContract"]
 	getTotalOfEthBalancesABI = arbowner.Methods["getTotalOfEthBalances"]
+	addChainOwnerABI = arbowner.Methods["addChainOwner"]
+	removeChainOwnerABI = arbowner.Methods["removeChainOwner"]
 }
 
 func GetTotalOfEthBalances() []byte {
@@ -65,7 +69,15 @@ func GetTotalOfEthBalances() []byte {
 }
 
 func SetChainParameterData(paramId *big.Int, val *big.Int) []byte {
-    return makeFuncData(setChainParameterABI, paramId, val)
+	return makeFuncData(setChainParameterABI, paramId, val)
+}
+
+func AddChainOwnerData(chainOwner common.Address) []byte {
+	return makeFuncData(addChainOwnerABI, chainOwner)
+}
+
+func RemoveChainOwnerData(chainOwner common.Address) []byte {
+	return makeFuncData(removeChainOwnerABI, chainOwner)
 }
 
 func StartArbOSUpgradeData() []byte {
