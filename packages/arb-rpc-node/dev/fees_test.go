@@ -19,7 +19,10 @@ package dev
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"io/ioutil"
 	"math/big"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -31,6 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -41,6 +45,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
+
+const UPGRADE bool = true
 
 func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, common.Address, func()) {
 	skipBelowVersion(t, 25)
@@ -76,13 +82,117 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	}
 
 	aggInit := message.DefaultAggConfig{Aggregator: common.NewAddressFromEth(aggAuth.From)}
+	var arbosInitFile string
+	if UPGRADE {
+		arbosDir, err := arbos.Dir()
+		test.FailIfError(t, err)
+		arbosInitFile = filepath.Join(arbosDir, "arbos_before.mexe")
+	} else {
+		arbosInitFile = *arbosfile
+	}
 	backend, _, srv, cancelDevNode := NewTestDevNode(
 		t,
-		*arbosfile,
+		arbosInitFile,
 		config,
 		common.NewAddressFromEth(auth.From),
 		[]message.ChainConfigOption{feeConfigInit, aggInit},
 	)
+
+	if UPGRADE {
+		arbosDir, err := arbos.Dir()
+		test.FailIfError(t, err)
+
+		upgradedMach, err := cmachine.New(filepath.Join(arbosDir, "arbos-upgrade.mexe"))
+		test.FailIfError(t, err)
+		targetHash := upgradedMach.CodePointHash()
+
+		deposit := message.EthDepositTx{
+			L2Message: message.NewSafeL2Message(message.ContractTransaction{
+				BasicTx: message.BasicTx{
+					MaxGas:      big.NewInt(1000000),
+					GasPriceBid: big.NewInt(0),
+					DestAddress: common.NewAddressFromEth(auth.From),
+					Payment:     big.NewInt(100),
+					Data:        nil,
+				},
+			}),
+		}
+		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+			t.Fatal(err)
+		}
+
+		client := web3.NewEthClient(srv, true)
+		arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+		test.FailIfError(t, err)
+
+		arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
+		test.FailIfError(t, err)
+
+		oldVersion, err := arbSys.ArbOSVersion(&bind.CallOpts{})
+		test.FailIfError(t, err)
+
+		t.Log("Old Version:", oldVersion)
+
+		_, _, simpleCon, err := arbostestcontracts.DeploySimple(auth, client)
+		test.FailIfError(t, err)
+
+		_, err = simpleCon.Exists(auth)
+		test.FailIfError(t, err)
+
+		auth.Value = big.NewInt(1)
+		_, err = simpleCon.RejectPayment(auth)
+		if err == nil {
+			t.Fatal("tx should have failed")
+		}
+		auth.Value = big.NewInt(0)
+
+		updateBytes, err := ioutil.ReadFile(filepath.Join(arbosDir, "upgrade.json"))
+		test.FailIfError(t, err)
+
+		upgrade := upgrade{}
+		err = json.Unmarshal(updateBytes, &upgrade)
+		test.FailIfError(t, err)
+		chunkSize := 100000
+		chunks := []string{"0x"}
+		for _, insn := range upgrade.Instructions {
+			if len(chunks[len(chunks)-1])+len(insn) > chunkSize {
+				chunks = append(chunks, "0x")
+			}
+			chunks[len(chunks)-1] += insn
+		}
+
+		auth.GasLimit = 10000000000
+		_, err = arbOwner.StartCodeUpload(auth)
+		test.FailIfError(t, err)
+
+		for i, upgradeChunk := range chunks {
+			t.Log("Upgrade chunk", i)
+			_, err = arbOwner.ContinueCodeUpload(auth, hexutil.MustDecode(upgradeChunk))
+			test.FailIfError(t, err)
+		}
+
+		codeHash, err := arbOwner.GetUploadedCodeHash(&bind.CallOpts{})
+		test.FailIfError(t, err)
+
+		if codeHash != targetHash {
+			t.Fatal("uploaded codehash was incorrect after 1st upgrade")
+		}
+
+		_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(auth, codeHash, common.Hash{})
+		test.FailIfError(t, err)
+		auth.GasLimit = 0
+
+		_, err = simpleCon.Exists(auth)
+		test.FailIfError(t, err)
+
+		newVersion, err := arbSys.ArbOSVersion(&bind.CallOpts{})
+		test.FailIfError(t, err)
+
+		t.Log("New Version:", newVersion)
+		//if newVersion.Cmp(oldVersion) <= 0 {
+		//	t.Error("didn't change to new version")
+		//}
+	}
 
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
