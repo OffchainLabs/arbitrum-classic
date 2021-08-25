@@ -2,7 +2,6 @@ import { ContractTransaction, ethers } from 'ethers'
 import { L2ERC20Gateway__factory } from './abi/factories/L2ERC20Gateway__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
-
 import { Outbox__factory } from './abi/factories/Outbox__factory'
 import { IOutbox__factory } from './abi/factories/IOutbox__factory'
 
@@ -37,27 +36,22 @@ export interface L2ToL1EventResult {
   data: string
 }
 
-export interface OutboundTransferInitiatedResult {
-  token: string
+export interface WithdrawalInitiated {
+  l1Token: string
   _from: string
   _to: string
-  _transferId: BigNumber
+  _l2ToL1Id: BigNumber
+  _exitNum: BigNumber
   _amount: BigNumber
-  bytes: string
-  txHash: string
 }
 
-export interface OutboundTransferInitiatedV1Result {
-  token: string
+export interface DepositInitiated {
+  l1Token: string
   _from: string
   _to: string
-  _transferId: BigNumber
-  __exitNum: BigNumber
-  _amount: BigNumber
-  _userData: string
-  txHash: string
+  _sequenceNumber: string
+  amount: BigNumber
 }
-
 export interface BuddyDeployEventResult {
   _sender: string
   _contract: string
@@ -121,36 +115,6 @@ export type ChainIdOrProvider = BigNumber | providers.Provider
  * Stateless helper methods; most wrapped / accessible (and documented) via {@link Bridge}
  */
 export class BridgeHelper {
-  static getOutBoundTransferInitiatedLogs = async (
-    provider: providers.Provider,
-    gatewayAddress: string,
-    tokenAddress?: string,
-    destinationAddress?: string
-  ) => {
-    const gatewayContract = TokenGateway__factory.connect(
-      gatewayAddress,
-      provider
-    )
-    const topics = [
-      tokenAddress ? utils.hexZeroPad(tokenAddress, 32) : null,
-      destinationAddress ? utils.hexZeroPad(destinationAddress, 32) : null,
-    ]
-    const logs = await BridgeHelper.getEventLogs(
-      'OutboundTransferInitiatedV1',
-      gatewayContract,
-      // @ts-ignore
-      topics
-    )
-
-    return logs.map(log => {
-      const data = {
-        ...gatewayContract.interface.parseLog(log).args,
-        txHash: log.transactionHash,
-      }
-      return data as unknown as OutboundTransferInitiatedV1Result
-    })
-  }
-
   static calculateL2TransactionHash = async (
     inboxSequenceNumber: BigNumber,
     chainIdOrL2Provider: ChainIdOrProvider
@@ -257,32 +221,78 @@ export class BridgeHelper {
   static getDepositTokenEventData = async (
     l1Transaction: providers.TransactionReceipt,
     l1GatewayAddress: string
-  ): Promise<Array<OutboundTransferInitiatedV1Result>> => {
+  ): Promise<Array<DepositInitiated>> => {
     const factory = new L1ERC20Gateway__factory()
     const contract = factory.attach(l1GatewayAddress)
     const iface = contract.interface
-    const event = iface.getEvent('OutboundTransferInitiatedV1')
+    const event = iface.getEvent('DepositInitiated')
     const eventTopic = iface.getEventTopic(event)
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
-      log =>
-        iface.parseLog(log).args as unknown as OutboundTransferInitiatedV1Result
+      log => iface.parseLog(log).args as unknown as DepositInitiated
     )
   }
 
-  static getOutboundTransferData = async (
+  /**
+   * All withdrawals from given token
+   */
+  static async getTokenWithdrawEventData(
+    l2Provider: ethers.providers.Provider,
     gatewayAddress: string,
-    provider: providers.Provider,
-    filter: ethers.providers.Filter = {}
-  ) => {
-    const contract = L1ERC20Gateway__factory.connect(gatewayAddress, provider)
-    const logs = await BridgeHelper.getEventLogs(
-      'OutboundTransferInitiatedV1',
-      contract,
-      [],
-      filter
+    l1TokenAddress: string,
+    destinationAddress?: string
+  ) {
+    const gatewayContract = TokenGateway__factory.connect(
+      gatewayAddress,
+      l2Provider
     )
-    return logs
+    const topics = [
+      l1TokenAddress ? utils.hexZeroPad(l1TokenAddress, 32) : null,
+      destinationAddress ? utils.hexZeroPad(destinationAddress, 32) : null,
+    ]
+    const logs = await BridgeHelper.getEventLogs(
+      'WithdrawalInitiated',
+      gatewayContract,
+      // @ts-ignore
+      topics
+    )
+
+    return logs.map(log => {
+      const data = {
+        ...gatewayContract.interface.parseLog(log).args,
+        txHash: log.transactionHash,
+      }
+      return data as unknown as WithdrawalInitiated
+    })
+  }
+
+  static async getGatewayWithdrawEventData(
+    l2Provider: ethers.providers.Provider,
+    gatewayAddress: string,
+    destinationAddress?: string
+  ) {
+    const gatewayContract = TokenGateway__factory.connect(
+      gatewayAddress,
+      l2Provider
+    )
+    const topics = [
+      null,
+      destinationAddress ? utils.hexZeroPad(destinationAddress, 32) : null,
+    ]
+    const logs = await BridgeHelper.getEventLogs(
+      'WithdrawalInitiated',
+      gatewayContract,
+      // @ts-ignore
+      topics
+    )
+
+    return logs.map(log => {
+      const data = {
+        ...gatewayContract.interface.parseLog(log).args,
+        txHash: log.transactionHash,
+      }
+      return data as unknown as WithdrawalInitiated
+    })
   }
 
   public static getEventLogs = (
