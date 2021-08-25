@@ -533,8 +533,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 	}
 
 	if kindInt.BigInt().Uint64() == 0 {
-		if tup.Len() != 6 {
-			return nil, errors.Errorf("tx result expected tuple of length 6, but recieved len %v: %v", tup.Len(), tup)
+		if tup.Len() != 6 && tup.Len() != 7 {
+			return nil, errors.Errorf("tx result expected tuple of length 6 or 7, but recieved len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored

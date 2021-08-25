@@ -21,11 +21,11 @@ package main
 import (
 	"github.com/rs/zerolog/log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgetestcontracts"
 )
 
 func main() {
-	if err := ethbridgecontracts.RunBindingGen(); err != nil {
-		log.Error().Err(err).Msg("error generating ethbridge bindings")
+	if err := ethbridgetestcontracts.RunBindingGen(); err != nil {
+		log.Error().Err(err).Msg("error generating ethbridge test bindings")
 	}
 }

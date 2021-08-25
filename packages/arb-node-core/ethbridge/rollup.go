@@ -24,8 +24,8 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"

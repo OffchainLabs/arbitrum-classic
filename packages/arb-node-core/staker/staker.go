@@ -30,6 +30,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
@@ -47,11 +48,14 @@ const (
 
 type Staker struct {
 	*Validator
-	activeChallenge *challenge.Challenger
-	strategy        Strategy
-	fromBlock       int64
-	baseCallOpts    bind.CallOpts
-	auth            *ethbridge.TransactAuth
+	activeChallenge     *challenge.Challenger
+	strategy            Strategy
+	fromBlock           int64
+	baseCallOpts        bind.CallOpts
+	auth                *ethbridge.TransactAuth
+	config              configuration.Validator
+	highGasBlocksBuffer *big.Int
+	lastActCalledBlock  *big.Int
 }
 
 func NewStaker(
@@ -64,17 +68,21 @@ func NewStaker(
 	strategy Strategy,
 	callOpts bind.CallOpts,
 	auth *ethbridge.TransactAuth,
+	config configuration.Validator,
 ) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress, callOpts)
 	if err != nil {
 		return nil, nil, err
 	}
 	return &Staker{
-		Validator:    val,
-		strategy:     strategy,
-		fromBlock:    fromBlock,
-		baseCallOpts: callOpts,
-		auth:         auth,
+		Validator:           val,
+		strategy:            strategy,
+		fromBlock:           fromBlock,
+		baseCallOpts:        callOpts,
+		auth:                auth,
+		config:              config,
+		highGasBlocksBuffer: big.NewInt(config.L1PostingStrategy.HighGasDelayBlocks),
+		lastActCalledBlock:  nil,
 	}, val.delayedBridge, nil
 }
 
@@ -114,7 +122,60 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 	return done
 }
 
+func (s *Staker) shouldAct(ctx context.Context) bool {
+	var gasPriceHigh = false
+	var gasPriceFloat float64
+	gasPrice, err := s.client.SuggestGasPrice(ctx)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error getting gas price")
+	} else {
+		gasPriceFloat = float64(gasPrice.Int64()) / 1e9
+		if gasPriceFloat >= s.config.L1PostingStrategy.HighGasThreshold {
+			gasPriceHigh = true
+		}
+	}
+	latestBlockInfo, err := s.client.BlockInfoByNumber(ctx, nil)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error getting latest block")
+		return true
+	}
+	latestBlockNum := latestBlockInfo.Number.ToInt()
+	if s.lastActCalledBlock == nil {
+		s.lastActCalledBlock = latestBlockNum
+	}
+	blocksSinceActCalled := new(big.Int).Sub(latestBlockNum, s.lastActCalledBlock)
+	s.lastActCalledBlock = latestBlockNum
+	if gasPriceHigh {
+		// We're eating into the high gas buffer to delay our tx
+		s.highGasBlocksBuffer.Sub(s.highGasBlocksBuffer, blocksSinceActCalled)
+	} else {
+		// We'll make a tx if necessary, so we can add to the buffer for future high gas
+		s.highGasBlocksBuffer.Add(s.highGasBlocksBuffer, blocksSinceActCalled)
+	}
+	// Clamp `s.highGasBlocksBuffer` to between 0 and HighGasDelayBlocks
+	if s.highGasBlocksBuffer.Sign() < 0 {
+		s.highGasBlocksBuffer.SetInt64(0)
+	} else if s.highGasBlocksBuffer.Cmp(big.NewInt(s.config.L1PostingStrategy.HighGasDelayBlocks)) > 0 {
+		s.highGasBlocksBuffer.SetInt64(s.config.L1PostingStrategy.HighGasDelayBlocks)
+	}
+	if gasPriceHigh && s.highGasBlocksBuffer.Sign() > 0 {
+		logger.
+			Info().
+			Float64("gasPrice", gasPriceFloat).
+			Float64("highGasPriceConfig", s.config.L1PostingStrategy.HighGasThreshold).
+			Str("highGasBuffer", s.highGasBlocksBuffer.String()).
+			Msg("not acting yet as gas price is high")
+		return false
+	} else {
+		return true
+	}
+}
+
 func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
+	if !s.shouldAct(ctx) {
+		// The fact that we're delaying acting is alreay logged in `shouldAct`
+		return nil, nil
+	}
 	s.builder.ClearTransactions()
 	rawInfo, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {

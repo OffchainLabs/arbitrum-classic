@@ -66,7 +66,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     /**
      * @notice Set the addresses of rollup logic facets called
      * @param newAdminFacet address of logic that owner of rollup calls
-     * @param newUserFacet ddress of logic that user of rollup calls
+     * @param newUserFacet address of logic that user of rollup calls
      */
     function setFacets(address newAdminFacet, address newUserFacet) external override {
         facets[0] = newAdminFacet;
