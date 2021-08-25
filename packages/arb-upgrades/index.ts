@@ -196,21 +196,31 @@ export const initUpgrades = (
 
     const { proxyAdminAddress } = tmpDeploymentsJsonData
 
-    const signers = await hre.ethers.getSigners()
-    if (!signers.length) {
-      throw new Error(
-        'No signer - make sure a key is properly set (check hardhat config)'
-      )
-    }
-    const signer = signers[0]
+    // const signers = await hre.ethers.getSigners()
+    // if (!signers.length) {
+    //   throw new Error(
+    //     'No signer - make sure a key is properly set (check hardhat config)'
+    //   )
+    // }
+    // const signer = signers[0]
 
     const ProxyAdmin__factory = await hre.ethers.getContractFactory(
       'ProxyAdmin'
     )
-    const proxyAdmin =
-      ProxyAdmin__factory.attach(proxyAdminAddress).connect(signer)
+    let proxyAdmin = ProxyAdmin__factory.attach(proxyAdminAddress).connect(
+      hre.ethers.provider
+    )
 
     const proxyAdminOwner = await proxyAdmin.owner()
+
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [proxyAdminOwner],
+    })
+
+    const signer = await hre.ethers.getSigner(proxyAdminOwner)
+    proxyAdmin = proxyAdmin.connect(signer)
+
     if (proxyAdminOwner.toLowerCase() !== signer.address.toLowerCase()) {
       throw new Error(
         `Signer address ${signer.address} != ProxyAdmin owner ${proxyAdminOwner}`
@@ -241,14 +251,18 @@ export const initUpgrades = (
       if (isBeacon(contractName)) {
         const UpgradeableBeacon = (
           await hre.ethers.getContractFactory('UpgradeableBeacon')
-        ).attach(deploymentData.proxyAddress)
+        )
+          .attach(deploymentData.proxyAddress)
+          .connect(signer)
         upgradeTx = await UpgradeableBeacon.upgradeTo(queuedUpdateData.address)
       } else {
-        upgradeTx = await proxyAdmin.upgradeAndCall(
-          deploymentData.proxyAddress,
-          queuedUpdateData.address,
-          POST_UPGRADE_INIT_SIG
-        )
+        upgradeTx = await proxyAdmin
+          .connect(signer)
+          .upgradeAndCall(
+            deploymentData.proxyAddress,
+            queuedUpdateData.address,
+            POST_UPGRADE_INIT_SIG
+          )
       }
       const rec = await upgradeTx.wait()
       console.log('Upgrade receipt:', rec)
