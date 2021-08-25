@@ -42,6 +42,7 @@ var FeesEnabledParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]b
 var ChainOwnerParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("ChainOwner")).Bytes())
 var NetworkFeeRecipientParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("NetworkFeeRecipient")).Bytes())
 var CongestionFeeRecipientParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("CongestionFeeRecipient")).Bytes())
+var DefaultAggregatorParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("DefaultAggregator")).Bytes())
 
 func init() {
 	arbowner, err := abi.JSON(strings.NewReader(arboscontracts.ArbOwnerABI))

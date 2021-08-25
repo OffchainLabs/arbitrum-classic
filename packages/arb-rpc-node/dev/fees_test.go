@@ -225,7 +225,7 @@ func TestFees(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		t.Log("tx", i)
-		tx, err := arbOwner.SetChainParameter(auth, arbos.ChainOwnerParamId, new(big.Int).SetBytes(auth.From[:]))
+		tx, err := arbOwner.SetChainParameter(auth, arbos.DefaultAggregatorParamId, big.NewInt(0))
 		test.FailIfError(t, err)
 		paid := checkFees(t, backend, tx)
 		totalPaid = totalPaid.Add(totalPaid, paid)

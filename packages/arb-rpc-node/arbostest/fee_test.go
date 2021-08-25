@@ -65,7 +65,7 @@ func addEnableFeesMessages(ib *InboxBuilder) {
 			BlockNum:  common.NewTimeBlocksInt(int64(len(ib.Messages))),
 			Timestamp: big.NewInt(0),
 		}
-		ib.AddMessage(message.NewSafeL2Message(msg), owner, big.NewInt(0), chainTime)
+		ib.AddMessage(message.NewSafeL2Message(msg), message.L1RemapAccount(owner), big.NewInt(0), chainTime)
 	}
 }
 
@@ -349,7 +349,7 @@ func TestArbOSFees(t *testing.T) {
 				Data:        tx.Data(),
 			}}
 			msg := message.NewSafeL2Message(l2msg)
-			feeWithContractTxIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)
+			feeWithContractTxIB.AddMessage(msg, message.L1RemapAccount(userAddress), big.NewInt(0), chainTime)
 			chainTime.BlockNum = common.NewTimeBlocksInt(int64(len(feeWithContractTxIB.Messages)))
 			contractTxData = append(contractTxData, countCalldataUnits(msg.Data))
 		}
