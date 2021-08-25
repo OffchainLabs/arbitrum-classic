@@ -291,6 +291,8 @@ export const initUpgrades = (
     const proxyAdmin = ProxyAdmin__factory.attach(
       deploymentsJsonData.proxyAdminAddress
     )
+    const proxyAdminOwner = await proxyAdmin.owner()
+
     for (const _contractName in deploymentsJsonData.contracts) {
       const contractName = _contractName as ContractNames
       const deploymentData = deploymentsJsonData.contracts[contractName]
@@ -374,10 +376,30 @@ export const initUpgrades = (
     await deployLogic(contractsNames)
   }
 
+  const transferAdmin = async (proxyAddress: string, newAdmin: string) => {
+    const { path: deploymentsPath, data } = await getDeployments()
+    const signers = await hre.ethers.getSigners()
+    if (!signers.length) {
+      throw new Error(
+        'No signer - make sure a key is properly set (check hardhat config)'
+      )
+    }
+    const signer = signers[0]
+
+    const TransparentUpgradeableProxy__factory =
+      await hre.ethers.getContractFactory('TransparentUpgradeableProxy')
+    const TransparentUpgradeableProxy =
+      TransparentUpgradeableProxy__factory.attach(proxyAddress).connect(signer)
+
+    const res = await TransparentUpgradeableProxy.changeAdmin(newAdmin)
+    const rec = res.wait()
+  }
+
   return {
     updateImplementations,
     verifyCurrentImplementations,
     deployLogic,
     deployLogicAll,
+    transferAdmin,
   }
 }

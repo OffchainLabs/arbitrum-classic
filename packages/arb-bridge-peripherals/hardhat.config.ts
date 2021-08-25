@@ -30,4 +30,13 @@ task('verify-deployments', 'verifies implementations').setAction(
   }
 )
 
+task('transfer-owner', 'deploy one logic')
+  .addParam('proxyAddress', 'proxy address')
+  .addParam('newAdmin', 'address of new admin')
+  .setAction(async (args, hre) => {
+    const { contract } = args
+    const { transferAdmin } = initUpgrades(hre, __dirname)
+    await transferAdmin(args.proxyAddress, args.newAdmin)
+  })
+
 module.exports = config
