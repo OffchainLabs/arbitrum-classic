@@ -16,7 +16,8 @@
 
 export { Bridge } from './lib/bridge'
 export {
-  OutboundTransferInitiatedResult,
+  DepositInitiated,
+  WithdrawalInitiated,
   L2ToL1EventResult,
   OutgoingMessageState,
   BridgeHelper,

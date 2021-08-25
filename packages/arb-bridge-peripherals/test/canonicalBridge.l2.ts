@@ -523,4 +523,25 @@ describe('Bridge peripherals layer 2', () => {
     const newBalance = await erc20.balanceOf(dest)
     assert.equal(newBalance.toString(), '0', 'Tokens not minted correctly')
   })
+
+  it('should map L1 to L2 addresses correctly', async function () {
+    const TestMessenger = await ethers.getContractFactory('AddressMappingTest')
+    const testMessenger = await TestMessenger.deploy()
+
+    const testCases = [
+      {
+        input: '0x1111000000000000000000000000000000001110',
+        expectedOutput: '0xffffffffffffffffffffffffffffffffffffffff',
+      },
+      {
+        input: '0x1111000000000000000000000000081759a885c4',
+        expectedOutput: '0x0000000000000000000000000000081759a874b3',
+      },
+    ]
+
+    for (const { input, expectedOutput } of testCases) {
+      const res = await testMessenger.getL1AddressTest(input)
+      expect(res.toLowerCase()).to.equal(expectedOutput.toLowerCase())
+    }
+  })
 })

@@ -17,7 +17,7 @@
 /* eslint-env node, mocha */
 
 import { ethers } from 'hardhat'
-import { BigNumber } from 'ethers'
+import { BigNumber, BigNumberish } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { BytesLike } from '@ethersproject/bytes'
@@ -30,21 +30,26 @@ import * as fs from 'fs'
 
 const { utils } = ethers
 
-interface ExecutionCut {
-  GasUsed: number
-  TotalMessagesRead: BytesLike
-  MachineState: BytesLike
+interface ExecutionState {
+  MachineHash: BytesLike
+  InboxAcc: BytesLike
+  TotalMessagesRead: BigNumberish
+  TotalGasConsumed: BigNumberish
+  TotalSendCount: BigNumberish
+  TotalLogCount: BigNumberish
   SendAcc: BytesLike
-  SendCount: BytesLike
   LogAcc: BytesLike
-  LogCount: BytesLike
+}
+
+interface Assertion {
+  Before: ExecutionState
+  After: ExecutionState
 }
 
 interface Proof {
-  BeforeCut: ExecutionCut
-  AfterCut: ExecutionCut
-  Proof: string
-  BufferProof: string
+  Assertion: Assertion
+  Proof: BytesLike
+  BufferProof: BytesLike
 }
 
 let ospTester: OneStepProofTester
@@ -62,7 +67,7 @@ function getProver(op: number) {
   }
 }
 
-describe('OneStepProof', function () {
+describe.only('OneStepProof', function () {
   before(async () => {
     const OneStepProofTester = await ethers.getContractFactory(
       'OneStepProofTester'
@@ -141,8 +146,8 @@ describe('OneStepProof', function () {
               executors[prover].address,
               sequencerInbox.address,
               bridge.address,
-              proof.BeforeCut.TotalMessagesRead,
-              [proof.BeforeCut.SendAcc, proof.BeforeCut.LogAcc],
+              proof.Assertion.Before.TotalMessagesRead,
+              [proof.Assertion.Before.SendAcc, proof.Assertion.Before.LogAcc],
               proof.Proof,
               proof.BufferProof
             )
@@ -172,7 +177,7 @@ describe('OneStepProof', function () {
             receipt.logs[receipt.logs.length - 1]
           )
           expect(ev.name, message).to.equal('OneStepProofResult')
-          const parsedEv = (ev as any) as {
+          const parsedEv = ev as any as {
             args: {
               gas: BigNumber
               totalMessagesRead: BigNumber
@@ -181,22 +186,24 @@ describe('OneStepProof', function () {
           }
           // console.log("opcode", opcode, fields)
           expect(parsedEv.args.fields[0], message).to.equal(
-            utils.hexlify(proof.BeforeCut.MachineState)
+            utils.hexlify(proof.Assertion.Before.MachineHash)
           )
           expect(parsedEv.args.fields[1], message).to.equal(
-            utils.hexlify(proof.AfterCut.MachineState)
+            utils.hexlify(proof.Assertion.After.MachineHash)
           )
           expect(parsedEv.args.fields[2], message).to.equal(
-            utils.hexlify(proof.AfterCut.SendAcc)
+            utils.hexlify(proof.Assertion.After.SendAcc)
           )
           expect(parsedEv.args.fields[3], message).to.equal(
-            utils.hexlify(proof.AfterCut.LogAcc)
+            utils.hexlify(proof.Assertion.After.LogAcc)
           )
           expect(parsedEv.args.totalMessagesRead, message).to.equal(
-            BigNumber.from(proof.AfterCut.TotalMessagesRead)
+            BigNumber.from(proof.Assertion.After.TotalMessagesRead)
           )
           expect(parsedEv.args.gas, message).to.equal(
-            proof.AfterCut.GasUsed - proof.BeforeCut.GasUsed
+            BigNumber.from(proof.Assertion.After.TotalGasConsumed).sub(
+              proof.Assertion.Before.TotalGasConsumed
+            )
           )
         }
       })

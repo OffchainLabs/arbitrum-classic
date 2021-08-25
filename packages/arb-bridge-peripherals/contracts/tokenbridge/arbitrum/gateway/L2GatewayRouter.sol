@@ -20,12 +20,22 @@ pragma solidity ^0.6.11;
 
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../ethereum/gateway/L1GatewayRouter.sol";
+import "../L2ArbitrumMessenger.sol";
 
 /**
  * @title Handles withdrawals from Ethereum into Arbitrum. Tokens are routered to their appropriate L2 gateway (Router itself also conforms to the Gateway interface).
  * @notice Router also serves as an L2-L1 token address oracle.
  */
-contract L2GatewayRouter is GatewayRouter {
+contract L2GatewayRouter is GatewayRouter, L2ArbitrumMessenger {
+    modifier onlyCounterpartGateway() override {
+        require(
+            msg.sender == counterpartGateway ||
+                L2ArbitrumMessenger.getL1Address(msg.sender) == counterpartGateway,
+            "ONLY_COUNTERPART_GATEWAY"
+        );
+        _;
+    }
+
     function initialize(address _counterpartGateway, address _defaultGateway) public {
         GatewayRouter._initialize(_counterpartGateway, address(0), _defaultGateway);
     }

@@ -38,6 +38,34 @@ type Conf struct {
 	String    string `koanf:"string"`
 }
 
+type Core struct {
+	Cache                  CoreCache     `koanf:"cache"`
+	CheckpointLoadGasCost  int           `koanf:"checkpoint-load-gas-cost"`
+	Debug                  bool          `koanf:"debug"`
+	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
+	MessageProcessCount    int           `koanf:"message-process-count"`
+	SaveRocksdbInterval    time.Duration `koanf:"save-rocksdb-interval"`
+	SaveRocksdbPath        string        `koanf:"save-rocksdb-path"`
+}
+
+type CoreCache struct {
+	LRUSize     int           `koanf:"lru-size"`
+	TimedExpire time.Duration `koanf:"timed-expire"`
+}
+
+// DefaultCoreSettings is useful in unit tests
+func DefaultCoreSettings() *Core {
+	return &Core{
+		Cache: CoreCache{
+			LRUSize:     1000,
+			TimedExpire: 20 * time.Minute,
+		},
+		CheckpointLoadGasCost:  1_000_000,
+		GasCheckpointFrequency: 1_000_000,
+		MessageProcessCount:    10,
+	}
+}
+
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
 	URLs    []string      `koanf:"url"`
@@ -96,12 +124,18 @@ type S3 struct {
 	SecretKey string `koanf:"secret-key"`
 }
 
+type L1PostingStrategy struct {
+	HighGasThreshold   float64 `koanf:"high-gas-threshold"`
+	HighGasDelayBlocks int64   `koanf:"high-gas-delay-blocks"`
+}
+
 type Sequencer struct {
-	CreateBatchBlockInterval          int64   `koanf:"create-batch-block-interval"`
-	ContinueBatchPostingBlockInterval int64   `koanf:"continue-batch-posting-block-interval"`
-	DelayedMessagesTargetDelay        int64   `koanf:"delayed-messages-target-delay"`
-	ReorgOutHugeMessages              bool    `koanf:"reorg-out-huge-messages"`
-	Lockout                           Lockout `koanf:"lockout"`
+	CreateBatchBlockInterval          int64             `koanf:"create-batch-block-interval"`
+	ContinueBatchPostingBlockInterval int64             `koanf:"continue-batch-posting-block-interval"`
+	DelayedMessagesTargetDelay        int64             `koanf:"delayed-messages-target-delay"`
+	ReorgOutHugeMessages              bool              `koanf:"reorg-out-huge-messages"`
+	Lockout                           Lockout           `koanf:"lockout"`
+	L1PostingStrategy                 L1PostingStrategy `koanf:"l1-posting-strategy"`
 }
 
 type WS struct {
@@ -113,16 +147,25 @@ type WS struct {
 type Forwarder struct {
 	Target    string `koanf:"target"`
 	Submitter string `koanf:"submitter-address"`
+	RpcMode   string `koanf:"rpc-mode"`
 }
 
 type Node struct {
 	Aggregator Aggregator `koanf:"aggregator"`
+	Cache      NodeCache  `koanf:"cache"`
 	ChainID    uint64     `koanf:"chain-id"`
 	Forwarder  Forwarder  `koanf:"forwarder"`
 	RPC        RPC        `koanf:"rpc"`
 	Sequencer  Sequencer  `koanf:"sequencer"`
 	Type       string     `koanf:"type"`
 	WS         WS         `koanf:"ws"`
+}
+
+type NodeCache struct {
+	AllowSlowLookup  bool          `koanf:"allow-slow-lookup"`
+	LRUSize          int           `koanf:"lru-size"`
+	TimedInitialSize int           `koanf:"timed-initial-size"`
+	TimedExpire      time.Duration `koanf:"timed-expire"`
 }
 
 type Persistent struct {
@@ -140,9 +183,10 @@ type Rollup struct {
 }
 
 type Validator struct {
-	Strategy             string `koanf:"strategy"`
-	UtilsAddress         string `koanf:"utils-address"`
-	WalletFactoryAddress string `koanf:"wallet-factory-address"`
+	Strategy             string            `koanf:"strategy"`
+	UtilsAddress         string            `koanf:"utils-address"`
+	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
+	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
 }
 
 type Wallet struct {
@@ -154,9 +198,15 @@ type Log struct {
 	Core string `koanf:"core"`
 }
 
+type Metrics struct {
+	Addr string `koanf:"addr"`
+	Port string `koanf:"port"`
+}
+
 type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               Conf        `koanf:"conf"`
+	Core               Core        `koanf:"core"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
@@ -171,6 +221,10 @@ type Config struct {
 	Validator     Validator  `koanf:"validator"`
 	WaitToCatchUp bool       `koanf:"wait-to-catch-up"`
 	Wallet        Wallet     `koanf:"wallet"`
+
+	// The following field needs to be top level for compatibility with the underlying go-ethereum lib
+	Metrics       bool    `koanf:"metrics"`
+	MetricsServer Metrics `koanf:"metrics-server"`
 }
 
 func (c *Config) GetNodeDatabasePath() string {
@@ -181,16 +235,23 @@ func (c *Config) GetValidatorDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "validator_db")
 }
 
+func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
+	f.Float64(prefix+"l1-posting-strategy.high-gas-threshold", 150, "gwei threshold at which to consider gas price high and delay batch posting")
+	f.Int64(prefix+"l1-posting-strategy.high-gas-delay-blocks", 270, "wait up to this many more blocks when gas costs are high")
+}
+
 func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
+	AddL1PostingStrategyOptions(f, "node.sequencer.")
 
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
+	f.String("node.forwarder.rpc-mode", "full", "RPC mode: either full, non-mutating (no eth_sendRawTransaction), or forwarding-only (only requests forwarded upstream are permitted)")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
@@ -211,6 +272,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
+	AddL1PostingStrategyOptions(f, "validator.")
 
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "strategy for validator to use")
@@ -221,6 +283,13 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
+
+	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
+	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
+
+	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
+	f.Int("node.cache.lru-size", 20, "number of recently used L2 blocks to hold in lru memory cache")
+	//f.Duration("node.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in timed memory cache")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 
@@ -354,6 +423,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
 	}
 
+	// Make rocksdb backup directory relative to persistent storage directory if not already absolute
+	if !filepath.IsAbs(out.Core.SaveRocksdbPath) {
+		out.Core.SaveRocksdbPath = path.Join(out.Persistent.Chain, out.Core.SaveRocksdbPath)
+	}
+
 	// Make machine relative to storage directory if not already absolute
 	out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
 
@@ -428,11 +502,14 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
 	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
 	f.Bool("healthcheck.l1-node", false, "enable checking the health of the L1 node")
-	f.Bool("healthcheck.metrics", false, "enable prometheus endpoint")
+	f.Bool("healthcheck.metrics", false, "serve healthcheck statistics over metrics interface")
 	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
 	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
 
+	f.Bool("metrics", false, "enable metrics")
+	f.String("metrics-server.addr", "127.0.0.1", "metrics server address")
+	f.String("metrics-server.port", "6070", "metrics server address")
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
 

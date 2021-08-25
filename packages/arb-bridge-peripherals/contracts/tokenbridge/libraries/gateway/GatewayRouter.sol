@@ -18,6 +18,7 @@
 
 pragma solidity ^0.6.11;
 
+import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
 import "./GatewayMessageHandler.sol";
@@ -43,6 +44,14 @@ abstract contract GatewayRouter is TokenGateway {
 
     event GatewaySet(address indexed l1Token, address indexed gateway);
     event DefaultGatewayUpdated(address newDefaultGateway);
+
+    function postUpgradeInit() external {
+        // it is assumed the L2 Arbitrum Gateway contract is behind a Proxy controlled by a proxy admin
+        // this function can only be called by the proxy admin contract
+        address proxyAdmin = ProxyUtil.getProxyAdmin();
+        require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
+        // this has no other logic since the current upgrade doesn't require this logic
+    }
 
     function _initialize(
         address _counterpartGateway,
