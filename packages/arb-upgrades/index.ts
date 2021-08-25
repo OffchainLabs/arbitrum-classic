@@ -1,5 +1,5 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { writeFileSync, readFileSync } from 'fs'
+import { writeFileSync, readFileSync, unlinkSync } from 'fs'
 import childProcess from 'child_process'
 // @ts-ignore (module doesn't have types declared)
 import prompt from 'prompt-promise'
@@ -79,6 +79,20 @@ export const initUpgrades = (
         )
       }
       throw err
+    }
+  }
+
+  const createTempDeploymentsFile = async (): Promise<{
+    path: string
+    data: CurrentDeployments
+  }> => {
+    const { data: currentDeployments } = await getDeployments()
+    const network = await hre.ethers.provider.getNetwork()
+    const path = `${rootDir}/deployments/${network.chainId}_tmp_deployment.json`
+    writeFileSync(path, JSON.stringify(currentDeployments))
+    return {
+      path,
+      data: currentDeployments,
     }
   }
 
@@ -175,10 +189,11 @@ export const initUpgrades = (
 
     const { path: queuedUpdatesPath, data: queuedUpdatesData } =
       await getQueuedUpdates()
-    const { path: deploymentsPath, data: deploymentsJsonData } =
-      await getDeployments()
+    const { path: deploymentsPath } = await getDeployments()
+    const { path: tmpDeploymentsPath, data: tmpDeploymentsJsonData } =
+      await createTempDeploymentsFile()
 
-    const { proxyAdminAddress } = deploymentsJsonData
+    const { proxyAdminAddress } = tmpDeploymentsJsonData
 
     const signers = await hre.ethers.getSigners()
     if (!signers.length) {
@@ -212,7 +227,7 @@ export const initUpgrades = (
 
     for (const contractName of contractsToUpdate) {
       const queuedUpdateData = queuedUpdatesData[contractName] as QueuedUpdate
-      const deploymentData = deploymentsJsonData.contracts[
+      const deploymentData = tmpDeploymentsJsonData.contracts[
         contractName
       ] as CurrentDeployment
       if (!deploymentData) {
@@ -245,15 +260,20 @@ export const initUpgrades = (
         implArbitrumCommitHash: queuedUpdateData.arbitrumCommitHash,
         implBuildInfo: buildInfo,
       }
-      console.log('Setting new deployment data:', newDeploymentData)
+      console.log('Setting new tmp: deployment data:', newDeploymentData)
 
-      deploymentsJsonData.contracts[contractName] = newDeploymentData
-      writeFileSync(deploymentsPath, JSON.stringify(deploymentsJsonData))
+      tmpDeploymentsJsonData.contracts[contractName] = newDeploymentData
+      writeFileSync(tmpDeploymentsPath, JSON.stringify(tmpDeploymentsJsonData))
 
       delete queuedUpdatesData[contractName]
       writeFileSync(queuedUpdatesPath, JSON.stringify(queuedUpdatesData))
       console.log('')
     }
+    console.log('Finished all deployments: setting data to current deployments')
+    writeFileSync(deploymentsPath, JSON.stringify(tmpDeploymentsJsonData))
+    // removing tmp file
+    unlinkSync(tmpDeploymentsPath)
+
     return await verifyCurrentImplementations()
   }
 
