@@ -11,7 +11,6 @@ export interface CurrentDeployment {
   implDeploymentTxn: string
   implArbitrumCommitHash: string
   implBuildInfo: string
-  isBeacon?: boolean
 }
 
 export type QueuedUpdates = {
