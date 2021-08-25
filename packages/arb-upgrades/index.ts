@@ -14,12 +14,14 @@ import {
   getLayer,
 } from './types'
 
-const adminSlot =
+const ADMIN_SLOT =
   '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103'
-const implementationSlot =
+const IMPLEMENTATION_SLOT =
   '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
-const beaconSlot =
+const BEACON_SLOT =
   '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50'
+
+const POST_UPGRADE_INIT_SIG = '0x95fcea78'
 
 const currentCommit = childProcess
   .execSync('git rev-parse HEAD')
@@ -243,9 +245,10 @@ export const initUpgrades = (
         ).attach(deploymentData.proxyAddress)
         upgradeTx = await UpgradeableBeacon.upgradeTo(queuedUpdateData.address)
       } else {
-        upgradeTx = await proxyAdmin.upgrade(
+        upgradeTx = await proxyAdmin.upgradeAndCall(
           deploymentData.proxyAddress,
-          queuedUpdateData.address
+          queuedUpdateData.address,
+          POST_UPGRADE_INIT_SIG
         )
       }
       const rec = await upgradeTx.wait()
@@ -307,7 +310,7 @@ export const initUpgrades = (
       // check proxy admin
       let admin = await hre.ethers.provider.getStorageAt(
         deploymentData.proxyAddress,
-        adminSlot
+        ADMIN_SLOT
       )
       if (admin.length > 42) {
         admin = '0x' + admin.substr(admin.length - 40, 40)
@@ -326,7 +329,7 @@ export const initUpgrades = (
       //  check implementation
       let implementation = await hre.ethers.provider.getStorageAt(
         deploymentData.proxyAddress,
-        implementationSlot
+        IMPLEMENTATION_SLOT
       )
       if (implementation.length > 42) {
         implementation =
