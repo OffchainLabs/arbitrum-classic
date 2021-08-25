@@ -54,7 +54,7 @@ func GetKeystore(
 	var auth *bind.TransactOpts
 
 	if len(walletConfig.Fireblocks.SSLKey) != 0 {
-		fromAddress := ethcommon.HexToAddress(config.Wallet.Fireblocks.SourceAddress)
+		fromAddress := ethcommon.HexToAddress(walletConfig.Fireblocks.SourceAddress)
 		logger.Info().Hex("address", fromAddress.Bytes()).Msg("fireblocks enabled")
 		auth = &bind.TransactOpts{
 			From: fromAddress,
@@ -86,6 +86,9 @@ func GetKeystore(
 				return crypto.Sign(data, privateKey)
 			}
 		} else if signerRequired {
+			if len(walletConfig.Fireblocks.FeedSigner.Pathname) == 0 {
+				return nil, nil, errors.New("missing feed signer private key")
+			}
 			ks, account, err := openKeystore("feed signer", walletConfig.Fireblocks.FeedSigner.Pathname, walletConfig.Fireblocks.FeedSigner.Password)
 			if err != nil {
 				return nil, nil, err

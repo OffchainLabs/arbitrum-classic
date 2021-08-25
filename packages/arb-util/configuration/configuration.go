@@ -343,6 +343,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("wallet.local.password", "", "password for wallet")
 	f.String("wallet.local.private-key", "", "wallet private key string")
 
+	f.String("wallet.fireblocks.feed-signer.pathname", "feed-signer-wallet", "path to store feed-signer wallet in")
+	f.String("wallet.fireblocks.feed-signer.password", "", "password for feed-signer wallet")
+	f.String("wallet.fireblocks.feed-signer.private-key", "", "wallet feed-signer private key string")
+
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
 	AddHealthcheckOptions(f)
@@ -377,13 +381,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		}
 	}
 	logger.Info().Str("l1url", l1URL).Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
-
-	err = k.Load(confmap.Provider(map[string]interface{}{
-		"wallet.local.pathname": defaultWalletPathname,
-	}, "."), nil)
-	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error setting default wallet pathname")
-	}
 
 	rollupAddress := k.String("rollup.address")
 	if len(rollupAddress) != 0 {
@@ -474,11 +471,17 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	}
 
 	// Make machine relative to storage directory if not already absolute
-	out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
+	if !filepath.IsAbs(out.Rollup.Machine.Filename) {
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
+	}
 
 	// Make wallet directories relative to storage directory if not already absolute
-	out.Wallet.Local.Pathname = path.Join(out.Persistent.GlobalConfig, out.Wallet.Local.Pathname)
-	out.Wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.GlobalConfig, out.Wallet.Fireblocks.FeedSigner.Pathname)
+	if !filepath.IsAbs(wallet.Local.Pathname) {
+		wallet.Local.Pathname = path.Join(out.Persistent.GlobalConfig, wallet.Local.Pathname)
+	}
+	if !filepath.IsAbs(wallet.Fireblocks.FeedSigner.Pathname) {
+		wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.GlobalConfig, wallet.Fireblocks.FeedSigner.Pathname)
+	}
 
 	_, err = os.Stat(out.Rollup.Machine.Filename)
 	if os.IsNotExist(err) && len(out.Rollup.Machine.URL) != 0 {

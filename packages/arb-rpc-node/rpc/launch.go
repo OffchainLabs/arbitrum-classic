@@ -89,7 +89,7 @@ func SetupBatcher(
 	case StatelessBatcherMode:
 		var auth *ethbridge.TransactAuth
 		var err error
-		if len(config.Wallet.Fireblocks.SSLKey) > 0 {
+		if len(walletConfig.Fireblocks.SSLKey) > 0 {
 			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
 		} else {
 			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
@@ -105,7 +105,7 @@ func SetupBatcher(
 	case StatefulBatcherMode:
 		var auth *ethbridge.TransactAuth
 		var err error
-		if len(config.Wallet.Fireblocks.SSLKey) > 0 {
+		if len(walletConfig.Fireblocks.SSLKey) > 0 {
 			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
 		} else {
 			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)

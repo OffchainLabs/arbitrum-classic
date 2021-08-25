@@ -126,12 +126,17 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 	if sequencer != auth.From {
+		logger.
+			Error().
+			Hex("sequencer", sequencer.Bytes()).
+			Hex("current-from", auth.From.Bytes()).
+			Msg("Transaction auth isn't for sequencer")
 		return nil, errors.New("Transaction auth isn't for sequencer")
 	}
 
 	var transactAuth *ethbridge.TransactAuth
 	var fb *fireblocks.Fireblocks
-	if len(config.Wallet.Fireblocks.SSLKey) > 0 {
+	if len(walletConfig.Fireblocks.SSLKey) > 0 {
 		transactAuth, fb, err = ethbridge.NewFireblocksTransactAuth(ctx, client, auth, walletConfig)
 	} else {
 		transactAuth, err = ethbridge.NewTransactAuth(ctx, client, auth)
