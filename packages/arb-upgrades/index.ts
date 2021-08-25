@@ -1,6 +1,9 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
 import { writeFileSync, readFileSync } from 'fs'
 import childProcess from 'child_process'
+// @ts-ignore (module doesn't have types declared)
+import prompt from 'prompt-promise'
+
 import {
   QueuedUpdates,
   CurrentDeployments,
@@ -119,6 +122,18 @@ export const initUpgrades = (
     const { path, data: queuedUpdatesData } = await getQueuedUpdates()
 
     for (const contractName of contractNames) {
+      if (queuedUpdatesData[contractName]) {
+        console.log(
+          `Update already queued up for ${contractName}; are you sure you want to continue?`
+        )
+        console.log(`('Yes') to continue:`)
+        const res = await prompt('')
+        if (res.trim() !== 'Yes') {
+          console.log('Skipping...')
+          continue
+        }
+      }
+
       console.log('Deploying new logic for ', contractName)
 
       const contractFactory = (
@@ -237,8 +252,6 @@ export const initUpgrades = (
   }
 
   const verifyCurrentImplementations = async () => {
-    console.log('Verifying implementations')
-
     const { data: deploymentsJsonData } = await getDeployments()
     let success = true
     for (const _contractName in deploymentsJsonData.contracts) {
