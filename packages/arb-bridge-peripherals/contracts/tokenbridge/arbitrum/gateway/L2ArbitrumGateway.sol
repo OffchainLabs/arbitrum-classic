@@ -52,6 +52,23 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount
     );
 
+    /// @notice Utility function that converts the msg.sender viewed in the L2 to the
+    /// address in the L1 that submitted a tx to the inbox
+    /// @param sender L2 address as viewed in msg.sender
+    /// @return l1Address the address in the L1 that triggered the tx to L2
+    function getL1Address(address sender) internal pure returns (address l1Address) {
+        uint160 offset = uint160(0x1111000000000000000000000000000000001111);
+        l1Address = address(uint160(sender) - offset);
+    }
+
+    modifier onlyCounterpartGateway() override {
+        require(
+            msg.sender == counterpartGateway || getL1Address(msg.sender) == counterpartGateway,
+            "ONLY_COUNTERPART_GATEWAY"
+        );
+        _;
+    }
+
     function _initialize(address _l1Counterpart, address _router) internal virtual override {
         TokenGateway._initialize(_l1Counterpart, _router);
         // L1 gateway must have a router
