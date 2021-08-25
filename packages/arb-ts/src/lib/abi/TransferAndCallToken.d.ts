@@ -12,7 +12,6 @@ import {
   BaseContract,
   ContractTransaction,
   Overrides,
-  PayableOverrides,
   CallOverrides,
 } from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
@@ -20,38 +19,22 @@ import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
-interface AeWETHInterface extends ethers.utils.Interface {
+interface TransferAndCallTokenInterface extends ethers.utils.Interface {
   functions: {
-    'DOMAIN_SEPARATOR()': FunctionFragment
     'allowance(address,address)': FunctionFragment
     'approve(address,uint256)': FunctionFragment
     'balanceOf(address)': FunctionFragment
-    'bridgeBurn(address,uint256)': FunctionFragment
-    'bridgeMint(address,uint256)': FunctionFragment
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
-    'deposit()': FunctionFragment
-    'depositTo(address)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
-    'initialize(string,string,uint8,address,address)': FunctionFragment
-    'l1Address()': FunctionFragment
-    'l2Gateway()': FunctionFragment
     'name()': FunctionFragment
-    'nonces(address)': FunctionFragment
-    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
     'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
     'transfer(address,uint256)': FunctionFragment
     'transferAndCall(address,uint256,bytes)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
-    'withdraw(uint256)': FunctionFragment
-    'withdrawTo(address,uint256)': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'DOMAIN_SEPARATOR',
-    values?: undefined
-  ): string
   encodeFunctionData(
     functionFragment: 'allowance',
     values: [string, string]
@@ -61,45 +44,16 @@ interface AeWETHInterface extends ethers.utils.Interface {
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
-  encodeFunctionData(
-    functionFragment: 'bridgeBurn',
-    values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'bridgeMint',
-    values: [string, BigNumberish]
-  ): string
   encodeFunctionData(functionFragment: 'decimals', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'decreaseAllowance',
     values: [string, BigNumberish]
   ): string
-  encodeFunctionData(functionFragment: 'deposit', values?: undefined): string
-  encodeFunctionData(functionFragment: 'depositTo', values: [string]): string
   encodeFunctionData(
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
   ): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish, string, string]
-  ): string
-  encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
-  encodeFunctionData(functionFragment: 'l2Gateway', values?: undefined): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
-  encodeFunctionData(functionFragment: 'nonces', values: [string]): string
-  encodeFunctionData(
-    functionFragment: 'permit',
-    values: [
-      string,
-      string,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BytesLike,
-      BytesLike
-    ]
-  ): string
   encodeFunctionData(functionFragment: 'symbol', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'totalSupply',
@@ -117,41 +71,20 @@ interface AeWETHInterface extends ethers.utils.Interface {
     functionFragment: 'transferFrom',
     values: [string, string, BigNumberish]
   ): string
-  encodeFunctionData(
-    functionFragment: 'withdraw',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'withdrawTo',
-    values: [string, BigNumberish]
-  ): string
 
-  decodeFunctionResult(
-    functionFragment: 'DOMAIN_SEPARATOR',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'allowance', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'bridgeBurn', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'decreaseAllowance',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'deposit', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'depositTo', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'l2Gateway', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'permit', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'totalSupply', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'transfer', data: BytesLike): Result
@@ -163,8 +96,6 @@ interface AeWETHInterface extends ethers.utils.Interface {
     functionFragment: 'transferFrom',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'withdrawTo', data: BytesLike): Result
 
   events: {
     'Approval(address,address,uint256)': EventFragment
@@ -175,7 +106,7 @@ interface AeWETHInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'Transfer'): EventFragment
 }
 
-export class AeWETH extends BaseContract {
+export class TransferAndCallToken extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -216,11 +147,9 @@ export class AeWETH extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
-  interface: AeWETHInterface
+  interface: TransferAndCallTokenInterface
 
   functions: {
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<[string]>
-
     allowance(
       owner: string,
       spender: string,
@@ -235,18 +164,6 @@ export class AeWETH extends BaseContract {
 
     balanceOf(account: string, overrides?: CallOverrides): Promise<[BigNumber]>
 
-    bridgeBurn(
-      account: string,
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    bridgeMint(
-      account: string,
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
     decimals(overrides?: CallOverrides): Promise<[number]>
 
     decreaseAllowance(
@@ -255,48 +172,13 @@ export class AeWETH extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    deposit(
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    depositTo(
-      account: string,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
     increaseAllowance(
       spender: string,
       addedValue: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    initialize(
-      name_: string,
-      symbol_: string,
-      decimals_: BigNumberish,
-      l2Gateway_: string,
-      l1Address_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    l1Address(overrides?: CallOverrides): Promise<[string]>
-
-    l2Gateway(overrides?: CallOverrides): Promise<[string]>
-
     name(overrides?: CallOverrides): Promise<[string]>
-
-    nonces(owner: string, overrides?: CallOverrides): Promise<[BigNumber]>
-
-    permit(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
 
     symbol(overrides?: CallOverrides): Promise<[string]>
 
@@ -321,20 +203,7 @@ export class AeWETH extends BaseContract {
       amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
-
-    withdraw(
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    withdrawTo(
-      account: string,
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
   }
-
-  DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<string>
 
   allowance(
     owner: string,
@@ -350,18 +219,6 @@ export class AeWETH extends BaseContract {
 
   balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
 
-  bridgeBurn(
-    account: string,
-    amount: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  bridgeMint(
-    account: string,
-    amount: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
   decimals(overrides?: CallOverrides): Promise<number>
 
   decreaseAllowance(
@@ -370,48 +227,13 @@ export class AeWETH extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  deposit(
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  depositTo(
-    account: string,
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
   increaseAllowance(
     spender: string,
     addedValue: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  initialize(
-    name_: string,
-    symbol_: string,
-    decimals_: BigNumberish,
-    l2Gateway_: string,
-    l1Address_: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  l1Address(overrides?: CallOverrides): Promise<string>
-
-  l2Gateway(overrides?: CallOverrides): Promise<string>
-
   name(overrides?: CallOverrides): Promise<string>
-
-  nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>
-
-  permit(
-    owner: string,
-    spender: string,
-    value: BigNumberish,
-    deadline: BigNumberish,
-    v: BigNumberish,
-    r: BytesLike,
-    s: BytesLike,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
 
   symbol(overrides?: CallOverrides): Promise<string>
 
@@ -437,20 +259,7 @@ export class AeWETH extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  withdraw(
-    amount: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  withdrawTo(
-    account: string,
-    amount: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
   callStatic: {
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<string>
-
     allowance(
       owner: string,
       spender: string,
@@ -465,18 +274,6 @@ export class AeWETH extends BaseContract {
 
     balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    bridgeBurn(
-      account: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    bridgeMint(
-      account: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     decimals(overrides?: CallOverrides): Promise<number>
 
     decreaseAllowance(
@@ -485,43 +282,13 @@ export class AeWETH extends BaseContract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    deposit(overrides?: CallOverrides): Promise<void>
-
-    depositTo(account: string, overrides?: CallOverrides): Promise<void>
-
     increaseAllowance(
       spender: string,
       addedValue: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    initialize(
-      name_: string,
-      symbol_: string,
-      decimals_: BigNumberish,
-      l2Gateway_: string,
-      l1Address_: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    l1Address(overrides?: CallOverrides): Promise<string>
-
-    l2Gateway(overrides?: CallOverrides): Promise<string>
-
     name(overrides?: CallOverrides): Promise<string>
-
-    nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    permit(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     symbol(overrides?: CallOverrides): Promise<string>
 
@@ -546,14 +313,6 @@ export class AeWETH extends BaseContract {
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    withdraw(amount: BigNumberish, overrides?: CallOverrides): Promise<void>
-
-    withdrawTo(
-      account: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
   }
 
   filters: {
@@ -578,8 +337,6 @@ export class AeWETH extends BaseContract {
   }
 
   estimateGas: {
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<BigNumber>
-
     allowance(
       owner: string,
       spender: string,
@@ -594,18 +351,6 @@ export class AeWETH extends BaseContract {
 
     balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    bridgeBurn(
-      account: string,
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    bridgeMint(
-      account: string,
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
     decimals(overrides?: CallOverrides): Promise<BigNumber>
 
     decreaseAllowance(
@@ -614,48 +359,13 @@ export class AeWETH extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    deposit(
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    depositTo(
-      account: string,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
     increaseAllowance(
       spender: string,
       addedValue: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    initialize(
-      name_: string,
-      symbol_: string,
-      decimals_: BigNumberish,
-      l2Gateway_: string,
-      l1Address_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    l1Address(overrides?: CallOverrides): Promise<BigNumber>
-
-    l2Gateway(overrides?: CallOverrides): Promise<BigNumber>
-
     name(overrides?: CallOverrides): Promise<BigNumber>
-
-    nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    permit(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
 
     symbol(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -680,22 +390,9 @@ export class AeWETH extends BaseContract {
       amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
-
-    withdraw(
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    withdrawTo(
-      account: string,
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
   }
 
   populateTransaction: {
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     allowance(
       owner: string,
       spender: string,
@@ -713,18 +410,6 @@ export class AeWETH extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    bridgeBurn(
-      account: string,
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    bridgeMint(
-      account: string,
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
     decimals(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     decreaseAllowance(
@@ -733,51 +418,13 @@ export class AeWETH extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    deposit(
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    depositTo(
-      account: string,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
     increaseAllowance(
       spender: string,
       addedValue: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    initialize(
-      name_: string,
-      symbol_: string,
-      decimals_: BigNumberish,
-      l2Gateway_: string,
-      l1Address_: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    l1Address(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    l2Gateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     name(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    nonces(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    permit(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
 
     symbol(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
@@ -799,17 +446,6 @@ export class AeWETH extends BaseContract {
     transferFrom(
       sender: string,
       recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    withdraw(
-      amount: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    withdrawTo(
-      account: string,
       amount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>

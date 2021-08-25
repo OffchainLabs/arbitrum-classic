@@ -11,6 +11,7 @@ import {
   PopulatedTransaction,
   BaseContract,
   ContractTransaction,
+  Overrides,
   CallOverrides,
 } from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
@@ -18,21 +19,44 @@ import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
-interface IRollupCoreInterface extends ethers.utils.Interface {
+interface RollupTesterInterface extends ethers.utils.Interface {
   functions: {
+    'STORAGE_GAP_1()': FunctionFragment
+    'STORAGE_GAP_2()': FunctionFragment
     '_stakerMap(address)': FunctionFragment
     'amountStaked(address)': FunctionFragment
+    'arbGasSpeedLimitPerBlock()': FunctionFragment
+    'baseStake()': FunctionFragment
+    'challengeExecutionBisectionDegree()': FunctionFragment
+    'challengeFactory()': FunctionFragment
+    'confirmPeriodBlocks()': FunctionFragment
     'currentChallenge(address)': FunctionFragment
+    'delayedBridge()': FunctionFragment
+    'extraChallengeTimeBlocks()': FunctionFragment
     'firstUnresolvedNode()': FunctionFragment
+    'getAdminFacet()': FunctionFragment
+    'getFacets()': FunctionFragment
     'getNode(uint256)': FunctionFragment
     'getNodeHash(uint256)': FunctionFragment
     'getStakerAddress(uint256)': FunctionFragment
+    'getUserFacet()': FunctionFragment
+    'initialize(bytes32,uint256[4],address,address,bytes,address[6],address[2],uint256[2])': FunctionFragment
+    'isMaster()': FunctionFragment
     'isStaked(address)': FunctionFragment
     'isZombie(address)': FunctionFragment
     'lastStakeBlock()': FunctionFragment
     'latestConfirmed()': FunctionFragment
     'latestNodeCreated()': FunctionFragment
     'latestStakedNode(address)': FunctionFragment
+    'minimumAssertionPeriod()': FunctionFragment
+    'nodeFactory()': FunctionFragment
+    'outbox()': FunctionFragment
+    'owner()': FunctionFragment
+    'paused()': FunctionFragment
+    'postUpgradeInit(address)': FunctionFragment
+    'rollupEventBridge()': FunctionFragment
+    'sequencerBridge()': FunctionFragment
+    'stakeToken()': FunctionFragment
     'stakerCount()': FunctionFragment
     'withdrawableFunds(address)': FunctionFragment
     'zombieAddress(uint256)': FunctionFragment
@@ -40,16 +64,54 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
     'zombieLatestStakedNode(uint256)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP_1',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP_2',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: '_stakerMap', values: [string]): string
   encodeFunctionData(functionFragment: 'amountStaked', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'arbGasSpeedLimitPerBlock',
+    values?: undefined
+  ): string
+  encodeFunctionData(functionFragment: 'baseStake', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'challengeExecutionBisectionDegree',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'challengeFactory',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'confirmPeriodBlocks',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'currentChallenge',
     values: [string]
   ): string
   encodeFunctionData(
+    functionFragment: 'delayedBridge',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'extraChallengeTimeBlocks',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'firstUnresolvedNode',
     values?: undefined
   ): string
+  encodeFunctionData(
+    functionFragment: 'getAdminFacet',
+    values?: undefined
+  ): string
+  encodeFunctionData(functionFragment: 'getFacets', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'getNode',
     values: [BigNumberish]
@@ -62,6 +124,24 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
     functionFragment: 'getStakerAddress',
     values: [BigNumberish]
   ): string
+  encodeFunctionData(
+    functionFragment: 'getUserFacet',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'initialize',
+    values: [
+      BytesLike,
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      string,
+      string,
+      BytesLike,
+      [string, string, string, string, string, string],
+      [string, string],
+      [BigNumberish, BigNumberish]
+    ]
+  ): string
+  encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(functionFragment: 'isStaked', values: [string]): string
   encodeFunctionData(functionFragment: 'isZombie', values: [string]): string
   encodeFunctionData(
@@ -80,6 +160,30 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
     functionFragment: 'latestStakedNode',
     values: [string]
   ): string
+  encodeFunctionData(
+    functionFragment: 'minimumAssertionPeriod',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'nodeFactory',
+    values?: undefined
+  ): string
+  encodeFunctionData(functionFragment: 'outbox', values?: undefined): string
+  encodeFunctionData(functionFragment: 'owner', values?: undefined): string
+  encodeFunctionData(functionFragment: 'paused', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'rollupEventBridge',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'sequencerBridge',
+    values?: undefined
+  ): string
+  encodeFunctionData(functionFragment: 'stakeToken', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'stakerCount',
     values?: undefined
@@ -101,9 +205,34 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'STORAGE_GAP_1',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'STORAGE_GAP_2',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: '_stakerMap', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'amountStaked',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'arbGasSpeedLimitPerBlock',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'baseStake', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'challengeExecutionBisectionDegree',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'challengeFactory',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'confirmPeriodBlocks',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -111,15 +240,34 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'delayedBridge',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'extraChallengeTimeBlocks',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'firstUnresolvedNode',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'getAdminFacet',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'getFacets', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'getNode', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'getNodeHash', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'getStakerAddress',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'getUserFacet',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'isStaked', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'isZombie', data: BytesLike): Result
   decodeFunctionResult(
@@ -138,6 +286,27 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
     functionFragment: 'latestStakedNode',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'minimumAssertionPeriod',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'nodeFactory', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'outbox', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'paused', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'rollupEventBridge',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'sequencerBridge',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'stakeToken', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'stakerCount', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'withdrawableFunds',
@@ -157,8 +326,10 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
     'NodeConfirmed(uint256,bytes32,uint256,bytes32,uint256)': EventFragment
     'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,uint256,bytes32,bytes32[3][2],uint256[4][2])': EventFragment
     'NodeRejected(uint256)': EventFragment
+    'Paused(address)': EventFragment
     'RollupChallengeStarted(address,address,address,uint256)': EventFragment
     'RollupCreated(bytes32)': EventFragment
+    'Unpaused(address)': EventFragment
     'UserStakeUpdated(address,uint256,uint256)': EventFragment
     'UserWithdrawableFundsUpdated(address,uint256,uint256)': EventFragment
   }
@@ -166,15 +337,17 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'NodeConfirmed'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodeCreated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodeRejected'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'Paused'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupChallengeStarted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'Unpaused'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'UserStakeUpdated'): EventFragment
   getEvent(
     nameOrSignatureOrTopic: 'UserWithdrawableFundsUpdated'
   ): EventFragment
 }
 
-export class IRollupCore extends BaseContract {
+export class RollupTester extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -215,25 +388,57 @@ export class IRollupCore extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
-  interface: IRollupCoreInterface
+  interface: RollupTesterInterface
 
   functions: {
+    STORAGE_GAP_1(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    STORAGE_GAP_2(overrides?: CallOverrides): Promise<[BigNumber]>
+
     _stakerMap(
-      stakerAddress: string,
+      arg0: string,
       overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber, BigNumber, string, boolean]>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     amountStaked(
       staker: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
+    arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    baseStake(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
+
+    challengeFactory(overrides?: CallOverrides): Promise<[string]>
+
+    confirmPeriodBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
+
     currentChallenge(
       staker: string,
       overrides?: CallOverrides
     ): Promise<[string]>
 
+    delayedBridge(overrides?: CallOverrides): Promise<[string]>
+
+    extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
+
     firstUnresolvedNode(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    getAdminFacet(overrides?: CallOverrides): Promise<[string]>
+
+    getFacets(overrides?: CallOverrides): Promise<[string, string]>
 
     getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
@@ -246,6 +451,22 @@ export class IRollupCore extends BaseContract {
       stakerNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string]>
+
+    getUserFacet(overrides?: CallOverrides): Promise<[string]>
+
+    initialize(
+      _machineHash: BytesLike,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      _stakeToken: string,
+      _owner: string,
+      _extraConfig: BytesLike,
+      connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
 
     isStaked(staker: string, overrides?: CallOverrides): Promise<[boolean]>
 
@@ -261,6 +482,27 @@ export class IRollupCore extends BaseContract {
       staker: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
+
+    minimumAssertionPeriod(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    nodeFactory(overrides?: CallOverrides): Promise<[string]>
+
+    outbox(overrides?: CallOverrides): Promise<[string]>
+
+    owner(overrides?: CallOverrides): Promise<[string]>
+
+    paused(overrides?: CallOverrides): Promise<[boolean]>
+
+    postUpgradeInit(
+      newAdminFacet: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    rollupEventBridge(overrides?: CallOverrides): Promise<[string]>
+
+    sequencerBridge(overrides?: CallOverrides): Promise<[string]>
+
+    stakeToken(overrides?: CallOverrides): Promise<[string]>
 
     stakerCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
@@ -282,16 +524,48 @@ export class IRollupCore extends BaseContract {
     ): Promise<[BigNumber]>
   }
 
+  STORAGE_GAP_1(overrides?: CallOverrides): Promise<BigNumber>
+
+  STORAGE_GAP_2(overrides?: CallOverrides): Promise<BigNumber>
+
   _stakerMap(
-    stakerAddress: string,
+    arg0: string,
     overrides?: CallOverrides
-  ): Promise<[BigNumber, BigNumber, BigNumber, string, boolean]>
+  ): Promise<
+    [BigNumber, BigNumber, BigNumber, string, boolean] & {
+      index: BigNumber
+      latestStakedNode: BigNumber
+      amountStaked: BigNumber
+      currentChallenge: string
+      isStaked: boolean
+    }
+  >
 
   amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
+  arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+  baseStake(overrides?: CallOverrides): Promise<BigNumber>
+
+  challengeExecutionBisectionDegree(
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
+
+  challengeFactory(overrides?: CallOverrides): Promise<string>
+
+  confirmPeriodBlocks(overrides?: CallOverrides): Promise<BigNumber>
+
   currentChallenge(staker: string, overrides?: CallOverrides): Promise<string>
 
+  delayedBridge(overrides?: CallOverrides): Promise<string>
+
+  extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<BigNumber>
+
   firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
+
+  getAdminFacet(overrides?: CallOverrides): Promise<string>
+
+  getFacets(overrides?: CallOverrides): Promise<[string, string]>
 
   getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -301,6 +575,22 @@ export class IRollupCore extends BaseContract {
     stakerNum: BigNumberish,
     overrides?: CallOverrides
   ): Promise<string>
+
+  getUserFacet(overrides?: CallOverrides): Promise<string>
+
+  initialize(
+    _machineHash: BytesLike,
+    _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+    _stakeToken: string,
+    _owner: string,
+    _extraConfig: BytesLike,
+    connectedContracts: [string, string, string, string, string, string],
+    _facets: [string, string],
+    sequencerInboxParams: [BigNumberish, BigNumberish],
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  isMaster(overrides?: CallOverrides): Promise<boolean>
 
   isStaked(staker: string, overrides?: CallOverrides): Promise<boolean>
 
@@ -316,6 +606,27 @@ export class IRollupCore extends BaseContract {
     staker: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>
+
+  minimumAssertionPeriod(overrides?: CallOverrides): Promise<BigNumber>
+
+  nodeFactory(overrides?: CallOverrides): Promise<string>
+
+  outbox(overrides?: CallOverrides): Promise<string>
+
+  owner(overrides?: CallOverrides): Promise<string>
+
+  paused(overrides?: CallOverrides): Promise<boolean>
+
+  postUpgradeInit(
+    newAdminFacet: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  rollupEventBridge(overrides?: CallOverrides): Promise<string>
+
+  sequencerBridge(overrides?: CallOverrides): Promise<string>
+
+  stakeToken(overrides?: CallOverrides): Promise<string>
 
   stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -337,16 +648,48 @@ export class IRollupCore extends BaseContract {
   ): Promise<BigNumber>
 
   callStatic: {
+    STORAGE_GAP_1(overrides?: CallOverrides): Promise<BigNumber>
+
+    STORAGE_GAP_2(overrides?: CallOverrides): Promise<BigNumber>
+
     _stakerMap(
-      stakerAddress: string,
+      arg0: string,
       overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber, BigNumber, string, boolean]>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
+    arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+    baseStake(overrides?: CallOverrides): Promise<BigNumber>
+
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    challengeFactory(overrides?: CallOverrides): Promise<string>
+
+    confirmPeriodBlocks(overrides?: CallOverrides): Promise<BigNumber>
+
     currentChallenge(staker: string, overrides?: CallOverrides): Promise<string>
 
+    delayedBridge(overrides?: CallOverrides): Promise<string>
+
+    extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<BigNumber>
+
     firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
+
+    getAdminFacet(overrides?: CallOverrides): Promise<string>
+
+    getFacets(overrides?: CallOverrides): Promise<[string, string]>
 
     getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -356,6 +699,22 @@ export class IRollupCore extends BaseContract {
       stakerNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>
+
+    getUserFacet(overrides?: CallOverrides): Promise<string>
+
+    initialize(
+      _machineHash: BytesLike,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      _stakeToken: string,
+      _owner: string,
+      _extraConfig: BytesLike,
+      connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    isMaster(overrides?: CallOverrides): Promise<boolean>
 
     isStaked(staker: string, overrides?: CallOverrides): Promise<boolean>
 
@@ -371,6 +730,27 @@ export class IRollupCore extends BaseContract {
       staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    minimumAssertionPeriod(overrides?: CallOverrides): Promise<BigNumber>
+
+    nodeFactory(overrides?: CallOverrides): Promise<string>
+
+    outbox(overrides?: CallOverrides): Promise<string>
+
+    owner(overrides?: CallOverrides): Promise<string>
+
+    paused(overrides?: CallOverrides): Promise<boolean>
+
+    postUpgradeInit(
+      newAdminFacet: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    rollupEventBridge(overrides?: CallOverrides): Promise<string>
+
+    sequencerBridge(overrides?: CallOverrides): Promise<string>
+
+    stakeToken(overrides?: CallOverrides): Promise<string>
 
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -458,6 +838,8 @@ export class IRollupCore extends BaseContract {
       nodeNum?: BigNumberish | null
     ): TypedEventFilter<[BigNumber], { nodeNum: BigNumber }>
 
+    Paused(account?: null): TypedEventFilter<[string], { account: string }>
+
     RollupChallengeStarted(
       challengeContract?: string | null,
       asserter?: null,
@@ -476,6 +858,8 @@ export class IRollupCore extends BaseContract {
     RollupCreated(
       machineHash?: null
     ): TypedEventFilter<[string], { machineHash: string }>
+
+    Unpaused(account?: null): TypedEventFilter<[string], { account: string }>
 
     UserStakeUpdated(
       user?: string | null,
@@ -497,19 +881,40 @@ export class IRollupCore extends BaseContract {
   }
 
   estimateGas: {
-    _stakerMap(
-      stakerAddress: string,
+    STORAGE_GAP_1(overrides?: CallOverrides): Promise<BigNumber>
+
+    STORAGE_GAP_2(overrides?: CallOverrides): Promise<BigNumber>
+
+    _stakerMap(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+    baseStake(overrides?: CallOverrides): Promise<BigNumber>
+
+    challengeExecutionBisectionDegree(
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
+    challengeFactory(overrides?: CallOverrides): Promise<BigNumber>
+
+    confirmPeriodBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
     currentChallenge(
       staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    delayedBridge(overrides?: CallOverrides): Promise<BigNumber>
+
+    extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<BigNumber>
+
     firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
+
+    getAdminFacet(overrides?: CallOverrides): Promise<BigNumber>
+
+    getFacets(overrides?: CallOverrides): Promise<BigNumber>
 
     getNode(
       nodeNum: BigNumberish,
@@ -526,6 +931,22 @@ export class IRollupCore extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    getUserFacet(overrides?: CallOverrides): Promise<BigNumber>
+
+    initialize(
+      _machineHash: BytesLike,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      _stakeToken: string,
+      _owner: string,
+      _extraConfig: BytesLike,
+      connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    isMaster(overrides?: CallOverrides): Promise<BigNumber>
+
     isStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
     isZombie(staker: string, overrides?: CallOverrides): Promise<BigNumber>
@@ -540,6 +961,27 @@ export class IRollupCore extends BaseContract {
       staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    minimumAssertionPeriod(overrides?: CallOverrides): Promise<BigNumber>
+
+    nodeFactory(overrides?: CallOverrides): Promise<BigNumber>
+
+    outbox(overrides?: CallOverrides): Promise<BigNumber>
+
+    owner(overrides?: CallOverrides): Promise<BigNumber>
+
+    paused(overrides?: CallOverrides): Promise<BigNumber>
+
+    postUpgradeInit(
+      newAdminFacet: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    rollupEventBridge(overrides?: CallOverrides): Promise<BigNumber>
+
+    sequencerBridge(overrides?: CallOverrides): Promise<BigNumber>
+
+    stakeToken(overrides?: CallOverrides): Promise<BigNumber>
 
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -562,8 +1004,12 @@ export class IRollupCore extends BaseContract {
   }
 
   populateTransaction: {
+    STORAGE_GAP_1(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    STORAGE_GAP_2(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     _stakerMap(
-      stakerAddress: string,
+      arg0: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -572,14 +1018,40 @@ export class IRollupCore extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    arbGasSpeedLimitPerBlock(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    baseStake(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    challengeFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    confirmPeriodBlocks(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     currentChallenge(
       staker: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    delayedBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    extraChallengeTimeBlocks(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     firstUnresolvedNode(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    getAdminFacet(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    getFacets(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     getNode(
       nodeNum: BigNumberish,
@@ -595,6 +1067,22 @@ export class IRollupCore extends BaseContract {
       stakerNum: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    getUserFacet(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    initialize(
+      _machineHash: BytesLike,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      _stakeToken: string,
+      _owner: string,
+      _extraConfig: BytesLike,
+      connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     isStaked(
       staker: string,
@@ -616,6 +1104,29 @@ export class IRollupCore extends BaseContract {
       staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    minimumAssertionPeriod(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    nodeFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    outbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    paused(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      newAdminFacet: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    rollupEventBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    sequencerBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    stakeToken(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     stakerCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
 

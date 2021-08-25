@@ -4,7 +4,10 @@
 
 import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-import type { IWETH9L1, IWETH9L1Interface } from '../IWETH9L1'
+import type {
+  ITransferAndCall,
+  ITransferAndCallInterface,
+} from '../ITransferAndCall'
 
 const _abi = [
   {
@@ -13,19 +16,19 @@ const _abi = [
       {
         indexed: true,
         internalType: 'address',
-        name: 'src',
+        name: 'owner',
         type: 'address',
       },
       {
         indexed: true,
         internalType: 'address',
-        name: 'guy',
+        name: 'spender',
         type: 'address',
       },
       {
         indexed: false,
         internalType: 'uint256',
-        name: 'wad',
+        name: 'value',
         type: 'uint256',
       },
     ],
@@ -38,39 +41,26 @@ const _abi = [
       {
         indexed: true,
         internalType: 'address',
-        name: 'dst',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'wad',
-        type: 'uint256',
-      },
-    ],
-    name: 'Deposit',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'src',
+        name: 'from',
         type: 'address',
       },
       {
         indexed: true,
         internalType: 'address',
-        name: 'dst',
+        name: 'to',
         type: 'address',
       },
       {
         indexed: false,
         internalType: 'uint256',
-        name: 'wad',
+        name: 'value',
         type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
       },
     ],
     name: 'Transfer',
@@ -82,24 +72,35 @@ const _abi = [
       {
         indexed: true,
         internalType: 'address',
-        name: 'src',
+        name: 'from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'to',
         type: 'address',
       },
       {
         indexed: false,
         internalType: 'uint256',
-        name: 'wad',
+        name: 'value',
         type: 'uint256',
       },
     ],
-    name: 'Withdrawal',
+    name: 'Transfer',
     type: 'event',
   },
   {
     inputs: [
       {
         internalType: 'address',
-        name: 'guy',
+        name: 'owner',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'spender',
         type: 'address',
       },
     ],
@@ -118,12 +119,12 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'guy',
+        name: 'spender',
         type: 'address',
       },
       {
         internalType: 'uint256',
-        name: 'wad',
+        name: 'amount',
         type: 'uint256',
       },
     ],
@@ -142,7 +143,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'guy',
+        name: 'account',
         type: 'address',
       },
     ],
@@ -155,13 +156,6 @@ const _abi = [
       },
     ],
     stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'deposit',
-    outputs: [],
-    stateMutability: 'payable',
     type: 'function',
   },
   {
@@ -181,12 +175,12 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'dst',
+        name: 'recipient',
         type: 'address',
       },
       {
         internalType: 'uint256',
-        name: 'wad',
+        name: 'amount',
         type: 'uint256',
       },
     ],
@@ -205,17 +199,46 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'src',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: 'dst',
+        name: 'to',
         type: 'address',
       },
       {
         internalType: 'uint256',
-        name: 'wad',
+        name: 'value',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
+      },
+    ],
+    name: 'transferAndCall',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: 'success',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'sender',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'recipient',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount',
         type: 'uint256',
       },
     ],
@@ -230,30 +253,17 @@ const _abi = [
     stateMutability: 'nonpayable',
     type: 'function',
   },
-  {
-    inputs: [
-      {
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'withdraw',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
 ]
 
-export class IWETH9L1__factory {
+export class ITransferAndCall__factory {
   static readonly abi = _abi
-  static createInterface(): IWETH9L1Interface {
-    return new utils.Interface(_abi) as IWETH9L1Interface
+  static createInterface(): ITransferAndCallInterface {
+    return new utils.Interface(_abi) as ITransferAndCallInterface
   }
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): IWETH9L1 {
-    return new Contract(address, _abi, signerOrProvider) as IWETH9L1
+  ): ITransferAndCall {
+    return new Contract(address, _abi, signerOrProvider) as ITransferAndCall
   }
 }

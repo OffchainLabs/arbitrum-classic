@@ -29,7 +29,6 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
     'getGateway(address)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'initialize(address,address)': FunctionFragment
-    'isRouter()': FunctionFragment
     'l1TokenToGateway(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
     'router()': FunctionFragment
@@ -62,7 +61,6 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
     functionFragment: 'initialize',
     values: [string, string]
   ): string
-  encodeFunctionData(functionFragment: 'isRouter', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'l1TokenToGateway',
     values: [string]
@@ -103,7 +101,6 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'isRouter', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'l1TokenToGateway',
     data: BytesLike
@@ -121,17 +118,21 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
 
   events: {
     'DefaultGatewayUpdated(address)': EventFragment
+    'DepositFinalized(address,address,address,uint256)': EventFragment
+    'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
     'GatewaySet(address,address)': EventFragment
-    'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
-    'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
     'TransferRouted(address,address,address,address)': EventFragment
+    'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
+    'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DefaultGatewayUpdated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'GatewaySet'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferRouted'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
 
 export class L2GatewayRouter extends BaseContract {
@@ -216,8 +217,6 @@ export class L2GatewayRouter extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    isRouter(overrides?: CallOverrides): Promise<[boolean]>
-
     l1TokenToGateway(arg0: string, overrides?: CallOverrides): Promise<[string]>
 
     'outboundTransfer(address,address,uint256,bytes)'(
@@ -286,8 +285,6 @@ export class L2GatewayRouter extends BaseContract {
     _defaultGateway: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
-
-  isRouter(overrides?: CallOverrides): Promise<boolean>
 
   l1TokenToGateway(arg0: string, overrides?: CallOverrides): Promise<string>
 
@@ -358,8 +355,6 @@ export class L2GatewayRouter extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    isRouter(overrides?: CallOverrides): Promise<boolean>
-
     l1TokenToGateway(arg0: string, overrides?: CallOverrides): Promise<string>
 
     'outboundTransfer(address,address,uint256,bytes)'(
@@ -399,48 +394,37 @@ export class L2GatewayRouter extends BaseContract {
       newDefaultGateway?: null
     ): TypedEventFilter<[string], { newDefaultGateway: string }>
 
+    DepositFinalized(
+      l1Token?: string | null,
+      _from?: string | null,
+      _to?: string | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber],
+      { l1Token: string; _from: string; _to: string; _amount: BigNumber }
+    >
+
+    DepositInitiated(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _sequenceNumber?: BigNumberish | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _sequenceNumber: BigNumber
+        _amount: BigNumber
+      }
+    >
+
     GatewaySet(
       l1Token?: string | null,
       gateway?: string | null
     ): TypedEventFilter<[string, string], { l1Token: string; gateway: string }>
-
-    InboundTransferFinalized(
-      token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _transferId?: BigNumberish | null,
-      _amount?: null,
-      _data?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, string],
-      {
-        token: string
-        _from: string
-        _to: string
-        _transferId: BigNumber
-        _amount: BigNumber
-        _data: string
-      }
-    >
-
-    OutboundTransferInitiated(
-      token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _transferId?: BigNumberish | null,
-      _amount?: null,
-      _data?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, string],
-      {
-        token: string
-        _from: string
-        _to: string
-        _transferId: BigNumber
-        _amount: BigNumber
-        _data: string
-      }
-    >
 
     TransferRouted(
       token?: string | null,
@@ -450,6 +434,42 @@ export class L2GatewayRouter extends BaseContract {
     ): TypedEventFilter<
       [string, string, string, string],
       { token: string; _userFrom: string; _userTo: string; gateway: string }
+    >
+
+    WithdrawalFinalized(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _exitNum?: BigNumberish | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _exitNum: BigNumber
+        _amount: BigNumber
+      }
+    >
+
+    WithdrawalInitiated(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _l2ToL1Id?: BigNumberish | null,
+      _exitNum?: null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _l2ToL1Id: BigNumber
+        _exitNum: BigNumber
+        _amount: BigNumber
+      }
     >
   }
 
@@ -488,8 +508,6 @@ export class L2GatewayRouter extends BaseContract {
       _defaultGateway: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
-
-    isRouter(overrides?: CallOverrides): Promise<BigNumber>
 
     l1TokenToGateway(
       arg0: string,
@@ -566,8 +584,6 @@ export class L2GatewayRouter extends BaseContract {
       _defaultGateway: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
-
-    isRouter(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     l1TokenToGateway(
       arg0: string,

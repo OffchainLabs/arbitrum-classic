@@ -60,12 +60,16 @@ interface ITokenGatewayInterface extends ethers.utils.Interface {
   ): Result
 
   events: {
-    'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
-    'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
+    'DepositFinalized(address,address,address,uint256)': EventFragment
+    'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
+    'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
+    'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
   }
 
-  getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
 
 export class ITokenGateway extends BaseContract {
@@ -188,41 +192,66 @@ export class ITokenGateway extends BaseContract {
   }
 
   filters: {
-    InboundTransferFinalized(
-      token?: null,
+    DepositFinalized(
+      l1Token?: string | null,
       _from?: string | null,
       _to?: string | null,
-      _transferId?: BigNumberish | null,
-      _amount?: null,
-      _data?: null
+      _amount?: null
     ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, string],
+      [string, string, string, BigNumber],
+      { l1Token: string; _from: string; _to: string; _amount: BigNumber }
+    >
+
+    DepositInitiated(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _sequenceNumber?: BigNumberish | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber],
       {
-        token: string
+        l1Token: string
         _from: string
         _to: string
-        _transferId: BigNumber
+        _sequenceNumber: BigNumber
         _amount: BigNumber
-        _data: string
       }
     >
 
-    OutboundTransferInitiated(
-      token?: null,
+    WithdrawalFinalized(
+      l1Token?: null,
       _from?: string | null,
       _to?: string | null,
-      _transferId?: BigNumberish | null,
-      _amount?: null,
-      _data?: null
+      _exitNum?: BigNumberish | null,
+      _amount?: null
     ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, string],
+      [string, string, string, BigNumber, BigNumber],
       {
-        token: string
+        l1Token: string
         _from: string
         _to: string
-        _transferId: BigNumber
+        _exitNum: BigNumber
         _amount: BigNumber
-        _data: string
+      }
+    >
+
+    WithdrawalInitiated(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _l2ToL1Id?: BigNumberish | null,
+      _exitNum?: null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _l2ToL1Id: BigNumber
+        _exitNum: BigNumber
+        _amount: BigNumber
       }
     >
   }

@@ -5,9 +5,9 @@
 import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 import type {
-  IERC677Receiver,
-  IERC677ReceiverInterface,
-} from '../IERC677Receiver'
+  ITransferAndCallReceiver,
+  ITransferAndCallReceiverInterface,
+} from '../ITransferAndCallReceiver'
 
 const _abi = [
   {
@@ -35,15 +35,19 @@ const _abi = [
   },
 ]
 
-export class IERC677Receiver__factory {
+export class ITransferAndCallReceiver__factory {
   static readonly abi = _abi
-  static createInterface(): IERC677ReceiverInterface {
-    return new utils.Interface(_abi) as IERC677ReceiverInterface
+  static createInterface(): ITransferAndCallReceiverInterface {
+    return new utils.Interface(_abi) as ITransferAndCallReceiverInterface
   }
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): IERC677Receiver {
-    return new Contract(address, _abi, signerOrProvider) as IERC677Receiver
+  ): ITransferAndCallReceiver {
+    return new Contract(
+      address,
+      _abi,
+      signerOrProvider
+    ) as ITransferAndCallReceiver
   }
 }

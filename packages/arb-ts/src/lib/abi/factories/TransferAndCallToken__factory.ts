@@ -4,7 +4,10 @@
 
 import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-import type { IERC677, IERC677Interface } from '../IERC677'
+import type {
+  TransferAndCallToken,
+  TransferAndCallTokenInterface,
+} from '../TransferAndCallToken'
 
 const _abi = [
   {
@@ -157,6 +160,93 @@ const _abi = [
   },
   {
     inputs: [],
+    name: 'decimals',
+    outputs: [
+      {
+        internalType: 'uint8',
+        name: '',
+        type: 'uint8',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'spender',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'subtractedValue',
+        type: 'uint256',
+      },
+    ],
+    name: 'decreaseAllowance',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'spender',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'addedValue',
+        type: 'uint256',
+      },
+    ],
+    name: 'increaseAllowance',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'name',
+    outputs: [
+      {
+        internalType: 'string',
+        name: '',
+        type: 'string',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'symbol',
+    outputs: [
+      {
+        internalType: 'string',
+        name: '',
+        type: 'string',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'totalSupply',
     outputs: [
       {
@@ -196,17 +286,17 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'to',
+        name: '_to',
         type: 'address',
       },
       {
         internalType: 'uint256',
-        name: 'value',
+        name: '_value',
         type: 'uint256',
       },
       {
         internalType: 'bytes',
-        name: 'data',
+        name: '_data',
         type: 'bytes',
       },
     ],
@@ -252,15 +342,15 @@ const _abi = [
   },
 ]
 
-export class IERC677__factory {
+export class TransferAndCallToken__factory {
   static readonly abi = _abi
-  static createInterface(): IERC677Interface {
-    return new utils.Interface(_abi) as IERC677Interface
+  static createInterface(): TransferAndCallTokenInterface {
+    return new utils.Interface(_abi) as TransferAndCallTokenInterface
   }
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): IERC677 {
-    return new Contract(address, _abi, signerOrProvider) as IERC677
+  ): TransferAndCallToken {
+    return new Contract(address, _abi, signerOrProvider) as TransferAndCallToken
   }
 }

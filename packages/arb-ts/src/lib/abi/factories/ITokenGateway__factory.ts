@@ -11,9 +11,9 @@ const _abi = [
     anonymous: false,
     inputs: [
       {
-        indexed: false,
+        indexed: true,
         internalType: 'address',
-        name: 'token',
+        name: 'l1Token',
         type: 'address',
       },
       {
@@ -29,25 +29,13 @@ const _abi = [
         type: 'address',
       },
       {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_transferId',
-        type: 'uint256',
-      },
-      {
         indexed: false,
         internalType: 'uint256',
         name: '_amount',
         type: 'uint256',
       },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
     ],
-    name: 'InboundTransferFinalized',
+    name: 'DepositFinalized',
     type: 'event',
   },
   {
@@ -56,7 +44,7 @@ const _abi = [
       {
         indexed: false,
         internalType: 'address',
-        name: 'token',
+        name: 'l1Token',
         type: 'address',
       },
       {
@@ -74,7 +62,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'uint256',
-        name: '_transferId',
+        name: '_sequenceNumber',
         type: 'uint256',
       },
       {
@@ -83,14 +71,88 @@ const _abi = [
         name: '_amount',
         type: 'uint256',
       },
+    ],
+    name: 'DepositInitiated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
       {
         indexed: false,
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
+        internalType: 'address',
+        name: 'l1Token',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_to',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: '_exitNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: '_amount',
+        type: 'uint256',
       },
     ],
-    name: 'OutboundTransferInitiated',
+    name: 'WithdrawalFinalized',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'l1Token',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_to',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: '_l2ToL1Id',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: '_exitNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: '_amount',
+        type: 'uint256',
+      },
+    ],
+    name: 'WithdrawalInitiated',
     type: 'event',
   },
   {
