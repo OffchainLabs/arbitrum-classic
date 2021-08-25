@@ -99,9 +99,8 @@ export const initUpgrades = (
   }
 
   const getBuildInfoString = async (contractName: string) => {
-    const contracts = (await hre.artifacts.getAllFullyQualifiedNames()).filter(
-      curr => curr.includes(contractName)
-    )
+    const names = await hre.artifacts.getAllFullyQualifiedNames()
+    const contracts = names.filter(curr => curr.endsWith(contractName))
     if (contracts.length !== 1) throw new Error('Contract not found')
     const info = await hre.artifacts.getBuildInfo(contracts[0])
     return JSON.stringify(info)
@@ -173,7 +172,7 @@ export const initUpgrades = (
       }
       queuedUpdatesData[contractName] = newLogicData
       console.log(`Deployed ${contractName} Logic:`)
-      console.log(newLogicData)
+      console.log(receipt)
       console.log('')
 
       writeFileSync(path, JSON.stringify(queuedUpdatesData))
