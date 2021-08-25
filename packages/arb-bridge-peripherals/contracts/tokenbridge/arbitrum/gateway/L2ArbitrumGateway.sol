@@ -36,6 +36,22 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
 
     uint256 public exitNum;
 
+    event DepositFinalized(
+        address indexed l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 _amount
+    );
+
+    event WithdrawalInitiated(
+        address l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _l2ToL1Id,
+        uint256 _exitNum,
+        uint256 _amount
+    );
+
     function _initialize(address _l1Counterpart, address _router) internal virtual override {
         TokenGateway._initialize(_l1Counterpart, _router);
         // L1 gateway must have a router

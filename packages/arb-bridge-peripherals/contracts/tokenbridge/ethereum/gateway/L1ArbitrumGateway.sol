@@ -40,6 +40,22 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
 
     address public inbox;
 
+    event DepositInitiated(
+        address l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _sequenceNumber,
+        uint256 _amount
+    );
+
+    event WithdrawalFinalized(
+        address l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _exitNum,
+        uint256 _amount
+    );
+
     modifier onlyCounterpartGateway() override {
         address _inbox = inbox;
 
