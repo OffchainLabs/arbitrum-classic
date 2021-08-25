@@ -24,6 +24,7 @@ import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 
 import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
@@ -67,6 +68,14 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address l2ToL1Sender = super.getL2ToL1Sender(_inbox);
         require(l2ToL1Sender == counterpartGateway, "ONLY_COUNTERPART_GATEWAY");
         _;
+    }
+
+    function postUpgradeInit() external {
+        // it is assumed the L2 Arbitrum Gateway contract is behind a Proxy controlled by a proxy admin
+        // this function can only be called by the proxy admin contract
+        address proxyAdmin = ProxyUtil.getProxyAdmin();
+        require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
+        // this has no other logic since the current upgrade doesn't require this logic
     }
 
     function _initialize(
