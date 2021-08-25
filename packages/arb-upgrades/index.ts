@@ -282,6 +282,8 @@ export const initUpgrades = (
   }
 
   const verifyCurrentImplementations = async () => {
+    console.log('Verifying deployments:')
+
     const { data: deploymentsJsonData } = await getDeployments()
     let success = true
     for (const _contractName in deploymentsJsonData.contracts) {
