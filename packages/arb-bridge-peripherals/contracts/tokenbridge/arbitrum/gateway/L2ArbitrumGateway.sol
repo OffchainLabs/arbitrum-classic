@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
+import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 
 import "../IArbToken.sol";
 
@@ -35,6 +36,39 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
     using Address for address;
 
     uint256 public exitNum;
+
+    event DepositFinalized(
+        address indexed l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 _amount
+    );
+
+    event WithdrawalInitiated(
+        address l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _l2ToL1Id,
+        uint256 _exitNum,
+        uint256 _amount
+    );
+
+    modifier onlyCounterpartGateway() override {
+        require(
+            msg.sender == counterpartGateway ||
+                L2ArbitrumMessenger.getL1Address(msg.sender) == counterpartGateway,
+            "ONLY_COUNTERPART_GATEWAY"
+        );
+        _;
+    }
+
+    function postUpgradeInit() external {
+        // it is assumed the L2 Arbitrum Gateway contract is behind a Proxy controlled by a proxy admin
+        // this function can only be called by the proxy admin contract
+        address proxyAdmin = ProxyUtil.getProxyAdmin();
+        require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
+        // this has no other logic since the current upgrade doesn't require this logic
+    }
 
     function _initialize(address _l1Counterpart, address _router) internal virtual override {
         TokenGateway._initialize(_l1Counterpart, _router);

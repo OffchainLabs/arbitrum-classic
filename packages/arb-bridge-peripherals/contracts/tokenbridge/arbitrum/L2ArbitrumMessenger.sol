@@ -37,4 +37,13 @@ abstract contract L2ArbitrumMessenger {
         emit TxToL1(_from, _to, _id, _data);
         return _id;
     }
+
+    /// @notice Utility function that converts the msg.sender viewed in the L2 to the
+    /// address in the L1 that submitted a tx to the inbox
+    /// @param sender L2 address as viewed in msg.sender
+    /// @return l1Address the address in the L1 that triggered the tx to L2
+    function getL1Address(address sender) internal pure returns (address l1Address) {
+        uint160 offset = uint160(0x1111000000000000000000000000000000001111);
+        l1Address = address(uint160(sender) - offset);
+    }
 }

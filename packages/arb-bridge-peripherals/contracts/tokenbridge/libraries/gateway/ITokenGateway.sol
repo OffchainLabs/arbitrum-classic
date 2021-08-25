@@ -39,38 +39,6 @@ interface ITokenGateway {
     //     bytes _data
     // );
 
-    event DepositInitiated(
-        address l1Token,
-        address indexed _from,
-        address indexed _to,
-        uint256 indexed _sequenceNumber,
-        uint256 _amount
-    );
-
-    event DepositFinalized(
-        address indexed l1Token,
-        address indexed _from,
-        address indexed _to,
-        uint256 _amount
-    );
-
-    event WithdrawalInitiated(
-        address l1Token,
-        address indexed _from,
-        address indexed _to,
-        uint256 indexed _l2ToL1Id,
-        uint256 _exitNum,
-        uint256 _amount
-    );
-
-    event WithdrawalFinalized(
-        address l1Token,
-        address indexed _from,
-        address indexed _to,
-        uint256 indexed _exitNum,
-        uint256 _amount
-    );
-
     function outboundTransfer(
         address _token,
         address _to,
