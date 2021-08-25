@@ -285,6 +285,12 @@ export const initUpgrades = (
 
     const { data: deploymentsJsonData } = await getDeployments()
     let success = true
+    const ProxyAdmin__factory = await hre.ethers.getContractFactory(
+      'ProxyAdmin'
+    )
+    const proxyAdmin = ProxyAdmin__factory.attach(
+      deploymentsJsonData.proxyAdminAddress
+    )
     for (const _contractName in deploymentsJsonData.contracts) {
       const contractName = _contractName as ContractNames
       const deploymentData = deploymentsJsonData.contracts[contractName]
@@ -295,6 +301,8 @@ export const initUpgrades = (
         ).attach(deploymentData.proxyAddress)
 
         const implementation = await UpgradeableBeacon.implementation()
+        const beaconOwner = await UpgradeableBeacon.owner()
+        const proxyAdminOwner = await proxyAdmin.owner()
         if (
           implementation.toLowerCase() !==
           deploymentData.implAddress.toLowerCase()
@@ -303,6 +311,14 @@ export const initUpgrades = (
             'Verification failed: bad implementation',
             implementation,
             deploymentData.implAddress
+          )
+          success = false
+        }
+        if (beaconOwner.toLowerCase() !== proxyAdminOwner.toLowerCase()) {
+          console.log(
+            `${contractName} Verification failed: bad admin`,
+            beaconOwner,
+            proxyAdminOwner
           )
           success = false
         }
