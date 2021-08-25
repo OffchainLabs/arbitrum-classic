@@ -43,6 +43,7 @@ export interface WithdrawalInitiated {
   _l2ToL1Id: BigNumber
   _exitNum: BigNumber
   _amount: BigNumber
+  txHash: string
 }
 
 export interface DepositInitiated {
