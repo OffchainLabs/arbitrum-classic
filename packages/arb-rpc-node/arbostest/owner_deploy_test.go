@@ -102,7 +102,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 
 	ib := &InboxBuilder{}
 	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), chainTime)
-	ib.AddMessage(makeEthDeposit(owner, big.NewInt(1000)), sender, big.NewInt(0), chainTime)
+	ib.AddMessage(makeEthDeposit(message.L2RemapAccount(owner), big.NewInt(1000)), sender, big.NewInt(0), chainTime)
 	ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
 	results, snap := runTxAssertion(t, ib.Messages)
 	correctConnAddress := crypto.CreateAddress(sender.ToEthAddress(), nonce)
@@ -119,7 +119,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	if new(big.Int).SetBytes(evmLog.Data).Cmp(ownerTx.Payment) != 0 {
 		t.Error("wrong event data/payment")
 	}
-	ownerBalance, err := snap.GetBalance(owner)
+	ownerBalance, err := snap.GetBalance(message.L2RemapAccount(owner))
 	test.FailIfError(t, err)
 	conBalance, err := snap.GetBalance(common.NewAddressFromEth(correctConnAddress))
 	test.FailIfError(t, err)
