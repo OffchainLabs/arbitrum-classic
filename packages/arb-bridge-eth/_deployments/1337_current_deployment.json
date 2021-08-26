@@ -72,6 +72,18 @@
       "implAddress": "0xcb0da32914a683286ed2d4890e8157ffecc9bd06",
       "implDeploymentTxn": "0x",
       "implArbitrumCommitHash": "0x"
+    },
+    "OldOutbox": {
+      "proxyAddress": "0x667e23abd27e623c11d4cc00ca3ec4d0bd63337a",
+      "implAddress": "0x19D6ddDC21503F4C8cD62Ce2A9FF94Bd590b49B0",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "OutboxEntry": {
+      "proxyAddress": "0x14797f5432f699Cb4d4dB04DF599B74952d78d7b",
+      "implAddress": "0x5E40E464DEF82286b177dFa2799753d23b068dcC",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
     }
   }
 }
