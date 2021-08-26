@@ -49,12 +49,12 @@ contract Outbox is IOutbox, Cloneable {
     mapping(uint256 => OutboxEntry) public outboxEntries;
 
     struct L2ToL1Context {
-        uint128 _l2Block;
-        uint128 _l1Block;
-        uint128 _timestamp;
-        uint128 _batchNum;
-        bytes32 _outputId;
-        address _sender;
+        uint128 l2Block;
+        uint128 l1Block;
+        uint128 timestamp;
+        uint128 batchNum;
+        bytes32 outputId;
+        address sender;
     }
     // Note, these variables are set and then wiped during a single transaction.
     // Therefore their values don't need to be maintained, and their slots will
@@ -72,27 +72,27 @@ contract Outbox is IOutbox, Cloneable {
     /// When the return value is zero, that means this is a system message
     /// @dev the l2ToL1Sender behaves as the tx.origin, the msg.sender should be validated to protect against reentrancies
     function l2ToL1Sender() external view override returns (address) {
-        return context._sender;
+        return context.sender;
     }
 
     function l2ToL1Block() external view override returns (uint256) {
-        return uint256(context._l2Block);
+        return uint256(context.l2Block);
     }
 
     function l2ToL1EthBlock() external view override returns (uint256) {
-        return uint256(context._l1Block);
+        return uint256(context.l1Block);
     }
 
     function l2ToL1Timestamp() external view override returns (uint256) {
-        return uint256(context._timestamp);
+        return uint256(context.timestamp);
     }
 
     function l2ToL1BatchNum() external view override returns (uint256) {
-        return uint256(context._batchNum);
+        return uint256(context.batchNum);
     }
 
     function l2ToL1OutputId() external view override returns (bytes32) {
-        return context._outputId;
+        return context.outputId;
     }
 
     function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
@@ -177,12 +177,12 @@ contract Outbox is IOutbox, Cloneable {
         L2ToL1Context memory prevContext = context;
 
         context = L2ToL1Context({
-            _sender: l2Sender,
-            _l2Block: uint128(l2Block),
-            _l1Block: uint128(l1Block),
-            _timestamp: uint128(l2Timestamp),
-            _batchNum: uint128(batchNum),
-            _outputId: outputId
+            sender: l2Sender,
+            l2Block: uint128(l2Block),
+            l1Block: uint128(l1Block),
+            timestamp: uint128(l2Timestamp),
+            batchNum: uint128(batchNum),
+            outputId: outputId
         });
 
         // set and reset vars around execution so they remain valid during call
