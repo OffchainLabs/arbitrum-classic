@@ -238,6 +238,11 @@ export const initUpgrades = (
           params: [proxyAdminOwner],
         })
 
+        await hre.network.provider.send('hardhat_setBalance', [
+          proxyAdminOwner,
+          '0x16189AD417E380000',
+        ])
+
         return hre.ethers.getSigner(proxyAdminOwner)
       } else {
         const signers = await hre.ethers.getSigners()
