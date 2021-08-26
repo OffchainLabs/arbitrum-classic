@@ -27,10 +27,23 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "cmdhelp").Logger()
+
+func readPass() (string, error) {
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", err
+	}
+	passphrase := string(bytePassword)
+	passphrase = strings.TrimSpace(passphrase)
+	return passphrase, nil
+}
 
 // GetKeystore returns a transaction authorization based on an existing ethereum
 // keystore located in validatorFolder/wallets or creates one if it does not
@@ -48,38 +61,43 @@ func GetKeystore(
 		keystore.StandardScryptN,
 		keystore.StandardScryptP,
 	)
+	logger.Info().
+		Str("location", filepath.Join(validatorFolder, "wallets")).
+		Int("accounts", len(ks.Accounts())).
+		Msg("loading wallet")
 
-	var account accounts.Account
-	if len(ks.Accounts()) > 0 {
-		account = ks.Accounts()[0]
-	}
-
-	if ks.Unlock(account, wallet.Password) != nil {
-		if len(ks.Accounts()) == 0 {
+	creatingNew := len(ks.Accounts()) == 0
+	passOpt := wallet.Password()
+	var password string
+	if passOpt != nil {
+		password = *passOpt
+	} else {
+		if creatingNew {
 			fmt.Print("Enter new account password: ")
 		} else {
 			fmt.Print("Enter account password: ")
 		}
-
-		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+		var err error
+		password, err = readPass()
 		if err != nil {
 			return nil, nil, err
 		}
-		passphrase := string(bytePassword)
+	}
 
-		passphrase = strings.TrimSpace(passphrase)
-
-		if len(ks.Accounts()) == 0 {
-			var err error
-			account, err = ks.NewAccount(passphrase)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-		err = ks.Unlock(account, passphrase)
+	var account accounts.Account
+	if creatingNew {
+		var err error
+		account, err = ks.NewAccount(password)
 		if err != nil {
 			return nil, nil, err
 		}
+	} else {
+		account = ks.Accounts()[0]
+	}
+
+	err := ks.Unlock(account, password)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	auth, err := bind.NewKeyStoreTransactorWithChainID(ks, account, chainId)
