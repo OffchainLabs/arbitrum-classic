@@ -53,9 +53,7 @@ func TestInboxProof(t *testing.T) {
 	test.FailIfError(t, err)
 	client.Commit()
 
-	_, err = sequencerCon.SetMaxDelayBlocks(auth, maxDelayBlocks)
-	test.FailIfError(t, err)
-	_, err = sequencerCon.SetMaxDelaySeconds(auth, maxDelaySeconds)
+	_, err = sequencerCon.SetMaxDelay(auth, maxDelayBlocks, maxDelaySeconds)
 	test.FailIfError(t, err)
 
 	_, err = delayedBridge.SetInbox(auth, auth.From, true)

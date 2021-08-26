@@ -43,9 +43,7 @@ func TestSequencerGasUsage(t *testing.T) {
 
 	clnt.Commit()
 
-	_, err = seqInbox.SetMaxDelaySeconds(auth, big.NewInt(9000))
-	test.FailIfError(t, err)
-	_, err = seqInbox.SetMaxDelayBlocks(auth, big.NewInt(150))
+	_, err = seqInbox.SetMaxDelay(auth, big.NewInt(150), big.NewInt(9000))
 	test.FailIfError(t, err)
 
 	_, err = evBridge.RollupInitialized(

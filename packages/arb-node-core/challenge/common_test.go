@@ -226,9 +226,7 @@ func initializeChallengeTest(
 	_, err = delayedBridge.SetInbox(deployer, deployer.From, true)
 	test.FailIfError(t, err)
 
-	_, err = sequencerBridge.SetMaxDelayBlocks(deployer, big.NewInt(60))
-	test.FailIfError(t, err)
-	_, err = sequencerBridge.SetMaxDelaySeconds(deployer, big.NewInt(900))
+	_, err = sequencerBridge.SetMaxDelay(deployer, big.NewInt(60), big.NewInt(900))
 	test.FailIfError(t, err)
 	client.Commit()
 
