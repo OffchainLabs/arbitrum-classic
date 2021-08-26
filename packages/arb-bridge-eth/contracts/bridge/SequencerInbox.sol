@@ -446,7 +446,6 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                 offset,
                 inboxAccs[targetInboxStateIndex - 1]
             );
-            messageCountAsOfPreviousInboxState++;
         }
 
         bytes32 targetInboxState = inboxAccs[targetInboxStateIndex];
