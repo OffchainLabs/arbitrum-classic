@@ -272,7 +272,6 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     ) external override whenPaused {
         require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
 
-        // The admin does not need to prove against the sequencer bridge
         RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
             assertionBytes32Fields,
             assertionIntFields,
