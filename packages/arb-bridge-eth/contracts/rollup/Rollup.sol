@@ -142,7 +142,7 @@ contract Rollup is Proxy, RollupBase {
         require(isInit(), "INITIALIZE_NOT_INIT");
     }
 
-    function postUpgradeInit(address newAdminFacet) external {
+    function postUpgradeInit() external {
         // it is assumed the rollup contract is behind a Proxy controlled by a proxy admin
         // this function can only be called by the proxy admin contract
         address proxyAdmin = ProxyUtil.getProxyAdmin();
@@ -157,8 +157,6 @@ contract Rollup is Proxy, RollupBase {
 
         STORAGE_GAP_1 = 0;
         STORAGE_GAP_2 = 0;
-
-        facets[0] = newAdminFacet;
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
