@@ -205,11 +205,11 @@ func switchFees(enabled bool) error {
 	if err != nil {
 		return err
 	}
-	tx, err := arbOwner.SetFeesEnabled(config.auth, enabled)
+	tx, err := arbOwner.SetChainParameter(config.auth, arbos.FeesEnabledParamId, big.NewInt(1))
 	if err != nil {
 		return err
 	}
-	return waitForTx(tx, "SetFeesEnabled")
+	return waitForTx(tx, "SetChainParameters")
 }
 
 func setDefaultAggregator(agg ethcommon.Address) error {

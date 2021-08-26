@@ -42,14 +42,11 @@ import (
 
 func TestL2ToL1Tx(t *testing.T) {
 	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil)
+	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil, false)
 	defer cancelDevNode()
 
 	client := web3.NewEthClient(srv, true)
@@ -137,7 +134,8 @@ func TestL2ToL1Tx(t *testing.T) {
 		}
 		l2SendLogs = append(l2SendLogs, parsedEv)
 		if i%8 == 0 {
-			backend.l1Emulator.IncreaseTime(20)
+			// ArbOS spaces out sends every 1800 seconds by default, so advance one send
+			backend.l1Emulator.IncreaseTime(1800)
 		}
 	}
 
@@ -146,6 +144,9 @@ func TestL2ToL1Tx(t *testing.T) {
 		batch, err := db.GetMessageBatch(big.NewInt(int64(i)))
 		if err != nil {
 			t.Fatal(err)
+		}
+		if batch == nil {
+			t.Fatal("message batch not found")
 		}
 		if batch.BatchNumber.Cmp(big.NewInt(int64(i))) != 0 {
 			t.Fatal("wrong batch num")

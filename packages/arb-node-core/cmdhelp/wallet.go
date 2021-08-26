@@ -39,6 +39,16 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "cmdhelp").Logger()
 
+func readPass() (string, error) {
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", err
+	}
+	passphrase := string(bytePassword)
+	passphrase = strings.TrimSpace(passphrase)
+	return passphrase, nil
+}
+
 // GetKeystore returns a transaction authorization based on an existing ethereum
 // keystore located in validatorFolder/wallets or creates one if it does not
 // exist. It accepts a password using the "password" command line argument or
@@ -153,42 +163,44 @@ func openKeystore(description string, walletPath string, walletPassword string) 
 		keystore.StandardScryptN,
 		keystore.StandardScryptP,
 	)
+	logger.Info().
+		Str("location", filepath.Join(validatorFolder, "wallets")).
+		Int("accounts", len(ks.Accounts())).
+		Msg("loading wallet")
 
-	var account accounts.Account
-	if len(ks.Accounts()) > 0 {
-		account = ks.Accounts()[0]
+	creatingNew := len(ks.Accounts()) == 0
+	passOpt := wallet.Password()
+	var password string
+	if passOpt != nil {
+		password = *passOpt
+	} else {
+		if creatingNew {
+			fmt.Print("Enter new account password: ")
+		} else {
+			fmt.Print("Enter account password: ")
+		}
+		var err error
+		password, err = readPass()
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
-	if ks.Unlock(account, walletPassword) != nil {
-		if len(walletPassword) == 0 {
-			if len(ks.Accounts()) == 0 {
-				// Wallet doesn't exist and no password provided
-				fmt.Printf("Enter new %s password: ", description)
-			} else {
-				// Wallet exists and no password provided
-				fmt.Printf("Enter %s password: ", description)
-			}
-
-			bytePassword, err := terminal.ReadPassword(syscall.Stdin)
-			if err != nil {
-				return nil, accounts.Account{}, err
-			}
-			passphrase := string(bytePassword)
-
-			walletPassword = strings.TrimSpace(passphrase)
-		}
-
-		if len(ks.Accounts()) == 0 {
-			var err error
-			account, err = ks.NewAccount(walletPassword)
-			if err != nil {
-				return nil, accounts.Account{}, err
-			}
-		}
-		err := ks.Unlock(account, walletPassword)
+	var account accounts.Account
+	if creatingNew {
+		var err error
+		account, err = ks.NewAccount(password)
 		if err != nil {
 			return nil, accounts.Account{}, err
 		}
+	} else {
+		account = ks.Accounts()[0]
+	}
+
+	err := ks.Unlock(account, password)
+	if err != nil {
+		return nil, nil, err
+	}
 
 		logger.Info().Hex("address", account.Address.Bytes()).Str("description", description).Msg("created new wallet")
 	}

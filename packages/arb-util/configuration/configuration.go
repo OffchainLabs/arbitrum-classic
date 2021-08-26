@@ -28,6 +28,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
+const PASSWORD_NOT_SET = "PASSWORD_NOT_SET"
+
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
 
 type Conf struct {
@@ -164,6 +166,7 @@ type Node struct {
 type NodeCache struct {
 	AllowSlowLookup  bool          `koanf:"allow-slow-lookup"`
 	LRUSize          int           `koanf:"lru-size"`
+	BlockInfoLRUSize int           `koanf:"block-info-lru-size"`
 	TimedInitialSize int           `koanf:"timed-initial-size"`
 	TimedExpire      time.Duration `koanf:"timed-expire"`
 }
@@ -213,10 +216,24 @@ type FeedSigner struct {
 	PrivateKey string `koanf:"private-key"`
 }
 
+func (f *FeedSigner) Password() *string {
+	if f.PasswordImpl == PASSWORD_NOT_SET {
+		return nil
+	}
+	return &f.PasswordImpl
+}
+
 type WalletLocal struct {
-	Pathname   string `koanf:"pathname"`
-	Password   string `koanf:"password"`
-	PrivateKey string `koanf:"private-key"`
+	Pathname     string `koanf:"pathname"`
+	PasswordImpl string `koanf:"password"`
+	PrivateKey   string `koanf:"private-key"`
+}
+
+func (w WalletLocal) Password() *string {
+	if w.PasswordImpl == PASSWORD_NOT_SET {
+		return nil
+	}
+	return &w.PasswordImpl
 }
 
 type Log struct {
@@ -324,7 +341,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
 
 	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
-	f.Int("node.cache.lru-size", 20, "number of recently used L2 blocks to hold in lru memory cache")
+	f.Int("node.cache.lru-size", 1000, "number of recently used L2 block snapshots to hold in lru memory cache")
+	f.Int("node.cache.block-info-lru-size", 100_000, "number of recently used L2 block info to hold in lru memory cache")
 	//f.Duration("node.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in timed memory cache")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
@@ -340,16 +358,17 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("persistent.chain", "", "path that chain specific state is located")
 
 	f.String("wallet.local.pathname", defaultWalletPathname, "path to store wallet in")
-	f.String("wallet.local.password", "", "password for wallet")
+	f.String("wallet.local.password", PASSWORD_NOT_SET, "password for wallet")
 	f.String("wallet.local.private-key", "", "wallet private key string")
-
+  
 	f.String("wallet.fireblocks.feed-signer.pathname", "feed-signer-wallet", "path to store feed-signer wallet in")
-	f.String("wallet.fireblocks.feed-signer.password", "", "password for feed-signer wallet")
+	f.String("wallet.fireblocks.feed-signer.password", PASSWORD_NOT_SET, "password for feed-signer wallet")
 	f.String("wallet.fireblocks.feed-signer.private-key", "", "wallet feed-signer private key string")
 
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
 	AddHealthcheckOptions(f)
+
 
 	k, err := beginCommonParse(f)
 	if err != nil {
