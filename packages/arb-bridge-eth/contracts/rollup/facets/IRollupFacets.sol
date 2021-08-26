@@ -128,16 +128,14 @@ interface IRollupAdmin {
     function setStakeToken(address newStakeToken) external;
 
     /**
-     * @notice Set max delay in blocks for sequencer inbox
+     * @notice Set max delay for sequencer inbox
      * @param newSequencerInboxMaxDelayBlocks max number of blocks
-     */
-    function setSequencerInboxMaxDelayBlocks(uint256 newSequencerInboxMaxDelayBlocks) external;
-
-    /**
-     * @notice Set max delay in seconds for sequencer inbox
      * @param newSequencerInboxMaxDelaySeconds max number of seconds
      */
-    function setSequencerInboxMaxDelaySeconds(uint256 newSequencerInboxMaxDelaySeconds) external;
+    function setSequencerInboxMaxDelay(
+        uint256 newSequencerInboxMaxDelayBlocks,
+        uint256 newSequencerInboxMaxDelaySeconds
+    ) external;
 
     /**
      * @notice Set execution bisection degree
