@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -47,8 +46,6 @@ func TestSequencerGasUsage(t *testing.T) {
 		auth,
 		big.NewInt(0),
 		big.NewInt(0),
-		big.NewInt(0),
-		ethcommon.Address{},
 		auth.From,
 		nil,
 	)

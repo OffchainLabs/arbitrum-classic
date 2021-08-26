@@ -186,12 +186,12 @@ func switchFees(enabled bool) error {
 	if err != nil {
 		return err
 	}
-	tx, err := arbOwner.SetFeesEnabled(config.auth, enabled)
+	tx, err := arbOwner.SetChainParameter(config.auth, arbos.FeesEnabledParamId, big.NewInt(1))
 	if err != nil {
 		return err
 	}
 	fmt.Println("Waiting for receipt")
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "SetFeesEnabled")
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "SetChainParameter")
 	if err != nil {
 		return err
 	}
