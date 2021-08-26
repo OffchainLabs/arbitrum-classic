@@ -9,7 +9,7 @@ import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { Rollup__factory } from './abi/factories/Rollup__factory'
-import { TokenGateway__factory } from './abi/factories/TokenGateway__factory'
+import { L2ArbitrumGateway__factory } from './abi/factories/L2ArbitrumGateway__factory'
 
 import { providers, utils, constants } from 'ethers'
 import { BigNumber, Contract, Signer } from 'ethers'
@@ -243,7 +243,7 @@ export class BridgeHelper {
     l1TokenAddress: string,
     destinationAddress?: string
   ) {
-    const gatewayContract = TokenGateway__factory.connect(
+    const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
       l2Provider
     )
@@ -272,7 +272,7 @@ export class BridgeHelper {
     gatewayAddress: string,
     destinationAddress?: string
   ) {
-    const gatewayContract = TokenGateway__factory.connect(
+    const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
       l2Provider
     )
