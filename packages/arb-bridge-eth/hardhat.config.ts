@@ -101,23 +101,23 @@ task('deposit', 'Deposit coins into ethbridge')
 task('core-deploy-logic-one', 'deploy one logic')
   .addParam('contract', 'contract to deploy')
   .setAction(async (args, hre) => {
+    await handleFork(hre)
     const { contract } = args
     const { deployLogic } = initUpgrades(hre, __dirname)
-    await handleFork(hre)
     await deployLogic(contract)
   })
 
 task('core-deploy-logic-all', 'deploy all logic contracts').setAction(
   async (_, hre) => {
-    const { deployLogicAll } = initUpgrades(hre, __dirname)
     await handleFork(hre)
+    const { deployLogicAll } = initUpgrades(hre, __dirname)
     await deployLogicAll()
   }
 )
 
 task('core-trigger-upgrades', 'triggers upgrade').setAction(async (_, hre) => {
-  const { updateImplementations } = initUpgrades(hre, __dirname)
   await handleFork(hre)
+  const { updateImplementations } = initUpgrades(hre, __dirname)
   await updateImplementations()
 })
 
