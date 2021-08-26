@@ -485,7 +485,7 @@ func (fb *Fireblocks) GetTransactionByExternalId(externalId string) (*Transactio
 }
 
 func (fb *Fireblocks) IsTransactionStatusFailed(status string) bool {
-	if status == Cancelled || status == Rejected || status == Blocked || status == Failed {
+	if len(status) == 0 || status == Cancelled || status == Rejected || status == Blocked || status == Failed {
 		return true
 	}
 
