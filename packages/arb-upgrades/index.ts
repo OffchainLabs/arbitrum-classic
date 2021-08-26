@@ -473,6 +473,7 @@ export const initUpgrades = (
     upgradableBeaconAddress: string,
     newOwner: string
   ) => {
+    await compileTask
     const signers = await hre.ethers.getSigners()
     if (!signers.length) {
       throw new Error(
