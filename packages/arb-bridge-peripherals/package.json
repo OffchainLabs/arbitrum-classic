@@ -29,7 +29,7 @@
     "arbos-contracts": "^1.0.0",
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.0.0",
-    "ethers": "^5.1.0",
+    "ethers": "^5.4.5",
     "hardhat": "^2.6.1",
     "sol2uml": "^1.1.25",
     "ts-node": "^9.1.1",
