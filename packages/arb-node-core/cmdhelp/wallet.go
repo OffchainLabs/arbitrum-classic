@@ -32,6 +32,16 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
+func readPass() (string, error) {
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", err
+	}
+	passphrase := string(bytePassword)
+	passphrase = strings.TrimSpace(passphrase)
+	return passphrase, nil
+}
+
 // GetKeystore returns a transaction authorization based on an existing ethereum
 // keystore located in validatorFolder/wallets or creates one if it does not
 // exist. It accepts a password using the "password" command line argument or
@@ -49,37 +59,38 @@ func GetKeystore(
 		keystore.StandardScryptP,
 	)
 
-	var account accounts.Account
-	if len(ks.Accounts()) > 0 {
-		account = ks.Accounts()[0]
-	}
-
-	if ks.Unlock(account, wallet.Password) != nil {
-		if len(ks.Accounts()) == 0 {
+	creatingNew := len(ks.Accounts()) > 0
+	passOpt := wallet.Password()
+	var password string
+	if passOpt != nil {
+		password = *passOpt
+	} else {
+		if creatingNew {
 			fmt.Print("Enter new account password: ")
 		} else {
 			fmt.Print("Enter account password: ")
 		}
-
-		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+		var err error
+		password, err = readPass()
 		if err != nil {
 			return nil, nil, err
 		}
-		passphrase := string(bytePassword)
+	}
 
-		passphrase = strings.TrimSpace(passphrase)
-
-		if len(ks.Accounts()) == 0 {
-			var err error
-			account, err = ks.NewAccount(passphrase)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-		err = ks.Unlock(account, passphrase)
+	var account accounts.Account
+	if creatingNew {
+		var err error
+		account, err = ks.NewAccount(password)
 		if err != nil {
 			return nil, nil, err
 		}
+	} else {
+		account = ks.Accounts()[0]
+	}
+
+	err := ks.Unlock(account, password)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	auth, err := bind.NewKeyStoreTransactorWithChainID(ks, account, chainId)

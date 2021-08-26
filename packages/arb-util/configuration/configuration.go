@@ -28,6 +28,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
+const PASSWORD_NOT_SET = "PASSWORD_NOT_SET"
+
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
 
 type Conf struct {
@@ -191,7 +193,14 @@ type Validator struct {
 }
 
 type Wallet struct {
-	Password string `koanf:"password"`
+	PasswordImpl string `koanf:"password"`
+}
+
+func (w Wallet) Password() *string {
+	if w.PasswordImpl == PASSWORD_NOT_SET {
+		return nil
+	}
+	return &w.PasswordImpl
 }
 
 type Log struct {
@@ -307,7 +316,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
-	f.String("wallet.password", "", "password for wallet")
+	f.String("wallet.password", PASSWORD_NOT_SET, "password for wallet")
 
 	k, err := beginCommonParse(f)
 	if err != nil {
@@ -670,7 +679,7 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 
 	// Don't pass around password with normal configuration
 	wallet := out.Wallet
-	out.Wallet.Password = ""
+	out.Wallet.PasswordImpl = ""
 
 	return &out, &wallet, nil
 }
