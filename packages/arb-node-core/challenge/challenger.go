@@ -61,7 +61,7 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 
 	emptyHash := common.Hash{}
 	if challengeState == emptyHash {
-		// We must have lost the challenge and currently are waiting to lose via timeout
+		logger.Warn().Str("contract", c.challenge.Address().Hex()).Msg("challenge has been lost, waiting for timeout")
 		return nil
 	}
 
