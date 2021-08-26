@@ -21,6 +21,7 @@ import (
 	"crypto/rsa"
 	"encoding/hex"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -157,7 +158,6 @@ func NewFireblocksTransactAuthAdvanced(
 				Warn().
 				Err(err).
 				Str("hash", txHash.String()).
-				Str("status", details.Status).
 				Msg("error getting fireblocks transaction for receipt")
 			return nil, errors.Wrapf(err, "error getting fireblocks transaction for receipt: %s", details.Status)
 		}
@@ -335,7 +335,11 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 		}
 
 		if len(details.TxHash) > 0 {
-			txHash, err := hex.DecodeString(details.TxHash)
+			hashString := details.TxHash
+			if strings.HasPrefix(hashString, "0x") {
+				hashString = hashString[2:]
+			}
+			txHash, err := hex.DecodeString(hashString)
 			if err != nil || len(txHash) < 32 {
 				return nil, errors.Wrap(err, "error decoding txHash from fireblocks response")
 			}
@@ -421,15 +425,14 @@ func (t *TransactAuth) makeContractImpl(
 
 	// Actually send transaction
 	arbTx, err := t.SendTx(ctx, tx, "")
-
 	if err != nil {
 		logger.
 			Error().
 			Err(err).
 			Str("nonce", auth.Nonce.String()).
 			Hex("sender", t.auth.From.Bytes()).
-			Hex("to", arbTx.To().Bytes()).
-			Hex("data", arbTx.Data()).
+			Hex("to", tx.To().Bytes()).
+			Hex("data", tx.Data()).
 			Str("nonce", auth.Nonce.String()).
 			Msg("unable to send transaction")
 		return addr, nil, err
