@@ -23,6 +23,8 @@ import { PayableOverrides } from '@ethersproject/contracts'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
+import { L1WethGateway__factory } from './abi/factories/L1WethGateway__factory'
+
 import networks from './networks'
 
 interface RetryableGasArgs {
@@ -41,10 +43,16 @@ export class Bridge {
   l2Bridge: L2Bridge
   walletAddressCache?: string
   outboxAddressCache?: string
+  isCustomNetwork: boolean
 
-  private constructor(l1BridgeObj: L1Bridge, l2BridgeObj: L2Bridge) {
+  private constructor(
+    l1BridgeObj: L1Bridge,
+    l2BridgeObj: L2Bridge,
+    isCustomNetwork = false
+  ) {
     this.l1Bridge = l1BridgeObj
     this.l2Bridge = l2BridgeObj
+    this.isCustomNetwork = isCustomNetwork
   }
 
   public updateAllBalances() {
@@ -68,31 +76,30 @@ export class Bridge {
 
     const l1Network = networks[l1ChainId]
     const l2Network = networks[l2ChainId]
-
-    if (l1Network) {
-      if (l1Network.isArbitrum)
-        throw new Error('Connected to an Arbitrum networks as the L1...')
-      l1GatewayRouterAddress = l1Network.tokenBridge.l1GatewayRouter
-    } else if (!l1GatewayRouterAddress) {
-      throw new Error(
-        'Network not in config, and no l1GatewayRouter Address provided'
-      )
-    }
-
-    if (l2Network) {
-      if (!l2Network.isArbitrum)
-        throw new Error('Connected to an L1 network as the L2...')
-      l2GatewayRouterAddress = l2Network.tokenBridge.l2GatewayRouter
-    } else if (!l2GatewayRouterAddress) {
-      throw new Error(
-        'Network not in config, and no l2GatewayRouter address provided'
-      )
-    }
-
+    let isCustomNetwork = false
     if (l1Network && l2Network) {
       if (l1Network.partnerChainID !== l2Network.chainID)
         throw new Error('L1 and L2 networks are not connected')
+      if (l1Network.isArbitrum)
+        throw new Error('Connected to an Arbitrum networks as the L1...')
+      if (!l2Network.isArbitrum)
+        throw new Error('Connected to an L1 network as the L2...')
+
+      l1GatewayRouterAddress = l1Network.tokenBridge.l1GatewayRouter
+
+      l2GatewayRouterAddress = l2Network.tokenBridge.l2GatewayRouter
+    } else {
+      isCustomNetwork = true
     }
+    if (!l2GatewayRouterAddress)
+      throw new Error(
+        'Network not in config, and no l2GatewayRouter address provided'
+      )
+
+    if (!l1GatewayRouterAddress)
+      throw new Error(
+        'Network not in config, and no l1GatewayRouter Address provided'
+      )
 
     // check routers are deployed
     const l1RouterCode = await ethSigner.provider.getCode(
@@ -112,7 +119,7 @@ export class Bridge {
     const l1BridgeObj = new L1Bridge(l1GatewayRouterAddress, ethSigner)
     const l2BridgeObj = new L2Bridge(l2GatewayRouterAddress, arbSigner)
 
-    return new Bridge(l1BridgeObj, l2BridgeObj)
+    return new Bridge(l1BridgeObj, l2BridgeObj, isCustomNetwork)
   }
 
   /**
@@ -186,6 +193,23 @@ export class Bridge {
     return this.l1Bridge.depositETH(value, maxSubmissionPrice, overrides)
   }
 
+  private async looksLikeWethGateway(potentialWethGatewayAddress: string) {
+    try {
+      const potentialWethGateway = L1WethGateway__factory.connect(
+        potentialWethGatewayAddress,
+        this.l1Provider
+      )
+      await potentialWethGateway.l1Weth()
+      return true
+    } catch (err) {
+      if (err.code === 'CALL_EXCEPTION') {
+        return false
+      } else {
+        throw err
+      }
+    }
+  }
+
   /**
    * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
    */
@@ -211,9 +235,12 @@ export class Bridge {
 
     let estimateGasCallValue = constants.Zero
 
-    if (l1WethGatewayAddress === expectedL1GatewayAddress) {
-      // forwarded deposited eth as call value for weth deposit
-
+    // if it's a weth deposit, include callvalue for the gas estimate for the retryable
+    if (this.isCustomNetwork) {
+      if (await this.looksLikeWethGateway(expectedL1GatewayAddress)) {
+        estimateGasCallValue = amount
+      }
+    } else if (l1WethGatewayAddress === expectedL1GatewayAddress) {
       estimateGasCallValue = amount
     }
 
@@ -581,7 +608,7 @@ export class Bridge {
       l1TokenAddress
     )
 
-    return BridgeHelper.getOutBoundTransferInitiatedLogs(
+    return BridgeHelper.getTokenWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
       l1TokenAddress,
@@ -597,10 +624,9 @@ export class Bridge {
     gatewayAddress: string,
     destinationAddress?: string
   ) {
-    return BridgeHelper.getOutBoundTransferInitiatedLogs(
+    return BridgeHelper.getGatewayWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
-      '',
       destinationAddress
     )
   }
@@ -700,20 +726,32 @@ export class Bridge {
       }
     )
   }
-  public async getL1GatewaySetEventData() {
+  public async getL1GatewaySetEventData(_l1GatewayRouterAddress?: string) {
+    if (this.isCustomNetwork && !_l1GatewayRouterAddress)
+      throw new Error('Must supply _l1GatewayRouterAddress for custom network ')
+
     const l1ChainId = await this.l1Signer.getChainId()
     const l1GatewayRouterAddress =
-      networks[l1ChainId].tokenBridge.l1GatewayRouter
+      _l1GatewayRouterAddress || networks[l1ChainId].tokenBridge.l1GatewayRouter
+    if (!l1GatewayRouterAddress)
+      throw new Error('No l2GatewayRouterAddress provided')
+
     return BridgeHelper.getGatewaySetEventData(
       l1GatewayRouterAddress,
       this.l1Provider
     )
   }
 
-  public async getL2GatewaySetEventData() {
+  public async getL2GatewaySetEventData(_l2GatewayRouterAddress?: string) {
+    if (this.isCustomNetwork && !_l2GatewayRouterAddress)
+      throw new Error('Must supply _l2GatewayRouterAddress for custom network ')
+
     const l1ChainId = await this.l1Signer.getChainId()
     const l2GatewayRouterAddress =
-      networks[l1ChainId].tokenBridge.l2GatewayRouter
+      _l2GatewayRouterAddress || networks[l1ChainId].tokenBridge.l2GatewayRouter
+    if (!l2GatewayRouterAddress)
+      throw new Error('No l2GatewayRouterAddress provided')
+
     return BridgeHelper.getGatewaySetEventData(
       l2GatewayRouterAddress,
       this.l2Provider

@@ -138,11 +138,17 @@ interface BridgeInterface extends ethers.utils.Interface {
   ): Result
 
   events: {
+    'BridgeCallTriggered(address,address,uint256,bytes)': EventFragment
+    'InboxToggle(address,bool)': EventFragment
     'MessageDelivered(uint256,bytes32,address,uint8,address,bytes32)': EventFragment
+    'OutboxToggle(address,bool)': EventFragment
     'OwnershipTransferred(address,address)': EventFragment
   }
 
+  getEvent(nameOrSignatureOrTopic: 'BridgeCallTriggered'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'InboxToggle'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'MessageDelivered'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'OutboxToggle'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment
 }
 
@@ -376,6 +382,21 @@ export class Bridge extends BaseContract {
   }
 
   filters: {
+    BridgeCallTriggered(
+      outbox?: string | null,
+      destAddr?: string | null,
+      amount?: null,
+      data?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string],
+      { outbox: string; destAddr: string; amount: BigNumber; data: string }
+    >
+
+    InboxToggle(
+      inbox?: string | null,
+      enabled?: null
+    ): TypedEventFilter<[string, boolean], { inbox: string; enabled: boolean }>
+
     MessageDelivered(
       messageIndex?: BigNumberish | null,
       beforeInboxAcc?: BytesLike | null,
@@ -394,6 +415,11 @@ export class Bridge extends BaseContract {
         messageDataHash: string
       }
     >
+
+    OutboxToggle(
+      outbox?: string | null,
+      enabled?: null
+    ): TypedEventFilter<[string, boolean], { outbox: string; enabled: boolean }>
 
     OwnershipTransferred(
       previousOwner?: string | null,

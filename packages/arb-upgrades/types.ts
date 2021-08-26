@@ -11,7 +11,6 @@ export interface CurrentDeployment {
   implDeploymentTxn: string
   implArbitrumCommitHash: string
   implBuildInfo: string
-  isBeacon?: boolean
 }
 
 export type QueuedUpdates = {
@@ -81,3 +80,15 @@ export const isRollupUserFacet = (contractName: ContractNames) =>
 
 export const isRollupAdminFacet = (contractName: ContractNames) =>
   proxyType(contractName) === UpgradeableType.RollupAdminFacet
+export const getLayer = (contractName: ContractNames) => {
+  switch (contractName) {
+    case 'L2ERC20Gateway':
+    case 'L2GatewayRouter':
+    case 'L2WethGateway':
+    case 'L2CustomGateway':
+    case 'StandardArbERC20':
+      return 2
+    default:
+      return 1
+  }
+}

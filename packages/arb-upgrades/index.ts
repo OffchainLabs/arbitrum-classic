@@ -1,6 +1,9 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { writeFileSync, readFileSync } from 'fs'
+import { writeFileSync, readFileSync, unlinkSync } from 'fs'
 import childProcess from 'child_process'
+// @ts-ignore (module doesn't have types declared)
+import prompt from 'prompt-promise'
+
 import {
   QueuedUpdates,
   CurrentDeployments,
@@ -10,24 +13,17 @@ import {
   isBeacon,
   isRollupUserFacet,
   isRollupAdminFacet,
+  getLayer,
 } from './types'
 
-// import {
-//   getStorageLayout,
-//   assertUpgradeSafe,
-//   getContractVersion,
-//   assertStorageUpgradeSafe,
-//   solcInputOutputDecoder,
-//   validate,
-//   RunValidation,
-// } from '@openzeppelin/upgrades-core'
-
-const adminSlot =
+const ADMIN_SLOT =
   '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103'
-const implementationSlot =
+const IMPLEMENTATION_SLOT =
   '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
-const beaconSlot =
+const BEACON_SLOT =
   '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50'
+
+const POST_UPGRADE_INIT_SIG = '0x95fcea78'
 
 const currentCommit = childProcess
   .execSync('git rev-parse HEAD')
@@ -85,17 +81,28 @@ export const initUpgrades = (
         console.log(
           'New network; need to set up _current_deployments.json file'
         )
-        throw err
-      } else {
-        throw err
       }
+      throw err
+    }
+  }
+
+  const createTempDeploymentsFile = async (): Promise<{
+    path: string
+    data: CurrentDeployments
+  }> => {
+    const { data: currentDeployments } = await getDeployments()
+    const network = await hre.ethers.provider.getNetwork()
+    const path = `${rootDir}/deployments/${network.chainId}_tmp_deployment.json`
+    writeFileSync(path, JSON.stringify(currentDeployments))
+    return {
+      path,
+      data: currentDeployments,
     }
   }
 
   const getBuildInfoString = async (contractName: string) => {
-    const contracts = (await hre.artifacts.getAllFullyQualifiedNames()).filter(
-      curr => curr.includes(contractName)
-    )
+    const names = await hre.artifacts.getAllFullyQualifiedNames()
+    const contracts = names.filter(curr => curr.endsWith(contractName))
     if (contracts.length !== 1) throw new Error('Contract not found')
     const info = await hre.artifacts.getBuildInfo(contracts[0])
     return JSON.stringify(info)
@@ -123,6 +130,32 @@ export const initUpgrades = (
     const { path, data: queuedUpdatesData } = await getQueuedUpdates()
 
     for (const contractName of contractNames) {
+      if (queuedUpdatesData[contractName]) {
+        console.log(
+          `Update already queued up for ${contractName}; are you sure you want to continue?`
+        )
+        console.log(`('Yes') to continue:`)
+        const res = await prompt('')
+        if (res.trim() !== 'Yes') {
+          console.log('Skipping...')
+          continue
+        }
+      }
+
+      const layerOfContract = getLayer(contractName)
+      const currentLayer =
+        (
+          await hre.ethers.provider.getCode(
+            '0x0000000000000000000000000000000000000064'
+          )
+        ).length > 2
+          ? 2
+          : 1
+      if (layerOfContract !== currentLayer) {
+        throw new Error(
+          `Warning: trying to deploy ${contractName} onto the wrong layer!`
+        )
+      }
       console.log('Deploying new logic for ', contractName)
 
       const contractFactory = (
@@ -141,7 +174,7 @@ export const initUpgrades = (
       }
       queuedUpdatesData[contractName] = newLogicData
       console.log(`Deployed ${contractName} Logic:`)
-      console.log(newLogicData)
+      console.log(receipt)
       console.log('')
 
       writeFileSync(path, JSON.stringify(queuedUpdatesData))
@@ -159,10 +192,11 @@ export const initUpgrades = (
 
     const { path: queuedUpdatesPath, data: queuedUpdatesData } =
       await getQueuedUpdates()
-    const { path: deploymentsPath, data: deploymentsJsonData } =
-      await getDeployments()
+    const { path: deploymentsPath } = await getDeployments()
+    const { path: tmpDeploymentsPath, data: tmpDeploymentsJsonData } =
+      await createTempDeploymentsFile()
 
-    const { proxyAdminAddress } = deploymentsJsonData
+    const { proxyAdminAddress } = tmpDeploymentsJsonData
 
     const signers = await hre.ethers.getSigners()
     if (!signers.length) {
@@ -192,10 +226,11 @@ export const initUpgrades = (
       )
     }
     console.log(`Updating ${contractsToUpdate.length} contracts`)
+    // TODO: explicitly check for storage layout clashes
 
     for (const contractName of contractsToUpdate) {
       const queuedUpdateData = queuedUpdatesData[contractName] as QueuedUpdate
-      const deploymentData = deploymentsJsonData.contracts[
+      const deploymentData = tmpDeploymentsJsonData.contracts[
         contractName
       ] as CurrentDeployment
       if (!deploymentData) {
@@ -218,22 +253,23 @@ export const initUpgrades = (
       ) {
         const userFacetAddress = isRollupUserFacet(contractName)
           ? queuedUpdateData.address
-          : deploymentsJsonData.contracts.RollupUserFacet
+          : tmpDeploymentsJsonData.contracts.RollupUserFacet
         const adminFacetAddress = isRollupAdminFacet(contractName)
           ? queuedUpdateData.address
-          : deploymentsJsonData.contracts.RollupAdminFacet
+          : tmpDeploymentsJsonData.contracts.RollupAdminFacet
         const Rollup = (await hre.ethers.getContractFactory('Rollup'))
           .attach(deploymentData.proxyAddress)
           .connect(signer)
         upgradeTx = await Rollup.setFacets(adminFacetAddress, userFacetAddress)
       } else {
-        upgradeTx = await proxyAdmin.upgrade(
+        upgradeTx = await proxyAdmin.upgradeAndCall(
           deploymentData.proxyAddress,
-          queuedUpdateData.address
+          queuedUpdateData.address,
+          POST_UPGRADE_INIT_SIG
         )
       }
-
-      await upgradeTx.wait()
+      const rec = await upgradeTx.wait()
+      console.log('Upgrade receipt:', rec)
 
       const buildInfo = await getBuildInfoString(contractName)
 
@@ -245,23 +281,36 @@ export const initUpgrades = (
         implArbitrumCommitHash: queuedUpdateData.arbitrumCommitHash,
         implBuildInfo: buildInfo,
       }
-      console.log('Setting new deployment data:', newDeploymentData)
+      console.log('Setting new tmp: deployment data')
 
-      deploymentsJsonData.contracts[contractName] = newDeploymentData
-      writeFileSync(deploymentsPath, JSON.stringify(deploymentsJsonData))
+      tmpDeploymentsJsonData.contracts[contractName] = newDeploymentData
+      writeFileSync(tmpDeploymentsPath, JSON.stringify(tmpDeploymentsJsonData))
 
       delete queuedUpdatesData[contractName]
       writeFileSync(queuedUpdatesPath, JSON.stringify(queuedUpdatesData))
       console.log('')
     }
+    console.log('Finished all deployments: setting data to current deployments')
+    writeFileSync(deploymentsPath, JSON.stringify(tmpDeploymentsJsonData))
+    // removing tmp file
+    unlinkSync(tmpDeploymentsPath)
+
     return await verifyCurrentImplementations()
   }
 
   const verifyCurrentImplementations = async () => {
-    console.log('Verifying implementations')
+    console.log('Verifying deployments:')
 
     const { data: deploymentsJsonData } = await getDeployments()
     let success = true
+    const ProxyAdmin__factory = await hre.ethers.getContractFactory(
+      'ProxyAdmin'
+    )
+    const proxyAdmin = ProxyAdmin__factory.attach(
+      deploymentsJsonData.proxyAdminAddress
+    )
+    const proxyAdminOwner = await proxyAdmin.owner()
+
     for (const _contractName in deploymentsJsonData.contracts) {
       const contractName = _contractName as ContractNames
       // console.warn('con', contractName);
@@ -275,6 +324,7 @@ export const initUpgrades = (
 
         const implementation = await UpgradeableBeacon.implementation()
         const beaconOwner = await UpgradeableBeacon.owner()
+        const proxyAdminOwner = await proxyAdmin.owner()
         if (
           implementation.toLowerCase() !==
           deploymentData.implAddress.toLowerCase()
@@ -286,15 +336,11 @@ export const initUpgrades = (
           )
           success = false
         }
-
-        if (
-          beaconOwner.toLowerCase() !==
-          deploymentsJsonData.proxyAdminAddress.toLowerCase()
-        ) {
+        if (beaconOwner.toLowerCase() !== proxyAdminOwner.toLowerCase()) {
           console.log(
             `${contractName} Verification failed: bad admin`,
             beaconOwner,
-            deploymentsJsonData.proxyAdminAddress
+            proxyAdminOwner
           )
           success = false
         }
@@ -321,7 +367,7 @@ export const initUpgrades = (
       // check proxy admin
       let admin = await hre.ethers.provider.getStorageAt(
         deploymentData.proxyAddress,
-        adminSlot
+        ADMIN_SLOT
       )
       if (admin.length > 42) {
         admin = '0x' + admin.substr(admin.length - 40, 40)
@@ -340,7 +386,7 @@ export const initUpgrades = (
       //  check implementation
       let implementation = await hre.ethers.provider.getStorageAt(
         deploymentData.proxyAddress,
-        implementationSlot
+        IMPLEMENTATION_SLOT
       )
       if (implementation.length > 42) {
         implementation =
@@ -371,46 +417,30 @@ export const initUpgrades = (
     await deployLogic(contractsNames)
   }
 
-  // TODO:
-  // const verifyUpgrade = async (contractName: string) => {
-  //    const validationContext = {} as RunValidation
+  const transferAdmin = async (proxyAddress: string, newAdmin: string) => {
+    const { path: deploymentsPath, data } = await getDeployments()
+    const signers = await hre.ethers.getSigners()
+    if (!signers.length) {
+      throw new Error(
+        'No signer - make sure a key is properly set (check hardhat config)'
+      )
+    }
+    const signer = signers[0]
 
-  //    const contractNameFull = (await artifacts.getAllFullyQualifiedNames()).find(
-  //      curr => curr.includes(contractName)
-  //    )
+    const TransparentUpgradeableProxy__factory =
+      await hre.ethers.getContractFactory('TransparentUpgradeableProxy')
+    const TransparentUpgradeableProxy =
+      TransparentUpgradeableProxy__factory.attach(proxyAddress).connect(signer)
 
-  //    if (!contractNameFull ) {
-  //      throw new Error("Can't find artifacts for contracts")
-  //    }
+    const res = await TransparentUpgradeableProxy.changeAdmin(newAdmin)
+    const rec = res.wait()
+  }
 
-  //    for (const contract of contractNameFull) {
-  //      const buildInfo = await artifacts.getBuildInfo(contract)
-
-  //      const solcOutput = buildInfo.output
-  //      const solcInput = buildInfo.input
-  //      const decodeSrc = solcInputOutputDecoder(solcInput, solcOutput)
-  //      Object.assign(validationContext, validate(solcOutput, decodeSrc))
-  //    }
-
-  //    const oldVersion = getContractVersion(validationContext, oldContract)
-  //    const newVersion = getContractVersion(validationContext, newContract)
-
-  //    // verifies for errors such as setting arguments in constructors
-  //    assertUpgradeSafe([validationContext], oldVersion, { kind: 'transparent' })
-  //    assertUpgradeSafe([validationContext], newVersion, { kind: 'transparent' })
-
-  //    const oldStorage = getStorageLayout(validationContext, oldVersion)
-  //    const newStorage = getStorageLayout(validationContext, newVersion)
-
-  //    // verifies that storage layouts match
-  //    assertStorageUpgradeSafe(oldStorage, newStorage)
-
-  //    console.log('Upgrade validation complete, all is good.')
-  //  }
   return {
     updateImplementations,
     verifyCurrentImplementations,
     deployLogic,
     deployLogicAll,
+    transferAdmin,
   }
 }

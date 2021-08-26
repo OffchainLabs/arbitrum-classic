@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -124,10 +123,22 @@ func startup() error {
 		fmt.Println("Missing --rollup.machine.filename")
 	}
 
+	var rpcMode web3.RpcMode
 	if config.Node.Type == "forwarder" {
 		if config.Node.Forwarder.Target == "" {
 			badConfig = true
 			fmt.Println("Forwarder node needs --node.forwarder.target")
+		}
+
+		if config.Node.Forwarder.RpcMode == "full" {
+			rpcMode = web3.NormalMode
+		} else if config.Node.Forwarder.RpcMode == "non-mutating" {
+			rpcMode = web3.NonMutatingMode
+		} else if config.Node.Forwarder.RpcMode == "forwarding-only" {
+			rpcMode = web3.ForwardingOnlyMode
+		} else {
+			badConfig = true
+			fmt.Printf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
 		}
 	} else if config.Node.Type == "aggregator" {
 		if config.Node.Aggregator.InboxAddress == "" {
@@ -163,21 +174,14 @@ func startup() error {
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", l2ChainId.Bytes()).Str("type", config.Node.Type).Msg("Launching arbitrum node")
 
-	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename)
+	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
 	defer mon.Close()
 
-	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.MetricsPrefix)
+	metricsConfig := metrics.NewMetricsConfig(config.MetricsServer, &config.Healthcheck.MetricsPrefix)
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
-	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry, metricsConfig.Registerer)
-		if err != nil {
-			log.Error().Err(err).Msg("healthcheck server failed")
-		}
-	}()
-
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics}
 	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer}
 	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node}
@@ -188,6 +192,13 @@ func startup() error {
 	}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)
+
+	go func() {
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	if len(config.Feed.Input.URLs) == 0 {
@@ -259,8 +270,9 @@ func startup() error {
 	}
 
 	nodeStore := mon.Storage.GetNodeStore()
-	metrics.RegisterNodeStoreMetrics(nodeStore, metricsConfig)
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond)
+	metricsConfig.RegisterNodeStoreMetrics(nodeStore)
+	metricsConfig.RegisterArbCoreMetrics(mon.Core)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond, &config.Node.Cache)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
@@ -285,8 +297,15 @@ func startup() error {
 			config.Feed.Output,
 		)
 		lockoutConf := config.Node.Sequencer.Lockout
-		if err == nil && lockoutConf.Redis != "" {
-			batch, err = rpc.SetupLockout(ctx, batch.(*batcher.SequencerBatcher), mon.Core, inboxReader, lockoutConf, errChan)
+		if err == nil {
+			seqBatcher, ok := batch.(*batcher.SequencerBatcher)
+			if lockoutConf.Redis != "" {
+				// Setup the lockout. This will take care of the initial delayed sequence.
+				batch, err = rpc.SetupLockout(ctx, seqBatcher, mon.Core, inboxReader, lockoutConf, errChan)
+			} else if ok {
+				// Ensure we sequence delayed messages before opening the RPC.
+				err = seqBatcher.SequenceDelayedMessages(ctx, false)
+			}
 		}
 		if err == nil {
 			go batch.Start(ctx)
@@ -301,11 +320,8 @@ func startup() error {
 		}
 	}
 
-	metricsConfig.RegisterSystemMetrics()
-	metricsConfig.RegisterStaticMetrics()
-
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil, metricsConfig)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil)
 	if err != nil {
 		return err
 	}

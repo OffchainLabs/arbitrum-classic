@@ -24,6 +24,7 @@ import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 
 import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
@@ -40,6 +41,22 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
 
     address public inbox;
 
+    event DepositInitiated(
+        address l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _sequenceNumber,
+        uint256 _amount
+    );
+
+    event WithdrawalFinalized(
+        address l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _exitNum,
+        uint256 _amount
+    );
+
     modifier onlyCounterpartGateway() override {
         address _inbox = inbox;
 
@@ -51,6 +68,14 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address l2ToL1Sender = super.getL2ToL1Sender(_inbox);
         require(l2ToL1Sender == counterpartGateway, "ONLY_COUNTERPART_GATEWAY");
         _;
+    }
+
+    function postUpgradeInit() external {
+        // it is assumed the L1 Arbitrum Gateway contract is behind a Proxy controlled by a proxy admin
+        // this function can only be called by the proxy admin contract
+        address proxyAdmin = ProxyUtil.getProxyAdmin();
+        require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
+        // this has no other logic since the current upgrade doesn't require this logic
     }
 
     function _initialize(
@@ -80,8 +105,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway returns (bytes memory) {
-        (uint256 exitNum, bytes memory callHookData) =
-            GatewayMessageHandler.parseToL1GatewayMsg(_data);
+        (uint256 exitNum, bytes memory callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(
+            _data
+        );
 
         (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
@@ -99,7 +125,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             inboundEscrowTransfer(_token, _to, _amount);
         }
 
-        emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
+        emit WithdrawalFinalized(_token, _from, _to, exitNum, _amount);
         return bytes("");
     }
 
@@ -212,17 +238,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
                 res
             );
         }
-        // deposits don't have an exit num from L1 to L2, only on the way back
-        uint256 currExitNum = 0;
-        emit OutboundTransferInitiatedV1(
-            _l1Token,
-            _from,
-            _to,
-            seqNum,
-            currExitNum,
-            _amount,
-            extraData
-        );
+        emit DepositInitiated(_l1Token, _from, _to, seqNum, _amount);
         return abi.encode(seqNum);
     }
 

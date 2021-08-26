@@ -38,9 +38,8 @@ HashPreImage Datastack::getHashPreImage() const {
     }
 }
 
-DataStackProof Datastack::marshalForProof(
-    const std::vector<MarshalLevel>& stackInfo,
-    const Code& code) const {
+DataStackProof Datastack::marshalForProof(const std::vector<size_t>& stackInfo,
+                                          const Code& code) const {
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;
@@ -62,7 +61,7 @@ DataStackProof Datastack::marshalForProof(
     for (size_t i = 0; i < val.size(); ++i) {
         auto index = val.size() - 1 - i;
         // Only marshal a stub if we are underflowing
-        auto level = underflow ? MarshalLevel::STUB : stackInfo[index];
+        auto level = underflow ? 0 : stackInfo[index];
         ::marshalForProof(val[index], level, buf, code);
     }
 

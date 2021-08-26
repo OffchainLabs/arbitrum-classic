@@ -551,21 +551,30 @@ CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
         arbCore->takeExecutionCursorMachine(*executionCursor).release());
 }
 
-CMachine* arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
-                                       uint64_t block_number) {
+CMachineResult arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
+                                            uint64_t block_number,
+                                            int allow_slow_lookup) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
 
     try {
-        auto machine = arbcore->getMachineForSideload(block_number);
+        auto machine =
+            arbcore->getMachineForSideload(block_number, allow_slow_lookup);
         if (!machine.status.ok()) {
+            if (machine.status.IsNotFound() && !allow_slow_lookup) {
+                // Machine not found in memory cache and database lookup
+                // disabled
+                return {nullptr, 1};
+            }
+
             std::cerr << "Failed to load machine for sideload "
                       << machine.status.ToString() << std::endl;
-            return nullptr;
+            return {nullptr, 0};
         }
-        return static_cast<void*>(machine.data.release());
+
+        return {static_cast<void*>(machine.data.release()), 0};
     } catch (const std::exception& e) {
         std::cerr << "Exception while loading machine for sideload " << e.what()
                   << std::endl;
-        return nullptr;
+        return {nullptr, 0};
     }
 }

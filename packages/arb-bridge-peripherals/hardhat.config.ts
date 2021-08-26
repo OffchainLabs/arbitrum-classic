@@ -1,8 +1,7 @@
 import * as config from 'arb-bridge-eth/hardhat.config'
 import { task } from 'hardhat/config'
 import { initUpgrades } from 'arb-upgrades'
-
-// require('@openzeppelin/hardhat-upgrades')
+import 'hardhat-deploy-ethers'
 
 task('deploy-logic-one', 'deploy one logic')
   .addParam('contract', 'contract to deploy')
@@ -30,5 +29,14 @@ task('verify-deployments', 'verifies implementations').setAction(
     await verifyCurrentImplementations()
   }
 )
+
+task('transfer-owner', 'deploy one logic')
+  .addParam('proxyaddress', 'proxy address')
+  .addParam('newadmin', 'address of new admin')
+  .setAction(async (args, hre) => {
+    const { contract } = args
+    const { transferAdmin } = initUpgrades(hre, __dirname)
+    await transferAdmin(args.proxyaddress, args.newadmin)
+  })
 
 module.exports = config

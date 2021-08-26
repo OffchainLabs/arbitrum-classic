@@ -270,14 +270,6 @@ export class L1Bridge {
     if (this.inboxCached) {
       return this.inboxCached
     }
-    const chainId = await this.getChainId()
-    if (networks[chainId]) {
-      this.inboxCached = Inbox__factory.connect(
-        networks[chainId].tokenBridge.inbox,
-        this.l1Signer
-      )
-      return this.inboxCached
-    }
     const gateway = await this.getDefaultL1Gateway()
 
     const inboxAddress = await gateway.inbox()

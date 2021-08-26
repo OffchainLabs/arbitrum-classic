@@ -19,6 +19,7 @@ package txdb
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"math/big"
 	"time"
 
@@ -48,9 +49,10 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
 type TxDB struct {
-	Lookup    core.ArbOutputLookup
-	as        machine.NodeStore
-	logReader *core.LogReader
+	Lookup          core.ArbOutputLookup
+	allowSlowLookup bool
+	as              machine.NodeStore
+	logReader       *core.LogReader
 
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
@@ -60,7 +62,7 @@ type TxDB struct {
 	pendingLogsFeed event.Feed
 	blockProcFeed   event.Feed
 
-	snapshotCache *lru.Cache
+	snapshotLRUCache *lru.Cache
 }
 
 func New(
@@ -68,15 +70,21 @@ func New(
 	arbCore core.ArbCore,
 	as machine.NodeStore,
 	updateFrequency time.Duration,
+	cacheConfig *configuration.NodeCache,
 ) (*TxDB, <-chan error, error) {
-	snapshotCache, err := lru.New(100)
-	if err != nil {
-		return nil, nil, err
+	var snapshotLRUCache *lru.Cache
+	if cacheConfig.LRUSize > 0 {
+		var err error
+		snapshotLRUCache, err = lru.New(cacheConfig.LRUSize)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	db := &TxDB{
-		Lookup:        arbCore,
-		as:            as,
-		snapshotCache: snapshotCache,
+		Lookup:           arbCore,
+		as:               as,
+		snapshotLRUCache: snapshotLRUCache,
+		allowSlowLookup:  cacheConfig.AllowSlowLookup,
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
@@ -208,10 +216,12 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 			return err
 		}
 
-		for i := oldHeight; i > reorgBlockHeight; i-- {
-			db.snapshotCache.Remove(i)
+		if db.snapshotLRUCache != nil {
+			for i := oldHeight; i > reorgBlockHeight; i-- {
+				db.snapshotLRUCache.Remove(i)
+			}
+			db.snapshotLRUCache.Remove(reorgBlockHeight)
 		}
-		db.snapshotCache.Remove(reorgBlockHeight)
 	}
 
 	return nil
@@ -460,11 +470,13 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
-	cachedSnap, found := db.snapshotCache.Get(info.Header.Number.Uint64())
-	if found {
-		return cachedSnap.(*snapshot.Snapshot), nil
+	if db.snapshotLRUCache != nil {
+		cachedSnap, found := db.snapshotLRUCache.Get(info.Header.Number.Uint64())
+		if found {
+			return cachedSnap.(*snapshot.Snapshot), nil
+		}
 	}
-	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
+	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64(), db.allowSlowLookup)
 	if err != nil || mach == nil {
 		return nil, err
 	}
@@ -476,7 +488,9 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if err != nil {
 		return nil, err
 	}
-	db.snapshotCache.Add(info.Header.Number.Uint64(), snap)
+	if db.snapshotLRUCache != nil {
+		db.snapshotLRUCache.Add(info.Header.Number.Uint64(), snap)
+	}
 	return snap, nil
 }
 

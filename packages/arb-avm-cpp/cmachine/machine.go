@@ -28,8 +28,8 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -39,18 +39,8 @@ import (
 )
 
 var (
-	GasCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "arbitrum",
-		Subsystem: "arbosmachine",
-		Name:      "arbGas",
-		Help:      "Amount of ArbGas consumed to evaulate assertions",
-	})
-	StepsCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "arbitrum",
-		Subsystem: "arbosmachine",
-		Name:      "steps",
-		Help:      "Number of steps in evaluated assertions",
-	})
+	GasCounter   = metrics.NewRegisteredCounter("arbitrum/nonmutating/gas_used", nil)
+	StepsCounter = metrics.NewRegisteredCounter("arbitrum/nonmutating/steps_used", nil)
 )
 
 type Machine struct {
@@ -221,10 +211,10 @@ func (m *Machine) ExecuteAssertionAdvanced(
 
 	assertion := C.executeAssertion(m.c, conf)
 
-	executionAssertion, values, u, err := makeExecutionAssertion(assertion)
-	GasCounter.Add(float64(executionAssertion.NumGas))
-	StepsCounter.Add(float64(u))
-	return executionAssertion, values, u, err
+	executionAssertion, values, steps, err := makeExecutionAssertion(assertion)
+	GasCounter.Inc(int64(executionAssertion.NumGas))
+	StepsCounter.Inc(int64(steps))
+	return executionAssertion, values, steps, err
 }
 
 func (m *Machine) MarshalForProof() ([]byte, []byte, error) {

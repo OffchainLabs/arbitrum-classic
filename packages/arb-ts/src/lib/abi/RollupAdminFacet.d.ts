@@ -21,6 +21,8 @@ import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface RollupAdminFacetInterface extends ethers.utils.Interface {
   functions: {
+    'STORAGE_GAP_1()': FunctionFragment
+    'STORAGE_GAP_2()': FunctionFragment
     '_stakerMap(address)': FunctionFragment
     'amountStaked(address)': FunctionFragment
     'arbGasSpeedLimitPerBlock()': FunctionFragment
@@ -32,6 +34,10 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     'delayedBridge()': FunctionFragment
     'extraChallengeTimeBlocks()': FunctionFragment
     'firstUnresolvedNode()': FunctionFragment
+    'forceConfirmNode(uint256,bytes32,bytes,uint256[],uint256,bytes32,uint256)': FunctionFragment
+    'forceCreateNode(bytes32,bytes32[3][2],uint256[4][2],bytes,uint256,uint256,uint256)': FunctionFragment
+    'forceRefundStaker(address[])': FunctionFragment
+    'forceResolveChallenge(address[],address[])': FunctionFragment
     'getNode(uint256)': FunctionFragment
     'getNodeHash(uint256)': FunctionFragment
     'getStakerAddress(uint256)': FunctionFragment
@@ -52,8 +58,6 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     'resume()': FunctionFragment
     'rollupEventBridge()': FunctionFragment
     'sequencerBridge()': FunctionFragment
-    'sequencerInboxMaxDelayBlocks()': FunctionFragment
-    'sequencerInboxMaxDelaySeconds()': FunctionFragment
     'setArbGasSpeedLimitPerBlock(uint256)': FunctionFragment
     'setBaseStake(uint256)': FunctionFragment
     'setChallengeExecutionBisectionDegree(uint256)': FunctionFragment
@@ -80,6 +84,14 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     'zombieLatestStakedNode(uint256)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP_1',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP_2',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: '_stakerMap', values: [string]): string
   encodeFunctionData(functionFragment: 'amountStaked', values: [string]): string
   encodeFunctionData(
@@ -114,6 +126,41 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'firstUnresolvedNode',
     values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceConfirmNode',
+    values: [
+      BigNumberish,
+      BytesLike,
+      BytesLike,
+      BigNumberish[],
+      BigNumberish,
+      BytesLike,
+      BigNumberish
+    ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceCreateNode',
+    values: [
+      BytesLike,
+      [[BytesLike, BytesLike, BytesLike], [BytesLike, BytesLike, BytesLike]],
+      [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      BytesLike,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish
+    ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceRefundStaker',
+    values: [string[]]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceResolveChallenge',
+    values: [string[], string[]]
   ): string
   encodeFunctionData(
     functionFragment: 'getNode',
@@ -169,14 +216,6 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'sequencerBridge',
-    values?: undefined
-  ): string
-  encodeFunctionData(
-    functionFragment: 'sequencerInboxMaxDelayBlocks',
-    values?: undefined
-  ): string
-  encodeFunctionData(
-    functionFragment: 'sequencerInboxMaxDelaySeconds',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -264,6 +303,14 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'STORAGE_GAP_1',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'STORAGE_GAP_2',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: '_stakerMap', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'amountStaked',
@@ -300,6 +347,22 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'firstUnresolvedNode',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceConfirmNode',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceCreateNode',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceRefundStaker',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceResolveChallenge',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'getNode', data: BytesLike): Result
@@ -347,14 +410,6 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'sequencerBridge',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'sequencerInboxMaxDelayBlocks',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'sequencerInboxMaxDelaySeconds',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -437,25 +492,27 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     'NodeConfirmed(uint256,bytes32,uint256,bytes32,uint256)': EventFragment
     'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,uint256,bytes32,bytes32[3][2],uint256[4][2])': EventFragment
     'NodeRejected(uint256)': EventFragment
-    'NodesDestroyed(uint256,uint256)': EventFragment
     'OwnerFunctionCalled(uint256)': EventFragment
     'Paused(address)': EventFragment
     'RollupChallengeStarted(address,address,address,uint256)': EventFragment
     'RollupCreated(bytes32)': EventFragment
-    'StakerReassigned(address,uint256)': EventFragment
     'Unpaused(address)': EventFragment
+    'UserStakeUpdated(address,uint256,uint256)': EventFragment
+    'UserWithdrawableFundsUpdated(address,uint256,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'NodeConfirmed'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodeCreated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodeRejected'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'NodesDestroyed'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OwnerFunctionCalled'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Paused'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupChallengeStarted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'StakerReassigned'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Unpaused'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'UserStakeUpdated'): EventFragment
+  getEvent(
+    nameOrSignatureOrTopic: 'UserWithdrawableFundsUpdated'
+  ): EventFragment
 }
 
 export class RollupAdminFacet extends BaseContract {
@@ -502,6 +559,10 @@ export class RollupAdminFacet extends BaseContract {
   interface: RollupAdminFacetInterface
 
   functions: {
+    STORAGE_GAP_1(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    STORAGE_GAP_2(overrides?: CallOverrides): Promise<[BigNumber]>
+
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
@@ -542,6 +603,45 @@ export class RollupAdminFacet extends BaseContract {
     extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
 
     firstUnresolvedNode(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    forceRefundStaker(
+      staker: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    forceResolveChallenge(
+      stakerA: string[],
+      stakerB: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
@@ -598,14 +698,6 @@ export class RollupAdminFacet extends BaseContract {
     rollupEventBridge(overrides?: CallOverrides): Promise<[string]>
 
     sequencerBridge(overrides?: CallOverrides): Promise<[string]>
-
-    sequencerInboxMaxDelayBlocks(
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
-    sequencerInboxMaxDelaySeconds(
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
 
     setArbGasSpeedLimitPerBlock(
       newArbGasSpeedLimitPerBlock: BigNumberish,
@@ -727,6 +819,10 @@ export class RollupAdminFacet extends BaseContract {
     ): Promise<[BigNumber]>
   }
 
+  STORAGE_GAP_1(overrides?: CallOverrides): Promise<BigNumber>
+
+  STORAGE_GAP_2(overrides?: CallOverrides): Promise<BigNumber>
+
   _stakerMap(
     arg0: string,
     overrides?: CallOverrides
@@ -761,6 +857,45 @@ export class RollupAdminFacet extends BaseContract {
   extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
   firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
+
+  forceConfirmNode(
+    nodeNum: BigNumberish,
+    beforeSendAcc: BytesLike,
+    sendsData: BytesLike,
+    sendLengths: BigNumberish[],
+    afterSendCount: BigNumberish,
+    afterLogAcc: BytesLike,
+    afterLogCount: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  forceCreateNode(
+    expectedNodeHash: BytesLike,
+    assertionBytes32Fields: [
+      [BytesLike, BytesLike, BytesLike],
+      [BytesLike, BytesLike, BytesLike]
+    ],
+    assertionIntFields: [
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+    ],
+    sequencerBatchProof: BytesLike,
+    beforeProposedBlock: BigNumberish,
+    beforeInboxMaxCount: BigNumberish,
+    prevNode: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  forceRefundStaker(
+    staker: string[],
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  forceResolveChallenge(
+    stakerA: string[],
+    stakerB: string[],
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -814,10 +949,6 @@ export class RollupAdminFacet extends BaseContract {
   rollupEventBridge(overrides?: CallOverrides): Promise<string>
 
   sequencerBridge(overrides?: CallOverrides): Promise<string>
-
-  sequencerInboxMaxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
-
-  sequencerInboxMaxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
 
   setArbGasSpeedLimitPerBlock(
     newArbGasSpeedLimitPerBlock: BigNumberish,
@@ -939,6 +1070,10 @@ export class RollupAdminFacet extends BaseContract {
   ): Promise<BigNumber>
 
   callStatic: {
+    STORAGE_GAP_1(overrides?: CallOverrides): Promise<BigNumber>
+
+    STORAGE_GAP_2(overrides?: CallOverrides): Promise<BigNumber>
+
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
@@ -973,6 +1108,45 @@ export class RollupAdminFacet extends BaseContract {
     extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
     firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
+
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    forceRefundStaker(
+      staker: string[],
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    forceResolveChallenge(
+      stakerA: string[],
+      stakerB: string[],
+      overrides?: CallOverrides
+    ): Promise<void>
 
     getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -1019,10 +1193,6 @@ export class RollupAdminFacet extends BaseContract {
     rollupEventBridge(overrides?: CallOverrides): Promise<string>
 
     sequencerBridge(overrides?: CallOverrides): Promise<string>
-
-    sequencerInboxMaxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
-
-    sequencerInboxMaxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
 
     setArbGasSpeedLimitPerBlock(
       newArbGasSpeedLimitPerBlock: BigNumberish,
@@ -1201,14 +1371,6 @@ export class RollupAdminFacet extends BaseContract {
       nodeNum?: BigNumberish | null
     ): TypedEventFilter<[BigNumber], { nodeNum: BigNumber }>
 
-    NodesDestroyed(
-      startNode?: BigNumberish | null,
-      endNode?: BigNumberish | null
-    ): TypedEventFilter<
-      [BigNumber, BigNumber],
-      { startNode: BigNumber; endNode: BigNumber }
-    >
-
     OwnerFunctionCalled(
       id?: BigNumberish | null
     ): TypedEventFilter<[BigNumber], { id: BigNumber }>
@@ -1234,18 +1396,32 @@ export class RollupAdminFacet extends BaseContract {
       machineHash?: null
     ): TypedEventFilter<[string], { machineHash: string }>
 
-    StakerReassigned(
-      staker?: string | null,
-      newNode?: null
+    Unpaused(account?: null): TypedEventFilter<[string], { account: string }>
+
+    UserStakeUpdated(
+      user?: string | null,
+      initialBalance?: null,
+      finalBalance?: null
     ): TypedEventFilter<
-      [string, BigNumber],
-      { staker: string; newNode: BigNumber }
+      [string, BigNumber, BigNumber],
+      { user: string; initialBalance: BigNumber; finalBalance: BigNumber }
     >
 
-    Unpaused(account?: null): TypedEventFilter<[string], { account: string }>
+    UserWithdrawableFundsUpdated(
+      user?: string | null,
+      initialBalance?: null,
+      finalBalance?: null
+    ): TypedEventFilter<
+      [string, BigNumber, BigNumber],
+      { user: string; initialBalance: BigNumber; finalBalance: BigNumber }
+    >
   }
 
   estimateGas: {
+    STORAGE_GAP_1(overrides?: CallOverrides): Promise<BigNumber>
+
+    STORAGE_GAP_2(overrides?: CallOverrides): Promise<BigNumber>
+
     _stakerMap(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
 
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
@@ -1272,6 +1448,45 @@ export class RollupAdminFacet extends BaseContract {
     extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
     firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
+
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    forceRefundStaker(
+      staker: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    forceResolveChallenge(
+      stakerA: string[],
+      stakerB: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     getNode(
       nodeNum: BigNumberish,
@@ -1331,10 +1546,6 @@ export class RollupAdminFacet extends BaseContract {
     rollupEventBridge(overrides?: CallOverrides): Promise<BigNumber>
 
     sequencerBridge(overrides?: CallOverrides): Promise<BigNumber>
-
-    sequencerInboxMaxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
-
-    sequencerInboxMaxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
 
     setArbGasSpeedLimitPerBlock(
       newArbGasSpeedLimitPerBlock: BigNumberish,
@@ -1457,6 +1668,10 @@ export class RollupAdminFacet extends BaseContract {
   }
 
   populateTransaction: {
+    STORAGE_GAP_1(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    STORAGE_GAP_2(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
@@ -1496,6 +1711,45 @@ export class RollupAdminFacet extends BaseContract {
 
     firstUnresolvedNode(
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    forceRefundStaker(
+      staker: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    forceResolveChallenge(
+      stakerA: string[],
+      stakerB: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     getNode(
@@ -1564,14 +1818,6 @@ export class RollupAdminFacet extends BaseContract {
     rollupEventBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     sequencerBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    sequencerInboxMaxDelayBlocks(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    sequencerInboxMaxDelaySeconds(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
 
     setArbGasSpeedLimitPerBlock(
       newArbGasSpeedLimitPerBlock: BigNumberish,
