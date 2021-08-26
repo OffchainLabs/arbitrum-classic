@@ -202,7 +202,15 @@ func CreateValidatorWallet(
 		simulatedBackend.Commit()
 	}
 
-	receipt, err := WaitForReceiptWithResults(ctx, client, transactAuth.auth.From, arbTx, "CreateWallet", transactAuth)
+	receipt, err := WaitForReceiptWithResultsAndReplaceByFee(
+		ctx,
+		client,
+		transactAuth.auth.From,
+		arbTx,
+		"CreateWallet",
+		transactAuth,
+		transactAuth,
+	)
 	if err != nil {
 		return ethcommon.Address{}, err
 	}

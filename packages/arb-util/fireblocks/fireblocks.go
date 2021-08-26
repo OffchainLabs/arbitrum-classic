@@ -43,6 +43,24 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "fireblocks").Logger()
 
+// Transaction status values
+const (
+	Submitted                     = "SUBMITTED"
+	Queued                        = "QEUEUED"
+	PendingAuthorization          = "PENDING_AUTHORIZATION"
+	PendingSignature              = "PENDING_SIGNATURE"
+	Broadcasting                  = "BROADCASTING"
+	Pending3rdPartyManualApproval = "PENDING_3RD_PARTY_MANUAL_APPROVAL"
+	Pending3rdParty               = "PENDING_3RD_PARTY"
+	Confirming                    = "CONFIRMING"
+	PartiallyCompleted            = "PARTIALLY_COMPLETED"
+	PendingAMLScreening           = "PENDING_AML_SCREENING"
+	Cancelled                     = "CANCELLED"
+	Rejected                      = "REJECTED"
+	Blocked                       = "BLOCKED"
+	Failed                        = "FAILED"
+)
+
 type Fireblocks struct {
 	apiKey     string
 	assetId    string
@@ -276,6 +294,20 @@ type fireblocksClaims struct {
 	jwt.StandardClaims
 }
 
+type NetworkFees struct {
+	Low    NetworkFee `json:"low"`
+	Medium NetworkFee `json:"medium"`
+	High   NetworkFee `json:"high"`
+}
+
+type NetworkFee struct {
+	BaseFee     string `json:"baseFee"`
+	FeePerByte  string `json:"feePerByte"`
+	GasPrice    string `json:"gasPrice"`
+	NetworkFee  string `json:"networkFee"`
+	PriorityFee string `json:"priorityFee"`
+}
+
 func New(assetId string, baseUrl string, sourceType accounttype.AccountType, sourceId string, apiKey string, signKey *rsa.PrivateKey) *Fireblocks {
 	rand.Seed(time.Now().UnixNano())
 	return &Fireblocks{
@@ -288,7 +320,29 @@ func New(assetId string, baseUrl string, sourceType accounttype.AccountType, sou
 	}
 }
 
-func (fb *Fireblocks) ListTransactions() (*[]TransactionDetails, error) {
+func (fb *Fireblocks) ListPendingTransactions() (*[]TransactionDetails, error) {
+	statusList := []string{
+		Submitted,
+		Queued,
+		PendingAuthorization,
+		PendingSignature,
+		Broadcasting,
+		Pending3rdPartyManualApproval,
+		Pending3rdParty,
+		Confirming,
+		PartiallyCompleted,
+		PendingAMLScreening,
+	}
+	return fb.ListTransactions(statusList)
+}
+
+func (fb *Fireblocks) ListTransactions(statusList []string) (*[]TransactionDetails, error) {
+	values := url.Values{}
+	values.Set("sourceType", fb.sourceType.String())
+	values.Set("sourceId", fb.sourceId)
+	if len(statusList) > 0 {
+		values.Set("status", strings.Join(statusList, ","))
+	}
 	resp, err := fb.getRequest("/v1/transactions", url.Values{})
 	if err != nil {
 		return nil, err
@@ -310,6 +364,23 @@ func (fb *Fireblocks) ListVaultAccounts() (*[]VaultAccount, error) {
 	}
 
 	var result []VaultAccount
+	err = fb.parseBody(resp.Body, &result)
+	if err != nil {
+		return nil, errors.Wrap(err, "list vault accounts")
+	}
+
+	return &result, nil
+}
+
+func (fb *Fireblocks) EstimateNetworkFees() (*NetworkFees, error) {
+	values := url.Values{}
+	values.Set("assetId", fb.assetId)
+	resp, err := fb.getRequest("/v1/estimate_network_fee", values)
+	if err != nil {
+		return nil, err
+	}
+
+	var result NetworkFees
 	err = fb.parseBody(resp.Body, &result)
 	if err != nil {
 		return nil, errors.Wrap(err, "list vault accounts")
@@ -414,7 +485,7 @@ func (fb *Fireblocks) GetTransactionByExternalId(externalId string) (*Transactio
 }
 
 func (fb *Fireblocks) IsTransactionStatusFailed(status string) bool {
-	if status == "CANCELLED" || status == "REJECTED" || status == "BLOCKED" || status == "FAILED" {
+	if status == Cancelled || status == Rejected || status == Blocked || status == Failed {
 		return true
 	}
 

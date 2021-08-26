@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
@@ -175,16 +176,105 @@ func NewFireblocksTransactAuthAdvanced(
 		return client.TransactionReceipt(ctx, txHash)
 	}
 
-	return &TransactAuth{
+	transactAuth := &TransactAuth{
 		auth:   auth,
 		SendTx: sendTx,
 		Signer: func(addr ethcommon.Address, tx *types.Transaction) (*types.Transaction, error) {
-			// Fireblocks handles signing
+			// Fireblocks handles signing, so nothing to do here
 			return tx, nil
 		},
 		transactionReceipt: transactionReceipt,
 		nonceAt:            client.NonceAt,
-	}, fb, nil
+	}
+
+	// Handle any pending transactions left from last time
+	/* TODO
+	err = waitForPendingTransactions(ctx, client, transactAuth, fb)
+	if err != nil {
+		return nil, nil, err
+	}
+	*/
+
+	return transactAuth, fb, nil
+}
+
+func waitForPendingTransactions(
+	ctx context.Context,
+	client ethutils.EthClient,
+	transactAuth *TransactAuth,
+	fb *fireblocks.Fireblocks,
+) error {
+	for {
+		pendingTx, err := fb.ListPendingTransactions()
+		if err != nil {
+			logger.Error().Err(err).Msg("error listing pending transactions")
+			return err
+		}
+
+		if len(*pendingTx) == 0 {
+			break
+		}
+
+		// Get updated fees to use
+		networkFees, err := fb.EstimateNetworkFees()
+		if err != nil {
+			return err
+		}
+		// TODO
+		_ = networkFees
+
+		for _, details := range *pendingTx {
+			if details.Status == fireblocks.Broadcasting {
+				logger.
+					Info().
+					Str("id", details.Id).
+					Str("status", details.Status).
+					Str("destination", details.DestinationAddress).
+					Msg("retrying pending fireblocks transaction")
+				// Existing transaction is stuck
+				destinationAddress := ethcommon.HexToAddress(details.DestinationAddress)
+				baseTx := &types.DynamicFeeTx{
+					ChainID:   big.NewInt(0), // Fireblocks ignore chain id
+					Nonce:     0,             // Fireblocks ignores nonce
+					GasTipCap: big.NewInt(0),
+					GasFeeCap: big.NewInt(0),
+					Gas:       0,
+					To:        &destinationAddress,
+					Value:     big.NewInt(details.Amount),
+					Data:      []byte(details.ExtraParameters.ContractCallData),
+				}
+				rawTx := types.NewTx(baseTx)
+				arbTx := NewFireblocksArbTransaction(rawTx, ethcommon.HexToHash(details.TxHash))
+				_, err := WaitForReceiptWithResultsAndReplaceByFee(
+					ctx,
+					client,
+					transactAuth.auth.From,
+					arbTx,
+					"CreateWallet",
+					transactAuth,
+					transactAuth,
+				)
+				if err != nil {
+					return err
+				}
+			} else {
+				logger.
+					Info().
+					Str("id", details.Id).
+					Str("status", details.Status).
+					Str("destination", details.DestinationAddress).
+					Msg("waiting on pending fireblocks transaction")
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(5 * time.Second):
+		}
+	}
+
+	return nil
 }
 
 func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
@@ -277,9 +367,48 @@ func NewFireblocksTransactAuth(
 	return NewFireblocksTransactAuthAdvanced(ctx, client, auth, walletConfig, true)
 }
 
-func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *ArbTransaction, error) {
+func (t *TransactAuth) makeContract(
+	ctx context.Context,
+	contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error),
+) (ethcommon.Address, *ArbTransaction, error) {
 	auth := t.getAuth(ctx)
 
+	addr, arbTx, err := t.makeContractImpl(ctx, auth, contractFunc)
+	if err != nil {
+		return ethcommon.Address{}, nil, err
+	}
+
+	// Transaction successful, increment nonce for next time
+	t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
+	return addr, arbTx, err
+}
+
+func (t *TransactAuth) makeContractCustomNonce(
+	ctx context.Context,
+	contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error),
+	customNonce *big.Int,
+) (ethcommon.Address, *ArbTransaction, error) {
+	auth := t.getAuth(ctx)
+	origNonce := auth.Nonce
+	defer func(auth *bind.TransactOpts) {
+		auth.Nonce = origNonce
+	}(auth)
+
+	auth.Nonce = customNonce
+
+	addr, arbTx, err := t.makeContractImpl(ctx, auth, contractFunc)
+	if err != nil {
+		return ethcommon.Address{}, nil, err
+	}
+
+	return addr, arbTx, err
+}
+
+func (t *TransactAuth) makeContractImpl(
+	ctx context.Context,
+	auth *bind.TransactOpts,
+	contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error),
+) (ethcommon.Address, *ArbTransaction, error) {
 	// Form transaction without sending it
 	auth.NoSend = true
 	addr, tx, _, err := contractFunc(auth)
@@ -294,22 +423,44 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	arbTx, err := t.SendTx(ctx, tx, "")
 
 	if err != nil {
-		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Hex("to", arbTx.To().Bytes()).Hex("data", arbTx.Data()).Str("nonce", auth.Nonce.String()).Msg("unable to send transaction")
+		logger.
+			Error().
+			Err(err).
+			Str("nonce", auth.Nonce.String()).
+			Hex("sender", t.auth.From.Bytes()).
+			Hex("to", arbTx.To().Bytes()).
+			Hex("data", arbTx.Data()).
+			Str("nonce", auth.Nonce.String()).
+			Msg("unable to send transaction")
 		return addr, nil, err
 	}
 
 	logger.Info().Str("nonce", auth.Nonce.String()).Hex("sender", t.auth.From.Bytes()).Msg("transaction sent")
 
-	// Transaction successful, increment nonce for next time
-	t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
-	return addr, arbTx, err
+	return addr, arbTx, nil
 }
 
-func (t *TransactAuth) makeTx(ctx context.Context, txFunc func(auth *bind.TransactOpts) (*types.Transaction, error)) (*ArbTransaction, error) {
+func (t *TransactAuth) makeTx(
+	ctx context.Context,
+	txFunc func(auth *bind.TransactOpts) (*types.Transaction, error),
+) (*ArbTransaction, error) {
 	_, arbTx, err := t.makeContract(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		tx, err := txFunc(auth)
 		return ethcommon.BigToAddress(big.NewInt(0)), tx, nil, err
 	})
+
+	return arbTx, err
+}
+
+func (t *TransactAuth) makeTxCustomNonce(
+	ctx context.Context,
+	txFunc func(auth *bind.TransactOpts) (*types.Transaction, error),
+	customNonce *big.Int,
+) (*ArbTransaction, error) {
+	_, arbTx, err := t.makeContractCustomNonce(ctx, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
+		tx, err := txFunc(auth)
+		return ethcommon.BigToAddress(big.NewInt(0)), tx, nil, err
+	}, customNonce)
 
 	return arbTx, err
 }

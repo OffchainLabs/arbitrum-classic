@@ -188,7 +188,9 @@ func AddSequencerL2BatchFromOriginCustomNonce(
 ) (*ArbTransaction, error) {
 	rawAuth := auth.getAuth(ctx)
 	rawAuth.Nonce = nonce
-	tx, err := inbox.AddSequencerL2BatchFromOrigin(rawAuth, transactions, lengths, sectionsMetadata, afterAcc)
+	arbTx, err := auth.makeTxCustomNonce(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
+	}, nonce)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +199,5 @@ func AddSequencerL2BatchFromOriginCustomNonce(
 		auth.auth.Nonce.Set(nonce)
 	}
 
-	arbTx := NewArbTransaction(tx)
 	return arbTx, nil
 }
