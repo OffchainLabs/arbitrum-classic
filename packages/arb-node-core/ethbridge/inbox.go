@@ -146,14 +146,10 @@ func (s *StandardInbox) Sender() common.Address {
 	return common.NewAddressFromEth(s.auth.auth.From)
 }
 
-func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte) (common.Hash, error) {
-	arbTx, err := s.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte) (*ArbTransaction, error) {
+	return s.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return s.con.SendL2MessageFromOrigin(auth, data)
 	})
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return common.NewHashFromEth(arbTx.Hash()), nil
 }
 
 func AddSequencerL2BatchFromOrigin(

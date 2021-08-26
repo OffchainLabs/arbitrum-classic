@@ -51,12 +51,12 @@ type TransactAuth struct {
 	auth               *bind.TransactOpts
 	SendTx             func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error)
 	Signer             bind.SignerFn
-	transactionReceipt func(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error)
+	transactionReceipt func(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error)
 	nonceAt            func(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error)
 }
 
-func (ta *TransactAuth) TransactionReceipt(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
-	return ta.transactionReceipt(ctx, txHash)
+func (ta *TransactAuth) TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
+	return ta.transactionReceipt(ctx, tx)
 }
 
 func (ta *TransactAuth) NonceAt(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error) {
@@ -107,11 +107,13 @@ func NewTransactAuthAdvanced(
 	}
 
 	return &TransactAuth{
-		auth:               auth,
-		SendTx:             sendTx,
-		Signer:             auth.Signer,
-		transactionReceipt: client.TransactionReceipt,
-		nonceAt:            client.NonceAt,
+		auth:   auth,
+		SendTx: sendTx,
+		Signer: auth.Signer,
+		transactionReceipt: func(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
+			return client.TransactionReceipt(ctx, tx.Hash())
+		},
+		nonceAt: client.NonceAt,
 	}, nil
 }
 
@@ -151,13 +153,13 @@ func NewFireblocksTransactAuthAdvanced(
 	sendTx := func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
 		return fireblocksSendTransaction(ctx, fb, tx, replaceTxByHash)
 	}
-	transactionReceipt := func(ctx context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
-		details, err := fb.GetTransaction(txHash.String())
+	transactionReceipt := func(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
+		details, err := fb.GetTransaction(tx.Hash().String())
 		if err != nil {
 			logger.
 				Warn().
 				Err(err).
-				Str("hash", txHash.String()).
+				Str("hash", tx.Hash().String()).
 				Msg("error getting fireblocks transaction for receipt")
 			return nil, errors.Wrapf(err, "error getting fireblocks transaction for receipt: %s", details.Status)
 		}
@@ -173,7 +175,7 @@ func NewFireblocksTransactAuthAdvanced(
 			return nil, errors.Wrapf(err, "fireblocks transaction failed when getting receipt: %s", details.Status)
 		}
 
-		return client.TransactionReceipt(ctx, txHash)
+		return client.TransactionReceipt(ctx, tx.Hash())
 	}
 
 	transactAuth := &TransactAuth{

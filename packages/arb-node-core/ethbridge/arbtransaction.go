@@ -17,15 +17,15 @@
 package ethbridge
 
 import (
+	"math/big"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"math/big"
 )
 
 type ArbTransaction struct {
-	hash ethcommon.Hash
 	tx   *types.Transaction
-	Hash func() ethcommon.Hash
+	hash ethcommon.Hash
 }
 
 func NewArbTransaction(tx *types.Transaction) *ArbTransaction {
@@ -36,20 +36,24 @@ func NewArbTransaction(tx *types.Transaction) *ArbTransaction {
 	}
 
 	return &ArbTransaction{
-		tx: tx,
-		Hash: func() ethcommon.Hash {
-			return tx.Hash()
-		},
+		tx:   tx,
+		hash: tx.Hash(),
 	}
+}
+
+func NewMockArbTx(hash ethcommon.Hash) *ArbTransaction {
+	return &ArbTransaction{hash: hash}
 }
 
 func NewFireblocksArbTransaction(tx *types.Transaction, hash ethcommon.Hash) *ArbTransaction {
 	return &ArbTransaction{
-		tx: tx,
-		Hash: func() ethcommon.Hash {
-			return hash
-		},
+		tx:   tx,
+		hash: hash,
 	}
+}
+
+func (t *ArbTransaction) Hash() ethcommon.Hash {
+	return t.hash
 }
 
 func (t *ArbTransaction) To() *ethcommon.Address {

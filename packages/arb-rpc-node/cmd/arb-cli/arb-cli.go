@@ -58,7 +58,7 @@ var config *Config
 
 func waitForTx(tx *types.Transaction, method string) error {
 	fmt.Println("Waiting for receipt")
-	_, err := ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, ethbridge.NewArbTransaction(tx), method, config.client)
+	_, err := ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, ethbridge.NewArbTransaction(tx), method, ethbridge.NewEthArbReceiptFetcher(config.client))
 	if err != nil {
 		return err
 	}
@@ -209,13 +209,7 @@ func switchFees(enabled bool) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Waiting for receipt")
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, ethbridge.NewArbTransaction(tx), "SetFeesEnabled", config.client)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Transaction completed successfully")
-	return nil
+	return waitForTx(tx, "SetFeesEnabled")
 }
 
 func setDefaultAggregator(agg ethcommon.Address) error {
@@ -224,13 +218,10 @@ func setDefaultAggregator(agg ethcommon.Address) error {
 		return err
 	}
 	tx, err := arbAggregator.SetDefaultAggregator(config.auth, agg)
-	fmt.Println("Waiting for receipt")
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, ethbridge.NewArbTransaction(tx), "SetDefaultAggregator", config.client)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Transaction completed successfully")
-	return nil
+	return waitForTx(tx, "SetDefaultAggregator")
 }
 
 func setFairGasPriceSender(sender ethcommon.Address) error {
@@ -242,13 +233,7 @@ func setFairGasPriceSender(sender ethcommon.Address) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Waiting for receipt")
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, ethbridge.NewArbTransaction(tx), "SetFairGasPriceSender", config.client)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Transaction completed successfully")
-	return nil
+	return waitForTx(tx, "SetFairGasPriceSender")
 }
 
 func deploy1820() error {

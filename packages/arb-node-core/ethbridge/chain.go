@@ -31,6 +31,27 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
+type ArbReceiptFetcher interface {
+	TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error)
+	NonceAt(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error)
+}
+
+type EthArbReceiptFetcher struct {
+	r ethutils.ReceiptFetcher
+}
+
+func NewEthArbReceiptFetcher(r ethutils.ReceiptFetcher) EthArbReceiptFetcher {
+	return EthArbReceiptFetcher{r: r}
+}
+
+func (f EthArbReceiptFetcher) TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
+	return f.r.TransactionReceipt(ctx, tx.Hash())
+}
+
+func (f EthArbReceiptFetcher) NonceAt(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error) {
+	return f.r.NonceAt(ctx, account, blockNumber)
+}
+
 type ArbAddresses struct {
 	ArbFactory string `json:"ArbFactory"`
 }
@@ -46,26 +67,26 @@ func (a ArbAddresses) ArbFactoryAddress() common.Address {
 const rbfInterval time.Duration = time.Minute * 5
 
 type attemptRbfInfo struct {
-	attempt func() (ethcommon.Hash, error)
+	attempt func() (*ArbTransaction, error)
 	account ethcommon.Address
 	nonce   uint64
 }
 
-func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher ethutils.ReceiptFetcher, txHash ethcommon.Hash, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
+func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher ArbReceiptFetcher, tx *ArbTransaction, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
 	lastRbf := time.Now()
 	for {
 		select {
 		case <-time.After(time.Second):
 			if rbfInfo != nil && time.Since(lastRbf) >= rbfInterval {
-				newTxHash, err := rbfInfo.attempt()
+				newTx, err := rbfInfo.attempt()
 				lastRbf = time.Now()
 				if err == nil {
-					txHash = newTxHash
+					tx = newTx
 				} else {
 					logger.Warn().Err(err).Msg("failed to replace by fee")
 				}
 			}
-			receipt, err := receiptFetcher.TransactionReceipt(ctx, txHash)
+			receipt, err := receiptFetcher.TransactionReceipt(ctx, tx)
 			if receipt == nil {
 				if rbfInfo != nil {
 					// an alternative tx might've gotten confirmed
@@ -86,10 +107,10 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher
 				}
 
 				if err.Error() == parityErr2 {
-					logger.Warn().Err(err).Hex("tx", txHash.Bytes()).Msg("Issue getting receipt")
+					logger.Warn().Err(err).Hex("tx", tx.Hash().Bytes()).Msg("Issue getting receipt")
 					continue
 				}
-				logger.Error().Err(err).Hex("tx", txHash.Bytes()).Msg("Issue getting receipt")
+				logger.Error().Err(err).Hex("tx", tx.Hash().Bytes()).Msg("Issue getting receipt")
 				return nil, errors.WithStack(err)
 			}
 			return receipt, nil
@@ -99,8 +120,8 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher
 	}
 }
 
-func WaitForReceiptWithResultsSimple(ctx context.Context, receiptFetcher ethutils.ReceiptFetcher, txHash ethcommon.Hash) (*types.Receipt, error) {
-	return waitForReceiptWithResultsSimpleInternal(ctx, receiptFetcher, txHash, nil)
+func WaitForReceiptWithResultsSimple(ctx context.Context, receiptFetcher ArbReceiptFetcher, tx *ArbTransaction) (*types.Receipt, error) {
+	return waitForReceiptWithResultsSimpleInternal(ctx, receiptFetcher, tx, nil)
 }
 
 func increaseByPercent(original *big.Int, percentage int64) *big.Int {
@@ -116,31 +137,31 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 	arbTx *ArbTransaction,
 	methodName string,
 	transactAuth *TransactAuth,
-	receiptFetcher ethutils.ReceiptFetcher,
+	receiptFetcher ArbReceiptFetcher,
 ) (*types.Receipt, error) {
 	var rbfInfo *attemptRbfInfo
 	if transactAuth != nil {
-		attemptRbf := func() (ethcommon.Hash, error) {
+		attemptRbf := func() (*ArbTransaction, error) {
 			auth := transactAuth.getAuth(ctx)
 			if auth.GasPrice.Cmp(arbTx.GasPrice()) <= 0 {
-				return arbTx.Hash(), nil
+				return arbTx, nil
 			}
 			var rawTx *types.Transaction
 			if arbTx.Type() == types.DynamicFeeTxType {
 				block, err := client.HeaderByNumber(ctx, nil)
 				if err != nil {
-					return ethcommon.Hash{}, err
+					return nil, err
 				}
 				if block.BaseFee == nil {
-					return ethcommon.Hash{}, errors.New("attempted to use dynamic fee tx in pre-EIP-1559 block")
+					return nil, errors.New("attempted to use dynamic fee tx in pre-EIP-1559 block")
 				}
 				tipCap, err := client.SuggestGasTipCap(ctx)
 				if err != nil {
-					return ethcommon.Hash{}, err
+					return nil, err
 				}
 				if tipCap.Cmp(increaseByPercent(arbTx.GasTipCap(), 10)) < 0 {
 					// We only replace by fee when we'd increase the tip by 10%
-					return arbTx.Hash(), nil
+					return arbTx, nil
 				}
 				feeCap := new(big.Int).Mul(block.BaseFee, big.NewInt(2))
 				feeCap.Add(feeCap, tipCap)
@@ -163,11 +184,11 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 			} else {
 				gasPrice, err := client.SuggestGasPrice(ctx)
 				if err != nil {
-					return ethcommon.Hash{}, err
+					return nil, err
 				}
 				if gasPrice.Cmp(increaseByPercent(arbTx.GasPrice(), 10)) < 0 {
 					// We only replace by fee when we'd increase the fee by at least 10%
-					return arbTx.Hash(), nil
+					return arbTx, nil
 				}
 				baseTx := &types.LegacyTx{
 					Nonce:    arbTx.Nonce(),
@@ -181,17 +202,17 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 			}
 			signedTx, err := transactAuth.Signer(auth.From, rawTx)
 			if err != nil {
-				return ethcommon.Hash{}, err
+				return nil, err
 			}
 
 			newTx, err := transactAuth.SendTx(ctx, signedTx, arbTx.Hash().String())
 			if err != nil {
-				return ethcommon.Hash{}, err
+				return nil, err
 			}
 
 			*arbTx = *newTx
 
-			return arbTx.Hash(), nil
+			return arbTx, nil
 		}
 		rbfInfo = &attemptRbfInfo{
 			attempt: attemptRbf,
@@ -199,7 +220,7 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 			nonce:   arbTx.Nonce(),
 		}
 	}
-	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, receiptFetcher, arbTx.Hash(), rbfInfo)
+	receipt, err := waitForReceiptWithResultsSimpleInternal(ctx, receiptFetcher, arbTx, rbfInfo)
 	if err != nil {
 		logger.Warn().Err(err).Hex("tx", arbTx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
@@ -224,6 +245,6 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 	return receipt, nil
 }
 
-func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *ArbTransaction, methodName string, receiptFetcher ethutils.ReceiptFetcher) (*types.Receipt, error) {
+func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *ArbTransaction, methodName string, receiptFetcher ArbReceiptFetcher) (*types.Receipt, error) {
 	return WaitForReceiptWithResultsAndReplaceByFee(ctx, client, from, tx, methodName, nil, receiptFetcher)
 }

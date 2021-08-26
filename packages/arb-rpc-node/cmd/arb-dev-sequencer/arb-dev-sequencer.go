@@ -196,7 +196,7 @@ func startup() error {
 	if err != nil {
 		return errors.Wrap(err, "error creating rollup")
 	}
-	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, ethclint, deployer.From, ethbridge.NewArbTransaction(tx), "CreateRollup", ethclint)
+	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, ethclint, deployer.From, ethbridge.NewArbTransaction(tx), "CreateRollup", ethbridge.NewEthArbReceiptFetcher(ethclint))
 	if err != nil {
 		return errors.Wrap(err, "error getting transaction receipt")
 	}
