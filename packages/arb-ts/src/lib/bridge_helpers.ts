@@ -9,7 +9,7 @@ import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { Rollup__factory } from './abi/factories/Rollup__factory'
-import { TokenGateway__factory } from './abi/factories/TokenGateway__factory'
+import { L2ArbitrumGateway__factory } from './abi/factories/L2ArbitrumGateway__factory'
 
 import { providers, utils, constants } from 'ethers'
 import { BigNumber, Contract, Signer } from 'ethers'
@@ -243,12 +243,12 @@ export class BridgeHelper {
     l1TokenAddress: string,
     destinationAddress?: string
   ) {
-    const gatewayContract = TokenGateway__factory.connect(
+    const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
       l2Provider
     )
     const topics = [
-      l1TokenAddress ? utils.hexZeroPad(l1TokenAddress, 32) : null,
+      null,
       destinationAddress ? utils.hexZeroPad(destinationAddress, 32) : null,
     ]
     const logs = await BridgeHelper.getEventLogs(
@@ -258,13 +258,18 @@ export class BridgeHelper {
       topics
     )
 
-    return logs.map(log => {
-      const data = {
-        ...gatewayContract.interface.parseLog(log).args,
-        txHash: log.transactionHash,
-      }
-      return data as unknown as WithdrawalInitiated
-    })
+    return logs
+      .map(log => {
+        const data = {
+          ...gatewayContract.interface.parseLog(log).args,
+          txHash: log.transactionHash,
+        }
+        return data as unknown as WithdrawalInitiated
+      })
+      .filter(
+        (log: WithdrawalInitiated) =>
+          log.l1Token.toLocaleLowerCase() === l1TokenAddress.toLocaleLowerCase()
+      )
   }
 
   static async getGatewayWithdrawEventData(
@@ -272,7 +277,7 @@ export class BridgeHelper {
     gatewayAddress: string,
     destinationAddress?: string
   ) {
-    const gatewayContract = TokenGateway__factory.connect(
+    const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
       l2Provider
     )
