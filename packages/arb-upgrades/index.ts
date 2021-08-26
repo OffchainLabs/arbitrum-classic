@@ -469,11 +469,48 @@ export const initUpgrades = (
     const rec = res.wait()
   }
 
+  const transferBeaconOwner = async (
+    upgradableBeaconAddress: string,
+    newOwner: string
+  ) => {
+    const signers = await hre.ethers.getSigners()
+    if (!signers.length) {
+      throw new Error(
+        'No signer - make sure a key is properly set (check hardhat config)'
+      )
+    }
+    const signer = signers[0]
+    const UpgradeableBeacon = (
+      await hre.ethers.getContractFactory('UpgradeableBeacon')
+    )
+      .attach(upgradableBeaconAddress)
+      .connect(signer)
+
+    const beaconOwner = await UpgradeableBeacon.owner()
+    if (beaconOwner.toLowerCase() !== signer.address.toLowerCase()) {
+      throw new Error('Not connecetd as owner')
+    }
+
+    console.log(
+      `You are about to transfer owner ship of ${upgradableBeaconAddress} to ${newOwner}. You sure? ('Yes' to proceeed)`
+    )
+
+    const confirm = prompt('')
+    if (confirm !== 'Yes') {
+      console.log('Cancelling')
+      return
+    }
+    const res = await UpgradeableBeacon.transferOwnership(newOwner)
+    const rec = res.wait()
+    console.log('ownership transfer complete')
+  }
+
   return {
     updateImplementations,
     verifyCurrentImplementations,
     deployLogic,
     deployLogicAll,
     transferAdmin,
+    transferBeaconOwner,
   }
 }
