@@ -152,9 +152,6 @@ contract Rollup is Proxy, RollupBase {
         // because of that we need to update the admin facet logic to allow the owner to set
         // these values in the sequencer inbox
 
-        require(STORAGE_GAP_1 == 6545, "ALREADY_POST_INIT");
-        require(STORAGE_GAP_2 == 86400, "ALREADY_POST_INIT");
-
         STORAGE_GAP_1 = 0;
         STORAGE_GAP_2 = 0;
     }
