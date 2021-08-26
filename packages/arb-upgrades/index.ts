@@ -222,21 +222,37 @@ export const initUpgrades = (
 
     const { proxyAdminAddress } = tmpDeploymentsJsonData
 
-    const signers = await hre.ethers.getSigners()
-    if (!signers.length) {
-      throw new Error(
-        'No signer - make sure a key is properly set (check hardhat config)'
-      )
-    }
-    const signer = signers[0]
-
     const ProxyAdmin__factory = await hre.ethers.getContractFactory(
       'ProxyAdmin'
     )
-    const proxyAdmin =
-      ProxyAdmin__factory.attach(proxyAdminAddress).connect(signer)
+    let proxyAdmin = ProxyAdmin__factory.attach(proxyAdminAddress).connect(
+      hre.ethers.provider
+    )
 
     const proxyAdminOwner = await proxyAdmin.owner()
+
+    const getSigner = async (networkName: string) => {
+      if (networkName === 'fork') {
+        await hre.network.provider.request({
+          method: 'hardhat_impersonateAccount',
+          params: [proxyAdminOwner],
+        })
+
+        return hre.ethers.getSigner(proxyAdminOwner)
+      } else {
+        const signers = await hre.ethers.getSigners()
+        if (!signers.length) {
+          throw new Error(
+            'No signer - make sure a key is properly set (check hardhat config)'
+          )
+        }
+        return signers[0]
+      }
+    }
+    const signer = await getSigner(hre.network.name)
+
+    proxyAdmin = proxyAdmin.connect(signer)
+
     if (proxyAdminOwner.toLowerCase() !== signer.address.toLowerCase()) {
       throw new Error(
         `Signer address ${signer.address} != ProxyAdmin owner ${proxyAdminOwner}`
@@ -353,7 +369,6 @@ export const initUpgrades = (
 
         const implementation = await UpgradeableBeacon.implementation()
         const beaconOwner = await UpgradeableBeacon.owner()
-        const proxyAdminOwner = await proxyAdmin.owner()
         if (
           implementation.toLowerCase() !==
           deploymentData.implAddress.toLowerCase()
