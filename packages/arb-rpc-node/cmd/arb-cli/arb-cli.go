@@ -132,7 +132,6 @@ func checkUploadedArbOS(targetMexe string) error {
 }
 
 func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) error {
-	config.auth.GasPrice = big.NewInt(355800000)
 	targetMach, err := cmachine.New(targetMexe)
 	if err != nil {
 		return err
