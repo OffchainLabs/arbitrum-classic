@@ -71,7 +71,7 @@
     "eslint-plugin-mocha": "^9.0.0",
     "eslint-plugin-prettier": "^3.4.0",
     "ethereum-waffle": "^3.2.0",
-    "hardhat": "^2.4.3",
+    "hardhat": "^2.6.1",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-spdx-license-identifier": "^2.0.2",
     "mocha": "^8.2.1",

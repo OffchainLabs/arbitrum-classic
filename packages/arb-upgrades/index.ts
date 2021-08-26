@@ -257,10 +257,13 @@ export const initUpgrades = (
         const adminFacetAddress = isRollupAdminFacet(contractName)
           ? queuedUpdateData.address
           : tmpDeploymentsJsonData.contracts.RollupAdminFacet
-        const Rollup = (await hre.ethers.getContractFactory('Rollup'))
+        const RollupAdmin = (await hre.ethers.getContractFactory('RollupAdmin'))
           .attach(deploymentData.proxyAddress)
           .connect(signer)
-        upgradeTx = await Rollup.setFacets(adminFacetAddress, userFacetAddress)
+        upgradeTx = await RollupAdmin.setFacets(
+          adminFacetAddress,
+          userFacetAddress
+        )
       } else {
         upgradeTx = await proxyAdmin.upgradeAndCall(
           deploymentData.proxyAddress,
@@ -330,7 +333,7 @@ export const initUpgrades = (
           deploymentData.implAddress.toLowerCase()
         ) {
           console.log(
-            'Verification failed: bad implementation',
+            contractName + ' Verification failed: bad implementation',
             implementation,
             deploymentData.implAddress
           )
@@ -398,7 +401,8 @@ export const initUpgrades = (
       ) {
         console.log(
           `${contractName} Verification failed; bad implementation`,
-          implementation
+          implementation,
+          deploymentData.implAddress
         )
         success = false
       }
