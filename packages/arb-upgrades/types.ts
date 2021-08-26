@@ -95,3 +95,21 @@ export const getLayer = (contractName: ContractNames) => {
       return 1
   }
 }
+
+export const hasPostInitHook = (contractName: ContractNames) => {
+  switch (contractName) {
+    case ContractNames.L1GatewayRouter:
+    case ContractNames.L1ERC20Gateway:
+    case ContractNames.L1CustomGateway:
+    case ContractNames.L1WethGateway:
+    case ContractNames.L2ERC20Gateway:
+    case ContractNames.L2GatewayRouter:
+    case ContractNames.L2CustomGateway:
+    case ContractNames.L2WethGateway:
+    case ContractNames.Rollup:
+    case ContractNames.SequencerInbox:
+      return true
+    default:
+      return false
+  }
+}

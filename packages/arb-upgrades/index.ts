@@ -14,6 +14,7 @@ import {
   isRollupUserFacet,
   isRollupAdminFacet,
   getLayer,
+  hasPostInitHook,
 } from './types'
 
 const ADMIN_SLOT =
@@ -273,9 +274,9 @@ export const initUpgrades = (
     console.log(`Updating ${contractsToUpdate.length} contracts`)
     // TODO: explicitly check for storage layout clashes
 
-    contractsToUpdate.sort((a, b) => {
-      return a === 'SequencerInbox' ? -1 : 1
-    })
+    contractsToUpdate.sort((a, b) =>
+      a === ContractNames.SequencerInbox ? -1 : 1
+    )
 
     for (const contractName of contractsToUpdate) {
       const queuedUpdateData = queuedUpdatesData[contractName] as QueuedUpdate
@@ -290,6 +291,7 @@ export const initUpgrades = (
 
       let upgradeTx: any
       if (isBeacon(contractName)) {
+        // handle UpgradeableBeacon proxy
         const UpgradeableBeacon = (
           await hre.ethers.getContractFactory('UpgradeableBeacon')
         )
@@ -300,6 +302,7 @@ export const initUpgrades = (
         isRollupAdminFacet(contractName) ||
         isRollupUserFacet(contractName)
       ) {
+        // Handle diamond proxy pattern
         const userFacetAddress = isRollupUserFacet(contractName)
           ? queuedUpdateData.address
           : tmpDeploymentsJsonData.contracts.RollupUserFacet
@@ -314,11 +317,20 @@ export const initUpgrades = (
           userFacetAddress
         )
       } else {
-        upgradeTx = await proxyAdmin.upgradeAndCall(
-          deploymentData.proxyAddress,
-          queuedUpdateData.address,
-          POST_UPGRADE_INIT_SIG
-        )
+        // handle TransparentUpgradeableProxy
+
+        if (hasPostInitHook(contractName)) {
+          upgradeTx = await proxyAdmin.upgradeAndCall(
+            deploymentData.proxyAddress,
+            queuedUpdateData.address,
+            POST_UPGRADE_INIT_SIG
+          )
+        } else {
+          upgradeTx = await proxyAdmin.upgrade(
+            deploymentData.proxyAddress,
+            queuedUpdateData.address
+          )
+        }
       }
       const rec = await upgradeTx.wait()
       console.log('Upgrade receipt:', rec)
