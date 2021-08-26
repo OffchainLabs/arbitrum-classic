@@ -156,8 +156,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @param assertionBytes32Fields Assertion data for creating
      * @param assertionIntFields Assertion data for creating
      * @param beforeProposedBlock Block number at previous assertion
-     @ @param beforeInboxMaxCount Inbox count at previous assertion 
-     @ @param sequencerBatchProof Proof data for ensuring expected state of inbox (used in Nodehash to protect against reorgs)
+     * @param beforeInboxMaxCount Inbox count at previous assertion 
+     * @param sequencerBatchProof Proof data for ensuring expected state of inbox (used in Nodehash to protect against reorgs)
      */
     function stakeOnNewNode(
         bytes32 expectedNodeHash,
