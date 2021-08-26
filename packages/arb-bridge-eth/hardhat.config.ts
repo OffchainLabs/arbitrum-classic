@@ -129,6 +129,16 @@ task('core-verify-deployments', 'verifies implementations').setAction(
   }
 )
 
+task('core-transfer-beacon-owner', 'transfers beacon owner')
+  .addParam('address', 'beacon contract')
+  .addParam('newowner', 'beacon contract')
+
+  .setAction(async (args, hre) => {
+    await handleFork(hre)
+    const { transferBeaconOwner } = initUpgrades(hre, __dirname)
+    await transferBeaconOwner(args.address, args.newowner)
+  })
+
 const config = {
   defaultNetwork: 'hardhat',
   paths: {
