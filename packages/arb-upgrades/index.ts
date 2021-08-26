@@ -1,5 +1,5 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { writeFileSync, readFileSync, unlinkSync } from 'fs'
+import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs'
 import childProcess from 'child_process'
 // @ts-ignore (module doesn't have types declared)
 import prompt from 'prompt-promise'
@@ -44,6 +44,8 @@ export const initUpgrades = (
   hre: HardhatRuntimeEnvironment,
   rootDir: string
 ) => {
+  const compileTask = hre.run('compile')
+
   const getQueuedUpdates = async (): Promise<{
     path: string
     data: QueuedUpdates
@@ -86,13 +88,25 @@ export const initUpgrades = (
     }
   }
 
-  const createTempDeploymentsFile = async (): Promise<{
+  const createOrLoadTmpDeploymentsFile = async (): Promise<{
     path: string
     data: CurrentDeployments
   }> => {
     const { data: currentDeployments } = await getDeployments()
     const network = await hre.ethers.provider.getNetwork()
+
     const path = `${rootDir}/deployments/${network.chainId}_tmp_deployment.json`
+
+    if (existsSync(path)) {
+      console.log('tmp deployments file found')
+      const jsonBuff = readFileSync(path)
+      return {
+        path,
+        data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
+      }
+    }
+    console.log('Creating a new tmp deployments file:')
+
     writeFileSync(path, JSON.stringify(currentDeployments))
     return {
       path,
@@ -111,6 +125,7 @@ export const initUpgrades = (
   const deployLogic = async (
     contractNames: ContractNames[] | ContractNames
   ) => {
+    await compileTask
     ensureCleanGitTree()
 
     if (!Array.isArray(contractNames)) {
@@ -182,6 +197,7 @@ export const initUpgrades = (
   }
 
   const updateImplementations = async () => {
+    await compileTask
     ensureCleanGitTree()
     const res = await verifyCurrentImplementations()
     if (!res) {
@@ -194,7 +210,7 @@ export const initUpgrades = (
       await getQueuedUpdates()
     const { path: deploymentsPath } = await getDeployments()
     const { path: tmpDeploymentsPath, data: tmpDeploymentsJsonData } =
-      await createTempDeploymentsFile()
+      await createOrLoadTmpDeploymentsFile()
 
     const { proxyAdminAddress } = tmpDeploymentsJsonData
 
@@ -302,6 +318,8 @@ export const initUpgrades = (
   }
 
   const verifyCurrentImplementations = async () => {
+    await compileTask
+
     console.log('Verifying deployments:')
 
     const { data: deploymentsJsonData } = await getDeployments()
@@ -413,6 +431,7 @@ export const initUpgrades = (
   }
 
   const deployLogicAll = async () => {
+    await compileTask
     const { path: deploymentsPath, data: deploymentsJsonData } =
       await getDeployments()
     const contractsNames = Object.keys(
@@ -422,6 +441,8 @@ export const initUpgrades = (
   }
 
   const transferAdmin = async (proxyAddress: string, newAdmin: string) => {
+    await compileTask
+
     const { path: deploymentsPath, data } = await getDeployments()
     const signers = await hre.ethers.getSigners()
     if (!signers.length) {

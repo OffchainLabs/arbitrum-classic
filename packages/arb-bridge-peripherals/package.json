@@ -15,7 +15,7 @@
     "pre:slither": "yarn post:slither && ln -s ../../node_modules/arb-bridge-eth && ln -s ../../node_modules/arbos-contracts",
     "slither": "yarn pre:slither && slither --hardhat-artifacts-directory build/contracts .  --filter-paths 'node_modules|arb-bridge-eth|arbos-contracts' && yarn post:slither",
     "post:slither": "rm -f arb-bridge-eth && rm -f arbos-contracts",
-    "hardhat": "hardhat"
+    "hardhat": "hardhat compile && hardhat"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",
@@ -29,7 +29,7 @@
     "arbos-contracts": "^1.0.0",
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.0.0",
-    "ethers": "^5.1.0",
+    "ethers": "^5.4.5",
     "hardhat": "^2.6.1",
     "sol2uml": "^1.1.25",
     "ts-node": "^9.1.1",
