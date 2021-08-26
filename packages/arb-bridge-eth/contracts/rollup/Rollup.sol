@@ -133,8 +133,7 @@ contract Rollup is Proxy, RollupBase {
         minimumAssertionPeriod = 75;
         challengeExecutionBisectionDegree = 400;
 
-        sequencerBridge.setMaxDelayBlocks(sequencerInboxParams[0]);
-        sequencerBridge.setMaxDelaySeconds(sequencerInboxParams[1]);
+        sequencerBridge.setMaxDelay(sequencerInboxParams[0], sequencerInboxParams[1]);
 
         // facets[0] == admin, facets[1] == user
         facets = _facets;
@@ -153,15 +152,8 @@ contract Rollup is Proxy, RollupBase {
         // because of that we need to update the admin facet logic to allow the owner to set
         // these values in the sequencer inbox
 
-        uint256 oldDelayBlocks = STORAGE_GAP_1;
-        uint256 oldDelaySeconds = STORAGE_GAP_2;
-
-        require(oldDelayBlocks == 6545, "ALREADY_POST_INIT");
-        require(oldDelaySeconds == 86400, "ALREADY_POST_INIT");
-
-        sequencerBridge.setMaxDelayBlocks(oldDelayBlocks);
-        sequencerBridge.setMaxDelaySeconds(oldDelaySeconds);
-        sequencerBridge.setIsSequencer(sequencerBridge.sequencer(), true);
+        require(STORAGE_GAP_1 == 6545, "ALREADY_POST_INIT");
+        require(STORAGE_GAP_2 == 86400, "ALREADY_POST_INIT");
 
         STORAGE_GAP_1 = 0;
         STORAGE_GAP_2 = 0;
