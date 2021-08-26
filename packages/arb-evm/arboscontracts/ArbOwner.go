@@ -27,7 +27,7 @@ var (
 )
 
 // ArbOwnerABI is the input ABI used to generate the binding from.
-const ArbOwnerABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addAllowedSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"addToReserveFunds\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allowAllSenders\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allowOnlyOwnerToSend\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"pluggableId\",\"type\":\"uint256\"}],\"name\":\"bindAddressToPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"which\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"createChainParameter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"constructorData\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"deemedSender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deemedNonce\",\"type\":\"uint256\"}],\"name\":\"deployContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"newCodeHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"oldCodeHash\",\"type\":\"bytes32\"}],\"name\":\"finishCodeUploadAsArbosUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"keepState\",\"type\":\"bool\"}],\"name\":\"finishCodeUploadAsPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllAllowedSenders\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllFairGasPriceSenders\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"which\",\"type\":\"uint256\"}],\"name\":\"getChainParameter\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTotalOfEthBalances\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getUploadedCodeHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isAllowedSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isFairGasPriceSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"removeAllowedSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"serializeAllParameters\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"which\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"setChainParameter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isFairGasPriceSender\",\"type\":\"bool\"}],\"name\":\"setFairGasPriceSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"priceInGwei\",\"type\":\"uint256\"}],\"name\":\"setL1GasPriceEstimate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"startCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbOwnerABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addAllowedSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"addToReserveFunds\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allowAllSenders\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allowOnlyOwnerToSend\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"pluggableId\",\"type\":\"uint256\"}],\"name\":\"bindAddressToPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"which\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"createChainParameter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"constructorData\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"deemedSender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deemedNonce\",\"type\":\"uint256\"}],\"name\":\"deployContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"newCodeHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"oldCodeHash\",\"type\":\"bytes32\"}],\"name\":\"finishCodeUploadAsArbosUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"keepState\",\"type\":\"bool\"}],\"name\":\"finishCodeUploadAsPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllAllowedSenders\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllFairGasPriceSenders\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"which\",\"type\":\"bytes32\"}],\"name\":\"getChainParameter\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTotalOfEthBalances\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getUploadedCodeHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isAllowedSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isFairGasPriceSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"removeAllowedSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"serializeAllParameters\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"which\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"setChainParameter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isFairGasPriceSender\",\"type\":\"bool\"}],\"name\":\"setFairGasPriceSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"priceInGwei\",\"type\":\"uint256\"}],\"name\":\"setL1GasPriceEstimate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"startCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbOwner is an auto generated Go binding around an Ethereum contract.
 type ArbOwner struct {
@@ -233,10 +233,10 @@ func (_ArbOwner *ArbOwnerCallerSession) GetAllFairGasPriceSenders() ([]byte, err
 	return _ArbOwner.Contract.GetAllFairGasPriceSenders(&_ArbOwner.CallOpts)
 }
 
-// GetChainParameter is a free data retrieval call binding the contract method 0x1480cecd.
+// GetChainParameter is a free data retrieval call binding the contract method 0x84352b19.
 //
-// Solidity: function getChainParameter(uint256 which) view returns(uint256)
-func (_ArbOwner *ArbOwnerCaller) GetChainParameter(opts *bind.CallOpts, which *big.Int) (*big.Int, error) {
+// Solidity: function getChainParameter(bytes32 which) view returns(uint256)
+func (_ArbOwner *ArbOwnerCaller) GetChainParameter(opts *bind.CallOpts, which [32]byte) (*big.Int, error) {
 	var out []interface{}
 	err := _ArbOwner.contract.Call(opts, &out, "getChainParameter", which)
 
@@ -250,17 +250,17 @@ func (_ArbOwner *ArbOwnerCaller) GetChainParameter(opts *bind.CallOpts, which *b
 
 }
 
-// GetChainParameter is a free data retrieval call binding the contract method 0x1480cecd.
+// GetChainParameter is a free data retrieval call binding the contract method 0x84352b19.
 //
-// Solidity: function getChainParameter(uint256 which) view returns(uint256)
-func (_ArbOwner *ArbOwnerSession) GetChainParameter(which *big.Int) (*big.Int, error) {
+// Solidity: function getChainParameter(bytes32 which) view returns(uint256)
+func (_ArbOwner *ArbOwnerSession) GetChainParameter(which [32]byte) (*big.Int, error) {
 	return _ArbOwner.Contract.GetChainParameter(&_ArbOwner.CallOpts, which)
 }
 
-// GetChainParameter is a free data retrieval call binding the contract method 0x1480cecd.
+// GetChainParameter is a free data retrieval call binding the contract method 0x84352b19.
 //
-// Solidity: function getChainParameter(uint256 which) view returns(uint256)
-func (_ArbOwner *ArbOwnerCallerSession) GetChainParameter(which *big.Int) (*big.Int, error) {
+// Solidity: function getChainParameter(bytes32 which) view returns(uint256)
+func (_ArbOwner *ArbOwnerCallerSession) GetChainParameter(which [32]byte) (*big.Int, error) {
 	return _ArbOwner.Contract.GetChainParameter(&_ArbOwner.CallOpts, which)
 }
 
@@ -545,24 +545,24 @@ func (_ArbOwner *ArbOwnerTransactorSession) ContinueCodeUpload(marshalledCode []
 	return _ArbOwner.Contract.ContinueCodeUpload(&_ArbOwner.TransactOpts, marshalledCode)
 }
 
-// CreateChainParameter is a paid mutator transaction binding the contract method 0x66dbfe6b.
+// CreateChainParameter is a paid mutator transaction binding the contract method 0xe1e639cf.
 //
-// Solidity: function createChainParameter(uint256 which, uint256 value) returns()
-func (_ArbOwner *ArbOwnerTransactor) CreateChainParameter(opts *bind.TransactOpts, which *big.Int, value *big.Int) (*types.Transaction, error) {
+// Solidity: function createChainParameter(bytes32 which, uint256 value) returns()
+func (_ArbOwner *ArbOwnerTransactor) CreateChainParameter(opts *bind.TransactOpts, which [32]byte, value *big.Int) (*types.Transaction, error) {
 	return _ArbOwner.contract.Transact(opts, "createChainParameter", which, value)
 }
 
-// CreateChainParameter is a paid mutator transaction binding the contract method 0x66dbfe6b.
+// CreateChainParameter is a paid mutator transaction binding the contract method 0xe1e639cf.
 //
-// Solidity: function createChainParameter(uint256 which, uint256 value) returns()
-func (_ArbOwner *ArbOwnerSession) CreateChainParameter(which *big.Int, value *big.Int) (*types.Transaction, error) {
+// Solidity: function createChainParameter(bytes32 which, uint256 value) returns()
+func (_ArbOwner *ArbOwnerSession) CreateChainParameter(which [32]byte, value *big.Int) (*types.Transaction, error) {
 	return _ArbOwner.Contract.CreateChainParameter(&_ArbOwner.TransactOpts, which, value)
 }
 
-// CreateChainParameter is a paid mutator transaction binding the contract method 0x66dbfe6b.
+// CreateChainParameter is a paid mutator transaction binding the contract method 0xe1e639cf.
 //
-// Solidity: function createChainParameter(uint256 which, uint256 value) returns()
-func (_ArbOwner *ArbOwnerTransactorSession) CreateChainParameter(which *big.Int, value *big.Int) (*types.Transaction, error) {
+// Solidity: function createChainParameter(bytes32 which, uint256 value) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) CreateChainParameter(which [32]byte, value *big.Int) (*types.Transaction, error) {
 	return _ArbOwner.Contract.CreateChainParameter(&_ArbOwner.TransactOpts, which, value)
 }
 
@@ -650,24 +650,24 @@ func (_ArbOwner *ArbOwnerTransactorSession) RemoveAllowedSender(addr common.Addr
 	return _ArbOwner.Contract.RemoveAllowedSender(&_ArbOwner.TransactOpts, addr)
 }
 
-// SetChainParameter is a paid mutator transaction binding the contract method 0xe8b41324.
+// SetChainParameter is a paid mutator transaction binding the contract method 0x966e2505.
 //
-// Solidity: function setChainParameter(uint256 which, uint256 value) returns()
-func (_ArbOwner *ArbOwnerTransactor) SetChainParameter(opts *bind.TransactOpts, which *big.Int, value *big.Int) (*types.Transaction, error) {
+// Solidity: function setChainParameter(bytes32 which, uint256 value) returns()
+func (_ArbOwner *ArbOwnerTransactor) SetChainParameter(opts *bind.TransactOpts, which [32]byte, value *big.Int) (*types.Transaction, error) {
 	return _ArbOwner.contract.Transact(opts, "setChainParameter", which, value)
 }
 
-// SetChainParameter is a paid mutator transaction binding the contract method 0xe8b41324.
+// SetChainParameter is a paid mutator transaction binding the contract method 0x966e2505.
 //
-// Solidity: function setChainParameter(uint256 which, uint256 value) returns()
-func (_ArbOwner *ArbOwnerSession) SetChainParameter(which *big.Int, value *big.Int) (*types.Transaction, error) {
+// Solidity: function setChainParameter(bytes32 which, uint256 value) returns()
+func (_ArbOwner *ArbOwnerSession) SetChainParameter(which [32]byte, value *big.Int) (*types.Transaction, error) {
 	return _ArbOwner.Contract.SetChainParameter(&_ArbOwner.TransactOpts, which, value)
 }
 
-// SetChainParameter is a paid mutator transaction binding the contract method 0xe8b41324.
+// SetChainParameter is a paid mutator transaction binding the contract method 0x966e2505.
 //
-// Solidity: function setChainParameter(uint256 which, uint256 value) returns()
-func (_ArbOwner *ArbOwnerTransactorSession) SetChainParameter(which *big.Int, value *big.Int) (*types.Transaction, error) {
+// Solidity: function setChainParameter(bytes32 which, uint256 value) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) SetChainParameter(which [32]byte, value *big.Int) (*types.Transaction, error) {
 	return _ArbOwner.Contract.SetChainParameter(&_ArbOwner.TransactOpts, which, value)
 }
 

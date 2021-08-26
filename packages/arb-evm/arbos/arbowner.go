@@ -38,10 +38,10 @@ var (
 	getTotalOfEthBalancesABI abi.Method
 )
 
-var FeesEnabledParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("FeesEnabled")).Bytes())
-var ChainOwnerParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("ChainOwner")).Bytes())
-var NetworkFeeRecipientParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("NetworkFeeRecipient")).Bytes())
-var CongestionFeeRecipientParamId *big.Int = new(big.Int).SetBytes(hashing.SoliditySHA3([]byte("CongestionFeeRecipient")).Bytes())
+var FeesEnabledParamId [32]byte = hashing.SoliditySHA3([]byte("FeesEnabled"))
+var ChainOwnerParamId [32]byte = hashing.SoliditySHA3([]byte("ChainOwner"))
+var NetworkFeeRecipientParamId [32]byte = hashing.SoliditySHA3([]byte("NetworkFeeRecipient"))
+var CongestionFeeRecipientParamId [32]byte = hashing.SoliditySHA3([]byte("CongestionFeeRecipient"))
 
 func init() {
 	arbowner, err := abi.JSON(strings.NewReader(arboscontracts.ArbOwnerABI))
@@ -63,7 +63,7 @@ func GetTotalOfEthBalances() []byte {
 	return makeFuncData(getTotalOfEthBalancesABI)
 }
 
-func SetChainParameterData(paramId *big.Int, val *big.Int) []byte {
+func SetChainParameterData(paramId [32]byte, val *big.Int) []byte {
     return makeFuncData(setChainParameterABI, paramId, val)
 }
 
