@@ -27,10 +27,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "cmdhelp").Logger()
 
 func readPass() (string, error) {
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
@@ -58,8 +61,12 @@ func GetKeystore(
 		keystore.StandardScryptN,
 		keystore.StandardScryptP,
 	)
+	logger.Info().
+		Str("location", filepath.Join(validatorFolder, "wallets")).
+		Int("accounts", len(ks.Accounts())).
+		Msg("loading wallet")
 
-	creatingNew := len(ks.Accounts()) > 0
+	creatingNew := len(ks.Accounts()) == 0
 	passOpt := wallet.Password()
 	var password string
 	if passOpt != nil {
