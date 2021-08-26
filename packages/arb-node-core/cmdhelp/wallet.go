@@ -59,7 +59,7 @@ func GetKeystore(
 		keystore.StandardScryptP,
 	)
 
-	creatingNew := len(ks.Accounts()) > 0
+	creatingNew := len(ks.Accounts()) == 0
 	passOpt := wallet.Password()
 	var password string
 	if passOpt != nil {
