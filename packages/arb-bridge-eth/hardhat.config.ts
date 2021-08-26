@@ -1,4 +1,5 @@
 import { task } from 'hardhat/config'
+import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
 import 'dotenv/config'
 import * as fs from 'fs'
 
@@ -15,6 +16,17 @@ import { initUpgrades } from 'arb-upgrades'
 const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
 const setupVerifyTask = verifyTask.default
 setupVerifyTask()
+
+const handleFork = async (hre: HardhatRuntimeEnvironment) => {
+  const network = hre.network
+  if (network.name === 'fork') {
+    await hre.network.provider.send('hardhat_setBalance', [
+      (await hre.ethers.getSigners())[0].address,
+      '0x16189AD417E380000',
+    ])
+  }
+  return true
+}
 
 if (!process.env['DEVNET_PRIVKEY']) console.warn('No devnet privkey set')
 
@@ -91,23 +103,27 @@ task('core-deploy-logic-one', 'deploy one logic')
   .setAction(async (args, hre) => {
     const { contract } = args
     const { deployLogic } = initUpgrades(hre, __dirname)
+    await handleFork(hre)
     await deployLogic(contract)
   })
 
 task('core-deploy-logic-all', 'deploy all logic contracts').setAction(
   async (_, hre) => {
     const { deployLogicAll } = initUpgrades(hre, __dirname)
+    await handleFork(hre)
     await deployLogicAll()
   }
 )
 
 task('core-trigger-upgrades', 'triggers upgrade').setAction(async (_, hre) => {
   const { updateImplementations } = initUpgrades(hre, __dirname)
+  await handleFork(hre)
   await updateImplementations()
 })
 
 task('core-verify-deployments', 'verifies implementations').setAction(
   async (_, hre) => {
+    await handleFork(hre)
     const { verifyCurrentImplementations } = initUpgrades(hre, __dirname)
     await verifyCurrentImplementations()
   }
