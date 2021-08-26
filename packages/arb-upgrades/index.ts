@@ -98,7 +98,15 @@ export const initUpgrades = (
     const path = `${rootDir}/deployments/${network.chainId}_tmp_deployment.json`
 
     if (existsSync(path)) {
-      console.log('tmp deployments file found')
+      console.log(
+        `tmp deployments file found; do you want to resume deployments with it? ('Yes' to continue)`
+      )
+      const res = await prompt('')
+      if (res !== 'Yes') {
+        console.log('exiting')
+        process.exit(0)
+      }
+
       const jsonBuff = readFileSync(path)
       return {
         path,
