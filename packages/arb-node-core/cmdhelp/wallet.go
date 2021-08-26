@@ -56,12 +56,15 @@ func GetKeystore(
 	gasPrice float64,
 	chainId *big.Int,
 ) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
-	logger.Info().Str("location", filepath.Join(validatorFolder, "wallets")).Msg("loading wallet")
 	ks := keystore.NewKeyStore(
 		filepath.Join(validatorFolder, "wallets"),
 		keystore.StandardScryptN,
 		keystore.StandardScryptP,
 	)
+	logger.Info().
+		Str("location", filepath.Join(validatorFolder, "wallets")).
+		Int("accounts", len(ks.Accounts())).
+		Msg("loading wallet")
 
 	creatingNew := len(ks.Accounts()) == 0
 	passOpt := wallet.Password()
