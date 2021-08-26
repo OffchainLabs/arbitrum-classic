@@ -1,5 +1,5 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { writeFileSync, readFileSync, unlinkSync } from 'fs'
+import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs'
 import childProcess from 'child_process'
 // @ts-ignore (module doesn't have types declared)
 import prompt from 'prompt-promise'
@@ -86,13 +86,25 @@ export const initUpgrades = (
     }
   }
 
-  const createTempDeploymentsFile = async (): Promise<{
+  const createOrLoadTmpDeploymentsFile = async (): Promise<{
     path: string
     data: CurrentDeployments
   }> => {
     const { data: currentDeployments } = await getDeployments()
     const network = await hre.ethers.provider.getNetwork()
+
     const path = `${rootDir}/deployments/${network.chainId}_tmp_deployment.json`
+
+    if (existsSync(path)) {
+      console.log('tmp deployments file found')
+      const jsonBuff = readFileSync(path)
+      return {
+        path,
+        data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
+      }
+    }
+    console.log('Creating a new tmp deployments file:')
+
     writeFileSync(path, JSON.stringify(currentDeployments))
     return {
       path,
@@ -196,7 +208,7 @@ export const initUpgrades = (
       await getQueuedUpdates()
     const { path: deploymentsPath } = await getDeployments()
     const { path: tmpDeploymentsPath, data: tmpDeploymentsJsonData } =
-      await createTempDeploymentsFile()
+      await createOrLoadTmpDeploymentsFile()
 
     const { proxyAdminAddress } = tmpDeploymentsJsonData
 
