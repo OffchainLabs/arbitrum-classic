@@ -700,7 +700,7 @@ func (fb *Fireblocks) signJWT(path string, body []byte) (string, error) {
 }
 
 func (fb *Fireblocks) parseBody(body io.Reader, result interface{}) error {
-	if logger.GetLevel() <= zerolog.DebugLevel {
+	if zerolog.GlobalLevel() <= zerolog.DebugLevel {
 		response, err := ioutil.ReadAll(body)
 		if err != nil {
 			return errors.Wrapf(err, "error reading fireblocks response")

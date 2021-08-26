@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -99,7 +100,7 @@ func GetKeystore(
 			if len(walletConfig.Fireblocks.FeedSigner.Pathname) == 0 {
 				return nil, nil, errors.New("missing feed signer private key")
 			}
-			ks, account, err := openKeystore("feed signer", walletConfig.Fireblocks.FeedSigner.Pathname, walletConfig.Fireblocks.FeedSigner.Password)
+			ks, account, err := openKeystore("feed signer", walletConfig.Fireblocks.FeedSigner.Pathname, walletConfig.Fireblocks.FeedSigner.Password())
 			if err != nil {
 				return nil, nil, err
 			}
@@ -109,7 +110,7 @@ func GetKeystore(
 				Hex("signer", account.Address.Bytes()).
 				Msg("feed signer wallet used as signer")
 			signer = func(data []byte) ([]byte, error) {
-				return ks.SignHash(account, data)
+				return ks.SignHash(*account, data)
 			}
 		}
 	} else if len(config.Wallet.Local.PrivateKey) != 0 {
@@ -130,12 +131,12 @@ func GetKeystore(
 			return crypto.Sign(data, privateKey)
 		}
 	} else {
-		ks, account, err := openKeystore("account", walletConfig.Local.Pathname, walletConfig.Local.Password)
+		ks, account, err := openKeystore("account", walletConfig.Local.Pathname, walletConfig.Local.Password())
 		if err != nil {
 			return nil, nil, err
 		}
 
-		auth, err = bind.NewKeyStoreTransactorWithChainID(ks, account, chainId)
+		auth, err = bind.NewKeyStoreTransactorWithChainID(ks, *account, chainId)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -145,7 +146,7 @@ func GetKeystore(
 			Hex("signer", account.Address.Bytes()).
 			Msg("wallet used as signer")
 		signer = func(data []byte) ([]byte, error) {
-			return ks.SignHash(account, data)
+			return ks.SignHash(*account, data)
 		}
 	}
 
@@ -157,19 +158,19 @@ func GetKeystore(
 	return auth, signer, nil
 }
 
-func openKeystore(description string, walletPath string, walletPassword string) (*keystore.KeyStore, accounts.Account, error) {
+func openKeystore(description string, walletPath string, walletPassword *string) (*keystore.KeyStore, *accounts.Account, error) {
 	ks := keystore.NewKeyStore(
 		walletPath,
 		keystore.StandardScryptN,
 		keystore.StandardScryptP,
 	)
 	logger.Info().
-		Str("location", filepath.Join(validatorFolder, "wallets")).
+		Str("location", filepath.Join(walletPath, "wallets")).
 		Int("accounts", len(ks.Accounts())).
 		Msg("loading wallet")
 
 	creatingNew := len(ks.Accounts()) == 0
-	passOpt := wallet.Password()
+	passOpt := walletPassword
 	var password string
 	if passOpt != nil {
 		password = *passOpt
@@ -191,7 +192,7 @@ func openKeystore(description string, walletPath string, walletPassword string) 
 		var err error
 		account, err = ks.NewAccount(password)
 		if err != nil {
-			return nil, accounts.Account{}, err
+			return nil, &accounts.Account{}, err
 		}
 	} else {
 		account = ks.Accounts()[0]
@@ -202,9 +203,9 @@ func openKeystore(description string, walletPath string, walletPassword string) 
 		return nil, nil, err
 	}
 
-		logger.Info().Hex("address", account.Address.Bytes()).Str("description", description).Msg("created new wallet")
-	}
-	return ks, account, nil
+	logger.Info().Hex("address", account.Address.Bytes()).Str("description", description).Msg("created new wallet")
+
+	return ks, &account, nil
 }
 
 const WalletArgsString = "[--wallet.password=pass] [--wallet.gasprice==FloatInGwei]"

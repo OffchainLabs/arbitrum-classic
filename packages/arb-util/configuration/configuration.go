@@ -211,9 +211,9 @@ type WalletFireblocks struct {
 }
 
 type FeedSigner struct {
-	Pathname   string `koanf:"pathname"`
-	Password   string `koanf:"password"`
-	PrivateKey string `koanf:"private-key"`
+	Pathname     string `koanf:"pathname"`
+	PasswordImpl string `koanf:"password"`
+	PrivateKey   string `koanf:"private-key"`
 }
 
 func (f *FeedSigner) Password() *string {
@@ -360,7 +360,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("wallet.local.pathname", defaultWalletPathname, "path to store wallet in")
 	f.String("wallet.local.password", PASSWORD_NOT_SET, "password for wallet")
 	f.String("wallet.local.private-key", "", "wallet private key string")
-  
+
 	f.String("wallet.fireblocks.feed-signer.pathname", "feed-signer-wallet", "path to store feed-signer wallet in")
 	f.String("wallet.fireblocks.feed-signer.password", PASSWORD_NOT_SET, "password for feed-signer wallet")
 	f.String("wallet.fireblocks.feed-signer.private-key", "", "wallet feed-signer private key string")
@@ -368,7 +368,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
 	AddHealthcheckOptions(f)
-
 
 	k, err := beginCommonParse(f)
 	if err != nil {
