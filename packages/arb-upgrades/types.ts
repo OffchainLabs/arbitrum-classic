@@ -47,6 +47,8 @@ export enum ContractNames {
   Inbox = 'Inbox',
   Bridge = 'Bridge',
   SequencerInbox = 'SequencerInbox',
+  Outbox = 'Outbox',
+  OutboxEntry = 'OutboxEntry',
 }
 
 export enum UpgradeableType {
@@ -62,6 +64,7 @@ export const proxyType = (contractName: ContractNames) => {
     case ContractNames.StandardArbERC20:
     case ContractNames.Node:
     case ContractNames.Challenge:
+    case ContractNames.OutboxEntry:
       return UpgradeableType.Beacon
     case ContractNames.RollupAdminFacet:
       return UpgradeableType.RollupAdminFacet
