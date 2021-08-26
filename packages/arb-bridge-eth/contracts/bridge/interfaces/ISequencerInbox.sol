@@ -52,12 +52,14 @@ interface ISequencerInbox {
     // event SequencerAddressUpdated(address newAddress);
 
     event IsSequencerUpdated(address addr, bool isSequencer);
-    event MaxDelayBlocksUpdated(uint256 newValue);
-    event MaxDelaySecondsUpdated(uint256 newValue);
+    event MaxDelayUpdated(uint256 newMaxDelayBlocks, uint256 newMaxDelaySeconds);
 
-    function setMaxDelayBlocks(uint256 newMaxDelayBlocks) external;
+    /// @notice DEPRECATED - look at MaxDelayUpdated for new updates
+    // event MaxDelayBlocksUpdated(uint256 newValue);
+    /// @notice DEPRECATED - look at MaxDelayUpdated for new updates
+    // event MaxDelaySecondsUpdated(uint256 newValue);
 
-    function setMaxDelaySeconds(uint256 newMaxDelaySeconds) external;
+    function setMaxDelay(uint256 newMaxDelayBlocks, uint256 newMaxDelaySeconds) external;
 
     function setIsSequencer(address addr, bool isSequencer) external;
 
