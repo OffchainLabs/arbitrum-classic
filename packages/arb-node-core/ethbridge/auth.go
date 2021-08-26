@@ -19,9 +19,7 @@ package ethbridge
 import (
 	"context"
 	"crypto/rsa"
-	"encoding/hex"
 	"math/big"
-	"strings"
 	"sync"
 	"time"
 
@@ -154,7 +152,7 @@ func NewFireblocksTransactAuthAdvanced(
 		return fireblocksSendTransaction(ctx, fb, tx, replaceTxByHash)
 	}
 	transactionReceipt := func(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
-		details, err := fb.GetTransaction(tx.Hash().String())
+		details, err := fb.GetTransaction(tx.Id())
 		if err != nil {
 			logger.
 				Warn().
@@ -246,8 +244,12 @@ func waitForPendingTransactions(
 					Data:      []byte(details.ExtraParameters.ContractCallData),
 				}
 				rawTx := types.NewTx(baseTx)
-				arbTx := NewFireblocksArbTransaction(rawTx, ethcommon.HexToHash(details.TxHash))
-				_, err := WaitForReceiptWithResultsAndReplaceByFee(
+				arbTx, err := NewFireblocksArbTransaction(rawTx, &details)
+				if err != nil {
+					logger.Error().Err(err).Msg("unable to wait for pending transactions")
+					return err
+				}
+				_, err = WaitForReceiptWithResultsAndReplaceByFee(
 					ctx,
 					client,
 					transactAuth.auth.From,
@@ -308,7 +310,7 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 		select {
 		case <-ctx.Done():
 			return nil, errors.New("ctx done")
-		default:
+		case <-time.After(2 * time.Second):
 		}
 
 		details, err := fb.GetTransaction(txResponse.Id)
@@ -337,19 +339,7 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 		}
 
 		if len(details.TxHash) > 0 {
-			hashString := details.TxHash
-			if strings.HasPrefix(hashString, "0x") {
-				hashString = hashString[2:]
-			}
-			txHash, err := hex.DecodeString(hashString)
-			if err != nil || len(txHash) < 32 {
-				return nil, errors.Wrap(err, "error decoding txHash from fireblocks response")
-			}
-			if err != nil {
-				return nil, errors.Wrap(err, "error encoding fireblocks transaction hash into signature")
-			}
-			arbTx := NewFireblocksArbTransaction(tx, ethcommon.BytesToHash(txHash))
-			return arbTx, nil
+			return NewFireblocksArbTransaction(tx, details)
 		}
 
 		// Hash not returned, keep trying

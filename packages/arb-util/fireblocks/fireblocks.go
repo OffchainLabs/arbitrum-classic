@@ -666,7 +666,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 	}
 
 	logger.
-		Info().
+		Debug().
 		Str("method", method).
 		Str("url", uri.String()).
 		RawJSON("body", requestBody).
@@ -705,7 +705,7 @@ func (fb *Fireblocks) parseBody(body io.Reader, result interface{}) error {
 		if err != nil {
 			return errors.Wrapf(err, "error reading fireblocks response")
 		}
-		logger.Info().RawJSON("body", response).Msgf("received fireblocks response")
+		logger.Debug().RawJSON("body", response).Msgf("received fireblocks response")
 		err = json.NewDecoder(strings.NewReader(string(response))).Decode(&result)
 		if err != nil {
 			return errors.Wrapf(err, "error decoding fireblocks response")

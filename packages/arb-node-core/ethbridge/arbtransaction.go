@@ -17,7 +17,11 @@
 package ethbridge
 
 import (
+	"encoding/hex"
+	"errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"math/big"
+	"strings"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -26,15 +30,10 @@ import (
 type ArbTransaction struct {
 	tx   *types.Transaction
 	hash ethcommon.Hash
+	id   string
 }
 
 func NewArbTransaction(tx *types.Transaction) *ArbTransaction {
-	v, r, s := tx.RawSignatureValues()
-	if v.Cmp(big.NewInt(0)) != 0 && r.Cmp(big.NewInt(0)) == 0 && s.Cmp(big.NewInt(0)) == 0 {
-		// When r and s are empty and v is not empty, v contains transaction hash from fireblocks
-		return NewFireblocksArbTransaction(tx, ethcommon.BytesToHash(v.Bytes()))
-	}
-
 	return &ArbTransaction{
 		tx:   tx,
 		hash: tx.Hash(),
@@ -45,11 +44,31 @@ func NewMockArbTx(hash ethcommon.Hash) *ArbTransaction {
 	return &ArbTransaction{hash: hash}
 }
 
-func NewFireblocksArbTransaction(tx *types.Transaction, hash ethcommon.Hash) *ArbTransaction {
+func NewFireblocksArbTransaction(tx *types.Transaction, details *fireblocks.TransactionDetails) (*ArbTransaction, error) {
+	if len(details.TxHash) == 0 {
+		return nil, errors.New("missing txHash")
+	}
+	hashString := details.TxHash
+	if strings.HasPrefix(hashString, "0x") {
+		hashString = hashString[2:]
+	}
+	if len(hashString) != 64 {
+		return nil, errors.New("txHash wrong size")
+	}
+	txHash, err := hex.DecodeString(hashString)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ArbTransaction{
 		tx:   tx,
-		hash: hash,
-	}
+		hash: ethcommon.BytesToHash(txHash),
+		id:   details.Id,
+	}, nil
+}
+
+func (t *ArbTransaction) Id() string {
+	return t.id
 }
 
 func (t *ArbTransaction) Hash() ethcommon.Hash {
