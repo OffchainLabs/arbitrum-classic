@@ -139,6 +139,14 @@ task('core-transfer-beacon-owner', 'transfers beacon owner')
     await transferBeaconOwner(args.address, args.newowner)
   })
 
+task('core-transfer-admin', 'deploy one logic')
+  .addParam('proxyaddress', 'proxy address')
+  .addParam('newadmin', 'address of new admin')
+  .setAction(async (args, hre) => {
+    const { transferAdmin } = initUpgrades(hre, __dirname)
+    await transferAdmin(args.proxyaddress, args.newadmin)
+  })
+
 const config = {
   defaultNetwork: 'hardhat',
   paths: {
