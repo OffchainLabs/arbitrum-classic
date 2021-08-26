@@ -26,6 +26,12 @@ import "../rollup/Rollup.sol";
 
 import "./Messages.sol";
 
+interface OldRollup {
+    function sequencerInboxMaxDelayBlocks() external view returns (uint256);
+
+    function sequencerInboxMaxDelaySeconds() external view returns (uint256);
+}
+
 contract SequencerInbox is ISequencerInbox, Cloneable {
     // Sequencer-Inbox state accumulator
     bytes32[] public override inboxAccs;
@@ -57,6 +63,21 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         // it is assumed that maxDelayBlocks and maxDelaySeconds are set by the rollup
     }
 
+    function postUpgradeInit() external {
+        // it is assumed the sequencer inbox contract is behind a Proxy controlled by a
+        // proxy admin. this function can only be called by the proxy admin contract
+        address proxyAdmin = ProxyUtil.getProxyAdmin();
+        require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
+
+        // the sequencer inbox needs to query the old rollup interface since it will be upgraded first
+        OldRollup _rollup = OldRollup(rollup);
+
+        maxDelayBlocks = _rollup.sequencerInboxMaxDelayBlocks();
+        maxDelaySeconds = _rollup.sequencerInboxMaxDelaySeconds();
+
+        isSequencer[deprecatedSequencer] = true;
+    }
+
     /// @notice DEPRECATED - use isSequencer instead
     function sequencer() external view override returns (address) {
         return deprecatedSequencer;
@@ -68,16 +89,11 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         emit IsSequencerUpdated(addr, newIsSequencer);
     }
 
-    function setMaxDelayBlocks(uint256 newMaxDelayBlocks) external override {
+    function setMaxDelay(uint256 newMaxDelayBlocks, uint256 newMaxDelaySeconds) external override {
         require(msg.sender == rollup, "ONLY_ROLLUP");
         maxDelayBlocks = newMaxDelayBlocks;
-        emit MaxDelayBlocksUpdated(newMaxDelayBlocks);
-    }
-
-    function setMaxDelaySeconds(uint256 newMaxDelaySeconds) external override {
-        require(msg.sender == rollup, "ONLY_ROLLUP");
         maxDelaySeconds = newMaxDelaySeconds;
-        emit MaxDelaySecondsUpdated(newMaxDelaySeconds);
+        emit MaxDelayUpdated(newMaxDelayBlocks, newMaxDelaySeconds);
     }
 
     /**
