@@ -328,14 +328,13 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 		if fb.IsTransactionStatusFailed(details.Status) {
 			logger.
 				Error().
-				Err(err).
 				Str("To", details.DestinationAddress).
 				Str("From", details.SourceAddress).
 				Str("status", details.Status).
 				Str("txhash", details.TxHash).
 				Str("replaceTxByHash", replaceTxByHash).
 				Msg("fireblocks transaction failed")
-			return nil, errors.Wrapf(err, "fireblocks transaction failed: %s", details.Status)
+			return nil, errors.New("fireblocks transaction failed")
 		}
 
 		if len(details.TxHash) > 0 {

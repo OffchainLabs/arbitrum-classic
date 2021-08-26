@@ -194,8 +194,8 @@ type TransactionDetails struct {
 	SignedMessages                []SignedMessage            `json:"signedMessages"`
 	Source                        TransferPeerPathResponse   `json:"source"`
 	SourceAddress                 string                     `json:"sourceAddress"`
-	Status                        string                     `json:"transactionStatus"`
-	SubStatus                     string                     `json:"transactionSubStatus"`
+	Status                        string                     `json:"status"`
+	SubStatus                     string                     `json:"subStatus"`
 	TxHash                        string                     `json:"txHash"`
 }
 
@@ -700,7 +700,7 @@ func (fb *Fireblocks) signJWT(path string, body []byte) (string, error) {
 }
 
 func (fb *Fireblocks) parseBody(body io.Reader, result interface{}) error {
-	if logger.GetLevel() == zerolog.DebugLevel {
+	if logger.GetLevel() <= zerolog.DebugLevel {
 		response, err := ioutil.ReadAll(body)
 		if err != nil {
 			return errors.Wrapf(err, "error reading fireblocks response")
