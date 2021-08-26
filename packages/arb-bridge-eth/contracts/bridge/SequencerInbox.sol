@@ -57,7 +57,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         // it is assumed that maxDelayBlocks and maxDelaySeconds are set by the rollup
     }
 
-    // DEPRECATED - use isSequencer instead
+    /// @notice DEPRECATED - use isSequencer instead
     function sequencer() external view override returns (address) {
         return deprecatedSequencer;
     }

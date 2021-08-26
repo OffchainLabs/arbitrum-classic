@@ -48,8 +48,9 @@ interface ISequencerInbox {
         uint256 seqBatchIndex
     );
 
-    // DEPRECATED - look at IsSequencerUpdated for new updates
-    event SequencerAddressUpdated(address newAddress);
+    /// @notice DEPRECATED - look at IsSequencerUpdated for new updates
+    // event SequencerAddressUpdated(address newAddress);
+
     event IsSequencerUpdated(address addr, bool isSequencer);
     event MaxDelayBlocksUpdated(uint256 newValue);
     event MaxDelaySecondsUpdated(uint256 newValue);
@@ -75,7 +76,7 @@ interface ISequencerInbox {
         view
         returns (uint256, bytes32);
 
-    // DEPRECATED - use isSequencer instead
+    /// @notice DEPRECATED - use isSequencer instead
     function sequencer() external view returns (address);
 
     function isSequencer(address seq) external view returns (bool);
