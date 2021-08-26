@@ -25,6 +25,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/c-bata/go-prompt"
 	"github.com/ethereum/go-ethereum"
@@ -286,6 +287,37 @@ func estimateTransferGas() error {
 	return nil
 }
 
+func spam() error {
+	dest := common.RandAddress().ToEthAddress()
+	ctx := context.Background()
+	for {
+		nonce, err := config.client.PendingNonceAt(ctx, config.auth.From)
+		if err != nil {
+			return err
+		}
+		gasPrice, err := config.client.SuggestGasPrice(ctx)
+		if err != nil {
+			return err
+		}
+		tx := types.NewTx(&types.LegacyTx{
+			Nonce:    nonce,
+			GasPrice: gasPrice,
+			Gas:      1000000,
+			To:       &dest,
+			Value:    big.NewInt(1),
+			Data:     nil,
+		})
+		tx, err = config.auth.Signer(config.auth.From, tx)
+		if err != nil {
+			return err
+		}
+		if err := config.client.SendTransaction(ctx, tx); err != nil {
+			return err
+		}
+		time.Sleep(time.Minute)
+	}
+}
+
 func handleCommand(fields []string) error {
 	switch fields[0] {
 	case "enable-fees":
@@ -334,6 +366,8 @@ func handleCommand(fields []string) error {
 		return upgradeArbOS(fields[1], fields[2], source)
 	case "version":
 		return version()
+	case "spam":
+		return spam()
 	default:
 		fmt.Println("Unknown command")
 	}
