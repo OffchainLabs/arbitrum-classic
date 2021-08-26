@@ -27,7 +27,7 @@ var (
 )
 
 // ArbAggregatorABI is the input ABI used to generate the binding from.
-const ArbAggregatorABI = "[{\"inputs\":[],\"name\":\"getDefaultAggregator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getFeeCollector\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getPreferredAggregator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newDefault\",\"type\":\"address\"}],\"name\":\"setDefaultAggregator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newFeeCollector\",\"type\":\"address\"}],\"name\":\"setFeeCollector\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"prefAgg\",\"type\":\"address\"}],\"name\":\"setPreferredAggregator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbAggregatorABI = "[{\"inputs\":[],\"name\":\"getDefaultAggregator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getFeeCollector\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getPreferredAggregator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getTxBaseFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newDefault\",\"type\":\"address\"}],\"name\":\"setDefaultAggregator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newFeeCollector\",\"type\":\"address\"}],\"name\":\"setFeeCollector\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"prefAgg\",\"type\":\"address\"}],\"name\":\"setPreferredAggregator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"feeInL1Gas\",\"type\":\"uint256\"}],\"name\":\"setTxBaseFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbAggregator is an auto generated Go binding around an Ethereum contract.
 type ArbAggregator struct {
@@ -265,6 +265,37 @@ func (_ArbAggregator *ArbAggregatorCallerSession) GetPreferredAggregator(addr co
 	return _ArbAggregator.Contract.GetPreferredAggregator(&_ArbAggregator.CallOpts, addr)
 }
 
+// GetTxBaseFee is a free data retrieval call binding the contract method 0x049764af.
+//
+// Solidity: function getTxBaseFee(address aggregator) view returns(uint256)
+func (_ArbAggregator *ArbAggregatorCaller) GetTxBaseFee(opts *bind.CallOpts, aggregator common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _ArbAggregator.contract.Call(opts, &out, "getTxBaseFee", aggregator)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetTxBaseFee is a free data retrieval call binding the contract method 0x049764af.
+//
+// Solidity: function getTxBaseFee(address aggregator) view returns(uint256)
+func (_ArbAggregator *ArbAggregatorSession) GetTxBaseFee(aggregator common.Address) (*big.Int, error) {
+	return _ArbAggregator.Contract.GetTxBaseFee(&_ArbAggregator.CallOpts, aggregator)
+}
+
+// GetTxBaseFee is a free data retrieval call binding the contract method 0x049764af.
+//
+// Solidity: function getTxBaseFee(address aggregator) view returns(uint256)
+func (_ArbAggregator *ArbAggregatorCallerSession) GetTxBaseFee(aggregator common.Address) (*big.Int, error) {
+	return _ArbAggregator.Contract.GetTxBaseFee(&_ArbAggregator.CallOpts, aggregator)
+}
+
 // SetDefaultAggregator is a paid mutator transaction binding the contract method 0x0ffd6650.
 //
 // Solidity: function setDefaultAggregator(address newDefault) returns()
@@ -326,4 +357,25 @@ func (_ArbAggregator *ArbAggregatorSession) SetPreferredAggregator(prefAgg commo
 // Solidity: function setPreferredAggregator(address prefAgg) returns()
 func (_ArbAggregator *ArbAggregatorTransactorSession) SetPreferredAggregator(prefAgg common.Address) (*types.Transaction, error) {
 	return _ArbAggregator.Contract.SetPreferredAggregator(&_ArbAggregator.TransactOpts, prefAgg)
+}
+
+// SetTxBaseFee is a paid mutator transaction binding the contract method 0x5be6888b.
+//
+// Solidity: function setTxBaseFee(address aggregator, uint256 feeInL1Gas) returns()
+func (_ArbAggregator *ArbAggregatorTransactor) SetTxBaseFee(opts *bind.TransactOpts, aggregator common.Address, feeInL1Gas *big.Int) (*types.Transaction, error) {
+	return _ArbAggregator.contract.Transact(opts, "setTxBaseFee", aggregator, feeInL1Gas)
+}
+
+// SetTxBaseFee is a paid mutator transaction binding the contract method 0x5be6888b.
+//
+// Solidity: function setTxBaseFee(address aggregator, uint256 feeInL1Gas) returns()
+func (_ArbAggregator *ArbAggregatorSession) SetTxBaseFee(aggregator common.Address, feeInL1Gas *big.Int) (*types.Transaction, error) {
+	return _ArbAggregator.Contract.SetTxBaseFee(&_ArbAggregator.TransactOpts, aggregator, feeInL1Gas)
+}
+
+// SetTxBaseFee is a paid mutator transaction binding the contract method 0x5be6888b.
+//
+// Solidity: function setTxBaseFee(address aggregator, uint256 feeInL1Gas) returns()
+func (_ArbAggregator *ArbAggregatorTransactorSession) SetTxBaseFee(aggregator common.Address, feeInL1Gas *big.Int) (*types.Transaction, error) {
+	return _ArbAggregator.Contract.SetTxBaseFee(&_ArbAggregator.TransactOpts, aggregator, feeInL1Gas)
 }
