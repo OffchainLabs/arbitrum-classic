@@ -27,10 +27,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "cmdhelp").Logger()
 
 func readPass() (string, error) {
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
@@ -53,6 +56,7 @@ func GetKeystore(
 	gasPrice float64,
 	chainId *big.Int,
 ) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
+	logger.Info().Str("location", filepath.Join(validatorFolder, "wallets")).Msg("loading wallet")
 	ks := keystore.NewKeyStore(
 		filepath.Join(validatorFolder, "wallets"),
 		keystore.StandardScryptN,
