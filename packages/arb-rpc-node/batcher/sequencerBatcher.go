@@ -61,6 +61,7 @@ type SequencerBatcher struct {
 	delayedMessagesTargetDelay      *big.Int
 	sequencerInbox                  *ethbridgecontracts.SequencerInbox
 	auth                            *ethbridge.TransactAuth
+	fromAddress                     common.Address
 	chainTimeCheckInterval          time.Duration
 	logBatchGasCosts                bool
 	feedBroadcaster                 *broadcaster.Broadcaster
@@ -73,7 +74,6 @@ type SequencerBatcher struct {
 	LockoutManager                  SequencerLockoutManager
 	config                          configuration.Sequencer
 
-	sequencer common.Address
 	signer    types.Signer
 	txQueue   chan txQueueItem
 	newTxFeed event.Feed
@@ -119,12 +119,12 @@ func NewSequencerBatcher(
 	}
 
 	callOpts := &bind.CallOpts{Context: ctx}
-	sequencer, err := sequencerInbox.Sequencer(callOpts)
+	isSequencer, err := sequencerInbox.IsSequencer(callOpts, auth.From)
 	if err != nil {
 		return nil, err
 	}
-	if sequencer != auth.From {
-		return nil, errors.New("Transaction auth isn't for sequencer")
+	if !isSequencer {
+		return nil, errors.New("Transaction auth address isn't a sequencer")
 	}
 
 	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
@@ -152,6 +152,7 @@ func NewSequencerBatcher(
 		delayedMessagesTargetDelay: big.NewInt(config.DelayedMessagesTargetDelay),
 		sequencerInbox:             sequencerInbox,
 		auth:                       transactAuth,
+		fromAddress:                common.NewAddressFromEth(auth.From),
 		chainTimeCheckInterval:     time.Second,
 		feedBroadcaster:            broadcaster,
 		dataSigner:                 dataSigner,
@@ -164,7 +165,6 @@ func NewSequencerBatcher(
 		sequenceDelayedMessagesInterval: big.NewInt(20),
 		createBatchBlockInterval:        big.NewInt(config.CreateBatchBlockInterval),
 
-		sequencer:                     common.NewAddressFromEth(sequencer),
 		signer:                        types.NewEIP155Signer(chainId),
 		txQueue:                       make(chan txQueueItem, 10),
 		newTxFeed:                     event.Feed{},
@@ -312,7 +312,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			return err
 		}
 		l2Message := message.NewSafeL2Message(batch)
-		seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
+		seqMsg := message.NewInboxMessage(l2Message, b.fromAddress, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
 
 		logCount, err := b.db.GetLogCount()
 		if err != nil {
@@ -390,7 +390,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 					return err
 				}
 				l2Message := message.NewSafeL2Message(batch)
-				seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
+				seqMsg := message.NewInboxMessage(l2Message, b.fromAddress, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
 				txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
 				err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
 				if err != nil {
@@ -431,7 +431,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 
 		newBlockMessage := message.NewInboxMessage(
 			message.EndBlockMessage{},
-			b.sequencer,
+			b.fromAddress,
 			new(big.Int).Set(msgCount),
 			big.NewInt(0),
 			b.latestChainTime.Clone(),
@@ -470,7 +470,7 @@ func (b *SequencerBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
 }
 
 func (b *SequencerBatcher) Aggregator() *common.Address {
-	return &b.sequencer
+	return &b.fromAddress
 }
 
 func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime inbox.ChainTime, bypassLockout bool) (bool, error) {
@@ -754,7 +754,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	atomic.StoreInt32(&b.publishingBatchAtomic, 1)
 	go (func() {
 		defer atomic.StoreInt32(&b.publishingBatchAtomic, 0)
-		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin", b.auth)
+		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.fromAddress.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin", b.auth)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error waiting for batch receipt")
 			return
@@ -922,7 +922,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			// We attempt to get this at the same block as prevMsgCount,
 			// but it isn't perfectly atomic as there could've been a reorg.
 			// That's fine though, as the worst case is that batch creation simply fails and we retry.
-			nonceInt, err := b.client.NonceAt(ctx, b.sequencer.ToEthAddress(), blockNum)
+			nonceInt, err := b.client.NonceAt(ctx, b.fromAddress.ToEthAddress(), blockNum)
 			if err != nil {
 				logger.Error().Err(err).Msg("error getting latest sequencer nonce")
 				continue

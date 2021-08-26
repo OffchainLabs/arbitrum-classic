@@ -97,10 +97,9 @@ contract Rollup is Proxy, RollupBase {
         // calls initialize method in user facet
         require(_facets[0].isContract(), "FACET_0_NOT_CONTRACT");
         require(_facets[1].isContract(), "FACET_1_NOT_CONTRACT");
-        (bool success, ) =
-            _facets[1].delegatecall(
-                abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
-            );
+        (bool success, ) = _facets[1].delegatecall(
+            abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
+        );
         require(success, "FAIL_INIT_FACET");
 
         delayedBridge = IBridge(connectedContracts[0]);
@@ -162,6 +161,7 @@ contract Rollup is Proxy, RollupBase {
 
         sequencerBridge.setMaxDelayBlocks(oldDelayBlocks);
         sequencerBridge.setMaxDelaySeconds(oldDelaySeconds);
+        sequencerBridge.setIsSequencer(sequencerBridge.sequencer(), true);
 
         STORAGE_GAP_1 = 0;
         STORAGE_GAP_2 = 0;
@@ -170,20 +170,19 @@ contract Rollup is Proxy, RollupBase {
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
-        bytes32 state =
-            RollupLib.stateHash(
-                RollupLib.ExecutionState(
-                    0, // total gas used
-                    _machineHash,
-                    0, // inbox count
-                    0, // send count
-                    0, // log count
-                    0, // send acc
-                    0, // log acc
-                    block.number, // block proposed
-                    1 // Initialization message already in inbox
-                )
-            );
+        bytes32 state = RollupLib.stateHash(
+            RollupLib.ExecutionState(
+                0, // total gas used
+                _machineHash,
+                0, // inbox count
+                0, // send count
+                0, // log count
+                0, // send acc
+                0, // log acc
+                block.number, // block proposed
+                1 // Initialization message already in inbox
+            )
+        );
         return
             INode(
                 nodeFactory.createNode(
@@ -221,10 +220,9 @@ contract Rollup is Proxy, RollupBase {
         require(msg.data.length >= 4, "NO_FUNC_SIG");
         address rollupOwner = owner;
         // if there is an owner and it is the sender, delegate to admin facet
-        address target =
-            rollupOwner != address(0) && rollupOwner == msg.sender
-                ? getAdminFacet()
-                : getUserFacet();
+        address target = rollupOwner != address(0) && rollupOwner == msg.sender
+            ? getAdminFacet()
+            : getUserFacet();
         require(target.isContract(), "TARGET_NOT_CONTRACT");
         return target;
     }

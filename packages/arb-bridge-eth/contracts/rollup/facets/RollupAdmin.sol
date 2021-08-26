@@ -228,8 +228,8 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
      * @notice Updates a sequencer address at the sequencer inbox
      * @param newSequencer new sequencer address to be used
      */
-    function setSequencer(address newSequencer) external override {
-        ISequencerInbox(sequencerBridge).setSequencer(newSequencer);
+    function setIsSequencer(address newSequencer, bool isSequencer) external override {
+        ISequencerInbox(sequencerBridge).setIsSequencer(newSequencer, isSequencer);
         emit OwnerFunctionCalled(19);
     }
 
@@ -281,14 +281,13 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
 
         // The admin does not need to prove against the sequencer bridge
-        RollupLib.Assertion memory assertion =
-            RollupLib.decodeAssertion(
-                assertionBytes32Fields,
-                assertionIntFields,
-                beforeProposedBlock,
-                beforeInboxMaxCount,
-                sequencerBridge.messageCount()
-            );
+        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
+            assertionBytes32Fields,
+            assertionIntFields,
+            beforeProposedBlock,
+            beforeInboxMaxCount,
+            sequencerBridge.messageCount()
+        );
 
         createNewNode(
             assertion,
