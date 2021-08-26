@@ -42,6 +42,8 @@ export const initUpgrades = (
   hre: HardhatRuntimeEnvironment,
   rootDir: string
 ) => {
+  const compileTask = hre.run('compile')
+
   const getQueuedUpdates = async (): Promise<{
     path: string
     data: QueuedUpdates
@@ -109,6 +111,7 @@ export const initUpgrades = (
   const deployLogic = async (
     contractNames: ContractNames[] | ContractNames
   ) => {
+    await compileTask
     ensureCleanGitTree()
 
     if (!Array.isArray(contractNames)) {
@@ -180,6 +183,7 @@ export const initUpgrades = (
   }
 
   const updateImplementations = async () => {
+    await compileTask
     ensureCleanGitTree()
     const res = await verifyCurrentImplementations()
     if (!res) {
@@ -281,6 +285,8 @@ export const initUpgrades = (
   }
 
   const verifyCurrentImplementations = async () => {
+    await compileTask
+
     console.log('Verifying deployments:')
 
     const { data: deploymentsJsonData } = await getDeployments()
@@ -368,6 +374,7 @@ export const initUpgrades = (
   }
 
   const deployLogicAll = async () => {
+    await compileTask
     const { path: deploymentsPath, data: deploymentsJsonData } =
       await getDeployments()
     const contractsNames = Object.keys(
@@ -377,6 +384,8 @@ export const initUpgrades = (
   }
 
   const transferAdmin = async (proxyAddress: string, newAdmin: string) => {
+    await compileTask
+
     const { path: deploymentsPath, data } = await getDeployments()
     const signers = await hre.ethers.getSigners()
     if (!signers.length) {
