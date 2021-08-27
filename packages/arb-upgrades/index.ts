@@ -15,6 +15,8 @@ import {
   isRollupAdminFacet,
   getLayer,
   hasPostInitHook,
+  isBeaconOwnedByEOA,
+  isBeaconOwnedByRollup,
 } from './types'
 
 const ADMIN_SLOT =
@@ -290,14 +292,25 @@ export const initUpgrades = (
       console.log(`Updating ${contractName} to new implementation`)
 
       let upgradeTx: any
-      if (isBeacon(contractName)) {
-        // handle UpgradeableBeacon proxy
+      if (isBeaconOwnedByEOA(contractName)) {
+        // handle UpgradeableBeacon proxy owned by EOA
         const UpgradeableBeacon = (
           await hre.ethers.getContractFactory('UpgradeableBeacon')
         )
           .attach(deploymentData.proxyAddress)
           .connect(signer)
         upgradeTx = await UpgradeableBeacon.upgradeTo(queuedUpdateData.address)
+      } else if (isBeaconOwnedByRollup(contractName)) {
+        // handle UpgradeableBeacon proxy owned by Rollup
+        const rollupAddress =
+          tmpDeploymentsJsonData.contracts.Rollup.proxyAddress
+        const RollupAdmin = (await hre.ethers.getContractFactory('RollupAdmin'))
+          .attach(rollupAddress)
+          .connect(signer)
+        upgradeTx = await RollupAdmin.upgradeBeacon(
+          deploymentData.proxyAddress,
+          queuedUpdateData.address
+        )
       } else if (
         isRollupAdminFacet(contractName) ||
         isRollupUserFacet(contractName)
@@ -305,12 +318,12 @@ export const initUpgrades = (
         // Handle diamond proxy pattern
         const userFacetAddress = isRollupUserFacet(contractName)
           ? queuedUpdateData.address
-          : tmpDeploymentsJsonData.contracts.RollupUserFacet
+          : tmpDeploymentsJsonData.contracts.RollupUserFacet.implAddress
         const adminFacetAddress = isRollupAdminFacet(contractName)
           ? queuedUpdateData.address
-          : tmpDeploymentsJsonData.contracts.RollupAdminFacet
+          : tmpDeploymentsJsonData.contracts.RollupAdminFacet.implAddress
         const RollupAdmin = (await hre.ethers.getContractFactory('RollupAdmin'))
-          .attach(deploymentData.proxyAddress)
+          .attach(tmpDeploymentsJsonData.contracts.Rollup.proxyAddress)
           .connect(signer)
         upgradeTx = await RollupAdmin.setFacets(
           adminFacetAddress,

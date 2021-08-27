@@ -52,7 +52,8 @@ export enum ContractNames {
 }
 
 export enum UpgradeableType {
-  Beacon = 'Beacon',
+  BeaconOwnedByEOA = 'BeaconOwnedByEOA',
+  BeaconOwnedByRollup = 'BeaconOwnedByRollup',
   TransparentProxy = 'TransparentProxy',
   Proxy = 'Proxy',
   RollupUserFacet = 'RollupUserFacet',
@@ -62,10 +63,11 @@ export enum UpgradeableType {
 export const proxyType = (contractName: ContractNames) => {
   switch (contractName) {
     case ContractNames.StandardArbERC20:
+      return UpgradeableType.BeaconOwnedByEOA
     case ContractNames.Node:
     case ContractNames.Challenge:
     case ContractNames.OutboxEntry:
-      return UpgradeableType.Beacon
+      return UpgradeableType.BeaconOwnedByRollup
     case ContractNames.RollupAdminFacet:
       return UpgradeableType.RollupAdminFacet
     case ContractNames.RollupUserFacet:
@@ -76,7 +78,14 @@ export const proxyType = (contractName: ContractNames) => {
 }
 
 export const isBeacon = (contractName: ContractNames) =>
-  proxyType(contractName) === UpgradeableType.Beacon
+  isBeaconOwnedByEOA(contractName) || isBeaconOwnedByRollup(contractName)
+
+export const isBeaconOwnedByEOA = (contractName: ContractNames) =>
+  proxyType(contractName) === UpgradeableType.BeaconOwnedByEOA ||
+  proxyType(contractName) === UpgradeableType.BeaconOwnedByRollup
+
+export const isBeaconOwnedByRollup = (contractName: ContractNames) =>
+  proxyType(contractName) === UpgradeableType.BeaconOwnedByRollup
 
 export const isRollupUserFacet = (contractName: ContractNames) =>
   proxyType(contractName) === UpgradeableType.RollupUserFacet
