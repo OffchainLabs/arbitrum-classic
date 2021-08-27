@@ -248,6 +248,15 @@ struct MachineState {
     WasmCodePoint compiledWasmCodePoint() const;
 };
 
+struct CodeResult {
+    std::shared_ptr<Code> code;
+    value table;
+    CodePointStub stub;
+};
+
+
+CodeResult wasmAvmToCode(WasmResult &res);
+
 WasmCodePoint wasmAvmToCodePoint(WasmResult& wres, std::vector<uint8_t>& wasm_module);
 
 MachineState makeWasmMachine(uint64_t len, Buffer buf);

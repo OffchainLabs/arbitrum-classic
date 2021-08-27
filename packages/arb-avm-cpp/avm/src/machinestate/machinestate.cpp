@@ -437,13 +437,6 @@ value get_int_value(std::vector<uint8_t> &bytes, uint64_t offset) {
     return acc;
 }
 
-struct CodeResult {
-    std::shared_ptr<Code> code;
-    value table;
-    CodePointStub stub;
-};
-
-
 CodeResult wasmAvmToCode(WasmResult &res) {
     auto code = std::make_shared<Code>(0);
     CodePointStub stub = code->addSegment();
@@ -454,7 +447,6 @@ CodeResult wasmAvmToCode(WasmResult &res) {
     for (int i = 0; i < res.insn->size(); i++) {
         points.push_back(stub);
         stub = code->addOperation(stub.pc, (*res.insn)[i]);
-        // std::cerr << i << ": " << stub << " " << (*res.insn)[i] << "\n";
     }
 
     for (int i = 0; i < res.table.size(); i++) {
@@ -463,12 +455,11 @@ CodeResult wasmAvmToCode(WasmResult &res) {
             tab_lst.resize(offset+1);
         }
         tab_lst[offset] = points[res.table[i].second];
-        // tab_lst[offset] = points[points.size() - res.table[i].second];
     }
     auto table = make_table(tab_lst);
 
-    std::cerr << "Made table " << hash_value(table) << " \n";
-    std::cerr << "Codepoint " << hash_value(stub) << " \n";
+    // std::cerr << "Made table " << hash_value(table) << " \n";
+    // std::cerr << "Codepoint " << hash_value(stub) << " \n";
 
     return {code, table, stub};
 }
