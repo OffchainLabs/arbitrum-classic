@@ -427,7 +427,12 @@ export const initUpgrades = (
           )
           success = false
         }
-        if (beaconOwner.toLowerCase() !== proxyAdminOwner.toLowerCase()) {
+
+        const expectedBeaconOwner = isBeaconOwnedByRollup(contractName)
+          ? deploymentsJsonData.contracts.Rollup.proxyAddress
+          : proxyAdminOwner
+
+        if (beaconOwner.toLowerCase() !== expectedBeaconOwner.toLowerCase()) {
           console.log(
             `${contractName} Verification failed: bad admin`,
             beaconOwner,
