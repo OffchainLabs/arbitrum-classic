@@ -30,7 +30,7 @@ library RollupLib {
         bytes32 machineHash;
         uint256 confirmPeriodBlocks;
         uint256 extraChallengeTimeBlocks;
-        uint256 arbGasSpeedLimitPerBlock;
+        uint256 avmGasSpeedLimitPerBlock;
         uint256 baseStake;
         address stakeToken;
         address owner;

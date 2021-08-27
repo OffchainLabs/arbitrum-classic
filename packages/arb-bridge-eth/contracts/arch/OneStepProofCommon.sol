@@ -259,14 +259,14 @@ abstract contract OneStepProofCommon is IOneStepProof {
         pure
         returns (bool)
     {
-        if (context.afterMachine.arbGasRemaining < amount) {
+        if (context.afterMachine.avmGasRemaining < amount) {
             // ERROR + GAS_SET
             context.gas += ERROR_GAS_COST;
-            context.afterMachine.arbGasRemaining = MAX_UINT256;
+            context.afterMachine.avmGasRemaining = MAX_UINT256;
             return true;
         } else {
             context.gas += amount;
-            context.afterMachine.arbGasRemaining -= amount;
+            context.afterMachine.avmGasRemaining -= amount;
             return false;
         }
     }

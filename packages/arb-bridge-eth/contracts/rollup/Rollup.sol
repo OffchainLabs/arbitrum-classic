@@ -44,7 +44,7 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     // Rollup Config
     uint256 public confirmPeriodBlocks;
     uint256 public extraChallengeTimeBlocks;
-    uint256 public arbGasSpeedLimitPerBlock;
+    uint256 public avmGasSpeedLimitPerBlock;
     uint256 public baseStake;
 
     // Bridge is an IInbox and IOutbox
@@ -80,7 +80,7 @@ contract Rollup is Proxy, RollupBase {
         return confirmPeriodBlocks != 0;
     }
 
-    // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, arbGasSpeedLimitPerBlock, baseStake ]
+    // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, avmGasSpeedLimitPerBlock, baseStake ]
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
         bytes32 _machineHash,
@@ -124,7 +124,7 @@ contract Rollup is Proxy, RollupBase {
 
         confirmPeriodBlocks = _rollupParams[0];
         extraChallengeTimeBlocks = _rollupParams[1];
-        arbGasSpeedLimitPerBlock = _rollupParams[2];
+        avmGasSpeedLimitPerBlock = _rollupParams[2];
         baseStake = _rollupParams[3];
         owner = _owner;
         // A little over 15 minutes
