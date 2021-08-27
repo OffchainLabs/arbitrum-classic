@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -73,6 +74,7 @@ type SequencerBatcher struct {
 	LockoutManager                  SequencerLockoutManager
 	config                          *configuration.Config
 	fb                              *fireblocks.Fireblocks
+	consecutiveShouldReorgGaps      int
 
 	sequencer common.Address
 	signer    types.Signer
@@ -760,20 +762,38 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	aheadBlocks := new(big.Int).Sub(maxL1BlockNumber, newestChainTime.BlockNum.AsInt())
 	aheadSeconds := new(big.Int).Sub(maxL1Timestamp, newestChainTime.Timestamp)
 	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 || aheadBlocks.Cmp(big.NewInt(maxL1BackwardsReorg)) > 0 || aheadSeconds.Cmp(big.NewInt(maxL1BackwardsReorg*15)) > 0 {
-		logger.
-			Error().
+		b.consecutiveShouldReorgGaps += 1
+		doingReorg := b.consecutiveShouldReorgGaps >= 10
+
+		var msg string
+		var log *zerolog.Event
+		if doingReorg {
+			msg = "Exceeded max sequencer delay! Reorganizing to compensate..."
+			log = logger.Error()
+		} else {
+			msg = "Exceeded max sequencer delay! Waiting to see if this is consistent..."
+			log = logger.Warn()
+		}
+
+		log.
 			Str("delayBlocks", delayBlocks.String()).
 			Str("delaySeconds", delaySeconds.String()).
 			Str("aheadBlocks", aheadBlocks.String()).
 			Str("aheadSeconds", aheadSeconds.String()).
-			Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
+			Int("consecutiveGaps", b.consecutiveShouldReorgGaps).
+			Msg(msg)
 
-		err = b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
-		if err != nil {
-			return false, errors.Wrap(err, "error during reorg after exceeded max sequencer delay")
+		if doingReorg {
+			err = b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
+			if err != nil {
+				return false, errors.Wrap(err, "error during reorg after exceeded max sequencer delay")
+			}
+			b.consecutiveShouldReorgGaps = 0
 		}
 
-		return false, errors.New("exceeded max sequencer delay, reorganized to compensate")
+		return false, errors.New("exceeded max sequencer delay")
+	} else {
+		b.consecutiveShouldReorgGaps = 0
 	}
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
