@@ -87,7 +87,7 @@ func (c *EthClient) NonceAt(ctx context.Context, account common.Address, blockNu
 		rpcBlockNumber = rpc.BlockNumber(blockNumber.Int64())
 	}
 	block := rpc.BlockNumberOrHash{BlockNumber: &rpcBlockNumber}
-	count, err := c.srv.GetTransactionCount(ctx, &account, block)
+	count, err := c.srv.getTransactionCountInner(ctx, &account, block, false)
 	if err != nil {
 		return 0, err
 	}
@@ -97,7 +97,7 @@ func (c *EthClient) NonceAt(ctx context.Context, account common.Address, blockNu
 func (c *EthClient) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
 	pending := rpc.PendingBlockNumber
 	block := rpc.BlockNumberOrHash{BlockNumber: &pending}
-	count, err := c.srv.GetTransactionCount(ctx, &account, block)
+	count, err := c.srv.getTransactionCountInner(ctx, &account, block, false)
 	if err != nil {
 		return 0, err
 	}

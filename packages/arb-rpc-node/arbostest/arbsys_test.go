@@ -104,7 +104,11 @@ func TestTransactionCount(t *testing.T) {
 		Payment:     big.NewInt(10),
 		Data:        []byte{},
 	}
-	resultCodes = append(resultCodes, evm.SequenceNumberTooHigh)
+	if arbosVersion < 33 {
+		resultCodes = append(resultCodes, evm.BadSequenceCode)
+	} else {
+		resultCodes = append(resultCodes, evm.SequenceNumberTooHigh)
+	}
 
 	// Insufficient balance
 	tx4 := message.Transaction{
@@ -137,7 +141,11 @@ func TestTransactionCount(t *testing.T) {
 		Payment:     big.NewInt(300),
 		Data:        generateFib(t, big.NewInt(20)),
 	}
-	resultCodes = append(resultCodes, evm.SequenceNumberTooLow)
+	if arbosVersion < 33 {
+		resultCodes = append(resultCodes, evm.BadSequenceCode)
+	} else {
+		resultCodes = append(resultCodes, evm.SequenceNumberTooLow)
+	}
 
 	// Transaction to contract with insufficient balance
 	tx7 := message.Transaction{

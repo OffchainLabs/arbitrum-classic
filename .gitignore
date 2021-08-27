@@ -7,6 +7,7 @@ compiled.json
 ci
 debug
 build
+build-fuzz
 release
 xcode
 validator-states
@@ -24,6 +25,7 @@ vconan
 gasReporterOutput.json
 rollups
 /packages/arb-node-core/arb-validator
+/packages/arb-node-core/proof_test_server
 /packages/arb-rpc-node/arb-node
 /packages/arb-rpc-node/cmd/arb-dev-node/arb-dev-node
 /packages/arb-rpc-node/cmd/arb-dev-node/arbitrum*
@@ -299,3 +301,7 @@ packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 # geth setup
 packages/arb-bridge-eth/data/
 packages/arb-bridge-eth/password.txt
+
+# GitHub CI
+packages/issues
+packages/*/issues

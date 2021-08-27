@@ -31,6 +31,8 @@ class ReadTransaction {
     ReadTransaction() = delete;
     explicit ReadTransaction(std::shared_ptr<DataStorage> store);
 
+    [[nodiscard]] rocksdb::Status createRocksdbCheckpoint(
+        const std::string& checkpoint_dir) const;
     rocksdb::Status defaultGet(const rocksdb::Slice& key,
                                std::string* value) const;
     rocksdb::Status stateGet(const rocksdb::Slice& key,

@@ -39,12 +39,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 func deployRollup(
@@ -151,7 +151,7 @@ func TestSequencerBatcher(t *testing.T) {
 	l2ChainId := common.RandBigInt()
 
 	chainIdConfig := message.ChainIDConfig{ChainId: l2ChainId}
-	init, err := message.NewInitMessage(protocol.ChainParams{}, common.RandAddress(), []message.ChainConfigOption{chainIdConfig})
+	init, err := message.NewInitMessage(protocol.ChainParams{}, owner, []message.ChainConfigOption{chainIdConfig})
 	test.FailIfError(t, err)
 	extraConfig := init.ExtraConfig
 
