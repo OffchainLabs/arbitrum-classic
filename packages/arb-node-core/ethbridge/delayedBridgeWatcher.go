@@ -148,6 +148,7 @@ func (r *DelayedBridgeWatcher) LookupMessageBlock(ctx context.Context, messageNu
 		return nil, errors.New("too many logs")
 	}
 	ethLog := logs[0]
+	logger.Info().Uint64("block", ethLog.BlockNumber).Msg("found starting message block")
 	return &common.BlockId{
 		Height:     common.NewTimeBlocksInt(int64(ethLog.BlockNumber)),
 		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),

@@ -33,7 +33,7 @@ Transaction receipts contain the following extra fields
 
 #### L1 Block Number
 
-The Layer 1 block number for the transaction, as specified in [Time in Arbitrum](Time_In_Arbitrum.md).
+The Layer 1 block number for the transaction, as specified in [Time in Arbitrum](Time_In_Arbitrum).
 
 #### Fee Stats
 
@@ -61,8 +61,8 @@ This includes the data from a smart contract return or the revert reason if you 
 | 0           | Transaction success                                                                                                                  |
 | 1           | EVM revert                                                                                                                           |
 | 2           | Arbitrum is too congested to process your transaction                                                                                |
-| 3           | Not enough balance to pay for maxGas at gasPrice                                                                                     |
-| 4           | Not enough balance for execution                                                                                                     |
+| 3           | Not enough balance to pay for maxGas at gasPrice (for [retryables](L1_L2_Messages): not enough to cover base submission cost)        |
+| 4           | Not enough balance for execution (for [retryables](L1_L2_Messages): not enough to cover callvalue + base submission cost)            |
 | 5           | Wrong nonce used in transaction                                                                                                      |
 | 6           | Transaction was not formatted correctly                                                                                              |
 | 7           | Cannot deploy to specified address ( ** defensive code that should never be triggered ** )                                           |
@@ -70,4 +70,6 @@ This includes the data from a smart contract return or the revert reason if you 
 | 9           | Amount of ArbGas provided for the tx is less than the amount required to cover L1 costs (the base tx charge plus L1 calldata charge) |
 | 10          | Transaction is below the minimum required arbgas                                                                                     |
 | 11          | Transaction set an arbgas price that was too low                                                                                     |
+| 12          | Insufficient gas for [retryable](L1_L2_Messages.md) auto-redeem                                                                      |
+| 13          | Sender not permitted                                                                                                                 |
 | 255         | Unknown failure                                                                                                                      |

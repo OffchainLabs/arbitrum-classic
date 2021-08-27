@@ -203,10 +203,7 @@ func startup() error {
 	if deleteDir {
 		owner := common.NewAddressFromEth(accounts[0].Address)
 		config := protocol.ChainParams{
-			StakeRequirement:          big.NewInt(10),
-			StakeToken:                common.Address{},
 			GracePeriod:               common.NewTimeBlocksInt(3),
-			MaxExecutionSteps:         10000000000,
 			ArbGasSpeedLimitPerSecond: 2000000000000,
 		}
 
@@ -238,7 +235,7 @@ func startup() error {
 		if err != nil {
 			return err
 		}
-		if _, err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
+		if _, err := backend.AddInboxMessage(initMsg, common.Address{}); err != nil {
 			return errors.Wrap(err, "error adding init message to inbox")
 		}
 	}

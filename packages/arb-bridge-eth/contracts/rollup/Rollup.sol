@@ -44,7 +44,7 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     // Rollup Config
     uint256 public confirmPeriodBlocks;
     uint256 public extraChallengeTimeBlocks;
-    uint256 public arbGasSpeedLimitPerBlock;
+    uint256 public avmGasSpeedLimitPerBlock;
     uint256 public baseStake;
 
     // Bridge is an IInbox and IOutbox
@@ -65,6 +65,13 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     address[] internal facets;
 
     mapping(address => bool) isValidator;
+
+    /// @notice DEPRECATED -- this method is deprecated but still mantained for backward compatibility
+    /// @dev this actually returns the avmGasSpeedLimitPerBlock
+    /// @return this actually returns the avmGasSpeedLimitPerBlock
+    function arbGasSpeedLimitPerBlock() external view returns (uint256) {
+        return avmGasSpeedLimitPerBlock;
+    }
 }
 
 contract Rollup is Proxy, RollupBase {
@@ -80,7 +87,7 @@ contract Rollup is Proxy, RollupBase {
         return confirmPeriodBlocks != 0;
     }
 
-    // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, arbGasSpeedLimitPerBlock, baseStake ]
+    // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, avmGasSpeedLimitPerBlock, baseStake ]
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
         bytes32 _machineHash,
@@ -112,8 +119,6 @@ contract Rollup is Proxy, RollupBase {
         rollupEventBridge.rollupInitialized(
             _rollupParams[0],
             _rollupParams[2],
-            _rollupParams[3],
-            _stakeToken,
             _owner,
             _extraConfig
         );
@@ -126,7 +131,7 @@ contract Rollup is Proxy, RollupBase {
 
         confirmPeriodBlocks = _rollupParams[0];
         extraChallengeTimeBlocks = _rollupParams[1];
-        arbGasSpeedLimitPerBlock = _rollupParams[2];
+        avmGasSpeedLimitPerBlock = _rollupParams[2];
         baseStake = _rollupParams[3];
         owner = _owner;
         // A little over 15 minutes

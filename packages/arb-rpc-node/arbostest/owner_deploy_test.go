@@ -64,7 +64,7 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 
 		ib := &InboxBuilder{}
 		config := []message.ChainConfigOption{message.ChainIDConfig{ChainId: chainId}}
-		ib.AddMessage(initMsg(t, config), chain, big.NewInt(0), chainTime)
+		ib.AddMessage(initMsg(t, config), common.Address{}, big.NewInt(0), chainTime)
 		ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
 		results, snap := runTxAssertion(t, ib.Messages)
 		allResultsSucceeded(t, results)
@@ -101,7 +101,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	}
 
 	ib := &InboxBuilder{}
-	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
+	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), chainTime)
 	ib.AddMessage(makeEthDeposit(owner, big.NewInt(1000)), sender, big.NewInt(0), chainTime)
 	ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
 	results, snap := runTxAssertion(t, ib.Messages)

@@ -455,7 +455,6 @@ func (b *L1Emulator) IncreaseTime(amount int64) {
 }
 
 func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator ethcommon.Address) error {
-
 	client := web3.NewEthClient(srv, true)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
@@ -463,16 +462,18 @@ func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator
 	}
 
 	tx, err := arbOwner.SetFairGasPriceSender(ownerAuth, aggregator, true)
+	arbTx := ethbridge.NewArbTransaction(tx)
 	if err != nil {
 		return errors.Wrap(err, "error calling SetFairGasPriceSender")
 	}
-	_, err = ethbridge.WaitForReceiptWithResultsSimple(context.Background(), client, tx.Hash())
+
+	_, err = ethbridge.WaitForReceiptWithResultsSimple(context.Background(), ethbridge.NewEthArbReceiptFetcher(client), arbTx)
 	if err != nil {
 		return errors.Wrap(err, "error getting SetFairGasPriceSender receipt")
 	}
-	_, err = arbOwner.SetFeesEnabled(ownerAuth, true)
+	_, err = arbOwner.SetChainParameter(ownerAuth, arbos.FeesEnabledParamId, big.NewInt(1))
 	if err != nil {
-		return errors.Wrap(err, "error calling SetFeesEnabled")
+		return errors.Wrap(err, "error calling SetChainParameter")
 	}
 	return nil
 }

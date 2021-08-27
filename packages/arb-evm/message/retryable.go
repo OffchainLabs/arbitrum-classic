@@ -45,12 +45,12 @@ func NewRetryableTxFromData(data []byte) RetryableTx {
 
 func (t RetryableTx) AsData() []byte {
 	ret := make([]byte, 0)
-	ret = append(ret, addressData(t.Destination)...)
+	ret = append(ret, AddressData(t.Destination)...)
 	ret = append(ret, math.U256Bytes(t.Value)...)
 	ret = append(ret, math.U256Bytes(t.Deposit)...)
 	ret = append(ret, math.U256Bytes(t.MaxSubmissionCost)...)
-	ret = append(ret, addressData(t.CreditBack)...)
-	ret = append(ret, addressData(t.Beneficiary)...)
+	ret = append(ret, AddressData(t.CreditBack)...)
+	ret = append(ret, AddressData(t.Beneficiary)...)
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
 	ret = append(ret, math.U256Bytes(big.NewInt(int64(len(t.Data))))...)
