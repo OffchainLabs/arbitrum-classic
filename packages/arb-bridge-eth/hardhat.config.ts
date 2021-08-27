@@ -155,7 +155,7 @@ task(
   await removeBuildInfoFiles()
 })
 
-task('deploy-outbox').setAction(async (_, hre) => {
+task('new-outbox', 'deploy and set a new outbox').setAction(async (_, hre) => {
   const { getDeployments } = initUpgrades(hre, __dirname)
   const { data } = await getDeployments()
   const rollupAddress = data.contracts.Rollup.proxyAddress
