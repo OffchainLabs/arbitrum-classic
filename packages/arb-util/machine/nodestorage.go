@@ -17,9 +17,10 @@
 package machine
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/big"
 )
 
 type BlockInfo struct {
@@ -45,6 +46,6 @@ type NodeStore interface {
 
 	SaveMessageBatch(batchNum *big.Int, logIndex uint64) error
 	GetMessageBatch(batchNum *big.Int) *uint64
-	SaveBlock(header *types.Header, logIndex, logCount uint64, requests []EVMRequestInfo) error
+	SaveBlock(info *BlockInfo, requests []EVMRequestInfo) error
 	Reorg(height uint64) error
 }
