@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package challenge
 
 import (
@@ -69,11 +85,11 @@ func executeChallenge(
 		if turn == ethbridge.CHALLENGER_TURN {
 			err := challenger.HandleConflict(ctx)
 			test.FailIfError(t, err)
-			tx, err := challengerWallet.ExecuteTransactions(ctx, challengerBackend)
+			arbTx, err := challengerWallet.ExecuteTransactions(ctx, challengerBackend)
 			test.FailIfError(t, err)
 			client.Commit()
-			if tx != nil {
-				receipt, err := client.TransactionReceipt(ctx, tx.Hash())
+			if arbTx != nil {
+				receipt, err := client.TransactionReceipt(ctx, arbTx.Hash())
 				test.FailIfError(t, err)
 				t.Log("Challenger Used", receipt.GasUsed, "gas")
 				turn = ethbridge.ASSERTER_TURN
@@ -85,11 +101,11 @@ func executeChallenge(
 				return rounds
 			}
 			test.FailIfError(t, err)
-			tx, err := asserterWallet.ExecuteTransactions(ctx, asserterBackend)
+			arbTx, err := asserterWallet.ExecuteTransactions(ctx, asserterBackend)
 			test.FailIfError(t, err)
 			client.Commit()
-			if tx != nil {
-				receipt, err := client.TransactionReceipt(ctx, tx.Hash())
+			if arbTx != nil {
+				receipt, err := client.TransactionReceipt(ctx, arbTx.Hash())
 				test.FailIfError(t, err)
 				t.Log("Asserter Used", receipt.GasUsed, "gas")
 				turn = ethbridge.CHALLENGER_TURN
