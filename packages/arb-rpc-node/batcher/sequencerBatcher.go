@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -38,11 +34,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type SequencerLockoutManager interface {
@@ -71,7 +71,8 @@ type SequencerBatcher struct {
 	sequenceDelayedMessagesInterval *big.Int
 	createBatchBlockInterval        *big.Int
 	LockoutManager                  SequencerLockoutManager
-	config                          configuration.Sequencer
+	config                          *configuration.Config
+	fb                              *fireblocks.Fireblocks
 
 	sequencer common.Address
 	signer    types.Signer
@@ -107,11 +108,12 @@ func NewSequencerBatcher(
 	chainId *big.Int,
 	inboxReader *monitor.InboxReader,
 	client ethutils.EthClient,
-	config configuration.Sequencer,
 	sequencerInbox *ethbridgecontracts.SequencerInbox,
 	auth *bind.TransactOpts,
 	dataSigner func([]byte) ([]byte, error),
 	broadcaster *broadcaster.Broadcaster,
+	config *configuration.Config,
+	walletConfig *configuration.Wallet,
 ) (*SequencerBatcher, error) {
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
@@ -124,10 +126,22 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 	if sequencer != auth.From {
+		logger.
+			Error().
+			Hex("sequencer", sequencer.Bytes()).
+			Hex("current-from", auth.From.Bytes()).
+			Msg("Transaction auth isn't for sequencer")
 		return nil, errors.New("Transaction auth isn't for sequencer")
 	}
 
-	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	var transactAuth *ethbridge.TransactAuth
+	var fb *fireblocks.Fireblocks
+	if len(walletConfig.Fireblocks.SSLKey) > 0 {
+		transactAuth, fb, err = ethbridge.NewFireblocksTransactAuth(ctx, client, auth, walletConfig)
+	} else {
+		transactAuth, err = ethbridge.NewTransactAuth(ctx, client, auth)
+
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +155,7 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
-	if config.CreateBatchBlockInterval <= 0 || config.CreateBatchBlockInterval > maxDelayBlocks.Int64() {
+	if config.Node.Sequencer.CreateBatchBlockInterval <= 0 || config.Node.Sequencer.CreateBatchBlockInterval > maxDelayBlocks.Int64() {
 		return nil, errors.New("invalid batch creation block interval")
 	}
 
@@ -149,7 +163,7 @@ func NewSequencerBatcher(
 		db:                         db,
 		inboxReader:                inboxReader,
 		client:                     client,
-		delayedMessagesTargetDelay: big.NewInt(config.DelayedMessagesTargetDelay),
+		delayedMessagesTargetDelay: big.NewInt(config.Node.Sequencer.DelayedMessagesTargetDelay),
 		sequencerInbox:             sequencerInbox,
 		auth:                       transactAuth,
 		chainTimeCheckInterval:     time.Second,
@@ -162,7 +176,7 @@ func NewSequencerBatcher(
 		// TODO make these configurable
 		updateTimestampInterval:         big.NewInt(4),
 		sequenceDelayedMessagesInterval: big.NewInt(20),
-		createBatchBlockInterval:        big.NewInt(config.CreateBatchBlockInterval),
+		createBatchBlockInterval:        big.NewInt(config.Node.Sequencer.CreateBatchBlockInterval),
 
 		sequencer:                     common.NewAddressFromEth(sequencer),
 		signer:                        types.NewEIP155Signer(chainId),
@@ -173,6 +187,7 @@ func NewSequencerBatcher(
 		lastCreatedBatchAt:            chainTime.BlockNum.AsInt(),
 		publishingBatchAtomic:         0,
 		pendingBatchGasEstimateAtomic: int64(gasCostBase),
+		fb:                            fb,
 	}
 
 	return batcher, nil
@@ -597,7 +612,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	if len(batchItems[0].SequencerMessage) >= 128*1024 {
 		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big!")
-		if b.config.ReorgOutHugeMessages {
+		if b.config.Node.Sequencer.ReorgOutHugeMessages {
 			err = b.reorgOutHugeMsg(ctx, prevMsgCount)
 			if err != nil {
 				return false, err
@@ -624,7 +639,10 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 {
 		logger.Error().Str("delayBlocks", delayBlocks.String()).Str("delaySeconds", delaySeconds.String()).Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
 
-		b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
+		err = b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
+		if err != nil {
+			return false, errors.Wrap(err, "error during reorg after exceeded max sequencer delay")
+		}
 
 		return false, errors.New("exceeded max sequencer delay, reorganized to compensate")
 	}
@@ -732,7 +750,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
 	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Int("items", len(batchItems)).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
-	tx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc)
+	arbTx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc)
 	if err != nil {
 		return false, err
 	}
@@ -754,7 +772,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	atomic.StoreInt32(&b.publishingBatchAtomic, 1)
 	go (func() {
 		defer atomic.StoreInt32(&b.publishingBatchAtomic, 0)
-		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin", b.auth)
+		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.sequencer.ToEthAddress(), arbTx, "addSequencerL2BatchFromOrigin", b.auth, b.auth)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error waiting for batch receipt")
 			return
@@ -878,14 +896,14 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			// The previous batch is still waiting on confirmation; don't attempt to create another yet
 			creatingBatch = false
 		}
-		if creatingBatch && blockNum.Cmp(new(big.Int).Add(targetCreateBatch, big.NewInt(b.config.L1PostingStrategy.HighGasDelayBlocks))) < 0 {
+		if creatingBatch && blockNum.Cmp(new(big.Int).Add(targetCreateBatch, big.NewInt(b.config.Node.Sequencer.L1PostingStrategy.HighGasDelayBlocks))) < 0 {
 			gasPrice, err := b.client.SuggestGasPrice(ctx)
 			if err != nil {
 				logger.Warn().Err(err).Msg("error getting gas price")
 			} else {
 				gasPriceFloat := float64(gasPrice.Int64()) / 1e9
-				if gasPriceFloat >= b.config.L1PostingStrategy.HighGasThreshold {
-					logger.Info().Float64("gasPrice", gasPriceFloat).Float64("highGasPriceConfig", b.config.L1PostingStrategy.HighGasThreshold).Msg("not posting batch yet as gas price is high")
+				if gasPriceFloat >= b.config.Node.Sequencer.L1PostingStrategy.HighGasThreshold {
+					logger.Info().Float64("gasPrice", gasPriceFloat).Float64("highGasPriceConfig", b.config.Node.Sequencer.L1PostingStrategy.HighGasThreshold).Msg("not posting batch yet as gas price is high")
 					creatingBatch = false
 				}
 			}
