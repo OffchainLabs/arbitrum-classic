@@ -151,7 +151,7 @@ func TestSequencerBatcher(t *testing.T) {
 	l2ChainId := common.RandBigInt()
 
 	chainIdConfig := message.ChainIDConfig{ChainId: l2ChainId}
-	init, err := message.NewInitMessage(protocol.ChainParams{}, common.RandAddress(), []message.ChainConfigOption{chainIdConfig})
+	init, err := message.NewInitMessage(protocol.ChainParams{}, owner, []message.ChainConfigOption{chainIdConfig})
 	test.FailIfError(t, err)
 	extraConfig := init.ExtraConfig
 
