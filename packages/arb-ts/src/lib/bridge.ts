@@ -602,7 +602,7 @@ export class Bridge {
    */
   public async getTokenWithdrawEventData(
     l1TokenAddress: string,
-    destinationAddress?: string
+    fromAddress?: string
   ) {
     const gatewayAddress = await this.l2Bridge.l2GatewayRouter.getGateway(
       l1TokenAddress
@@ -612,7 +612,7 @@ export class Bridge {
       this.l2Provider,
       gatewayAddress,
       l1TokenAddress,
-      destinationAddress
+      fromAddress
     )
   }
 
@@ -622,17 +622,17 @@ export class Bridge {
 
   public async getGatewayWithdrawEventData(
     gatewayAddress: string,
-    destinationAddress?: string
+    fromAddress?: string
   ) {
     return BridgeHelper.getGatewayWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
-      destinationAddress
+      fromAddress
     )
   }
 
-  public async getL2ToL1EventData(destinationAddress: string) {
-    return BridgeHelper.getL2ToL1EventData(destinationAddress, this.l2Provider)
+  public async getL2ToL1EventData(fromAddress: string) {
+    return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider)
   }
 
   public async getOutboxAddress() {

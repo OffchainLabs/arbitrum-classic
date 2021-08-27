@@ -241,6 +241,10 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TransferAndCallToken__factory>
     getContractFactory(
+      name: 'AddressMappingTest',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.AddressMappingTest__factory>
+    getContractFactory(
       name: 'L1ArbitrumTestMessenger',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.L1ArbitrumTestMessenger__factory>

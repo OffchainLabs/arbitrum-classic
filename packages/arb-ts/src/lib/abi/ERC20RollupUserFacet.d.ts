@@ -27,6 +27,7 @@ interface ERC20RollupUserFacetInterface extends ethers.utils.Interface {
     'addToDeposit(address,uint256)': FunctionFragment
     'amountStaked(address)': FunctionFragment
     'arbGasSpeedLimitPerBlock()': FunctionFragment
+    'avmGasSpeedLimitPerBlock()': FunctionFragment
     'baseStake()': FunctionFragment
     'challengeExecutionBisectionDegree()': FunctionFragment
     'challengeFactory()': FunctionFragment
@@ -94,6 +95,10 @@ interface ERC20RollupUserFacetInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'amountStaked', values: [string]): string
   encodeFunctionData(
     functionFragment: 'arbGasSpeedLimitPerBlock',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'avmGasSpeedLimitPerBlock',
     values?: undefined
   ): string
   encodeFunctionData(functionFragment: 'baseStake', values?: undefined): string
@@ -308,6 +313,10 @@ interface ERC20RollupUserFacetInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'arbGasSpeedLimitPerBlock',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'avmGasSpeedLimitPerBlock',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'baseStake', data: BytesLike): Result
@@ -561,6 +570,8 @@ export class ERC20RollupUserFacet extends BaseContract {
 
     arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
+    avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<[BigNumber]>
+
     baseStake(overrides?: CallOverrides): Promise<[BigNumber]>
 
     challengeExecutionBisectionDegree(
@@ -783,6 +794,8 @@ export class ERC20RollupUserFacet extends BaseContract {
 
   arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
 
+  avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
   baseStake(overrides?: CallOverrides): Promise<BigNumber>
 
   challengeExecutionBisectionDegree(
@@ -998,6 +1011,8 @@ export class ERC20RollupUserFacet extends BaseContract {
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
     arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+    avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
 
     baseStake(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -1310,6 +1325,8 @@ export class ERC20RollupUserFacet extends BaseContract {
 
     arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
 
+    avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
     baseStake(overrides?: CallOverrides): Promise<BigNumber>
 
     challengeExecutionBisectionDegree(
@@ -1530,6 +1547,10 @@ export class ERC20RollupUserFacet extends BaseContract {
     ): Promise<PopulatedTransaction>
 
     arbGasSpeedLimitPerBlock(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    avmGasSpeedLimitPerBlock(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 

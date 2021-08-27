@@ -23,13 +23,14 @@ interface ISequencerInboxInterface extends ethers.utils.Interface {
   functions: {
     'getInboxAccsLength()': FunctionFragment
     'inboxAccs(uint256)': FunctionFragment
+    'isSequencer(address)': FunctionFragment
     'maxDelayBlocks()': FunctionFragment
     'maxDelaySeconds()': FunctionFragment
     'messageCount()': FunctionFragment
     'proveInboxContainsMessage(bytes,uint256)': FunctionFragment
-    'setMaxDelayBlocks(uint256)': FunctionFragment
-    'setMaxDelaySeconds(uint256)': FunctionFragment
-    'setSequencer(address)': FunctionFragment
+    'sequencer()': FunctionFragment
+    'setIsSequencer(address,bool)': FunctionFragment
+    'setMaxDelay(uint256,uint256)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -40,6 +41,7 @@ interface ISequencerInboxInterface extends ethers.utils.Interface {
     functionFragment: 'inboxAccs',
     values: [BigNumberish]
   ): string
+  encodeFunctionData(functionFragment: 'isSequencer', values: [string]): string
   encodeFunctionData(
     functionFragment: 'maxDelayBlocks',
     values?: undefined
@@ -56,21 +58,22 @@ interface ISequencerInboxInterface extends ethers.utils.Interface {
     functionFragment: 'proveInboxContainsMessage',
     values: [BytesLike, BigNumberish]
   ): string
+  encodeFunctionData(functionFragment: 'sequencer', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'setMaxDelayBlocks',
-    values: [BigNumberish]
+    functionFragment: 'setIsSequencer',
+    values: [string, boolean]
   ): string
   encodeFunctionData(
-    functionFragment: 'setMaxDelaySeconds',
-    values: [BigNumberish]
+    functionFragment: 'setMaxDelay',
+    values: [BigNumberish, BigNumberish]
   ): string
-  encodeFunctionData(functionFragment: 'setSequencer', values: [string]): string
 
   decodeFunctionResult(
     functionFragment: 'getInboxAccsLength',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'inboxAccs', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'isSequencer', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'maxDelayBlocks',
     data: BytesLike
@@ -87,32 +90,24 @@ interface ISequencerInboxInterface extends ethers.utils.Interface {
     functionFragment: 'proveInboxContainsMessage',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'sequencer', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'setMaxDelayBlocks',
+    functionFragment: 'setIsSequencer',
     data: BytesLike
   ): Result
-  decodeFunctionResult(
-    functionFragment: 'setMaxDelaySeconds',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setSequencer',
-    data: BytesLike
-  ): Result
+  decodeFunctionResult(functionFragment: 'setMaxDelay', data: BytesLike): Result
 
   events: {
     'DelayedInboxForced(uint256,bytes32,uint256,uint256,bytes32[2],uint256)': EventFragment
-    'MaxDelayBlocksUpdated(uint256)': EventFragment
-    'MaxDelaySecondsUpdated(uint256)': EventFragment
-    'SequencerAddressUpdated(address)': EventFragment
+    'IsSequencerUpdated(address,bool)': EventFragment
+    'MaxDelayUpdated(uint256,uint256)': EventFragment
     'SequencerBatchDelivered(uint256,bytes32,uint256,bytes32,bytes,uint256[],uint256[],uint256,address)': EventFragment
     'SequencerBatchDeliveredFromOrigin(uint256,bytes32,uint256,bytes32,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DelayedInboxForced'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'MaxDelayBlocksUpdated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'MaxDelaySecondsUpdated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'SequencerAddressUpdated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'IsSequencerUpdated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'MaxDelayUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'SequencerBatchDelivered'): EventFragment
   getEvent(
     nameOrSignatureOrTopic: 'SequencerBatchDeliveredFromOrigin'
@@ -167,6 +162,8 @@ export class ISequencerInbox extends BaseContract {
 
     inboxAccs(index: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
+    isSequencer(seq: string, overrides?: CallOverrides): Promise<[boolean]>
+
     maxDelayBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
 
     maxDelaySeconds(overrides?: CallOverrides): Promise<[BigNumber]>
@@ -179,18 +176,17 @@ export class ISequencerInbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, string]>
 
-    setMaxDelayBlocks(
+    sequencer(overrides?: CallOverrides): Promise<[string]>
+
+    setIsSequencer(
+      addr: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    setMaxDelay(
       newMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    setMaxDelaySeconds(
       newMaxDelaySeconds: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    setSequencer(
-      newSequencer: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
@@ -198,6 +194,8 @@ export class ISequencerInbox extends BaseContract {
   getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
 
   inboxAccs(index: BigNumberish, overrides?: CallOverrides): Promise<string>
+
+  isSequencer(seq: string, overrides?: CallOverrides): Promise<boolean>
 
   maxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -211,18 +209,17 @@ export class ISequencerInbox extends BaseContract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, string]>
 
-  setMaxDelayBlocks(
+  sequencer(overrides?: CallOverrides): Promise<string>
+
+  setIsSequencer(
+    addr: string,
+    isSequencer: boolean,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  setMaxDelay(
     newMaxDelayBlocks: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  setMaxDelaySeconds(
     newMaxDelaySeconds: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  setSequencer(
-    newSequencer: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -230,6 +227,8 @@ export class ISequencerInbox extends BaseContract {
     getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
 
     inboxAccs(index: BigNumberish, overrides?: CallOverrides): Promise<string>
+
+    isSequencer(seq: string, overrides?: CallOverrides): Promise<boolean>
 
     maxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -243,17 +242,19 @@ export class ISequencerInbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, string]>
 
-    setMaxDelayBlocks(
-      newMaxDelayBlocks: BigNumberish,
+    sequencer(overrides?: CallOverrides): Promise<string>
+
+    setIsSequencer(
+      addr: string,
+      isSequencer: boolean,
       overrides?: CallOverrides
     ): Promise<void>
 
-    setMaxDelaySeconds(
+    setMaxDelay(
+      newMaxDelayBlocks: BigNumberish,
       newMaxDelaySeconds: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
-
-    setSequencer(newSequencer: string, overrides?: CallOverrides): Promise<void>
   }
 
   filters: {
@@ -276,17 +277,21 @@ export class ISequencerInbox extends BaseContract {
       }
     >
 
-    MaxDelayBlocksUpdated(
-      newValue?: null
-    ): TypedEventFilter<[BigNumber], { newValue: BigNumber }>
+    IsSequencerUpdated(
+      addr?: null,
+      isSequencer?: null
+    ): TypedEventFilter<
+      [string, boolean],
+      { addr: string; isSequencer: boolean }
+    >
 
-    MaxDelaySecondsUpdated(
-      newValue?: null
-    ): TypedEventFilter<[BigNumber], { newValue: BigNumber }>
-
-    SequencerAddressUpdated(
-      newAddress?: null
-    ): TypedEventFilter<[string], { newAddress: string }>
+    MaxDelayUpdated(
+      newMaxDelayBlocks?: null,
+      newMaxDelaySeconds?: null
+    ): TypedEventFilter<
+      [BigNumber, BigNumber],
+      { newMaxDelayBlocks: BigNumber; newMaxDelaySeconds: BigNumber }
+    >
 
     SequencerBatchDelivered(
       firstMessageNum?: BigNumberish | null,
@@ -349,6 +354,8 @@ export class ISequencerInbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    isSequencer(seq: string, overrides?: CallOverrides): Promise<BigNumber>
+
     maxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
     maxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
@@ -361,18 +368,17 @@ export class ISequencerInbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    setMaxDelayBlocks(
+    sequencer(overrides?: CallOverrides): Promise<BigNumber>
+
+    setIsSequencer(
+      addr: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    setMaxDelay(
       newMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    setMaxDelaySeconds(
       newMaxDelaySeconds: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    setSequencer(
-      newSequencer: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
@@ -382,6 +388,11 @@ export class ISequencerInbox extends BaseContract {
 
     inboxAccs(
       index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    isSequencer(
+      seq: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -397,18 +408,17 @@ export class ISequencerInbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    setMaxDelayBlocks(
+    sequencer(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    setIsSequencer(
+      addr: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    setMaxDelay(
       newMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    setMaxDelaySeconds(
       newMaxDelaySeconds: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    setSequencer(
-      newSequencer: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }

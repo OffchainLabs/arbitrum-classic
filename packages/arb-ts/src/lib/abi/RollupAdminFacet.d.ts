@@ -26,6 +26,7 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     '_stakerMap(address)': FunctionFragment
     'amountStaked(address)': FunctionFragment
     'arbGasSpeedLimitPerBlock()': FunctionFragment
+    'avmGasSpeedLimitPerBlock()': FunctionFragment
     'baseStake()': FunctionFragment
     'challengeExecutionBisectionDegree()': FunctionFragment
     'challengeFactory()': FunctionFragment
@@ -58,19 +59,18 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     'resume()': FunctionFragment
     'rollupEventBridge()': FunctionFragment
     'sequencerBridge()': FunctionFragment
-    'setArbGasSpeedLimitPerBlock(uint256)': FunctionFragment
+    'setAvmGasSpeedLimitPerBlock(uint256)': FunctionFragment
     'setBaseStake(uint256)': FunctionFragment
     'setChallengeExecutionBisectionDegree(uint256)': FunctionFragment
     'setConfirmPeriodBlocks(uint256)': FunctionFragment
     'setExtraChallengeTimeBlocks(uint256)': FunctionFragment
     'setFacets(address,address)': FunctionFragment
     'setInbox(address,bool)': FunctionFragment
+    'setIsSequencer(address,bool)': FunctionFragment
     'setMinimumAssertionPeriod(uint256)': FunctionFragment
     'setOutbox(address)': FunctionFragment
     'setOwner(address)': FunctionFragment
-    'setSequencer(address)': FunctionFragment
-    'setSequencerInboxMaxDelayBlocks(uint256)': FunctionFragment
-    'setSequencerInboxMaxDelaySeconds(uint256)': FunctionFragment
+    'setSequencerInboxMaxDelay(uint256,uint256)': FunctionFragment
     'setStakeToken(address)': FunctionFragment
     'setValidator(address[],bool[])': FunctionFragment
     'setWhitelistEntries(address,address[],bool[])': FunctionFragment
@@ -96,6 +96,10 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'amountStaked', values: [string]): string
   encodeFunctionData(
     functionFragment: 'arbGasSpeedLimitPerBlock',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'avmGasSpeedLimitPerBlock',
     values?: undefined
   ): string
   encodeFunctionData(functionFragment: 'baseStake', values?: undefined): string
@@ -219,7 +223,7 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'setArbGasSpeedLimitPerBlock',
+    functionFragment: 'setAvmGasSpeedLimitPerBlock',
     values: [BigNumberish]
   ): string
   encodeFunctionData(
@@ -247,19 +251,18 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     values: [string, boolean]
   ): string
   encodeFunctionData(
+    functionFragment: 'setIsSequencer',
+    values: [string, boolean]
+  ): string
+  encodeFunctionData(
     functionFragment: 'setMinimumAssertionPeriod',
     values: [BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'setOutbox', values: [string]): string
   encodeFunctionData(functionFragment: 'setOwner', values: [string]): string
-  encodeFunctionData(functionFragment: 'setSequencer', values: [string]): string
   encodeFunctionData(
-    functionFragment: 'setSequencerInboxMaxDelayBlocks',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'setSequencerInboxMaxDelaySeconds',
-    values: [BigNumberish]
+    functionFragment: 'setSequencerInboxMaxDelay',
+    values: [BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'setStakeToken',
@@ -318,6 +321,10 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'arbGasSpeedLimitPerBlock',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'avmGasSpeedLimitPerBlock',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'baseStake', data: BytesLike): Result
@@ -413,7 +420,7 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'setArbGasSpeedLimitPerBlock',
+    functionFragment: 'setAvmGasSpeedLimitPerBlock',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -435,21 +442,17 @@ interface RollupAdminFacetInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'setFacets', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'setInbox', data: BytesLike): Result
   decodeFunctionResult(
+    functionFragment: 'setIsSequencer',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'setMinimumAssertionPeriod',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'setOutbox', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'setOwner', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'setSequencer',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setSequencerInboxMaxDelayBlocks',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setSequencerInboxMaxDelaySeconds',
+    functionFragment: 'setSequencerInboxMaxDelay',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -583,6 +586,8 @@ export class RollupAdminFacet extends BaseContract {
 
     arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
+    avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<[BigNumber]>
+
     baseStake(overrides?: CallOverrides): Promise<[BigNumber]>
 
     challengeExecutionBisectionDegree(
@@ -699,8 +704,8 @@ export class RollupAdminFacet extends BaseContract {
 
     sequencerBridge(overrides?: CallOverrides): Promise<[string]>
 
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -736,6 +741,12 @@ export class RollupAdminFacet extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -751,17 +762,8 @@ export class RollupAdminFacet extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    setSequencer(
-      newSequencer: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
@@ -839,6 +841,8 @@ export class RollupAdminFacet extends BaseContract {
   amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
   arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+  avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
 
   baseStake(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -950,8 +954,8 @@ export class RollupAdminFacet extends BaseContract {
 
   sequencerBridge(overrides?: CallOverrides): Promise<string>
 
-  setArbGasSpeedLimitPerBlock(
-    newArbGasSpeedLimitPerBlock: BigNumberish,
+  setAvmGasSpeedLimitPerBlock(
+    newAvmGasSpeedLimitPerBlock: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -987,6 +991,12 @@ export class RollupAdminFacet extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  setIsSequencer(
+    newSequencer: string,
+    isSequencer: boolean,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   setMinimumAssertionPeriod(
     newPeriod: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
@@ -1002,17 +1012,8 @@ export class RollupAdminFacet extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  setSequencer(
-    newSequencer: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  setSequencerInboxMaxDelayBlocks(
+  setSequencerInboxMaxDelay(
     newSequencerInboxMaxDelayBlocks: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  setSequencerInboxMaxDelaySeconds(
     newSequencerInboxMaxDelaySeconds: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
@@ -1090,6 +1091,8 @@ export class RollupAdminFacet extends BaseContract {
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
     arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+    avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
 
     baseStake(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -1194,8 +1197,8 @@ export class RollupAdminFacet extends BaseContract {
 
     sequencerBridge(overrides?: CallOverrides): Promise<string>
 
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -1231,6 +1234,12 @@ export class RollupAdminFacet extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
       overrides?: CallOverrides
@@ -1240,14 +1249,8 @@ export class RollupAdminFacet extends BaseContract {
 
     setOwner(newOwner: string, overrides?: CallOverrides): Promise<void>
 
-    setSequencer(newSequencer: string, overrides?: CallOverrides): Promise<void>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
@@ -1428,6 +1431,8 @@ export class RollupAdminFacet extends BaseContract {
 
     arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
 
+    avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
     baseStake(overrides?: CallOverrides): Promise<BigNumber>
 
     challengeExecutionBisectionDegree(
@@ -1547,8 +1552,8 @@ export class RollupAdminFacet extends BaseContract {
 
     sequencerBridge(overrides?: CallOverrides): Promise<BigNumber>
 
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -1584,6 +1589,12 @@ export class RollupAdminFacet extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -1599,17 +1610,8 @@ export class RollupAdminFacet extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    setSequencer(
-      newSequencer: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
@@ -1683,6 +1685,10 @@ export class RollupAdminFacet extends BaseContract {
     ): Promise<PopulatedTransaction>
 
     arbGasSpeedLimitPerBlock(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    avmGasSpeedLimitPerBlock(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -1819,8 +1825,8 @@ export class RollupAdminFacet extends BaseContract {
 
     sequencerBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
@@ -1856,6 +1862,12 @@ export class RollupAdminFacet extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -1871,17 +1883,8 @@ export class RollupAdminFacet extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    setSequencer(
-      newSequencer: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>

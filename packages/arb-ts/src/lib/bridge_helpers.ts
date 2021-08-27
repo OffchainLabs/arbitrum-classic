@@ -241,7 +241,7 @@ export class BridgeHelper {
     l2Provider: ethers.providers.Provider,
     gatewayAddress: string,
     l1TokenAddress: string,
-    destinationAddress?: string
+    fromAddress?: string
   ) {
     const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
@@ -249,7 +249,7 @@ export class BridgeHelper {
     )
     const topics = [
       null,
-      destinationAddress ? utils.hexZeroPad(destinationAddress, 32) : null,
+      fromAddress ? utils.hexZeroPad(fromAddress, 32) : null,
     ]
     const logs = await BridgeHelper.getEventLogs(
       'WithdrawalInitiated',
@@ -275,7 +275,7 @@ export class BridgeHelper {
   static async getGatewayWithdrawEventData(
     l2Provider: ethers.providers.Provider,
     gatewayAddress: string,
-    destinationAddress?: string
+    fromAddress?: string
   ) {
     const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
@@ -283,7 +283,7 @@ export class BridgeHelper {
     )
     const topics = [
       null,
-      destinationAddress ? utils.hexZeroPad(destinationAddress, 32) : null,
+      fromAddress ? utils.hexZeroPad(fromAddress, 32) : null,
     ]
     const logs = await BridgeHelper.getEventLogs(
       'WithdrawalInitiated',
@@ -709,7 +709,7 @@ export class BridgeHelper {
   }
 
   static getL2ToL1EventData = async (
-    destinationAddress: string,
+    fromAddress: string,
     l2Provider: providers.Provider
   ) => {
     const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
@@ -717,7 +717,7 @@ export class BridgeHelper {
     const logs = await BridgeHelper.getEventLogs(
       'L2ToL1Transaction',
       contract,
-      [ethers.utils.hexZeroPad(destinationAddress, 32)]
+      [ethers.utils.hexZeroPad(fromAddress, 32)]
     )
 
     return logs.map(
