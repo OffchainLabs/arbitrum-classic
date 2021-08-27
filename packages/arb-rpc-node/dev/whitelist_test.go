@@ -50,6 +50,10 @@ func TestWhitelist(t *testing.T) {
 	ownerAuth, err := bind.NewKeyedTransactorWithChainID(ownerKey, backend.chainID)
 	test.FailIfError(t, err)
 
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+	}
+
 	client := web3.NewEthClient(srv, true)
 
 	_, _, simple, err := arbostestcontracts.DeploySimple(senderAuth, client)

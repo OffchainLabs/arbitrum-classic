@@ -69,18 +69,18 @@ func TestOwner(t *testing.T) {
 			Data:        arbos.RemoveChainOwnerData(message.L2RemapAccount(address)),
 		})
 	}
-	
+
 	var shouldSucceed []bool;
-	
+
 	ib := InboxBuilder{}
 	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), chainTime)
 
 	// Add and remove a bunch of random owners
-	
+
 	priorRandomOwner := owner
 	ib.AddMessage(addAddress(priorRandomOwner, 0), priorRandomOwner, big.NewInt(0), chainTime)
 	shouldSucceed = append(shouldSucceed, true)
-	
+
 	for i := 0; i < 24; i++ {
 
 		println(len(shouldSucceed))
@@ -95,7 +95,7 @@ func TestOwner(t *testing.T) {
 			ib.AddMessage(removeAddress(priorRandomOwner, 0), randomOwner, big.NewInt(0), chainTime)
 			ib.AddMessage(removeAddress(randomOwner, 3), priorRandomOwner, big.NewInt(0), chainTime)
 			shouldSucceed = append(shouldSucceed, true, false)
-			
+
 			priorRandomOwner = randomOwner
 		}
 	}
@@ -124,7 +124,7 @@ func TestOwner(t *testing.T) {
 	ib.AddMessage(ownerOnlyAction(2), priorRandomOwner, big.NewInt(0), chainTime)
 	shouldSucceed = append(shouldSucceed, false, true, false)
 
-	results, _ := runTxAssertion(t, ib.Messages)
+	results, _ := runTxAssertion(T, ib.Messages)
 
 	if len(results) != len(shouldSucceed) {
 		t.Log("length of results does not match checks", len(results), len(shouldSucceed))
@@ -139,4 +139,3 @@ func TestOwner(t *testing.T) {
 		}
 	}
 }
-

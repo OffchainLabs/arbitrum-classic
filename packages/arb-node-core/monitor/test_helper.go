@@ -30,7 +30,7 @@ import (
 )
 
 func PrepareArbCore(t *testing.T) (*Monitor, func()) {
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	test.FailIfError(t, err)
 	return PrepareArbCoreWithMexe(t, arbosPath)
 }

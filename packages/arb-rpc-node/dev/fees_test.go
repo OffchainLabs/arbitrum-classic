@@ -81,6 +81,10 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		[]message.ChainConfigOption{feeConfigInit, aggInit},
 	)
 
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, auth);
+	}
+
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
 			BasicTx: message.BasicTx{

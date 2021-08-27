@@ -132,7 +132,7 @@ func TestSequencerBatcher(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.WarnLevel)
 	defer zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	test.FailIfError(t, err)
 
 	mach, err := cmachine.New(arbosPath)
