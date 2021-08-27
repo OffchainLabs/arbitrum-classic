@@ -25,6 +25,17 @@ const IMPLEMENTATION_SLOT =
 const BEACON_SLOT =
   '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50'
 
+const getAdminFromProxyStorage = async (
+  hre: HardhatRuntimeEnvironment,
+  proxyAddress: string
+) => {
+  let admin = await hre.ethers.provider.getStorageAt(proxyAddress, ADMIN_SLOT)
+  if (admin.length > 42) {
+    admin = '0x' + admin.substr(admin.length - 40, 40)
+  }
+  return admin
+}
+
 const POST_UPGRADE_INIT_SIG = '0x95fcea78'
 
 const currentCommit = childProcess
@@ -445,13 +456,10 @@ export const initUpgrades = (
       }
 
       // check proxy admin
-      let admin = await hre.ethers.provider.getStorageAt(
-        deploymentData.proxyAddress,
-        ADMIN_SLOT
+      const admin = await getAdminFromProxyStorage(
+        hre,
+        deploymentData.proxyAddress
       )
-      if (admin.length > 42) {
-        admin = '0x' + admin.substr(admin.length - 40, 40)
-      }
       if (
         admin.toLowerCase() !==
         deploymentsJsonData.proxyAdminAddress.toLowerCase()
@@ -502,6 +510,19 @@ export const initUpgrades = (
   const transferAdmin = async (proxyAddress: string, newAdmin: string) => {
     await compileTask
 
+    const proxyAdminAddr = await getAdminFromProxyStorage(hre, proxyAddress)
+    const ProxyAdmin__factory = await hre.ethers.getContractFactory(
+      'ProxyAdmin'
+    )
+    const proxyAdmin = ProxyAdmin__factory.attach(proxyAdminAddr).connect(
+      hre.ethers.provider
+    )
+    const proxyAdminOwner = await proxyAdmin.owner()
+
+    if (newAdmin.toLowerCase() === proxyAdminOwner) {
+      throw new Error('User trying to update admin to current admin address')
+    }
+
     const { path: deploymentsPath, data } = await getDeployments()
     const signers = await hre.ethers.getSigners()
     if (!signers.length) {
@@ -511,12 +532,13 @@ export const initUpgrades = (
     }
     const signer = signers[0]
 
-    const TransparentUpgradeableProxy__factory =
-      await hre.ethers.getContractFactory('TransparentUpgradeableProxy')
-    const TransparentUpgradeableProxy =
-      TransparentUpgradeableProxy__factory.attach(proxyAddress).connect(signer)
+    if (signer.address.toLowerCase() !== proxyAdminOwner) {
+      throw new Error('User signer is not the owner of proxy admin')
+    }
 
-    const res = await TransparentUpgradeableProxy.changeAdmin(newAdmin)
+    const res = await proxyAdmin
+      .connect(signer)
+      .changeProxyAdmin(proxyAddress, newAdmin)
     const rec = res.wait()
   }
 
