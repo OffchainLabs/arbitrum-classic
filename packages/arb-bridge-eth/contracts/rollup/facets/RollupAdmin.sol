@@ -128,16 +128,16 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
 
     /**
      * @notice Set speed limit per block
-     * @param newArbGasSpeedLimitPerBlock maximum arbgas to be used per block
+     * @param newAvmGasSpeedLimitPerBlock maximum avmgas to be used per block
      */
-    function setArbGasSpeedLimitPerBlock(uint256 newArbGasSpeedLimitPerBlock) external override {
-        arbGasSpeedLimitPerBlock = newArbGasSpeedLimitPerBlock;
+    function setAvmGasSpeedLimitPerBlock(uint256 newAvmGasSpeedLimitPerBlock) external override {
+        avmGasSpeedLimitPerBlock = newAvmGasSpeedLimitPerBlock;
         emit OwnerFunctionCalled(11);
     }
 
     /**
      * @notice Set base stake required for an assertion
-     * @param newBaseStake maximum arbgas to be used per block
+     * @param newBaseStake minimum amount of stake required
      */
     function setBaseStake(uint256 newBaseStake) external override {
         baseStake = newBaseStake;
@@ -286,7 +286,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
             assertionIntFields,
             sequencerBatchProof,
             CreateNodeDataFrame({
-                arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
+                avmGasSpeedLimitPerBlock: avmGasSpeedLimitPerBlock,
                 confirmPeriodBlocks: confirmPeriodBlocks,
                 prevNode: prevNode,
                 sequencerInbox: sequencerBridge,

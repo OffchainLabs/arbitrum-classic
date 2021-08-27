@@ -51,7 +51,7 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
 
     function rollupInitialized(
         uint256 confirmPeriodBlocks,
-        uint256 arbGasSpeedLimitPerBlock,
+        uint256 avmGasSpeedLimitPerBlock,
         address owner,
         bytes calldata extraConfig
     ) external onlyRollup {
@@ -59,7 +59,7 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
             keccak256("ChallengePeriodEthBlocks"),
             confirmPeriodBlocks,
             keccak256("SpeedLimitPerSecond"),
-            arbGasSpeedLimitPerBlock / 100, // convert avm gas to arbgas
+            avmGasSpeedLimitPerBlock / 100, // convert avm gas to arbgas
             keccak256("ChainOwner"),
             uint256(uint160(bytes20(owner))),
             extraConfig

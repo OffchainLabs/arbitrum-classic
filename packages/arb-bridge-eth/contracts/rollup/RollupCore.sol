@@ -473,14 +473,14 @@ contract RollupCore is IRollupCore {
     }
 
     function nodeDeadline(
-        uint256 arbGasSpeedLimitPerBlock,
+        uint256 avmGasSpeedLimitPerBlock,
         uint256 gasUsed,
         uint256 confirmPeriodBlocks,
         INode prevNode
     ) internal view returns (uint256 deadlineBlock) {
         // Set deadline rounding up to the nearest block
         uint256 checkTime =
-            gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
+            gasUsed.add(avmGasSpeedLimitPerBlock.sub(1)).div(avmGasSpeedLimitPerBlock);
 
         deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(
             checkTime
@@ -513,7 +513,7 @@ contract RollupCore is IRollupCore {
     struct CreateNodeDataFrame {
         uint256 prevNode;
         uint256 confirmPeriodBlocks;
-        uint256 arbGasSpeedLimitPerBlock;
+        uint256 avmGasSpeedLimitPerBlock;
         ISequencerInbox sequencerInbox;
         RollupEventBridge rollupEventBridge;
         INodeFactory nodeFactory;
@@ -557,7 +557,7 @@ contract RollupCore is IRollupCore {
             memoryFrame.executionHash = RollupLib.executionHash(assertion);
 
             memoryFrame.deadlineBlock = nodeDeadline(
-                inputDataFrame.arbGasSpeedLimitPerBlock,
+                inputDataFrame.avmGasSpeedLimitPerBlock,
                 memoryFrame.gasUsed,
                 inputDataFrame.confirmPeriodBlocks,
                 memoryFrame.prevNode

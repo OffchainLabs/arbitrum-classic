@@ -109,13 +109,13 @@ interface IRollupAdmin {
 
     /**
      * @notice Set speed limit per block
-     * @param newArbGasSpeedLimitPerBlock maximum arbgas to be used per block
+     * @param newAvmGasSpeedLimitPerBlock maximum avmgas to be used per block
      */
-    function setArbGasSpeedLimitPerBlock(uint256 newArbGasSpeedLimitPerBlock) external;
+    function setAvmGasSpeedLimitPerBlock(uint256 newAvmGasSpeedLimitPerBlock) external;
 
     /**
      * @notice Set base stake required for an assertion
-     * @param newBaseStake maximum arbgas to be used per block
+     * @param newBaseStake maximum avmgas to be used per block
      */
     function setBaseStake(uint256 newBaseStake) external;
 
