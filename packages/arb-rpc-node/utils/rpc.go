@@ -42,28 +42,6 @@ func setupPaths(r *mux.Router, path string) ([]*mux.Route, error) {
 	return []*mux.Route{basePath, prefixPath}, nil
 }
 
-func addRPCRoutes(r *mux.Router, handler http.Handler, path string) error {
-	routes, err := setupPaths(r, path)
-	if err != nil {
-		return err
-	}
-	for _, route := range routes {
-		route.Handler(handler).Methods("GET", "POST", "OPTIONS")
-	}
-	return nil
-}
-
-func addWSRoutes(r *mux.Router, handler http.Handler, path string) error {
-	routes, err := setupPaths(r, path)
-	if err != nil {
-		return err
-	}
-	for _, route := range routes {
-		route.Handler(handler).Methods("GET", "POST", "OPTIONS")
-	}
-	return nil
-}
-
 func LaunchRPC(ctx context.Context, handler http.Handler, addr, port, path string) error {
 	r := mux.NewRouter()
 	rpcRoutes, err := setupPaths(r, path)
