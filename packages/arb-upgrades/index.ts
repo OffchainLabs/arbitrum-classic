@@ -547,7 +547,7 @@ export const initUpgrades = (
       `You are about to transfer owner ship of ${upgradableBeaconAddress} to ${newOwner}. You sure? ('Yes' to proceeed)`
     )
 
-    const confirm = prompt('')
+    const confirm = await prompt('')
     if (confirm !== 'Yes') {
       console.log('Cancelling')
       return
