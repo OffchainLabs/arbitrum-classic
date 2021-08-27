@@ -606,29 +606,6 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 		}
 	}
 
-	// Check if we need to reorg because we've exceeded the window
-	firstSeqBatchItem := batchItems[0]
-	if len(firstSeqBatchItem.SequencerMessage) == 0 {
-		firstSeqBatchItem = batchItems[1]
-	}
-	firstSeqMsg, err := inbox.NewInboxMessageFromData(firstSeqBatchItem.SequencerMessage)
-	if err != nil {
-		return false, err
-	}
-	newestChainTime, err := getChainTime(ctx, b.client)
-	if err != nil {
-		return false, err
-	}
-	delayBlocks := new(big.Int).Sub(newestChainTime.BlockNum.AsInt(), firstSeqMsg.ChainTime.BlockNum.AsInt())
-	delaySeconds := new(big.Int).Sub(newestChainTime.Timestamp, firstSeqMsg.ChainTime.Timestamp)
-	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 {
-		logger.Error().Str("delayBlocks", delayBlocks.String()).Str("delaySeconds", delaySeconds.String()).Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
-
-		b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
-
-		return false, errors.New("exceeded max sequencer delay, reorganized to compensate")
-	}
-
 	var transactionsData []byte
 	var transactionsLengths []*big.Int
 	var metadata []*big.Int
@@ -728,6 +705,40 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	lastSectionCount := len(transactionsLengths) - lastMetadataEnd
 	if lastSectionCount > 0 {
 		metadata = append(metadata, big.NewInt(int64(lastSectionCount)), l1BlockNumber, l1Timestamp, startDelayedMessagesRead, big.NewInt(0))
+	}
+
+	var minL1BlockNumber *big.Int
+	var minL1Timestamp *big.Int
+	for i := 0; i < len(metadata); i += 5 {
+		blockNum := metadata[i+1]
+		timestamp := metadata[i+2]
+		if minL1BlockNumber == nil || blockNum.Cmp(minL1BlockNumber) < 0 {
+			minL1BlockNumber = blockNum
+		}
+		if minL1Timestamp == nil || timestamp.Cmp(minL1Timestamp) < 0 {
+			minL1Timestamp = timestamp
+		}
+	}
+
+	newestChainTime, err := getChainTime(ctx, b.client)
+	if err != nil {
+		return false, err
+	}
+	// These should never be nil, but just for safety
+	if minL1BlockNumber == nil {
+		minL1BlockNumber = newestChainTime.BlockNum.AsInt()
+	}
+	if minL1Timestamp == nil {
+		minL1Timestamp = newestChainTime.Timestamp
+	}
+	delayBlocks := new(big.Int).Sub(newestChainTime.BlockNum.AsInt(), minL1BlockNumber)
+	delaySeconds := new(big.Int).Sub(newestChainTime.Timestamp, minL1Timestamp)
+	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 {
+		logger.Error().Str("delayBlocks", delayBlocks.String()).Str("delaySeconds", delaySeconds.String()).Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
+
+		b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
+
+		return false, errors.New("exceeded max sequencer delay, reorganized to compensate")
 	}
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
@@ -853,6 +864,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		defer b.feedBroadcaster.Stop()
 	}
 
+	var chainTime inbox.ChainTime
 	for {
 		select {
 		case <-ctx.Done():
@@ -864,11 +876,16 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
 			continue
 		}
-		chainTime, err := getChainTime(ctx, b.client)
+		newChainTime, err := getChainTime(ctx, b.client)
 		if err != nil {
 			logger.Warn().Err(err).Msg("Error getting chain time")
 			continue
 		}
+		if chainTime.BlockNum != nil && newChainTime.BlockNum.Cmp(chainTime.BlockNum) <= 0 {
+			// Chain time didn't move forwards
+			continue
+		}
+		chainTime = newChainTime
 		blockNum := chainTime.BlockNum.AsInt()
 		targetCreateBatch := new(big.Int).Add(b.lastCreatedBatchAt, b.createBatchBlockInterval)
 		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
