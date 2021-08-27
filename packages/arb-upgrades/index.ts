@@ -519,7 +519,7 @@ export const initUpgrades = (
     )
     const proxyAdminOwner = await proxyAdmin.owner()
 
-    if (newAdmin.toLowerCase() === proxyAdminOwner) {
+    if (newAdmin.toLowerCase() === proxyAdminOwner.toLowerCase()) {
       throw new Error('User trying to update admin to current admin address')
     }
 
@@ -532,7 +532,7 @@ export const initUpgrades = (
     }
     const signer = signers[0]
 
-    if (signer.address.toLowerCase() !== proxyAdminOwner) {
+    if (signer.address.toLowerCase() !== proxyAdminOwner.toLowerCase()) {
       throw new Error('User signer is not the owner of proxy admin')
     }
 
