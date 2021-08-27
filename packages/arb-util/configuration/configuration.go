@@ -493,12 +493,12 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
 	}
 
-	// Make wallet directories relative to storage directory if not already absolute
+	// Make wallet directories relative to chain directory if not already absolute
 	if !filepath.IsAbs(wallet.Local.Pathname) {
-		wallet.Local.Pathname = path.Join(out.Persistent.GlobalConfig, wallet.Local.Pathname)
+		wallet.Local.Pathname = path.Join(out.Persistent.Chain, wallet.Local.Pathname)
 	}
 	if !filepath.IsAbs(wallet.Fireblocks.FeedSigner.Pathname) {
-		wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.GlobalConfig, wallet.Fireblocks.FeedSigner.Pathname)
+		wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.Chain, wallet.Fireblocks.FeedSigner.Pathname)
 	}
 
 	_, err = os.Stat(out.Rollup.Machine.Filename)
