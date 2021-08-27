@@ -131,7 +131,7 @@ func TestBlocks(t *testing.T) {
 		Timestamp: big.NewInt(1),
 	}
 
-	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), startTime)
+	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), startTime)
 	ib.AddMessage(makeEthDeposit(sender, big.NewInt(1000)), chain, big.NewInt(0), startTime)
 
 	halfSendCount := int64(5)

@@ -79,6 +79,7 @@ func NewTestDevNode(
 	params protocol.ChainParams,
 	owner common.Address,
 	config []message.ChainConfigOption,
+	oldStyleInit bool,
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
 	agg := common.RandAddress()
@@ -94,7 +95,6 @@ func NewTestDevNode(
 			break
 		}
 	}
-	rollupAddress := common.RandAddress()
 	backend, db, cancelDevNode, txDBErrChan, err := NewDevNode(
 		ctx,
 		t.TempDir(),
@@ -105,6 +105,11 @@ func NewTestDevNode(
 	)
 	test.FailIfError(t, err)
 	initMsg, err := message.NewInitMessage(params, owner, config)
+	
+	if (oldStyleInit) {
+		initMsg.OldStyle = true
+	}
+	
 	test.FailIfError(t, err)
 	_, err = backend.AddInboxMessage(initMsg, common.Address{})
 	test.FailIfError(t, err)
@@ -119,6 +124,6 @@ func NewTestDevNode(
 		cancelDevNode()
 		cancel()
 	}
-	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
+	srv := aggregator.NewServer(backend, common.Address{}, chainId, db)
 	return backend, db, srv, closeFunc
 }

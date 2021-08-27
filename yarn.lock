@@ -4508,6 +4508,19 @@ aproba@^1.0.3:
   resolved "https://registry.yarnpkg.com/aproba/-/aproba-1.2.0.tgz#6802e6264efd18c790a1b0d517f0f2627bf2c94a"
   integrity sha512-Y9J6ZjXtoYh8RnXVCMOU/ttDmk1aBjunq9vO0ta5x85WDQiQfUF9sIPBITdbiiIVcBo03Hi3jMxigBtsddlXRw==
 
+arb-ts@^0.0.28:
+  version "0.0.28"
+  resolved "https://registry.yarnpkg.com/arb-ts/-/arb-ts-0.0.28.tgz#04c24e774e2cb5a1ade171811a0b3109981a8367"
+  integrity sha512-hL8S768edxqzcz0pFDArLsK9S5Iqy1qMxvrHM+0e4RhQJqPIrScidmBDiSHcYUh7Ez4vVW0uyEzGzmYZ+womMA==
+  dependencies:
+    "@ethersproject/address" "^5.0.8"
+    "@ethersproject/bignumber" "^5.1.1"
+    "@ethersproject/bytes" "^5.0.8"
+    "@types/promise-poller" "^1.7.0"
+    "@uniswap/token-lists" "^1.0.0-beta.24"
+    dotenv "^10.0.0"
+    ethers "^5.0.24"
+
 archy@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/archy/-/archy-1.0.0.tgz#f9c8c13757cc1dd7bc379ac77b2c62a5c2868c40"
