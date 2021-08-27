@@ -326,9 +326,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	for i := 400; i >= 0; i-- {
 		if (i % 2) == 0 {
 			fmt.Println("Honest staker acting")
-			tx, err := staker.Act(ctx)
+			arbTx, err := staker.Act(ctx)
 			test.FailIfError(t, err)
-			if tx != nil {
+			if arbTx != nil {
 				stakerMadeFirstMove = true
 			}
 		} else if (!faultyStakerAlive || !faultyStakerDead) && stakerMadeFirstMove {
