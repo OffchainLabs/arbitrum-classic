@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 
-#ifndef config_hpp_in
-#define config_hpp_in
+#ifndef wasm_config_hpp_in
+#define wasm_config_hpp_in
 
-const char* const test_cases_path = "@TEST_CASES_PATH@";
-const char* const test_contract_path = "@TEST_CONTRACT_PATH@";
-const char* const arb_os_path = "@ARB_OS_PATH@";
-const char* const arb_os_test_cases_path = "@ARB_OS_TEST_CASES_PATH@";
-const char* const machine_test_cases_path = "@MACHINE_TEST_CASES_PATH@";
-
-const char* const wasm_compile_path = "@WASM_COMPILE_PATH@";
-const char* const wasm_test_path = "@WASM_TEST_PATH@";
+const char* const wasm_compiler_path = "@WASM_COMPILE_PATH@";
 
 #endif /* config_hpp_in */

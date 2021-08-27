@@ -22,6 +22,7 @@
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/status.hpp>
 #include <avm/machinestate/runwasm.hpp>
+#include <avm/machinestate/config.hpp>
 
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
@@ -193,7 +194,7 @@ struct MachineState {
     MachineOutput output;
 
     AssertionContext context;
-    RunWasm compile{"/home/sami/arbitrum/compiler.wasm"};
+    RunWasm compile{wasm_compiler_path};
 
     static MachineState loadFromFile(const std::string& executable_filename);
 

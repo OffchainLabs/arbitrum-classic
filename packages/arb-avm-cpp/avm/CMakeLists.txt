@@ -101,3 +101,9 @@ else()
     source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/../external" FILES ${KECCAK_SOURCES})
 endif()
 
+set(WASM_COMPILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../compiler.wasm)
+
+configure_file (
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/avm/machinestate/config.hpp.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/avm/machinestate/config.hpp"
+)

@@ -18,6 +18,7 @@
 
 #include <avm/machine.hpp>
 #include <avm/machinestate/machineoperation.hpp>
+#include <avm/machinestate/config.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/vmValueParser.hpp>
 #include <utility>
@@ -647,7 +648,7 @@ MachineState MachineState::initialWasmMachine() const {
         uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
         Buffer buf = *std::get_if<Buffer>(&elem1);
 
-        std::ifstream input("/home/sami/arbitrum/compiler.wasm", std::ios::binary);
+        std::ifstream input(wasm_compiler_path, std::ios::binary);
         std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
         input.close();
 

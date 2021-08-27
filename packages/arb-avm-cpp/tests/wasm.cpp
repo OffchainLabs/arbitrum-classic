@@ -39,11 +39,11 @@ MachineState mkWasmMachine(WasmResult res, std::string fname) {
 
 TEST_CASE("Wasm") {
     SECTION("Making compiler machine") {
-        RunWasm runner("/home/sami/arbitrum/compiler.wasm");
-        auto buf = getFile("/home/sami/arbitrum/compiler.wasm");
+        RunWasm runner(wasm_compile_path);
+        auto buf = getFile(wasm_compile_path);
         auto res = runner.run_wasm(vec2buf(buf), buf.size());
 
-        std::string test_file = "/home/sami/arbitrum/test.wasm";
+        std::string test_file = wasm_test_path;
 
         auto m = mkWasmMachine(res, test_file);
         auto start = std::chrono::system_clock::now();
