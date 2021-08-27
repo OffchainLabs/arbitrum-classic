@@ -263,7 +263,7 @@ type Config struct {
 	Rollup        Rollup     `koanf:"rollup"`
 	Validator     Validator  `koanf:"validator"`
 	WaitToCatchUp bool       `koanf:"wait-to-catch-up"`
-	Wallet        Wallet     `koanf:"rpc"`
+	Wallet        Wallet     `koanf:"wallet"`
 
 	// The following field needs to be top level for compatibility with the underlying go-ethereum lib
 	Metrics       bool    `koanf:"metrics"`
@@ -283,7 +283,7 @@ func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *b
 
 	AddForwarderTarget(f)
 
-	return ParseNonRelay(ctx, f, "cli_wallet")
+	return ParseNonRelay(ctx, f, "cli-wallet")
 }
 
 func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
@@ -317,7 +317,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
 
-	return ParseNonRelay(ctx, f, "wallet")
+	return ParseNonRelay(ctx, f, "rpc-wallet")
 }
 
 func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -331,7 +331,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
 
-	return ParseNonRelay(ctx, f, "validator")
+	return ParseNonRelay(ctx, f, "validator-wallet")
 }
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
