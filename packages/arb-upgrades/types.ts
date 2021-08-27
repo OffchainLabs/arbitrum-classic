@@ -117,6 +117,7 @@ export const hasPostInitHook = (contractName: ContractNames) => {
     case ContractNames.L2WethGateway:
     case ContractNames.Rollup:
     case ContractNames.SequencerInbox:
+      // case ContractNames.Inbox: // Uncomment if upgrading to Inbox with postInitHook
       return true
     default:
       return false
