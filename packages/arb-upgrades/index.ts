@@ -539,7 +539,7 @@ export const initUpgrades = (
     const res = await proxyAdmin
       .connect(signer)
       .changeProxyAdmin(proxyAddress, newAdmin)
-    const rec = res.wait()
+    const rec = await res.wait()
   }
 
   const transferBeaconOwner = async (
@@ -562,7 +562,9 @@ export const initUpgrades = (
 
     const beaconOwner = await UpgradeableBeacon.owner()
     if (beaconOwner.toLowerCase() !== signer.address.toLowerCase()) {
-      throw new Error('Not connecetd as owner')
+      throw new Error(
+        `Not connecetd as owner ${beaconOwner}, instead running as ${signer.address}`
+      )
     }
 
     console.log(
@@ -575,7 +577,7 @@ export const initUpgrades = (
       return
     }
     const res = await UpgradeableBeacon.transferOwnership(newOwner)
-    const rec = res.wait()
+    const rec = await res.wait()
     console.log('ownership transfer complete')
   }
 
