@@ -74,7 +74,7 @@ func TestMemoryInitialization(t *testing.T) {
 
 	ib := &InboxBuilder{}
 	options := []message.ChainConfigOption{message.ChainIDConfig{ChainId: chainId}}
-	ib.AddMessage(initMsg(t, options), chain, big.NewInt(0), chainTime)
+	ib.AddMessage(initMsg(t, options), common.Address{}, big.NewInt(0), chainTime)
 	ib.AddMessage(msg1, sender, big.NewInt(0), chainTime)
 	ib.AddMessage(msg2, sender, big.NewInt(0), chainTime)
 

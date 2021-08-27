@@ -229,10 +229,7 @@ func TestArbOSFees(t *testing.T) {
 
 	addInitializationLoc := func(ib *InboxBuilder) {
 		config := protocol.ChainParams{
-			StakeRequirement:          big.NewInt(0),
-			StakeToken:                common.Address{},
 			GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
-			MaxExecutionSteps:         0,
 			ArbGasSpeedLimitPerSecond: 1000000000,
 		}
 
@@ -257,7 +254,7 @@ func TestArbOSFees(t *testing.T) {
 			BlockNum:  common.NewTimeBlocksInt(0),
 			Timestamp: big.NewInt(0),
 		}
-		ib.AddMessage(init, chain, big.NewInt(0), chainTime)
+		ib.AddMessage(init, common.Address{}, big.NewInt(0), chainTime)
 
 		deposit := message.EthDepositTx{
 			L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -473,7 +470,7 @@ func TestArbOSFees(t *testing.T) {
 
 		l1CalldataDiff := calculateFeeAggDiff(noAggPrice.L1Calldata, aggPrice.L1Calldata)
 		if l1CalldataDiff.Cmp(big.NewRat(1, 100)) > 0 {
-			t.Error("tx price with agg is wrong " + l1CalldataDiff.String())
+			t.Error("tx price with agg is wrong ", i, l1CalldataDiff)
 		}
 
 		if noAggPrice.L2Computation.Cmp(aggPrice.L2Computation) != 0 {

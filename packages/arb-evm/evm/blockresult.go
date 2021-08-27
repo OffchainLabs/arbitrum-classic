@@ -34,7 +34,6 @@ type OutputStatistics struct {
 }
 
 type GasAccountingSummary struct {
-	PricePerL2Tx             *big.Int
 	PricePerL1CalldataByte   *big.Int
 	PricePerStorageCell      *big.Int
 	PricePerArbGasBase       *big.Int

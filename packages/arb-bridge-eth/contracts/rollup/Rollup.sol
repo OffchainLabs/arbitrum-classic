@@ -124,8 +124,6 @@ contract Rollup is RollupBase {
         rollupEventBridge.rollupInitialized(
             _rollupParams[0],
             _rollupParams[2],
-            _rollupParams[3],
-            _stakeToken,
             _owner,
             _extraConfig
         );

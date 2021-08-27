@@ -17,7 +17,6 @@
 package dev
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -35,10 +34,7 @@ import (
 func TestWhitelist(t *testing.T) {
 	skipBelowVersion(t, 25)
 	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 	senderKey, err := crypto.GenerateKey()
@@ -46,7 +42,7 @@ func TestWhitelist(t *testing.T) {
 	test.FailIfError(t, err)
 	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil, false)
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
