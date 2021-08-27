@@ -140,7 +140,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	test.FailIfError(t, err)
 
 	hash := mach.Hash()
-	confirmPeriodBlocks := big.NewInt(100)
+	confirmPeriodBlocks := big.NewInt(40)
 	extraChallengeTimeBlocks := big.NewInt(0)
 	arbGasSpeedLimitPerBlock := maxGasPerNode
 	baseStake := big.NewInt(100)
