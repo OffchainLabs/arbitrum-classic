@@ -27,7 +27,7 @@ The `Challenge` contract is responsible for mediating disputes between conflicti
 
 - Inbox Consistency: The assertion claimed to read up to a given position in the inbox. This challenge assures that the end point is really a correct position in the inbox.
 - Inbox Delta: The messages between the first read message and the last read message are accumulated into a hash which is proposed as part of the assertion. This challenge assures that the inbox delta was actually calculated correctly based on the messages read from the inbox.
-- Execution Stopped Shot: The portion of the assertion which specifies execution claimed to have executed a total amount of AvmGas. If the machine should have stopped before this point, this challenge can be used to propose a shorter assertion.
+- Execution Stopped Short: The portion of the assertion which specifies execution claimed to have executed a total amount of AvmGas. If the machine should have stopped before this point, this challenge can be used to propose a shorter assertion.
 - Execution: This challenge can be used to ensure the correctness of the execution of the assertion.
 
 ## Arch
