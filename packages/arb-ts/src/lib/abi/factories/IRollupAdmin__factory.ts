@@ -168,11 +168,11 @@ const _abi = [
     inputs: [
       {
         internalType: 'uint256',
-        name: 'newArbGasSpeedLimitPerBlock',
+        name: 'newAvmGasSpeedLimitPerBlock',
         type: 'uint256',
       },
     ],
-    name: 'setArbGasSpeedLimitPerBlock',
+    name: 'setAvmGasSpeedLimitPerBlock',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
@@ -268,6 +268,24 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: 'address',
+        name: 'newSequencer',
+        type: 'address',
+      },
+      {
+        internalType: 'bool',
+        name: 'isSequencer',
+        type: 'bool',
+      },
+    ],
+    name: 'setIsSequencer',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
         internalType: 'uint256',
         name: 'newPeriod',
         type: 'uint256',
@@ -307,38 +325,17 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'address',
-        name: 'newSequencer',
-        type: 'address',
-      },
-    ],
-    name: 'setSequencer',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
         internalType: 'uint256',
         name: 'newSequencerInboxMaxDelayBlocks',
         type: 'uint256',
       },
-    ],
-    name: 'setSequencerInboxMaxDelayBlocks',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
       {
         internalType: 'uint256',
         name: 'newSequencerInboxMaxDelaySeconds',
         type: 'uint256',
       },
     ],
-    name: 'setSequencerInboxMaxDelaySeconds',
+    name: 'setSequencerInboxMaxDelay',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

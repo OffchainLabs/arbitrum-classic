@@ -26,7 +26,7 @@ interface RollupEventBridgeInterface extends ethers.utils.Interface {
     'nodeConfirmed(uint256)': FunctionFragment
     'nodeCreated(uint256,uint256,uint256,address)': FunctionFragment
     'nodeRejected(uint256)': FunctionFragment
-    'rollupInitialized(uint256,uint256,uint256,address,address,bytes)': FunctionFragment
+    'rollupInitialized(uint256,uint256,address,bytes)': FunctionFragment
     'stakeCreated(address,uint256)': FunctionFragment
   }
 
@@ -49,14 +49,7 @@ interface RollupEventBridgeInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'rollupInitialized',
-    values: [
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      string,
-      string,
-      BytesLike
-    ]
+    values: [BigNumberish, BigNumberish, string, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'stakeCreated',
@@ -166,9 +159,7 @@ export class RollupEventBridge extends BaseContract {
 
     rollupInitialized(
       confirmPeriodBlocks: BigNumberish,
-      arbGasSpeedLimitPerBlock: BigNumberish,
-      baseStake: BigNumberish,
-      stakeToken: string,
+      avmGasSpeedLimitPerBlock: BigNumberish,
       owner: string,
       extraConfig: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -209,9 +200,7 @@ export class RollupEventBridge extends BaseContract {
 
   rollupInitialized(
     confirmPeriodBlocks: BigNumberish,
-    arbGasSpeedLimitPerBlock: BigNumberish,
-    baseStake: BigNumberish,
-    stakeToken: string,
+    avmGasSpeedLimitPerBlock: BigNumberish,
     owner: string,
     extraConfig: BytesLike,
     overrides?: Overrides & { from?: string | Promise<string> }
@@ -252,9 +241,7 @@ export class RollupEventBridge extends BaseContract {
 
     rollupInitialized(
       confirmPeriodBlocks: BigNumberish,
-      arbGasSpeedLimitPerBlock: BigNumberish,
-      baseStake: BigNumberish,
-      stakeToken: string,
+      avmGasSpeedLimitPerBlock: BigNumberish,
       owner: string,
       extraConfig: BytesLike,
       overrides?: CallOverrides
@@ -310,9 +297,7 @@ export class RollupEventBridge extends BaseContract {
 
     rollupInitialized(
       confirmPeriodBlocks: BigNumberish,
-      arbGasSpeedLimitPerBlock: BigNumberish,
-      baseStake: BigNumberish,
-      stakeToken: string,
+      avmGasSpeedLimitPerBlock: BigNumberish,
       owner: string,
       extraConfig: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -354,9 +339,7 @@ export class RollupEventBridge extends BaseContract {
 
     rollupInitialized(
       confirmPeriodBlocks: BigNumberish,
-      arbGasSpeedLimitPerBlock: BigNumberish,
-      baseStake: BigNumberish,
-      stakeToken: string,
+      avmGasSpeedLimitPerBlock: BigNumberish,
       owner: string,
       extraConfig: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }

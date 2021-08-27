@@ -26,6 +26,7 @@ interface RollupInterface extends ethers.utils.Interface {
     '_stakerMap(address)': FunctionFragment
     'amountStaked(address)': FunctionFragment
     'arbGasSpeedLimitPerBlock()': FunctionFragment
+    'avmGasSpeedLimitPerBlock()': FunctionFragment
     'baseStake()': FunctionFragment
     'challengeExecutionBisectionDegree()': FunctionFragment
     'challengeFactory()': FunctionFragment
@@ -53,7 +54,7 @@ interface RollupInterface extends ethers.utils.Interface {
     'outbox()': FunctionFragment
     'owner()': FunctionFragment
     'paused()': FunctionFragment
-    'postUpgradeInit(address)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'rollupEventBridge()': FunctionFragment
     'sequencerBridge()': FunctionFragment
     'stakeToken()': FunctionFragment
@@ -76,6 +77,10 @@ interface RollupInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'amountStaked', values: [string]): string
   encodeFunctionData(
     functionFragment: 'arbGasSpeedLimitPerBlock',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'avmGasSpeedLimitPerBlock',
     values?: undefined
   ): string
   encodeFunctionData(functionFragment: 'baseStake', values?: undefined): string
@@ -173,7 +178,7 @@ interface RollupInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'paused', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'postUpgradeInit',
-    values: [string]
+    values?: undefined
   ): string
   encodeFunctionData(
     functionFragment: 'rollupEventBridge',
@@ -220,6 +225,10 @@ interface RollupInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'arbGasSpeedLimitPerBlock',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'avmGasSpeedLimitPerBlock',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'baseStake', data: BytesLike): Result
@@ -415,6 +424,8 @@ export class Rollup extends BaseContract {
 
     arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
+    avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<[BigNumber]>
+
     baseStake(overrides?: CallOverrides): Promise<[BigNumber]>
 
     challengeExecutionBisectionDegree(
@@ -494,7 +505,6 @@ export class Rollup extends BaseContract {
     paused(overrides?: CallOverrides): Promise<[boolean]>
 
     postUpgradeInit(
-      newAdminFacet: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -544,6 +554,8 @@ export class Rollup extends BaseContract {
   amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
   arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+  avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
 
   baseStake(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -618,7 +630,6 @@ export class Rollup extends BaseContract {
   paused(overrides?: CallOverrides): Promise<boolean>
 
   postUpgradeInit(
-    newAdminFacet: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -668,6 +679,8 @@ export class Rollup extends BaseContract {
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
     arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
+    avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
 
     baseStake(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -741,10 +754,7 @@ export class Rollup extends BaseContract {
 
     paused(overrides?: CallOverrides): Promise<boolean>
 
-    postUpgradeInit(
-      newAdminFacet: string,
-      overrides?: CallOverrides
-    ): Promise<void>
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
 
     rollupEventBridge(overrides?: CallOverrides): Promise<string>
 
@@ -891,6 +901,8 @@ export class Rollup extends BaseContract {
 
     arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
 
+    avmGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<BigNumber>
+
     baseStake(overrides?: CallOverrides): Promise<BigNumber>
 
     challengeExecutionBisectionDegree(
@@ -973,7 +985,6 @@ export class Rollup extends BaseContract {
     paused(overrides?: CallOverrides): Promise<BigNumber>
 
     postUpgradeInit(
-      newAdminFacet: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -1019,6 +1030,10 @@ export class Rollup extends BaseContract {
     ): Promise<PopulatedTransaction>
 
     arbGasSpeedLimitPerBlock(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    avmGasSpeedLimitPerBlock(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -1118,7 +1133,6 @@ export class Rollup extends BaseContract {
     paused(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     postUpgradeInit(
-      newAdminFacet: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
