@@ -16,7 +16,7 @@ func runExecutionTest(t *testing.T, startGas *big.Int, endGas *big.Int, faultCon
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
-	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge := initializeChallengeTest(t, big.NewInt(100), big.NewInt(100), mon.Core)
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
 
 	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
@@ -102,7 +102,7 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 func TestChallengeToUnreachableSmall(t *testing.T) {
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
-	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge := initializeChallengeTest(t, big.NewInt(100), big.NewInt(100), mon.Core)
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(1 << 30))
 	test.FailIfError(t, err)
 	startGas := cursor.TotalGasConsumed()

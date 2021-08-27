@@ -27,10 +27,10 @@ var (
 )
 
 // BridgeABI is the input ABI used to generate the binding from.
-const BridgeABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"messageIndex\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"beforeInboxAcc\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"inbox\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"kind\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"messageDataHash\",\"type\":\"bytes32\"}],\"name\":\"MessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"activeOutbox\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"allowedInboxList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"inbox\",\"type\":\"address\"}],\"name\":\"allowedInboxes\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"allowedOutboxList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"outbox\",\"type\":\"address\"}],\"name\":\"allowedOutboxes\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"kind\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"messageDataHash\",\"type\":\"bytes32\"}],\"name\":\"deliverMessageToInbox\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"executeCall\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"internalType\":\"bytes\",\"name\":\"returnData\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"inboxAccs\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"messageCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"inbox\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setInbox\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"outbox\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setOutbox\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const BridgeABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"outbox\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"BridgeCallTriggered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"inbox\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"InboxToggle\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"messageIndex\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"beforeInboxAcc\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"inbox\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"kind\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"messageDataHash\",\"type\":\"bytes32\"}],\"name\":\"MessageDelivered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"outbox\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"OutboxToggle\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"activeOutbox\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"allowedInboxList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"inbox\",\"type\":\"address\"}],\"name\":\"allowedInboxes\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"allowedOutboxList\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"outbox\",\"type\":\"address\"}],\"name\":\"allowedOutboxes\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"kind\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"messageDataHash\",\"type\":\"bytes32\"}],\"name\":\"deliverMessageToInbox\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"executeCall\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"internalType\":\"bytes\",\"name\":\"returnData\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"inboxAccs\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"messageCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"inbox\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setInbox\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"outbox\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setOutbox\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // BridgeBin is the compiled bytecode used for deploying new contracts.
-var BridgeBin = "0x608060405234801561001057600080fd5b506111d9806100206000396000f3fe6080604052600436106100c85760003560e01c8063945e11471161007a578063945e1147146101f75780639e5d4c4914610221578063ab5d894314610336578063c29372de1461034b578063cee3d7281461037e578063d9dd67ab146103b9578063e45b7ce6146103e3578063f2fde38b1461041e576100c8565b806302bbfad1146100cd5780633dbcc8d114610114578063413b35bd14610129578063715018a6146101705780637ee94329146101875780638129fc1c146101cd5780638da5cb5b146101e2575b600080fd5b610102600480360360608110156100e357600080fd5b5060ff813516906001600160a01b036020820135169060400135610451565b60408051918252519081900360200190f35b34801561012057600080fd5b50610102610567565b34801561013557600080fd5b5061015c6004803603602081101561014c57600080fd5b50356001600160a01b031661056d565b604080519115158252519081900360200190f35b34801561017c57600080fd5b5061018561058e565b005b34801561019357600080fd5b506101b1600480360360208110156101aa57600080fd5b5035610628565b604080516001600160a01b039092168252519081900360200190f35b3480156101d957600080fd5b5061018561064f565b3480156101ee57600080fd5b506101b16106f9565b34801561020357600080fd5b506101b16004803603602081101561021a57600080fd5b5035610708565b34801561022d57600080fd5b506102b36004803603606081101561024457600080fd5b6001600160a01b038235169160208101359181019060608101604082013564010000000081111561027457600080fd5b82018360208201111561028657600080fd5b803590602001918460018302840111640100000000831117156102a857600080fd5b509092509050610715565b604051808315151515815260200180602001828103825283818151815260200191508051906020019080838360005b838110156102fa5781810151838201526020016102e2565b50505050905090810190601f1680156103275780820380516001836020036101000a031916815260200191505b50935050505060405180910390f35b34801561034257600080fd5b506101b1610879565b34801561035757600080fd5b5061015c6004803603602081101561036e57600080fd5b50356001600160a01b0316610888565b34801561038a57600080fd5b50610185600480360360408110156103a157600080fd5b506001600160a01b03813516906020013515156108a9565b3480156103c557600080fd5b50610102600480360360208110156103dc57600080fd5b5035610ae5565b3480156103ef57600080fd5b506101856004803603604081101561040657600080fd5b506001600160a01b0381351690602001351515610b03565b34801561042a57600080fd5b506101856004803603602081101561044157600080fd5b50356001600160a01b0316610d3d565b3360009081526065602052604081206001015460ff166104a9576040805162461bcd60e51b815260206004820152600e60248201526d09c9ea8be8ca49e9abe929c849eb60931b604482015290519081900360640190fd5b606a5460006104bd86864342863a8a610e2e565b9050600082156104e557606a60018403815481106104d757fe5b906000526020600020015490505b606a6104f18284610ea4565b8154600181018355600092835260209283902001556040805133815260ff8a16928101929092526001600160a01b038816828201526060820187905251829185917f23be8e12e420b5da9fb98d8102572f640fb3c11a0085060472dfc0ed194b3cf79181900360800190a3509095945050505050565b606a5490565b6001600160a01b031660009081526066602052604090206001015460ff1690565b610596610ed0565b6001600160a01b03166105a76106f9565b6001600160a01b0316146105f0576040805162461bcd60e51b81526020600482018190526024820152600080516020611164833981519152604482015290519081900360640190fd5b6033546040516000916001600160a01b031690600080516020611184833981519152908390a3603380546001600160a01b0319169055565b6067818154811061063557fe5b6000918252602090912001546001600160a01b0316905081565b600054610100900460ff16806106685750610668610ed4565b80610676575060005460ff16155b6106b15760405162461bcd60e51b815260040180806020018281038252602e815260200180611136602e913960400191505060405180910390fd5b600054610100900460ff161580156106dc576000805460ff1961ff0019909116610100171660011790555b6106e4610ee5565b80156106f6576000805461ff00191690555b50565b6033546001600160a01b031690565b6068818154811061063557fe5b3360009081526066602052604081206001015460609060ff16610771576040805162461bcd60e51b815260206004820152600f60248201526e09c9ea8be8ca49e9abe9eaaa8849eb608b1b604482015290519081900360640190fd5b82156107cc57610789866001600160a01b0316610f82565b6107cc576040805162461bcd60e51b815260206004820152600f60248201526e1393d7d0d3d11157d05517d11154d5608a1b604482015290519081900360640190fd5b606980546001600160a01b0319811633179091556040516001600160a01b0391821691881690879087908790808383808284376040519201945060009350909150508083038185875af1925050503d8060008114610846576040519150601f19603f3d011682016040523d82523d6000602084013e61084b565b606091505b50606980546001600160a01b0319166001600160a01b03949094169390931790925597909650945050505050565b6069546001600160a01b031681565b6001600160a01b031660009081526065602052604090206001015460ff1690565b6108b1610ed0565b6001600160a01b03166108c26106f9565b6001600160a01b03161461090b576040805162461bcd60e51b81526020600482018190526024820152600080516020611164833981519152604482015290519081900360640190fd5b6001600160a01b0382166000908152606660205260409020600181015460ff168080156109355750825b80610947575080158015610947575082155b15610953575050610ae1565b82156109e257604080518082018252606880548252600160208084018281526001600160a01b038a16600081815260669093529582209451855551938201805460ff1916941515949094179093558154908101825591527fa2153420d844928b4421650203c77babc8b33d7f2e7b450e2966db0c220977530180546001600160a01b0319169091179055610ade565b6068805460001981019081106109f457fe5b6000918252602090912001548254606880546001600160a01b03909316929091908110610a1d57fe5b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b031602179055508160000154606660006068856000015481548110610a6557fe5b60009182526020808320909101546001600160a01b031683528201929092526040019020556068805480610a9557fe5b60008281526020808220830160001990810180546001600160a01b03191690559092019092556001600160a01b03861682526066905260408120908155600101805460ff191690555b50505b5050565b606a8181548110610af257fe5b600091825260209091200154905081565b610b0b610ed0565b6001600160a01b0316610b1c6106f9565b6001600160a01b031614610b65576040805162461bcd60e51b81526020600482018190526024820152600080516020611164833981519152604482015290519081900360640190fd5b6001600160a01b0382166000908152606560205260409020600181015460ff16808015610b8f5750825b80610ba1575080158015610ba1575082155b15610bad575050610ae1565b8215610c3c57604080518082018252606780548252600160208084018281526001600160a01b038a16600081815260659093529582209451855551938201805460ff1916941515949094179093558154908101825591527f9787eeb91fe3101235e4a76063c7023ecb40f923f97916639c598592fa30d6ae0180546001600160a01b0319169091179055610ade565b606780546000198101908110610c4e57fe5b6000918252602090912001548254606780546001600160a01b03909316929091908110610c7757fe5b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b031602179055508160000154606560006067856000015481548110610cbf57fe5b60009182526020808320909101546001600160a01b031683528201929092526040019020556067805480610cef57fe5b60008281526020808220830160001990810180546001600160a01b03191690559092019092556001600160a01b03861682526065905260408120908155600101805460ff1916905550505050565b610d45610ed0565b6001600160a01b0316610d566106f9565b6001600160a01b031614610d9f576040805162461bcd60e51b81526020600482018190526024820152600080516020611164833981519152604482015290519081900360640190fd5b6001600160a01b038116610de45760405162461bcd60e51b81526004018080602001828103825260268152602001806111106026913960400191505060405180910390fd5b6033546040516001600160a01b0380841692169060008051602061118483398151915290600090a3603380546001600160a01b0319166001600160a01b0392909216919091179055565b6040805160f89890981b6001600160f81b0319166020808a019190915260609790971b6bffffffffffffffffffffffff19166021890152603588019590955260558701939093526075860191909152609585015260b5808501919091528151808503909101815260d59093019052815191012090565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b3390565b6000610edf30610f82565b15905090565b600054610100900460ff1680610efe5750610efe610ed4565b80610f0c575060005460ff16155b610f475760405162461bcd60e51b815260040180806020018281038252602e815260200180611136602e913960400191505060405180910390fd5b600054610100900460ff16158015610f72576000805460ff1961ff0019909116610100171660011790555b610f7a610f88565b6106e4611028565b3b151590565b600054610100900460ff1680610fa15750610fa1610ed4565b80610faf575060005460ff16155b610fea5760405162461bcd60e51b815260040180806020018281038252602e815260200180611136602e913960400191505060405180910390fd5b600054610100900460ff161580156106e4576000805460ff1961ff00199091166101001716600117905580156106f6576000805461ff001916905550565b600054610100900460ff16806110415750611041610ed4565b8061104f575060005460ff16155b61108a5760405162461bcd60e51b815260040180806020018281038252602e815260200180611136602e913960400191505060405180910390fd5b600054610100900460ff161580156110b5576000805460ff1961ff0019909116610100171660011790555b60006110bf610ed0565b603380546001600160a01b0319166001600160a01b03831690811790915560405191925090600090600080516020611184833981519152908290a35080156106f6576000805461ff00191690555056fe4f776e61626c653a206e6577206f776e657220697320746865207a65726f2061646472657373496e697469616c697a61626c653a20636f6e747261637420697320616c726561647920696e697469616c697a65644f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65728be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0a26469706673582212203326e8cbe9185a408e83d59af1d623d1c981ce18dd1e21788eb5592e651d2d8864736f6c634300060b0033"
+var BridgeBin = "0x608060405234801561001057600080fd5b506112c3806100206000396000f3fe6080604052600436106100c85760003560e01c8063945e11471161007a578063945e1147146101f75780639e5d4c4914610221578063ab5d894314610336578063c29372de1461034b578063cee3d7281461037e578063d9dd67ab146103b9578063e45b7ce6146103e3578063f2fde38b1461041e576100c8565b806302bbfad1146100cd5780633dbcc8d114610114578063413b35bd14610129578063715018a6146101705780637ee94329146101875780638129fc1c146101cd5780638da5cb5b146101e2575b600080fd5b610102600480360360608110156100e357600080fd5b5060ff813516906001600160a01b036020820135169060400135610451565b60408051918252519081900360200190f35b34801561012057600080fd5b50610102610567565b34801561013557600080fd5b5061015c6004803603602081101561014c57600080fd5b50356001600160a01b031661056d565b604080519115158252519081900360200190f35b34801561017c57600080fd5b5061018561058e565b005b34801561019357600080fd5b506101b1600480360360208110156101aa57600080fd5b5035610628565b604080516001600160a01b039092168252519081900360200190f35b3480156101d957600080fd5b5061018561064f565b3480156101ee57600080fd5b506101b16106f9565b34801561020357600080fd5b506101b16004803603602081101561021a57600080fd5b5035610708565b34801561022d57600080fd5b506102b36004803603606081101561024457600080fd5b6001600160a01b038235169160208101359181019060608101604082013564010000000081111561027457600080fd5b82018360208201111561028657600080fd5b803590602001918460018302840111640100000000831117156102a857600080fd5b509092509050610715565b604051808315151515815260200180602001828103825283818151815260200191508051906020019080838360005b838110156102fa5781810151838201526020016102e2565b50505050905090810190601f1680156103275780820380516001836020036101000a031916815260200191505b50935050505060405180910390f35b34801561034257600080fd5b506101b16108e9565b34801561035757600080fd5b5061015c6004803603602081101561036e57600080fd5b50356001600160a01b03166108f8565b34801561038a57600080fd5b50610185600480360360408110156103a157600080fd5b506001600160a01b0381351690602001351515610919565b3480156103c557600080fd5b50610102600480360360208110156103dc57600080fd5b5035610b92565b3480156103ef57600080fd5b506101856004803603604081101561040657600080fd5b506001600160a01b0381351690602001351515610bb0565b34801561042a57600080fd5b506101856004803603602081101561044157600080fd5b50356001600160a01b0316610e27565b3360009081526065602052604081206001015460ff166104a9576040805162461bcd60e51b815260206004820152600e60248201526d09c9ea8be8ca49e9abe929c849eb60931b604482015290519081900360640190fd5b606a5460006104bd86864342863a8a610f18565b9050600082156104e557606a60018403815481106104d757fe5b906000526020600020015490505b606a6104f18284610f8e565b8154600181018355600092835260209283902001556040805133815260ff8a16928101929092526001600160a01b038816828201526060820187905251829185917f23be8e12e420b5da9fb98d8102572f640fb3c11a0085060472dfc0ed194b3cf79181900360800190a3509095945050505050565b606a5490565b6001600160a01b031660009081526066602052604090206001015460ff1690565b610596610fba565b6001600160a01b03166105a76106f9565b6001600160a01b0316146105f0576040805162461bcd60e51b8152602060048201819052602482015260008051602061124e833981519152604482015290519081900360640190fd5b6033546040516000916001600160a01b03169060008051602061126e833981519152908390a3603380546001600160a01b0319169055565b6067818154811061063557fe5b6000918252602090912001546001600160a01b0316905081565b600054610100900460ff16806106685750610668610fbe565b80610676575060005460ff16155b6106b15760405162461bcd60e51b815260040180806020018281038252602e815260200180611220602e913960400191505060405180910390fd5b600054610100900460ff161580156106dc576000805460ff1961ff0019909116610100171660011790555b6106e4610fcf565b80156106f6576000805461ff00191690555b50565b6033546001600160a01b031690565b6068818154811061063557fe5b3360009081526066602052604081206001015460609060ff16610771576040805162461bcd60e51b815260206004820152600f60248201526e09c9ea8be8ca49e9abe9eaaa8849eb608b1b604482015290519081900360640190fd5b82156107cc57610789866001600160a01b031661106c565b6107cc576040805162461bcd60e51b815260206004820152600f60248201526e1393d7d0d3d11157d05517d11154d5608a1b604482015290519081900360640190fd5b606980546001600160a01b0319811633179091556040516001600160a01b0391821691881690879087908790808383808284376040519201945060009350909150508083038185875af1925050503d8060008114610846576040519150601f19603f3d011682016040523d82523d6000602084013e61084b565b606091505b50606980546001600160a01b0319166001600160a01b0385811691909117909155604080518a81526020810182815291810189905293965091945089169133917f2d9d115ef3e4a606d698913b1eae831a3cdfe20d9a83d48007b0526749c3d466918a918a918a9160608201848480828437600083820152604051601f909101601f1916909201829003965090945050505050a35094509492505050565b6069546001600160a01b031681565b6001600160a01b031660009081526065602052604090206001015460ff1690565b610921610fba565b6001600160a01b03166109326106f9565b6001600160a01b03161461097b576040805162461bcd60e51b8152602060048201819052602482015260008051602061124e833981519152604482015290519081900360640190fd5b6001600160a01b0382166000818152606660209081526040918290206001810154835186151581529351919460ff9091169390927f49477e7356dbcb654ab85d7534b50126772d938130d1350e23e2540370c8dffa92918290030190a28080156109e25750825b806109f45750801580156109f4575082155b15610a00575050610b8e565b8215610a8f57604080518082018252606880548252600160208084018281526001600160a01b038a16600081815260669093529582209451855551938201805460ff1916941515949094179093558154908101825591527fa2153420d844928b4421650203c77babc8b33d7f2e7b450e2966db0c220977530180546001600160a01b0319169091179055610b8b565b606880546000198101908110610aa157fe5b6000918252602090912001548254606880546001600160a01b03909316929091908110610aca57fe5b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b031602179055508160000154606660006068856000015481548110610b1257fe5b60009182526020808320909101546001600160a01b031683528201929092526040019020556068805480610b4257fe5b60008281526020808220830160001990810180546001600160a01b03191690559092019092556001600160a01b03861682526066905260408120908155600101805460ff191690555b50505b5050565b606a8181548110610b9f57fe5b600091825260209091200154905081565b610bb8610fba565b6001600160a01b0316610bc96106f9565b6001600160a01b031614610c12576040805162461bcd60e51b8152602060048201819052602482015260008051602061124e833981519152604482015290519081900360640190fd5b6001600160a01b0382166000818152606560209081526040918290206001810154835186151581529351919460ff9091169390927f6675ce8882cb71637de5903a193d218cc0544be9c0650cb83e0955f6aa2bf52192918290030190a2808015610c795750825b80610c8b575080158015610c8b575082155b15610c97575050610b8e565b8215610d2657604080518082018252606780548252600160208084018281526001600160a01b038a16600081815260659093529582209451855551938201805460ff1916941515949094179093558154908101825591527f9787eeb91fe3101235e4a76063c7023ecb40f923f97916639c598592fa30d6ae0180546001600160a01b0319169091179055610b8b565b606780546000198101908110610d3857fe5b6000918252602090912001548254606780546001600160a01b03909316929091908110610d6157fe5b9060005260206000200160006101000a8154816001600160a01b0302191690836001600160a01b031602179055508160000154606560006067856000015481548110610da957fe5b60009182526020808320909101546001600160a01b031683528201929092526040019020556067805480610dd957fe5b60008281526020808220830160001990810180546001600160a01b03191690559092019092556001600160a01b03861682526065905260408120908155600101805460ff1916905550505050565b610e2f610fba565b6001600160a01b0316610e406106f9565b6001600160a01b031614610e89576040805162461bcd60e51b8152602060048201819052602482015260008051602061124e833981519152604482015290519081900360640190fd5b6001600160a01b038116610ece5760405162461bcd60e51b81526004018080602001828103825260268152602001806111fa6026913960400191505060405180910390fd5b6033546040516001600160a01b0380841692169060008051602061126e83398151915290600090a3603380546001600160a01b0319166001600160a01b0392909216919091179055565b6040805160f89890981b6001600160f81b0319166020808a019190915260609790971b6bffffffffffffffffffffffff19166021890152603588019590955260558701939093526075860191909152609585015260b5808501919091528151808503909101815260d59093019052815191012090565b604080516020808201949094528082019290925280518083038201815260609092019052805191012090565b3390565b6000610fc93061106c565b15905090565b600054610100900460ff1680610fe85750610fe8610fbe565b80610ff6575060005460ff16155b6110315760405162461bcd60e51b815260040180806020018281038252602e815260200180611220602e913960400191505060405180910390fd5b600054610100900460ff1615801561105c576000805460ff1961ff0019909116610100171660011790555b611064611072565b6106e4611112565b3b151590565b600054610100900460ff168061108b575061108b610fbe565b80611099575060005460ff16155b6110d45760405162461bcd60e51b815260040180806020018281038252602e815260200180611220602e913960400191505060405180910390fd5b600054610100900460ff161580156106e4576000805460ff1961ff00199091166101001716600117905580156106f6576000805461ff001916905550565b600054610100900460ff168061112b575061112b610fbe565b80611139575060005460ff16155b6111745760405162461bcd60e51b815260040180806020018281038252602e815260200180611220602e913960400191505060405180910390fd5b600054610100900460ff1615801561119f576000805460ff1961ff0019909116610100171660011790555b60006111a9610fba565b603380546001600160a01b0319166001600160a01b0383169081179091556040519192509060009060008051602061126e833981519152908290a35080156106f6576000805461ff00191690555056fe4f776e61626c653a206e6577206f776e657220697320746865207a65726f2061646472657373496e697469616c697a61626c653a20636f6e747261637420697320616c726561647920696e697469616c697a65644f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65728be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0a2646970667358221220098faf76a761dd64cd29655e46e3c58fa1d3e1cc89496a10843acaaae6202f7564736f6c634300060b0033"
 
 // DeployBridge deploys a new Ethereum contract, binding an instance of Bridge to it.
 func DeployBridge(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Bridge, error) {
@@ -583,6 +583,306 @@ func (_Bridge *BridgeTransactorSession) TransferOwnership(newOwner common.Addres
 	return _Bridge.Contract.TransferOwnership(&_Bridge.TransactOpts, newOwner)
 }
 
+// BridgeBridgeCallTriggeredIterator is returned from FilterBridgeCallTriggered and is used to iterate over the raw logs and unpacked data for BridgeCallTriggered events raised by the Bridge contract.
+type BridgeBridgeCallTriggeredIterator struct {
+	Event *BridgeBridgeCallTriggered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BridgeBridgeCallTriggeredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BridgeBridgeCallTriggered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BridgeBridgeCallTriggered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BridgeBridgeCallTriggeredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BridgeBridgeCallTriggeredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BridgeBridgeCallTriggered represents a BridgeCallTriggered event raised by the Bridge contract.
+type BridgeBridgeCallTriggered struct {
+	Outbox   common.Address
+	DestAddr common.Address
+	Amount   *big.Int
+	Data     []byte
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterBridgeCallTriggered is a free log retrieval operation binding the contract event 0x2d9d115ef3e4a606d698913b1eae831a3cdfe20d9a83d48007b0526749c3d466.
+//
+// Solidity: event BridgeCallTriggered(address indexed outbox, address indexed destAddr, uint256 amount, bytes data)
+func (_Bridge *BridgeFilterer) FilterBridgeCallTriggered(opts *bind.FilterOpts, outbox []common.Address, destAddr []common.Address) (*BridgeBridgeCallTriggeredIterator, error) {
+
+	var outboxRule []interface{}
+	for _, outboxItem := range outbox {
+		outboxRule = append(outboxRule, outboxItem)
+	}
+	var destAddrRule []interface{}
+	for _, destAddrItem := range destAddr {
+		destAddrRule = append(destAddrRule, destAddrItem)
+	}
+
+	logs, sub, err := _Bridge.contract.FilterLogs(opts, "BridgeCallTriggered", outboxRule, destAddrRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BridgeBridgeCallTriggeredIterator{contract: _Bridge.contract, event: "BridgeCallTriggered", logs: logs, sub: sub}, nil
+}
+
+// WatchBridgeCallTriggered is a free log subscription operation binding the contract event 0x2d9d115ef3e4a606d698913b1eae831a3cdfe20d9a83d48007b0526749c3d466.
+//
+// Solidity: event BridgeCallTriggered(address indexed outbox, address indexed destAddr, uint256 amount, bytes data)
+func (_Bridge *BridgeFilterer) WatchBridgeCallTriggered(opts *bind.WatchOpts, sink chan<- *BridgeBridgeCallTriggered, outbox []common.Address, destAddr []common.Address) (event.Subscription, error) {
+
+	var outboxRule []interface{}
+	for _, outboxItem := range outbox {
+		outboxRule = append(outboxRule, outboxItem)
+	}
+	var destAddrRule []interface{}
+	for _, destAddrItem := range destAddr {
+		destAddrRule = append(destAddrRule, destAddrItem)
+	}
+
+	logs, sub, err := _Bridge.contract.WatchLogs(opts, "BridgeCallTriggered", outboxRule, destAddrRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BridgeBridgeCallTriggered)
+				if err := _Bridge.contract.UnpackLog(event, "BridgeCallTriggered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseBridgeCallTriggered is a log parse operation binding the contract event 0x2d9d115ef3e4a606d698913b1eae831a3cdfe20d9a83d48007b0526749c3d466.
+//
+// Solidity: event BridgeCallTriggered(address indexed outbox, address indexed destAddr, uint256 amount, bytes data)
+func (_Bridge *BridgeFilterer) ParseBridgeCallTriggered(log types.Log) (*BridgeBridgeCallTriggered, error) {
+	event := new(BridgeBridgeCallTriggered)
+	if err := _Bridge.contract.UnpackLog(event, "BridgeCallTriggered", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BridgeInboxToggleIterator is returned from FilterInboxToggle and is used to iterate over the raw logs and unpacked data for InboxToggle events raised by the Bridge contract.
+type BridgeInboxToggleIterator struct {
+	Event *BridgeInboxToggle // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BridgeInboxToggleIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BridgeInboxToggle)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BridgeInboxToggle)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BridgeInboxToggleIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BridgeInboxToggleIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BridgeInboxToggle represents a InboxToggle event raised by the Bridge contract.
+type BridgeInboxToggle struct {
+	Inbox   common.Address
+	Enabled bool
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterInboxToggle is a free log retrieval operation binding the contract event 0x6675ce8882cb71637de5903a193d218cc0544be9c0650cb83e0955f6aa2bf521.
+//
+// Solidity: event InboxToggle(address indexed inbox, bool enabled)
+func (_Bridge *BridgeFilterer) FilterInboxToggle(opts *bind.FilterOpts, inbox []common.Address) (*BridgeInboxToggleIterator, error) {
+
+	var inboxRule []interface{}
+	for _, inboxItem := range inbox {
+		inboxRule = append(inboxRule, inboxItem)
+	}
+
+	logs, sub, err := _Bridge.contract.FilterLogs(opts, "InboxToggle", inboxRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BridgeInboxToggleIterator{contract: _Bridge.contract, event: "InboxToggle", logs: logs, sub: sub}, nil
+}
+
+// WatchInboxToggle is a free log subscription operation binding the contract event 0x6675ce8882cb71637de5903a193d218cc0544be9c0650cb83e0955f6aa2bf521.
+//
+// Solidity: event InboxToggle(address indexed inbox, bool enabled)
+func (_Bridge *BridgeFilterer) WatchInboxToggle(opts *bind.WatchOpts, sink chan<- *BridgeInboxToggle, inbox []common.Address) (event.Subscription, error) {
+
+	var inboxRule []interface{}
+	for _, inboxItem := range inbox {
+		inboxRule = append(inboxRule, inboxItem)
+	}
+
+	logs, sub, err := _Bridge.contract.WatchLogs(opts, "InboxToggle", inboxRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BridgeInboxToggle)
+				if err := _Bridge.contract.UnpackLog(event, "InboxToggle", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseInboxToggle is a log parse operation binding the contract event 0x6675ce8882cb71637de5903a193d218cc0544be9c0650cb83e0955f6aa2bf521.
+//
+// Solidity: event InboxToggle(address indexed inbox, bool enabled)
+func (_Bridge *BridgeFilterer) ParseInboxToggle(log types.Log) (*BridgeInboxToggle, error) {
+	event := new(BridgeInboxToggle)
+	if err := _Bridge.contract.UnpackLog(event, "InboxToggle", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // BridgeMessageDeliveredIterator is returned from FilterMessageDelivered and is used to iterate over the raw logs and unpacked data for MessageDelivered events raised by the Bridge contract.
 type BridgeMessageDeliveredIterator struct {
 	Event *BridgeMessageDelivered // Event containing the contract specifics and raw log
@@ -734,6 +1034,151 @@ func (_Bridge *BridgeFilterer) WatchMessageDelivered(opts *bind.WatchOpts, sink 
 func (_Bridge *BridgeFilterer) ParseMessageDelivered(log types.Log) (*BridgeMessageDelivered, error) {
 	event := new(BridgeMessageDelivered)
 	if err := _Bridge.contract.UnpackLog(event, "MessageDelivered", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BridgeOutboxToggleIterator is returned from FilterOutboxToggle and is used to iterate over the raw logs and unpacked data for OutboxToggle events raised by the Bridge contract.
+type BridgeOutboxToggleIterator struct {
+	Event *BridgeOutboxToggle // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BridgeOutboxToggleIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BridgeOutboxToggle)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BridgeOutboxToggle)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BridgeOutboxToggleIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BridgeOutboxToggleIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BridgeOutboxToggle represents a OutboxToggle event raised by the Bridge contract.
+type BridgeOutboxToggle struct {
+	Outbox  common.Address
+	Enabled bool
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterOutboxToggle is a free log retrieval operation binding the contract event 0x49477e7356dbcb654ab85d7534b50126772d938130d1350e23e2540370c8dffa.
+//
+// Solidity: event OutboxToggle(address indexed outbox, bool enabled)
+func (_Bridge *BridgeFilterer) FilterOutboxToggle(opts *bind.FilterOpts, outbox []common.Address) (*BridgeOutboxToggleIterator, error) {
+
+	var outboxRule []interface{}
+	for _, outboxItem := range outbox {
+		outboxRule = append(outboxRule, outboxItem)
+	}
+
+	logs, sub, err := _Bridge.contract.FilterLogs(opts, "OutboxToggle", outboxRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BridgeOutboxToggleIterator{contract: _Bridge.contract, event: "OutboxToggle", logs: logs, sub: sub}, nil
+}
+
+// WatchOutboxToggle is a free log subscription operation binding the contract event 0x49477e7356dbcb654ab85d7534b50126772d938130d1350e23e2540370c8dffa.
+//
+// Solidity: event OutboxToggle(address indexed outbox, bool enabled)
+func (_Bridge *BridgeFilterer) WatchOutboxToggle(opts *bind.WatchOpts, sink chan<- *BridgeOutboxToggle, outbox []common.Address) (event.Subscription, error) {
+
+	var outboxRule []interface{}
+	for _, outboxItem := range outbox {
+		outboxRule = append(outboxRule, outboxItem)
+	}
+
+	logs, sub, err := _Bridge.contract.WatchLogs(opts, "OutboxToggle", outboxRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BridgeOutboxToggle)
+				if err := _Bridge.contract.UnpackLog(event, "OutboxToggle", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOutboxToggle is a log parse operation binding the contract event 0x49477e7356dbcb654ab85d7534b50126772d938130d1350e23e2540370c8dffa.
+//
+// Solidity: event OutboxToggle(address indexed outbox, bool enabled)
+func (_Bridge *BridgeFilterer) ParseOutboxToggle(log types.Log) (*BridgeOutboxToggle, error) {
+	event := new(BridgeOutboxToggle)
+	if err := _Bridge.contract.UnpackLog(event, "OutboxToggle", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
