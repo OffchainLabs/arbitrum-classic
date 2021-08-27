@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -165,7 +164,7 @@ func openKeystore(description string, walletPath string, walletPassword *string)
 		keystore.StandardScryptP,
 	)
 	logger.Info().
-		Str("location", filepath.Join(walletPath, "wallets")).
+		Str("location", walletPath).
 		Int("accounts", len(ks.Accounts())).
 		Msg("loading wallet")
 
