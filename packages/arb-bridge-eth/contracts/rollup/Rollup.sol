@@ -65,6 +65,13 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     address[] internal facets;
 
     mapping(address => bool) isValidator;
+
+    /// @notice DEPRECATED -- this method is deprecated but still mantained for backward compatibility
+    /// @dev this actually returns the avmGasSpeedLimitPerBlock
+    /// @return this actually returns the avmGasSpeedLimitPerBlock
+    function arbGasSpeedLimitPerBlock() public view returns (uint256) {
+        return avmGasSpeedLimitPerBlock;
+    }
 }
 
 contract Rollup is Proxy, RollupBase {
