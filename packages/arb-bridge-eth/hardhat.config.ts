@@ -139,13 +139,21 @@ task('core-transfer-beacon-owner', 'transfers beacon owner')
     await transferBeaconOwner(args.address, args.newowner)
   })
 
-task('core-transfer-admin', 'deploy one logic')
+task('core-transfer-admin', 'transfer proxy admin')
   .addParam('proxyaddress', 'proxy address')
   .addParam('newadmin', 'address of new admin')
   .setAction(async (args, hre) => {
     const { transferAdmin } = initUpgrades(hre, __dirname)
     await transferAdmin(args.proxyaddress, args.newadmin)
   })
+
+task(
+  'remove-build-info',
+  'remove giant build info string from current_deployments json'
+).setAction(async (_, hre) => {
+  const { removeBuildInfoFiles } = initUpgrades(hre, __dirname)
+  await removeBuildInfoFiles()
+})
 
 const config = {
   defaultNetwork: 'hardhat',

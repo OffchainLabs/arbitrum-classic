@@ -3,7 +3,6 @@ import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs'
 import childProcess from 'child_process'
 // @ts-ignore (module doesn't have types declared)
 import prompt from 'prompt-promise'
-
 import {
   QueuedUpdates,
   CurrentDeployments,
@@ -555,6 +554,23 @@ export const initUpgrades = (
     console.log('ownership transfer complete')
   }
 
+  const removeBuildInfoFiles = async () => {
+    console.log(
+      `You sure you want to remove build info files for the current network's current_deployments file? You might want to make sure they're backed up first.  ('Yes' to continue)`
+    )
+    const res = await prompt('')
+    if (res !== 'Yes') {
+      console.log('exiting')
+      process.exit(0)
+    }
+    const { data, path } = await getDeployments()
+    for (const _contractName of Object.keys(data.contracts)) {
+      const contractName = _contractName as ContractNames
+      data.contracts[contractName].implBuildInfo = ''
+    }
+    writeFileSync(path, JSON.stringify(data))
+  }
+
   return {
     updateImplementations,
     verifyCurrentImplementations,
@@ -562,5 +578,6 @@ export const initUpgrades = (
     deployLogicAll,
     transferAdmin,
     transferBeaconOwner,
+    removeBuildInfoFiles,
   }
 }
