@@ -69,11 +69,15 @@ func GetTotalOfEthBalances() []byte {
 }
 
 func SetChainParameterData(paramId [32]byte, val *big.Int) []byte {
-    return makeFuncData(setChainParameterABI, paramId, val)
+	return makeFuncData(setChainParameterABI, paramId, val)
 }
 
 func AddChainOwnerData(address common.Address) []byte {
-    return makeFuncData(addChainOwnerABI, address)
+	return makeFuncData(addChainOwnerABI, address)
+}
+
+func RemoveChainOwnerData(address common.Address) []byte {
+	return makeFuncData(removeChainOwnerABI, address)
 }
 
 func StartArbOSUpgradeData() []byte {

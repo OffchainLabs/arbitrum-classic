@@ -32,7 +32,7 @@ func TestTopLevelCall(t *testing.T) {
 	test.FailIfError(t, err)
 	owner := common.RandAddress()
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, owner, nil, false)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, owner, nil)
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
