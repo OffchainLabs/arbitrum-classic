@@ -724,7 +724,7 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 		return nil, nil, err
 	}
 
-	if out.Wallet.Fireblocks != (WalletFireblocks{}) {
+	if len(out.Wallet.Fireblocks.SSLKey) != 0 {
 		if len(out.Wallet.Fireblocks.APIKey) == 0 {
 			return nil, nil, errors.New("fireblocks configured but missing fireblocks.api-key")
 		}
