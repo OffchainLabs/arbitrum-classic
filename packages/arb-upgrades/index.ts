@@ -126,7 +126,7 @@ export const initUpgrades = (
 
   const getBuildInfoString = async (contractName: string) => {
     const names = await hre.artifacts.getAllFullyQualifiedNames()
-    const contracts = names.filter(curr => curr.endsWith(contractName))
+    const contracts = names.filter(curr => curr.endsWith(`:${contractName}`))
     if (contracts.length !== 1) throw new Error('Contract not found')
     const info = await hre.artifacts.getBuildInfo(contracts[0])
     return JSON.stringify(info)
@@ -186,8 +186,12 @@ export const initUpgrades = (
       const contractFactory = (
         await hre.ethers.getContractFactory(contractName)
       ).connect(signer)
-      // TODO: ensure we're on the right layer?
-      const newLogic = await contractFactory.deploy()
+
+      // handle Rollup's constructor:
+      const newLogic =
+        contractName === ContractNames.Rollup
+          ? await contractFactory.deploy(42161)
+          : await contractFactory.deploy()
       const deployedContract = await newLogic.deployed()
       const receipt = await deployedContract.deployTransaction.wait()
 
@@ -376,7 +380,6 @@ export const initUpgrades = (
 
   const verifyCurrentImplementations = async () => {
     await compileTask
-
     console.log('Verifying deployments:')
 
     const { data: deploymentsJsonData } = await getDeployments()
