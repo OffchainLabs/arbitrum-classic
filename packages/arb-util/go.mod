@@ -8,6 +8,7 @@ require (
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.0.4
 	github.com/gobwas/ws-examples v0.0.0-20190625122829-a9e8908d9484
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/knadh/koanf v1.1.0
 	github.com/mailru/easygo v0.0.0-20190618140210-3c14a0dc985f
 	github.com/mitchellh/mapstructure v1.4.1

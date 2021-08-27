@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
@@ -542,7 +543,16 @@ func (db *TxDB) LatestSnapshot() (*snapshot.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return db.getSnapshotForInfo(block)
+	snap, err := db.getSnapshotForInfo(block)
+	if err != nil {
+		if strings.Contains(err.Error(), "block not in cache") {
+			logger.Error().Hex("block", block.Header.Number.Bytes()).Msg("latest block is not in cache")
+		}
+
+		return nil, err
+	}
+
+	return snap, nil
 }
 
 func (db *TxDB) SubscribeChainEvent(ch chan<- ethcore.ChainEvent) event.Subscription {

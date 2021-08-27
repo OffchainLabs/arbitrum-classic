@@ -9,8 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -93,7 +91,7 @@ func NewValidator(
 
 // removeOldStakers removes the stakes of all currently staked validators except
 // its own if dontRemoveSelf is true
-func (v *Validator) removeOldStakers(ctx context.Context, dontRemoveSelf bool) (*types.Transaction, error) {
+func (v *Validator) removeOldStakers(ctx context.Context, dontRemoveSelf bool) (*ethbridge.ArbTransaction, error) {
 	stakersToEliminate, err := v.validatorUtils.RefundableStakers(ctx)
 	if err != nil {
 		return nil, err
@@ -115,7 +113,7 @@ func (v *Validator) removeOldStakers(ctx context.Context, dontRemoveSelf bool) (
 	return v.wallet.ReturnOldDeposits(ctx, stakersToEliminate)
 }
 
-func (v *Validator) resolveTimedOutChallenges(ctx context.Context) (*types.Transaction, error) {
+func (v *Validator) resolveTimedOutChallenges(ctx context.Context) (*ethbridge.ArbTransaction, error) {
 	challengesToEliminate, err := v.validatorUtils.TimedOutChallenges(ctx, 10)
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/ethereum/go-ethereum v1.10.4
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/heptiolabs/healthcheck v0.0.0-20180807145615-6ff867650f40
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
