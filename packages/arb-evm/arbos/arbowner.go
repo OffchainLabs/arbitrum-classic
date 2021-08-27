@@ -72,6 +72,10 @@ func SetChainParameterData(paramId [32]byte, val *big.Int) []byte {
     return makeFuncData(setChainParameterABI, paramId, val)
 }
 
+func AddChainOwnerData(address common.Address) []byte {
+    return makeFuncData(addChainOwnerABI, address)
+}
+
 func StartArbOSUpgradeData() []byte {
 	return makeFuncData(startArbOSUpgradeABI)
 }

@@ -47,7 +47,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        GiveOwnershipData(common.RandAddress()),
+		Data:        arbos.AddChainOwnerData(common.RandAddress()),
 	}
 
 	tx3 := message.Transaction{
@@ -56,7 +56,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        GiveOwnershipData(message.L2RemapAccount(sender)),
+		Data:        arbos.AddChainOwnerData(message.L2RemapAccount(sender)),
 	}
 
 	tx4 := message.Transaction{
@@ -104,6 +104,3 @@ func TestOwner(t *testing.T) {
 	}
 }
 
-func GiveOwnershipData(newOwnerAddr common.Address) []byte {
-	return arbos.AddChainOwnerData(newOwnerAddr)
-}
