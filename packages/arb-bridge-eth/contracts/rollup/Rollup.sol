@@ -69,7 +69,7 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     /// @notice DEPRECATED -- this method is deprecated but still mantained for backward compatibility
     /// @dev this actually returns the avmGasSpeedLimitPerBlock
     /// @return this actually returns the avmGasSpeedLimitPerBlock
-    function arbGasSpeedLimitPerBlock() public view returns (uint256) {
+    function arbGasSpeedLimitPerBlock() external view returns (uint256) {
         return avmGasSpeedLimitPerBlock;
     }
 }
