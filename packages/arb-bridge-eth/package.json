@@ -37,7 +37,8 @@
     "docker:geth": "rm -rf deployments/parity && ./scripts/launch-geth",
     "verify": "hardhat etherscan-verify --api-key $(dotenv -p ETHERSCAN_API_KEY)",
     "typechain": "hardhat typechain",
-    "slither": "slither . --hardhat-artifacts-directory build/contracts"
+    "slither": "slither . --hardhat-artifacts-directory build/contracts",
+    "hardhat": "hardhat"
   },
   "dependencies": {
     "@openzeppelin/contracts": "3.4.0",
@@ -70,7 +71,7 @@
     "eslint-plugin-mocha": "^9.0.0",
     "eslint-plugin-prettier": "^3.4.0",
     "ethereum-waffle": "^3.2.0",
-    "hardhat": "^2.4.3",
+    "hardhat": "^2.6.1",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-spdx-license-identifier": "^2.0.2",
     "mocha": "^8.2.1",
