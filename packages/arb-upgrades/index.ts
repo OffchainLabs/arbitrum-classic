@@ -611,5 +611,6 @@ export const initUpgrades = (
     transferAdmin,
     transferBeaconOwner,
     removeBuildInfoFiles,
+    getDeployments,
   }
 }

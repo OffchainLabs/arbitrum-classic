@@ -155,6 +155,64 @@ task(
   await removeBuildInfoFiles()
 })
 
+task('deploy-outbox').setAction(async (_, hre) => {
+  const { getDeployments } = initUpgrades(hre, __dirname)
+  const { data } = await getDeployments()
+  const rollupAddress = data.contracts.Rollup.proxyAddress
+  const bridgeAddress = data.contracts.Bridge.proxyAddress
+  const proxyAdminAddress = data.proxyAdminAddress
+
+  console.log('Sanity checking ')
+  const Rollup = (await hre.ethers.getContractFactory('Rollup')).attach(
+    rollupAddress
+  )
+  await Rollup.getUserFacet()
+  const Bridge = (await hre.ethers.getContractFactory('Bridge')).attach(
+    bridgeAddress
+  )
+  await Bridge.activeOutbox()
+  const ProxyAdmin = (await hre.ethers.getContractFactory('ProxyAdmin')).attach(
+    proxyAdminAddress
+  )
+  await ProxyAdmin.owner()
+
+  console.log(
+    'Rollup, Bridge, and ProxyAdmin look like a Rollup, Bridge, and ProxyAdmin (respectively). Deploying Outbox:'
+  )
+
+  const OutboxFactory = await hre.ethers.getContractFactory('Outbox')
+  console.log('Deploying outbox logic')
+  const OutboxLogic = await OutboxFactory.deploy()
+  await OutboxLogic.deployed()
+  console.log('Outbox logic deployed at:', OutboxLogic.address)
+
+  console.log('Deploying Outbox TransparentUpgradeableProxy')
+  const TransparentUpgradeableProxyFactory =
+    await hre.ethers.getContractFactory('TransparentUpgradeableProxy')
+  const OutboxProxyDeployed = await TransparentUpgradeableProxyFactory.deploy(
+    OutboxLogic.address,
+    proxyAdminAddress,
+    '0x'
+  )
+  await OutboxProxyDeployed.deployed()
+  console.log('Outbox proxy deployed at', OutboxProxyDeployed.address)
+
+  console.log('Initializing Outbox')
+  const Outbox = OutboxLogic.attach(OutboxProxyDeployed.address)
+  const initializeRes = await Outbox.initialize(rollupAddress, bridgeAddress)
+  const initializeRec = await initializeRes.wait()
+  console.log('Outbox initialized', initializeRec)
+
+  console.log('Setting Outbox')
+
+  const RollupAdmin = (
+    await hre.ethers.getContractFactory('RollupAdmin')
+  ).attach(rollupAddress)
+  const setRollupRes = await RollupAdmin.setOutbox(OutboxProxyDeployed.address)
+  const setRollupRec = await setRollupRes.wait()
+  console.log('Outbox set', setRollupRec)
+  console.log('all set 👍')
+})
 const config = {
   defaultNetwork: 'hardhat',
   paths: {
