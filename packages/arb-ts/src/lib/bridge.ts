@@ -631,8 +631,8 @@ export class Bridge {
     )
   }
 
-  public async getL2ToL1EventData(destinationAddress: string) {
-    return BridgeHelper.getL2ToL1EventData(destinationAddress, this.l2Provider)
+  public async getL2ToL1EventData(fromAddress: string) {
+    return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider)
   }
 
   public async getOutboxAddress() {

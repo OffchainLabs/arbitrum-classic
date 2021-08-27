@@ -709,7 +709,7 @@ export class BridgeHelper {
   }
 
   static getL2ToL1EventData = async (
-    destinationAddress: string,
+    fromAddress: string,
     l2Provider: providers.Provider
   ) => {
     const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
@@ -717,7 +717,7 @@ export class BridgeHelper {
     const logs = await BridgeHelper.getEventLogs(
       'L2ToL1Transaction',
       contract,
-      [ethers.utils.hexZeroPad(destinationAddress, 32)]
+      [ethers.utils.hexZeroPad(fromAddress, 32)]
     )
 
     return logs.map(
