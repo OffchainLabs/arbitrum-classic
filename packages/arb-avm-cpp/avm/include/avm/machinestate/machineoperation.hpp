@@ -98,7 +98,6 @@ void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
 BlockReason sideload(MachineState& m);
 
-void wasm_test(MachineState& m);
 void wasm_compile(MachineState& m);
 void wasm_run(MachineState& m);
 

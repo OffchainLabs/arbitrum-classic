@@ -263,7 +263,6 @@ ParsedSerializedVal parseRecord(
         }
         case WASM_CODE_POINT: {
             it += TUP_NUM_LENGTH;
-            std::cerr << "deserialize here\n";
             return WasmValueHash{deserializeUint256t(buf)};
         }
         default: {
@@ -533,7 +532,7 @@ GetResults processVal(const ReadTransaction& tx,
 GetResults processVal(const ReadTransaction& tx,
                       const WasmValueHash& val_hash,
                       std::vector<ValueBeingParsed>& val_stack,
-                      std::set<uint64_t>& segment_ids,
+                      std::set<uint64_t>&,
                       const uint32_t,
                       ValueCache& val_cache) {
     if (auto val = val_cache.loadIfExists(val_hash.hash)) {
@@ -543,7 +542,6 @@ GetResults processVal(const ReadTransaction& tx,
 
     // Value not in cache, so need to load from database
     auto results = getValue(tx, val_hash.hash, val_cache);
-    // auto results = getStoredValue(tx, val_hash);
     if (std::holds_alternative<rocksdb::Status>(results)) {
         return GetResults{0, std::get<rocksdb::Status>(results), {}};
     }
@@ -562,15 +560,15 @@ GetResults processVal(const ReadTransaction& tx,
         auto res = applyValue(val, 0, val_stack);
         return res;
     }
+    throw std::runtime_error("expected tuple for wasm codepoint");
 }
 
 GetResults processFirstVal(const ReadTransaction& tx,
                            const WasmValueHash& val_hash,
                            std::vector<ValueBeingParsed>& val_stack,
-                           std::set<uint64_t>& segment_ids,
+                           std::set<uint64_t>&,
                            const uint32_t,
                            ValueCache& val_cache) {
-    std::cerr << "process first wasm\n";
     if (auto val = val_cache.loadIfExists(val_hash.hash)) {
         // Use cached value
         val_stack.emplace_back(std::move(*val), 0);
@@ -590,6 +588,7 @@ GetResults processFirstVal(const ReadTransaction& tx,
         val_stack.emplace_back(std::move(val), 0);
         return GetResults{0, rocksdb::Status::OK(), {}};
     }
+    throw std::runtime_error("expected tuple for wasm codepoint");
 }
 
 GetResults processFirstVal(const ReadTransaction& tx,
@@ -725,7 +724,6 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
     std::vector<value> items_to_save{val};
     while (!items_to_save.empty()) {
         auto next_item = std::move(items_to_save.back());
-        // std::cerr << "saving " << next_item << "\n"; 
         items_to_save.pop_back();
         auto hash = hash_value(next_item);
         std::vector<unsigned char> hash_key;

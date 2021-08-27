@@ -119,8 +119,6 @@ enum class OpCode : uint8_t {
     SET_BUFFER256,
     WASM_COMPILE,
     WASM_RUN,
-
-    WASM_TEST = 0xf1,
 };
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
@@ -208,7 +206,6 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::SET_BUFFER64, "setbuffer64"},
     {OpCode::SET_BUFFER256, "setbuffer256"},
 
-    {OpCode::WASM_TEST, "wasm_test"},
     {OpCode::WASM_COMPILE, "wasm_compile"},
     {OpCode::WASM_RUN, "wasm_run"},
 
@@ -317,8 +314,6 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::SET_BUFFER256,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
 
-        {OpCode::WASM_TEST,
-         {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::WASM_COMPILE,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::WASM_RUN,
@@ -420,7 +415,6 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::SET_BUFFER64, {}},
                                {OpCode::SET_BUFFER256, {}},
 
-                               {OpCode::WASM_TEST, {}},
                                {OpCode::WASM_COMPILE, {}},
                                {OpCode::WASM_RUN, {}},
 
@@ -514,7 +508,6 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::SET_BUFFER64, 100},
     {OpCode::SET_BUFFER256, 100},
 
-    {OpCode::WASM_TEST, 100000},
     {OpCode::WASM_COMPILE, 1000000},
     {OpCode::WASM_RUN, 1000000},
 

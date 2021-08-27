@@ -242,7 +242,6 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
             nbuffer1 = nbuffer;
             aligned = false;
         }
-        // std::cerr << "setting " << (loc+i) << ":" << int(static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff)) << "\n";
         nbuffer = nbuffer.set(
             loc + i,
             static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff));
@@ -251,7 +250,6 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
     auto nproof1 = nbuffer1.makeNormalizationProof();
 
     if (aligned) {
-        std::cerr << "they were aligned " << v << "\n";
         insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
@@ -444,12 +442,12 @@ CodeResult wasmAvmToCode(WasmResult &res) {
     std::vector<CodePointStub> points;
     std::vector<value> tab_lst;
 
-    for (int i = 0; i < res.insn->size(); i++) {
+    for (uint64_t i = 0; i < res.insn->size(); i++) {
         points.push_back(stub);
         stub = code->addOperation(stub.pc, (*res.insn)[i]);
     }
 
-    for (int i = 0; i < res.table.size(); i++) {
+    for (uint64_t i = 0; i < res.table.size(); i++) {
         auto offset = res.table[i].first;
         if (offset >= tab_lst.size()) {
             tab_lst.resize(offset+1);
@@ -457,9 +455,6 @@ CodeResult wasmAvmToCode(WasmResult &res) {
         tab_lst[offset] = points[res.table[i].second];
     }
     auto table = make_table(tab_lst);
-
-    // std::cerr << "Made table " << hash_value(table) << " \n";
-    // std::cerr << "Codepoint " << hash_value(stub) << " \n";
 
     return {code, table, stub};
 }
@@ -471,62 +466,6 @@ WasmCodePoint wasmAvmToCodePoint(WasmResult &wres, std::vector<uint8_t>& wasm_mo
     return {std::move(tpl), std::move(runner)};
 }
 
-MachineState makeWasmMachine(uint64_t len, Buffer buf) {
-    std::ifstream labels_input_stream("/home/sami/arb-os/wasm-labels.json");
-    if (!labels_input_stream.is_open()) {
-        throw std::runtime_error("doesn't exist");
-    }
-    nlohmann::json labels_json;
-    labels_input_stream >> labels_json;
-    std::vector<bool> has_labels;
-    for (auto elem : labels_json) {
-        has_labels.push_back(elem.get<int>() == 1);
-    }
-    // Load JSON
-    std::ifstream executable_input_stream("/home/sami/arb-os/wasm-program.json");
-    if (!executable_input_stream.is_open()) {
-        throw std::runtime_error("doesn't exist");
-    }
-    nlohmann::json executable_json;
-    executable_input_stream >> executable_json;
-    auto& json_code = executable_json.at("code");
-    if (!json_code.is_array()) {
-        throw std::runtime_error("expected code to be array");
-    }
-    auto code = std::make_shared<Code>(0);
-    CodePointStub stub = code->addSegment();
-    std::vector<value> labels;
-    int idx = json_code.size();
-    for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
-        Operation op = simple_operation_from_json(*it);
-        stub = code->addOperation(stub.pc, op);
-        idx--;
-        // std::cerr << "Loaded op " << op << " idx " << idx << "\n";
-        if (has_labels[idx]) {
-            // std::cerr << "Label " << stub << " at " << labels.size() << "\n";
-            labels.push_back(stub);
-        }
-    }
-
-    std::reverse(labels.begin(), labels.end());
-
-    auto table = make_table(labels);
-    std::cerr << "Here ???? " << intx::to_string(stub.hash, 16) << " " << labels.size() << " \n";
-    // std::cerr << "Table " << table << " hash " << intx::to_string(hash_value(table), 16) << "\n";
-    std::cerr << "Table hash " << intx::to_string(hash_value(table), 16) << " size " << getSize(table) << "\n";
-    MachineState state(code, 0);
-    state.stack.push(len);
-    state.stack.push(buf);
-    state.stack.push(std::move(table));
-    state.stack.push(0);
-    state.arb_gas_remaining = 1000000;
-    state.output.arb_gas_used = 0;
-
-    std::cerr << state;
-
-    return state;
-}
-
 MachineState makeWasmMachine(WasmResult &wres, uint64_t len, Buffer buf, value arg) {
     auto res = wasmAvmToCode(wres);
     MachineState state(res.code, 0);
@@ -534,11 +473,8 @@ MachineState makeWasmMachine(WasmResult &wres, uint64_t len, Buffer buf, value a
     state.stack.push(buf);
     state.stack.push(std::move(res.table));
     state.stack.push(std::move(arg));
-    std::cerr << "len " << len << "buf " << value(buf) << "arg " << arg << "\n";
     state.arb_gas_remaining = 1000000000000;
     state.output.arb_gas_used = 0;
-
-    std::cerr << state;
 
     return state;
 }
@@ -548,7 +484,7 @@ uint256_t runWasmMachine(MachineState &machine_state) {
 
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
-    uint64_t counter = 0;
+    // uint64_t counter = 0;
     while (true) {
         if (has_gas_limit) {
             if (!machine_state.context.go_over_gas) {
@@ -570,10 +506,10 @@ uint256_t runWasmMachine(MachineState &machine_state) {
         if (machine_state.stack.stacksize() > 0 && !std::get_if<Tuple>(&machine_state.stack[0])) {
             std::cerr << "stack top " << machine_state.stack[0] << "\n";
         }
-*/
        if (counter++ % 1000000 == 0) {
            std::cerr << "step " << counter << "\n";
        }
+*/
 
         auto& instruction = machine_state.loadCurrentInstruction();
         if (instruction.op.opcode == OpCode::HALT) {
@@ -582,16 +518,11 @@ uint256_t runWasmMachine(MachineState &machine_state) {
 
         block_reason = machine_state.runOne();
         
-        /*
-        if (machine_state.stack.stacksize() > 0 && getSize(machine_state.stack[0]) < 100) {
-            std::cerr << "stack top " << machine_state.stack[0] << "\n";
-        }*/
 
         if (!std::get_if<NotBlocked>(&block_reason)) {
             break;
         }
     }    
-    // return start_gas - machine_state.arb_gas_remaining - 10;
     return start_gas - machine_state.arb_gas_remaining;
 }
 
@@ -604,20 +535,15 @@ void MachineState::marshalWasmProof(OneStepProof &proof) const {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
 
-    std::cerr << "Final machine opcode " << current_op << "\n";
-
     std::vector<MarshalLevel> stackPops = { MarshalLevel::SINGLE, MarshalLevel::SINGLE };
 
     std::vector<MarshalLevel> auxStackPops;
 
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
     if (current_op.immediate && !stackPops.empty()) {
-        std::cerr << "??? here shouldn't be immeds\n";
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.cbegin());
     }
-
-    std::cerr << "Got results " << stack[0] << " and " << stack[1] << "\n";
 
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
@@ -653,8 +579,6 @@ void MachineState::marshalWasmCompileProof(OneStepProof &proof) const {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
 
-    std::cerr << "Final machine opcode " << current_op << "\n";
-
     std::vector<MarshalLevel> stackPops = {
         MarshalLevel::SINGLE,
         MarshalLevel::SINGLE,
@@ -667,12 +591,9 @@ void MachineState::marshalWasmCompileProof(OneStepProof &proof) const {
 
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
     if (current_op.immediate && !stackPops.empty()) {
-        std::cerr << "??? here shouldn't be immeds\n";
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.cbegin());
     }
-
-    std::cerr << "Got results " << stack[0] << " and " << stack[1] << "\n";
 
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
@@ -702,14 +623,7 @@ void MachineState::marshalWasmCompileProof(OneStepProof &proof) const {
 MachineState MachineState::initialWasmMachine() const {
     auto currentInstruction = loadCurrentInstruction();
     auto& op = currentInstruction.op;
-    if (op.opcode == OpCode::WASM_TEST) {
-        auto elem0 = getStackOrImmed(0, op);
-        auto elem1 = getStackOrImmed(1, op);
-        uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
-        Buffer buf = *std::get_if<Buffer>(&elem1);
-
-        return makeWasmMachine(len, buf);
-    } else if (op.opcode == OpCode::WASM_RUN) {
+    if (op.opcode == OpCode::WASM_RUN) {
         auto elem_arg = getStackOrImmed(0, op);
         auto elem0 = getStackOrImmed(1, op);
         auto elem1 = getStackOrImmed(2, op);
@@ -741,6 +655,8 @@ MachineState MachineState::initialWasmMachine() const {
         auto res = copy.run_wasm(vec2buf(bytes), bytes.size());
 
         return makeWasmMachine(res, len, buf, 0);
+    } else {
+        throw std::runtime_error("Not a wasm instruction");
     }
 }
 
@@ -794,14 +710,11 @@ OneStepProof MachineState::marshalForProof() const {
     }
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
     if (current_op.immediate && !stackPops.empty()) {
-        std::cerr << "Has immediate\n";
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.cbegin());
     }
 
     OneStepProof proof;
-
-    std::cerr << "Stack pops " << stackPops.size() << " op " << current_op.opcode << "\n";
 
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
@@ -829,38 +742,22 @@ OneStepProof MachineState::marshalForProof() const {
 
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
 
-    if (current_op.opcode == OpCode::WASM_TEST || current_op.opcode == OpCode::WASM_RUN) {
+    if (current_op.opcode == OpCode::WASM_RUN) {
 
         auto state = initialWasmMachine();
 
-        std::cerr << "Starting " << intx::to_string(state.hash().value(), 16) << "\n";
-
         uint256_t gasUsed = runWasmMachine(state);
 
-        std::cerr << "Stopping " << intx::to_string(state.hash().value(), 16) << " gas used " << gasUsed << "\n";
-
         state.marshalWasmProof(proof);
-        std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
         marshal_uint256_t(gasUsed, proof.buffer_proof);
-
-        std::cerr << "state before " << *this << "\n";
-
     } else if (current_op.opcode == OpCode::WASM_COMPILE) {
 
         auto state = initialWasmMachine();
 
-        std::cerr << "Starting " << intx::to_string(state.hash().value(), 16) << "\n";
-
         uint256_t gasUsed = runWasmMachine(state);
 
-        std::cerr << "Stopping " << intx::to_string(state.hash().value(), 16) << " gas used " << gasUsed << "\n";
-
         state.marshalWasmCompileProof(proof);
-        std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
         marshal_uint256_t(gasUsed, proof.buffer_proof);
-
-        std::cerr << "state before " << *this << "\n";
-
     } else if (!underflowed) {
         // Don't need a buffer proof if we're underflowing
         marshalBufferProof(proof);
@@ -924,9 +821,6 @@ BlockReason MachineState::runOne() {
     }
 
     auto& instruction = loadCurrentInstruction();
-
-    // std::cerr << "running " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
-    // std::cerr << "state " << *this << "\n";
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
@@ -1293,9 +1187,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::SET_BUFFER256:
             machineoperation::setbuffer256(*this);
-            break;
-        case OpCode::WASM_TEST:
-            machineoperation::wasm_test(*this);
             break;
         case OpCode::WASM_COMPILE:
             machineoperation::wasm_compile(*this);
