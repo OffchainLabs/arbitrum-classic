@@ -128,16 +128,16 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
 
     /**
      * @notice Set speed limit per block
-     * @param newArbGasSpeedLimitPerBlock maximum arbgas to be used per block
+     * @param newAvmGasSpeedLimitPerBlock maximum avmgas to be used per block
      */
-    function setArbGasSpeedLimitPerBlock(uint256 newArbGasSpeedLimitPerBlock) external override {
-        arbGasSpeedLimitPerBlock = newArbGasSpeedLimitPerBlock;
+    function setAvmGasSpeedLimitPerBlock(uint256 newAvmGasSpeedLimitPerBlock) external override {
+        avmGasSpeedLimitPerBlock = newAvmGasSpeedLimitPerBlock;
         emit OwnerFunctionCalled(11);
     }
 
     /**
      * @notice Set base stake required for an assertion
-     * @param newBaseStake maximum arbgas to be used per block
+     * @param newBaseStake minimum amount of stake required
      */
     function setBaseStake(uint256 newBaseStake) external override {
         baseStake = newBaseStake;
@@ -156,27 +156,19 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     }
 
     /**
-     * @notice Set max delay in blocks for sequencer inbox
+     * @notice Set max delay for sequencer inbox
      * @param newSequencerInboxMaxDelayBlocks max number of blocks
-     */
-    function setSequencerInboxMaxDelayBlocks(uint256 newSequencerInboxMaxDelayBlocks)
-        external
-        override
-    {
-        ISequencerInbox(sequencerBridge).setMaxDelayBlocks(newSequencerInboxMaxDelayBlocks);
-        emit OwnerFunctionCalled(14);
-    }
-
-    /**
-     * @notice Set max delay in seconds for sequencer inbox
      * @param newSequencerInboxMaxDelaySeconds max number of seconds
      */
-    function setSequencerInboxMaxDelaySeconds(uint256 newSequencerInboxMaxDelaySeconds)
-        external
-        override
-    {
-        ISequencerInbox(sequencerBridge).setMaxDelaySeconds(newSequencerInboxMaxDelaySeconds);
-        emit OwnerFunctionCalled(15);
+    function setSequencerInboxMaxDelay(
+        uint256 newSequencerInboxMaxDelayBlocks,
+        uint256 newSequencerInboxMaxDelaySeconds
+    ) external override {
+        ISequencerInbox(sequencerBridge).setMaxDelay(
+            newSequencerInboxMaxDelayBlocks,
+            newSequencerInboxMaxDelaySeconds
+        );
+        emit OwnerFunctionCalled(14);
     }
 
     /**
@@ -228,8 +220,8 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
      * @notice Updates a sequencer address at the sequencer inbox
      * @param newSequencer new sequencer address to be used
      */
-    function setSequencer(address newSequencer) external override {
-        ISequencerInbox(sequencerBridge).setSequencer(newSequencer);
+    function setIsSequencer(address newSequencer, bool isSequencer) external override {
+        ISequencerInbox(sequencerBridge).setIsSequencer(newSequencer, isSequencer);
         emit OwnerFunctionCalled(19);
     }
 
@@ -280,15 +272,13 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     ) external override whenPaused {
         require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
 
-        // The admin does not need to prove against the sequencer bridge
-        RollupLib.Assertion memory assertion =
-            RollupLib.decodeAssertion(
-                assertionBytes32Fields,
-                assertionIntFields,
-                beforeProposedBlock,
-                beforeInboxMaxCount,
-                sequencerBridge.messageCount()
-            );
+        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
+            assertionBytes32Fields,
+            assertionIntFields,
+            beforeProposedBlock,
+            beforeInboxMaxCount,
+            sequencerBridge.messageCount()
+        );
 
         createNewNode(
             assertion,
@@ -296,7 +286,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
             assertionIntFields,
             sequencerBatchProof,
             CreateNodeDataFrame({
-                arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
+                avmGasSpeedLimitPerBlock: avmGasSpeedLimitPerBlock,
                 confirmPeriodBlocks: confirmPeriodBlocks,
                 prevNode: prevNode,
                 sequencerInbox: sequencerBridge,

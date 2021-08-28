@@ -224,7 +224,7 @@ func (t Transaction) AsDataSafe() []byte {
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
 	ret = append(ret, math.U256Bytes(t.SequenceNum)...)
-	ret = append(ret, addressData(t.DestAddress)...)
+	ret = append(ret, AddressData(t.DestAddress)...)
 	ret = append(ret, math.U256Bytes(t.Payment)...)
 	ret = append(ret, t.Data...)
 	return ret
@@ -234,7 +234,7 @@ func (t Transaction) MessageID(sender common.Address, chainId *big.Int) common.H
 	l2 := NewSafeL2Message(t)
 	dataHash := hashing.SoliditySHA3(l2.AsData())
 	inner := hashing.SoliditySHA3(hashing.Uint256(chainId), hashing.Bytes32(dataHash))
-	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
+	return hashing.SoliditySHA3(AddressData(sender), hashing.Bytes32(inner))
 }
 
 type BasicTx struct {
@@ -281,7 +281,7 @@ func (t BasicTx) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.MaxGas))...)
 	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.GasPriceBid))...)
-	ret = append(ret, addressData(t.DestAddress)...)
+	ret = append(ret, AddressData(t.DestAddress)...)
 	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.Payment))...)
 	ret = append(ret, t.Data...)
 	return ret

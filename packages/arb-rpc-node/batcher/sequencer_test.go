@@ -151,7 +151,7 @@ func TestSequencerBatcher(t *testing.T) {
 	l2ChainId := common.RandBigInt()
 
 	chainIdConfig := message.ChainIDConfig{ChainId: l2ChainId}
-	init, err := message.NewInitMessage(protocol.ChainParams{}, common.RandAddress(), []message.ChainConfigOption{chainIdConfig})
+	init, err := message.NewInitMessage(protocol.ChainParams{}, owner, []message.ChainConfigOption{chainIdConfig})
 	test.FailIfError(t, err)
 	extraConfig := init.ExtraConfig
 
@@ -176,6 +176,15 @@ func TestSequencerBatcher(t *testing.T) {
 		sequencerDelaySeconds,
 		extraConfig,
 	)
+
+	config := configuration.Config{
+		Node: configuration.Node{
+			Sequencer: configuration.Sequencer{
+				CreateBatchBlockInterval:   40,
+				DelayedMessagesTargetDelay: 1,
+			},
+		},
+	}
 
 	bridgeUtilsAddr, _, _, err := ethbridgecontracts.DeployBridgeUtils(auth, client)
 	test.FailIfError(t, err)
@@ -212,10 +221,26 @@ func TestSequencerBatcher(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
-	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	_, err = seqMon.StartInboxReader(
+		ctx,
+		client,
+		common.NewAddressFromEth(rollupAddr),
+		rollupBlock.Int64(),
+		common.NewAddressFromEth(bridgeUtilsAddr),
+		nil,
+		dummySequencerFeed,
+	)
 	test.FailIfError(t, err)
 
-	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	_, err = otherMon.StartInboxReader(
+		ctx,
+		client,
+		common.NewAddressFromEth(rollupAddr),
+		rollupBlock.Int64(),
+		common.NewAddressFromEth(bridgeUtilsAddr),
+		nil,
+		dummySequencerFeed,
+	)
 	test.FailIfError(t, err)
 
 	batcher, err := NewSequencerBatcher(
@@ -224,14 +249,12 @@ func TestSequencerBatcher(t *testing.T) {
 		l2ChainId,
 		seqMon.Reader,
 		client,
-		configuration.Sequencer{
-			CreateBatchBlockInterval:   40,
-			DelayedMessagesTargetDelay: 1,
-		},
 		seqInbox,
 		auth,
 		dummyDataSigner,
 		nil,
+		&config,
+		&config.Wallet,
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true

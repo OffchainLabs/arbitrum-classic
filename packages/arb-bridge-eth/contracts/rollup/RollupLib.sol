@@ -21,12 +21,16 @@ pragma solidity ^0.6.11;
 import "../challenge/ChallengeLib.sol";
 import "./INode.sol";
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
 library RollupLib {
+    using SafeMath for uint256;
+
     struct Config {
         bytes32 machineHash;
         uint256 confirmPeriodBlocks;
         uint256 extraChallengeTimeBlocks;
-        uint256 arbGasSpeedLimitPerBlock;
+        uint256 avmGasSpeedLimitPerBlock;
         uint256 baseStake;
         address stakeToken;
         address owner;
@@ -143,8 +147,7 @@ library RollupLib {
         pure
         returns (uint256)
     {
-        require(assertion.afterState.gasUsed > assertion.beforeState.gasUsed, "GAS_USED_UNDERFLOW");
-        return assertion.afterState.gasUsed - assertion.beforeState.gasUsed;
+        return assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
     }
 
     function challengeRoot(

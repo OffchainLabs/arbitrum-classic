@@ -40,7 +40,7 @@ const zerobytes32 = ethers.constants.HashZero
 const stakeRequirement = 10
 const stakeToken = ethers.constants.AddressZero
 const confirmationPeriodBlocks = 100
-const arbGasSpeedLimitPerBlock = 1000000
+const avmGasSpeedLimitPerBlock = 1000000
 const minimumAssertionPeriod = 75
 const sequencerDelayBlocks = 15
 const sequencerDelaySeconds = 900
@@ -74,7 +74,7 @@ async function getDefaultConfig(
     initialVmState,
     _confirmationPeriodBlocks,
     0,
-    arbGasSpeedLimitPerBlock,
+    avmGasSpeedLimitPerBlock,
     stakeRequirement,
     stakeToken,
     await accounts[0].getAddress(), // owner
@@ -188,7 +188,7 @@ async function makeSimpleNode(
   const challengedAssertion = makeSimpleAssertion(
     parentNode.afterState,
     (block.number - parentNode.afterState.proposedBlock + 1) *
-      arbGasSpeedLimitPerBlock
+      avmGasSpeedLimitPerBlock
   )
   const { tx, node, event } = await rollup.stakeOnNewNode(
     parentNode,
@@ -231,7 +231,7 @@ async function makeNode(
   const assertion = makeAssertion(
     parentNode.afterState,
     (block.number - parentNode.afterState.proposedBlock + 1) *
-      arbGasSpeedLimitPerBlock,
+      avmGasSpeedLimitPerBlock,
     sends
   )
   const { tx, node, event } = await rollup.stakeOnNewNode(
@@ -509,7 +509,7 @@ describe('ArbRollup', () => {
   it('should fail to confirm first staker node', async function () {
     await tryAdvanceChain(
       confirmationPeriodBlocks +
-        challengedNode.checkTime(arbGasSpeedLimitPerBlock)
+        challengedNode.checkTime(avmGasSpeedLimitPerBlock)
     )
     await expect(
       rollup.confirmNextNode(zerobytes32, 0, [], zerobytes32, 0)
@@ -558,7 +558,7 @@ describe('ArbRollup', () => {
   it('asserter should win via timeout', async function () {
     await tryAdvanceChain(
       confirmationPeriodBlocks +
-        challengedNode.checkTime(arbGasSpeedLimitPerBlock) +
+        challengedNode.checkTime(avmGasSpeedLimitPerBlock) +
         1
     )
     await challenge.connect(accounts[1]).timeout()
@@ -635,7 +635,7 @@ describe('ArbRollup', () => {
   it('challenger should win via timeout', async function () {
     await tryAdvanceChain(
       confirmationPeriodBlocks +
-        challengedNode.checkTime(arbGasSpeedLimitPerBlock) +
+        challengedNode.checkTime(avmGasSpeedLimitPerBlock) +
         1
     )
     await challenge.timeout()
@@ -819,7 +819,7 @@ describe('ArbRollup', () => {
     const assertion = makeSimpleAssertion(
       prevNode.afterState,
       (block.number - prevNode.afterState.proposedBlock + 1) *
-        arbGasSpeedLimitPerBlock
+        avmGasSpeedLimitPerBlock
     )
 
     const hasSibling = true

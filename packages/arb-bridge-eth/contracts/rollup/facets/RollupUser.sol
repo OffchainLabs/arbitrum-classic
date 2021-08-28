@@ -156,8 +156,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @param assertionBytes32Fields Assertion data for creating
      * @param assertionIntFields Assertion data for creating
      * @param beforeProposedBlock Block number at previous assertion
-     @ @param beforeInboxMaxCount Inbox count at previous assertion 
-     @ @param sequencerBatchProof Proof data for ensuring expected state of inbox (used in Nodehash to protect against reorgs)
+     * @param beforeInboxMaxCount Inbox count at previous assertion 
+     * @param sequencerBatchProof Proof data for ensuring expected state of inbox (used in Nodehash to protect against reorgs)
      */
     function stakeOnNewNode(
         bytes32 expectedNodeHash,
@@ -188,8 +188,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             require(
                 // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
                 assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
-                    // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                    gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
+                    // Consumes AvmGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
+                    gasUsed >= timeSinceLastNode.mul(avmGasSpeedLimitPerBlock) ||
                     assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
                     MAX_SEND_COUNT,
                 "TOO_SMALL"
@@ -203,7 +203,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             );
 
             // Don't allow an assertion to use above a maximum amount of gas
-            require(gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
+            require(gasUsed <= timeSinceLastNode.mul(avmGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
         }
         createNewNode(
             assertion,
@@ -211,7 +211,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             assertionIntFields,
             sequencerBatchProof,
             CreateNodeDataFrame({
-                arbGasSpeedLimitPerBlock: arbGasSpeedLimitPerBlock,
+                avmGasSpeedLimitPerBlock: avmGasSpeedLimitPerBlock,
                 confirmPeriodBlocks: confirmPeriodBlocks,
                 prevNode: latestStakedNode(msg.sender), // Ensure staker is staked on the previous node
                 sequencerInbox: sequencerBridge,

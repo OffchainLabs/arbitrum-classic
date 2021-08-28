@@ -44,7 +44,7 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     // Rollup Config
     uint256 public confirmPeriodBlocks;
     uint256 public extraChallengeTimeBlocks;
-    uint256 public arbGasSpeedLimitPerBlock;
+    uint256 public avmGasSpeedLimitPerBlock;
     uint256 public baseStake;
 
     // Bridge is an IInbox and IOutbox
@@ -65,6 +65,13 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     address[] internal facets;
 
     mapping(address => bool) isValidator;
+
+    /// @notice DEPRECATED -- this method is deprecated but still mantained for backward compatibility
+    /// @dev this actually returns the avmGasSpeedLimitPerBlock
+    /// @return this actually returns the avmGasSpeedLimitPerBlock
+    function arbGasSpeedLimitPerBlock() external view returns (uint256) {
+        return avmGasSpeedLimitPerBlock;
+    }
 }
 
 contract Rollup is Proxy, RollupBase {
@@ -80,7 +87,7 @@ contract Rollup is Proxy, RollupBase {
         return confirmPeriodBlocks != 0;
     }
 
-    // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, arbGasSpeedLimitPerBlock, baseStake ]
+    // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, avmGasSpeedLimitPerBlock, baseStake ]
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
         bytes32 _machineHash,
@@ -97,10 +104,9 @@ contract Rollup is Proxy, RollupBase {
         // calls initialize method in user facet
         require(_facets[0].isContract(), "FACET_0_NOT_CONTRACT");
         require(_facets[1].isContract(), "FACET_1_NOT_CONTRACT");
-        (bool success, ) =
-            _facets[1].delegatecall(
-                abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
-            );
+        (bool success, ) = _facets[1].delegatecall(
+            abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
+        );
         require(success, "FAIL_INIT_FACET");
 
         delayedBridge = IBridge(connectedContracts[0]);
@@ -113,8 +119,6 @@ contract Rollup is Proxy, RollupBase {
         rollupEventBridge.rollupInitialized(
             _rollupParams[0],
             _rollupParams[2],
-            _rollupParams[3],
-            _stakeToken,
             _owner,
             _extraConfig
         );
@@ -127,15 +131,14 @@ contract Rollup is Proxy, RollupBase {
 
         confirmPeriodBlocks = _rollupParams[0];
         extraChallengeTimeBlocks = _rollupParams[1];
-        arbGasSpeedLimitPerBlock = _rollupParams[2];
+        avmGasSpeedLimitPerBlock = _rollupParams[2];
         baseStake = _rollupParams[3];
         owner = _owner;
         // A little over 15 minutes
         minimumAssertionPeriod = 75;
         challengeExecutionBisectionDegree = 400;
 
-        sequencerBridge.setMaxDelayBlocks(sequencerInboxParams[0]);
-        sequencerBridge.setMaxDelaySeconds(sequencerInboxParams[1]);
+        sequencerBridge.setMaxDelay(sequencerInboxParams[0], sequencerInboxParams[1]);
 
         // facets[0] == admin, facets[1] == user
         facets = _facets;
@@ -144,7 +147,7 @@ contract Rollup is Proxy, RollupBase {
         require(isInit(), "INITIALIZE_NOT_INIT");
     }
 
-    function postUpgradeInit(address newAdminFacet) external {
+    function postUpgradeInit() external {
         // it is assumed the rollup contract is behind a Proxy controlled by a proxy admin
         // this function can only be called by the proxy admin contract
         address proxyAdmin = ProxyUtil.getProxyAdmin();
@@ -154,36 +157,24 @@ contract Rollup is Proxy, RollupBase {
         // because of that we need to update the admin facet logic to allow the owner to set
         // these values in the sequencer inbox
 
-        uint256 oldDelayBlocks = STORAGE_GAP_1;
-        uint256 oldDelaySeconds = STORAGE_GAP_2;
-
-        require(oldDelayBlocks == 6545, "ALREADY_POST_INIT");
-        require(oldDelaySeconds == 86400, "ALREADY_POST_INIT");
-
-        sequencerBridge.setMaxDelayBlocks(oldDelayBlocks);
-        sequencerBridge.setMaxDelaySeconds(oldDelaySeconds);
-
         STORAGE_GAP_1 = 0;
         STORAGE_GAP_2 = 0;
-
-        facets[0] = newAdminFacet;
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
-        bytes32 state =
-            RollupLib.stateHash(
-                RollupLib.ExecutionState(
-                    0, // total gas used
-                    _machineHash,
-                    0, // inbox count
-                    0, // send count
-                    0, // log count
-                    0, // send acc
-                    0, // log acc
-                    block.number, // block proposed
-                    1 // Initialization message already in inbox
-                )
-            );
+        bytes32 state = RollupLib.stateHash(
+            RollupLib.ExecutionState(
+                0, // total gas used
+                _machineHash,
+                0, // inbox count
+                0, // send count
+                0, // log count
+                0, // send acc
+                0, // log acc
+                block.number, // block proposed
+                1 // Initialization message already in inbox
+            )
+        );
         return
             INode(
                 nodeFactory.createNode(
@@ -221,10 +212,9 @@ contract Rollup is Proxy, RollupBase {
         require(msg.data.length >= 4, "NO_FUNC_SIG");
         address rollupOwner = owner;
         // if there is an owner and it is the sender, delegate to admin facet
-        address target =
-            rollupOwner != address(0) && rollupOwner == msg.sender
-                ? getAdminFacet()
-                : getUserFacet();
+        address target = rollupOwner != address(0) && rollupOwner == msg.sender
+            ? getAdminFacet()
+            : getUserFacet();
         require(target.isContract(), "TARGET_NOT_CONTRACT");
         return target;
     }

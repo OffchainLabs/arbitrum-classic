@@ -48,15 +48,20 @@ interface ISequencerInbox {
         uint256 seqBatchIndex
     );
 
-    event SequencerAddressUpdated(address newAddress);
-    event MaxDelayBlocksUpdated(uint256 newValue);
-    event MaxDelaySecondsUpdated(uint256 newValue);
+    /// @notice DEPRECATED - look at IsSequencerUpdated for new updates
+    // event SequencerAddressUpdated(address newAddress);
 
-    function setMaxDelayBlocks(uint256 newMaxDelayBlocks) external;
+    event IsSequencerUpdated(address addr, bool isSequencer);
+    event MaxDelayUpdated(uint256 newMaxDelayBlocks, uint256 newMaxDelaySeconds);
 
-    function setMaxDelaySeconds(uint256 newMaxDelaySeconds) external;
+    /// @notice DEPRECATED - look at MaxDelayUpdated for new updates
+    // event MaxDelayBlocksUpdated(uint256 newValue);
+    /// @notice DEPRECATED - look at MaxDelayUpdated for new updates
+    // event MaxDelaySecondsUpdated(uint256 newValue);
 
-    function setSequencer(address newSequencer) external;
+    function setMaxDelay(uint256 newMaxDelayBlocks, uint256 newMaxDelaySeconds) external;
+
+    function setIsSequencer(address addr, bool isSequencer) external;
 
     function messageCount() external view returns (uint256);
 
@@ -72,4 +77,9 @@ interface ISequencerInbox {
         external
         view
         returns (uint256, bytes32);
+
+    /// @notice DEPRECATED - use isSequencer instead
+    function sequencer() external view returns (address);
+
+    function isSequencer(address seq) external view returns (bool);
 }

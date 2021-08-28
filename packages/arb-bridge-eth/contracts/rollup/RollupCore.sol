@@ -362,11 +362,8 @@ contract RollupCore is IRollupCore {
         require(target <= current, "TOO_LITTLE_STAKE");
         uint256 amountWithdrawn = current.sub(target);
         staker.amountStaked = target;
-        uint256 initialWithdrawable = _withdrawableFunds[stakerAddress];
-        uint256 finalWithdrawable = initialWithdrawable.add(amountWithdrawn);
-        _withdrawableFunds[stakerAddress] = finalWithdrawable;
+        increaseWithdrawableFunds(stakerAddress, amountWithdrawn);
         emit UserStakeUpdated(stakerAddress, current, target);
-        emit UserWithdrawableFundsUpdated(stakerAddress, initialWithdrawable, finalWithdrawable);
         return amountWithdrawn;
     }
 
@@ -405,12 +402,9 @@ contract RollupCore is IRollupCore {
     function withdrawStaker(address stakerAddress) internal {
         Staker storage staker = _stakerMap[stakerAddress];
         uint256 initialStaked = staker.amountStaked;
-        uint256 initialWithdrawable = _withdrawableFunds[stakerAddress];
-        uint256 finalWithdrawable = initialWithdrawable.add(initialStaked);
-        _withdrawableFunds[stakerAddress] = finalWithdrawable;
+        increaseWithdrawableFunds(stakerAddress, initialStaked);
         deleteStaker(stakerAddress);
         emit UserStakeUpdated(stakerAddress, initialStaked, 0);
-        emit UserWithdrawableFundsUpdated(stakerAddress, initialWithdrawable, finalWithdrawable);
     }
 
     /**
@@ -479,14 +473,14 @@ contract RollupCore is IRollupCore {
     }
 
     function nodeDeadline(
-        uint256 arbGasSpeedLimitPerBlock,
+        uint256 avmGasSpeedLimitPerBlock,
         uint256 gasUsed,
         uint256 confirmPeriodBlocks,
         INode prevNode
     ) internal view returns (uint256 deadlineBlock) {
         // Set deadline rounding up to the nearest block
         uint256 checkTime =
-            gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
+            gasUsed.add(avmGasSpeedLimitPerBlock.sub(1)).div(avmGasSpeedLimitPerBlock);
 
         deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(
             checkTime
@@ -519,7 +513,7 @@ contract RollupCore is IRollupCore {
     struct CreateNodeDataFrame {
         uint256 prevNode;
         uint256 confirmPeriodBlocks;
-        uint256 arbGasSpeedLimitPerBlock;
+        uint256 avmGasSpeedLimitPerBlock;
         ISequencerInbox sequencerInbox;
         RollupEventBridge rollupEventBridge;
         INodeFactory nodeFactory;
@@ -563,7 +557,7 @@ contract RollupCore is IRollupCore {
             memoryFrame.executionHash = RollupLib.executionHash(assertion);
 
             memoryFrame.deadlineBlock = nodeDeadline(
-                inputDataFrame.arbGasSpeedLimitPerBlock,
+                inputDataFrame.avmGasSpeedLimitPerBlock,
                 memoryFrame.gasUsed,
                 inputDataFrame.confirmPeriodBlocks,
                 memoryFrame.prevNode

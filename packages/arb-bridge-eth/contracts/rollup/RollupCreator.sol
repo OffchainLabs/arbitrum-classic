@@ -71,7 +71,7 @@ contract RollupCreator is Ownable {
         bytes32 _machineHash,
         uint256 _confirmPeriodBlocks,
         uint256 _extraChallengeTimeBlocks,
-        uint256 _arbGasSpeedLimitPerBlock,
+        uint256 _avmGasSpeedLimitPerBlock,
         uint256 _baseStake,
         address _stakeToken,
         address _rollupOwner,
@@ -86,7 +86,7 @@ contract RollupCreator is Ownable {
                     _machineHash,
                     _confirmPeriodBlocks,
                     _extraChallengeTimeBlocks,
-                    _arbGasSpeedLimitPerBlock,
+                    _avmGasSpeedLimitPerBlock,
                     _baseStake,
                     _stakeToken,
                     _rollupOwner,
@@ -134,7 +134,7 @@ contract RollupCreator is Ownable {
             [
                 config.confirmPeriodBlocks,
                 config.extraChallengeTimeBlocks,
-                config.arbGasSpeedLimitPerBlock,
+                config.avmGasSpeedLimitPerBlock,
                 config.baseStake
             ],
             config.stakeToken,

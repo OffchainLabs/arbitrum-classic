@@ -17,7 +17,7 @@
 /* eslint-env node, mocha */
 import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
 
 describe('Bridge peripherals layer 1', () => {

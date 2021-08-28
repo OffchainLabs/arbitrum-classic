@@ -58,38 +58,37 @@ const _abi = [
     inputs: [
       {
         indexed: false,
-        internalType: 'uint256',
-        name: 'newValue',
-        type: 'uint256',
-      },
-    ],
-    name: 'MaxDelayBlocksUpdated',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'newValue',
-        type: 'uint256',
-      },
-    ],
-    name: 'MaxDelaySecondsUpdated',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
         internalType: 'address',
-        name: 'newAddress',
+        name: 'addr',
         type: 'address',
       },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'isSequencer',
+        type: 'bool',
+      },
     ],
-    name: 'SequencerAddressUpdated',
+    name: 'IsSequencerUpdated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'newMaxDelayBlocks',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'newMaxDelaySeconds',
+        type: 'uint256',
+      },
+    ],
+    name: 'MaxDelayUpdated',
     type: 'event',
   },
   {
@@ -223,6 +222,25 @@ const _abi = [
     type: 'function',
   },
   {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'seq',
+        type: 'address',
+      },
+    ],
+    name: 'isSequencer',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'maxDelayBlocks',
     outputs: [
@@ -291,40 +309,50 @@ const _abi = [
     type: 'function',
   },
   {
-    inputs: [
+    inputs: [],
+    name: 'sequencer',
+    outputs: [
       {
-        internalType: 'uint256',
-        name: 'newMaxDelayBlocks',
-        type: 'uint256',
+        internalType: 'address',
+        name: '',
+        type: 'address',
       },
     ],
-    name: 'setMaxDelayBlocks',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'uint256',
-        name: 'newMaxDelaySeconds',
-        type: 'uint256',
-      },
-    ],
-    name: 'setMaxDelaySeconds',
-    outputs: [],
-    stateMutability: 'nonpayable',
+    stateMutability: 'view',
     type: 'function',
   },
   {
     inputs: [
       {
         internalType: 'address',
-        name: 'newSequencer',
+        name: 'addr',
         type: 'address',
       },
+      {
+        internalType: 'bool',
+        name: 'isSequencer',
+        type: 'bool',
+      },
     ],
-    name: 'setSequencer',
+    name: 'setIsSequencer',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'newMaxDelayBlocks',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'newMaxDelaySeconds',
+        type: 'uint256',
+      },
+    ],
+    name: 'setMaxDelay',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
