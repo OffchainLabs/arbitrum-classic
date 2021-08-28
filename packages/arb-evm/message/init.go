@@ -32,7 +32,6 @@ type Init struct {
 	protocol.ChainParams
 	Owner       common.Address
 	ExtraConfig []byte
-	OldStyle    bool
 }
 
 func NewInitMessage(params protocol.ChainParams, owner common.Address, config []ChainConfigOption) (Init, error) {
@@ -78,9 +77,6 @@ func NewInitFromData(data []byte) (Init, error) {
 }
 
 func (m Init) Type() inbox.Type {
-	if (m.OldStyle) {
-		return OldInitType  // remove after upgrade 5
-	}
 	return InitType
 }
 

@@ -55,7 +55,7 @@ func setupTest(t *testing.T) (
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil, false)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil)
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
