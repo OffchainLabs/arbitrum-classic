@@ -210,7 +210,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         bytes calldata _data
     ) public payable override onlyWhitelisted returns (bytes memory) {
         // will revert if msg.sender is not whitelisted
-        super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
+        return super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     modifier onlyCounterpartGateway() override {
