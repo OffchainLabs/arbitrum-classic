@@ -95,8 +95,8 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
 
     /**
      * @notice utility function used to perform external read-only calls.
-     * @dev the result is returned even if the call failed, the L2 is expected to
-     * identify and deal with this.
+     * @dev the result is returned even if the call failed or was directed at an EOA,
+     * it is cheaper to have the L2 consumer identify and deal with this.
      * @return result bytes, even if the call failed.
      */
     function callStatic(address targetContract, bytes4 targetFunction)
