@@ -644,6 +644,21 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 				return false, err
 			}
 
+			if seqMsg.Sender != (common.Address{}) && seqMsg.Sender != b.fromAddress {
+				logger.
+					Warn().
+					Str("messageAddress", seqMsg.Sender.String()).
+					Str("fromAddress", b.fromAddress.String()).
+					Str("sequenceNumber", seqMsg.InboxSeqNum.String()).
+					Msg("sequencer message in database contains messages from another sequencer")
+				if len(transactionsLengths) > 0 {
+					// Still publish what we can
+					break
+				} else {
+					return false, errors.New("sequencer message in database begins with messages from another sequencer")
+				}
+			}
+
 			estimatedGasCost += gasCostPerMessage + gasCostPerMessageByte*len(seqMsg.Data)
 		} else {
 			estimatedGasCost += gasCostDelayedMessages
@@ -969,9 +984,8 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			return
 		case <-time.After(b.chainTimeCheckInterval):
 		}
-		if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
-			continue
-		}
+
+		// Safely get the current chain time
 		newChainTime, err := getChainTime(ctx, b.client)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting chain time")
@@ -997,15 +1011,23 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		}
 		chainTime = newChainTime
 		blockNum := chainTime.BlockNum.AsInt()
+
+		// Determine if we should create a batch
+		shouldSequence := b.LockoutManager == nil || b.LockoutManager.ShouldSequence()
 		targetCreateBatch := new(big.Int).Add(b.lastCreatedBatchAt, b.createBatchBlockInterval)
 		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
 			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= int64(gasCostMaximum)*9/10 ||
 			firstBatchCreation
+		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.PublishBatchesWithoutLockout {
+			// We don't have the lockout and publishing batches without the lockout is disabled
+			creatingBatch = false
+		}
 		if creatingBatch && atomic.LoadInt32(&b.publishingBatchAtomic) != 0 {
 			// The previous batch is still waiting on confirmation; don't attempt to create another yet
 			creatingBatch = false
 		}
 		if creatingBatch && blockNum.Cmp(new(big.Int).Add(targetCreateBatch, big.NewInt(b.config.Node.Sequencer.L1PostingStrategy.HighGasDelayBlocks))) < 0 {
+			// Check if gas price is too high, and if so, hold off on creating a batch
 			gasPrice, err := b.client.SuggestGasPrice(ctx)
 			if err != nil {
 				logger.Warn().Err(err).Msg("error getting gas price")
@@ -1017,25 +1039,31 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 				}
 			}
 		}
-		targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
+
+		// Maybe sequence delayed messages
 		sequencedDelayed := false
-		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
-			sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime, false)
-			if err != nil {
-				logger.Error().Err(err).Msg("Error delivering delayed messages")
-				continue
-			}
-			b.lastSequencedDelayedAt = blockNum
-		}
-		targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
 		var dontPublishBlockNum *big.Int
-		if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed {
-			b.inboxReader.MessageDeliveryMutex.Lock()
-			b.latestChainTime = chainTime
-			// Avoid inefficency of publishing something that just got put in this timestamp
-			dontPublishBlockNum = b.latestChainTime.BlockNum.AsInt()
-			b.inboxReader.MessageDeliveryMutex.Unlock()
+		if shouldSequence {
+			targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
+			if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
+				sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime, false)
+				if err != nil {
+					logger.Error().Err(err).Msg("Error delivering delayed messages")
+					continue
+				}
+				b.lastSequencedDelayedAt = blockNum
+			}
+			targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
+			if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed {
+				b.inboxReader.MessageDeliveryMutex.Lock()
+				b.latestChainTime = chainTime
+				// Avoid inefficency of publishing something that just got put in this timestamp
+				dontPublishBlockNum = b.latestChainTime.BlockNum.AsInt()
+				b.inboxReader.MessageDeliveryMutex.Unlock()
+			}
 		}
+
+		// Maybe create a batch
 		if creatingBatch {
 			prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{
 				Context:     ctx,
