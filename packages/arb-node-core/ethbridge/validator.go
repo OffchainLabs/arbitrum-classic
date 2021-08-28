@@ -54,11 +54,11 @@ type ValidatorWallet struct {
 	con           *ethbridgecontracts.Validator
 	address       ethcommon.Address
 	client        ethutils.EthClient
-	auth          *TransactAuth
+	auth          TransactAuth
 	rollupAddress ethcommon.Address
 }
 
-func NewValidator(address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*ValidatorWallet, error) {
+func NewValidator(address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth TransactAuth) (*ValidatorWallet, error) {
 	con, err := ethbridgecontracts.NewValidator(address, client)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (v *ValidatorWallet) Address() common.Address {
 }
 
 func (v *ValidatorWallet) From() common.Address {
-	return common.NewAddressFromEth(v.auth.auth.From)
+	return common.NewAddressFromEth(v.auth.From())
 }
 
 func (v *ValidatorWallet) RollupAddress() common.Address {
@@ -85,7 +85,7 @@ func (v *ValidatorWallet) RollupAddress() common.Address {
 }
 
 func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Transaction) (*ArbTransaction, error) {
-	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	return makeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = tx.Value()
 		return v.con.ExecuteTransaction(auth, tx.Data(), *tx.To(), tx.Value())
 	})
@@ -133,7 +133,7 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 		totalAmount = totalAmount.Add(totalAmount, tx.Value())
 	}
 
-	arbTx, err := v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	arbTx, err := makeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = totalAmount
 		return v.con.ExecuteTransactions(auth, data, dest, amount)
 	})
@@ -145,13 +145,13 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 }
 
 func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*ArbTransaction, error) {
-	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	return makeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.ReturnOldDeposits(auth, v.rollupAddress, common.AddressArrayToEth(stakers))
 	})
 }
 
 func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []common.Address) (*ArbTransaction, error) {
-	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	return makeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.TimeoutChallenges(auth, common.AddressArrayToEth(challenges))
 	})
 }
@@ -160,7 +160,7 @@ func CreateValidatorWallet(
 	ctx context.Context,
 	validatorWalletFactoryAddr ethcommon.Address,
 	fromBlock int64,
-	transactAuth *TransactAuth,
+	transactAuth TransactAuth,
 	client ethutils.EthClient,
 ) (ethcommon.Address, error) {
 	walletCreator, err := ethbridgecontracts.NewValidatorWalletCreator(validatorWalletFactoryAddr, client)
@@ -173,7 +173,7 @@ func CreateValidatorWallet(
 		FromBlock: big.NewInt(fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{validatorWalletFactoryAddr},
-		Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {transactAuth.auth.From.Hash()}},
+		Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {transactAuth.From().Hash()}},
 	}
 	logs, err := client.FilterLogs(ctx, query)
 	if err != nil {
@@ -190,7 +190,7 @@ func CreateValidatorWallet(
 		return parsed.WalletAddress, err
 	}
 
-	arbTx, err := transactAuth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	arbTx, err := makeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return walletCreator.CreateWallet(auth)
 	})
 	if err != nil {
@@ -205,7 +205,7 @@ func CreateValidatorWallet(
 	receipt, err := WaitForReceiptWithResultsAndReplaceByFee(
 		ctx,
 		client,
-		transactAuth.auth.From,
+		transactAuth.From(),
 		arbTx,
 		"CreateWallet",
 		transactAuth,

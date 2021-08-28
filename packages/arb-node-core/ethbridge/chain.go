@@ -136,13 +136,13 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 	from ethcommon.Address,
 	arbTx *ArbTransaction,
 	methodName string,
-	transactAuth *TransactAuth,
+	transactAuth TransactAuth,
 	receiptFetcher ArbReceiptFetcher,
 ) (*types.Receipt, error) {
 	var rbfInfo *attemptRbfInfo
 	if transactAuth != nil {
 		attemptRbf := func() (*ArbTransaction, error) {
-			auth := transactAuth.getAuth(ctx)
+			auth := transactAuth.getAuth()
 			if auth.GasPrice.Cmp(arbTx.GasPrice()) <= 0 {
 				return arbTx, nil
 			}
@@ -200,12 +200,12 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 				}
 				rawTx = types.NewTx(baseTx)
 			}
-			signedTx, err := transactAuth.Signer(auth.From, rawTx)
+			signedTx, err := transactAuth.Sign(auth.From, rawTx)
 			if err != nil {
 				return nil, err
 			}
 
-			newTx, err := transactAuth.SendTx(ctx, signedTx, arbTx.Hash().String())
+			newTx, err := transactAuth.SendTransaction(ctx, signedTx, arbTx.Hash().String())
 			if err != nil {
 				return nil, err
 			}
@@ -216,7 +216,7 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 		}
 		rbfInfo = &attemptRbfInfo{
 			attempt: attemptRbf,
-			account: transactAuth.auth.From,
+			account: transactAuth.From(),
 			nonce:   arbTx.Nonce(),
 		}
 	}
