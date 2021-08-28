@@ -514,13 +514,11 @@ export class Bridge {
     indexInBatch: BigNumber,
     singleAttempt = false
   ) {
-    const inbox = await this.l1Bridge.getInbox()
-    const bridgeAddress = await inbox.bridge()
-
+    const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
     return BridgeHelper.triggerL2ToL1Transaction(
       batchNumber,
       indexInBatch,
-      bridgeAddress,
+      outboxAddress,
       this.l2Provider,
       this.l1Signer,
       singleAttempt
@@ -528,7 +526,7 @@ export class Bridge {
   }
 
   public tryOutboxExecute(
-    activeOutboxAddress: string,
+    outboxAddress: string,
     batchNumber: BigNumber,
     proof: Array<string>,
     path: BigNumber,
@@ -553,7 +551,7 @@ export class Bridge {
         amount,
         calldataForL1,
       },
-      activeOutboxAddress,
+      outboxAddress,
       this.l1Signer
     )
   }
@@ -581,11 +579,11 @@ export class Bridge {
 
   public waitUntilOutboxEntryCreated(
     batchNumber: BigNumber,
-    activeOutboxAddress: string
+    outboxAddress: string
   ) {
     return BridgeHelper.waitUntilOutboxEntryCreated(
       batchNumber,
-      activeOutboxAddress,
+      outboxAddress,
       this.l1Provider
     )
   }
@@ -635,23 +633,14 @@ export class Bridge {
     return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider)
   }
 
-  public async getOutboxAddress() {
-    if (this.outboxAddressCache) {
-      return this.outboxAddressCache
-    }
-    const inboxAddress = (await this.l1Bridge.getInbox()).address
-    const coreBridgeAddress = await BridgeHelper.getCoreBridgeFromInbox(
-      inboxAddress,
-      this.l1Provider
-    )
-    const outboxAddress = await BridgeHelper.getActiveOutbox(
-      coreBridgeAddress,
-      this.l1Provider
-    )
-    this.outboxAddressCache = outboxAddress
-    return outboxAddress
+  public async getOutboxAddressByBatchNum(batchNum: BigNumber) {
+    const l1ChainId = await this.l1Signer.getChainId()
+    const { oldOutbox, outbox, lastOldOutboxBatchNum } =
+      networks[l1ChainId].tokenBridge
+    return batchNum.gt(BigNumber.from(lastOldOutboxBatchNum))
+      ? outbox
+      : oldOutbox
   }
-
   /**
    * Returns {@link OutgoingMessageState} for given outgoing message
    */
@@ -659,7 +648,7 @@ export class Bridge {
     batchNumber: BigNumber,
     indexInBatch: BigNumber
   ) {
-    const outboxAddress = await this.getOutboxAddress()
+    const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
     return BridgeHelper.getOutgoingMessageState(
       batchNumber,
       indexInBatch,

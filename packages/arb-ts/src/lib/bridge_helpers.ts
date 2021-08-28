@@ -532,13 +532,13 @@ export class BridgeHelper {
 
   static waitUntilOutboxEntryCreated = async (
     batchNumber: BigNumber,
-    activeOutboxAddress: string,
+    outboxAddress: string,
     l1Provider: providers.Provider,
     retryDelay = 500
   ) => {
     const exists = await BridgeHelper.outboxEntryExists(
       batchNumber,
-      activeOutboxAddress,
+      outboxAddress,
       l1Provider
     )
     if (exists) {
@@ -551,7 +551,7 @@ export class BridgeHelper {
       console.log('Starting new attempt')
       await BridgeHelper.waitUntilOutboxEntryCreated(
         batchNumber,
-        activeOutboxAddress,
+        outboxAddress,
         l1Provider,
         retryDelay
       )
@@ -559,45 +559,25 @@ export class BridgeHelper {
   }
 
   static getActiveOutbox = async (
-    l1CoreBridgeAddress: string,
+    rollupAddress: string,
     l1Provider: providers.Provider
   ) => {
-    const bridge = await Bridge__factory.connect(
-      l1CoreBridgeAddress,
-      l1Provider
-    )
-
-    const [activeOutboxAddress] = await bridge.functions.allowedOutboxList(0)
-    try {
-      // index 1 should not exist
-      await bridge.functions.allowedOutboxList(1)
-      console.error('There is more than 1 outbox registered with the bridge?!')
-    } catch (e) {
-      // this should fail!
-      console.log('All is good')
-    }
-    return activeOutboxAddress
+    return Rollup__factory.connect(rollupAddress, l1Provider).outbox()
   }
 
   static tryOutboxExecute = async (
     outboxProofData: OutboxProofData,
-    l1CoreBridgeAddress: string,
+    outboxAddress: string,
     l1Signer: Signer
   ): Promise<ContractTransaction> => {
     if (!l1Signer.provider) throw new Error('No L1 provider in L1 signer')
-
-    const activeOutboxAddress = await BridgeHelper.getActiveOutbox(
-      l1CoreBridgeAddress,
-      l1Signer.provider
-    )
-
     await BridgeHelper.waitUntilOutboxEntryCreated(
       outboxProofData.batchNumber,
-      activeOutboxAddress,
+      outboxAddress,
       l1Signer.provider
     )
 
-    const outbox = Outbox__factory.connect(activeOutboxAddress, l1Signer)
+    const outbox = Outbox__factory.connect(outboxAddress, l1Signer)
     try {
       // TODO: wait until assertion is confirmed before execute
       // We can predict and print number of missing blocks
@@ -623,10 +603,11 @@ export class BridgeHelper {
       throw e
     }
   }
+
   static triggerL2ToL1Transaction = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
-    l1CoreBridgeAddress: string,
+    outboxAddress: string,
     l2Provider: providers.Provider,
     l1Signer: Signer,
     singleAttempt = false
@@ -648,15 +629,10 @@ export class BridgeHelper {
     }
 
     if (singleAttempt) {
-      const outBoxAddress = await BridgeHelper.getActiveOutbox(
-        l1CoreBridgeAddress,
-        l1Provider
-      )
-
       const outGoingMessageState = await BridgeHelper.getOutgoingMessageState(
         batchNumber,
         indexInBatch,
-        outBoxAddress,
+        outboxAddress,
         l1Provider,
         l2Provider
       )
@@ -701,11 +677,7 @@ export class BridgeHelper {
 
     console.log('got proof')
 
-    return BridgeHelper.tryOutboxExecute(
-      proofData,
-      l1CoreBridgeAddress,
-      l1Signer
-    )
+    return BridgeHelper.tryOutboxExecute(proofData, outboxAddress, l1Signer)
   }
 
   static getL2ToL1EventData = async (
@@ -748,6 +720,7 @@ export class BridgeHelper {
     const contract = Rollup__factory.connect(rollupAddress, l1Provider)
     return BridgeHelper.getEventLogs('NodeCreated', contract)
   }
+
   static getOutgoingMessage = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
@@ -791,8 +764,8 @@ export class BridgeHelper {
    * Check if given outbox message has already been executed
    */
   static messageHasExecuted = async (
-    outboxIndex: BigNumber,
-    path: BigNumber,
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber,
     outboxAddress: string,
     l1Provider: providers.Provider
   ): Promise<boolean> => {
@@ -800,7 +773,7 @@ export class BridgeHelper {
     const topics = [
       null,
       null,
-      ethers.utils.hexZeroPad(outboxIndex.toHexString(), 32),
+      ethers.utils.hexZeroPad(batchNumber.toHexString(), 32),
     ]
     const logs = await BridgeHelper.getEventLogs(
       'OutBoxTransactionExecuted',
@@ -815,7 +788,7 @@ export class BridgeHelper {
     )
     return (
       parsedData.filter(executedEvent =>
-        executedEvent.transactionIndex.eq(path)
+        executedEvent.transactionIndex.eq(indexInBatch)
       ).length === 1
     )
   }
