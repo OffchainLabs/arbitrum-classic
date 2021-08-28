@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 
+import { ArbitrumEnabledToken } from "../ICustomToken.sol";
 import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../arbitrum/gateway/L2GatewayRouter.sol";
@@ -164,7 +165,10 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxSubmissionCost,
         address _creditBackAddress
     ) public payable returns (uint256) {
-        require(address(msg.sender).isContract(), "NOT_FROM_CONTRACT");
+        require(
+            ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
+            "NOT_ARB_ENABLED"
+        );
         require(_gateway.isContract(), "NOT_TO_CONTRACT");
 
         address[] memory _tokenArr = new address[](1);

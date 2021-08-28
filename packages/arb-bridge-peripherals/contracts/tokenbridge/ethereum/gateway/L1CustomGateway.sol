@@ -18,6 +18,7 @@
 
 pragma solidity ^0.6.11;
 
+import { ArbitrumEnabledToken } from "../ICustomToken.sol";
 import "./L1ArbitrumExtendedGateway.sol";
 import "../../arbitrum/gateway/L2CustomGateway.sol";
 import "../../libraries/gateway/ICustomGateway.sol";
@@ -135,7 +136,10 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxSubmissionCost,
         address _creditBackAddress
     ) public payable returns (uint256) {
-        require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
+        require(
+            ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
+            "NOT_ARB_ENABLED"
+        );
         l1ToL2Token[msg.sender] = _l2Address;
 
         address[] memory l1Addresses = new address[](1);

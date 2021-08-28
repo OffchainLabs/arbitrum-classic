@@ -18,10 +18,15 @@
 
 pragma solidity ^0.6.11;
 
+interface ArbitrumEnabledToken {
+    /// @notice should return `0xa4b1` if token is enabled for arbitrum gateways
+    function isArbitrumEnabled() external view virtual returns (uint8);
+}
+
 /**
  * @title Minimum expected interface for L1 custom token (see TestCustomTokenL1.sol for an example implementation)
  */
-interface ICustomToken {
+interface ICustomToken is ArbitrumEnabledToken {
     /**
      * @notice Should make an external call to EthERC20Bridge.registerCustomL2Token
      */
@@ -40,4 +45,7 @@ interface ICustomToken {
     ) external virtual returns (bool);
 
     function balanceOf(address account) external view virtual returns (uint256);
+
+    /// @notice should return `0xa4b1` if token is enabled for arbitrum gateways
+    // function isArbitrumEnabled() external view virtual returns (uint8);
 }
