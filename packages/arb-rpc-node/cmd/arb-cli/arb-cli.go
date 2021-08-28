@@ -621,6 +621,77 @@ func addAllowedSender(sender ethcommon.Address) error {
 	return waitForTx(tx, "AddAllowedSender")
 }
 
+func checkAllowed() error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	a, err := arbOwner.IsAllowedSender(&bind.CallOpts{}, common.RandAddress().ToEthAddress())
+	if err != nil {
+		return err
+	}
+	fmt.Println("Allowed", a)
+	return nil
+}
+
+func resetAllowedSenders(sendersFile string) error {
+	data, err := ioutil.ReadFile(sendersFile)
+	if err != nil {
+		return err
+	}
+	var senders []ethcommon.Address
+	if err := json.Unmarshal(data, &senders); err != nil {
+		return err
+	}
+	fmt.Println("Adding", len(senders), "senders")
+	fmt.Println("First", senders[0])
+	fmt.Println("Last", senders[len(senders)-1])
+	config.auth.GasPrice = big.NewInt(1866300000)
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.AllowOnlyOwnerToSend(config.auth)
+	if err != nil {
+		return err
+	}
+	if err := waitForTx(tx, "AllowOnlyOwnerToSend"); err != nil {
+		return err
+	}
+	startNonce, err := config.client.PendingNonceAt(context.Background(), config.auth.From)
+	if err != nil {
+		return err
+	}
+	config.auth.Nonce = new(big.Int).SetUint64(startNonce)
+	for i, sender := range senders {
+		tx, err = arbOwner.AddAllowedSender(config.auth, sender)
+		if err != nil {
+			return err
+		}
+		config.auth.Nonce.Add(config.auth.Nonce, big.NewInt(1))
+		fmt.Println("Added sender", i)
+		if i%50 == 0 {
+			time.Sleep(time.Second)
+		}
+	}
+	return waitForTx(tx, "AddAllowedSender")
+}
+
+//func checkIsAllowed() error {
+//	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+//	if err != nil {
+//		return err
+//	}
+//	arbOwner.GetAllAllowedSenders(&bind.TransactOpts{})
+//	allowed, err := arbOwner.IsAllowedSender(&bind.CallOpts{}, common.RandAddress().ToEthAddress())
+//	if err != nil {
+//		return err
+//	}
+//
+//	fmt.Println("Allowed", allowed)
+//	return nil
+//}
+
 func deployContractFromTx(rawTx string) error {
 	tx := new(types.Transaction)
 	txData, err := hexutil.Decode(rawTx)
@@ -753,6 +824,12 @@ func handleCommand(fields []string) error {
 		}
 		sender := ethcommon.HexToAddress(fields[1])
 		return addAllowedSender(sender)
+	case "add-allowed-senders":
+		if len(fields) != 2 {
+			return errors.New("Expected [sender.json]")
+		}
+		sendersFile := fields[1]
+		return resetAllowedSenders(sendersFile)
 	case "deploy-1820":
 		return deployContractFromTx(eip1820Tx)
 	case "deploy-2470":
@@ -909,6 +986,8 @@ func handleCommand(fields []string) error {
 		if err := deployContractFromRaw(wethProxyConn, wethDeployer, wethNonce); err != nil {
 			return err
 		}
+	case "check-allowed":
+		return checkAllowed()
 	default:
 		fmt.Println("Unknown command")
 	}
