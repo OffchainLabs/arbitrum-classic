@@ -338,7 +338,9 @@ export const initUpgrades = (
         const adminFacetAddress = isRollupAdminFacet(contractName)
           ? queuedUpdateData.address
           : tmpDeploymentsJsonData.contracts.RollupAdminFacet.implAddress
-        const RollupAdmin = (await hre.ethers.getContractFactory('RollupAdmin'))
+        const RollupAdmin = (
+          await hre.ethers.getContractFactory(ContractNames.RollupAdminFacet)
+        )
           .attach(tmpDeploymentsJsonData.contracts.Rollup.proxyAddress)
           .connect(signer)
         upgradeTx = await RollupAdmin.setFacets(
@@ -446,9 +448,9 @@ export const initUpgrades = (
       }
 
       if (isRollupAdminFacet(contractName) || isRollupUserFacet(contractName)) {
-        const Rollup = (await hre.ethers.getContractFactory('Rollup')).attach(
-          deploymentsJsonData.contracts.Rollup.proxyAddress
-        )
+        const Rollup = (
+          await hre.ethers.getContractFactory(ContractNames.Rollup)
+        ).attach(deploymentsJsonData.contracts.Rollup.proxyAddress)
         const facet = isRollupUserFacet(contractName)
           ? await Rollup.getUserFacet()
           : await Rollup.getAdminFacet()
