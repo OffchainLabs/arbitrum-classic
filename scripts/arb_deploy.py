@@ -52,6 +52,7 @@ services:
         image: arb-validator
         entrypoint: '/home/user/go/bin/arb-node'
         command: --sequencer %s state %s %s
+        user: root
         ports:
             - '1235:1235'
             - '8547:8547'
@@ -81,6 +82,7 @@ COMPOSE_VALIDATOR = """
         volumes:
             - %s:/home/user/state
         image: arb-validator
+        user: root
         command: state %s %s %s %s %s %s
 """
 
