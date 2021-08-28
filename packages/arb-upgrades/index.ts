@@ -105,17 +105,21 @@ export const initUpgrades = (
     path: string
     data: CurrentDeployments
   }> => {
-    const { data: currentDeployments, path } = await getDeployments()
+    const { data: currentDeployments } = await getDeployments()
     const val = await loadTmpDeployments()
     if (val) return val
 
     console.log('Creating a new tmp deployments file:')
-
+    const path = await tmpDeploymentsPath()
     writeFileSync(path, JSON.stringify(currentDeployments))
     return {
       path,
       data: currentDeployments,
     }
+  }
+  const tmpDeploymentsPath = async () => {
+    const network = await hre.ethers.provider.getNetwork()
+    return `${rootDir}/_deployments/${network.chainId}_tmp_deployment.json`
   }
 
   const loadTmpDeployments = async (): Promise<
@@ -125,9 +129,7 @@ export const initUpgrades = (
       }
     | undefined
   > => {
-    const network = await hre.ethers.provider.getNetwork()
-
-    const path = `${rootDir}/_deployments/${network.chainId}_tmp_deployment.json`
+    const path = await tmpDeploymentsPath()
     if (existsSync(path)) {
       console.log(
         `tmp deployments file found; do you want to resume deployments with it? ('Yes' to continue)`
