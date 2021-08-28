@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "../../libraries/IERC677.sol";
+import "../../libraries/ITransferAndCall.sol";
 
 import "./L1ArbitrumGateway.sol";
 
@@ -31,9 +31,8 @@ interface ITradeableExitReceiver {
 }
 
 abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
-    address internal constant USED_ADDRESS = address(0x01);
-
     struct ExitData {
+        bool isExit;
         address _newTo;
         bytes _newData;
     }
@@ -59,9 +58,9 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
 
     /**
      * @notice Allows a user to redirect their right to claim a withdrawal to another address.
-     * @dev This method also allows you to make an arbitrary call after the transfer, similar to ERC677.
-     * This does not change the original data that will be triggered with the withdrawal's external call.
-     * The exit receiver is the one to
+     * @dev This method also allows you to make an arbitrary call after the transfer.
+     * This does not validate if the exit was already triggered. It is assumed the `_exitNum` is
+     * validated off-chain to ensure this was not yet triggered.
      * @param _exitNum Sequentially increasing exit counter determined by the L2 bridge
      * @param _initialDestination address the L2 withdrawal call initially set as the destination.
      * @param _newDestination address the L1 will now call instead of the previously set destination
@@ -74,7 +73,7 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         address _newDestination,
         bytes calldata _newData,
         bytes calldata _data
-    ) external virtual {
+    ) external {
         // the initial data doesn't make a difference when transfering you exit
         // since the L2 bridge gives a unique exit ID to each exit
         (address expectedSender, ) = getExternalCall(_exitNum, _initialDestination, "");
@@ -105,17 +104,24 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         );
     }
 
+    /// @notice this does not verify if the external call was already done
     function getExternalCall(
         uint256 _exitNum,
         address _initialDestination,
         bytes memory _initialData
     ) public view virtual override returns (address target, bytes memory data) {
+        // this function is virtual so that subclasses can override it with custom logic where necessary
         bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
-        ExitData memory exit = redirectedExits[withdrawData];
-        require(exit._newTo != USED_ADDRESS, "ALREADY_EXITED");
-        target = exit._newTo == address(0) ? _initialDestination : exit._newTo;
-        data = exit._newData;
-        return (target, data);
+        ExitData storage exit = redirectedExits[withdrawData];
+
+        // here we don't authenticate `_initialData`. we could hash it into `withdrawData` but would increase gas costs
+        // this is safe because if the exit isn't overriden, the _initialData coming from L2 is trusted
+        // but if the exit is traded, all we care about is the latest user calldata
+        if (exit.isExit) {
+            return (exit._newTo, exit._newData);
+        } else {
+            return (_initialDestination, _initialData);
+        }
     }
 
     function setRedirectedExit(
@@ -123,15 +129,14 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         address _initialDestination,
         address _newDestination,
         bytes memory _newData
-    ) internal virtual {
+    ) internal {
         bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
-        redirectedExits[withdrawData] = ExitData(_newDestination, _newData);
+        redirectedExits[withdrawData] = ExitData(true, _newDestination, _newData);
     }
 
     function encodeWithdrawal(uint256 _exitNum, address _initialDestination)
         public
         pure
-        virtual
         returns (bytes32)
     {
         // here we assume the L2 bridge gives a unique exitNum to each exit

@@ -13,6 +13,7 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
+    "audit:ci": "audit-ci -l -a 1748",
     "install:deps": "./scripts/install-deps",
     "install:validator": "./scripts/install-validator",
     "update:abi": "yarn go:generate && yarn workspace arb-ts update:abi",
@@ -48,7 +49,12 @@
       "packages/tools",
       "packages/arb-bridge-peripherals",
       "packages/arb-ts",
-      "packages/arb-os/contracts"
+      "packages/arb-os/contracts",
+      "packages/arb-upgrades"
+    ],
+    "nohoist": [
+      "**/@openzeppelin/contracts",
+      "**/@openzeppelin/contracts-upgradeable"
     ]
   },
   "devDependencies": {

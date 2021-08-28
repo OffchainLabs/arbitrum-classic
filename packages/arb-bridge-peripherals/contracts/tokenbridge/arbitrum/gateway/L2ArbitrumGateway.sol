@@ -20,28 +20,60 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
+import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 
 import "../IArbToken.sol";
 
-import { L2ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
-import "../../libraries/gateway/ArbitrumGateway.sol";
+import "../L2ArbitrumMessenger.sol";
+import "../../libraries/gateway/GatewayMessageHandler.sol";
+import "../../libraries/gateway/EscrowAndCallGateway.sol";
+import "../../libraries/gateway/TokenGateway.sol";
 
 /**
  * @title Common interface for gatways on Arbitrum messaging to L1.
  */
-abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
+abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, EscrowAndCallGateway {
     using Address for address;
 
     uint256 public exitNum;
 
-    function _initialize(address _l1Counterpart, address _router) internal virtual override {
-        // L2 gateway may have a router address(0)
-        ArbitrumGateway._initialize(_l1Counterpart, _router);
+    event DepositFinalized(
+        address indexed l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 _amount
+    );
+
+    event WithdrawalInitiated(
+        address l1Token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _l2ToL1Id,
+        uint256 _exitNum,
+        uint256 _amount
+    );
+
+    modifier onlyCounterpartGateway() override {
+        require(
+            msg.sender == counterpartGateway ||
+                L2ArbitrumMessenger.getL1Address(msg.sender) == counterpartGateway,
+            "ONLY_COUNTERPART_GATEWAY"
+        );
+        _;
     }
 
     function postUpgradeInit() external {
-        require(router == address(0), "ALREADY_INIT");
-        router = address(0x5288c571Fd7aD117beA99bF60FE0846C4E84F933);
+        // it is assumed the L2 Arbitrum Gateway contract is behind a Proxy controlled by a proxy admin
+        // this function can only be called by the proxy admin contract
+        address proxyAdmin = ProxyUtil.getProxyAdmin();
+        require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
+        // this has no other logic since the current upgrade doesn't require this logic
+    }
+
+    function _initialize(address _l1Counterpart, address _router) internal virtual override {
+        TokenGateway._initialize(_l1Counterpart, _router);
+        // L1 gateway must have a router
+        require(_router != address(0), "BAD_ROUTER");
     }
 
     function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
@@ -51,21 +83,23 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
     }
 
     function createOutboundTx(
-        address _l1Token,
         address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _extraData
+        uint256 _tokenAmount,
+        bytes memory _outboundCalldata
     ) internal virtual returns (uint256) {
-        return sendTxToL1(_from, 0, getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData));
-    }
+        // We make this function virtual since outboundTransfer logic is the same for many gateways
+        // but sometimes (ie weth) you construct the outgoing message differently.
 
-    function sendTxToL1(
-        address _from,
-        uint256 _l1CallValue,
-        bytes memory _data
-    ) internal virtual returns (uint256) {
-        return sendTxToL1(_l1CallValue, _from, counterpartGateway, _data);
+        // exitNum incremented after being included in _outboundCalldata
+        exitNum++;
+        return
+            sendTxToL1(
+                // default to sending no callvalue to the L1
+                0,
+                _from,
+                counterpartGateway,
+                _outboundCalldata
+            );
     }
 
     function getOutboundCalldata(
@@ -74,14 +108,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         address _to,
         uint256 _amount,
         bytes memory _data
-    ) public view virtual override returns (bytes memory outboundCalldata) {
+    ) public view override returns (bytes memory outboundCalldata) {
         outboundCalldata = abi.encodeWithSelector(
-            ArbitrumGateway.finalizeInboundTransfer.selector,
+            TokenGateway.finalizeInboundTransfer.selector,
             _token,
             _from,
             _to,
             _amount,
-            abi.encode(exitNum, _data)
+            GatewayMessageHandler.encodeFromL2GatewayMsg(exitNum, _data)
         );
 
         return outboundCalldata;
@@ -113,24 +147,41 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override returns (bytes memory) {
-        // can be triggered directly or by router
+    ) public payable virtual override returns (bytes memory res) {
+        // This function is set as public and virtual so that subclasses can override
+        // it and add custom validation for callers (ie only whitelisted users)
+
+        // the function is marked as payable to conform to the inheritance setup
+        // this particular code path shouldn't have a msg.value > 0
+        // TODO: remove this invariant for execution markets
         require(msg.value == 0, "NO_VALUE");
 
-        (address _from, bytes memory _extraData) = parseOutboundData(_data);
-
-        uint256 id;
+        address _from;
+        bytes memory _extraData;
         {
-            address l2Token = _calculateL2TokenAddress(_l1Token);
+            if (isRouter(msg.sender)) {
+                (_from, _extraData) = GatewayMessageHandler.parseFromRouterToGateway(_data);
+            } else {
+                _from = msg.sender;
+                _extraData = _data;
+            }
+        }
+
+        // unique id used to identify the L2 to L1 tx
+        uint256 id;
+        // exit number used for tradeable exits
+        uint256 currExitNum = exitNum;
+        {
+            address l2Token = calculateL2TokenAddress(_l1Token);
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
 
             outboundEscrowTransfer(l2Token, _from, _amount);
 
-            id = createOutboundTx(_l1Token, _from, _to, _amount, _extraData);
+            // we override the res field to save on the stack
+            res = getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
+            id = createOutboundTx(_from, _amount, res);
         }
-        // exitNum incremented after being used in createOutboundTx
-        exitNum++;
-        emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _extraData);
+        emit WithdrawalInitiated(_l1Token, _from, _to, id, currExitNum, _amount);
         return abi.encode(id);
     }
 
@@ -139,22 +190,10 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         address _from,
         uint256 _amount
     ) internal virtual {
+        // this method is virtual since different subclasses can handle escrow differently
+        // user funds are escrowed on the gateway using this function
         // burns L2 tokens in order to release escrowed L1 tokens
         IArbToken(_l2Token).bridgeBurn(_from, _amount);
-    }
-
-    function parseOutboundData(bytes memory _data)
-        internal
-        view
-        virtual
-        returns (address _from, bytes memory _extraData)
-    {
-        if (isRouter(msg.sender)) {
-            (_from, _extraData) = abi.decode(_data, (address, bytes));
-        } else {
-            _from = msg.sender;
-            _extraData = _data;
-        }
     }
 
     function inboundEscrowTransfer(
@@ -162,6 +201,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         address _dest,
         uint256 _amount
     ) internal virtual override {
+        // this method is virtual since different subclasses can handle escrow differently
         IArbToken(_l2Address).bridgeMint(_dest, _amount);
     }
 
@@ -182,22 +222,30 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
-        (bytes memory gatewayData, bytes memory callHookData) = abi.decode(_data, (bytes, bytes));
+    ) external payable override onlyCounterpartGateway returns (bytes memory) {
+        (bytes memory gatewayData, bytes memory callHookData) = GatewayMessageHandler
+            .parseFromL1GatewayMsg(_data);
 
-        address expectedAddress = _calculateL2TokenAddress(_token);
+        address expectedAddress = calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
-            bool shouldHalt =
-                handleNoContract(_token, expectedAddress, _from, _to, _amount, gatewayData);
+            bool shouldHalt = handleNoContract(
+                _token,
+                expectedAddress,
+                _from,
+                _to,
+                _amount,
+                gatewayData
+            );
             if (shouldHalt) return bytes("");
         }
         // ignores gatewayData if token already deployed
 
         {
             // validate if L1 address supplied matches that of the expected L2 address
-            (bool success, bytes memory _l1AddressData) =
-                expectedAddress.staticcall(abi.encodeWithSelector(IArbToken.l1Address.selector));
+            (bool success, bytes memory _l1AddressData) = expectedAddress.staticcall(
+                abi.encodeWithSelector(IArbToken.l1Address.selector)
+            );
 
             bool shouldWithdraw;
             if (!success || _l1AddressData.length < 32) {
@@ -213,7 +261,10 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
             }
 
             if (shouldWithdraw) {
-                createOutboundTx(_token, address(this), _from, _amount, "");
+                // we override the gatewayData field to save on the stack
+                gatewayData = getOutboundCalldata(_token, address(this), _from, _amount, "");
+
+                createOutboundTx(address(this), _amount, gatewayData);
                 return bytes("");
             }
         }
@@ -232,14 +283,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
             inboundEscrowTransfer(expectedAddress, _to, _amount);
         }
 
-        emit InboundTransferFinalized(
-            _token,
-            _from,
-            _to,
-            uint256(uint160(expectedAddress)),
-            _amount,
-            _data
-        );
+        emit DepositFinalized(_token, _from, _to, _amount);
 
         return bytes("");
     }

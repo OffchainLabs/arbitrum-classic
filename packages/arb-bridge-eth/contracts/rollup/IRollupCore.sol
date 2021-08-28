@@ -32,6 +32,45 @@ interface IRollupCore {
             bool
         );
 
+    event RollupCreated(bytes32 machineHash);
+
+    event NodeCreated(
+        uint256 indexed nodeNum,
+        bytes32 indexed parentNodeHash,
+        bytes32 nodeHash,
+        bytes32 executionHash,
+        uint256 inboxMaxCount,
+        uint256 afterInboxBatchEndCount,
+        bytes32 afterInboxBatchAcc,
+        bytes32[3][2] assertionBytes32Fields,
+        uint256[4][2] assertionIntFields
+    );
+
+    event NodeConfirmed(
+        uint256 indexed nodeNum,
+        bytes32 afterSendAcc,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
+    );
+
+    event NodeRejected(uint256 indexed nodeNum);
+
+    event RollupChallengeStarted(
+        address indexed challengeContract,
+        address asserter,
+        address challenger,
+        uint256 challengedNode
+    );
+
+    event UserStakeUpdated(address indexed user, uint256 initialBalance, uint256 finalBalance);
+
+    event UserWithdrawableFundsUpdated(
+        address indexed user,
+        uint256 initialBalance,
+        uint256 finalBalance
+    );
+
     function getNode(uint256 nodeNum) external view returns (INode);
 
     /**

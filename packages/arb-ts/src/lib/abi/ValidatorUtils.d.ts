@@ -206,7 +206,7 @@ export class ValidatorUtils extends BaseContract {
       [BigNumber, BigNumber, BigNumber, BigNumber] & {
         confirmPeriodBlocks: BigNumber
         extraChallengeTimeBlocks: BigNumber
-        arbGasSpeedLimitPerBlock: BigNumber
+        avmGasSpeedLimitPerBlock: BigNumber
         baseStake: BigNumber
       }
     >
@@ -299,7 +299,7 @@ export class ValidatorUtils extends BaseContract {
     [BigNumber, BigNumber, BigNumber, BigNumber] & {
       confirmPeriodBlocks: BigNumber
       extraChallengeTimeBlocks: BigNumber
-      arbGasSpeedLimitPerBlock: BigNumber
+      avmGasSpeedLimitPerBlock: BigNumber
       baseStake: BigNumber
     }
   >
@@ -386,7 +386,7 @@ export class ValidatorUtils extends BaseContract {
       [BigNumber, BigNumber, BigNumber, BigNumber] & {
         confirmPeriodBlocks: BigNumber
         extraChallengeTimeBlocks: BigNumber
-        arbGasSpeedLimitPerBlock: BigNumber
+        avmGasSpeedLimitPerBlock: BigNumber
         baseStake: BigNumber
       }
     >

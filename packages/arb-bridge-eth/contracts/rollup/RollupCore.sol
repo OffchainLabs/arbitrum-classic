@@ -21,12 +21,16 @@ pragma solidity ^0.6.11;
 import "./INode.sol";
 import "./IRollupCore.sol";
 import "./RollupLib.sol";
+import "./INodeFactory.sol";
+import "./RollupEventBridge.sol";
+import "../bridge/interfaces/ISequencerInbox.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract RollupCore is IRollupCore {
     using SafeMath for uint256;
 
+    // Stakers become Zombies after losing a challenge
     struct Zombie {
         address stakerAddress;
         uint256 latestStakedNode;
@@ -69,7 +73,7 @@ contract RollupCore is IRollupCore {
      * @param stakerNum Index of the staker
      * @return Address of the staker
      */
-    function getStakerAddress(uint256 stakerNum) public view override returns (address) {
+    function getStakerAddress(uint256 stakerNum) external view override returns (address) {
         return _stakerList[stakerNum];
     }
 
@@ -146,7 +150,7 @@ contract RollupCore is IRollupCore {
      * @param owner Address to check the funds of
      * @return Amount of funds withdrawable by owner
      */
-    function withdrawableFunds(address owner) public view override returns (uint256) {
+    function withdrawableFunds(address owner) external view override returns (uint256) {
         return _withdrawableFunds[owner];
     }
 
@@ -169,7 +173,7 @@ contract RollupCore is IRollupCore {
     }
 
     /// @return Ethereum block that the most recent stake was created
-    function lastStakeBlock() public view override returns (uint256) {
+    function lastStakeBlock() external view override returns (uint256) {
         return _lastStakeBlock;
     }
 
@@ -203,41 +207,76 @@ contract RollupCore is IRollupCore {
         return _nodeHashes[index];
     }
 
-    function resetNodeHash(uint256 index) internal {
-        _nodeHashes[index] = 0;
-    }
-
-    /**
-     * @notice Update the latest node created
-     * @param newLatestNodeCreated New value for the latest node created
-     */
-    function updateLatestNodeCreated(uint256 newLatestNodeCreated) internal {
-        _latestNodeCreated = newLatestNodeCreated;
-    }
-
     /// @notice Reject the next unresolved node
-    function rejectNextNode() internal {
+    function _rejectNextNode() internal {
         destroyNode(_firstUnresolvedNode);
         _firstUnresolvedNode++;
     }
 
     /// @notice Confirm the next unresolved node
-    function confirmNextNode() internal {
-        destroyNode(_latestConfirmed);
-        _latestConfirmed = _firstUnresolvedNode;
-        _firstUnresolvedNode++;
+    function confirmNextNode(
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount,
+        IOutbox outbox,
+        RollupEventBridge rollupEventBridge
+    ) internal {
+        confirmNode(
+            _firstUnresolvedNode,
+            beforeSendAcc,
+            sendsData,
+            sendLengths,
+            afterSendCount,
+            afterLogAcc,
+            afterLogCount,
+            outbox,
+            rollupEventBridge
+        );
     }
 
-    /// @notice Confirm the next unresolved node
-    function confirmLatestNode() internal {
+    function confirmNode(
+        uint256 nodeNum,
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount,
+        IOutbox outbox,
+        RollupEventBridge rollupEventBridge
+    ) internal {
+        bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
+
+        INode node = getNode(nodeNum);
+        // Authenticate data against node's confirm data pre-image
+        require(
+            node.confirmData() ==
+                RollupLib.confirmHash(
+                    beforeSendAcc,
+                    afterSendAcc,
+                    afterLogAcc,
+                    afterSendCount,
+                    afterLogCount
+                ),
+            "CONFIRM_DATA"
+        );
+
+        // trusted external call to outbox
+        outbox.processOutgoingMessages(sendsData, sendLengths);
+
         destroyNode(_latestConfirmed);
-        uint256 latestNode = _latestNodeCreated;
-        _latestConfirmed = latestNode;
-        _firstUnresolvedNode = latestNode + 1;
+        _latestConfirmed = nodeNum;
+        _firstUnresolvedNode = nodeNum + 1;
+
+        rollupEventBridge.nodeConfirmed(nodeNum);
+        emit NodeConfirmed(nodeNum, afterSendAcc, afterSendCount, afterLogAcc, afterLogCount);
     }
 
     /**
-     * @notice Create a new stake
+     * @notice Create a new stake at latest confirmed node
      * @param stakerAddress Address of the new staker
      * @param depositAmount Stake amount of the new staker
      */
@@ -248,10 +287,11 @@ contract RollupCore is IRollupCore {
             stakerIndex,
             _latestConfirmed,
             depositAmount,
-            address(0),
+            address(0), // new staker is not in challenge
             true
         );
         _lastStakeBlock = block.number;
+        emit UserStakeUpdated(stakerAddress, 0, depositAmount);
     }
 
     /**
@@ -268,8 +308,8 @@ contract RollupCore is IRollupCore {
         Staker storage staker1 = _stakerMap[stakerAddress1];
         Staker storage staker2 = _stakerMap[stakerAddress2];
         address challenge = staker1.currentChallenge;
-        require(challenge == staker2.currentChallenge, "IN_CHAL");
         require(challenge != address(0), "NO_CHAL");
+        require(challenge == staker2.currentChallenge, "DIFF_IN_CHAL");
         return challenge;
     }
 
@@ -304,7 +344,10 @@ contract RollupCore is IRollupCore {
      */
     function increaseStakeBy(address stakerAddress, uint256 amountAdded) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        staker.amountStaked = staker.amountStaked.add(amountAdded);
+        uint256 initialStaked = staker.amountStaked;
+        uint256 finalStaked = initialStaked.add(amountAdded);
+        staker.amountStaked = finalStaked;
+        emit UserStakeUpdated(stakerAddress, initialStaked, finalStaked);
     }
 
     /**
@@ -319,7 +362,8 @@ contract RollupCore is IRollupCore {
         require(target <= current, "TOO_LITTLE_STAKE");
         uint256 amountWithdrawn = current.sub(target);
         staker.amountStaked = target;
-        _withdrawableFunds[stakerAddress] = _withdrawableFunds[stakerAddress].add(amountWithdrawn);
+        increaseWithdrawableFunds(stakerAddress, amountWithdrawn);
+        emit UserStakeUpdated(stakerAddress, current, target);
         return amountWithdrawn;
     }
 
@@ -357,10 +401,10 @@ contract RollupCore is IRollupCore {
      */
     function withdrawStaker(address stakerAddress) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        _withdrawableFunds[stakerAddress] = _withdrawableFunds[stakerAddress].add(
-            staker.amountStaked
-        );
+        uint256 initialStaked = staker.amountStaked;
+        increaseWithdrawableFunds(stakerAddress, initialStaked);
         deleteStaker(stakerAddress);
+        emit UserStakeUpdated(stakerAddress, initialStaked, 0);
     }
 
     /**
@@ -391,6 +435,7 @@ contract RollupCore is IRollupCore {
     function withdrawFunds(address owner) internal returns (uint256) {
         uint256 amount = _withdrawableFunds[owner];
         _withdrawableFunds[owner] = 0;
+        emit UserWithdrawableFundsUpdated(owner, amount, 0);
         return amount;
     }
 
@@ -399,7 +444,10 @@ contract RollupCore is IRollupCore {
      * @param owner Address of the account to add withdrawable funds to
      */
     function increaseWithdrawableFunds(address owner, uint256 amount) internal {
-        _withdrawableFunds[owner] = _withdrawableFunds[owner].add(amount);
+        uint256 initialWithdrawable = _withdrawableFunds[owner];
+        uint256 finalWithdrawable = initialWithdrawable.add(amount);
+        _withdrawableFunds[owner] = finalWithdrawable;
+        emit UserWithdrawableFundsUpdated(owner, initialWithdrawable, finalWithdrawable);
     }
 
     /**
@@ -424,7 +472,149 @@ contract RollupCore is IRollupCore {
         _nodes[nodeNum] = INode(0);
     }
 
+    function nodeDeadline(
+        uint256 avmGasSpeedLimitPerBlock,
+        uint256 gasUsed,
+        uint256 confirmPeriodBlocks,
+        INode prevNode
+    ) internal view returns (uint256 deadlineBlock) {
+        // Set deadline rounding up to the nearest block
+        uint256 checkTime =
+            gasUsed.add(avmGasSpeedLimitPerBlock.sub(1)).div(avmGasSpeedLimitPerBlock);
+
+        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(
+            checkTime
+        );
+
+        uint256 olderSibling = prevNode.latestChildNumber();
+        if (olderSibling != 0) {
+            deadlineBlock = max(deadlineBlock, getNode(olderSibling).deadlineBlock());
+        }
+        return deadlineBlock;
+    }
+
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a > b ? a : b;
+    }
+
+    struct StakeOnNewNodeFrame {
+        uint256 currentInboxSize;
+        INode node;
+        bytes32 executionHash;
+        INode prevNode;
+        bytes32 lastHash;
+        bool hasSibling;
+        uint256 deadlineBlock;
+        uint256 gasUsed;
+        uint256 sequencerBatchEnd;
+        bytes32 sequencerBatchAcc;
+    }
+
+    struct CreateNodeDataFrame {
+        uint256 prevNode;
+        uint256 confirmPeriodBlocks;
+        uint256 avmGasSpeedLimitPerBlock;
+        ISequencerInbox sequencerInbox;
+        RollupEventBridge rollupEventBridge;
+        INodeFactory nodeFactory;
+    }
+
+    uint8 internal constant MAX_SEND_COUNT = 100;
+
+    function createNewNode(
+        RollupLib.Assertion memory assertion,
+        bytes32[3][2] calldata assertionBytes32Fields,
+        uint256[4][2] calldata assertionIntFields,
+        bytes calldata sequencerBatchProof,
+        CreateNodeDataFrame memory inputDataFrame,
+        bytes32 expectedNodeHash
+    ) internal returns (bytes32 newNodeHash) {
+        StakeOnNewNodeFrame memory memoryFrame;
+        {
+            // validate data
+            memoryFrame.gasUsed = RollupLib.assertionGasUsed(assertion);
+            memoryFrame.prevNode = getNode(inputDataFrame.prevNode);
+            memoryFrame.currentInboxSize = inputDataFrame.sequencerInbox.messageCount();
+
+            // Make sure the previous state is correct against the node being built on
+            require(
+                RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.stateHash(),
+                "PREV_STATE_HASH"
+            );
+
+            // Ensure that the assertion doesn't read past the end of the current inbox
+            require(
+                assertion.afterState.inboxCount <= memoryFrame.currentInboxSize,
+                "INBOX_PAST_END"
+            );
+            // Insure inbox tip after assertion is included in a sequencer-inbox batch and return inbox acc; this gives replay protection against the state of the inbox
+            (memoryFrame.sequencerBatchEnd, memoryFrame.sequencerBatchAcc) = inputDataFrame
+                .sequencerInbox
+                .proveInboxContainsMessage(sequencerBatchProof, assertion.afterState.inboxCount);
+        }
+
+        {
+            memoryFrame.executionHash = RollupLib.executionHash(assertion);
+
+            memoryFrame.deadlineBlock = nodeDeadline(
+                inputDataFrame.avmGasSpeedLimitPerBlock,
+                memoryFrame.gasUsed,
+                inputDataFrame.confirmPeriodBlocks,
+                memoryFrame.prevNode
+            );
+
+            memoryFrame.hasSibling = memoryFrame.prevNode.latestChildNumber() > 0;
+            // here we don't use ternacy operator to remain compatible with slither
+            if (memoryFrame.hasSibling) {
+                memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.latestChildNumber());
+            } else {
+                memoryFrame.lastHash = getNodeHash(inputDataFrame.prevNode);
+            }
+
+            memoryFrame.node = INode(
+                inputDataFrame.nodeFactory.createNode(
+                    RollupLib.stateHash(assertion.afterState),
+                    RollupLib.challengeRoot(assertion, memoryFrame.executionHash, block.number),
+                    RollupLib.confirmHash(assertion),
+                    inputDataFrame.prevNode,
+                    memoryFrame.deadlineBlock
+                )
+            );
+        }
+
+        {
+            uint256 nodeNum = latestNodeCreated() + 1;
+            memoryFrame.prevNode.childCreated(nodeNum);
+
+            newNodeHash = RollupLib.nodeHash(
+                memoryFrame.hasSibling,
+                memoryFrame.lastHash,
+                memoryFrame.executionHash,
+                memoryFrame.sequencerBatchAcc
+            );
+            require(newNodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
+
+            nodeCreated(memoryFrame.node, newNodeHash);
+            inputDataFrame.rollupEventBridge.nodeCreated(
+                nodeNum,
+                inputDataFrame.prevNode,
+                memoryFrame.deadlineBlock,
+                msg.sender
+            );
+        }
+
+        emit NodeCreated(
+            latestNodeCreated(),
+            getNodeHash(inputDataFrame.prevNode),
+            newNodeHash,
+            memoryFrame.executionHash,
+            memoryFrame.currentInboxSize,
+            memoryFrame.sequencerBatchEnd,
+            memoryFrame.sequencerBatchAcc,
+            assertionBytes32Fields,
+            assertionIntFields
+        );
+
+        return newNodeHash;
     }
 }

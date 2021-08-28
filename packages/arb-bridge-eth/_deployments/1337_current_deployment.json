@@ -1,0 +1,89 @@
+{
+  "proxyAdminAddress": "0x171a2624302775eF943f4f62E76fd22A6813d7c4",
+  "contracts": {
+    "Rollup": {
+      "proxyAddress": "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
+      "implAddress": "0xae71755b42d1ef5fb365aeb4a74cb73992dd9fbe",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "RollupAdminFacet": {
+      "proxyAddress": "",
+      "implAddress": "0x00792e3740FA46E9123F10025873d5FA3e0369D7",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "RollupUserFacet": {
+      "proxyAddress": "",
+      "implAddress": "0xa490124817cdc4c4e6ff4b7c824a69cb734df74c",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "RollupEventBridge": {
+      "proxyAddress": "0xc8C3194eD3BE7B2393fEfE811a2Cc39297442c0B",
+      "implAddress": "0x5c7355e46d5486583a1cc211701e25004231d9dd",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "Node": {
+      "proxyAddress": "0x27A6cf5E8350b44273FB10F98D78525c5DAD6d8a",
+      "implAddress": "0x00B628217E5C6Bf267A1E740f8f18a19542Ab8A9",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "Challenge": {
+      "proxyAddress": "0x6AD1Dc4ab5475d9f8CD10118C9D28B06f0c8A2D9",
+      "implAddress": "0x9063e302F12971CFA9f91c68Bd9CBfFffb649B74",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "OneStepProof": {
+      "proxyAddress": "0x4812be53BE02b9F38063Cf55feF0a19d2Ba8bB3A",
+      "implAddress": "0xd6a34a8e5080e6e0e6636ba8b739df1cd8193681",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "OneStepProof2": {
+      "proxyAddress": "0x2DF287A3B2fd0916c0b3D4882201Ff360Acd6EC3",
+      "implAddress": "0x94e42a16323263bca9ec6246b5b90c671fe617d3",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "OneStepProofHash": {
+      "proxyAddress": "0xcE81E7d009e53c02242b724819df1869DA5e9FD8",
+      "implAddress": "0x1f66edfc147bf17869ab867f68b27a70cba92ab7",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "Inbox": {
+      "proxyAddress": "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f",
+      "implAddress": "0xb38634f1192fd4a4864b99a4c9100339815c6450",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "SequencerInbox": {
+      "proxyAddress": "0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef",
+      "implAddress": "0x04f6bff0d8491fdc83d0cf0117eda228532074d1",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "Bridge": {
+      "proxyAddress": "0x011B6E24FfB0B5f5fCc564cf4183C5BBBc96D515",
+      "implAddress": "0xcb0da32914a683286ed2d4890e8157ffecc9bd06",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "OldOutbox": {
+      "proxyAddress": "0x667e23abd27e623c11d4cc00ca3ec4d0bd63337a",
+      "implAddress": "0x19D6ddDC21503F4C8cD62Ce2A9FF94Bd590b49B0",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    },
+    "OutboxEntry": {
+      "proxyAddress": "0x14797f5432f699Cb4d4dB04DF599B74952d78d7b",
+      "implAddress": "0x5E40E464DEF82286b177dFa2799753d23b068dcC",
+      "implDeploymentTxn": "0x",
+      "implArbitrumCommitHash": "0x"
+    }
+  }
+}
