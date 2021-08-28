@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "license": "Apache-2.0",
   "scripts": {
-    "test:l1": "hardhat test test/*.l1.ts",
+    "test:l1": "hardhat test test/canonicalBridge.l1.ts --network local_development",
+    "test:l11": "hardhat test test/buddyBridge.l1.ts --network local_development",
     "test:l2": "hardhat test test/*.l2.ts --network arbitrum",
     "typechain": "hardhat typechain",
-    "deploy:tokenbridge:l1": "hardhat run scripts/deploy_token_bridge_l1.ts --network kovan",
-    "deploy:tokenbridge:l2": "hardhat run scripts/deploy_token_bridge_l2.ts --network kovan5",
+    "deploy:tokenbridge:l1": "hardhat run scripts/deploy_token_bridge_l1.ts --network local_development",
+    "deploy:tokenbridge:l2": "hardhat run scripts/deploy_token_bridge_l2.ts --network arbitrum",
     "deploy:tokenbridge": "yarn deploy:tokenbridge:l2 && yarn deploy:tokenbridge:l1",
-    "deploy:buddydeployer": "hardhat run scripts/deploy_buddy_deployer.ts --network kovan5",
+    "deploy:buddydeployer": "hardhat run scripts/deploy_buddy_deployer.ts --network arbitrum",
     "deploy": "yarn deploy:buddydeployer && yarn deploy:tokenbridge"
   },
   "devDependencies": {

@@ -130,6 +130,11 @@ const config = {
     },
     local_development: {
       url: 'http://127.0.0.1:7545',
+      allowUnlimitedContractSize: true,
+      //blockGasLimit: 15000000,
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
     },
     kovan: {
       url: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
@@ -166,15 +171,12 @@ const config = {
     arbitrum: {
       url: 'http://127.0.0.1:8547',
       // url: 'https://kovan3.arbitrum.io/rpc',
-      gas: 999999999999999,
-      accounts: {
-        mnemonic:
-          'jar deny prosper gasp flush glass core corn alarm treat leg smart',
-        path: "m/44'/60'/0'/0",
-        initialIndex: 0,
-        count: 10,
-      },
-      timeout: 100000,
+      //gas: 999999999999999,
+      allowUnlimitedContractSize: true,
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+        timeout: 1000000,
     },
   },
   mocha: {

@@ -31,7 +31,8 @@ const main = async () => {
   const l2Provider = new providers.JsonRpcProvider(
     // 'https://kovan4.arbitrum.io/rpc'
     // 'https://devnet-l2.arbitrum.io/rpc'
-    'https://kovan5.arbitrum.io/rpc'
+    // 'https://kovan5.arbitrum.io/rpc'
+    'http://localhost:8547'
   )
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
