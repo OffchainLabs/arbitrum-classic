@@ -88,7 +88,8 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher
 			}
 			receipt, err := receiptFetcher.TransactionReceipt(ctx, tx)
 			if receipt == nil {
-				if rbfInfo != nil {
+				_, isFireblocks := receiptFetcher.(*FireblocksTransactAuth)
+				if rbfInfo != nil && !isFireblocks {
 					// an alternative tx might've gotten confirmed
 					nonce, err := receiptFetcher.NonceAt(ctx, rbfInfo.account, nil)
 					if err == nil {
