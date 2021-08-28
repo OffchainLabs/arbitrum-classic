@@ -22,6 +22,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
@@ -208,7 +209,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
             address l2Token = calculateL2TokenAddress(_l1Token);
             require(l2Token != address(0), "NO_L2_TOKEN_SET");
 
-            outboundEscrowTransfer(_l1Token, _from, _amount);
+            _amount = outboundEscrowTransfer(_l1Token, _from, _amount);
 
             // we override the res field to save on the stack
             res = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
@@ -230,10 +231,13 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         address _l1Token,
         address _from,
         uint256 _amount
-    ) internal virtual {
+    ) internal virtual returns (uint256 amountReceived) {
         // this method is virtual since different subclasses can handle escrow differently
         // user funds are escrowed on the gateway using this function
+        uint256 prevBalance = IERC20(_l1Token).balanceOf(address(this));
         IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
+        uint256 postBalance = IERC20(_l1Token).balanceOf(address(this));
+        return SafeMath.sub(postBalance, prevBalance);
     }
 
     function getOutboundCalldata(

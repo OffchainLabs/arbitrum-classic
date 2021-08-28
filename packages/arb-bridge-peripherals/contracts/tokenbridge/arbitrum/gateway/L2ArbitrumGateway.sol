@@ -168,7 +168,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
             require(IArbToken(l2Token).l1Address() == _l1Token, "NOT_EXPECTED_L1_TOKEN");
 
-            outboundEscrowTransfer(l2Token, _from, _amount);
+            _amount = outboundEscrowTransfer(l2Token, _from, _amount);
             id = triggerWithdrawal(_l1Token, _from, _to, _amount, _extraData);
         }
         return abi.encode(id);
@@ -197,11 +197,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         address _l2Token,
         address _from,
         uint256 _amount
-    ) internal virtual {
+    ) internal virtual returns (uint256 amountBurnt) {
         // this method is virtual since different subclasses can handle escrow differently
         // user funds are escrowed on the gateway using this function
         // burns L2 tokens in order to release escrowed L1 tokens
         IArbToken(_l2Token).bridgeBurn(_from, _amount);
+        // by default we assume that the amount we send to bridgeBurn is the amount burnt
+        // this might not be the case for every token
+        return _amount;
     }
 
     function inboundEscrowTransfer(
