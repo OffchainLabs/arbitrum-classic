@@ -69,8 +69,8 @@ type Fireblocks struct {
 	signKey           *rsa.PrivateKey
 	sourceId          string
 	sourceType        accounttype.AccountType
-	internalWalletIds *map[string]string
-	externalWalletIds *map[string]string
+	internalWalletIds map[string]string
+	externalWalletIds map[string]string
 }
 
 type StatusBody struct {
@@ -152,16 +152,12 @@ func NewDestinationTransferPeerPath(destinationType accounttype.AccountType, des
 }
 
 func (fb *Fireblocks) NewDestinationTransferUsingAddress(addr string, tag string) *DestinationTransferPeerPath {
-	if fb.internalWalletIds != nil {
-		if id, found := (*fb.internalWalletIds)[addr]; found {
-			return NewDestinationTransferPeerPath(accounttype.InternalWallet, id, tag)
-		}
+	if id, found := fb.internalWalletIds[addr]; found {
+		return NewDestinationTransferPeerPath(accounttype.InternalWallet, id, tag)
 	}
 
-	if fb.externalWalletIds != nil {
-		if id, found := (*fb.externalWalletIds)[addr]; found {
-			return NewDestinationTransferPeerPath(accounttype.ExternalWallet, id, tag)
-		}
+	if id, found := fb.externalWalletIds[addr]; found {
+		return NewDestinationTransferPeerPath(accounttype.ExternalWallet, id, tag)
 	}
 
 	return NewDestinationTransferPeerPath(accounttype.OneTimeAddress, addr, tag)
@@ -349,14 +345,6 @@ func New(fireblocksConfig configuration.WalletFireblocks) (*Fireblocks, error) {
 		return nil, errors.Wrap(err, "problem with fireblocks source-type")
 	}
 
-	var internalWalletIds *map[string]string
-	var externalWalletIds *map[string]string
-	if len(fireblocksConfig.InternalWallets) > 0 {
-		internalWalletIds = configuration.UnmarshalMap(fireblocksConfig.InternalWallets)
-	}
-	if len(fireblocksConfig.ExternalWallets) > 0 {
-		externalWalletIds = configuration.UnmarshalMap(fireblocksConfig.ExternalWallets)
-	}
 	return &Fireblocks{
 		apiKey:            fireblocksConfig.APIKey,
 		assetId:           fireblocksConfig.AssetId,
@@ -364,8 +352,8 @@ func New(fireblocksConfig configuration.WalletFireblocks) (*Fireblocks, error) {
 		signKey:           signKey,
 		sourceId:          fireblocksConfig.SourceId,
 		sourceType:        *sourceType,
-		internalWalletIds: internalWalletIds,
-		externalWalletIds: externalWalletIds,
+		internalWalletIds: configuration.UnmarshalMap(fireblocksConfig.InternalWallets),
+		externalWalletIds: configuration.UnmarshalMap(fireblocksConfig.ExternalWallets),
 	}, nil
 }
 
