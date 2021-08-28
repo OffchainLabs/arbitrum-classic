@@ -17,17 +17,13 @@
 package dev
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"math/big"
 	"path/filepath"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -48,10 +44,6 @@ func TestUpgrade(t *testing.T) {
 	arbosDir, err := arbos.Dir()
 	test.FailIfError(t, err)
 	arbosFile := filepath.Join(arbosDir, "arbos_before.mexe")
-
-	upgradedMach, err := cmachine.New(filepath.Join(arbosDir, "arbos-upgrade.mexe"))
-	test.FailIfError(t, err)
-	targetHash := upgradedMach.CodePointHash()
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
@@ -81,8 +73,6 @@ func TestUpgrade(t *testing.T) {
 	}
 
 	client := web3.NewEthClient(srv, true)
-	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
-	test.FailIfError(t, err)
 
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	test.FailIfError(t, err)
@@ -105,41 +95,7 @@ func TestUpgrade(t *testing.T) {
 	}
 	auth.Value = big.NewInt(0)
 
-	updateBytes, err := ioutil.ReadFile(filepath.Join(arbosDir, "upgrade.json"))
-	test.FailIfError(t, err)
-
-	upgrade := upgrade{}
-	err = json.Unmarshal(updateBytes, &upgrade)
-	test.FailIfError(t, err)
-	chunkSize := 100000
-	chunks := []string{"0x"}
-	for _, insn := range upgrade.Instructions {
-		if len(chunks[len(chunks)-1])+len(insn) > chunkSize {
-			chunks = append(chunks, "0x")
-		}
-		chunks[len(chunks)-1] += insn
-	}
-
-	auth.GasLimit = 10000000000
-	_, err = arbOwner.StartCodeUpload(auth)
-	test.FailIfError(t, err)
-
-	for i, upgradeChunk := range chunks {
-		t.Log("Upgrade chunk", i)
-		_, err = arbOwner.ContinueCodeUpload(auth, hexutil.MustDecode(upgradeChunk))
-		test.FailIfError(t, err)
-	}
-
-	codeHash, err := arbOwner.GetUploadedCodeHash(&bind.CallOpts{})
-	test.FailIfError(t, err)
-
-	if codeHash != targetHash {
-		t.Fatal("uploaded codehash was incorrect after 1st upgrade")
-	}
-
-	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(auth, codeHash, common.Hash{})
-	test.FailIfError(t, err)
-	auth.GasLimit = 0
+	UpgradeTestDevNode(t, backend, srv, auth)
 
 	_, err = simpleCon.Exists(auth)
 	test.FailIfError(t, err)
@@ -148,7 +104,7 @@ func TestUpgrade(t *testing.T) {
 	test.FailIfError(t, err)
 
 	t.Log("New Version:", newVersion)
-	//if newVersion.Cmp(oldVersion) <= 0 {
-	//	t.Error("didn't change to new version")
-	//}
+	if newVersion.Cmp(oldVersion) <= 0 {
+		t.Error("didn't change to new version")
+	}
 }

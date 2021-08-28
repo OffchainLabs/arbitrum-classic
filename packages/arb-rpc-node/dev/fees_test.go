@@ -81,10 +81,6 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		[]message.ChainConfigOption{feeConfigInit, aggInit},
 	)
 
-	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, auth);
-	}
-
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
 			BasicTx: message.BasicTx{
@@ -125,6 +121,10 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	otherSender := common.RandAddress()
 	_, err = arbOwner.SetFairGasPriceSender(auth, otherSender.ToEthAddress(), true)
 	test.FailIfError(t, err)
+
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, auth)
+	}
 
 	senders, err := arbOwner.GetAllFairGasPriceSenders(&bind.CallOpts{})
 	test.FailIfError(t, err)

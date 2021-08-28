@@ -42,7 +42,7 @@ func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 
 func TestDeserializeMachine(t *testing.T) {
 	machineTester := getTester(t)
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	test.FailIfError(t, err)
 	machine, err := cmachine.New(arbosPath)
 	test.FailIfError(t, err)

@@ -18,14 +18,14 @@ package dev
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"math/big"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"testing"
-	"crypto/ecdsa"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -33,10 +33,10 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -47,23 +47,24 @@ import (
 var arbosfile *string
 var arbosVersion int
 var doUpgrade bool
-var didUpgrade bool
 
 type ArbOSExec struct {
 	Version *int `json:"arbos_version"`
 }
 
 func TestMain(m *testing.M) {
+	arbosfile = flag.String("arbos", "", "version of arbos to run tests against")
+	parseDoUpgrade := flag.Bool("upgrade", false, "Test against an upgraded ArbOS. -arbos now specifies the pre-upgrade version.")
 
-	path, _ := arbos.Path(false)
-	arbosfile = flag.String("arbos", path, "version of arbos to run tests against")
-	parseDoUpgrade := flag.Bool("upgrade", true, "Test against an upgraded ArbOS. Overrides 'arbos' flag.")
 	flag.Parse()
-
 	doUpgrade = *parseDoUpgrade
-	if doUpgrade {
-		path, _ := arbos.Path(doUpgrade)
-		arbosfile = &path
+
+	if len(*arbosfile) == 0 {
+		path, err := arbos.Path(doUpgrade)
+		if err != nil {
+			panic(err)
+		}
+		*arbosfile = path
 	}
 
 	fileData, err := ioutil.ReadFile(*arbosfile)
@@ -121,7 +122,7 @@ func NewTestDevNode(
 	)
 	test.FailIfError(t, err)
 	initMsg, err := message.NewInitMessage(params, owner, config)
-		
+
 	test.FailIfError(t, err)
 	_, err = backend.AddInboxMessage(initMsg, common.Address{})
 	test.FailIfError(t, err)
@@ -133,14 +134,27 @@ func NewTestDevNode(
 		}
 	}()
 
+	srv := aggregator.NewServer(backend, common.Address{}, chainId, db)
+	client := web3.NewEthClient(srv, true)
+	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	oldVersion, err := arbSys.ArbOSVersion(&bind.CallOpts{})
+	test.FailIfError(t, err)
+
 	closeFunc := func() {
-		if doUpgrade && !didUpgrade {
-			t.Fatal("Test was supposed to perform an upgrade but never did")
+		if doUpgrade {
+			newVersion, err := arbSys.ArbOSVersion(&bind.CallOpts{})
+			test.FailIfError(t, err)
+
+			if newVersion.Cmp(oldVersion) <= 0 {
+				t.Error("didn't upgrade ArbOS as expected")
+			}
 		}
 		cancelDevNode()
 		cancel()
 	}
-	srv := aggregator.NewServer(backend, common.Address{}, chainId, db)
+
 	return backend, db, srv, closeFunc
 }
 
@@ -236,11 +250,9 @@ func UpgradeTestDevNode(t *testing.T, backend *Backend, srv *aggregator.Server, 
 	newVersion, err := arbSys.ArbOSVersion(&bind.CallOpts{})
 	test.FailIfError(t, err)
 	t.Log("New Version:", newVersion)
-	didUpgrade = true
 }
 
 func OwnerAuthPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, common.Address) {
-	
 	if key == nil {
 		random, err := crypto.GenerateKey()
 		if err != nil {
@@ -248,7 +260,7 @@ func OwnerAuthPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, com
 		}
 		key = random
 	}
-	
+
 	auth := bind.NewKeyedTransactor(key)
 	address := common.NewAddressFromEth(auth.From)
 	return auth, address
