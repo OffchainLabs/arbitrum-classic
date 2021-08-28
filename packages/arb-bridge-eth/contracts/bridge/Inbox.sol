@@ -228,7 +228,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         require(!isEthDepositPaused, "ETH_DEPOSIT_PAUSED");
         address sender = msg.sender;
 
-        if (shouldRewriteSender && !Address.isContract(sender)) {
+        if (shouldRewriteSender && !Address.isContract(sender) && tx.origin == msg.sender) {
             // isContract check fails if this function is called during a contract's constructor.
             // We don't adjust the address for calls coming from L1 contracts since their addresses get remapped
             // If the caller is an EOA, we adjust the address.
