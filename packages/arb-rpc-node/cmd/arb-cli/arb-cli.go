@@ -95,14 +95,36 @@ type upgrade struct {
 	Instructions []string `json:"instructions"`
 }
 
-func upgradeArbOSSimple() error {
+type ArbOSExec struct {
+	Version int `json:"arbos_version"`
+}
+
+func upgradeArbOSSimple(targetVersion int) error {
 	arbosDirPath, err := arbos.Dir()
 	if err != nil {
 		return err
 	}
-	upgradeFile := filepath.Join(arbosDirPath, "upgrade.json")
-	targetMexe := filepath.Join(arbosDirPath, "arbos-upgrade.mexe")
-	startMexe := filepath.Join(arbosDirPath, "arbos_before.mexe")
+	return upgradeArbOSFolder(targetVersion, arbosDirPath)
+}
+
+func upgradeArbOSFolder(targetVersion int, folder string) error {
+	upgradeFile := filepath.Join(folder, "upgrade.json")
+	targetMexe := filepath.Join(folder, "arbos-upgrade.mexe")
+	startMexe := filepath.Join(folder, "arbos_before.mexe")
+
+	fileData, err := ioutil.ReadFile(targetMexe)
+	if err != nil {
+		panic(err)
+	}
+	var arbosExec ArbOSExec
+	if err := json.Unmarshal(fileData, &arbosExec); err != nil {
+		panic(err)
+	}
+
+	if arbosExec.Version != targetVersion {
+		return errors.New("wrong arbos version targeted")
+	}
+
 	return upgradeArbOS(upgradeFile, targetMexe, &startMexe)
 }
 
@@ -132,6 +154,7 @@ func checkUploadedArbOS(targetMexe string) error {
 }
 
 func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) error {
+	config.auth.GasPrice = big.NewInt(2066300000)
 	targetMach, err := cmachine.New(targetMexe)
 	if err != nil {
 		return err
@@ -875,7 +898,23 @@ func handleCommand(fields []string) error {
 		}
 		return upgradeArbOS(fields[1], fields[2], source)
 	case "upgrade-simple":
-		return upgradeArbOSSimple()
+		if len(fields) != 2 {
+			return errors.New("Expected [version]")
+		}
+		version, err := strconv.ParseInt(fields[1], 10, 64)
+		if err != nil {
+			return err
+		}
+		return upgradeArbOSSimple(int(version))
+	case "upgrade-folder":
+		if len(fields) != 3 {
+			return errors.New("Expected [version] [arbos folder]")
+		}
+		version, err := strconv.ParseInt(fields[1], 10, 64)
+		if err != nil {
+			return err
+		}
+		return upgradeArbOSFolder(int(version), fields[2])
 	case "check-upgrade":
 		if len(fields) != 2 {
 			return errors.New("Expected target mexe")
