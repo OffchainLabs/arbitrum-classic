@@ -210,7 +210,7 @@ export const initUpgrades = (
         address: receipt.contractAddress,
         deployTxn: receipt.transactionHash,
         arbitrumCommitHash: currentCommit,
-        buildInfo: await getBuildInfoString(contractName),
+        buildInfo: '' /* await getBuildInfoString(contractName) */,
       }
       queuedUpdatesData[contractName] = newLogicData
       console.log(`Deployed ${contractName} Logic:`)
@@ -366,7 +366,7 @@ export const initUpgrades = (
       const rec = await upgradeTx.wait()
       console.log('Upgrade receipt:', rec)
 
-      const buildInfo = await getBuildInfoString(contractName)
+      // const buildInfo = await getBuildInfoString(contractName)
 
       console.log(`Done updating ${contractName}`)
       const newDeploymentData: CurrentDeployment = {
@@ -374,7 +374,7 @@ export const initUpgrades = (
         implAddress: queuedUpdateData.address,
         implDeploymentTxn: queuedUpdateData.deployTxn,
         implArbitrumCommitHash: queuedUpdateData.arbitrumCommitHash,
-        implBuildInfo: buildInfo,
+        implBuildInfo: '',
       }
       console.log('Setting new tmp: deployment data')
 
@@ -412,7 +412,6 @@ export const initUpgrades = (
 
     for (const _contractName in deploymentsJsonData.contracts) {
       const contractName = _contractName as ContractNames
-      // console.warn('con', contractName);
 
       const deploymentData = tmpDeploymentsJsonData.contracts[contractName]
         ? tmpDeploymentsJsonData.contracts[contractName]
