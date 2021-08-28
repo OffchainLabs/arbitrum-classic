@@ -112,7 +112,7 @@ export const initUpgrades = (
 
     if (existsSync(path)) {
       console.log(
-        `tmp deployments file found; do you want to resume deployments with it? ('Yes' to continue)`
+        `tmp deployments file found; do you want to resume with it? ('Yes' to continue)`
       )
       const res = await prompt('')
       if (res !== 'Yes') {
@@ -398,6 +398,9 @@ export const initUpgrades = (
     console.log('Verifying deployments:')
 
     const { data: deploymentsJsonData } = await getDeployments()
+    const { data: tmpDeploymentsJsonData } =
+      await createOrLoadTmpDeploymentsFile()
+
     let success = true
     const ProxyAdmin__factory = await hre.ethers.getContractFactory(
       'ProxyAdmin'
@@ -411,7 +414,9 @@ export const initUpgrades = (
       const contractName = _contractName as ContractNames
       // console.warn('con', contractName);
 
-      const deploymentData = deploymentsJsonData.contracts[contractName]
+      const deploymentData = tmpDeploymentsJsonData.contracts[contractName]
+        ? tmpDeploymentsJsonData.contracts[contractName]
+        : deploymentsJsonData.contracts[contractName]
 
       if (isBeacon(contractName)) {
         const UpgradeableBeacon = (
