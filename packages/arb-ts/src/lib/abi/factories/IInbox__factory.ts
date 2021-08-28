@@ -126,6 +126,13 @@ const _abi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'pauseEthDeposits',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'uint256',
@@ -297,6 +304,27 @@ const _abi = [
         type: 'uint256',
       },
     ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'startRewriteAddress',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'stopRewriteAddress',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'unpauseEthDeposits',
+    outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },
