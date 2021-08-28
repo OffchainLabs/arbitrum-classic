@@ -166,6 +166,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         {
             address l2Token = calculateL2TokenAddress(_l1Token);
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
+            require(IArbToken(l2Token).l1Address() == _l1Token, "NOT_EXPECTED_L1_TOKEN");
 
             outboundEscrowTransfer(l2Token, _from, _amount);
             id = triggerWithdrawal(_l1Token, _from, _to, _amount, _extraData);
