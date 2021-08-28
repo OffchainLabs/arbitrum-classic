@@ -108,7 +108,7 @@ export const initUpgrades = (
     const { data: currentDeployments } = await getDeployments()
     const network = await hre.ethers.provider.getNetwork()
 
-    const path = `${rootDir}/deployments/${network.chainId}_tmp_deployment.json`
+    const path = `${rootDir}/_deployments/${network.chainId}_tmp_deployment.json`
 
     if (existsSync(path)) {
       console.log(
