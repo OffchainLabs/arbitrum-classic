@@ -5,6 +5,7 @@ export const deploy1820Registry = async (signer: SignerWithAddress) => {
   const registry1820 = await ethers.provider.getCode(
     '0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24'
   )
+  return
   if (registry1820 === '0x') {
     console.log('Deploying registry')
     const balance = await ethers.provider.getBalance(signer.address)

@@ -55,4 +55,20 @@ export default {
     executeOutGoingMessages: false,
     outBoxUpdateTimeout: 10000,
   },
+  arbitrum: {
+    ethRPC: 'http://127.0.0.1:7545',
+    arbRPC: 'http://127.0.0.1:8547',
+    preFundedSignerPK:
+      process.env['DEVNET_PRIVKEY'] ||
+      '0xffb2b26161e081f0cdf9db67200ee0ce25499d5ee683180a9781e6cceb791c39',
+    erc20BridgeAddress: '0x0C66A2251A5a0E63137E4e545C3145FA1DDa2ca5',
+    arbTokenBridgeAddress: '0x2EEBB8EE9c377caBC476654ca4aba016ECA1B9fc',
+    l1gasPrice: 0,
+    existentTestERC20: '',
+    existentCustomTokenL1: '',
+    existentCustomTokenL2: '',
+    defaultWait: 10000,
+    executeOutGoingMessages: false,
+    outBoxUpdateTimeout: 10000,
+  }
 }

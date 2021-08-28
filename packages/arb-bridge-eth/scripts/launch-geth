@@ -11,8 +11,10 @@ docker run -d -it --rm -p 7545:7545 -p 7546:7546 \
        --http --http.addr 0.0.0.0 --http.port 7545 --http.corsdomain="*" --http.vhosts="*" \
        --http.api 'personal,db,eth,net,web3,txpool,miner' \
        --ws --ws.addr 0.0.0.0 --ws.port 7546 --ws.origins '*' \
+       --rpc --rpcaddr 0.0.0.0 --rpc.txfeecap 0 \
        --ws.api personal,admin,db,eth,net,web3,miner,shh,txpool,debug \
        --gcmode=archive \
+       --verbosity 4 \
        --rpc.allow-unprotected-txs
 while ! nc -z localhost 7545; do sleep 2; done;
 echo "Finished waiting for geth on localhost:7545..."
