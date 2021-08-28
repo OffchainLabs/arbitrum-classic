@@ -55,22 +55,16 @@ type ArbOSExec struct {
 
 func TestMain(m *testing.M) {
 
+	path, _ := arbos.Path(false)
+	arbosfile = flag.String("arbos", path, "version of arbos to run tests against")
 	parseDoUpgrade := flag.Bool("upgrade", true, "Test against an upgraded ArbOS. Overrides 'arbos' flag.")
-	
-	arbosPath, err := arbos.Path(doUpgrade)
-	if err != nil {
-		panic(err)
-	}
-
-	if doUpgrade {
-		arbosfile = &arbosPath
-	} else {
-		arbosfile = flag.String("arbos", arbosPath, "version of arbos to run tests against")
-	}
 	flag.Parse()
 
 	doUpgrade = *parseDoUpgrade
-	didUpgrade = false
+	if doUpgrade {
+		path, _ := arbos.Path(doUpgrade)
+		arbosfile = &path
+	}
 
 	fileData, err := ioutil.ReadFile(*arbosfile)
 	if err != nil {
