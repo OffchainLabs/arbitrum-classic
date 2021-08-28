@@ -107,6 +107,13 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             emit GatewaySet(_token[i], _gateway[i]);
             // overwrite memory so the L2 router receives the L2 address of each gateway
             if (_gateway[i] != address(0)) {
+                // if we are assigning a gateway to the token, the address oracle of the gateway
+                // must return something other than the 0 address
+                // this check helps avoid misconfiguring gateways
+                require(
+                    TokenGateway(_gateway[i]).calculateL2TokenAddress(_token[i]) != address(0),
+                    "TOKEN_NOT_HANDLED_BY_GATEWAY"
+                );
                 _gateway[i] = TokenGateway(_gateway[i]).counterpartGateway();
             }
         }
