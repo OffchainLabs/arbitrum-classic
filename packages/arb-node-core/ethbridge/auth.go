@@ -172,8 +172,13 @@ func NewFireblocksTransactAuthAdvanced(
 				Msg("fireblocks transaction failed when getting receipt")
 			return nil, errors.Wrapf(err, "fireblocks transaction failed when getting receipt: %s", details.Status)
 		}
+		if fb.IsTransactionStatusCompletedSuccessfully(details.Status) {
+			// The transaction is marked as completed in Fireblocks. Get the actual tx receipt.
+			return client.TransactionReceipt(ctx, tx.Hash())
+		}
 
-		return client.TransactionReceipt(ctx, tx.Hash())
+		// The transaction is still pending in Fireblocks. Don't expose the tx receipt yet, even if it exists.
+		return nil, nil
 	}
 
 	transactAuth := &TransactAuth{

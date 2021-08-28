@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/rs/zerolog"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -32,6 +31,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
@@ -59,6 +60,7 @@ const (
 	Rejected                      = "REJECTED"
 	Blocked                       = "BLOCKED"
 	Failed                        = "FAILED"
+	Completed                     = "COMPLETED"
 )
 
 type Fireblocks struct {
@@ -485,11 +487,15 @@ func (fb *Fireblocks) GetTransactionByExternalId(externalId string) (*Transactio
 }
 
 func (fb *Fireblocks) IsTransactionStatusFailed(status string) bool {
-	if len(status) == 0 || status == Cancelled || status == Rejected || status == Blocked || status == Failed {
-		return true
-	}
+	return len(status) == 0 ||
+		status == Cancelled ||
+		status == Rejected ||
+		status == Blocked ||
+		status == Failed
+}
 
-	return false
+func (fb *Fireblocks) IsTransactionStatusCompletedSuccessfully(status string) bool {
+	return status == Completed
 }
 
 func (fb *Fireblocks) CancelTransaction(txid string) error {
