@@ -69,8 +69,8 @@ type Fireblocks struct {
 	signKey           *rsa.PrivateKey
 	sourceId          string
 	sourceType        accounttype.AccountType
-	internalWalletIds *map[string]string
-	externalWalletIds *map[string]string
+	internalWalletIds map[string]string
+	externalWalletIds map[string]string
 }
 
 type StatusBody struct {
@@ -152,11 +152,11 @@ func NewDestinationTransferPeerPath(destinationType accounttype.AccountType, des
 }
 
 func (fb *Fireblocks) NewDestinationTransferUsingAddress(addr string, tag string) *DestinationTransferPeerPath {
-	if id, found := (*fb.internalWalletIds)[addr]; found {
+	if id, found := fb.internalWalletIds[addr]; found {
 		return NewDestinationTransferPeerPath(accounttype.InternalWallet, id, tag)
 	}
 
-	if id, found := (*fb.externalWalletIds)[addr]; found {
+	if id, found := fb.externalWalletIds[addr]; found {
 		return NewDestinationTransferPeerPath(accounttype.ExternalWallet, id, tag)
 	}
 
