@@ -90,7 +90,6 @@ export const initUpgrades = (
       const tmpFile = await loadTmpDeployments()
 
       const parsedData = JSON.parse(jsonBuff.toString()) as CurrentDeployments
-      console.log(parsedData)
       return {
         path,
         data: tmpFile ? { ...parsedData, ...tmpFile.data } : parsedData,
@@ -108,7 +107,7 @@ export const initUpgrades = (
   const loadTmpDeployments = async () => {
     const network = await hre.ethers.provider.getNetwork()
 
-    const path = `${rootDir}/deployments/${network.chainId}_tmp_deployment.json`
+    const path = `${rootDir}/_deployments/${network.chainId}_tmp_deployment.json`
 
     if (existsSync(path)) {
       console.log(
