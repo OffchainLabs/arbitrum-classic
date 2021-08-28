@@ -179,13 +179,14 @@ export const initUpgrades = (
     for (const contractName of contractNames) {
       if (queuedUpdatesData[contractName]) {
         console.log(
-          `Update already queued up for ${contractName}; are you sure you want to continue?`
+          `Update already queued up for ${contractName}; would you redeploy it? ('Yes' to redeploy, otherwise we'll skip and used the queued update)`
         )
-        console.log(`('Yes') to continue:`)
         const res = await prompt('')
-        if (res.trim() !== 'Yes') {
-          console.log('Skipping...')
+        if (res.trim().toLowerCase() !== 'yes') {
+          console.log('Skipping redeploy and using the queued update')
           continue
+        } else {
+          console.log('Redeploying ', contractName)
         }
       }
 
