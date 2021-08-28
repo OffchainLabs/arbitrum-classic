@@ -331,6 +331,21 @@ func enableValidators(rollup ethcommon.Address, validators []ethcommon.Address) 
 	return waitForTx(tx, "CreateRollup")
 }
 
+func swapValidatorOwner(walletAddress, newOwner ethcommon.Address) error {
+	wallet, err := ethbridgecontracts.NewValidator(walletAddress, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := wallet.TransferOwnership(config.auth, newOwner)
+	fmt.Println("Waiting for receipt for", tx.Hash())
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "TransferOwnership")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
 func getWhitelist(inboxAddr ethcommon.Address) error {
 	inbox, err := ethbridgecontracts.NewInbox(inboxAddr, config.client)
 	if err != nil {
@@ -877,6 +892,13 @@ func handleCommand(fields []string) error {
 		rollup := ethcommon.HexToAddress(fields[1])
 		seq := ethcommon.HexToAddress(fields[2])
 		return setSequencer(rollup, seq)
+	case "swap-validator-owner":
+		if len(fields) != 3 {
+			return errors.New("Expected [wallet] [newOwner] arguments")
+		}
+		wallet := ethcommon.HexToAddress(fields[1])
+		newOwner := ethcommon.HexToAddress(fields[2])
+		return swapValidatorOwner(wallet, newOwner)
 	case "custom-admin-deploy":
 		fmt.Println("usdc", crypto.CreateAddress(ethcommon.HexToAddress(usdcDeployer), usdcNonce))
 		fmt.Println("weth", crypto.CreateAddress(ethcommon.HexToAddress(wethDeployer), wethNonce))
@@ -937,7 +959,6 @@ func run(ctx context.Context) error {
 	}
 	fmt.Println("Sending from address", auth.From)
 	auth.Context = context.Background()
-	auth.GasPrice = big.NewInt(1405800000)
 	config = &Config{
 		client: client,
 		auth:   auth,
