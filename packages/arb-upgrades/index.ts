@@ -105,27 +105,10 @@ export const initUpgrades = (
     path: string
     data: CurrentDeployments
   }> => {
-    const { data: currentDeployments } = await getDeployments()
-    const network = await hre.ethers.provider.getNetwork()
+    const { data: currentDeployments, path } = await getDeployments()
+    const val = await loadTmpDeployments()
+    if (val) return val
 
-    const path = `${rootDir}/_deployments/${network.chainId}_tmp_deployment.json`
-
-    if (existsSync(path)) {
-      console.log(
-        `tmp deployments file found; do you want to resume with it? ('Yes' to continue)`
-      )
-      const res = await prompt('')
-      if (res !== 'Yes') {
-        console.log('exiting')
-        process.exit(0)
-      }
-
-      const jsonBuff = readFileSync(path)
-      return {
-        path,
-        data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
-      }
-    }
     console.log('Creating a new tmp deployments file:')
 
     writeFileSync(path, JSON.stringify(currentDeployments))
@@ -135,6 +118,32 @@ export const initUpgrades = (
     }
   }
 
+  const loadTmpDeployments = async (): Promise<
+    | {
+        path: string
+        data: CurrentDeployments
+      }
+    | undefined
+  > => {
+    const network = await hre.ethers.provider.getNetwork()
+
+    const path = `${rootDir}/_deployments/${network.chainId}_tmp_deployment.json`
+    if (existsSync(path)) {
+      console.log(
+        `tmp deployments file found; do you want to resume deployments with it? ('Yes' to continue)`
+      )
+      const res = await prompt('')
+      if (res !== 'Yes') {
+        console.log('exiting')
+        process.exit(0)
+      }
+      const jsonBuff = readFileSync(path)
+      return {
+        path,
+        data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
+      }
+    }
+  }
   const getBuildInfoString = async (contractName: string) => {
     const names = await hre.artifacts.getAllFullyQualifiedNames()
     const contracts = names.filter(curr => curr.endsWith(`:${contractName}`))
@@ -398,8 +407,7 @@ export const initUpgrades = (
     console.log('Verifying deployments:')
 
     const { data: deploymentsJsonData } = await getDeployments()
-    const { data: tmpDeploymentsJsonData } =
-      await createOrLoadTmpDeploymentsFile()
+    const tmpDeploymentsJsonData = await loadTmpDeployments()
 
     let success = true
     const ProxyAdmin__factory = await hre.ethers.getContractFactory(
@@ -409,13 +417,18 @@ export const initUpgrades = (
       deploymentsJsonData.proxyAdminAddress
     )
     const proxyAdminOwner = await proxyAdmin.owner()
+    console.log('proxyAdmin owner:', proxyAdminOwner)
 
     for (const _contractName in deploymentsJsonData.contracts) {
       const contractName = _contractName as ContractNames
+      const _currentDeploymentData = deploymentsJsonData.contracts[contractName]
+      const _tmpDeploymentData =
+        tmpDeploymentsJsonData &&
+        tmpDeploymentsJsonData.data.contracts[contractName]
 
-      const deploymentData = tmpDeploymentsJsonData.contracts[contractName]
-        ? tmpDeploymentsJsonData.contracts[contractName]
-        : deploymentsJsonData.contracts[contractName]
+      const deploymentData = _tmpDeploymentData
+        ? _tmpDeploymentData
+        : _currentDeploymentData
 
       if (isBeacon(contractName)) {
         const UpgradeableBeacon = (
