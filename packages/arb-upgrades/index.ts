@@ -87,9 +87,13 @@ export const initUpgrades = (
     const path = `${rootDir}/_deployments/${network.chainId}_current_deployment.json`
     try {
       const jsonBuff = readFileSync(path)
+      const tmpFile = await loadTmpDeployments()
+
+      const parsedData = JSON.parse(jsonBuff.toString()) as CurrentDeployments
+      console.log(parsedData)
       return {
         path,
-        data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
+        data: tmpFile ? { ...parsedData, ...tmpFile.data } : parsedData,
       }
     } catch (err) {
       if (err.code === 'ENOENT') {
@@ -101,11 +105,7 @@ export const initUpgrades = (
     }
   }
 
-  const createOrLoadTmpDeploymentsFile = async (): Promise<{
-    path: string
-    data: CurrentDeployments
-  }> => {
-    const { data: currentDeployments } = await getDeployments()
+  const loadTmpDeployments = async () => {
     const network = await hre.ethers.provider.getNetwork()
 
     const path = `${rootDir}/deployments/${network.chainId}_tmp_deployment.json`
@@ -126,6 +126,17 @@ export const initUpgrades = (
         data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
       }
     }
+    return undefined
+  }
+
+  const createOrLoadTmpDeploymentsFile = async (): Promise<{
+    path: string
+    data: CurrentDeployments
+  }> => {
+    const { data: currentDeployments, path } = await getDeployments()
+    const val = await loadTmpDeployments()
+    if (val) return val
+
     console.log('Creating a new tmp deployments file:')
 
     writeFileSync(path, JSON.stringify(currentDeployments))
