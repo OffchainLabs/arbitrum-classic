@@ -18,7 +18,6 @@ package ethbridge
 
 import (
 	"context"
-	"crypto/rsa"
 	"math/big"
 	"sync"
 	"time"
@@ -32,7 +31,6 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -127,27 +125,11 @@ func NewFireblocksTransactAuthAdvanced(
 		return nil, nil, err
 	}
 
-	var signKey *rsa.PrivateKey
-	if len(walletConfig.Fireblocks.SSLKeyPassword) != 0 {
-		signKey, err = jwt.ParseRSAPrivateKeyFromPEMWithPassword([]byte(walletConfig.Fireblocks.SSLKey), walletConfig.Fireblocks.SSLKeyPassword)
-	} else {
-		signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(walletConfig.Fireblocks.SSLKey))
-	}
+	fb, err := fireblocks.New(walletConfig.Fireblocks)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "problem with fireblocks privatekey")
+		return nil, nil, err
 	}
-	sourceType, err := accounttype.New(walletConfig.Fireblocks.SourceType)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "problem with fireblocks source-type")
-	}
-	fb := fireblocks.New(
-		walletConfig.Fireblocks.AssetId,
-		walletConfig.Fireblocks.BaseURL,
-		*sourceType,
-		walletConfig.Fireblocks.SourceId,
-		walletConfig.Fireblocks.APIKey,
-		signKey,
-	)
+
 	sendTx := func(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
 		return fireblocksSendTransaction(ctx, fb, tx, replaceTxByHash)
 	}
@@ -215,14 +197,6 @@ func waitForPendingTransactions(
 			break
 		}
 
-		// Get updated fees to use
-		networkFees, err := fb.EstimateNetworkFees()
-		if err != nil {
-			return err
-		}
-		// TODO
-		_ = networkFees
-
 		for _, details := range *pendingTx {
 			if details.Status == fireblocks.Broadcasting {
 				logger.
@@ -234,14 +208,9 @@ func waitForPendingTransactions(
 				// Existing transaction is stuck
 				destinationAddress := ethcommon.HexToAddress(details.DestinationAddress)
 				baseTx := &types.DynamicFeeTx{
-					ChainID:   big.NewInt(0), // Fireblocks ignore chain id
-					Nonce:     0,             // Fireblocks ignores nonce
-					GasTipCap: big.NewInt(0),
-					GasFeeCap: big.NewInt(0),
-					Gas:       0,
-					To:        &destinationAddress,
-					Value:     big.NewInt(details.Amount),
-					Data:      []byte(details.ExtraParameters.ContractCallData),
+					To:    &destinationAddress,
+					Value: big.NewInt(details.Amount),
+					Data:  []byte(details.ExtraParameters.ContractCallData),
 				}
 				rawTx := types.NewTx(baseTx)
 				arbTx, err := NewFireblocksArbTransaction(rawTx, &details)
@@ -254,7 +223,7 @@ func waitForPendingTransactions(
 					client,
 					transactAuth.auth.From,
 					arbTx,
-					"CreateWallet",
+					"waitForPendingTransactions",
 					transactAuth,
 					transactAuth,
 				)
@@ -287,6 +256,8 @@ func fireblocksSendTransaction(ctx context.Context, fb *fireblocks.Fireblocks, t
 		tx.To().Hex(),
 		"",
 		tx.Value(),
+		big.NewInt(int64(tx.Gas())),
+		tx.GasPrice(),
 		tx.GasTipCap(),
 		tx.GasFeeCap(),
 		replaceTxByHash,
