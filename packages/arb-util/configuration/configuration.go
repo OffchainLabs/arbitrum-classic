@@ -754,10 +754,13 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 
 		// Don't keep printing configuration file and don't print wallet passwords
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"conf.dump":                              false,
-			"wallet.fireblocks.feed-signer.password": "",
-			"wallet.fireblocks.ssl-key-password":     "",
-			"wallet.local.password":                  "",
+			"conf.dump":                                 false,
+			"wallet.fireblocks.feed-signer.password":    "",
+			"wallet.fireblocks.feed-signer.private-key": "",
+			"wallet.fireblocks.ssl-key":                 "",
+			"wallet.fireblocks.ssl-key-password":        "",
+			"wallet.local.password":                     "",
+			"wallet.local.private-key":                  "",
 		}, "."), nil)
 
 		c, err := k.Marshal(json.Parser())
