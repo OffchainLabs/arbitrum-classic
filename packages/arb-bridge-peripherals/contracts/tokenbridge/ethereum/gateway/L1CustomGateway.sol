@@ -61,17 +61,11 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         address _l1Router,
         address _inbox,
         address _owner
-    ) public virtual {
+    ) public {
         L1ArbitrumExtendedGateway._initialize(_l1Counterpart, _l1Router, _inbox);
         owner = _owner;
         // disable whitelist by default
         whitelist = address(0);
-    }
-
-    function postUpgradeInit() external {
-        require(whitelist == address(0), "ALREADY_INIT");
-        router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
-        whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
     }
 
     /**
@@ -92,24 +86,18 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override onlyWhitelisted returns (bytes memory) {
+    ) public payable override onlyWhitelisted returns (bytes memory) {
         return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     /**
      * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * @dev the L1 and L2 address oracles may not always be in sync.
      * For example, a custom token may have been registered but not deploy or the contract self destructed.
      * @param l1ERC20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
         return l1ToL2Token[l1ERC20];
     }
 
@@ -126,7 +114,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable virtual returns (uint256) {
+    ) external payable returns (uint256) {
         return registerTokenToL2(_l2Address, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
@@ -146,7 +134,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
         address _creditBackAddress
-    ) public payable virtual returns (uint256) {
+    ) public payable returns (uint256) {
         require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
         l1ToL2Token[msg.sender] = _l2Address;
 
@@ -164,7 +152,18 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 l2Addresses
             );
 
-        return sendTxToL2(_creditBackAddress, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                _creditBackAddress,
+                msg.value,
+                0,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
     /**
@@ -183,7 +182,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable virtual returns (uint256) {
+    ) external payable returns (uint256) {
         require(msg.sender == owner, "ONLY_OWNER");
         require(_l1Addresses.length == _l2Addresses.length, "INVALID_LENGTHS");
 
@@ -201,6 +200,17 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 _l2Addresses
             );
 
-        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                msg.sender,
+                msg.value,
+                0,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 }

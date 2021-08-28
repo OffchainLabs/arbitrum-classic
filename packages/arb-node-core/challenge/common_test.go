@@ -85,17 +85,15 @@ func executeChallenge(
 		if turn == ethbridge.CHALLENGER_TURN {
 			err := challenger.HandleConflict(ctx)
 			test.FailIfError(t, err)
-
-			if challengerBackend.TransactionCount() == 0 {
-				t.Fatal("should be able to transact")
-			}
 			arbTx, err := challengerWallet.ExecuteTransactions(ctx, challengerBackend)
 			test.FailIfError(t, err)
 			client.Commit()
-			receipt, err := client.TransactionReceipt(ctx, arbTx.Hash())
-			test.FailIfError(t, err)
-			t.Log("Challenger Used", receipt.GasUsed, "gas")
-			turn = ethbridge.ASSERTER_TURN
+			if arbTx != nil {
+				receipt, err := client.TransactionReceipt(ctx, arbTx.Hash())
+				test.FailIfError(t, err)
+				t.Log("Challenger Used", receipt.GasUsed, "gas")
+				turn = ethbridge.ASSERTER_TURN
+			}
 		} else {
 			err := asserter.HandleConflict(ctx)
 			if asserterMayFail && err != nil {
@@ -103,16 +101,15 @@ func executeChallenge(
 				return rounds
 			}
 			test.FailIfError(t, err)
-			if asserterBackend.TransactionCount() == 0 {
-				t.Fatal("should be able to transact")
-			}
 			arbTx, err := asserterWallet.ExecuteTransactions(ctx, asserterBackend)
 			test.FailIfError(t, err)
 			client.Commit()
-			receipt, err := client.TransactionReceipt(ctx, arbTx.Hash())
-			test.FailIfError(t, err)
-			t.Log("Asserter Used", receipt.GasUsed, "gas")
-			turn = ethbridge.CHALLENGER_TURN
+			if arbTx != nil {
+				receipt, err := client.TransactionReceipt(ctx, arbTx.Hash())
+				test.FailIfError(t, err)
+				t.Log("Asserter Used", receipt.GasUsed, "gas")
+				turn = ethbridge.CHALLENGER_TURN
+			}
 		}
 		rounds++
 
@@ -218,6 +215,7 @@ func initializeChallengeTest(
 	ctx := context.Background()
 	clnt, auths := test.SimulatedBackend(t)
 	deployer := auths[0]
+	rollupAddr := deployer.From
 	asserter := auths[1]
 	challenger := auths[2]
 	sequencer := auths[3]
@@ -230,22 +228,21 @@ func initializeChallengeTest(
 	test.FailIfError(t, err)
 	_, _, tester, err := ethbridgetestcontracts.DeployChallengeTester(deployer, client, []ethcommon.Address{osp1Addr, osp2Addr, osp3Addr})
 	test.FailIfError(t, err)
-	rollupAddr, _, rollup, err := ethbridgetestcontracts.DeployRollupMock(deployer, client)
-	test.FailIfError(t, err)
-
 	delayedBridgeAddr, _, delayedBridge, err := ethbridgecontracts.DeployBridge(deployer, client)
+	test.FailIfError(t, err)
+	sequencerBridgeAddr, _, sequencerBridge, err := ethbridgecontracts.DeploySequencerInbox(deployer, client)
 	test.FailIfError(t, err)
 	client.Commit()
 	_, err = delayedBridge.Initialize(deployer)
+	test.FailIfError(t, err)
+	_, err = sequencerBridge.Initialize(deployer, delayedBridgeAddr, sequencer.From, rollupAddr)
 	test.FailIfError(t, err)
 	client.Commit()
 
 	_, err = delayedBridge.SetInbox(deployer, deployer.From, true)
 	test.FailIfError(t, err)
 
-	maxDelayBlocks := big.NewInt(60)
-	maxDelaySeconds := big.NewInt(900)
-	_, err = rollup.SetMock(deployer, maxDelayBlocks, maxDelaySeconds)
+	_, err = sequencerBridge.SetMaxDelay(deployer, big.NewInt(60), big.NewInt(900))
 	test.FailIfError(t, err)
 	client.Commit()
 
@@ -277,11 +274,6 @@ func initializeChallengeTest(
 		t.Fatal("unexpected acc in inbox")
 	}
 
-	sequencerBridgeAddr, _, sequencerBridge, err := ethbridgecontracts.DeploySequencerInbox(deployer, client)
-	test.FailIfError(t, err)
-	client.Commit()
-	_, err = sequencerBridge.Initialize(deployer, delayedBridgeAddr, sequencer.From, rollupAddr)
-	test.FailIfError(t, err)
 	client.Commit()
 	latestHeader, err := client.HeaderByNumber(context.Background(), nil)
 	test.FailIfError(t, err)

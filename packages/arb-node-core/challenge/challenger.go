@@ -37,6 +37,14 @@ func NewChallenger(challenge *ethbridge.Challenge, sequencerInbox *ethbridge.Seq
 }
 
 func (c *Challenger) HandleConflict(ctx context.Context) error {
+	isTimedOut, err := c.challenge.IsTimedOut(ctx)
+	if err != nil {
+		return err
+	}
+	if isTimedOut {
+		return c.challenge.Timeout(ctx)
+	}
+
 	responder, err := c.challenge.CurrentResponder(ctx)
 	if err != nil {
 		return err
@@ -49,6 +57,12 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 	challengeState, err := c.challenge.ChallengeState(ctx)
 	if err != nil {
 		return err
+	}
+
+	emptyHash := common.Hash{}
+	if challengeState == emptyHash {
+		logger.Warn().Str("contract", c.challenge.Address().Hex()).Msg("challenge has been lost, waiting for timeout")
+		return nil
 	}
 
 	prevBisection, err := c.challenge.LookupBisection(ctx, challengeState)

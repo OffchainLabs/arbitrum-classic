@@ -8,6 +8,211 @@ import type { IRollupCore, IRollupCoreInterface } from '../IRollupCore'
 
 const _abi = [
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'nodeNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'afterSendAcc',
+        type: 'bytes32',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'afterSendCount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'afterLogAcc',
+        type: 'bytes32',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'afterLogCount',
+        type: 'uint256',
+      },
+    ],
+    name: 'NodeConfirmed',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'nodeNum',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'parentNodeHash',
+        type: 'bytes32',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'nodeHash',
+        type: 'bytes32',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'executionHash',
+        type: 'bytes32',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'inboxMaxCount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'afterInboxBatchEndCount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'afterInboxBatchAcc',
+        type: 'bytes32',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes32[3][2]',
+        name: 'assertionBytes32Fields',
+        type: 'bytes32[3][2]',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256[4][2]',
+        name: 'assertionIntFields',
+        type: 'uint256[4][2]',
+      },
+    ],
+    name: 'NodeCreated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'nodeNum',
+        type: 'uint256',
+      },
+    ],
+    name: 'NodeRejected',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'challengeContract',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'asserter',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'challenger',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'challengedNode',
+        type: 'uint256',
+      },
+    ],
+    name: 'RollupChallengeStarted',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'machineHash',
+        type: 'bytes32',
+      },
+    ],
+    name: 'RollupCreated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'user',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'initialBalance',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'finalBalance',
+        type: 'uint256',
+      },
+    ],
+    name: 'UserStakeUpdated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'user',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'initialBalance',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'finalBalance',
+        type: 'uint256',
+      },
+    ],
+    name: 'UserWithdrawableFundsUpdated',
+    type: 'event',
+  },
+  {
     inputs: [
       {
         internalType: 'address',

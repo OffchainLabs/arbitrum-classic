@@ -35,6 +35,15 @@ import "../rollup/facets/RollupAdmin.sol";
 
 import "../libraries/Whitelist.sol";
 
+contract RollupTester is Rollup {
+    constructor() public Rollup(1) {
+        // this undoes the proxy safety from the main rollup contract
+        // to enable hardhat traces / debugging
+        confirmPeriodBlocks = 0;
+        require(!isInit(), "INVALID_CONSTRUCTOR");
+    }
+}
+
 contract RollupCreatorNoProxy {
     event RollupCreated(address rollupAddress, Inbox inbox);
 
@@ -43,7 +52,7 @@ contract RollupCreatorNoProxy {
         bytes32 _machineHash,
         uint256 _confirmPeriodBlocks,
         uint256 _extraChallengeTimeBlocks,
-        uint256 _arbGasSpeedLimitPerBlock,
+        uint256 _avmGasSpeedLimitPerBlock,
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
@@ -57,7 +66,7 @@ contract RollupCreatorNoProxy {
                 _machineHash,
                 _confirmPeriodBlocks,
                 _extraChallengeTimeBlocks,
-                _arbGasSpeedLimitPerBlock,
+                _avmGasSpeedLimitPerBlock,
                 _baseStake,
                 _stakeToken,
                 _owner,
@@ -134,7 +143,7 @@ contract RollupCreatorNoProxy {
         returns (address)
     {
         CreateRollupFrame memory frame;
-        frame.rollup = address(new Rollup());
+        frame.rollup = address(new RollupTester());
         (
             frame.delayedBridge,
             frame.sequencerInbox,
@@ -148,7 +157,7 @@ contract RollupCreatorNoProxy {
             [
                 config.confirmPeriodBlocks,
                 config.extraChallengeTimeBlocks,
-                config.arbGasSpeedLimitPerBlock,
+                config.avmGasSpeedLimitPerBlock,
                 config.baseStake
             ],
             config.stakeToken,

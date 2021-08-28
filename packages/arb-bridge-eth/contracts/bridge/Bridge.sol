@@ -39,6 +39,8 @@ contract Bridge is OwnableUpgradeable, IBridge {
     address[] public allowedOutboxList;
 
     address public override activeOutbox;
+
+    // Accumulator for delayed inbox; tail represents hash of the current state; each element represents the inclusion of a new message.
     bytes32[] public override inboxAccs;
 
     function initialize() external initializer {
@@ -88,13 +90,16 @@ contract Bridge is OwnableUpgradeable, IBridge {
         if (data.length > 0) require(destAddr.isContract(), "NO_CODE_AT_DEST");
         address currentOutbox = activeOutbox;
         activeOutbox = msg.sender;
+        // We set and reset active outbox around external call so activeOutbox remains valid during call
         (success, returnData) = destAddr.call{ value: amount }(data);
         activeOutbox = currentOutbox;
+        emit BridgeCallTriggered(msg.sender, destAddr, amount, data);
     }
 
     function setInbox(address inbox, bool enabled) external override onlyOwner {
         InOutInfo storage info = allowedInboxesMap[inbox];
         bool alreadyEnabled = info.allowed;
+        emit InboxToggle(inbox, enabled);
         if ((alreadyEnabled && enabled) || (!alreadyEnabled && !enabled)) {
             return;
         }
@@ -112,6 +117,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
     function setOutbox(address outbox, bool enabled) external override onlyOwner {
         InOutInfo storage info = allowedOutboxesMap[outbox];
         bool alreadyEnabled = info.allowed;
+        emit OutboxToggle(outbox, enabled);
         if ((alreadyEnabled && enabled) || (!alreadyEnabled && !enabled)) {
             return;
         }
