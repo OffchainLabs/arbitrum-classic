@@ -20,10 +20,16 @@ pragma solidity ^0.6.11;
 
 import "./interfaces/IInbox.sol";
 import "./interfaces/IBridge.sol";
+import "../rollup/Rollup.sol";
 
 import "./Messages.sol";
 import "../libraries/Cloneable.sol";
 import "../libraries/Whitelist.sol";
+import "../libraries/ProxyUtil.sol";
+import "../libraries/AddressAliasHelper.sol";
+
+import "@openzeppelin/contracts/utils/Address.sol";
+import "./Bridge.sol";
 
 contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     uint8 internal constant ETH_TRANSFER = 0;
@@ -35,6 +41,9 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     uint8 internal constant L2MessageType_unsignedContractTx = 1;
 
     IBridge public override bridge;
+
+    bool public isEthDepositPaused;
+    bool public shouldRewriteSender;
 
     function initialize(IBridge _bridge, address _whitelist) external {
         require(address(bridge) == address(0), "ALREADY_INIT");
@@ -165,6 +174,49 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
             );
     }
 
+    modifier onlyOwner() {
+        // the rollup contract owns the bridge
+        address rollup = Bridge(address(bridge)).owner();
+        // we want to validate the owner of the rollup
+        address owner = RollupBase(rollup).owner();
+        require(msg.sender == owner, "NOT_ROLLUP");
+        _;
+    }
+
+    event PauseToggled(bool enabled);
+
+    /// @notice pauses eth deposits
+    function pauseEthDeposits() external override onlyOwner {
+        require(!isEthDepositPaused, "ALREADY_PAUSED");
+        isEthDepositPaused = true;
+        emit PauseToggled(true);
+    }
+
+    /// @notice unpauses eth deposits
+    function unpauseEthDeposits() external override onlyOwner {
+        require(isEthDepositPaused, "NOT_PAUSED");
+        isEthDepositPaused = false;
+        emit PauseToggled(false);
+    }
+
+    event RewriteToggled(bool enabled);
+
+    /// @notice start rewriting addresses in eth deposits
+    function startRewriteAddress() external override onlyOwner {
+        require(!shouldRewriteSender, "ALREADY_REWRITING");
+        shouldRewriteSender = true;
+        emit RewriteToggled(true);
+    }
+
+    /// @notice stop rewriting addresses in eth deposits
+    function stopRewriteAddress() external override onlyOwner {
+        require(shouldRewriteSender, "NOT_REWRITING");
+        shouldRewriteSender = false;
+        emit RewriteToggled(false);
+    }
+
+    /// @notice deposit eth from L1 to L2
+    /// @dev this function should not be called inside contract constructors
     function depositEth(uint256 maxSubmissionCost)
         external
         payable
@@ -173,11 +225,26 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         onlyWhitelisted
         returns (uint256)
     {
+        require(!isEthDepositPaused, "ETH_DEPOSIT_PAUSED");
+        address sender = msg.sender;
+
+        if (shouldRewriteSender && !Address.isContract(sender)) {
+            // isContract check fails if this function is called during a contract's constructor.
+            // We don't adjust the address for calls coming from L1 contracts since their addresses get remapped
+            // If the caller is an EOA, we adjust the address.
+            // This is needed because unsigned messages to the L2 (such as retryables)
+            // have the L1 sender address mapped.
+            // Here we preemptively reverse the mapping for EOAs so deposits work as expected
+            sender = AddressAliasHelper.undoL1ToL2Alias(sender);
+        }
+
         return
             _deliverMessage(
                 L1MessageType_submitRetryableTx,
-                msg.sender,
+                sender,
                 abi.encodePacked(
+                    // the beneficiary and other refund addresses don't get rewritten by arb-os
+                    // so we use the original msg.sender value
                     uint256(uint160(bytes20(msg.sender))),
                     uint256(0),
                     msg.value,
