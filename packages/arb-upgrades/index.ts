@@ -25,6 +25,7 @@ const IMPLEMENTATION_SLOT =
 const BEACON_SLOT =
   '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50'
 
+const ROLLUP_CONSTRUCTOR_VAL = 42161
 const getAdminFromProxyStorage = async (
   hre: HardhatRuntimeEnvironment,
   proxyAddress: string
@@ -213,7 +214,7 @@ export const initUpgrades = (
       // handle Rollup's constructor:
       const newLogic =
         contractName === ContractNames.Rollup
-          ? await contractFactory.deploy(42161)
+          ? await contractFactory.deploy(ROLLUP_CONSTRUCTOR_VAL)
           : await contractFactory.deploy()
       const deployedContract = await newLogic.deployed()
       const receipt = await deployedContract.deployTransaction.wait()
@@ -627,6 +628,32 @@ export const initUpgrades = (
     writeFileSync(path, JSON.stringify(data))
   }
 
+  const verifyDeployments = async () => {
+    const { data } = await getDeployments()
+
+    for (const _contractName of Object.keys(data.contracts)) {
+      const contractName = _contractName as ContractNames
+      const contract = data.contracts[contractName]
+
+      try {
+        // Handle Rollup Constructor
+        if (contractName === ContractNames.Rollup) {
+          await hre.run('verify:verify', {
+            address: contract.implAddress,
+            constructorArguments: [ROLLUP_CONSTRUCTOR_VAL],
+            contract: 'contracts/rollup/Rollup.sol:Rollup',
+          })
+        } else {
+          await hre.run('verify:verify', {
+            address: contract.implAddress,
+          })
+        }
+      } catch (err) {
+        console.log(`failed to verify ${contractName}`, err)
+      }
+    }
+  }
+
   return {
     updateImplementations,
     verifyCurrentImplementations,
@@ -635,5 +662,6 @@ export const initUpgrades = (
     transferAdmin,
     transferBeaconOwner,
     removeBuildInfoFiles,
+    verifyDeployments,
   }
 }
