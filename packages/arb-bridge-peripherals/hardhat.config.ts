@@ -39,4 +39,12 @@ task('transfer-owner', 'deploy one logic')
     await transferAdmin(args.proxyaddress, args.newadmin)
   })
 
+task(
+  'remove-build-info',
+  'remove giant build info string from current_deployments json'
+).setAction(async (_, hre) => {
+  const { removeBuildInfoFiles } = initUpgrades(hre, __dirname)
+  await removeBuildInfoFiles()
+})
+
 module.exports = config
