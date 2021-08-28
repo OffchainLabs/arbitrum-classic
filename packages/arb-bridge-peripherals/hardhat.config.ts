@@ -47,4 +47,11 @@ task(
   await removeBuildInfoFiles()
 })
 
+task('etherscan-verify', 'verify current deployments in etherscan').setAction(
+  async (_, hre) => {
+    const { verifyDeployments } = await initUpgrades(hre, __dirname)
+    await verifyDeployments()
+  }
+)
+
 module.exports = config
