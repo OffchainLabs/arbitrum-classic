@@ -229,7 +229,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable override onlyCounterpartGateway returns (bytes memory) {
+    ) external payable override onlyCounterpartGateway {
         (bytes memory gatewayData, bytes memory callHookData) = GatewayMessageHandler
             .parseFromL1GatewayMsg(_data);
         // callHookData should always be 0 since inboundEscrowAndCall is disabled
@@ -246,7 +246,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
                 _amount,
                 gatewayData
             );
-            if (shouldHalt) return bytes("");
+            if (shouldHalt) return;
         }
         // ignores gatewayData if token already deployed
 
@@ -272,14 +272,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
             if (shouldWithdraw) {
                 // we override the gatewayData field to save on the stack
                 triggerWithdrawal(_token, address(this), _from, _amount, "");
-                return bytes("");
+                return;
             }
         }
 
         inboundEscrowTransfer(expectedAddress, _to, _amount);
         emit DepositFinalized(_token, _from, _to, _amount);
 
-        return bytes("");
+        return;
     }
 
     // returns if function should halt after

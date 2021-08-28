@@ -103,7 +103,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable override onlyCounterpartGateway returns (bytes memory) {
+    ) external payable override onlyCounterpartGateway {
         (uint256 exitNum, bytes memory callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(
             _data
         );
@@ -115,7 +115,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         inboundEscrowTransfer(_token, _to, _amount);
 
         emit WithdrawalFinalized(_token, _from, _to, exitNum, _amount);
-        return bytes("");
     }
 
     function getExternalCall(
