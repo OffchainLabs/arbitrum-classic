@@ -124,7 +124,7 @@ func TestOwner(t *testing.T) {
 	ib.AddMessage(ownerOnlyAction(2), priorRandomOwner, big.NewInt(0), chainTime)
 	shouldSucceed = append(shouldSucceed, false, true, false)
 
-	results, _ := runTxAssertion(T, ib.Messages)
+	results, _ := runTxAssertion(t, ib.Messages)
 
 	if len(results) != len(shouldSucceed) {
 		t.Log("length of results does not match checks", len(results), len(shouldSucceed))

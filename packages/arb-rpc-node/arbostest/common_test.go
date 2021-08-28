@@ -39,26 +39,17 @@ var (
 
 var arbosfile *string
 var arbosVersion int
-var doUpgrade bool
 
 type ArbOSExec struct {
 	Version *int `json:"arbos_version"`
 }
 
 func TestMain(m *testing.M) {
-
-	doUpgrade = flag.Bool("upgrade", false, "Test against an upgraded ArbOS. Overrides 'arbos' flag.");
-	
-	arbosPath, err := arbos.Path(doUpgrade)
+	arbosPath, err := arbos.Path(false)
 	if err != nil {
 		panic(err)
 	}
-
-	if doUpgrade {
-		arbosfile = arbosPath
-	} else {
-		arbosfile = flag.String("arbos", arbosPath, "Version of arbos to run tests against")
-	}
+ 	arbosfile = flag.String("arbos", arbosPath, "version of arbos to run tests against")
 	flag.Parse()
 
 	fileData, err := ioutil.ReadFile(*arbosfile)
