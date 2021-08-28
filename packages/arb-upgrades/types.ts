@@ -81,8 +81,7 @@ export const isBeacon = (contractName: ContractNames) =>
   isBeaconOwnedByEOA(contractName) || isBeaconOwnedByRollup(contractName)
 
 export const isBeaconOwnedByEOA = (contractName: ContractNames) =>
-  proxyType(contractName) === UpgradeableType.BeaconOwnedByEOA ||
-  proxyType(contractName) === UpgradeableType.BeaconOwnedByRollup
+  proxyType(contractName) === UpgradeableType.BeaconOwnedByEOA
 
 export const isBeaconOwnedByRollup = (contractName: ContractNames) =>
   proxyType(contractName) === UpgradeableType.BeaconOwnedByRollup
