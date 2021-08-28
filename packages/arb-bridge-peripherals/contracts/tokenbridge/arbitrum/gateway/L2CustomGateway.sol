@@ -45,11 +45,9 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
     ) internal override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         // trigger withdrawal
-        createOutboundTx(
-            address(this),
-            _amount,
-            getOutboundCalldata(_l1Token, address(this), _from, _amount, "")
-        );
+        // we don't need the return value from triggerWithdrawal since this is forcing a withdrawal back to the L1
+        // instead of composing with a L2 dapp
+        triggerWithdrawal(_l1Token, address(this), _from, _amount, "");
         return true;
     }
 

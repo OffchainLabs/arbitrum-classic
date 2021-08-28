@@ -58,11 +58,9 @@ contract L2WethGateway is L2ArbitrumGateway {
     ) internal override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         // trigger withdrawal
-        createOutboundTx(
-            address(this),
-            _amount,
-            getOutboundCalldata(l1ERC20, address(this), _from, _amount, "")
-        );
+        // this codepath should only be hit if the system is setup incorrectly
+        // this withdrawal is for error recovery, not composing with L2 dapps, so we ignore the return value
+        triggerWithdrawal(l1ERC20, address(this), _from, _amount, "");
         return true;
     }
 
