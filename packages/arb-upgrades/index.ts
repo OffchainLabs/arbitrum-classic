@@ -318,7 +318,9 @@ export const initUpgrades = (
         // handle UpgradeableBeacon proxy owned by Rollup
         const rollupAddress =
           tmpDeploymentsJsonData.contracts.Rollup.proxyAddress
-        const RollupAdmin = (await hre.ethers.getContractFactory('RollupAdmin'))
+        const RollupAdmin = (
+          await hre.ethers.getContractFactory(ContractNames.RollupAdminFacet)
+        )
           .attach(rollupAddress)
           .connect(signer)
         upgradeTx = await RollupAdmin.upgradeBeacon(
