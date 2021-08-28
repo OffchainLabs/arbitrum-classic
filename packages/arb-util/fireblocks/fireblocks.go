@@ -37,6 +37,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/accounttype"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/operationtype"
 )
@@ -62,12 +63,14 @@ const (
 )
 
 type Fireblocks struct {
-	apiKey     string
-	assetId    string
-	baseUrl    string
-	signKey    *rsa.PrivateKey
-	sourceId   string
-	sourceType accounttype.AccountType
+	apiKey            string
+	assetId           string
+	baseUrl           string
+	signKey           *rsa.PrivateKey
+	sourceId          string
+	sourceType        accounttype.AccountType
+	internalWalletIds *map[string]string
+	externalWalletIds *map[string]string
 }
 
 type StatusBody struct {
@@ -146,6 +149,18 @@ func NewDestinationTransferPeerPath(destinationType accounttype.AccountType, des
 	}
 
 	return &destination
+}
+
+func (fb *Fireblocks) NewDestinationTransferUsingAddress(addr string, tag string) *DestinationTransferPeerPath {
+	if id, found := (*fb.internalWalletIds)[addr]; found {
+		return NewDestinationTransferPeerPath(accounttype.InternalWallet, id, tag)
+	}
+
+	if id, found := (*fb.externalWalletIds)[addr]; found {
+		return NewDestinationTransferPeerPath(accounttype.ExternalWallet, id, tag)
+	}
+
+	return NewDestinationTransferPeerPath(accounttype.OneTimeAddress, addr, tag)
 }
 
 type OneTimeAddress struct {
@@ -308,16 +323,38 @@ type NetworkFee struct {
 	PriorityFee string `json:"priorityFee"`
 }
 
-func New(assetId string, baseUrl string, sourceType accounttype.AccountType, sourceId string, apiKey string, signKey *rsa.PrivateKey) *Fireblocks {
+func New(fireblocksConfig configuration.WalletFireblocks) (*Fireblocks, error) {
 	rand.Seed(time.Now().UnixNano())
-	return &Fireblocks{
-		apiKey:     apiKey,
-		assetId:    assetId,
-		baseUrl:    baseUrl,
-		signKey:    signKey,
-		sourceId:   sourceId,
-		sourceType: sourceType,
+
+	var signKey *rsa.PrivateKey
+	var err error
+	if len(fireblocksConfig.SSLKeyPassword) != 0 {
+		signKey, err = jwt.ParseRSAPrivateKeyFromPEMWithPassword([]byte(fireblocksConfig.SSLKey), fireblocksConfig.SSLKeyPassword)
+		if err != nil {
+			return nil, errors.Wrap(err, "problem with fireblocks privatekey with password")
+		}
+	} else {
+		signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(fireblocksConfig.SSLKey))
+		if err != nil {
+			return nil, errors.Wrap(err, "problem with fireblocks privatekey")
+		}
 	}
+
+	sourceType, err := accounttype.New(fireblocksConfig.SourceType)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem with fireblocks source-type")
+	}
+
+	return &Fireblocks{
+		apiKey:            fireblocksConfig.APIKey,
+		assetId:           fireblocksConfig.AssetId,
+		baseUrl:           fireblocksConfig.BaseURL,
+		signKey:           signKey,
+		sourceId:          fireblocksConfig.SourceId,
+		sourceType:        *sourceType,
+		internalWalletIds: configuration.UnmarshalMap(fireblocksConfig.InternalWallets),
+		externalWalletIds: configuration.UnmarshalMap(fireblocksConfig.ExternalWallets),
+	}, nil
 }
 
 func (fb *Fireblocks) ListPendingTransactions() (*[]TransactionDetails, error) {
@@ -394,6 +431,8 @@ func (fb *Fireblocks) CreateContractCall(
 	destinationId string,
 	destinationTag string,
 	amount *big.Int,
+	gasLimitWei *big.Int,
+	gasPriceWei *big.Int,
 	maxPriorityFeeWei *big.Int,
 	maxTotalGasPriceWei *big.Int,
 	replaceTxByHash string,
@@ -405,6 +444,8 @@ func (fb *Fireblocks) CreateContractCall(
 		destinationTag,
 		amount,
 		operationtype.ContractCall,
+		gasLimitWei,
+		gasPriceWei,
 		maxPriorityFeeWei,
 		maxTotalGasPriceWei,
 		replaceTxByHash,
@@ -418,6 +459,8 @@ func (fb *Fireblocks) CreateTransaction(
 	destinationTag string,
 	amountWei *big.Int,
 	operation operationtype.OperationType,
+	gasLimitWei *big.Int,
+	gasPriceWei *big.Int,
 	maxPriorityFeeWei *big.Int,
 	maxTotalGasPriceWei *big.Int,
 	replaceTxByHash string,
@@ -427,6 +470,8 @@ func (fb *Fireblocks) CreateTransaction(
 	amountEth := new(big.Rat).SetFrac(amountWei, divisor)
 	maxPriorityFee := new(big.Rat).SetFrac(maxPriorityFeeWei, divisor)
 	maxTotalGasPrice := new(big.Rat).SetFrac(maxTotalGasPriceWei, divisor)
+	gasLimit := new(big.Rat).SetFrac(gasLimitWei, divisor)
+	gasPrice := new(big.Rat).SetFrac(gasPriceWei, divisor)
 
 	body := &CreateTransactionBody{
 		AssetId:          fb.assetId,
@@ -434,6 +479,8 @@ func (fb *Fireblocks) CreateTransaction(
 		Destination:      *NewDestinationTransferPeerPath(destinationType, destinationId, destinationTag),
 		Amount:           amountEth.FloatString(18),
 		Operation:        operation,
+		GasLimit:         gasLimit.FloatString(18),
+		GasPrice:         gasPrice.FloatString(18),
 		MaxPriorityFee:   maxPriorityFee.FloatString(18),
 		MaxTotalGasPrice: maxTotalGasPrice.FloatString(18),
 		ReplaceTxByHash:  replaceTxByHash,

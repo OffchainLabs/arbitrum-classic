@@ -199,15 +199,17 @@ type Wallet struct {
 }
 
 type WalletFireblocks struct {
-	APIKey         string     `koanf:"api-key,omitempty"`
-	AssetId        string     `koanf:"asset-id,omitempty"`
-	BaseURL        string     `koanf:"base-url,omitempty"`
-	FeedSigner     FeedSigner `koanf:"feed-signer"`
-	SourceAddress  string     `koanf:"source-address,omitempty"`
-	SourceId       string     `koanf:"source-id,omitempty"`
-	SourceType     string     `koanf:"source-type,omitempty"`
-	SSLKey         string     `koanf:"ssl-key,omitempty"`
-	SSLKeyPassword string     `koanf:"ssl-key-password,omitempty"`
+	APIKey          string     `koanf:"api-key,omitempty"`
+	AssetId         string     `koanf:"asset-id,omitempty"`
+	BaseURL         string     `koanf:"base-url,omitempty"`
+	ExternalWallets string     `koanf:"external-wallets"`
+	FeedSigner      FeedSigner `koanf:"feed-signer"`
+	InternalWallets string     `koanf:"internal-wallets"`
+	SourceAddress   string     `koanf:"source-address,omitempty"`
+	SourceId        string     `koanf:"source-id,omitempty"`
+	SourceType      string     `koanf:"source-type,omitempty"`
+	SSLKey          string     `koanf:"ssl-key,omitempty"`
+	SSLKeyPassword  string     `koanf:"ssl-key-password,omitempty"`
 }
 
 type FeedSigner struct {
@@ -772,4 +774,15 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	out.Wallet = Wallet{}
 
 	return &out, &wallet, nil
+}
+
+func UnmarshalMap(marshalled string) *map[string]string {
+	unmarshalled := make(map[string]string)
+	items := strings.Split(marshalled, ",")
+	for _, pair := range items {
+		item := strings.Split(pair, ":")
+		unmarshalled[item[0]] = item[1]
+	}
+
+	return &unmarshalled
 }
