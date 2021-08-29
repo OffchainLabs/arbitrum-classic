@@ -327,10 +327,10 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         // if a refund address is a contract, we apply the alias to it
         // so that it can access its funds on the L2
         // since the beneficiary and other refund addresses don't get rewritten by arb-os
-        if (Address.isContract(excessFeeRefundAddress)) {
+        if (shouldRewriteSender && Address.isContract(excessFeeRefundAddress)) {
             excessFeeRefundAddress = AddressAliasHelper.applyL1ToL2Alias(excessFeeRefundAddress);
         }
-        if (Address.isContract(callValueRefundAddress)) {
+        if (shouldRewriteSender && Address.isContract(callValueRefundAddress)) {
             // this is the beneficiary. be careful since this is the address that can cancel the retryable in the L2
             callValueRefundAddress = AddressAliasHelper.applyL1ToL2Alias(callValueRefundAddress);
         }
