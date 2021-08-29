@@ -62,13 +62,13 @@ func NewFireblocksTransactAuthAdvanced(
 		fb:     fb,
 	}
 
-	// Handle any pending transactions left from last time
-	/* TODO
-	err = waitForPendingTransactions(ctx, client, transactAuth, fb)
-	if err != nil {
-		return nil, nil, err
+	if !walletConfig.Fireblocks.DisableHandlePending {
+		// Handle any pending transactions left from last time process was running
+		err = waitForPendingTransactions(ctx, client, transactAuth, fb)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
-	*/
 
 	return transactAuth, fb, nil
 }
@@ -96,9 +96,11 @@ func waitForPendingTransactions(
 		}
 
 		if len(*pendingTx) == 0 {
+			logger.Info().Msg("no pending fireblocks transactions to take care of")
 			break
 		}
 
+		logger.Info().Int("count", len(*pendingTx)).Msg("pending fireblocks transactions need to be handled")
 		for _, details := range *pendingTx {
 			if details.Status == fireblocks.Broadcasting {
 				logger.
@@ -117,7 +119,11 @@ func waitForPendingTransactions(
 				rawTx := types.NewTx(baseTx)
 				arbTx, err := NewFireblocksArbTransaction(rawTx, &details)
 				if err != nil {
-					logger.Error().Err(err).Msg("unable to wait for pending transactions")
+					logger.
+						Error().
+						Err(err).
+						Str("id", details.Id).
+						Msg("error creating new version of pending transaction")
 					return err
 				}
 				_, err = WaitForReceiptWithResultsAndReplaceByFee(
@@ -145,7 +151,7 @@ func waitForPendingTransactions(
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(5 * time.Second):
+		case <-time.After(10 * time.Second):
 		}
 	}
 
@@ -181,18 +187,19 @@ func (ta *FireblocksTransactAuth) NonceAt(ctx context.Context, account ethcommon
 }
 
 func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
-	txResponse, err := ta.fb.CreateContractCall(
-		accounttype.OneTimeAddress,
-		tx.To().Hex(),
-		"",
-		tx.Value(),
-		big.NewInt(int64(tx.Gas())),
-		tx.GasPrice(),
-		tx.GasTipCap(),
-		tx.GasFeeCap(),
-		replaceTxByHash,
-		ethcommon.Bytes2Hex(tx.Data()),
-	)
+	input := fireblocks.CreateTransactionInput{
+		DestinationType:     accounttype.OneTimeAddress,
+		DestinationId:       tx.To().Hex(),
+		DestinationTag:      "",
+		AmountWei:           tx.Value(),
+		GasLimitWei:         big.NewInt(int64(tx.Gas())),
+		GasPriceWei:         tx.GasPrice(),
+		MaxPriorityFeeWei:   tx.GasTipCap(),
+		MaxTotalGasPriceWei: tx.GasFeeCap(),
+		ReplaceTxByHash:     replaceTxByHash,
+		CallData:            ethcommon.Bytes2Hex(tx.Data()),
+	}
+	txResponse, err := ta.fb.CreateContractCall(&input)
 	if err != nil {
 		return nil, err
 	}

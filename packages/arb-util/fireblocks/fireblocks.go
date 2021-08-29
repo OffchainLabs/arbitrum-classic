@@ -85,8 +85,8 @@ type CreateTransactionBody struct {
 	Fee              string                          `json:"fee,omitempty"`
 	GasPrice         string                          `json:"gasPrice,omitempty"`
 	GasLimit         string                          `json:"gasLimit,omitempty"`
-	MaxPriorityFee   string                          `json:"maxPriorityFee"`
-	MaxTotalGasPrice string                          `json:"maxTotalGasPrice"`
+	MaxPriorityFee   string                          `json:"maxPriorityFee,omitempty"`
+	MaxTotalGasPrice string                          `json:"maxTotalGasPrice,omitempty"`
 	NetworkFee       string                          `json:"networkFee,omitempty"`
 	FeeLevel         string                          `json:"feeLevel,omitempty"`
 	MaxFee           string                          `json:"maxFee,omitempty"`
@@ -425,65 +425,63 @@ func (fb *Fireblocks) EstimateNetworkFees() (*NetworkFees, error) {
 	return &result, nil
 }
 
-func (fb *Fireblocks) CreateContractCall(
-	destinationType accounttype.AccountType,
-	destinationId string,
-	destinationTag string,
-	amount *big.Int,
-	gasLimitWei *big.Int,
-	gasPriceWei *big.Int,
-	maxPriorityFeeWei *big.Int,
-	maxTotalGasPriceWei *big.Int,
-	replaceTxByHash string,
-	callData string,
-) (*CreateTransactionResponse, error) {
-	return fb.CreateTransaction(
-		destinationType,
-		destinationId,
-		destinationTag,
-		amount,
-		operationtype.ContractCall,
-		gasLimitWei,
-		gasPriceWei,
-		maxPriorityFeeWei,
-		maxTotalGasPriceWei,
-		replaceTxByHash,
-		callData,
-	)
+func (fb *Fireblocks) CreateContractCall(input *CreateTransactionInput) (*CreateTransactionResponse, error) {
+	return fb.CreateTransaction(operationtype.ContractCall, input)
 }
 
-func (fb *Fireblocks) CreateTransaction(
-	destinationType accounttype.AccountType,
-	destinationId string,
-	destinationTag string,
-	amountWei *big.Int,
-	operation operationtype.OperationType,
-	gasLimitWei *big.Int,
-	gasPriceWei *big.Int,
-	maxPriorityFeeWei *big.Int,
-	maxTotalGasPriceWei *big.Int,
-	replaceTxByHash string,
-	callData string,
-) (*CreateTransactionResponse, error) {
+type CreateTransactionInput struct {
+	DestinationType     accounttype.AccountType
+	DestinationId       string
+	DestinationTag      string
+	AmountWei           *big.Int
+	GasLimitWei         *big.Int
+	GasPriceWei         *big.Int
+	MaxPriorityFeeWei   *big.Int
+	MaxTotalGasPriceWei *big.Int
+	ReplaceTxByHash     string
+	CallData            string
+}
+
+func (fb *Fireblocks) CreateTransaction(operation operationtype.OperationType, input *CreateTransactionInput) (*CreateTransactionResponse, error) {
 	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
-	amountEth := new(big.Rat).SetFrac(amountWei, divisor)
-	maxPriorityFee := new(big.Rat).SetFrac(maxPriorityFeeWei, divisor)
-	maxTotalGasPrice := new(big.Rat).SetFrac(maxTotalGasPriceWei, divisor)
-	gasLimit := new(big.Rat).SetFrac(gasLimitWei, divisor)
-	gasPrice := new(big.Rat).SetFrac(gasPriceWei, divisor)
+	amountEth := new(big.Rat).SetFrac(input.AmountWei, divisor)
+
+	var gasLimitString string
+	if input.GasLimitWei.Cmp(big.NewInt(0)) != 0 {
+		gasLimit := new(big.Rat).SetFrac(input.GasLimitWei, divisor)
+		gasLimitString = gasLimit.FloatString(18)
+	}
+
+	var gasPriceString string
+	if input.GasPriceWei.Cmp(big.NewInt(0)) != 0 {
+		gasPrice := new(big.Rat).SetFrac(input.GasPriceWei, divisor)
+		gasPriceString = gasPrice.FloatString(18)
+	}
+
+	var maxPriorityFeeString string
+	if input.MaxPriorityFeeWei.Cmp(big.NewInt(0)) != 0 {
+		maxPriorityFee := new(big.Rat).SetFrac(input.MaxPriorityFeeWei, divisor)
+		maxPriorityFeeString = maxPriorityFee.FloatString(18)
+	}
+
+	var maxTotalGasPriceString string
+	if input.MaxTotalGasPriceWei.Cmp(big.NewInt(0)) != 0 {
+		maxTotalGasPrice := new(big.Rat).SetFrac(input.MaxTotalGasPriceWei, divisor)
+		maxTotalGasPriceString = maxTotalGasPrice.FloatString(18)
+	}
 
 	body := &CreateTransactionBody{
 		AssetId:          fb.assetId,
 		Source:           TransferPeerPath{Type: fb.sourceType, Id: fb.sourceId},
-		Destination:      *NewDestinationTransferPeerPath(destinationType, destinationId, destinationTag),
+		Destination:      *NewDestinationTransferPeerPath(input.DestinationType, input.DestinationId, input.DestinationTag),
 		Amount:           amountEth.FloatString(18),
 		Operation:        operation,
-		GasLimit:         gasLimit.FloatString(18),
-		GasPrice:         gasPrice.FloatString(18),
-		MaxPriorityFee:   maxPriorityFee.FloatString(18),
-		MaxTotalGasPrice: maxTotalGasPrice.FloatString(18),
-		ReplaceTxByHash:  replaceTxByHash,
-		ExtraParameters:  TransactionExtraParameters{ContractCallData: callData},
+		GasLimit:         gasLimitString,
+		GasPrice:         gasPriceString,
+		MaxPriorityFee:   maxPriorityFeeString,
+		MaxTotalGasPrice: maxTotalGasPriceString,
+		ReplaceTxByHash:  input.ReplaceTxByHash,
+		ExtraParameters:  TransactionExtraParameters{ContractCallData: input.CallData},
 	}
 
 	resp, err := fb.postRequest("/v1/transactions", url.Values{}, body)
@@ -685,7 +683,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 				Str("method", method).
 				Str("url", uri.String()).
 				Str("status", resp.Status).
-				Str("body", responseBodyStr).
+				Str("responsebody", responseBodyStr).
 				Msg("error returned when posting fireblocks request")
 			return nil, fmt.Errorf("nonce was already used")
 		}
@@ -696,7 +694,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 				Str("method", method).
 				Str("url", uri.String()).
 				Str("status", resp.Status).
-				Str("body", responseBodyStr).
+				Str("responsebody", responseBodyStr).
 				Msg("fireblocks requested object not found")
 			return nil, fmt.Errorf("status '%s' fireblocks requested object not found", resp.Status)
 		}
@@ -706,7 +704,8 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 			Str("method", method).
 			Str("url", uri.String()).
 			Str("status", resp.Status).
-			Str("body", responseBodyStr).
+			RawJSON("requestbody", requestBody).
+			Str("responsebody", responseBodyStr).
 			Msg("error returned when posting fireblocks request")
 		return nil, fmt.Errorf("status '%s' fireblocks response", resp.Status)
 	}
@@ -715,7 +714,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 		Debug().
 		Str("method", method).
 		Str("url", uri.String()).
-		RawJSON("body", requestBody).
+		RawJSON("requestbody", requestBody).
 		Str("status", resp.Status).
 		Msg("sent fireblocks request")
 
