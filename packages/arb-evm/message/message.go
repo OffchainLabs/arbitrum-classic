@@ -155,6 +155,10 @@ func (t EndBlockMessage) AsData() []byte {
 
 func L2RemapAccount(account common.Address) common.Address {
 
+	if account == (common.Address{}) {
+		return account
+	}
+
 	magic, _ := new(big.Int).SetString("1111000000000000000000000000000000001111", 16)	
 	overflow := new(big.Int).Exp(big.NewInt(2), big.NewInt(20*8), nil)
 	
@@ -168,6 +172,10 @@ func L2RemapAccount(account common.Address) common.Address {
 }
 
 func L1RemapAccount(account common.Address) common.Address {
+
+	if account == (common.Address{}) {
+		return account
+	}
 	
 	magic, _ := new(big.Int).SetString("1111000000000000000000000000000000001111", 16)
 	overflow := new(big.Int).Exp(big.NewInt(2), big.NewInt(20*8), nil)
