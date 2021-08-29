@@ -61,7 +61,7 @@ type SequencerBatcher struct {
 	client                          ethutils.EthClient
 	delayedMessagesTargetDelay      *big.Int
 	sequencerInbox                  *ethbridgecontracts.SequencerInbox
-	auth                            *ethbridge.TransactAuth
+	auth                            ethbridge.TransactAuth
 	fromAddress                     common.Address
 	chainTimeCheckInterval          time.Duration
 	logBatchGasCosts                bool
@@ -135,7 +135,7 @@ func NewSequencerBatcher(
 		return nil, errors.New("Transaction auth address isn't for sequencer")
 	}
 
-	var transactAuth *ethbridge.TransactAuth
+	var transactAuth ethbridge.TransactAuth
 	var fb *fireblocks.Fireblocks
 	if len(walletConfig.Fireblocks.SSLKey) > 0 {
 		transactAuth, fb, err = ethbridge.NewFireblocksTransactAuth(ctx, client, auth, walletConfig)

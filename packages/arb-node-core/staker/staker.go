@@ -51,7 +51,7 @@ type Staker struct {
 	strategy            Strategy
 	fromBlock           int64
 	baseCallOpts        bind.CallOpts
-	auth                *ethbridge.TransactAuth
+	auth                ethbridge.TransactAuth
 	config              configuration.Validator
 	highGasBlocksBuffer *big.Int
 	lastActCalledBlock  *big.Int
@@ -66,7 +66,7 @@ func NewStaker(
 	validatorUtilsAddress common.Address,
 	strategy Strategy,
 	callOpts bind.CallOpts,
-	auth *ethbridge.TransactAuth,
+	auth ethbridge.TransactAuth,
 	config configuration.Validator,
 ) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress, callOpts)

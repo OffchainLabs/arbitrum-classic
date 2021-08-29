@@ -106,7 +106,7 @@ func NewStatefulBatcher(
 	ctx context.Context,
 	db *txdb.TxDB,
 	chainId *big.Int,
-	receiptFetcher *ethbridge.TransactAuth,
+	receiptFetcher ethbridge.TransactAuth,
 	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
 ) (*Batcher, error) {
