@@ -96,6 +96,14 @@ Buffer& assumeBuffer(value& val) {
     return *buf;
 }
 
+const Buffer& assumeBuffer(const value& val) {
+    auto buf = std::get_if<Buffer>(&val);
+    if (!buf) {
+        throw bad_pop_type{};
+    }
+    return *buf;
+}
+
 void add(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
