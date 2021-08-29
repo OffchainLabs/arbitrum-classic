@@ -124,6 +124,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, auth)
+		enableRewrites(t, backend, srv, auth)
 	}
 
 	senders, err := arbOwner.GetAllFairGasPriceSenders(&bind.CallOpts{})

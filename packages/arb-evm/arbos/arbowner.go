@@ -45,6 +45,7 @@ var ChainOwnerParamId = hashing.SoliditySHA3([]byte("ChainOwner"))
 var NetworkFeeRecipientParamId = hashing.SoliditySHA3([]byte("NetworkFeeRecipient"))
 var CongestionFeeRecipientParamId = hashing.SoliditySHA3([]byte("CongestionFeeRecipient"))
 var DefaultAggregatorParamId = hashing.SoliditySHA3([]byte("DefaultAggregator"))
+var EnableL1ContractAddressAliasingParamId = hashing.SoliditySHA3([]byte("EnableL1ContractAddressAliasing"))
 
 func init() {
 	arbowner, err := abi.JSON(strings.NewReader(arboscontracts.ArbOwnerABI))

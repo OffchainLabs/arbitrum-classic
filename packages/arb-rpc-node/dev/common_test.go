@@ -265,3 +265,14 @@ func OwnerAuthPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, com
 	address := common.NewAddressFromEth(auth.From)
 	return auth, address
 }
+
+func enableRewrites(t *testing.T, backend *Backend, srv *aggregator.Server, auth *bind.TransactOpts) {
+
+	client := web3.NewEthClient(srv, true)
+
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	_, err = arbOwner.SetChainParameter(auth, arbos.EnableL1ContractAddressAliasingParamId, big.NewInt(1))
+	test.FailIfError(t, err)
+}

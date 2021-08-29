@@ -18,7 +18,6 @@ package dev
 
 import (
 	"math/big"
-	"path/filepath"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -41,20 +40,18 @@ type upgrade struct {
 func TestUpgrade(t *testing.T) {
 	skipBelowVersion(t, 4)
 
-	arbosDir, err := arbos.Dir()
-	test.FailIfError(t, err)
-	arbosFile := filepath.Join(arbosDir, "arbos_before.mexe")
+	arbosFile, _ := arbos.Path(true)
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
-	auth := bind.NewKeyedTransactor(privkey)
+	auth, owner := OwnerAuthPair(t, privkey)
 
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, common.NewAddressFromEth(auth.From), nil)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, owner, nil)
 	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{

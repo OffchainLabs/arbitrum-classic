@@ -46,9 +46,9 @@ func setupTest(t *testing.T) (
 	common.Address,
 	*bind.TransactOpts,
 	*bind.TransactOpts,
+	*bind.TransactOpts,
 	*aggregator.Server,
 	*Backend,
-	func(),
 	func(),
 ) {
 	config := protocol.ChainParams{
@@ -83,13 +83,7 @@ func setupTest(t *testing.T) (
 	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
 	test.FailIfError(t, err)
 
-	upgradeFunc := func() {
-		if doUpgrade {
-			UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		}
-	}
-
-	return sender, beneficiaryAuth, otherAuth, srv, backend, upgradeFunc, cancelDevNode
+	return sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, cancelDevNode
 }
 
 func setupTicket(t *testing.T, backend *Backend, sender, destination common.Address, data []byte, beneficiary common.Address) (message.RetryableTx, common.Hash) {
@@ -105,14 +99,14 @@ func setupTicket(t *testing.T, backend *Backend, sender, destination common.Addr
 		Data:              data,
 	}
 
-	requestId, err := backend.AddInboxMessage(retryableTx, sender)
+	requestId, err := backend.AddInboxMessage(retryableTx, message.L1RemapAccount(sender))
 	test.FailIfError(t, err)
 
 	return retryableTx, requestId
 }
 
 func TestRetryableRedeem(t *testing.T) {
-	sender, beneficiaryAuth, otherAuth, srv, backend, upgradeFunc, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
 	client := web3.NewEthClient(srv, true)
@@ -125,10 +119,15 @@ func TestRetryableRedeem(t *testing.T) {
 	dest, _, _, err := arbostestcontracts.DeploySimple(otherAuth, client)
 	test.FailIfError(t, err)
 
+	// TODO: add a setup ticket before
+
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		enableRewrites(t, backend, srv, ownerAuth)
+	}
+
 	retryableTx, requestId := setupTicket(t, backend, sender, common.NewAddressFromEth(dest), simpleABI.Methods["exists"].ID, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-
-	upgradeFunc()
 
 	redeemReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
 	test.FailIfError(t, err)
@@ -246,12 +245,16 @@ func TestRetryableRedeem(t *testing.T) {
 }
 
 func TestRetryableCancel(t *testing.T) {
-	sender, beneficiaryAuth, otherAuth, srv, backend, upgradeFunc, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
+
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		enableRewrites(t, backend, srv, ownerAuth)
+	}
+
 	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-
-	upgradeFunc()
 
 	client := web3.NewEthClient(srv, true)
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
@@ -289,12 +292,16 @@ func TestRetryableCancel(t *testing.T) {
 }
 
 func TestRetryableTimeout(t *testing.T) {
-	sender, beneficiaryAuth, _, srv, backend, upgradeFunc, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, _, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
+
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		enableRewrites(t, backend, srv, ownerAuth)
+	}
+
 	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-
-	upgradeFunc()
 
 	client := web3.NewEthClient(srv, true)
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
@@ -406,8 +413,9 @@ func balanceCheck(
 		t.Error("unexpected destination balance")
 	}
 }
+
 func TestRetryableReverted(t *testing.T) {
-	sender, beneficiaryAuth, otherAuth, srv, backend, upgradeFunc, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
 	client := web3.NewEthClient(srv, true)
@@ -417,6 +425,11 @@ func TestRetryableReverted(t *testing.T) {
 
 	dest, _, _, err := arbostestcontracts.DeploySimple(otherAuth, client)
 	test.FailIfError(t, err)
+
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		enableRewrites(t, backend, srv, ownerAuth)
+	}
 
 	retryableTx := message.RetryableTx{
 		Destination:       common.NewAddressFromEth(dest),
@@ -430,10 +443,8 @@ func TestRetryableReverted(t *testing.T) {
 		Data:              simpleABI.Methods["reverts"].ID,
 	}
 
-	requestId, err := backend.AddInboxMessage(retryableTx, sender)
+	requestId, err := backend.AddInboxMessage(retryableTx, message.L1RemapAccount(sender))
 	test.FailIfError(t, err)
-
-	upgradeFunc()
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
@@ -452,7 +463,7 @@ func TestRetryableReverted(t *testing.T) {
 }
 
 func TestRetryableWithReturnData(t *testing.T) {
-	sender, beneficiaryAuth, otherAuth, srv, backend, upgradeFunc, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
 	client := web3.NewEthClient(srv, true)
@@ -478,7 +489,10 @@ func TestRetryableWithReturnData(t *testing.T) {
 	requestId, err := backend.AddInboxMessage(retryableTx, sender)
 	test.FailIfError(t, err)
 
-	upgradeFunc()
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		enableRewrites(t, backend, srv, ownerAuth)
+	}
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
@@ -508,7 +522,7 @@ func TestRetryableWithReturnData(t *testing.T) {
 
 func TestRetryableImmediateReceipts(t *testing.T) {
 	skipBelowVersion(t, 12)
-	sender, beneficiaryAuth, otherAuth, srv, backend, upgradeFunc, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
 	client := web3.NewEthClient(srv, true)
@@ -534,7 +548,10 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 	requestId, err := backend.AddInboxMessage(retryableTx, sender)
 	test.FailIfError(t, err)
 
-	upgradeFunc()
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		enableRewrites(t, backend, srv, ownerAuth)
+	}
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
 
@@ -552,7 +569,7 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 func TestRetryableImmediateNoGas(t *testing.T) {
 	skipBelowVersion(t, 12)
 
-	sender, beneficiaryAuth, otherAuth, srv, backend, upgradeFunc, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
 	client := web3.NewEthClient(srv, true)
@@ -578,7 +595,10 @@ func TestRetryableImmediateNoGas(t *testing.T) {
 	requestId, err := backend.AddInboxMessage(retryableTx, sender)
 	test.FailIfError(t, err)
 
-	upgradeFunc()
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		enableRewrites(t, backend, srv, ownerAuth)
+	}
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
 
@@ -604,7 +624,7 @@ func TestRetryableImmediateNoGas(t *testing.T) {
 
 func TestRetryableSeparateReceipts(t *testing.T) {
 	skipBelowVersion(t, 12)
-	sender, beneficiaryAuth, otherAuth, srv, backend, upgradeFunc, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
 	client := web3.NewEthClient(srv, true)
@@ -630,7 +650,10 @@ func TestRetryableSeparateReceipts(t *testing.T) {
 	requestId, err := backend.AddInboxMessage(retryableTx, sender)
 	test.FailIfError(t, err)
 
-	upgradeFunc()
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		enableRewrites(t, backend, srv, ownerAuth)
+	}
 
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
@@ -646,7 +669,7 @@ func TestRetryableSeparateReceipts(t *testing.T) {
 
 func TestRetryableEmptyDest(t *testing.T) {
 	skipBelowVersion(t, 12)
-	sender, beneficiaryAuth, _, srv, backend, upgradeFunc, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, _, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
 	client := web3.NewEthClient(srv, true)
@@ -666,7 +689,10 @@ func TestRetryableEmptyDest(t *testing.T) {
 	requestId, err := backend.AddInboxMessage(retryableTx, sender)
 	test.FailIfError(t, err)
 
-	upgradeFunc()
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		enableRewrites(t, backend, srv, ownerAuth)
+	}
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
 
