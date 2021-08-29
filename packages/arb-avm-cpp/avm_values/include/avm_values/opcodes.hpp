@@ -59,6 +59,8 @@ enum class OpCode : uint8_t {
     ETHHASH2,
     KECCAKF,
     SHA256F,
+    RSVD_Ripemd160f,
+    BLAKE2BF,
 
     POP = 0x30,
     SPUSH,          // 31
@@ -153,6 +155,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::ETHHASH2, "ethhash2"},
     {OpCode::KECCAKF, "keccakf"},
     {OpCode::SHA256F, "sha256f"},
+    {OpCode::BLAKE2BF, "bLAKE2BF"},
 
     {OpCode::POP, "pop"},
     {OpCode::SPUSH, "spush"},
@@ -244,6 +247,7 @@ const std::unordered_map<OpCode, std::vector<size_t>> InstructionStackPops = {
     {OpCode::ETHHASH2, {1, 1}},
     {OpCode::KECCAKF, {1}},
     {OpCode::SHA256F, {1, 1, 1}},
+    {OpCode::BLAKE2BF, {1}},
 
     {OpCode::POP, {0}},
     {OpCode::SPUSH, {}},
@@ -334,6 +338,7 @@ const std::unordered_map<OpCode, std::vector<size_t>> InstructionAuxStackPops =
      {OpCode::ETHHASH2, {}},
      {OpCode::KECCAKF, {}},
      {OpCode::SHA256F, {}},
+     {OpCode::BLAKE2BF, {}},
 
      {OpCode::POP, {}},
      {OpCode::SPUSH, {}},
@@ -422,6 +427,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ETHHASH2, 8},
     {OpCode::KECCAKF, 600},
     {OpCode::SHA256F, 250},
+    {OpCode::BLAKE2BF, 10},
 
     {OpCode::POP, 1},
     {OpCode::SPUSH, 1},
