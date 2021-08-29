@@ -32,6 +32,7 @@ var (
 	continueArbOSUpgradeABI  abi.Method
 	finishArbOSUpgradeABI    abi.Method
 	getUploadedCodeHashABI   abi.Method
+	getChainParameterABI     abi.Method
 	setChainParameterABI     abi.Method
 	setFairGasPriceSenderABI abi.Method
 	deployContractABI        abi.Method
@@ -57,6 +58,7 @@ func init() {
 	continueArbOSUpgradeABI = arbowner.Methods["continueCodeUpload"]
 	finishArbOSUpgradeABI = arbowner.Methods["finishCodeUploadAsArbosUpgrade"]
 	getUploadedCodeHashABI = arbowner.Methods["getUploadedCodeHash"]
+	getChainParameterABI = arbowner.Methods["getChainParameter"]
 	setChainParameterABI = arbowner.Methods["setChainParameter"]
 	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
 	deployContractABI = arbowner.Methods["deployContract"]
@@ -67,6 +69,10 @@ func init() {
 
 func GetTotalOfEthBalances() []byte {
 	return makeFuncData(getTotalOfEthBalancesABI)
+}
+
+func GetChainParameterData(paramId [32]byte) []byte {
+	return makeFuncData(getChainParameterABI, paramId)
 }
 
 func SetChainParameterData(paramId [32]byte, val *big.Int) []byte {
