@@ -128,10 +128,10 @@ func (r *StandardInboxWatcher) parseMessage(txData map[string]*types.Transaction
 
 type StandardInbox struct {
 	*StandardInboxWatcher
-	auth *TransactAuth
+	auth TransactAuth
 }
 
-func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*StandardInbox, error) {
+func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth TransactAuth) (*StandardInbox, error) {
 	watcher, err := NewStandardInboxWatcher(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -143,11 +143,11 @@ func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth
 }
 
 func (s *StandardInbox) Sender() common.Address {
-	return common.NewAddressFromEth(s.auth.auth.From)
+	return common.NewAddressFromEth(s.auth.From())
 }
 
 func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte) (*ArbTransaction, error) {
-	return s.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	return makeTx(ctx, s.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return s.con.SendL2MessageFromOrigin(auth, data)
 	})
 }
@@ -155,13 +155,13 @@ func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte
 func AddSequencerL2BatchFromOrigin(
 	ctx context.Context,
 	inbox *ethbridgecontracts.SequencerInbox,
-	auth *TransactAuth,
+	auth TransactAuth,
 	transactions []byte,
 	lengths []*big.Int,
 	sectionsMetadata []*big.Int,
 	afterAcc [32]byte,
 ) (*ArbTransaction, error) {
-	arbTx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	arbTx, err := makeTx(ctx, auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
 	})
 	if err != nil {
@@ -175,24 +175,23 @@ func AddSequencerL2BatchFromOrigin(
 func AddSequencerL2BatchFromOriginCustomNonce(
 	ctx context.Context,
 	inbox *ethbridgecontracts.SequencerInbox,
-	auth *TransactAuth,
+	auth TransactAuth,
 	nonce *big.Int,
 	transactions []byte,
 	lengths []*big.Int,
 	sectionsMetadata []*big.Int,
 	afterAcc [32]byte,
 ) (*ArbTransaction, error) {
-	rawAuth := auth.getAuth(ctx)
-	rawAuth.Nonce = nonce
-	arbTx, err := auth.makeTxCustomNonce(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	rawAuth := auth.getAuth()
+	arbTx, err := makeTxCustomNonce(ctx, auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
 	}, nonce)
 	if err != nil {
 		return nil, err
 	}
 	nonce.Add(nonce, big.NewInt(1))
-	if auth.auth.Nonce.Cmp(nonce) < 0 {
-		auth.auth.Nonce.Set(nonce)
+	if rawAuth.Nonce.Cmp(nonce) < 0 {
+		rawAuth.Nonce.Set(nonce)
 	}
 
 	return arbTx, nil

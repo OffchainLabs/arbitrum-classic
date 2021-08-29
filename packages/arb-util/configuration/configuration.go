@@ -199,15 +199,17 @@ type Wallet struct {
 }
 
 type WalletFireblocks struct {
-	APIKey         string     `koanf:"api-key,omitempty"`
-	AssetId        string     `koanf:"asset-id,omitempty"`
-	BaseURL        string     `koanf:"base-url,omitempty"`
-	FeedSigner     FeedSigner `koanf:"feed-signer"`
-	SourceAddress  string     `koanf:"source-address,omitempty"`
-	SourceId       string     `koanf:"source-id,omitempty"`
-	SourceType     string     `koanf:"source-type,omitempty"`
-	SSLKey         string     `koanf:"ssl-key,omitempty"`
-	SSLKeyPassword string     `koanf:"ssl-key-password,omitempty"`
+	APIKey          string     `koanf:"api-key,omitempty"`
+	AssetId         string     `koanf:"asset-id,omitempty"`
+	BaseURL         string     `koanf:"base-url,omitempty"`
+	ExternalWallets string     `koanf:"external-wallets"`
+	FeedSigner      FeedSigner `koanf:"feed-signer"`
+	InternalWallets string     `koanf:"internal-wallets"`
+	SourceAddress   string     `koanf:"source-address,omitempty"`
+	SourceId        string     `koanf:"source-id,omitempty"`
+	SourceType      string     `koanf:"source-type,omitempty"`
+	SSLKey          string     `koanf:"ssl-key,omitempty"`
+	SSLKeyPassword  string     `koanf:"ssl-key-password,omitempty"`
 }
 
 type FeedSigner struct {
@@ -752,10 +754,13 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 
 		// Don't keep printing configuration file and don't print wallet passwords
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"conf.dump":                              false,
-			"wallet.fireblocks.feed-signer.password": "",
-			"wallet.fireblocks.ssl-key-password":     "",
-			"wallet.local.password":                  "",
+			"conf.dump":                                 false,
+			"wallet.fireblocks.feed-signer.password":    "",
+			"wallet.fireblocks.feed-signer.private-key": "",
+			"wallet.fireblocks.ssl-key":                 "",
+			"wallet.fireblocks.ssl-key-password":        "",
+			"wallet.local.password":                     "",
+			"wallet.local.private-key":                  "",
 		}, "."), nil)
 
 		c, err := k.Marshal(json.Parser())
@@ -772,4 +777,18 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	out.Wallet = Wallet{}
 
 	return &out, &wallet, nil
+}
+
+func UnmarshalMap(marshalled string) map[string]string {
+	unmarshalled := make(map[string]string)
+	if len(marshalled) == 0 {
+		return unmarshalled
+	}
+	items := strings.Split(marshalled, ",")
+	for _, pair := range items {
+		item := strings.Split(pair, ":")
+		unmarshalled[item[0]] = item[1]
+	}
+
+	return unmarshalled
 }
