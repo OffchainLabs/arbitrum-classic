@@ -47,7 +47,7 @@ func NewFireblocksTransactAuthAdvanced(
 	auth *bind.TransactOpts,
 	walletConfig *configuration.Wallet,
 	usePendingNonce bool,
-) (*FireblocksTransactAuth, *fireblocks.Fireblocks, error) {
+) (TransactAuth, *fireblocks.Fireblocks, error) {
 	err := getNonce(ctx, client, auth, usePendingNonce)
 	if err != nil {
 		return nil, nil, err

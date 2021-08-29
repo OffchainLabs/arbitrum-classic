@@ -26,16 +26,14 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
-type DelayedInboxFireblocksTransactAuth struct {
-	inner        *FireblocksTransactAuth
-	auth         *bind.TransactOpts // has remapped from address
+type DelayedInboxAuth struct {
+	l1Auth       TransactAuth
+	l2Auth       *bind.TransactOpts // has remapped from address
 	l1Client     ethutils.EthClient
 	l2Client     ethutils.EthClient
 	l2ChainId    *big.Int
@@ -55,57 +53,50 @@ func l2RemapAccount(account ethcommon.Address) ethcommon.Address {
 	return ethcommon.BigToAddress(translated)
 }
 
-func NewDelayedInboxFireblocksTransactAuthAdvanced(
+func NewDelayedInboxTransactAuth(
 	ctx context.Context,
 	l1Client ethutils.EthClient,
 	l2Client ethutils.EthClient,
-	auth *bind.TransactOpts,
-	walletConfig *configuration.Wallet,
 	delayedInboxAddress ethcommon.Address,
 	remapFromAddress bool,
-	usePendingNonce bool,
-) (TransactAuth, *fireblocks.Fireblocks, error) {
-	// The inner TransactAuth doesn't need an EthClient
-	inner, fb, err := NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, walletConfig, usePendingNonce)
-	if err != nil {
-		return nil, nil, err
-	}
+	l1Auth TransactAuth,
+) (TransactAuth, error) {
 	delayedInbox, err := ethbridgecontracts.NewInbox(delayedInboxAddress, l1Client)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	l2ChainId, err := l2Client.ChainID(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	l2Auth := *auth
-	l2Auth.From = l2RemapAccount(auth.From)
+	l2Auth := *l1Auth.GetAuth()
+	l2Auth.From = l2RemapAccount(l2Auth.From)
 
-	wrapped := &DelayedInboxFireblocksTransactAuth{
-		inner:        inner,
-		auth:         &l2Auth,
+	wrapped := &DelayedInboxAuth{
+		l1Auth:       l1Auth,
+		l2Auth:       &l2Auth,
 		l1Client:     l1Client,
 		l2Client:     l2Client,
 		l2ChainId:    l2ChainId,
 		delayedInbox: delayedInbox,
 	}
-	return wrapped, fb, nil
+	return wrapped, nil
 }
 
-func (ta *DelayedInboxFireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
-	err := ta.inner.checkIfFailed(tx)
-	if err != nil {
+func (ta *DelayedInboxAuth) TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
+	l1Receipt, err := ta.l1Auth.TransactionReceipt(ctx, tx)
+	if err != nil || l1Receipt == nil {
 		return nil, err
 	}
 
 	return ta.l2Client.TransactionReceipt(ctx, tx.Hash())
 }
 
-func (ta *DelayedInboxFireblocksTransactAuth) NonceAt(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error) {
+func (ta *DelayedInboxAuth) NonceAt(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error) {
 	return ta.l2Client.NonceAt(ctx, account, blockNumber)
 }
 
-func (ta *DelayedInboxFireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error) {
+func (ta *DelayedInboxAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error) {
 	var hashData []byte
 	hashData = append(hashData, 0) // L2MessageType_unsignedEOATx
 	hashData = append(hashData, math.U256Bytes(new(big.Int).SetUint64(tx.Gas()))...)
@@ -127,7 +118,7 @@ func (ta *DelayedInboxFireblocksTransactAuth) SendTransaction(ctx context.Contex
 	l2TxHash := hashing.SoliditySHA3(hashData)
 
 	wrappedTx, err := ta.delayedInbox.SendL1FundedUnsignedTransaction(
-		ta.inner.GetAuth(),
+		ta.l1Auth.GetAuth(),
 		new(big.Int).SetUint64(tx.Gas()),
 		tx.GasPrice(),
 		new(big.Int).SetUint64(tx.Nonce()),
@@ -138,21 +129,25 @@ func (ta *DelayedInboxFireblocksTransactAuth) SendTransaction(ctx context.Contex
 		return nil, err
 	}
 
-	arbTx, err := ta.inner.SendTransaction(ctx, wrappedTx, replaceTxByHash)
-	if arbTx != nil {
-		arbTx.OverrideHash(l2TxHash.ToEthHash())
+	l1ArbTx, err := ta.l1Auth.SendTransaction(ctx, wrappedTx, replaceTxByHash)
+	if err != nil {
+		return nil, err
 	}
-	return arbTx, err
+	l2ArbTx := arbtransaction.NewArbTransaction(tx)
+	l2ArbTx.InheritFireblocksFieldsFrom(l1ArbTx)
+	l2ArbTx.OverrideHash(l2TxHash.ToEthHash())
+	return l2ArbTx, err
 }
 
-func (ta *DelayedInboxFireblocksTransactAuth) Sign(addr ethcommon.Address, tx *types.Transaction) (*types.Transaction, error) {
-	return ta.inner.Sign(addr, tx)
+func (ta *DelayedInboxAuth) Sign(addr ethcommon.Address, tx *types.Transaction) (*types.Transaction, error) {
+	// Signing the L1 transaction happens as part of SendTransaction, not here
+	return nil, nil
 }
 
-func (ta *DelayedInboxFireblocksTransactAuth) GetAuth() *bind.TransactOpts {
-	return ta.auth
+func (ta *DelayedInboxAuth) GetAuth() *bind.TransactOpts {
+	return ta.l2Auth
 }
 
-func (ta *DelayedInboxFireblocksTransactAuth) From() ethcommon.Address {
-	return ta.auth.From
+func (ta *DelayedInboxAuth) From() ethcommon.Address {
+	return ta.l2Auth.From
 }

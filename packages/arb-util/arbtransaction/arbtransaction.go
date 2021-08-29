@@ -77,6 +77,11 @@ func (t *ArbTransaction) OverrideHash(hash ethcommon.Hash) {
 	t.hash = hash
 }
 
+func (t *ArbTransaction) InheritFireblocksFieldsFrom(other *ArbTransaction) {
+	t.hashForRbf = other.hash
+	t.id = other.id
+}
+
 func (t *ArbTransaction) Id() string {
 	return t.id
 }
