@@ -21,8 +21,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
@@ -32,11 +30,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 type BatcherMode interface {
@@ -87,12 +87,12 @@ func SetupBatcher(
 	case ForwarderBatcherMode:
 		return batcher.NewForwarder(ctx, batcherMode.Config)
 	case StatelessBatcherMode:
-		var auth *ethbridge.TransactAuth
+		var auth transactauth.TransactAuth
 		var err error
 		if len(walletConfig.Fireblocks.SSLKey) > 0 {
-			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
+			auth, _, err = transactauth.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
 		} else {
-			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
+			auth, err = transactauth.NewTransactAuth(ctx, client, batcherMode.Auth)
 		}
 		if err != nil {
 			return nil, err
@@ -103,12 +103,12 @@ func SetupBatcher(
 		}
 		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, auth, inbox, maxBatchTime), nil
 	case StatefulBatcherMode:
-		var auth *ethbridge.TransactAuth
+		var auth transactauth.TransactAuth
 		var err error
 		if len(walletConfig.Fireblocks.SSLKey) > 0 {
-			auth, _, err = ethbridge.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
+			auth, _, err = transactauth.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
 		} else {
-			auth, err = ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
+			auth, err = transactauth.NewTransactAuth(ctx, client, batcherMode.Auth)
 		}
 		if err != nil {
 			return nil, err
