@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-package ethbridge
+package transactauth
 
 import (
 	"context"
 	"math/big"
 	"sync"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 type LocalTransactAuth struct {
@@ -59,7 +61,7 @@ func NewTransactAuth(
 ) (TransactAuth, error) {
 	return NewTransactAuthAdvanced(ctx, client, auth, true)
 }
-func (ta *LocalTransactAuth) TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
+func (ta *LocalTransactAuth) TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
 	return ta.client.TransactionReceipt(ctx, tx.Hash())
 }
 
@@ -67,7 +69,7 @@ func (ta *LocalTransactAuth) NonceAt(ctx context.Context, account ethcommon.Addr
 	return ta.client.NonceAt(ctx, account, blockNumber)
 }
 
-func (ta *LocalTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
+func (ta *LocalTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error) {
 	err := ta.client.SendTransaction(ctx, tx)
 	if err != nil {
 		logger.Error().Err(err).Hex("data", tx.Data()).Msg("error sending transaction")
@@ -75,7 +77,7 @@ func (ta *LocalTransactAuth) SendTransaction(ctx context.Context, tx *types.Tran
 	}
 
 	logger.Debug().Hex("data", tx.Data()).Msg("sent transaction")
-	arbTx := NewArbTransaction(tx)
+	arbTx := arbtransaction.NewArbTransaction(tx)
 	return arbTx, nil
 }
 
@@ -83,7 +85,7 @@ func (ta *LocalTransactAuth) Sign(addr ethcommon.Address, tx *types.Transaction)
 	return ta.signer(addr, tx)
 }
 
-func (ta *LocalTransactAuth) getAuth() *bind.TransactOpts {
+func (ta *LocalTransactAuth) GetAuth() *bind.TransactOpts {
 	return ta.auth
 }
 

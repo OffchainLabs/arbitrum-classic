@@ -45,6 +45,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var logger zerolog.Logger
@@ -166,11 +167,11 @@ func startup() error {
 		}
 	}
 
-	var valAuth ethbridge.TransactAuth
+	var valAuth transactauth.TransactAuth
 	if len(walletConfig.Fireblocks.SSLKey) > 0 {
-		valAuth, _, err = ethbridge.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, walletConfig, false)
+		valAuth, _, err = transactauth.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, walletConfig, false)
 	} else {
-		valAuth, err = ethbridge.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
+		valAuth, err = transactauth.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
 
 	}
 	if err != nil {

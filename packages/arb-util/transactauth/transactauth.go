@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package ethbridge
+package transactauth
 
 import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -30,15 +31,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "ethbridge").Logger()
+var logger = log.With().Caller().Stack().Str("component", "transactauth").Logger()
 
 type TransactAuth interface {
-	SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error)
-	TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error)
+	SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error)
+	TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error)
 	NonceAt(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error)
 	Sign(ethcommon.Address, *types.Transaction) (*types.Transaction, error)
 	From() ethcommon.Address
-	getAuth() *bind.TransactOpts
+	GetAuth() *bind.TransactOpts
 }
 
 func getNonce(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts, usePendingNonce bool) error {
@@ -64,8 +65,8 @@ func makeContract(
 	ctx context.Context,
 	t TransactAuth,
 	contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error),
-) (ethcommon.Address, *ArbTransaction, error) {
-	auth := t.getAuth()
+) (ethcommon.Address, *arbtransaction.ArbTransaction, error) {
+	auth := t.GetAuth()
 
 	addr, arbTx, err := makeContractImpl(ctx, t, auth, contractFunc)
 	if err != nil {
@@ -82,8 +83,8 @@ func makeContractCustomNonce(
 	t TransactAuth,
 	contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error),
 	customNonce *big.Int,
-) (ethcommon.Address, *ArbTransaction, error) {
-	auth := t.getAuth()
+) (ethcommon.Address, *arbtransaction.ArbTransaction, error) {
+	auth := t.GetAuth()
 	origNonce := auth.Nonce
 	defer func(auth *bind.TransactOpts) {
 		auth.Nonce = origNonce
@@ -104,7 +105,7 @@ func makeContractImpl(
 	t TransactAuth,
 	auth *bind.TransactOpts,
 	contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error),
-) (ethcommon.Address, *ArbTransaction, error) {
+) (ethcommon.Address, *arbtransaction.ArbTransaction, error) {
 	// Form transaction without sending it
 	auth.NoSend = true
 	addr, tx, _, err := contractFunc(auth)
@@ -135,11 +136,11 @@ func makeContractImpl(
 	return addr, arbTx, nil
 }
 
-func makeTx(
+func MakeTx(
 	ctx context.Context,
 	t TransactAuth,
 	txFunc func(auth *bind.TransactOpts) (*types.Transaction, error),
-) (*ArbTransaction, error) {
+) (*arbtransaction.ArbTransaction, error) {
 	_, arbTx, err := makeContract(ctx, t, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		tx, err := txFunc(auth)
 		return ethcommon.BigToAddress(big.NewInt(0)), tx, nil, err
@@ -148,12 +149,12 @@ func makeTx(
 	return arbTx, err
 }
 
-func makeTxCustomNonce(
+func MakeTxCustomNonce(
 	ctx context.Context,
 	t TransactAuth,
 	txFunc func(auth *bind.TransactOpts) (*types.Transaction, error),
 	customNonce *big.Int,
-) (*ArbTransaction, error) {
+) (*arbtransaction.ArbTransaction, error) {
 	_, arbTx, err := makeContractCustomNonce(ctx, t, func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error) {
 		tx, err := txFunc(auth)
 		return ethcommon.BigToAddress(big.NewInt(0)), tx, nil, err

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethbridge
+package transactauth
 
 import (
 	"context"
@@ -25,11 +25,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/accounttype"
-	"github.com/pkg/errors"
 )
 
 type FireblocksTransactAuth struct {
@@ -118,7 +120,7 @@ func waitForPendingTransactions(
 					Data:  []byte(details.ExtraParameters.ContractCallData),
 				}
 				rawTx := types.NewTx(baseTx)
-				arbTx, err := NewFireblocksArbTransaction(rawTx, &details)
+				arbTx, err := arbtransaction.NewFireblocksArbTransaction(rawTx, &details)
 				if err != nil {
 					logger.
 						Warn().
@@ -168,7 +170,7 @@ func waitForPendingTransactions(
 		}
 	}
 }
-func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
+func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
 	details, err := ta.fb.GetTransaction(tx.Id())
 	if err != nil {
 		logger.
@@ -197,7 +199,7 @@ func (ta *FireblocksTransactAuth) NonceAt(ctx context.Context, account ethcommon
 	return ta.client.NonceAt(ctx, account, blockNumber)
 }
 
-func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
+func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error) {
 	input := fireblocks.CreateTransactionInput{
 		DestinationType:     accounttype.OneTimeAddress,
 		DestinationId:       tx.To().Hex(),
@@ -257,7 +259,7 @@ func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types
 		}
 
 		if len(details.TxHash) > 0 {
-			return NewFireblocksArbTransaction(tx, details)
+			return arbtransaction.NewFireblocksArbTransaction(tx, details)
 		}
 
 		// Hash not returned, keep trying
@@ -269,7 +271,7 @@ func (ta *FireblocksTransactAuth) Sign(addr ethcommon.Address, tx *types.Transac
 	return tx, nil
 }
 
-func (ta *FireblocksTransactAuth) getAuth() *bind.TransactOpts {
+func (ta *FireblocksTransactAuth) GetAuth() *bind.TransactOpts {
 	return ta.auth
 }
 

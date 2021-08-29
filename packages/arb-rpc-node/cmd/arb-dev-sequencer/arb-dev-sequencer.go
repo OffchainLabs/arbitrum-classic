@@ -46,11 +46,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var logger zerolog.Logger
@@ -196,7 +198,7 @@ func startup() error {
 	if err != nil {
 		return errors.Wrap(err, "error creating rollup")
 	}
-	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, ethclint, deployer.From, ethbridge.NewArbTransaction(tx), "CreateRollup", ethbridge.NewEthArbReceiptFetcher(ethclint))
+	receipt, err := transactauth.WaitForReceiptWithResults(ctx, ethclint, deployer.From, arbtransaction.NewArbTransaction(tx), "CreateRollup", transactauth.NewEthArbReceiptFetcher(ethclint))
 	if err != nil {
 		return errors.Wrap(err, "error getting transaction receipt")
 	}
