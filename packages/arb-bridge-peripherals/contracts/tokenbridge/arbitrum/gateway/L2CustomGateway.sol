@@ -25,7 +25,7 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
     // stores addresses of L2 tokens to be used
     mapping(address => address) public override l1ToL2Token;
 
-    function initialize(address _l1Counterpart, address _router) public virtual {
+    function initialize(address _l1Counterpart, address _router) public {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
     }
 
@@ -42,33 +42,30 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
         address _to,
         uint256 _amount,
         bytes memory gatewayData
-    ) internal virtual override returns (bool shouldHalt) {
+    ) internal override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         // trigger withdrawal
-        createOutboundTx(_l1Token, address(this), _from, _amount, "");
+        createOutboundTx(
+            address(this),
+            _amount,
+            getOutboundCalldata(_l1Token, address(this), _from, _amount, "")
+        );
         return true;
     }
 
     /**
      * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * @dev the L1 and L2 address oracles may not always be in sync.
      * For example, a custom token may have been registered but not deploy or the contract self destructed.
      * @param l1ERC20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
         return l1ToL2Token[l1ERC20];
     }
 
     function registerTokenFromL1(address[] calldata l1Address, address[] calldata l2Address)
         external
-        virtual
         onlyCounterpartGateway
     {
         // we assume both arrays are the same length, safe since its encoded by the L1

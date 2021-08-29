@@ -35,7 +35,7 @@ describe('standard ERC20', () => {
 
   it('withdraws erc20', async function () {
     const tokenWithdrawAmount = BigNumber.from(1)
-    const { bridge } = await instantiateBridgeWithRandomWallet()
+    const { bridge, l2Network } = await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
     const result = await fundL2Token(bridge, existentTestERC20)
     if (!result) {
@@ -60,6 +60,19 @@ describe('standard ERC20', () => {
       testWalletL2Balance &&
         testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenFundAmount)
     ).to.be.true
+    const walletAddress = await bridge.l1Signer.getAddress()
+
+    const gatewayWithdrawEventData = await bridge.getGatewayWithdrawEventData(
+      l2Network.tokenBridge.l2ERC20Gateway,
+      walletAddress
+    )
+    expect(gatewayWithdrawEventData.length).to.equal(1)
+
+    const tokenWithdrawEvents = await bridge.getTokenWithdrawEventData(
+      existentTestERC20,
+      walletAddress
+    )
+    expect(tokenWithdrawEvents.length).to.equal(1)
   })
 })
 

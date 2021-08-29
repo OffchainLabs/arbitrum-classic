@@ -271,11 +271,11 @@ export class AeWETH extends BaseContract {
     ): Promise<ContractTransaction>
 
     initialize(
-      _name: string,
-      _symbol: string,
-      _decimals: BigNumberish,
-      _l2Gateway: string,
-      _l1Address: string,
+      name_: string,
+      symbol_: string,
+      decimals_: BigNumberish,
+      l2Gateway_: string,
+      l1Address_: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -386,11 +386,11 @@ export class AeWETH extends BaseContract {
   ): Promise<ContractTransaction>
 
   initialize(
-    _name: string,
-    _symbol: string,
-    _decimals: BigNumberish,
-    _l2Gateway: string,
-    _l1Address: string,
+    name_: string,
+    symbol_: string,
+    decimals_: BigNumberish,
+    l2Gateway_: string,
+    l1Address_: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -496,11 +496,11 @@ export class AeWETH extends BaseContract {
     ): Promise<boolean>
 
     initialize(
-      _name: string,
-      _symbol: string,
-      _decimals: BigNumberish,
-      _l2Gateway: string,
-      _l1Address: string,
+      name_: string,
+      symbol_: string,
+      decimals_: BigNumberish,
+      l2Gateway_: string,
+      l1Address_: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -630,11 +630,11 @@ export class AeWETH extends BaseContract {
     ): Promise<BigNumber>
 
     initialize(
-      _name: string,
-      _symbol: string,
-      _decimals: BigNumberish,
-      _l2Gateway: string,
-      _l1Address: string,
+      name_: string,
+      symbol_: string,
+      decimals_: BigNumberish,
+      l2Gateway_: string,
+      l1Address_: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -749,11 +749,11 @@ export class AeWETH extends BaseContract {
     ): Promise<PopulatedTransaction>
 
     initialize(
-      _name: string,
-      _symbol: string,
-      _decimals: BigNumberish,
-      _l2Gateway: string,
-      _l1Address: string,
+      name_: string,
+      symbol_: string,
+      decimals_: BigNumberish,
+      l2Gateway_: string,
+      l1Address_: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 

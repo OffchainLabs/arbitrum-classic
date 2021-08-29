@@ -18,9 +18,9 @@
 
 pragma solidity ^0.6.11;
 
-import "../libraries/IERC677.sol";
+import "../libraries/ITransferAndCall.sol";
 
-contract L2Called is IERC677Receiver {
+contract L2Called is ITransferAndCallReceiver {
     event Called(uint256 num);
 
     constructor() public {}

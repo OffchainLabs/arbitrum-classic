@@ -80,13 +80,7 @@ interface TokenGatewayInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
-  events: {
-    'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
-    'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
-  }
-
-  getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
+  events: {}
 }
 
 export class TokenGateway extends BaseContract {
@@ -247,45 +241,7 @@ export class TokenGateway extends BaseContract {
     router(overrides?: CallOverrides): Promise<string>
   }
 
-  filters: {
-    InboundTransferFinalized(
-      token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _transferId?: BigNumberish | null,
-      _amount?: null,
-      _data?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, string],
-      {
-        token: string
-        _from: string
-        _to: string
-        _transferId: BigNumber
-        _amount: BigNumber
-        _data: string
-      }
-    >
-
-    OutboundTransferInitiated(
-      token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _transferId?: BigNumberish | null,
-      _amount?: null,
-      _data?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, string],
-      {
-        token: string
-        _from: string
-        _to: string
-        _transferId: BigNumber
-        _amount: BigNumber
-        _data: string
-      }
-    >
-  }
+  filters: {}
 
   estimateGas: {
     calculateL2TokenAddress(

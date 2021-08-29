@@ -49,7 +49,7 @@ describe('Custom ERC20', () => {
 
   it('withdraws erc20', async function () {
     const tokenWithdrawAmount = BigNumber.from(1)
-    const { bridge } = await instantiateBridgeWithRandomWallet()
+    const { bridge, l2Network } = await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
     const result = await fundL2Token(bridge, existentTestCustomToken)
     if (!result) {
@@ -74,6 +74,19 @@ describe('Custom ERC20', () => {
       testWalletL2Balance &&
         testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenFundAmount)
     ).to.be.true
+    const walletAddress = await bridge.l1Signer.getAddress()
+
+    const gatewayWithdrawEvents = await bridge.getGatewayWithdrawEventData(
+      l2Network.tokenBridge.l2CustomGateway,
+      walletAddress
+    )
+    expect(gatewayWithdrawEvents.length).to.equal(1)
+
+    const tokenWithdrawEvents = await bridge.getTokenWithdrawEventData(
+      existentTestCustomToken,
+      walletAddress
+    )
+    expect(tokenWithdrawEvents.length).to.equal(1)
   })
 })
 

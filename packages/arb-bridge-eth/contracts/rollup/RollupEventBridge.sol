@@ -34,12 +34,11 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
     uint8 internal constant CONFIRM_NODE_EVENT = 1;
     uint8 internal constant REJECT_NODE_EVENT = 2;
     uint8 internal constant STAKE_CREATED_EVENT = 3;
-    uint8 internal constant CLAIM_NODE_EVENT = 4;
 
     IBridge bridge;
     address rollup;
 
-    modifier onlyRollup {
+    modifier onlyRollup() {
         require(msg.sender == rollup, "ONLY_ROLLUP");
         _;
     }
@@ -52,22 +51,24 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
 
     function rollupInitialized(
         uint256 confirmPeriodBlocks,
-        uint256 arbGasSpeedLimitPerBlock,
+        uint256 avmGasSpeedLimitPerBlock,
         address owner,
         bytes calldata extraConfig
     ) external onlyRollup {
-        bytes memory initMsg =
-            abi.encodePacked(
-                keccak256("ChallengePeriodEthBlocks"),
-                confirmPeriodBlocks,
-                keccak256("SpeedLimitPerSecond"),
-                arbGasSpeedLimitPerBlock / 100, // convert avm gas to arbgas
-                keccak256("ChainOwner"),
-                uint256(uint160(bytes20(owner))),
-                extraConfig
-            );
-        uint256 num =
-            bridge.deliverMessageToInbox(INITIALIZATION_MSG_TYPE, address(0), keccak256(initMsg));
+        bytes memory initMsg = abi.encodePacked(
+            keccak256("ChallengePeriodEthBlocks"),
+            confirmPeriodBlocks,
+            keccak256("SpeedLimitPerSecond"),
+            avmGasSpeedLimitPerBlock / 100, // convert avm gas to arbgas
+            keccak256("ChainOwner"),
+            uint256(uint160(bytes20(owner))),
+            extraConfig
+        );
+        uint256 num = bridge.deliverMessageToInbox(
+            INITIALIZATION_MSG_TYPE,
+            address(0),
+            keccak256(initMsg)
+        );
         emit InboxMessageDelivered(num, initMsg);
     }
 
@@ -105,17 +106,6 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
                 nodeNum,
                 block.number
             )
-        );
-    }
-
-    function claimNode(uint256 nodeNum, address staker) external onlyRollup {
-        Rollup r = Rollup(payable(rollup));
-        INode node = r.getNode(nodeNum);
-        require(node.stakers(staker), "NOT_STAKED");
-        IRollupUser(address(r)).requireUnresolved(nodeNum);
-
-        deliverToBridge(
-            abi.encodePacked(CLAIM_NODE_EVENT, nodeNum, uint256(uint160(bytes20(staker))))
         );
     }
 
