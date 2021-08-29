@@ -35,7 +35,7 @@ ARG NETWORK
 ENV NETWORK=$NETWORK
 RUN echo arbitrum > password.txt && \
     parity --chain=parity/$NETWORK account import parity/keystore/ && \
-    parity --chain parity/$NETWORK --unlock 0x81183c9c61bdf79db7330bbcda47be30c0a85064 --password ~/password.txt & \
+    parity --chain parity/$NETWORK --unlock 0x4F5FD0eA6724DfBf825714c2742A37E0c0d6D7d9 --password ~/password.txt & \
     while ! nc -z localhost 7545; do sleep 2; done; \
     echo "Finished waiting for parity on localhost:7545..." && \
     DOCKER=true npx buidler deploy --network parity && [ -f bridge_eth_addresses.json ]
@@ -49,4 +49,4 @@ COPY --from=0 --chown=parity /home/parity/parity/ /home/parity/parity/
 COPY --from=0 --chown=parity /home/parity/.local/share/io.parity.ethereum/ /home/parity/.local/share/io.parity.ethereum/
 COPY --from=0 --chown=parity /home/parity/bridge_eth_addresses.json ./
 RUN echo arbitrum > password.txt
-ENTRYPOINT ["/usr/bin/parity", "--unlock", "0x81183c9c61bdf79db7330bbcda47be30c0a85064", "--password", "/home/parity/password.txt"]
+ENTRYPOINT ["/usr/bin/parity", "--unlock", "0x4F5FD0eA6724DfBf825714c2742A37E0c0d6D7d9", "--password", "/home/parity/password.txt"]
