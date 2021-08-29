@@ -166,7 +166,7 @@ func startup() error {
 		}
 	}
 
-	var valAuth *ethbridge.TransactAuth
+	var valAuth ethbridge.TransactAuth
 	if len(walletConfig.Fireblocks.SSLKey) > 0 {
 		valAuth, _, err = ethbridge.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, walletConfig, false)
 	} else {
