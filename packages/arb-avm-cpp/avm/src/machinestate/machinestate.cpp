@@ -459,6 +459,9 @@ uint256_t MachineState::gasCost(const Operation& op) const {
     if (op.opcode == OpCode::ECPAIRING) {
         base_gas += machineoperation::ec_pairing_variable_gas_cost(*this);
     }
+    if (op.opcode == OpCode::BLAKE2BF) {
+        base_gas += machineoperation::blake2bF_variable_gas_cost(*this);
+    }
     return base_gas;
 }
 
@@ -685,6 +688,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::SHA256F:
             machineoperation::sha256F(*this);
+            break;
+        case OpCode::BLAKE2BF:
+            machineoperation::blake2bF(*this);
             break;
 
             /***********************************************/

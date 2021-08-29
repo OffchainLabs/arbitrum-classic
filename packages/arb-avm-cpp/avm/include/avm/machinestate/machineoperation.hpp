@@ -57,6 +57,8 @@ void typeOp(MachineState& m);
 void ethhash2Op(MachineState& m);
 void keccakF(MachineState& m);
 void sha256F(MachineState& m);
+void blake2bF(MachineState& m);
+uint64_t blake2bF_variable_gas_cost(const MachineState& m);
 void pop(MachineState& m);
 void spush(MachineState& m);
 void rpush(MachineState& m);

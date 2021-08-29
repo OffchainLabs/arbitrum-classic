@@ -17,6 +17,7 @@
 #include <avm/machinestate/machineoperation.hpp>
 
 #include <avm/machinestate/ecops.hpp>
+#include <avm/machinestate/blake2b.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
 #include <PicoSHA2/picosha2.h>
@@ -26,10 +27,13 @@
 
 #include <iostream>
 
+#include <boost/endian/arithmetic.hpp>
+
 // Many opcode implementations were inspired from the Apache 2.0 licensed EVM
 // implementation https://github.com/ethereum/evmone
 
 using namespace intx;
+using namespace boost::endian;
 
 namespace {
 template <typename T>
@@ -522,6 +526,87 @@ void sha256F(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     ++m.pc;
+}
+
+namespace internal {
+uint32_t blake2F_numrounds(const Buffer& b) {
+    /* there are exactly 213 bytes, trailing may be zeroes */
+    if (b.lastIndex() > 212) {
+        throw bad_pop_type{};
+    }
+    if (b.size() < 32) {
+        throw bad_pop_type{};
+    }
+    uint32_t rounds = endian_load<uint32_t, 4, order::big>(b.get_many(0,4).data());
+    if (rounds > 0xffff) {
+        rounds = 0xffff;
+    }
+    return rounds;
+}
+}
+
+void blake2bF(MachineState& m) {
+    m.stack.prepForMod(1);
+    Buffer& encodedBuffer = assumeBuffer(m.stack[0]);
+    std::vector<uint8_t> encodedBytes = encodedBuffer.toFlatVector();
+    encodedBytes.resize(213, 0);
+    unsigned char* currentByte = encodedBytes.data();
+
+    uint32_t rounds = internal::blake2F_numrounds(encodedBuffer);
+    currentByte+=4;
+
+    std::array<uint64_t, 8> h;
+    for (int i=0; i < 8; i++) {
+        h[i] = endian_load<uint64_t, 8, order::little>(currentByte);
+        currentByte += 8;
+    }
+    std::array<uint64_t, 16> msg;
+    for (int i=0; i < 16; i++) {
+        msg[i] = endian_load<uint64_t, 8, order::little>(currentByte);
+        currentByte += 8;
+    }
+    std::array<uint64_t, 2> t;
+    for (int i=0; i < 2; i++) {
+        t[i] = endian_load<uint64_t, 8, order::little>(currentByte);
+        currentByte += 8;
+    }
+    uint8_t f = *currentByte;
+    bool final_indicator;
+    if (f == 1)
+        final_indicator = 1;
+    else if (f == 0)
+        final_indicator = 0;
+    else
+        throw bad_pop_type{};
+
+    blake2b_F(rounds, t, final_indicator, msg, h);
+
+    uint8_t outBytes[64];
+    currentByte = outBytes;
+    for (int i=0; i < 8; i++) {
+        endian_store<uint64_t, 8, order::little>(currentByte, h[i]);
+        currentByte += 8;
+    }
+
+    Buffer outBuff = Buffer::fromData(std::vector<uint8_t>(outBytes, currentByte));
+
+    m.stack[0] = outBuff;
+}
+
+uint64_t blake2bF_variable_gas_cost(const MachineState& m) {
+    uint64_t gas_cost = 0;
+    if (m.stack.stacksize() == 0) {
+        return gas_cost;
+    }
+    try {
+        const value* val = &m.stack[0];
+        const Buffer* buf = &assumeBuffer(*val);
+        uint32_t rounds = internal::blake2F_numrounds(*buf);
+        gas_cost += 10 * rounds;
+    } catch (const std::exception&) {
+    }
+
+    return gas_cost;
 }
 
 void pop(MachineState& m) {
