@@ -302,7 +302,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     }
 
     /**
-     * @notice Put an message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts
+     * @notice Put a message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts
      * @dev all msg.value will deposited to callValueRefundAddress on L2
      * @param destAddr destination L2 contract address
      * @param l2CallValue call value for retryable L2 message
