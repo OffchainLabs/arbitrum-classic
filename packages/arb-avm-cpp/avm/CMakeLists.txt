@@ -34,6 +34,7 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   src/machine.cpp
   src/inboxmessage.cpp
+  src/machinestate/blake2b.cpp
   src/machinestate/blockreason.cpp
   src/machinestate/datastack.cpp
   src/machinestate/ecops.cpp
