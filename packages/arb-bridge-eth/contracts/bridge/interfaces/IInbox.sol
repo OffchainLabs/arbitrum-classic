@@ -71,9 +71,9 @@ interface IInbox is IMessageProvider {
 
     function bridge() external view returns (IBridge);
 
-    function pauseEthDeposits() external;
+    function pauseCreateRetryables() external;
 
-    function unpauseEthDeposits() external;
+    function unpauseCreateRetryables() external;
 
     function startRewriteAddress() external;
 
