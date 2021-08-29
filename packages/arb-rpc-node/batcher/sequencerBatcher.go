@@ -871,7 +871,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	return publishingAllBatchItems, nil
 }
 
-func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount *big.Int, newChainTime inbox.ChainTime) error {
+func (b *SequencerBatcher) reorgAndModifySequencerMessages(ctx context.Context, prevMsgCount *big.Int, modifier func(*inbox.InboxMessage)) error {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 
@@ -896,7 +896,7 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 			if err != nil {
 				return err
 			}
-			seqMsg.ChainTime = newChainTime
+			modifier(&seqMsg)
 			item.SequencerMessage = seqMsg.ToBytes()
 			item.Accumulator = common.Hash{}
 		}
@@ -909,44 +909,18 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 	return nil
 }
 
+func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount *big.Int, newChainTime inbox.ChainTime) error {
+	return b.reorgAndModifySequencerMessages(ctx, prevMsgCount, func(msg *inbox.InboxMessage) {
+		msg.ChainTime = newChainTime
+	})
+}
+
 func (b *SequencerBatcher) reorgToNewSequencerAddress(ctx context.Context, prevMsgCount *big.Int) error {
-	b.inboxReader.MessageDeliveryMutex.Lock()
-	defer b.inboxReader.MessageDeliveryMutex.Unlock()
-
-	batchItems, err := b.db.GetSequencerBatchItems(prevMsgCount)
-	if err != nil {
-		return err
-	}
-
-	var previousSeqBatchAcc common.Hash
-	if prevMsgCount.Cmp(big.NewInt(0)) > 0 {
-		previousSeqBatchAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(prevMsgCount, big.NewInt(1)))
-		if err != nil {
-			return err
+	return b.reorgAndModifySequencerMessages(ctx, prevMsgCount, func(msg *inbox.InboxMessage) {
+		if msg.Sender != (common.Address{}) {
+			msg.Sender = b.fromAddress
 		}
-	}
-	for i := range batchItems {
-		item := &batchItems[i]
-		if len(item.SequencerMessage) == 0 {
-			item.Accumulator = common.Hash{}
-		} else {
-			seqMsg, err := inbox.NewInboxMessageFromData(item.SequencerMessage)
-			if err != nil {
-				return err
-			}
-			if seqMsg.Sender != (common.Address{}) {
-				seqMsg.Sender = b.fromAddress
-			}
-			item.SequencerMessage = seqMsg.ToBytes()
-			item.Accumulator = common.Hash{}
-		}
-	}
-	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func (b *SequencerBatcher) reorgOutHugeMsg(ctx context.Context, prevMsgCount *big.Int) error {
