@@ -101,7 +101,7 @@ if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     endif()
 endif()
 
-find_package(Boost 1.65 COMPONENTS filesystem system REQUIRED)
+find_package(Boost 1.71 COMPONENTS filesystem system REQUIRED)
 if(NOT TARGET Boost::boost)
     add_library(Boost::boost IMPORTED INTERFACE)
     set_property(TARGET Boost::boost PROPERTY
