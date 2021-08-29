@@ -24,6 +24,9 @@ import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import { L1WethGateway__factory } from './abi/factories/L1WethGateway__factory'
+import { Inbox__factory } from './abi/factories/Inbox__factory'
+import { Bridge__factory } from './abi/factories/Bridge__factory'
+import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
 
 import networks from './networks'
 
@@ -634,12 +637,30 @@ export class Bridge {
   }
 
   public async getOutboxAddressByBatchNum(batchNum: BigNumber) {
-    const l1ChainId = await this.l1Signer.getChainId()
-    const { oldOutbox, outbox, lastOldOutboxBatchNum } =
-      networks[l1ChainId].tokenBridge
-    return batchNum.gt(BigNumber.from(lastOldOutboxBatchNum))
-      ? outbox
-      : oldOutbox
+    const inbox = Inbox__factory.connect(
+      (await this.l1Bridge.getInbox()).address,
+      this.l1Provider
+    )
+    const bridge = await Bridge__factory.connect(
+      await inbox.bridge(),
+      this.l1Provider
+    )
+    const oldOutboxAddress = await bridge.allowedInboxList(0)
+    const newOutboxAddress = await bridge.allowedInboxList(1)
+
+    if (newOutboxAddress === constants.AddressZero) {
+      // new outbox not yet deployed; using old outbox
+      return oldOutboxAddress
+    }
+    const oldOutbox = OldOutbox__factory.connect(
+      oldOutboxAddress,
+      this.l1Provider
+    )
+    const lastOldOutboxBatchNumber = await oldOutbox.outboxesLength()
+
+    return batchNum.lt(lastOldOutboxBatchNumber)
+      ? oldOutboxAddress
+      : newOutboxAddress
   }
   /**
    * Returns {@link OutgoingMessageState} for given outgoing message
