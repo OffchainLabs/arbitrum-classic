@@ -199,17 +199,18 @@ type Wallet struct {
 }
 
 type WalletFireblocks struct {
-	APIKey          string     `koanf:"api-key,omitempty"`
-	AssetId         string     `koanf:"asset-id,omitempty"`
-	BaseURL         string     `koanf:"base-url,omitempty"`
-	ExternalWallets string     `koanf:"external-wallets"`
-	FeedSigner      FeedSigner `koanf:"feed-signer"`
-	InternalWallets string     `koanf:"internal-wallets"`
-	SourceAddress   string     `koanf:"source-address,omitempty"`
-	SourceId        string     `koanf:"source-id,omitempty"`
-	SourceType      string     `koanf:"source-type,omitempty"`
-	SSLKey          string     `koanf:"ssl-key,omitempty"`
-	SSLKeyPassword  string     `koanf:"ssl-key-password,omitempty"`
+	APIKey               string     `koanf:"api-key,omitempty"`
+	AssetId              string     `koanf:"asset-id,omitempty"`
+	BaseURL              string     `koanf:"base-url,omitempty"`
+	DisableHandlePending bool       `koanf:"disable-handle-pending"`
+	ExternalWallets      string     `koanf:"external-wallets"`
+	FeedSigner           FeedSigner `koanf:"feed-signer"`
+	InternalWallets      string     `koanf:"internal-wallets"`
+	SourceAddress        string     `koanf:"source-address,omitempty"`
+	SourceId             string     `koanf:"source-id,omitempty"`
+	SourceType           string     `koanf:"source-type,omitempty"`
+	SSLKey               string     `koanf:"ssl-key,omitempty"`
+	SSLKeyPassword       string     `koanf:"ssl-key-password,omitempty"`
 }
 
 type FeedSigner struct {

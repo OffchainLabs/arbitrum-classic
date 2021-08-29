@@ -148,17 +148,14 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 				return arbTx, nil
 			}
 			var rawTx *types.Transaction
-			if arbTx.Type() == types.DynamicFeeTxType {
+			tipCap, tipCapErr := client.SuggestGasTipCap(ctx)
+			if arbTx.Type() == types.DynamicFeeTxType && tipCapErr == nil {
 				block, err := client.HeaderByNumber(ctx, nil)
 				if err != nil {
 					return nil, err
 				}
 				if block.BaseFee == nil {
 					return nil, errors.New("attempted to use dynamic fee tx in pre-EIP-1559 block")
-				}
-				tipCap, err := client.SuggestGasTipCap(ctx)
-				if err != nil {
-					return nil, err
 				}
 				if tipCap.Cmp(increaseByPercent(arbTx.GasTipCap(), 10)) < 0 {
 					// We only replace by fee when we'd increase the tip by 10%
