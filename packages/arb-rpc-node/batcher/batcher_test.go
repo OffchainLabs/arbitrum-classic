@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -57,13 +57,13 @@ func (m *mock) Sender() common.Address {
 	return m.sender
 }
 
-func (m *mock) SendL2MessageFromOrigin(_ context.Context, data []byte) (*ethbridge.ArbTransaction, error) {
+func (m *mock) SendL2MessageFromOrigin(_ context.Context, data []byte) (*arbtransaction.ArbTransaction, error) {
 	m.Lock()
 	defer m.Unlock()
 	l1Hash := common.RandHash()
 	m.sentL1Txes[l1Hash] = true
 
-	tx := ethbridge.NewMockArbTx(l1Hash.ToEthHash())
+	tx := arbtransaction.NewMockArbTx(l1Hash.ToEthHash())
 
 	msg, err := message.L2Message{Data: data}.AbstractMessage()
 	if err != nil {
@@ -91,7 +91,7 @@ func (m *mock) SendL2MessageFromOrigin(_ context.Context, data []byte) (*ethbrid
 	return tx, nil
 }
 
-func (m *mock) TransactionReceipt(_ context.Context, tx *ethbridge.ArbTransaction) (*types.Receipt, error) {
+func (m *mock) TransactionReceipt(_ context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
 	m.Lock()
 	defer m.Unlock()
 	_, ok := m.sentL1Txes[common.NewHashFromEth(tx.Hash())]

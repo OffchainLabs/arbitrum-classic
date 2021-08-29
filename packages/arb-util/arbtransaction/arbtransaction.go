@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethbridge
+package arbtransaction
 
 import (
 	"encoding/hex"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethbridge
+package transactauth
 
 import (
 	"context"
@@ -26,13 +26,13 @@ import (
 	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 type ArbReceiptFetcher interface {
-	TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error)
+	TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error)
 	NonceAt(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error)
 }
 
@@ -44,7 +44,7 @@ func NewEthArbReceiptFetcher(r ethutils.ReceiptFetcher) EthArbReceiptFetcher {
 	return EthArbReceiptFetcher{r: r}
 }
 
-func (f EthArbReceiptFetcher) TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
+func (f EthArbReceiptFetcher) TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
 	return f.r.TransactionReceipt(ctx, tx.Hash())
 }
 
@@ -67,12 +67,12 @@ func (a ArbAddresses) ArbFactoryAddress() common.Address {
 const rbfInterval time.Duration = time.Minute * 5
 
 type attemptRbfInfo struct {
-	attempt func() (*ArbTransaction, error)
+	attempt func() (*arbtransaction.ArbTransaction, error)
 	account ethcommon.Address
 	nonce   uint64
 }
 
-func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher ArbReceiptFetcher, tx *ArbTransaction, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
+func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher ArbReceiptFetcher, tx *arbtransaction.ArbTransaction, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
 	lastRbf := time.Now()
 	for {
 		select {
@@ -121,7 +121,7 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher
 	}
 }
 
-func WaitForReceiptWithResultsSimple(ctx context.Context, receiptFetcher ArbReceiptFetcher, tx *ArbTransaction) (*types.Receipt, error) {
+func WaitForReceiptWithResultsSimple(ctx context.Context, receiptFetcher ArbReceiptFetcher, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
 	return waitForReceiptWithResultsSimpleInternal(ctx, receiptFetcher, tx, nil)
 }
 
@@ -135,15 +135,15 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 	ctx context.Context,
 	client ethutils.EthClient,
 	from ethcommon.Address,
-	arbTx *ArbTransaction,
+	arbTx *arbtransaction.ArbTransaction,
 	methodName string,
 	transactAuth TransactAuth,
 	receiptFetcher ArbReceiptFetcher,
 ) (*types.Receipt, error) {
 	var rbfInfo *attemptRbfInfo
 	if transactAuth != nil {
-		attemptRbf := func() (*ArbTransaction, error) {
-			auth := transactAuth.getAuth()
+		attemptRbf := func() (*arbtransaction.ArbTransaction, error) {
+			auth := transactAuth.GetAuth()
 			if auth.GasPrice.Cmp(arbTx.GasPrice()) <= 0 {
 				return arbTx, nil
 			}
@@ -243,6 +243,6 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 	return receipt, nil
 }
 
-func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *ArbTransaction, methodName string, receiptFetcher ArbReceiptFetcher) (*types.Receipt, error) {
+func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *arbtransaction.ArbTransaction, methodName string, receiptFetcher ArbReceiptFetcher) (*types.Receipt, error) {
 	return WaitForReceiptWithResultsAndReplaceByFee(ctx, client, from, tx, methodName, nil, receiptFetcher)
 }

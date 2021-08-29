@@ -43,6 +43,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -61,7 +62,7 @@ type SequencerBatcher struct {
 	client                          ethutils.EthClient
 	delayedMessagesTargetDelay      *big.Int
 	sequencerInbox                  *ethbridgecontracts.SequencerInbox
-	auth                            ethbridge.TransactAuth
+	auth                            transactauth.TransactAuth
 	fromAddress                     common.Address
 	chainTimeCheckInterval          time.Duration
 	logBatchGasCosts                bool
@@ -135,12 +136,12 @@ func NewSequencerBatcher(
 		return nil, errors.New("Transaction auth address isn't for sequencer")
 	}
 
-	var transactAuth ethbridge.TransactAuth
+	var transactAuth transactauth.TransactAuth
 	var fb *fireblocks.Fireblocks
 	if len(walletConfig.Fireblocks.SSLKey) > 0 {
-		transactAuth, fb, err = ethbridge.NewFireblocksTransactAuth(ctx, client, auth, walletConfig)
+		transactAuth, fb, err = transactauth.NewFireblocksTransactAuth(ctx, client, auth, walletConfig)
 	} else {
-		transactAuth, err = ethbridge.NewTransactAuth(ctx, client, auth)
+		transactAuth, err = transactauth.NewTransactAuth(ctx, client, auth)
 
 	}
 	if err != nil {
@@ -819,7 +820,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	atomic.StoreInt32(&b.publishingBatchAtomic, 1)
 	go (func() {
 		defer atomic.StoreInt32(&b.publishingBatchAtomic, 0)
-		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.fromAddress.ToEthAddress(), arbTx, "addSequencerL2BatchFromOrigin", b.auth, b.auth)
+		receipt, err := transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.fromAddress.ToEthAddress(), arbTx, "addSequencerL2BatchFromOrigin", b.auth, b.auth)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error waiting for batch receipt")
 			return
