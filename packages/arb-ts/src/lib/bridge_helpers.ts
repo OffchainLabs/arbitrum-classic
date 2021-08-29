@@ -828,8 +828,8 @@ export class BridgeHelper {
       )
 
       return outboxEntryExists
-        ? OutgoingMessageState.UNCONFIRMED
-        : OutgoingMessageState.CONFIRMED
+        ? OutgoingMessageState.CONFIRMED
+        : OutgoingMessageState.UNCONFIRMED
     } catch (e) {
       console.warn('666: error in getOutgoingMessageState:', e)
       return OutgoingMessageState.NOT_FOUND
