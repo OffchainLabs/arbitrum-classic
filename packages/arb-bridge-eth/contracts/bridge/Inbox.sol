@@ -227,8 +227,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     {
         require(!isCreateRetryablePaused, "CREATE_RETRYABLES_PAUSED");
         address sender = msg.sender;
-        address excessFeeRefundAddress = msg.sender;
-        address callValueRefundAddress = msg.sender;
+        address refundAdddress = msg.sender;
 
         if (shouldRewriteSender && !Address.isContract(sender) && tx.origin == msg.sender) {
             // isContract check fails if this function is called during a contract's constructor.
@@ -243,12 +242,8 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         // if a refund address is a contract, we apply the alias to it
         // so that it can access its funds on the L2
         // since the beneficiary and other refund addresses don't get rewritten by arb-os
-        if (shouldRewriteSender && Address.isContract(excessFeeRefundAddress)) {
-            excessFeeRefundAddress = AddressAliasHelper.applyL1ToL2Alias(excessFeeRefundAddress);
-        }
-        if (shouldRewriteSender && Address.isContract(callValueRefundAddress)) {
-            // this is the beneficiary. be careful since this is the address that can cancel the retryable in the L2
-            callValueRefundAddress = AddressAliasHelper.applyL1ToL2Alias(callValueRefundAddress);
+        if (shouldRewriteSender && Address.isContract(refundAdddress)) {
+            refundAdddress = AddressAliasHelper.applyL1ToL2Alias(refundAdddress);
         }
 
         return
@@ -262,8 +257,8 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
                     uint256(0),
                     msg.value,
                     maxSubmissionCost,
-                    uint256(uint160(bytes20(excessFeeRefundAddress))),
-                    uint256(uint160(bytes20(callValueRefundAddress))),
+                    uint256(uint160(bytes20(refundAdddress))),
+                    uint256(uint160(bytes20(refundAdddress))),
                     uint256(0),
                     uint256(0),
                     uint256(0),
