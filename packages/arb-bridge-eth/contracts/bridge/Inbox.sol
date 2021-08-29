@@ -272,7 +272,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
      * @param data ABI encoded data of L2 message
      * @return unique id for retryable transaction (keccak256(requestID, uint(0) )
      */
-    function createRetryableTicketNoAliasRewrite(
+    function createRetryableTicketNoRefundAliasRewrite(
         address destAddr,
         uint256 l2CallValue,
         uint256 maxSubmissionCost,
@@ -331,11 +331,12 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
             excessFeeRefundAddress = AddressAliasHelper.applyL1ToL2Alias(excessFeeRefundAddress);
         }
         if (Address.isContract(callValueRefundAddress)) {
+            // this is the beneficiary. be careful since this is the address that can cancel the retryable in the L2
             callValueRefundAddress = AddressAliasHelper.applyL1ToL2Alias(callValueRefundAddress);
         }
 
         return
-            createRetryableTicketNoRewrite(
+            createRetryableTicketNoRefundAliasRewrite(
                 destAddr,
                 l2CallValue,
                 maxSubmissionCost,
