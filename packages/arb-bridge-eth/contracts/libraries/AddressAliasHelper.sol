@@ -19,12 +19,21 @@
 pragma solidity ^0.6.11;
 
 library AddressAliasHelper {
+    uint160 constant offset = uint160(0x1111000000000000000000000000000000001111);
+
     /// @notice Utility function that converts the msg.sender viewed in the L2 to the
     /// address in the L1 that submitted a tx to the inbox
-    /// @param l2address L2 address as viewed in msg.sender
+    /// @param l1Address L2 address as viewed in msg.sender
+    /// @return l2Address the address in the L1 that triggered the tx to L2
+    function applyL1ToL2Alias(address l1Address) internal pure returns (address l2Address) {
+        l2Address = address(uint160(l1Address) + offset);
+    }
+
+    /// @notice Utility function that converts the msg.sender viewed in the L2 to the
+    /// address in the L1 that submitted a tx to the inbox
+    /// @param l2Address L2 address as viewed in msg.sender
     /// @return l1Address the address in the L1 that triggered the tx to L2
-    function undoL1ToL2Alias(address l2address) internal pure returns (address l1Address) {
-        uint160 offset = uint160(0x1111000000000000000000000000000000001111);
-        l1Address = address(uint160(l2address) - offset);
+    function undoL1ToL2Alias(address l2Address) internal pure returns (address l1Address) {
+        l1Address = address(uint160(l2Address) - offset);
     }
 }
