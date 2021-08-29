@@ -48,6 +48,7 @@ type EthClient interface {
 	TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error)
 	PendingCallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error)
 	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error)
+	ChainID(ctx context.Context) (*big.Int, error)
 }
 
 type RPCEthClient struct {
@@ -115,4 +116,8 @@ func (r *SimulatedEthClient) BlockInfoByNumber(ctx context.Context, number *big.
 		Time:       hexutil.Uint64(header.Time),
 		Number:     (*hexutil.Big)(header.Number),
 	}, nil
+}
+
+func (r *SimulatedEthClient) ChainID(ctx context.Context) (*big.Int, error) {
+	return big.NewInt(1337), nil
 }
