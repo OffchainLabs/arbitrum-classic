@@ -28,9 +28,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var validatorABI abi.ABI
@@ -54,11 +56,11 @@ type ValidatorWallet struct {
 	con           *ethbridgecontracts.Validator
 	address       ethcommon.Address
 	client        ethutils.EthClient
-	auth          TransactAuth
+	auth          transactauth.TransactAuth
 	rollupAddress ethcommon.Address
 }
 
-func NewValidator(address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth TransactAuth) (*ValidatorWallet, error) {
+func NewValidator(address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth transactauth.TransactAuth) (*ValidatorWallet, error) {
 	con, err := ethbridgecontracts.NewValidator(address, client)
 	if err != nil {
 		return nil, err
@@ -84,8 +86,8 @@ func (v *ValidatorWallet) RollupAddress() common.Address {
 	return common.NewAddressFromEth(v.rollupAddress)
 }
 
-func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Transaction) (*ArbTransaction, error) {
-	return makeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Transaction) (*arbtransaction.ArbTransaction, error) {
+	return transactauth.MakeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = tx.Value()
 		return v.con.ExecuteTransaction(auth, tx.Data(), *tx.To(), tx.Value())
 	})
@@ -106,7 +108,7 @@ func combineTxes(txes []*types.Transaction) ([][]byte, []ethcommon.Address, []*b
 	return data, dest, amount, totalAmount
 }
 
-func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *BuilderBackend) (*ArbTransaction, error) {
+func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *BuilderBackend) (*arbtransaction.ArbTransaction, error) {
 	txes := builder.transactions
 	if len(txes) == 0 {
 		return nil, nil
@@ -133,7 +135,7 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 		totalAmount = totalAmount.Add(totalAmount, tx.Value())
 	}
 
-	arbTx, err := makeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	arbTx, err := transactauth.MakeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = totalAmount
 		return v.con.ExecuteTransactions(auth, data, dest, amount)
 	})
@@ -144,14 +146,14 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 	return arbTx, nil
 }
 
-func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*ArbTransaction, error) {
-	return makeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*arbtransaction.ArbTransaction, error) {
+	return transactauth.MakeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.ReturnOldDeposits(auth, v.rollupAddress, common.AddressArrayToEth(stakers))
 	})
 }
 
-func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []common.Address) (*ArbTransaction, error) {
-	return makeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []common.Address) (*arbtransaction.ArbTransaction, error) {
+	return transactauth.MakeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.TimeoutChallenges(auth, common.AddressArrayToEth(challenges))
 	})
 }
@@ -160,7 +162,7 @@ func CreateValidatorWallet(
 	ctx context.Context,
 	validatorWalletFactoryAddr ethcommon.Address,
 	fromBlock int64,
-	transactAuth TransactAuth,
+	transactAuth transactauth.TransactAuth,
 	client ethutils.EthClient,
 ) (ethcommon.Address, error) {
 	walletCreator, err := ethbridgecontracts.NewValidatorWalletCreator(validatorWalletFactoryAddr, client)
@@ -190,7 +192,7 @@ func CreateValidatorWallet(
 		return parsed.WalletAddress, err
 	}
 
-	arbTx, err := makeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+	arbTx, err := transactauth.MakeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return walletCreator.CreateWallet(auth)
 	})
 	if err != nil {
@@ -202,7 +204,7 @@ func CreateValidatorWallet(
 		simulatedBackend.Commit()
 	}
 
-	receipt, err := WaitForReceiptWithResultsAndReplaceByFee(
+	receipt, err := transactauth.WaitForReceiptWithResultsAndReplaceByFee(
 		ctx,
 		client,
 		transactAuth.From(),
