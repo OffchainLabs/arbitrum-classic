@@ -27,10 +27,11 @@ import "../arbitrum/gateway/L2WethGateway.sol";
 import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
 import "../arbitrum/L2ArbitrumMessenger.sol";
+import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
 contract AddressMappingTest is L2ArbitrumMessenger {
     function getL1AddressTest(address sender) external pure returns (address l1Address) {
-        return L2ArbitrumMessenger.getL1Address(sender);
+        return AddressAliasHelper.undoL1ToL2Alias(sender);
     }
 }
 

@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
+import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
 import "../IArbToken.sol";
 
@@ -55,7 +56,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
     modifier onlyCounterpartGateway() override {
         require(
             msg.sender == counterpartGateway ||
-                L2ArbitrumMessenger.getL1Address(msg.sender) == counterpartGateway,
+                AddressAliasHelper.undoL1ToL2Alias(msg.sender) == counterpartGateway,
             "ONLY_COUNTERPART_GATEWAY"
         );
         _;
