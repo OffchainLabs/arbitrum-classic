@@ -97,10 +97,11 @@ func waitForPendingTransactions(
 
 		if len(*pendingTx) == 0 {
 			logger.Info().Msg("no pending fireblocks transactions to take care of")
-			break
+			return nil
 		}
 
 		logger.Info().Int("count", len(*pendingTx)).Msg("pending fireblocks transactions need to be handled")
+		failed := false
 		for _, details := range *pendingTx {
 			if details.Status == fireblocks.Broadcasting {
 				logger.
@@ -120,11 +121,12 @@ func waitForPendingTransactions(
 				arbTx, err := NewFireblocksArbTransaction(rawTx, &details)
 				if err != nil {
 					logger.
-						Error().
+						Warn().
 						Err(err).
 						Str("id", details.Id).
 						Msg("error creating new version of pending transaction")
-					return err
+					failed = true
+					continue
 				}
 				_, err = WaitForReceiptWithResultsAndReplaceByFee(
 					ctx,
@@ -136,7 +138,13 @@ func waitForPendingTransactions(
 					transactAuth,
 				)
 				if err != nil {
-					return err
+					logger.
+						Warn().
+						Err(err).
+						Str("id", details.Id).
+						Msg("error waiting for receipt for pending transaction")
+					failed = true
+					continue
 				}
 			} else {
 				logger.
@@ -148,14 +156,17 @@ func waitForPendingTransactions(
 			}
 		}
 
+		if failed {
+			// Stop trying to resolve pending transactions
+			return nil
+		}
+
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-time.After(10 * time.Second):
 		}
 	}
-
-	return nil
 }
 func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
 	details, err := ta.fb.GetTransaction(tx.Id())
