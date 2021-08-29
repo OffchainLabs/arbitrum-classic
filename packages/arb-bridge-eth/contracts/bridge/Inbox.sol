@@ -227,23 +227,20 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     {
         require(!isCreateRetryablePaused, "CREATE_RETRYABLES_PAUSED");
         address sender = msg.sender;
-        address refundAdddress = msg.sender;
+        address refundAddress = msg.sender;
 
-        if (shouldRewriteSender && !Address.isContract(sender) && tx.origin == msg.sender) {
-            // isContract check fails if this function is called during a contract's constructor.
-            // We don't adjust the address for calls coming from L1 contracts since their addresses get remapped
-            // If the caller is an EOA, we adjust the address.
-            // This is needed because unsigned messages to the L2 (such as retryables)
-            // have the L1 sender address mapped.
-            // Here we preemptively reverse the mapping for EOAs so deposits work as expected
-            sender = AddressAliasHelper.undoL1ToL2Alias(sender);
-        }
-
-        // if a refund address is a contract, we apply the alias to it
-        // so that it can access its funds on the L2
-        // since the beneficiary and other refund addresses don't get rewritten by arb-os
-        if (shouldRewriteSender && Address.isContract(refundAdddress)) {
-            refundAdddress = AddressAliasHelper.applyL1ToL2Alias(refundAdddress);
+        if (shouldRewriteSender) {
+            if (!Address.isContract(sender) && tx.origin == msg.sender) {
+                // isContract check fails if this function is called during a contract's constructor.
+                // We don't adjust the address for calls coming from L1 contracts since their addresses get remapped
+                // If the caller is an EOA, we adjust the address.
+                // This is needed because unsigned messages to the L2 (such as retryables)
+                // have the L1 sender address mapped.
+                // Here we preemptively reverse the mapping for EOAs so deposits work as expected
+                sender = AddressAliasHelper.undoL1ToL2Alias(sender);
+            } else {
+                refundAddress = AddressAliasHelper.applyL1ToL2Alias(refundAddress);
+            }
         }
 
         return
@@ -253,12 +250,12 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
                 abi.encodePacked(
                     // the beneficiary and other refund addresses don't get rewritten by arb-os
                     // so we use the original msg.sender value
-                    uint256(uint160(bytes20(msg.sender))),
+                    uint256(uint160(bytes20(refundAddress))),
                     uint256(0),
                     msg.value,
                     maxSubmissionCost,
-                    uint256(uint160(bytes20(refundAdddress))),
-                    uint256(uint160(bytes20(refundAdddress))),
+                    uint256(uint160(bytes20(refundAddress))),
+                    uint256(uint160(bytes20(refundAddress))),
                     uint256(0),
                     uint256(0),
                     uint256(0),
