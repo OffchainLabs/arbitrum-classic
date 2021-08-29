@@ -25,7 +25,7 @@ interface IInboxInterface extends ethers.utils.Interface {
     'bridge()': FunctionFragment
     'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'depositEth(uint256)': FunctionFragment
-    'pauseEthDeposits()': FunctionFragment
+    'pauseCreateRetryables()': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
     'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)': FunctionFragment
@@ -33,7 +33,7 @@ interface IInboxInterface extends ethers.utils.Interface {
     'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)': FunctionFragment
     'startRewriteAddress()': FunctionFragment
     'stopRewriteAddress()': FunctionFragment
-    'unpauseEthDeposits()': FunctionFragment
+    'unpauseCreateRetryables()': FunctionFragment
   }
 
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
@@ -55,7 +55,7 @@ interface IInboxInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
   encodeFunctionData(
-    functionFragment: 'pauseEthDeposits',
+    functionFragment: 'pauseCreateRetryables',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -94,7 +94,7 @@ interface IInboxInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'unpauseEthDeposits',
+    functionFragment: 'unpauseCreateRetryables',
     values?: undefined
   ): string
 
@@ -105,7 +105,7 @@ interface IInboxInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'depositEth', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'pauseEthDeposits',
+    functionFragment: 'pauseCreateRetryables',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -137,7 +137,7 @@ interface IInboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'unpauseEthDeposits',
+    functionFragment: 'unpauseCreateRetryables',
     data: BytesLike
   ): Result
 
@@ -215,7 +215,7 @@ export class IInbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    pauseEthDeposits(
+    pauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -268,7 +268,7 @@ export class IInbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    unpauseEthDeposits(
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
@@ -292,7 +292,7 @@ export class IInbox extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  pauseEthDeposits(
+  pauseCreateRetryables(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -345,7 +345,7 @@ export class IInbox extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  unpauseEthDeposits(
+  unpauseCreateRetryables(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -369,7 +369,7 @@ export class IInbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    pauseEthDeposits(overrides?: CallOverrides): Promise<void>
+    pauseCreateRetryables(overrides?: CallOverrides): Promise<void>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -416,7 +416,7 @@ export class IInbox extends BaseContract {
 
     stopRewriteAddress(overrides?: CallOverrides): Promise<void>
 
-    unpauseEthDeposits(overrides?: CallOverrides): Promise<void>
+    unpauseCreateRetryables(overrides?: CallOverrides): Promise<void>
   }
 
   filters: {
@@ -453,7 +453,7 @@ export class IInbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    pauseEthDeposits(
+    pauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -506,7 +506,7 @@ export class IInbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    unpauseEthDeposits(
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
@@ -531,7 +531,7 @@ export class IInbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    pauseEthDeposits(
+    pauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
@@ -584,7 +584,7 @@ export class IInbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    unpauseEthDeposits(
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
