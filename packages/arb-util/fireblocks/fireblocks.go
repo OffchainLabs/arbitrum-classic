@@ -631,7 +631,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 	uri.Path = path
 	uri.RawQuery = params.Encode()
 
-	token, err := fb.signJWT(uri.Path+"?"+uri.RawQuery, requestBody)
+	token, err := fb.signJWT(uri, requestBody)
 	if err != nil {
 		return nil, err
 	}
@@ -722,10 +722,17 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 	return resp, nil
 }
 
-func (fb *Fireblocks) signJWT(path string, body []byte) (string, error) {
+func (fb *Fireblocks) signJWT(uri *url.URL, body []byte) (string, error) {
 	now := time.Now().Unix()
 	if body == nil {
 		body = []byte("null")
+	}
+
+	path := strings.Replace(uri.Path, "[", "%5B", -1)
+	path = strings.Replace(path, "]", "%5D", -1)
+
+	if len(uri.RawQuery) > 0 {
+		path += "?" + uri.RawQuery
 	}
 
 	bodyHash := sha256.Sum256(body)
