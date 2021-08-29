@@ -146,7 +146,7 @@ func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.A
 	redeemGasPriceBid := new(big.Int).Set(msg.GasPriceBid)
 	msg.MaxGas = msg.MaxGas.SetUint64(0)
 	msg.GasPriceBid = msg.GasPriceBid.SetUint64(0)
-	inboxMsg1 := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
+	inboxMsg1 := message.NewInboxMessage(msg, message.L1RemapAccount(sender), s.nextInboxSeqNum, big.NewInt(0), s.time)
 	var targetHash common.Hash
 	var ticketHash common.Hash
 	if s.chainId != nil {
