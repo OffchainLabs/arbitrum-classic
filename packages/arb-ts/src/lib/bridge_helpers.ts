@@ -765,7 +765,7 @@ export class BridgeHelper {
    */
   static messageHasExecuted = async (
     batchNumber: BigNumber,
-    indexInBatch: BigNumber,
+    path: BigNumber,
     outboxAddress: string,
     l1Provider: providers.Provider
   ): Promise<boolean> => {
@@ -788,7 +788,7 @@ export class BridgeHelper {
     )
     return (
       parsedData.filter(executedEvent =>
-        executedEvent.transactionIndex.eq(indexInBatch)
+        executedEvent.transactionIndex.eq(path)
       ).length === 1
     )
   }
