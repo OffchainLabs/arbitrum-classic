@@ -178,6 +178,12 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         );
         require(_gateway.isContract(), "NOT_TO_CONTRACT");
 
+        address currGateway = l1TokenToGateway[msg.sender];
+        if (currGateway != address(0)) {
+            // if gateway is already set, don't allow it to set a different gateway
+            require(currGateway == _gateway, "NO_UPDATE_TO_DIFFERENT_ADDR");
+        }
+
         address[] memory _tokenArr = new address[](1);
         _tokenArr[0] = address(msg.sender);
 

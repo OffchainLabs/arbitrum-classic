@@ -140,6 +140,13 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
             ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
             "NOT_ARB_ENABLED"
         );
+
+        address currL2Addr = l1ToL2Token[msg.sender];
+        if (currL2Addr != address(0)) {
+            // if token is already set, don't allow it to set a different L2 address
+            require(currL2Addr == _l2Address, "NO_UPDATE_TO_DIFFERENT_ADDR");
+        }
+
         l1ToL2Token[msg.sender] = _l2Address;
 
         address[] memory l1Addresses = new address[](1);
