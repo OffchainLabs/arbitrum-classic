@@ -344,7 +344,6 @@ func New(fireblocksConfig configuration.WalletFireblocks) (*Fireblocks, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with fireblocks source-type")
 	}
-
 	return &Fireblocks{
 		apiKey:            fireblocksConfig.APIKey,
 		assetId:           fireblocksConfig.AssetId,
@@ -380,7 +379,7 @@ func (fb *Fireblocks) ListTransactions(statusList []string) (*[]TransactionDetai
 	if len(statusList) > 0 {
 		values.Set("status", strings.Join(statusList, ","))
 	}
-	resp, err := fb.getRequest("/v1/transactions", url.Values{})
+	resp, err := fb.getRequest("/v1/transactions", values)
 	if err != nil {
 		return nil, err
 	}
@@ -624,11 +623,6 @@ func (fb *Fireblocks) sendRequest(method string, path string, params url.Values,
 }
 
 func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Values, requestBody []byte) (*http.Response, error) {
-	token, err := fb.signJWT(path, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
 	uri, err := url.ParseRequestURI(fb.baseUrl)
 	if err != nil {
 		return nil, err
@@ -636,6 +630,11 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 
 	uri.Path = path
 	uri.RawQuery = params.Encode()
+
+	token, err := fb.signJWT(uri, requestBody)
+	if err != nil {
+		return nil, err
+	}
 
 	client := &http.Client{}
 	var req *http.Request
@@ -723,17 +722,22 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 	return resp, nil
 }
 
-func (fb *Fireblocks) signJWT(path string, body []byte) (string, error) {
-	newPath := strings.Replace(path, "[", "%5B", -1)
-	newPath = strings.Replace(newPath, "]", "%5D", -1)
+func (fb *Fireblocks) signJWT(uri *url.URL, body []byte) (string, error) {
 	now := time.Now().Unix()
 	if body == nil {
 		body = []byte("null")
 	}
 
+	path := strings.Replace(uri.Path, "[", "%5B", -1)
+	path = strings.Replace(path, "]", "%5D", -1)
+
+	if len(uri.RawQuery) > 0 {
+		path += "?" + uri.RawQuery
+	}
+
 	bodyHash := sha256.Sum256(body)
 	claims := fireblocksClaims{
-		Uri:      newPath,
+		Uri:      path,
 		Nonce:    rand.Int63(),
 		Iat:      now,
 		Exp:      now + 55,
