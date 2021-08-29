@@ -645,12 +645,24 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 			}
 
 			if seqMsg.Sender != (common.Address{}) && seqMsg.Sender != b.fromAddress {
+				msg := "sequencer message in database contains messages from another sequencer"
+				if b.config.Node.Sequencer.RewriteSequencerAddress {
+					msg += "! Reorganizing to compensate..."
+				}
+
 				logger.
 					Warn().
 					Str("messageAddress", seqMsg.Sender.String()).
 					Str("fromAddress", b.fromAddress.String()).
 					Str("sequenceNumber", seqMsg.InboxSeqNum.String()).
-					Msg("sequencer message in database contains messages from another sequencer")
+					Msg(msg)
+
+				if b.config.Node.Sequencer.RewriteSequencerAddress {
+					b.reorgToNewSequencerAddress(ctx, prevMsgCount)
+
+					return false, errors.New("reorganized to rewrite sequencer address")
+				}
+
 				if len(transactionsLengths) > 0 {
 					// Still publish what we can
 					break
@@ -876,7 +888,7 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 		}
 	}
 	for i := range batchItems {
-		item := batchItems[i]
+		item := &batchItems[i]
 		if len(item.SequencerMessage) == 0 {
 			item.Accumulator = common.Hash{}
 		} else {
@@ -888,7 +900,46 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 			item.SequencerMessage = seqMsg.ToBytes()
 			item.Accumulator = common.Hash{}
 		}
-		batchItems[i] = item
+	}
+	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *SequencerBatcher) reorgToNewSequencerAddress(ctx context.Context, prevMsgCount *big.Int) error {
+	b.inboxReader.MessageDeliveryMutex.Lock()
+	defer b.inboxReader.MessageDeliveryMutex.Unlock()
+
+	batchItems, err := b.db.GetSequencerBatchItems(prevMsgCount)
+	if err != nil {
+		return err
+	}
+
+	var previousSeqBatchAcc common.Hash
+	if prevMsgCount.Cmp(big.NewInt(0)) > 0 {
+		previousSeqBatchAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(prevMsgCount, big.NewInt(1)))
+		if err != nil {
+			return err
+		}
+	}
+	for i := range batchItems {
+		item := &batchItems[i]
+		if len(item.SequencerMessage) == 0 {
+			item.Accumulator = common.Hash{}
+		} else {
+			seqMsg, err := inbox.NewInboxMessageFromData(item.SequencerMessage)
+			if err != nil {
+				return err
+			}
+			if seqMsg.Sender != (common.Address{}) {
+				seqMsg.Sender = b.fromAddress
+			}
+			item.SequencerMessage = seqMsg.ToBytes()
+			item.Accumulator = common.Hash{}
+		}
 	}
 	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
