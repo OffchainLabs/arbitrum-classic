@@ -42,7 +42,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
 
     IBridge public override bridge;
 
-    bool public isEthDepositPaused;
+    bool public isCreateRetryablePaused;
     bool public shouldRewriteSender;
 
     function initialize(IBridge _bridge, address _whitelist) external {
@@ -185,17 +185,17 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
 
     event PauseToggled(bool enabled);
 
-    /// @notice pauses eth deposits
-    function pauseEthDeposits() external override onlyOwner {
-        require(!isEthDepositPaused, "ALREADY_PAUSED");
-        isEthDepositPaused = true;
+    /// @notice pauses creating retryables
+    function pauseCreateRetryables() external override onlyOwner {
+        require(!isCreateRetryablePaused, "ALREADY_PAUSED");
+        isCreateRetryablePaused = true;
         emit PauseToggled(true);
     }
 
-    /// @notice unpauses eth deposits
-    function unpauseEthDeposits() external override onlyOwner {
-        require(isEthDepositPaused, "NOT_PAUSED");
-        isEthDepositPaused = false;
+    /// @notice unpauses creating retryables
+    function unpauseCreateRetryables() external override onlyOwner {
+        require(isCreateRetryablePaused, "NOT_PAUSED");
+        isCreateRetryablePaused = false;
         emit PauseToggled(false);
     }
 
@@ -225,8 +225,10 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         onlyWhitelisted
         returns (uint256)
     {
-        require(!isEthDepositPaused, "ETH_DEPOSIT_PAUSED");
+        require(!isCreateRetryablePaused, "CREATE_RETRYABLES_PAUSED");
         address sender = msg.sender;
+        address excessFeeRefundAddress = msg.sender;
+        address callValueRefundAddress = msg.sender;
 
         if (shouldRewriteSender && !Address.isContract(sender) && tx.origin == msg.sender) {
             // isContract check fails if this function is called during a contract's constructor.
@@ -236,6 +238,17 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
             // have the L1 sender address mapped.
             // Here we preemptively reverse the mapping for EOAs so deposits work as expected
             sender = AddressAliasHelper.undoL1ToL2Alias(sender);
+        }
+
+        // if a refund address is a contract, we apply the alias to it
+        // so that it can access its funds on the L2
+        // since the beneficiary and other refund addresses don't get rewritten by arb-os
+        if (shouldRewriteSender && Address.isContract(excessFeeRefundAddress)) {
+            excessFeeRefundAddress = AddressAliasHelper.applyL1ToL2Alias(excessFeeRefundAddress);
+        }
+        if (shouldRewriteSender && Address.isContract(callValueRefundAddress)) {
+            // this is the beneficiary. be careful since this is the address that can cancel the retryable in the L2
+            callValueRefundAddress = AddressAliasHelper.applyL1ToL2Alias(callValueRefundAddress);
         }
 
         return
@@ -249,8 +262,8 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
                     uint256(0),
                     msg.value,
                     maxSubmissionCost,
-                    uint256(uint160(bytes20(msg.sender))),
-                    uint256(uint160(bytes20(msg.sender))),
+                    uint256(uint160(bytes20(excessFeeRefundAddress))),
+                    uint256(uint160(bytes20(callValueRefundAddress))),
                     uint256(0),
                     uint256(0),
                     uint256(0),
@@ -282,6 +295,8 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         uint256 gasPriceBid,
         bytes calldata data
     ) public payable virtual onlyWhitelisted returns (uint256) {
+        require(!isCreateRetryablePaused, "CREATE_RETRYABLES_PAUSED");
+
         return
             _deliverMessage(
                 L1MessageType_submitRetryableTx,
