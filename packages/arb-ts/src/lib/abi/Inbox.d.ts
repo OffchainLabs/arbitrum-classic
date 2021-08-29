@@ -24,11 +24,12 @@ interface InboxInterface extends ethers.utils.Interface {
   functions: {
     'bridge()': FunctionFragment
     'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
+    'createRetryableTicketNoRefundAliasRewrite(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'depositEth(uint256)': FunctionFragment
     'initialize(address,address)': FunctionFragment
-    'isEthDepositPaused()': FunctionFragment
+    'isCreateRetryablePaused()': FunctionFragment
     'isMaster()': FunctionFragment
-    'pauseEthDeposits()': FunctionFragment
+    'pauseCreateRetryables()': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
     'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)': FunctionFragment
@@ -38,7 +39,7 @@ interface InboxInterface extends ethers.utils.Interface {
     'shouldRewriteSender()': FunctionFragment
     'startRewriteAddress()': FunctionFragment
     'stopRewriteAddress()': FunctionFragment
-    'unpauseEthDeposits()': FunctionFragment
+    'unpauseCreateRetryables()': FunctionFragment
     'updateWhitelistSource(address)': FunctionFragment
     'whitelist()': FunctionFragment
   }
@@ -46,6 +47,19 @@ interface InboxInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'createRetryableTicket',
+    values: [
+      string,
+      BigNumberish,
+      BigNumberish,
+      string,
+      string,
+      BigNumberish,
+      BigNumberish,
+      BytesLike
+    ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'createRetryableTicketNoRefundAliasRewrite',
     values: [
       string,
       BigNumberish,
@@ -66,12 +80,12 @@ interface InboxInterface extends ethers.utils.Interface {
     values: [string, string]
   ): string
   encodeFunctionData(
-    functionFragment: 'isEthDepositPaused',
+    functionFragment: 'isCreateRetryablePaused',
     values?: undefined
   ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'pauseEthDeposits',
+    functionFragment: 'pauseCreateRetryables',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -118,7 +132,7 @@ interface InboxInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'unpauseEthDeposits',
+    functionFragment: 'unpauseCreateRetryables',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -132,15 +146,19 @@ interface InboxInterface extends ethers.utils.Interface {
     functionFragment: 'createRetryableTicket',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'createRetryableTicketNoRefundAliasRewrite',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'depositEth', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'isEthDepositPaused',
+    functionFragment: 'isCreateRetryablePaused',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'pauseEthDeposits',
+    functionFragment: 'pauseCreateRetryables',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -180,7 +198,7 @@ interface InboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'unpauseEthDeposits',
+    functionFragment: 'unpauseCreateRetryables',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -264,6 +282,18 @@ export class Inbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    createRetryableTicketNoRefundAliasRewrite(
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     depositEth(
       maxSubmissionCost: BigNumberish,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
@@ -275,11 +305,11 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    isEthDepositPaused(overrides?: CallOverrides): Promise<[boolean]>
+    isCreateRetryablePaused(overrides?: CallOverrides): Promise<[boolean]>
 
     isMaster(overrides?: CallOverrides): Promise<[boolean]>
 
-    pauseEthDeposits(
+    pauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -339,7 +369,7 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    unpauseEthDeposits(
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -365,6 +395,18 @@ export class Inbox extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  createRetryableTicketNoRefundAliasRewrite(
+    destAddr: string,
+    l2CallValue: BigNumberish,
+    maxSubmissionCost: BigNumberish,
+    excessFeeRefundAddress: string,
+    callValueRefundAddress: string,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    data: BytesLike,
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   depositEth(
     maxSubmissionCost: BigNumberish,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
@@ -376,11 +418,11 @@ export class Inbox extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  isEthDepositPaused(overrides?: CallOverrides): Promise<boolean>
+  isCreateRetryablePaused(overrides?: CallOverrides): Promise<boolean>
 
   isMaster(overrides?: CallOverrides): Promise<boolean>
 
-  pauseEthDeposits(
+  pauseCreateRetryables(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -440,7 +482,7 @@ export class Inbox extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  unpauseEthDeposits(
+  unpauseCreateRetryables(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -466,6 +508,18 @@ export class Inbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    createRetryableTicketNoRefundAliasRewrite(
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     depositEth(
       maxSubmissionCost: BigNumberish,
       overrides?: CallOverrides
@@ -477,11 +531,11 @@ export class Inbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    isEthDepositPaused(overrides?: CallOverrides): Promise<boolean>
+    isCreateRetryablePaused(overrides?: CallOverrides): Promise<boolean>
 
     isMaster(overrides?: CallOverrides): Promise<boolean>
 
-    pauseEthDeposits(overrides?: CallOverrides): Promise<void>
+    pauseCreateRetryables(overrides?: CallOverrides): Promise<void>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -535,7 +589,7 @@ export class Inbox extends BaseContract {
 
     stopRewriteAddress(overrides?: CallOverrides): Promise<void>
 
-    unpauseEthDeposits(overrides?: CallOverrides): Promise<void>
+    unpauseCreateRetryables(overrides?: CallOverrides): Promise<void>
 
     updateWhitelistSource(
       newSource: string,
@@ -586,6 +640,18 @@ export class Inbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    createRetryableTicketNoRefundAliasRewrite(
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     depositEth(
       maxSubmissionCost: BigNumberish,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
@@ -597,11 +663,11 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    isEthDepositPaused(overrides?: CallOverrides): Promise<BigNumber>
+    isCreateRetryablePaused(overrides?: CallOverrides): Promise<BigNumber>
 
     isMaster(overrides?: CallOverrides): Promise<BigNumber>
 
-    pauseEthDeposits(
+    pauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -661,7 +727,7 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    unpauseEthDeposits(
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -688,6 +754,18 @@ export class Inbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
+    createRetryableTicketNoRefundAliasRewrite(
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
     depositEth(
       maxSubmissionCost: BigNumberish,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
@@ -699,11 +777,13 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    isEthDepositPaused(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    isCreateRetryablePaused(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
 
     isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    pauseEthDeposits(
+    pauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
@@ -765,7 +845,7 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    unpauseEthDeposits(
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 

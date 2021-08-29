@@ -127,7 +127,7 @@ const _abi = [
   },
   {
     inputs: [],
-    name: 'pauseEthDeposits',
+    name: 'pauseCreateRetryables',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
@@ -323,7 +323,7 @@ const _abi = [
   },
   {
     inputs: [],
-    name: 'unpauseEthDeposits',
+    name: 'unpauseCreateRetryables',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
