@@ -29,14 +29,13 @@ import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 
 import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
-import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/ITransferAndCall.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
  */
-abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, EscrowAndCallGateway {
+abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -110,29 +109,16 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             _data
         );
 
-        (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
-
-        if (callHookData.length > 0) {
-            bool success;
-            try this.inboundEscrowAndCall(_token, _amount, _from, _to, callHookData) {
-                success = true;
-            } catch {
-                // if reverted, then credit _from's account
-                inboundEscrowTransfer(_token, _from, _amount);
-                // success default value is false
-            }
-            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
-        } else {
-            inboundEscrowTransfer(_token, _to, _amount);
+        if (callHookData.length != 0) {
+            // callHookData should always be 0 since inboundEscrowAndCall is disabled
+            callHookData = bytes("");
         }
 
-        emit WithdrawalFinalized(_token, _from, _to, exitNum, _amount);
-    }
+        // we ignore the returned data since the callHook feature is now disabled
+        (_to, ) = getExternalCall(exitNum, _to, callHookData);
+        inboundEscrowTransfer(_token, _to, _amount);
 
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        // amount of gas necessary to send user tokens in case
-        // of the "onTokenTransfer" call consumes all available gas
-        return 30000;
+        emit WithdrawalFinalized(_token, _from, _to, exitNum, _amount);
     }
 
     function getExternalCall(
@@ -150,7 +136,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address _l1Token,
         address _dest,
         uint256 _amount
-    ) internal virtual override {
+    ) internal virtual {
         // this method is virtual since different subclasses can handle escrow differently
         IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
@@ -220,6 +206,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             }
             // user encoded
             (_maxSubmissionCost, extraData) = abi.decode(extraData, (uint256, bytes));
+            // the inboundEscrowAndCall functionality has been disabled, so no data is allowed
+            require(extraData.length == 0, "EXTRA_DATA_DISABLED");
 
             require(_l1Token.isContract(), "L1_NOT_CONTRACT");
             address l2Token = calculateL2TokenAddress(_l1Token);
