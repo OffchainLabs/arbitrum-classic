@@ -644,6 +644,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 				return false, err
 			}
 
+			// We also allow the empty address as it's used for the delayed messages end of block
 			if seqMsg.Sender != (common.Address{}) && seqMsg.Sender != b.fromAddress {
 				msg := "sequencer message in database contains messages from another sequencer"
 				if b.config.Node.Sequencer.RewriteSequencerAddress {
@@ -651,7 +652,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 				}
 
 				logger.
-					Warn().
+					Error().
 					Str("messageAddress", seqMsg.Sender.String()).
 					Str("fromAddress", b.fromAddress.String()).
 					Str("sequenceNumber", seqMsg.InboxSeqNum.String()).
@@ -917,6 +918,7 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 
 func (b *SequencerBatcher) reorgToNewSequencerAddress(ctx context.Context, prevMsgCount *big.Int) error {
 	return b.reorgAndModifySequencerMessages(ctx, prevMsgCount, func(msg *inbox.InboxMessage) {
+		// We don't modify the empty address as it's used for the delayed messages end of block
 		if msg.Sender != (common.Address{}) {
 			msg.Sender = b.fromAddress
 		}
