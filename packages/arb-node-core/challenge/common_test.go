@@ -22,18 +22,18 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -312,12 +312,12 @@ func initializeChallengeTest(
 	_, err = validatorCon2.Initialize(challenger)
 	test.FailIfError(t, err)
 
-	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter)
+	asserterAuth, err := transactauth.NewTransactAuth(ctx, client, asserter)
 	test.FailIfError(t, err)
 	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, asserterAuth)
 	test.FailIfError(t, err)
 
-	challengerAuth, err := ethbridge.NewTransactAuth(ctx, client, challenger)
+	challengerAuth, err := transactauth.NewTransactAuth(ctx, client, challenger)
 	test.FailIfError(t, err)
 	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, challengerAuth)
 	test.FailIfError(t, err)
