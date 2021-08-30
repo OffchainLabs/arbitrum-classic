@@ -77,6 +77,7 @@ type SequencerBatcher struct {
 	config                          *configuration.Config
 	fb                              *fireblocks.Fireblocks
 	consecutiveShouldReorgGaps      int
+	gasRefunder                     common.Address
 
 	signer    types.Signer
 	txQueue   chan txQueueItem
@@ -161,6 +162,11 @@ func NewSequencerBatcher(
 		return nil, errors.New("invalid batch creation block interval")
 	}
 
+	var gasRefunder common.Address
+	if len(config.Node.Sequencer.GasRefunderAddress) > 0 {
+		gasRefunder = common.HexToAddress(config.Node.Sequencer.GasRefunderAddress)
+	}
+
 	batcher := &SequencerBatcher{
 		db:                         db,
 		inboxReader:                inboxReader,
@@ -175,6 +181,7 @@ func NewSequencerBatcher(
 		maxDelayBlocks:             maxDelayBlocks,
 		maxDelaySeconds:            maxDelaySeconds,
 		config:                     config,
+		gasRefunder:                gasRefunder,
 
 		// TODO make these configurable
 		updateTimestampInterval:         big.NewInt(4),
@@ -825,7 +832,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
 	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Int("items", len(batchItems)).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
-	arbTx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc)
+	arbTx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc, b.gasRefunder)
 	if err != nil {
 		return false, err
 	}
