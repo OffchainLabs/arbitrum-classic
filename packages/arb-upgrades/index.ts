@@ -577,6 +577,67 @@ export const initUpgrades = (
     const rec = await res.wait()
   }
 
+  const transferProxyAdminOwner = async (newOwner: string) => {
+    const signers = await hre.ethers.getSigners()
+    if (!signers.length) {
+      throw new Error(
+        'No signer - make sure a key is properly set (check hardhat config)'
+      )
+    }
+    const signer = signers[0]
+    const {
+      data: { proxyAdminAddress },
+    } = await getDeployments()
+
+    console.log(`Connecting to Proxy admin at ${proxyAdminAddress}`)
+
+    const ProxyAdmin__factory = await hre.ethers.getContractFactory(
+      'ProxyAdmin'
+    )
+    const proxyAdmin =
+      ProxyAdmin__factory.attach(proxyAdminAddress).connect(signer)
+
+    console.log('Checking Proxy Admin Owner')
+
+    const proxyAdminOwner: string = await proxyAdmin.owner()
+
+    if (proxyAdminOwner.toLowerCase() !== signer.address.toLowerCase()) {
+      throw new Error(
+        `Stop — you are not the proxy admin owner! Proxy admin owner: ${proxyAdminOwner}. You: ${signer.address} `
+      )
+    }
+    console.log(
+      `You are connected as the proxy admin owner ${proxyAdminOwner} 👍`
+    )
+
+    const newOwnerIsContract =
+      (await hre.ethers.provider.getCode(newOwner)).length > 2
+
+    console.log(
+      `Be careful! You are about to transfer owner ship of the proxy admin at ${proxyAdminAddress} from old-owner ${proxyAdminOwner} to new-owner ${newOwner}`
+    )
+    console.log(
+      'New owner address is ' + newOwnerIsContract
+        ? 'a contract address'
+        : 'an EOA'
+    )
+    console.log(
+      `Are you absolutely sure you want to do this? ('Yes' to proceed)`
+    )
+
+    const resp = await prompt('')
+    if (resp !== 'Yes') {
+      console.log('Okay, stopping')
+      return
+    }
+    console.log('Transferring ownership:')
+
+    const res = await proxyAdmin.transferOwnership(newOwner)
+    const rec = await res.wait()
+    console.log('Ownership transfer complete 👍')
+    console.log(rec)
+  }
+
   const transferBeaconOwner = async (
     upgradableBeaconAddress: string,
     newOwner: string
@@ -668,5 +729,6 @@ export const initUpgrades = (
     transferBeaconOwner,
     removeBuildInfoFiles,
     verifyDeployments,
+    transferProxyAdminOwner,
   }
 }

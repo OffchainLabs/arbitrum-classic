@@ -39,6 +39,13 @@ task('transfer-owner', 'deploy one logic')
     await transferAdmin(args.proxyaddress, args.newadmin)
   })
 
+task('bridge-transfer-admin-owner', 'transfer ownership of proxy admin')
+  .addParam('newowner', 'new owner address')
+  .setAction(async (args, hre) => {
+    const { transferProxyAdminOwner } = initUpgrades(hre, __dirname)
+    await transferProxyAdminOwner(args.newowner)
+  })
+
 task(
   'remove-build-info',
   'remove giant build info string from current_deployments json'
