@@ -44,7 +44,7 @@ Retryable tickets handle all these things (and handle them well!)
 
 ### Retryable Tickets Contract API
 
-A retryable ticket is created by calling [Inbox.createRetryableTicket](./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md). Other operation's involving retryable tickets are preformed via the [ArbRetryableTicket](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) precompile interface at L2 address 0x000000000000000000000000000000000000006E. (this contract won't need to be used under normal circumstances.)
+A retryable ticket is created by calling [Inbox.createRetryableTicket](./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md). Other operations involving retryable tickets are preformed via the [ArbRetryableTicket](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) precompile interface at L2 address 0x000000000000000000000000000000000000006E. (this contract won't need to be used under normal circumstances.)
 
 ### Parameters:
 
@@ -93,7 +93,7 @@ If the Retryable Ticket is cancelled or expires before it is redeemed, Callvalue
 
 ### Depositing ETH via Retryables
 
-Currently, the canonical method for depositing ETH into Arbitrum via the [Inbox.depositEth](<(./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md)>) method, which uses retryable tickets. A Retryable Ticket is created with 0 Callvalue, 0 MaxGas, 0 GasPrice, and empty Calldata. The DepositValue credited to the sender’s account in step 1 simply remains there.
+Currently, the canonical method for depositing ETH into Arbitrum is to create a retryable ticket using the [Inbox.depositEth](<(./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md)>) method. A Retryable Ticket is created with 0 Callvalue, 0 MaxGas, 0 GasPrice, and empty Calldata. The DepositValue credited to the sender’s account in step 1 simply remains there.
 
 The Retryable Ticket gets put in the retry buffer and can in theory be redeemed, but redeeming is a no-op.
 
@@ -104,22 +104,21 @@ Beyond the superfluous ticket creation, this is suboptimal in that the base subm
 When a retryable ticket is executed on L2, the sender's address —i.e., that which is returned by `msg.sender` — will _not_ simply be the address of the contract on L1 that initiated the message; rather it will be the contract's "L2 Alias." A contract address's L2 alias is its value increased by the hex value `0x1111000000000000000000000000000000001111`:
 
 ```
-L1_Contract_ Address + 0x1111000000000000000000000000000000001111 = L2_Alias
+L2_Alias = L1_Contract_ Address + 0x1111000000000000000000000000000000001111
 ```
 
 The Arbitrum protocol's usage of L2 Aliases for L1-to-L2 messages prevents cross-chain exploits that would otherwise be possible if we simply reused L1 contact addresses.
 
-If for some reason you need to compute an L2 alias's corresponding L1 address on chain, you can use our `AddressAliasHelper` library:
+If for some reason you need to compute the L1 address from an L2 alias on chain, you can use our `AddressAliasHelper` library:
 
 ```sol
     modifier onlyFromMyL1Contract() override {
         require(AddressAliasHelper.undoL1ToL2Alias(msg.sender) === myL1ContractAddress, "ONLY_COUNTERPART_CONTRACT");
-        address _inbox = inbox;
         _;
     }
 ```
 
-_Of note: the (highly) recommended convenience methods `Inbox.depositEth` and `Inbox.createRetryableTicket` handle subtracting the offset for the credit back address and beneficiary address, and using the these reverse-aliased values as the inputs for the create retryable tickets. This way, the beneficiary and credit back addresses as received on L2 will be equal to those provided as the L1 params._
+_Of note: the (highly) recommended convenience methods `Inbox.depositEth` and `Inbox.createRetryableTicket` handle subtracting the offset for the credit back address and beneficiary address, and using the these reverse-aliased values as the inputs for the create retryable tickets. This way, the beneficiary and credit back addresses as received on L2 will be equivalent to those provided as the L1 params._
 
 #### Directly Redeeming / Cancelling Retryables
 

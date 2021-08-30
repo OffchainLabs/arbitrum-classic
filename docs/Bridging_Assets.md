@@ -126,7 +126,7 @@ Follow the following steps to get your token set up to use the Generic Custom Ga
 Have your L1 token's contract make an external call to `L1CustomGateway.registerTokenToL2`. This registration can alternatively be performed as an admin registration.
 
 **3. Register Your Token on L1 To the L1Gateway Router**
-After your token's registration to the Custom Gateway is complete, have your L1 token's contract make an external to `L1GatewayRouter.setGateway`; this registration can also alternatively be performed as an admin registration.
+After your token's registration to the Custom Gateway is complete, have your L1 token's contract make an external call to `L1GatewayRouter.setGateway`; this registration can also alternatively be performed as an admin registration.
 
 | ☝️ The admin privilege over the router and generic custom gateway are temporary and users should use at their own discretion |
 | ---------------------------------------------------------------------------------------------------------------------------- |
