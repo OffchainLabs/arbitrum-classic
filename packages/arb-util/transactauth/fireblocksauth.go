@@ -271,8 +271,10 @@ func (ta *FireblocksTransactAuth) Sign(addr ethcommon.Address, tx *types.Transac
 	return tx, nil
 }
 
-func (ta *FireblocksTransactAuth) GetAuth() *bind.TransactOpts {
-	return ta.auth
+func (ta *FireblocksTransactAuth) GetAuth(ctx context.Context) *bind.TransactOpts {
+	auth := *ta.auth
+	auth.Context = ctx
+	return &auth
 }
 
 func (ta *FireblocksTransactAuth) From() ethcommon.Address {

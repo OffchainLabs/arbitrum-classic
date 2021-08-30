@@ -184,7 +184,7 @@ func AddSequencerL2BatchFromOriginCustomNonce(
 	sectionsMetadata []*big.Int,
 	afterAcc [32]byte,
 ) (*arbtransaction.ArbTransaction, error) {
-	rawAuth := auth.GetAuth()
+	rawAuth := auth.GetAuth(ctx)
 	arbTx, err := transactauth.MakeTxCustomNonce(ctx, auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
 	}, nonce)
