@@ -159,6 +159,10 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
         return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
     }
 
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
+        return 50000;
+    }
+
     address public stubAddressOracleReturn;
 
     function setStubAddressOracleReturn(address _stubValue) external {
@@ -238,6 +242,10 @@ contract L2CustomGatewayTester is L2ArbitrumTestMessenger, L2CustomGateway {
     ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
         return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
     }
+
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
+        return 50000;
+    }
 }
 
 contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
@@ -299,5 +307,9 @@ contract L2WethGatewayTester is L2ArbitrumTestMessenger, L2WethGateway {
 
     function setL2WethAddress(address _l2Weth) external {
         L2WethGateway.l2Weth = _l2Weth;
+    }
+
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
+        return 50000;
     }
 }
