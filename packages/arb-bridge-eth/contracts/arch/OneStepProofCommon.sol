@@ -75,6 +75,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
     uint8 internal constant OP_ETHHASH2 = 0x22;
     uint8 internal constant OP_KECCAK_F = 0x23;
     uint8 internal constant OP_SHA256_F = 0x24;
+    uint8 internal constant OP_BLAKE2B_F = 0x26;
 
     // Stack, Memory, Storage and Flow Operations
     uint8 internal constant OP_POP = 0x30;
