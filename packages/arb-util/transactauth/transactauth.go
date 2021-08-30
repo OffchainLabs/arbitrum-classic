@@ -39,7 +39,7 @@ type TransactAuth interface {
 	NonceAt(ctx context.Context, account ethcommon.Address, blockNumber *big.Int) (uint64, error)
 	Sign(ethcommon.Address, *types.Transaction) (*types.Transaction, error)
 	From() ethcommon.Address
-	GetAuth() *bind.TransactOpts
+	GetAuth(ctx context.Context) *bind.TransactOpts
 }
 
 func getNonce(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts, usePendingNonce bool) error {
@@ -66,7 +66,7 @@ func makeContract(
 	t TransactAuth,
 	contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error),
 ) (ethcommon.Address, *arbtransaction.ArbTransaction, error) {
-	auth := t.GetAuth()
+	auth := t.GetAuth(ctx)
 
 	addr, arbTx, err := makeContractImpl(ctx, t, auth, contractFunc)
 	if err != nil {
@@ -84,7 +84,7 @@ func makeContractCustomNonce(
 	contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error),
 	customNonce *big.Int,
 ) (ethcommon.Address, *arbtransaction.ArbTransaction, error) {
-	auth := t.GetAuth()
+	auth := t.GetAuth(ctx)
 	origNonce := auth.Nonce
 	defer func(auth *bind.TransactOpts) {
 		auth.Nonce = origNonce
