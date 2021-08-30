@@ -29,7 +29,8 @@ contract GasRefunder is IGasRefunder, Ownable {
     uint256 public extraGasMargin;
     uint256 public calldataCost;
     uint256 public maxGasTip;
-    uint256 public maxSingleRefund;
+    uint256 public maxGasCost;
+    uint256 public maxSingleGasUsage;
 
     event RefundedGasCosts(
         address indexed refundee,
@@ -54,14 +55,16 @@ contract GasRefunder is IGasRefunder, Ownable {
     // 1: extraGasMargin
     // 2: calldataCost
     // 3: maxGasTip
-    // 4: maxSingleRefund
+    // 4: maxGasCost
+    // 5: maxSingleGasUsage
     event ParameterSet(uint256 indexed parameter, uint256 value);
 
     constructor() Ownable() {
-        extraGasMargin = 4000;
+        extraGasMargin = 4000; // 4k gas
         calldataCost = 12; // Between 4 for 0 bytes and 16 for non-zero bytes
         maxGasTip = 2e9; // 2 gwei
-        maxSingleRefund = 2e17; // 0.2 ETH
+        maxGasCost = 120e9; // 120 gwei
+        maxSingleGasUsage = 2e6; // 2 million gas
     }
 
     function setContractAllowed(address contractAddress, bool allowed) external onlyOwner {
@@ -89,9 +92,14 @@ contract GasRefunder is IGasRefunder, Ownable {
         emit ParameterSet(3, newValue);
     }
 
-    function setMaxSingleRefund(uint256 newValue) external onlyOwner {
-        maxSingleRefund = newValue;
+    function setMaxGasCost(uint256 newValue) external onlyOwner {
+        maxGasCost = newValue;
         emit ParameterSet(4, newValue);
+    }
+
+    function setMaxSingleGasUsage(uint256 newValue) external onlyOwner {
+        maxSingleGasUsage = newValue;
+        emit ParameterSet(5, newValue);
     }
 
     receive() external payable {
@@ -122,16 +130,23 @@ contract GasRefunder is IGasRefunder, Ownable {
         if (tx.gasprice < estGasPrice) {
             estGasPrice = tx.gasprice;
         }
+        if (maxGasCost != 0 && estGasPrice > maxGasCost) {
+            estGasPrice = maxGasCost;
+        }
 
         // Cache these variables and retrieve them before measuring gasleft()
         uint256 refundeeBalance = refundee.balance;
         uint256 maxRefundeeBalanceCache = maxRefundeeBalance;
-        uint256 maxSingleRefundCached = maxSingleRefund;
+        uint256 maxSingleGasUsageCached = maxSingleGasUsage;
 
         // Add in a bit of a buffer for the tx costs not measured with gasleft
         gasUsed += startGasLeft + extraGasMargin + (calldataSize * calldataCost);
         // Split this up into two statements so that gasleft() comes after the storage load of extraGasMargin
         gasUsed -= gasleft();
+
+        if (maxSingleGasUsageCached != 0 && gasUsed > maxSingleGasUsage) {
+            gasUsed = maxSingleGasUsageCached;
+        }
 
         uint256 refundAmount = estGasPrice * gasUsed;
         if (
@@ -144,9 +159,6 @@ contract GasRefunder is IGasRefunder, Ownable {
             } else {
                 refundAmount = maxRefundeeBalanceCache - refundeeBalance;
             }
-        }
-        if (maxSingleRefundCached != 0 && maxSingleRefundCached < refundAmount) {
-            refundAmount = maxSingleRefundCached;
         }
 
         bool success = refundee.send(refundAmount);
