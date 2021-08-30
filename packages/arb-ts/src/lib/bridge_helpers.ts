@@ -241,7 +241,8 @@ export class BridgeHelper {
     l2Provider: ethers.providers.Provider,
     gatewayAddress: string,
     l1TokenAddress: string,
-    fromAddress?: string
+    fromAddress?: string,
+    filter?: providers.Filter
   ) {
     const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
@@ -255,7 +256,8 @@ export class BridgeHelper {
       'WithdrawalInitiated',
       gatewayContract,
       // @ts-ignore
-      topics
+      topics,
+      filter
     )
 
     return logs
@@ -275,7 +277,8 @@ export class BridgeHelper {
   static async getGatewayWithdrawEventData(
     l2Provider: ethers.providers.Provider,
     gatewayAddress: string,
-    fromAddress?: string
+    fromAddress?: string,
+    filter?: providers.Filter
   ) {
     const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
@@ -289,7 +292,8 @@ export class BridgeHelper {
       'WithdrawalInitiated',
       gatewayContract,
       // @ts-ignore
-      topics
+      topics,
+      filter
     )
 
     return logs.map(log => {
@@ -434,12 +438,8 @@ export class BridgeHelper {
       return res
     } catch (e) {
       const expectedError = "batch doesn't exist"
-      if (
-        e &&
-        e.error &&
-        e.error.message &&
-        e.error.message === expectedError
-      ) {
+      const actualError = e && (e.message || (e.error && e.error.message))
+      if (actualError.includes(expectedError)) {
         console.log(
           'Withdrawal detected, but batch not created yet. Going to wait a bit.'
         )
@@ -506,12 +506,8 @@ export class BridgeHelper {
       return res
     } catch (e) {
       const expectedError = "batch doesn't exist"
-      if (
-        e &&
-        e.error &&
-        e.error.message &&
-        e.error.message === expectedError
-      ) {
+      const actualError = e && (e.message || (e.error && e.error.message))
+      if (actualError.includes(expectedError)) {
         console.log('Withdrawal detected, but batch not created yet.')
       } else {
         console.log("Withdrawal proof didn't work. Not sure why")
@@ -629,7 +625,7 @@ export class BridgeHelper {
     }
 
     if (singleAttempt) {
-      const outGoingMessageState = await BridgeHelper.getOutgoingMessageState(
+      const outGoingMessageState = await BridgeHelper.getOutGoingMessageState(
         batchNumber,
         indexInBatch,
         outboxAddress,
@@ -682,14 +678,16 @@ export class BridgeHelper {
 
   static getL2ToL1EventData = async (
     fromAddress: string,
-    l2Provider: providers.Provider
+    l2Provider: providers.Provider,
+    filter?: providers.Filter
   ) => {
     const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
 
     const logs = await BridgeHelper.getEventLogs(
       'L2ToL1Transaction',
       contract,
-      [ethers.utils.hexZeroPad(fromAddress, 32)]
+      [ethers.utils.hexZeroPad(fromAddress, 32)],
+      filter
     )
 
     return logs.map(
@@ -793,7 +791,7 @@ export class BridgeHelper {
     )
   }
 
-  static getOutgoingMessageState = async (
+  static getOutGoingMessageState = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
     outBoxAddress: string,
@@ -831,7 +829,7 @@ export class BridgeHelper {
         ? OutgoingMessageState.CONFIRMED
         : OutgoingMessageState.UNCONFIRMED
     } catch (e) {
-      console.warn('666: error in getOutgoingMessageState:', e)
+      console.warn('666: error in getOutGoingMessageState:', e)
       return OutgoingMessageState.NOT_FOUND
     }
   }

@@ -603,7 +603,8 @@ export class Bridge {
    */
   public async getTokenWithdrawEventData(
     l1TokenAddress: string,
-    fromAddress?: string
+    fromAddress?: string,
+    filter?: ethers.providers.Filter
   ) {
     const gatewayAddress = await this.l2Bridge.l2GatewayRouter.getGateway(
       l1TokenAddress
@@ -613,7 +614,8 @@ export class Bridge {
       this.l2Provider,
       gatewayAddress,
       l1TokenAddress,
-      fromAddress
+      fromAddress,
+      filter
     )
   }
 
@@ -623,17 +625,22 @@ export class Bridge {
 
   public async getGatewayWithdrawEventData(
     gatewayAddress: string,
-    fromAddress?: string
+    fromAddress?: string,
+    filter?: ethers.providers.Filter
   ) {
     return BridgeHelper.getGatewayWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
-      fromAddress
+      fromAddress,
+      filter
     )
   }
 
-  public async getL2ToL1EventData(fromAddress: string) {
-    return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider)
+  public async getL2ToL1EventData(
+    fromAddress: string,
+    filter?: ethers.providers.Filter
+  ) {
+    return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider, filter)
   }
 
   public async getOutboxAddressByBatchNum(batchNum: BigNumber) {
@@ -671,7 +678,7 @@ export class Bridge {
     indexInBatch: BigNumber
   ) {
     const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
-    return BridgeHelper.getOutgoingMessageState(
+    return BridgeHelper.getOutGoingMessageState(
       batchNumber,
       indexInBatch,
       outboxAddress,
