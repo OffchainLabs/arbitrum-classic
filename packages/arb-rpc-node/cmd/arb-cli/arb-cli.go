@@ -33,33 +33,54 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 const eip1820Tx = "0xf90a388085174876e800830c35008080b909e5608060405234801561001057600080fd5b506109c5806100206000396000f3fe608060405234801561001057600080fd5b50600436106100a5576000357c010000000000000000000000000000000000000000000000000000000090048063a41e7d5111610078578063a41e7d51146101d4578063aabbb8ca1461020a578063b705676514610236578063f712f3e814610280576100a5565b806329965a1d146100aa5780633d584063146100e25780635df8122f1461012457806365ba36c114610152575b600080fd5b6100e0600480360360608110156100c057600080fd5b50600160a060020a038135811691602081013591604090910135166102b6565b005b610108600480360360208110156100f857600080fd5b5035600160a060020a0316610570565b60408051600160a060020a039092168252519081900360200190f35b6100e06004803603604081101561013a57600080fd5b50600160a060020a03813581169160200135166105bc565b6101c26004803603602081101561016857600080fd5b81019060208101813564010000000081111561018357600080fd5b82018360208201111561019557600080fd5b803590602001918460018302840111640100000000831117156101b757600080fd5b5090925090506106b3565b60408051918252519081900360200190f35b6100e0600480360360408110156101ea57600080fd5b508035600160a060020a03169060200135600160e060020a0319166106ee565b6101086004803603604081101561022057600080fd5b50600160a060020a038135169060200135610778565b61026c6004803603604081101561024c57600080fd5b508035600160a060020a03169060200135600160e060020a0319166107ef565b604080519115158252519081900360200190f35b61026c6004803603604081101561029657600080fd5b508035600160a060020a03169060200135600160e060020a0319166108aa565b6000600160a060020a038416156102cd57836102cf565b335b9050336102db82610570565b600160a060020a031614610339576040805160e560020a62461bcd02815260206004820152600f60248201527f4e6f7420746865206d616e616765720000000000000000000000000000000000604482015290519081900360640190fd5b6103428361092a565b15610397576040805160e560020a62461bcd02815260206004820152601a60248201527f4d757374206e6f7420626520616e204552433136352068617368000000000000604482015290519081900360640190fd5b600160a060020a038216158015906103b85750600160a060020a0382163314155b156104ff5760405160200180807f455243313832305f4143434550545f4d4147494300000000000000000000000081525060140190506040516020818303038152906040528051906020012082600160a060020a031663249cb3fa85846040518363ffffffff167c01000000000000000000000000000000000000000000000000000000000281526004018083815260200182600160a060020a0316600160a060020a031681526020019250505060206040518083038186803b15801561047e57600080fd5b505afa158015610492573d6000803e3d6000fd5b505050506040513d60208110156104a857600080fd5b5051146104ff576040805160e560020a62461bcd02815260206004820181905260248201527f446f6573206e6f7420696d706c656d656e742074686520696e74657266616365604482015290519081900360640190fd5b600160a060020a03818116600081815260208181526040808320888452909152808220805473ffffffffffffffffffffffffffffffffffffffff19169487169485179055518692917f93baa6efbd2244243bfee6ce4cfdd1d04fc4c0e9a786abd3a41313bd352db15391a450505050565b600160a060020a03818116600090815260016020526040812054909116151561059a5750806105b7565b50600160a060020a03808216600090815260016020526040902054165b919050565b336105c683610570565b600160a060020a031614610624576040805160e560020a62461bcd02815260206004820152600f60248201527f4e6f7420746865206d616e616765720000000000000000000000000000000000604482015290519081900360640190fd5b81600160a060020a031681600160a060020a0316146106435780610646565b60005b600160a060020a03838116600081815260016020526040808220805473ffffffffffffffffffffffffffffffffffffffff19169585169590951790945592519184169290917f605c2dbf762e5f7d60a546d42e7205dcb1b011ebc62a61736a57c9089d3a43509190a35050565b600082826040516020018083838082843780830192505050925050506040516020818303038152906040528051906020012090505b92915050565b6106f882826107ef565b610703576000610705565b815b600160a060020a03928316600081815260208181526040808320600160e060020a031996909616808452958252808320805473ffffffffffffffffffffffffffffffffffffffff19169590971694909417909555908152600284528181209281529190925220805460ff19166001179055565b600080600160a060020a038416156107905783610792565b335b905061079d8361092a565b156107c357826107ad82826108aa565b6107b85760006107ba565b815b925050506106e8565b600160a060020a0390811660009081526020818152604080832086845290915290205416905092915050565b6000808061081d857f01ffc9a70000000000000000000000000000000000000000000000000000000061094c565b909250905081158061082d575080155b1561083d576000925050506106e8565b61084f85600160e060020a031961094c565b909250905081158061086057508015155b15610870576000925050506106e8565b61087a858561094c565b909250905060018214801561088f5750806001145b1561089f576001925050506106e8565b506000949350505050565b600160a060020a0382166000908152600260209081526040808320600160e060020a03198516845290915281205460ff1615156108f2576108eb83836107ef565b90506106e8565b50600160a060020a03808316600081815260208181526040808320600160e060020a0319871684529091529020549091161492915050565b7bffffffffffffffffffffffffffffffffffffffffffffffffffffffff161590565b6040517f01ffc9a7000000000000000000000000000000000000000000000000000000008082526004820183905260009182919060208160248189617530fa90519096909550935050505056fea165627a7a72305820377f4a2d4301ede9949f163f319021a6e9c687c292a5e2b2c4734c126b524e6c00291ba01820182018201820182018201820182018201820182018201820182018201820a01820182018201820182018201820182018201820182018201820182018201820"
 
-type Config struct {
-	client ethutils.EthClient
-	auth   *bind.TransactOpts
-	fb     *fireblocks.Fireblocks
+type Globals struct {
+	ctx context.Context
+
+	l1Client       ethutils.EthClient
+	l1ChainId      *big.Int
+	l1TransactAuth transactauth.TransactAuth
+
+	l2Client       ethutils.EthClient
+	l2ChainId      *big.Int
+	l2TransactAuth transactauth.TransactAuth
+
+	config *configuration.Config
 }
 
-var config *Config
+var global *Globals
 
-func waitForTx(tx *types.Transaction, method string) error {
+func waitForTx(
+	ctx context.Context,
+	client ethutils.EthClient,
+	transactAuth transactauth.TransactAuth,
+	arbTx *arbtransaction.ArbTransaction,
+	method string,
+) error {
 	fmt.Println("Waiting for receipt")
-	_, err := transactauth.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, arbtransaction.NewArbTransaction(tx), method, transactauth.NewEthArbReceiptFetcher(config.client))
+	_, err := transactauth.WaitForReceiptWithResults(
+		ctx,
+		client,
+		transactAuth.From(),
+		arbTx,
+		method,
+		transactauth.NewEthArbReceiptFetcher(client),
+	)
 	if err != nil {
 		return err
 	}
@@ -71,7 +92,14 @@ type upgrade struct {
 	Instructions []string `json:"instructions"`
 }
 
-func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) error {
+func upgradeArbOS(
+	ctx context.Context,
+	client ethutils.EthClient,
+	transactAuth transactauth.TransactAuth,
+	upgradeFile string,
+	targetMexe string,
+	startMexe *string,
+) error {
 	targetMach, err := cmachine.New(targetMexe)
 	if err != nil {
 		return err
@@ -104,25 +132,29 @@ func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) erro
 		chunks[len(chunks)-1] += insn
 	}
 
-	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
 		return err
 	}
-	tx, err := arbOwner.StartCodeUpload(config.auth)
+	arbTx, err := transactauth.MakeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return arbOwner.StartCodeUpload(auth)
+	})
 	if err != nil {
 		return err
 	}
-	if err := waitForTx(tx, "StartCodeUpload"); err != nil {
+	if err := waitForTx(ctx, client, transactAuth, arbTx, "StartCodeUpload"); err != nil {
 		return err
 	}
 
 	fmt.Println("Submitting upgrade in", len(chunks), "chunks")
 	for _, upgradeChunk := range chunks {
-		tx, err = arbOwner.ContinueCodeUpload(config.auth, hexutil.MustDecode(upgradeChunk))
+		arbTx, err := transactauth.MakeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+			return arbOwner.ContinueCodeUpload(auth, hexutil.MustDecode(upgradeChunk))
+		})
 		if err != nil {
 			return err
 		}
-		if err := waitForTx(tx, "ContinueCodeUpload"); err != nil {
+		if err := waitForTx(ctx, client, transactAuth, arbTx, "StartCodeUpload"); err != nil {
 			return err
 		}
 	}
@@ -135,18 +167,20 @@ func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) erro
 		return errors.New("incorrect code segment uploaded")
 	}
 
-	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(config.auth, targetMach.CodePointHash(), startHash)
+	arbTx, err = transactauth.MakeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return arbOwner.FinishCodeUploadAsArbosUpgrade(auth, targetMach.CodePointHash(), startHash)
+	})
 	if err != nil {
 		return err
 	}
-	if err := waitForTx(tx, "FinishCodeUploadAsArbosUpgrade"); err != nil {
+	if err := waitForTx(ctx, client, transactAuth, arbTx, "StartCodeUpload"); err != nil {
 		return err
 	}
 	return nil
 }
 
-func version() error {
-	con, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, config.client)
+func version(client ethutils.EthClient) error {
+	con, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	if err != nil {
 		return err
 	}
@@ -158,8 +192,8 @@ func version() error {
 	return nil
 }
 
-func feeInfo(blockNum *big.Int) error {
-	con, err := arboscontracts.NewArbGasInfo(arbos.ARB_GAS_INFO_ADDRESS, config.client)
+func feeInfo(client ethutils.EthClient, blockNum *big.Int) error {
+	con, err := arboscontracts.NewArbGasInfo(arbos.ARB_GAS_INFO_ADDRESS, client)
 	if err != nil {
 		return err
 	}
@@ -201,44 +235,75 @@ func feeInfo(blockNum *big.Int) error {
 	return nil
 }
 
-func switchFees(enabled bool) error {
-	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+func switchFees(
+	ctx context.Context,
+	client ethutils.EthClient,
+	transactAuth transactauth.TransactAuth,
+	enabled bool,
+) error {
+	var enabledInt int64
+	if enabled {
+		enabledInt = 1
+	}
+
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
 		return err
 	}
-	tx, err := arbOwner.SetChainParameter(config.auth, arbos.FeesEnabledParamId, big.NewInt(1))
+	arbTx, err := transactauth.MakeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return arbOwner.SetChainParameter(auth, arbos.FeesEnabledParamId, big.NewInt(enabledInt))
+	})
 	if err != nil {
 		return err
 	}
-	return waitForTx(tx, "SetChainParameters")
+	return waitForTx(ctx, client, transactAuth, arbTx, "StartCodeUpload")
 }
 
-func setDefaultAggregator(agg ethcommon.Address) error {
-	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, config.client)
+func setDefaultAggregator(
+	ctx context.Context,
+	client ethutils.EthClient,
+	transactAuth transactauth.TransactAuth,
+	agg ethcommon.Address,
+) error {
+	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
 	if err != nil {
 		return err
 	}
-	tx, err := arbAggregator.SetDefaultAggregator(config.auth, agg)
+	arbTx, err := transactauth.MakeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return arbAggregator.SetDefaultAggregator(auth, agg)
+	})
 	if err != nil {
 		return err
 	}
-	return waitForTx(tx, "SetDefaultAggregator")
+	return waitForTx(ctx, client, transactAuth, arbTx, "StartCodeUpload")
 }
 
-func setFairGasPriceSender(sender ethcommon.Address) error {
-	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+func setFairGasPriceSender(
+	ctx context.Context,
+	client ethutils.EthClient,
+	transactAuth transactauth.TransactAuth,
+	sender ethcommon.Address,
+) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
 		return err
 	}
-	tx, err := arbOwner.SetFairGasPriceSender(config.auth, sender, true)
+	arbTx, err := transactauth.MakeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return arbOwner.SetFairGasPriceSender(auth, sender, true)
+	})
 	if err != nil {
 		return err
 	}
-	return waitForTx(tx, "SetFairGasPriceSender")
+
+	return waitForTx(ctx, client, transactAuth, arbTx, "StartCodeUpload")
 }
 
-func deploy1820() error {
-	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+func deploy1820(
+	ctx context.Context,
+	client ethutils.EthClient,
+	transactAuth transactauth.TransactAuth,
+) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
 		return err
 	}
@@ -252,20 +317,26 @@ func deploy1820() error {
 		return err
 	}
 
-	_, err = arbOwner.DeployContract(config.auth, tx1820.Data(), sender1820, new(big.Int).SetUint64(tx1820.Nonce()))
+	arbTx, err := transactauth.MakeTx(ctx, transactAuth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return arbOwner.DeployContract(auth, tx1820.Data(), sender1820, new(big.Int).SetUint64(tx1820.Nonce()))
+	})
 	if err != nil {
+		return err
+	}
+
+	if err := waitForTx(ctx, client, transactAuth, arbTx, "StartCodeUpload"); err != nil {
 		return err
 	}
 	return nil
 }
 
-func estimateTransferGas() error {
+func estimateTransferGas(client ethutils.EthClient, transactAuth transactauth.TransactAuth) error {
 	dest := common.RandAddress().ToEthAddress()
 	msg := ethereum.CallMsg{
-		From: config.auth.From,
+		From: transactAuth.From(),
 		To:   &dest,
 	}
-	gas, err := config.client.EstimateGas(context.Background(), msg)
+	gas, err := client.EstimateGas(context.Background(), msg)
 	if err != nil {
 		return err
 	}
@@ -273,15 +344,15 @@ func estimateTransferGas() error {
 	return nil
 }
 
-func spam() error {
+func spam(client ethutils.EthClient, transactAuth transactauth.TransactAuth) error {
 	dest := common.RandAddress().ToEthAddress()
 	ctx := context.Background()
 	for {
-		nonce, err := config.client.PendingNonceAt(ctx, config.auth.From)
+		nonce, err := client.PendingNonceAt(ctx, transactAuth.From())
 		if err != nil {
 			return err
 		}
-		gasPrice, err := config.client.SuggestGasPrice(ctx)
+		gasPrice, err := client.SuggestGasPrice(ctx)
 		if err != nil {
 			return err
 		}
@@ -293,11 +364,11 @@ func spam() error {
 			Value:    big.NewInt(1),
 			Data:     nil,
 		})
-		tx, err = config.auth.Signer(config.auth.From, tx)
+		tx, err = transactAuth.GetAuth(ctx).Signer(transactAuth.From(), tx)
 		if err != nil {
 			return err
 		}
-		if err := config.client.SendTransaction(ctx, tx); err != nil {
+		if err := client.SendTransaction(ctx, tx); err != nil {
 			return err
 		}
 		time.Sleep(time.Minute)
@@ -314,23 +385,23 @@ func handleCommand(fields []string) error {
 		if err != nil {
 			return err
 		}
-		return switchFees(enabled)
+		return switchFees(global.ctx, global.l2Client, global.l2TransactAuth, enabled)
 	case "estimate-transfer-gas":
-		return estimateTransferGas()
+		return estimateTransferGas(global.l2Client, global.l2TransactAuth)
 	case "set-default-agg":
 		if len(fields) != 2 {
 			return errors.New("Expected address argument")
 		}
-		agg := ethcommon.HexToAddress(fields[1])
-		return setDefaultAggregator(agg)
+		addr := ethcommon.HexToAddress(fields[1])
+		return setDefaultAggregator(global.ctx, global.l2Client, global.l2TransactAuth, addr)
 	case "set-fair-gas-sender":
 		if len(fields) != 2 {
 			return errors.New("Expected address argument")
 		}
-		agg := ethcommon.HexToAddress(fields[1])
-		return setFairGasPriceSender(agg)
+		addr := ethcommon.HexToAddress(fields[1])
+		return setFairGasPriceSender(global.ctx, global.l2Client, global.l2TransactAuth, addr)
 	case "deploy-1820":
-		return deploy1820()
+		return deploy1820(global.ctx, global.l2Client, global.l2TransactAuth)
 	case "fee-info":
 		var blockNum *big.Int
 		if len(fields) == 2 {
@@ -340,7 +411,7 @@ func handleCommand(fields []string) error {
 				return errors.New("expected arg to be int")
 			}
 		}
-		return feeInfo(blockNum)
+		return feeInfo(global.l2Client, blockNum)
 	case "upgrade":
 		if len(fields) != 3 && len(fields) != 4 {
 			return errors.New("Expected upgrade file and target mexe arguments")
@@ -349,11 +420,11 @@ func handleCommand(fields []string) error {
 		if len(fields) == 4 {
 			source = &fields[3]
 		}
-		return upgradeArbOS(fields[1], fields[2], source)
+		return upgradeArbOS(global.ctx, global.l2Client, global.l2TransactAuth, fields[1], fields[2], source)
 	case "version":
-		return version()
+		return version(global.l2Client)
 	case "spam":
-		return spam()
+		return spam(global.l2Client, global.l2TransactAuth)
 	default:
 		fmt.Println("Unknown command")
 	}
@@ -371,42 +442,73 @@ func executor(t string) {
 	}
 }
 
-func completer(t prompt.Document) []prompt.Suggest {
+func completer(_ prompt.Document) []prompt.Suggest {
 	return []prompt.Suggest{
 		{Text: "enable-fees"},
 		{Text: "exit"},
 	}
 }
 
+func printSampleUsage() {
+	fmt.Println("Expected: arb-cli --node.forwarder.target rpcurl --wallet.private-key privkey")
+}
+
 func run(ctx context.Context) error {
-	if len(os.Args) != 3 {
-		fmt.Println("Expected: arb-cli rpcurl privkey")
-	}
-	arbUrl := os.Args[1]
-	privKeystr := os.Args[2]
+	config, walletConfig, l1Client, l1ChainId, err := configuration.ParseCLI(ctx)
+	if err != nil || len(config.Node.Forwarder.Target) == 0 {
+		printSampleUsage()
+		if err != nil && !strings.Contains(err.Error(), "help requested") {
+			fmt.Printf("%s\n", err.Error())
+		}
 
-	client, err := ethutils.NewRPCEthClient(arbUrl)
-	if err != nil {
-		return err
+		return nil
 	}
-	chainId, err := client.ChainID(ctx)
-	if err != nil {
-		return err
-	}
-	privKey, err := crypto.HexToECDSA(privKeystr)
-	if err != nil {
-		return err
-	}
-	auth, err := bind.NewKeyedTransactorWithChainID(privKey, chainId)
-	if err != nil {
-		return err
-	}
-	fmt.Println("Sending from address", auth.From)
 
-	config = &Config{
-		client: client,
-		auth:   auth,
-		fb:     nil,
+	if len(walletConfig.Local.PrivateKey) == 0 {
+		printSampleUsage()
+		fmt.Print("missing local private key")
+
+		return nil
+	}
+
+	l2Client, err := ethutils.NewRPCEthClient(config.Node.Forwarder.Target)
+	if err != nil {
+		return err
+	}
+	l2ChainId, err := l2Client.ChainID(ctx)
+	if err != nil {
+		return err
+	}
+
+	l1Auth, _, err := cmdhelp.GetKeystore(config, walletConfig, l2ChainId, false)
+	if err != nil {
+		return errors.Wrap(err, "error loading wallet keystore")
+	}
+
+	l1TransactAuth, err := transactauth.NewTransactAuth(ctx, l2Client, l1Auth)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Sending from L1 address", l1TransactAuth.From())
+
+	l2Auth, _, err := cmdhelp.GetKeystore(config, walletConfig, l2ChainId, false)
+	if err != nil {
+		return errors.Wrap(err, "error loading wallet keystore")
+	}
+
+	l2TransactAuth, err := transactauth.NewTransactAuth(ctx, l2Client, l2Auth)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Sending from L2 address", l2TransactAuth.From())
+
+	global = &Globals{
+		l1Client:       l1Client,
+		l1ChainId:      l1ChainId,
+		l1TransactAuth: l1TransactAuth,
+		l2Client:       l2Client,
+		l2ChainId:      l2ChainId,
+		l2TransactAuth: l2TransactAuth,
 	}
 
 	p := prompt.New(
