@@ -19,5 +19,9 @@
 pragma solidity >=0.6.11 <0.7.0||>=0.8.7 <0.9.0;
 
 interface IGasRefunder {
-    function onGasSpent(address payable spender, uint256 gasUsed) external;
+    function onGasSpent(
+        address payable spender,
+        uint256 gasUsed,
+        uint256 calldataSize
+    ) external;
 }

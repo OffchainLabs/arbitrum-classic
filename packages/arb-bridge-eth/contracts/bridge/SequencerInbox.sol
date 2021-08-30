@@ -198,13 +198,11 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
 
-        // Add in a lower bound of calldata cost to the gas estimate
-        // startGasLeft = gasleft() + 4 * calldatasize()
-        uint256 startGasLeft;
+        uint256 startGasLeft = gasleft();
+        uint256 calldataSize;
         assembly {
-            startGasLeft := mul(calldatasize(), 4)
+            calldataSize := calldatasize()
         }
-        startGasLeft += gasleft();
 
         uint256 startNum = messageCount;
         bytes32 beforeAcc = addSequencerL2BatchImpl(
@@ -222,7 +220,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         );
 
         if (gasRefunder != IGasRefunder(0)) {
-            gasRefunder.onGasSpent(msg.sender, startGasLeft - gasleft());
+            gasRefunder.onGasSpent(msg.sender, startGasLeft - gasleft(), calldataSize);
         }
     }
 
