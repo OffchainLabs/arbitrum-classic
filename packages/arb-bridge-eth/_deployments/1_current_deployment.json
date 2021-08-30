@@ -66,9 +66,9 @@
     },
     "Inbox": {
       "proxyAddress": "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f",
-      "implAddress": "0xE5dB9273e7279F1485b30D8553183E3E29532ca3",
-      "implDeploymentTxn": "0xcb56834566423651fdc45b9ee4e875d7d693699e30804e6bf6f47df799991e32",
-      "implArbitrumCommitHash": "71eb134aa9be05e108d25ab0f9a7d4c62aacc0bd",
+      "implAddress": "0x048cc108763de75E080Ad717bD284003aa49eA15",
+      "implDeploymentTxn": "0xd4ef55c084c4fb0e8cabbaba6a5453a68149f85dcb3d90f95d92e8ec85138323",
+      "implArbitrumCommitHash": "756db11bb41e35a8108cd70cb230f2bacbb2c998",
       "implBuildInfo": ""
     },
     "SequencerInbox": {
