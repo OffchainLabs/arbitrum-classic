@@ -98,6 +98,13 @@
       "implDeploymentTxn": "0xd6dc4d8ed2cc893b3bb19f9b1be175e994aae4dd94710ca8e06030f91d7707a6",
       "implArbitrumCommitHash": "71eb134aa9be05e108d25ab0f9a7d4c62aacc0bd",
       "implBuildInfo": ""
+    },
+    "Outbox": {
+      "proxyAddress": "0x2360A33905dc1c72b12d975d975F42BaBdcef9F3",
+      "implAddress": "0x8fdA3500EA1F8c6790cE5Ed482dA23337B3E2A5f",
+      "implDeploymentTxn": "0x0a7fa5bc8e747b83cdbab256e71590bbc06376c5a8b4f31a7a455e5ec0544158",
+      "implArbitrumCommitHash": "a69a1012c3d6f314537a713391050f0f7653494d",
+      "implBuildInfo": ""
     }
   }
 }
