@@ -125,29 +125,23 @@ export class InboxMock extends BaseContract {
   interface: InboxMockInterface
 
   functions: {
-    activeOutbox(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
+    activeOutbox(overrides?: CallOverrides): Promise<[string]>
 
-    bridge(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
+    bridge(overrides?: CallOverrides): Promise<[string]>
 
     createRetryableTicket(
-      destAddr: string,
-      l2CallValue: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       maxSubmissionCost: BigNumberish,
-      excessFeeRefundAddress: string,
-      callValueRefundAddress: string,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      data: BytesLike,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      arg7: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    l2ToL1Sender(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
+    l2ToL1Sender(overrides?: CallOverrides): Promise<[string]>
 
     setL2ToL1Sender(
       sender: string,
@@ -155,29 +149,23 @@ export class InboxMock extends BaseContract {
     ): Promise<ContractTransaction>
   }
 
-  activeOutbox(
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
+  activeOutbox(overrides?: CallOverrides): Promise<string>
 
-  bridge(
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
+  bridge(overrides?: CallOverrides): Promise<string>
 
   createRetryableTicket(
-    destAddr: string,
-    l2CallValue: BigNumberish,
+    arg0: string,
+    arg1: BigNumberish,
     maxSubmissionCost: BigNumberish,
-    excessFeeRefundAddress: string,
-    callValueRefundAddress: string,
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    data: BytesLike,
+    arg3: string,
+    arg4: string,
+    arg5: BigNumberish,
+    arg6: BigNumberish,
+    arg7: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  l2ToL1Sender(
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
+  l2ToL1Sender(overrides?: CallOverrides): Promise<string>
 
   setL2ToL1Sender(
     sender: string,
@@ -190,14 +178,14 @@ export class InboxMock extends BaseContract {
     bridge(overrides?: CallOverrides): Promise<string>
 
     createRetryableTicket(
-      destAddr: string,
-      l2CallValue: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       maxSubmissionCost: BigNumberish,
-      excessFeeRefundAddress: string,
-      callValueRefundAddress: string,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      data: BytesLike,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      arg7: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -213,29 +201,23 @@ export class InboxMock extends BaseContract {
   }
 
   estimateGas: {
-    activeOutbox(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
+    activeOutbox(overrides?: CallOverrides): Promise<BigNumber>
 
-    bridge(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
+    bridge(overrides?: CallOverrides): Promise<BigNumber>
 
     createRetryableTicket(
-      destAddr: string,
-      l2CallValue: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       maxSubmissionCost: BigNumberish,
-      excessFeeRefundAddress: string,
-      callValueRefundAddress: string,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      data: BytesLike,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      arg7: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    l2ToL1Sender(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
+    l2ToL1Sender(overrides?: CallOverrides): Promise<BigNumber>
 
     setL2ToL1Sender(
       sender: string,
@@ -244,29 +226,23 @@ export class InboxMock extends BaseContract {
   }
 
   populateTransaction: {
-    activeOutbox(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
+    activeOutbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    bridge(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
+    bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     createRetryableTicket(
-      destAddr: string,
-      l2CallValue: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       maxSubmissionCost: BigNumberish,
-      excessFeeRefundAddress: string,
-      callValueRefundAddress: string,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      data: BytesLike,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      arg7: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    l2ToL1Sender(
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
+    l2ToL1Sender(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     setL2ToL1Sender(
       sender: string,

@@ -21,18 +21,18 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
+import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
 import "../IArbToken.sol";
 
 import "../L2ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
-import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 
 /**
  * @title Common interface for gatways on Arbitrum messaging to L1.
  */
-abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, EscrowAndCallGateway {
+abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
     using Address for address;
 
     uint256 public exitNum;
@@ -56,7 +56,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
     modifier onlyCounterpartGateway() override {
         require(
             msg.sender == counterpartGateway ||
-                L2ArbitrumMessenger.getL1Address(msg.sender) == counterpartGateway,
+                AddressAliasHelper.undoL1ToL2Alias(msg.sender) == counterpartGateway,
             "ONLY_COUNTERPART_GATEWAY"
         );
         _;
@@ -76,15 +76,9 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         require(_router != address(0), "BAD_ROUTER");
     }
 
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        // amount of arbgas necessary to send user tokens in case
-        // of the "onTokenTransfer" call consumes all available gas
-        return 2500;
-    }
-
     function createOutboundTx(
         address _from,
-        uint256 _tokenAmount,
+        uint256, /* _tokenAmount */
         bytes memory _outboundCalldata
     ) internal virtual returns (uint256) {
         // We make this function virtual since outboundTransfer logic is the same for many gateways
@@ -135,17 +129,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
      * @param _l1Token l1 address of token
      * @param _to destination address
      * @param _amount amount of tokens withdrawn
-     * @param _maxGas max gas provided for outbox execution market (todo)
-     * @param _gasPriceBid provided for outbox execution market (todo)
-     @ @return encoded unique identifier for withdrawal
+     * @return res encoded unique identifier for withdrawal
      */
-
     function outboundTransfer(
         address _l1Token,
         address _to,
         uint256 _amount,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
         bytes calldata _data
     ) public payable virtual override returns (bytes memory res) {
         // This function is set as public and virtual so that subclasses can override
@@ -166,41 +157,59 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
                 _extraData = _data;
             }
         }
+        // the inboundEscrowAndCall functionality has been disabled, so no data is allowed
+        require(_extraData.length == 0, "EXTRA_DATA_DISABLED");
 
-        // unique id used to identify the L2 to L1 tx
         uint256 id;
-        // exit number used for tradeable exits
-        uint256 currExitNum = exitNum;
         {
             address l2Token = calculateL2TokenAddress(_l1Token);
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
+            require(IArbToken(l2Token).l1Address() == _l1Token, "NOT_EXPECTED_L1_TOKEN");
 
-            outboundEscrowTransfer(l2Token, _from, _amount);
-
-            // we override the res field to save on the stack
-            res = getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
-            id = createOutboundTx(_from, _amount, res);
+            _amount = outboundEscrowTransfer(l2Token, _from, _amount);
+            id = triggerWithdrawal(_l1Token, _from, _to, _amount, _extraData);
         }
-        emit WithdrawalInitiated(_l1Token, _from, _to, id, currExitNum, _amount);
         return abi.encode(id);
+    }
+
+    function triggerWithdrawal(
+        address _l1Token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) internal returns (uint256) {
+        // exit number used for tradeable exits
+        uint256 currExitNum = exitNum;
+        // unique id used to identify the L2 to L1 tx
+        uint256 id = createOutboundTx(
+            _from,
+            _amount,
+            getOutboundCalldata(_l1Token, _from, _to, _amount, _data)
+        );
+        emit WithdrawalInitiated(_l1Token, _from, _to, id, currExitNum, _amount);
+        return id;
     }
 
     function outboundEscrowTransfer(
         address _l2Token,
         address _from,
         uint256 _amount
-    ) internal virtual {
+    ) internal virtual returns (uint256 amountBurnt) {
         // this method is virtual since different subclasses can handle escrow differently
         // user funds are escrowed on the gateway using this function
         // burns L2 tokens in order to release escrowed L1 tokens
         IArbToken(_l2Token).bridgeBurn(_from, _amount);
+        // by default we assume that the amount we send to bridgeBurn is the amount burnt
+        // this might not be the case for every token
+        return _amount;
     }
 
     function inboundEscrowTransfer(
         address _l2Address,
         address _dest,
         uint256 _amount
-    ) internal virtual override {
+    ) internal virtual {
         // this method is virtual since different subclasses can handle escrow differently
         IArbToken(_l2Address).bridgeMint(_dest, _amount);
     }
@@ -222,9 +231,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable override onlyCounterpartGateway returns (bytes memory) {
+    ) external payable override onlyCounterpartGateway {
         (bytes memory gatewayData, bytes memory callHookData) = GatewayMessageHandler
             .parseFromL1GatewayMsg(_data);
+
+        if (callHookData.length != 0) {
+            // callHookData should always be 0 since inboundEscrowAndCall is disabled
+            callHookData = bytes("");
+        }
 
         address expectedAddress = calculateL2TokenAddress(_token);
 
@@ -237,7 +251,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
                 _amount,
                 gatewayData
             );
-            if (shouldHalt) return bytes("");
+            if (shouldHalt) return;
         }
         // ignores gatewayData if token already deployed
 
@@ -261,31 +275,17 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             }
 
             if (shouldWithdraw) {
-                // we override the gatewayData field to save on the stack
-                gatewayData = getOutboundCalldata(_token, address(this), _from, _amount, "");
-
-                createOutboundTx(address(this), _amount, gatewayData);
-                return bytes("");
+                // we don't need the return value from triggerWithdrawal since this is forcing
+                // a withdrawal back to the L1 instead of composing with a L2 dapp
+                triggerWithdrawal(_token, address(this), _from, _amount, "");
+                return;
             }
         }
 
-        if (callHookData.length > 0) {
-            bool success;
-            try this.inboundEscrowAndCall(expectedAddress, _amount, _from, _to, callHookData) {
-                success = true;
-            } catch {
-                // if reverted, then credit _from's account
-                inboundEscrowTransfer(expectedAddress, _from, _amount);
-                // success default value is false
-            }
-            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
-        } else {
-            inboundEscrowTransfer(expectedAddress, _to, _amount);
-        }
-
+        inboundEscrowTransfer(expectedAddress, _to, _amount);
         emit DepositFinalized(_token, _from, _to, _amount);
 
-        return bytes("");
+        return;
     }
 
     // returns if function should halt after

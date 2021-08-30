@@ -66,12 +66,12 @@ abstract contract GatewayRouter is TokenGateway {
     }
 
     function finalizeInboundTransfer(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes calldata _data
-    ) external payable virtual override returns (bytes memory) {
+        address, /* _token */
+        address, /* _from */
+        address, /* _to */
+        uint256, /* _amount */
+        bytes calldata /* _data */
+    ) external payable virtual override {
         revert("ONLY_OUTBOUND_ROUTER");
     }
 

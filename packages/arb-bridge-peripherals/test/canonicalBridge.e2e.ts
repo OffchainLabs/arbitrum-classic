@@ -121,6 +121,17 @@ describe('Bridge peripherals end-to-end', () => {
       [maxSubmissionCost, '0x']
     )
 
+    await expect(
+      l1TestBridge.outboundTransfer(
+        token.address,
+        accounts[0].address,
+        tokenAmount,
+        maxGas,
+        gasPrice,
+        data
+      )
+    ).to.be.revertedWith('NOT_FROM_ROUTER')
+
     await l1RouterTestBridge.outboundTransfer(
       token.address,
       accounts[0].address,

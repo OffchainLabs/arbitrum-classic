@@ -27,10 +27,8 @@ interface L1GatewayTesterInterface extends ethers.utils.Interface {
     'counterpartGateway()': FunctionFragment
     'encodeWithdrawal(uint256,address)': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
-    'gasReserveIfCallRevert()': FunctionFragment
     'getExternalCall(uint256,address,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'inbox()': FunctionFragment
     'initialize(address,address,address,bytes32,address)': FunctionFragment
     'l2BeaconProxyFactory()': FunctionFragment
@@ -40,7 +38,6 @@ interface L1GatewayTesterInterface extends ethers.utils.Interface {
     'router()': FunctionFragment
     'setInboxUse(bool)': FunctionFragment
     'transferExitAndCall(uint256,address,address,bytes,bytes)': FunctionFragment
-    'updateWhitelistSource(address)': FunctionFragment
     'whitelist()': FunctionFragment
   }
 
@@ -65,20 +62,12 @@ interface L1GatewayTesterInterface extends ethers.utils.Interface {
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
-    functionFragment: 'gasReserveIfCallRevert',
-    values?: undefined
-  ): string
-  encodeFunctionData(
     functionFragment: 'getExternalCall',
     values: [BigNumberish, string, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'inboundEscrowAndCall',
-    values: [string, BigNumberish, string, string, BytesLike]
   ): string
   encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
   encodeFunctionData(
@@ -114,10 +103,6 @@ interface L1GatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'transferExitAndCall',
     values: [BigNumberish, string, string, BytesLike, BytesLike]
   ): string
-  encodeFunctionData(
-    functionFragment: 'updateWhitelistSource',
-    values: [string]
-  ): string
   encodeFunctionData(functionFragment: 'whitelist', values?: undefined): string
 
   decodeFunctionResult(
@@ -141,19 +126,11 @@ interface L1GatewayTesterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'gasReserveIfCallRevert',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
     functionFragment: 'getExternalCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(
     functionFragment: 'getOutboundCalldata',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'inboundEscrowAndCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
@@ -180,25 +157,17 @@ interface L1GatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'transferExitAndCall',
     data: BytesLike
   ): Result
-  decodeFunctionResult(
-    functionFragment: 'updateWhitelistSource',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'whitelist', data: BytesLike): Result
 
   events: {
     'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
-    'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL2(address,address,uint256,bytes)': EventFragment
-    'WhitelistSourceUpdated(address)': EventFragment
     'WithdrawRedirected(address,address,uint256,bytes,bytes,bool)': EventFragment
     'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawRedirected'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
 }
@@ -271,8 +240,6 @@ export class L1GatewayTester extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<[BigNumber]>
-
     getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
@@ -288,15 +255,6 @@ export class L1GatewayTester extends BaseContract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
 
     inbox(overrides?: CallOverrides): Promise<[string]>
 
@@ -352,11 +310,6 @@ export class L1GatewayTester extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    updateWhitelistSource(
-      newSource: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
     whitelist(overrides?: CallOverrides): Promise<[string]>
   }
 
@@ -384,8 +337,6 @@ export class L1GatewayTester extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
-
   getExternalCall(
     _exitNum: BigNumberish,
     _initialDestination: string,
@@ -401,15 +352,6 @@ export class L1GatewayTester extends BaseContract {
     _data: BytesLike,
     overrides?: CallOverrides
   ): Promise<string>
-
-  inboundEscrowAndCall(
-    _l2Address: string,
-    _amount: BigNumberish,
-    _from: string,
-    _to: string,
-    _data: BytesLike,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
 
   inbox(overrides?: CallOverrides): Promise<string>
 
@@ -465,11 +407,6 @@ export class L1GatewayTester extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  updateWhitelistSource(
-    newSource: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
   whitelist(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
@@ -495,9 +432,7 @@ export class L1GatewayTester extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
-
-    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+    ): Promise<void>
 
     getExternalCall(
       _exitNum: BigNumberish,
@@ -514,15 +449,6 @@ export class L1GatewayTester extends BaseContract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     inbox(overrides?: CallOverrides): Promise<string>
 
@@ -576,11 +502,6 @@ export class L1GatewayTester extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    updateWhitelistSource(
-      newSource: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     whitelist(overrides?: CallOverrides): Promise<string>
   }
 
@@ -602,23 +523,6 @@ export class L1GatewayTester extends BaseContract {
       }
     >
 
-    TransferAndCallTriggered(
-      success?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _amount?: null,
-      callHookData?: null
-    ): TypedEventFilter<
-      [boolean, string, string, BigNumber, string],
-      {
-        success: boolean
-        _from: string
-        _to: string
-        _amount: BigNumber
-        callHookData: string
-      }
-    >
-
     TxToL2(
       _from?: string | null,
       _to?: string | null,
@@ -628,10 +532,6 @@ export class L1GatewayTester extends BaseContract {
       [string, string, BigNumber, string],
       { _from: string; _to: string; _seqNum: BigNumber; _data: string }
     >
-
-    WhitelistSourceUpdated(
-      newSource?: null
-    ): TypedEventFilter<[string], { newSource: string }>
 
     WithdrawRedirected(
       from?: string | null,
@@ -695,8 +595,6 @@ export class L1GatewayTester extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
-
     getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
@@ -711,15 +609,6 @@ export class L1GatewayTester extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     inbox(overrides?: CallOverrides): Promise<BigNumber>
@@ -770,11 +659,6 @@ export class L1GatewayTester extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    updateWhitelistSource(
-      newSource: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
     whitelist(overrides?: CallOverrides): Promise<BigNumber>
   }
 
@@ -803,10 +687,6 @@ export class L1GatewayTester extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    gasReserveIfCallRevert(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
@@ -821,15 +701,6 @@ export class L1GatewayTester extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -879,11 +750,6 @@ export class L1GatewayTester extends BaseContract {
       _newDestination: string,
       _newData: BytesLike,
       _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    updateWhitelistSource(
-      newSource: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
