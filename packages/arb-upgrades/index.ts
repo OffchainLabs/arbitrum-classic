@@ -577,7 +577,16 @@ export const initUpgrades = (
     const rec = await res.wait()
   }
 
-  const transferProxyAdminOwner = async (newOwner: string) => {
+  const transferMainProxyAdminOwner = async (newOwner: string) => {
+    const {
+      data: { proxyAdminAddress },
+    } = await getDeployments()
+    return transferProxyAdminOwner(proxyAdminAddress, newOwner)
+  }
+  const transferProxyAdminOwner = async (
+    proxyAdminAddress: string,
+    newOwner: string
+  ) => {
     const signers = await hre.ethers.getSigners()
     if (!signers.length) {
       throw new Error(
@@ -585,10 +594,6 @@ export const initUpgrades = (
       )
     }
     const signer = signers[0]
-    const {
-      data: { proxyAdminAddress },
-    } = await getDeployments()
-
     console.log(`Connecting to Proxy admin at ${proxyAdminAddress}`)
 
     const ProxyAdmin__factory = await hre.ethers.getContractFactory(
@@ -747,6 +752,7 @@ export const initUpgrades = (
     transferBeaconOwner,
     removeBuildInfoFiles,
     verifyDeployments,
+    transferMainProxyAdminOwner,
     transferProxyAdminOwner,
   }
 }

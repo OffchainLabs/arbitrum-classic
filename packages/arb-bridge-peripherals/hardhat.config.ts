@@ -39,11 +39,19 @@ task('transfer-owner', 'deploy one logic')
     await transferAdmin(args.proxyaddress, args.newadmin)
   })
 
+task('bridge-transfer-main-admin-owner', 'transfer ownership of proxy admin')
+  .addParam('newowner', 'new owner address')
+  .setAction(async (args, hre) => {
+    const { transferMainProxyAdminOwner } = initUpgrades(hre, __dirname)
+    await transferMainProxyAdminOwner(args.newowner)
+  })
+
 task('bridge-transfer-admin-owner', 'transfer ownership of proxy admin')
+  .addParam('proxyadmin', 'proxy admin address')
   .addParam('newowner', 'new owner address')
   .setAction(async (args, hre) => {
     const { transferProxyAdminOwner } = initUpgrades(hre, __dirname)
-    await transferProxyAdminOwner(args.newowner)
+    await transferProxyAdminOwner(args.proxyadmin, args.newowner)
   })
 
 task('bridge-transfer-beacon-owner', 'transfers beacon owner')
