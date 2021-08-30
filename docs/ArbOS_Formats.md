@@ -25,7 +25,8 @@ An incoming message is a 6-tuple:
 - L1 timestamp (uint): timestamp of L1 block when this message was inserted into the inbox
 - Sender (address encoded as uint)
 - RequestID: 0 for the first message inserted into the inbox; otherwise 1 + the requestID of the previous message inserted into the inbox
-- Type-specific data: (byte array)
+- Size of type-specific data (uint)
+- Type-specific data: (buffer)
 
 The L1 block number and/or L1 timestamp fields can be set to zero. Zero values in these fields will be replaced, by ArbOS, with the value of the same field in the previous message. If there was no previous message, ArbOS will leave these values as zero. (Note that the EthBridge will never create messages with zeroed block number or timestamp fields. The treatment of zero block number and timestamp values exists only as a convenience for use in private executions of a chain.)
 
@@ -33,32 +34,15 @@ Each message type is associated with rules, imposed by the Arbitrum protocol, re
 
 ##### Message type 0: Eth deposit
 
-It represents a transfer of Eth to an account on the L2 chain.
-
-Type-specific data:
-
-- L2 address to receive the Eth (address encoded as uint)
-- number of Wei (uint)
+[This is no longer supported.]
 
 ##### Message type 1: ERC20 deposit
 
-It represents a transfer of ERC20 tokens to an account on the L2 chain.
-
-Type-specific data:
-
-- address of the ERC20 token (address encoded as uint)
-- L2 address to receive the tokens (address encoded as uint)
-- number of Wei (uint)
+[This is no longer supported.]
 
 ##### Message type 2: ERC721 deposit
 
-This message type must be initiated by the EthBridge. It represents a transfer of an ERC721 token to an account on the L2 chain.
-
-Type-specific data:
-
-- address of the ERC721 token (address encoded as uint)
-- L2 address to receive the tokens (address encoded as uint)
-- token identifier (uint)
+[This is no longer supported.]
 
 ##### Message type 3: L2 message
 
@@ -72,7 +56,7 @@ This message type is initiated by the EthBridge, as part of the creation of a ne
 
 Type-specific data:
 
-- challenge period, in milliseconds (uint)
+- challenge period, in seconds (uint)
 - ArbGas speed limit, in ArbGas per second (uint)
 - maximum number of execution steps allowed in an assertion (uint)
 - minimum stake requirement, in Wei (uint)
@@ -80,7 +64,7 @@ Type-specific data:
 - address of the chain's owner (address encoded as uint)
 - option data
 
-Option data consists of a sequence of zero or more chunks. ArbOS will ignore chunk IDs that it does not understand.
+Option data consists of a sequence of zero or more chunks. ArbOS will ignore a chunk if it does not know how to handle that chunk's option ID.
 
 Each chunk is:
 
@@ -88,36 +72,93 @@ Each chunk is:
 - option payload length (64-bit uint)
 - option payload
 
-At present, no options are supported.
+At present. the following options are supported:
+
+- [Option 0 is currently unused]
+- [Option 1 is currently unused]
+- Option 2: set charging parameters:
+  - speed limit per second (uint);
+  - L1 gas per L2 tx (uint);
+  - ArbGas per L2 tx (uint);
+  - L1 gas per L2 calldata unit (uint) [a non-zero calldata byte is 16 units; a zero calldata byte is 4 units];
+  - ArbGas per L2 calldata unit (uint);
+  - L1 gas per storage unit allocated (uint);
+  - ratio of L1 gas price to base ArbGas price;
+  - network fee recipient (address encoded as uint);
+  - congestion fee recipient (address encoded as uint)
+- Option 3: set default aggregator
+  - Default aggregator address (address encoded as uint)
+
+All other options are ignored at present.
 
 ##### Message type 5: buddy contract creation
 
-This message type is initiated by a call from an L1 contract to the EthBridge. The EthBridge must check that the call came from a contract, and reject it otherwise.
+[This is no longer supported.]
 
-This message type allows an L1 contract to deploy an L2 contract at an L2 address that is equal to the contract's L1 address. This L2 deploy will be exactly like any ordinary L2 deploy, except for how the address of the deployed L2 contract is determined.
+##### Message type 6: end of Arbitrum block
+
+A message of this type directs ArbOS to end the current Arbitrum block and start a new one. All integer or address fields (other than the message type) should be zero, and the buffer should be empty.
+
+**Message type 7: L2 transaction funded by L1**
+
+This message type encodes an L2 transaction that is funded by calldata provided at L1. The type-specific data must be the same as an L2 message of subtype 0 or 1.
+
+**Message type 8: Rollup protocol event**
+
+[This is not yet documented.]
+
+**Message type 9: Send tx to retry buffer**
+
+This message type encodes and delivers an L2 transaction; if gas is provided, it will be executed immediately. If no gas is provided or the execution reverts, it will be placed in the L2 retry buffer.
 
 Type-specific data:
 
-- maximum ArbGas to use (uint)
-- ArbGas price bid, in wei (uint)
-- Eth payment, in wei (uint)
-- constructor code and data, encoded per Ethereum ABI (bytes)
+- destination address (address encoded as uint)
+- callvalue, in wei (uint)
+- L1-to-L2 deposit, in wei (uint)
+- maximum submission cost (uint)
+- credit-back address (address encoded as uint)
+- beneficiary (address encoded as uint)
+- max gas for immediate redemption request (uint) [if zero, don't try to redeem immediately]
+- gas price for immediate redemption request (uint)
+- calldata size (uint)
+- calldata
 
-##### Message type 6: reserved
+If this message is properly formatted, the L1-to-L2 deposit amount will be credited to the sender's L2 ETH account.
 
-This message type is reserved for internal use by ArbOS. It should never appear in the inbox.
+Then, if the caller's L2 balance (after the L1-to-L2 deposit has occurred) is at least callvalue+maximumSubmissionCost, the transaction will proceed.
 
-##### Message type 7: Eth deposit transaction
+- _callvalue+maximumSubmissionCost_ will be deducted from the caller's L2 ETH account,
+- _currentSubmissionCost_ will be collected by ArbOS as a submission fee,
+- _maximumSubmissionCost-currentSubmissionCost_ will be credited to the creditBack address's L2 account,
+- a retryable tx will be created and held in ArbOS's buffer, containing _callvalue_, with the specified beneficiary [if the retryable tx times out or is canceled by the beneficiary, the callvalue will be refunded to the beneficiary]
+- ArbOS will emit a transaction receipt reporting success, with 32 bytes of return data: a transaction ID for the retryable tx (uint) which will be equal to keccak256(submissionID, uint(0) ), where submissionID is the requestID of this message
+- if "the max gas for immediate redemption request" field is non-zero, and the sender has at least (maxgas x gasprice) in its ETH account, then
+  - (maxgas x gasprice) is transferred from the sender's ETH account to the credit-back address's ETH account,
+  - a transaction is immediately created, as if the sender had called RetryableTx.redeem(retryableTxId), with callvalue 0 and the specified maxgas and gasprice, and with transaction ID keccak256(submissionID, uint(1)). The credit-back address pays for the transaction's gas.
 
-This message type first transfers the given amount of Eth to the sender's account. Then it executes the given transaction.
+Otherwise, ArbOS will emit a transaction receipt reporting a failure code, with no return data.
 
-Type-specific data:
+**Message type 10: L2 batch, out-of-band processing for gas estimation**
 
-- Unsigned Transaction or Contract transaction as defined in the L2 message section below
+This message type can't be sent to the chain but is only used by Arbitrum nodes to estimate gas usage of submitted transactions.
+
+The type-specific data consists of:
+
+- 3 (byte)
+- aggregator address (address encoded as uint)
+- limit on computation ArbGas (uint)
+- an L2 message of subtype 7
+
+This executes the enclosed L2 message, with the following deviations from the normal semantics.
+
+- The aggregator address specified in the message is considered to be the aggregator that submitted this message.
+- The transaction signature on the L2 message is ignored, and the enclosed transaction is treated as if it carried a valid signature by the sender of this L1 message.
+- The ArbGas used for computation will be limited by the supplied limit. (The supplied limit will be ignored if it is larger than the ordinary limit that applies to all transactions.)
 
 ## L2 messages
 
-As noted above, an L2 message is one type of incoming message that can be put into an L2 chain's inbox. The purpose of an L2 message is to convey information, typically a transaction request, to ArbOS. The EthBridge does not examine or interpret the contents of an L2 message.
+As noted above, an L2 message is one type of incoming message that can be put into an L2 chain's inbox. The purpose of an L2 message is to convey information, typically a transaction request, to ArbOS. Except where specified here, the EthBridge does not examine or interpret the contents of an L2 message.
 
 An L2 message consists of:
 
@@ -146,7 +187,6 @@ An L2 message consists of:
 - ArbGas limit (uint)
 - ArbGas price bid, in wei (uint)
 - destination address (uint)
-- callvalue, in wei (uint)
 - calldata (bytes)
 
 **Subtype 3: L2 message batch** has subtype-specific data consisting of a sequence of one or more items, where each item consists of:
@@ -156,7 +196,7 @@ An L2 message consists of:
 
 The L2 messages in a batch will be separated, and treated as if each had arrived separately, in the order in which they appear in the batch.
 
-The enclosed L2 message may not have subtype 5 (sequencer batch). All other subtypes are allowed.
+The enclosed L2 message may have any valid subtype.
 
 **Subtype 4: signed tx from user** has subtype-specific data that is identical to the standard Ethereum encoded transaction format. The subtype-specific data consists of an RLP-encoded list containing:
 
@@ -178,72 +218,90 @@ The destination address is encoded consistently with Ethereum: a zero address is
 
 **Subtype 6: heartbeat message** has no subtype-specific data. This message has no effect, except to notify ArbOS that the block number and timestamp in the enclosing L1 message has been reached. ArbOS merely notes the block number and timestamp, then discards the message.
 
-**Subtype 7: compressed signed tx** has subtype specific data of:
+**Subtype 7: signed compressed transaction** encodes a signed, compressed transaction. The subtype-specific data is defined by the compression format, which is documented elsewhere.
 
-- sequence number (RLP-encoded uint)
-- ArbGas price bid, in wei (RLP-encoded uint)
-- ArbGas limit (RLP-encoded uint)
-- destination [compressed address]
-- callvalue [compressed amount]
-- calldata [bytes]
-- r [32 byte uint, big-endian]
-- s [32 byte uint, big-endian]
-- v low-order byte of signature v
+**Subtype 8: BLS signed message batch** encodes a batch of transactions, which are signed using a BLS aggregate signature. The subtype-specific data is:
 
-Here, the compressed address is one of three things:
-
-- an RLP encoding of a null value interpreted as the null address
-- an RLP-encoding of a value 1-19 bytes in length, which is interpreted as an index into the IndexedAddressTable
-- an RLP-encoding of a 20-byte value which is interpreted as an address
-
-Compressed amount is encoded in scientific notation as A\*10^B:
-
-- A is an RLP-encoded uint
-- If A > 0, include B as a byte, otherwise do nothing
+- number of messages in batch (RLP-encoded uint)
+- BLS signature (2 uints)
+- for each message: compressed message data (in compressed format that is described elsewhere)
 
 ## Logs
 
-ArbOS emits two types of log items: transaction receipts and block summaries.
+ArbOS emits three types of log items: transaction receipts, block summaries, and outgoing message contents.
 
 ### Tx receipts
 
-ArbOS emits one log item for each transaction request it receives. A transaction request is an L2 message of subtype 0, 1, or 4, which might arrive in its own incoming message or might be part of a message batch or sequencer batch. Regardless, each individual request will cause its own separate tx receipt to be emitted.
+ArbOS emits one log item for each transaction request it receives. A transaction request is an L2 message of subtype 0, 1, 4, or 7, which might arrive in its own incoming message or might be part of a batch. Regardless, each individual request will cause its own separate tx receipt to be emitted.
 
 ArbOS will make its best effort to emit a tx receipt for each transaction request received, regardless of whether the transaction succeeds or fails; but this will not be possible for certain kinds of erroneous requests.
 
 A tx receipt log item consists of:
 
 - 0 (uint)
-- incoming request info consisting of:
+- incoming request info, an 8-tuple consisting of:
   - 3 (uint)
   - L1 block number (uint)
+  - Arbitrum block number (uint)
   - L2 timestamp (uint)
   - address of sender (address represented as uint)
-  - requestID (uint). [described below]
-  - L2 message for the request (byte array)
-- tx result info consisting of:
+  - requestID (uint) [described below]
+  - a 2-tuple consisting of:
+    - size of L2 message (uint)
+    - contents of L2 message for the request (buffer)
+  - a 3-tuple consisting of:
+    - provenance info
+    - aggregator info
+    - whether message was artificially injected via sideload (boolean encoded as uint 0 or 1)
+- tx result info, a 3-tuple consisting of:
   - return code (uint) [described below]
-  - returndata (byte array)
+  - returndata (2-tuple of size (uint) and contents (buffer))
   - EVM logs [format described below]
-- ArbGas info consisting of:
+- ArbGas info, as 2-tuple consisting of:
   - ArbGas used (uint)
   - ArbGas price paid, in wei (uint)
-- cumulative info in L1 block consisting of:
-  - ArbGas used in current L1 block including this tx (uint)
-  - index of this tx within this L1 block (uint)
-  - number of EVM logs emitted in this L1 block before this tx (uint)
+- cumulative info in Arbitrum block, a 3-tuple consisting of:
+  - ArbGas used in current Arbitrum block including this tx (uint)
+  - index of this tx within this Arbitrum block (uint)
+  - number of EVM logs emitted in this Arbitrum block before this tx (uint)
+- fee information for the transaction, a 4-tuple consisting of:
+  - a 4-tuple of prices of:
+    - L2 transaction (uint)
+    - L1 calldata bytes (uint)
+    - L2 storage (uint)
+    - L2 computation (uint)
+  - a 4-tuple of units used of:
+    - L2 transaction (uint, will always be 1)
+    - L1 calldata bytes (uint)
+    - L2 storage (uint)
+    - L2 computation (uint)
+  - a 4-tuple of wei paid for: [might not equal product of units and price, e.g. if user has insufficient funds to pay, or no aggregator was reimbursed]
+    - L2 transaction (uint)
+    - L1 calldata bytes (uint)
+    - L2 storage (uint)
+    - L2 computation (uint)
+  - address of aggregator that was reimbursed (or zero if there wasn't one) (address encoded as uint)
 
 Possible return codes are:
 0: tx returned (success)
 1: tx reverted
 2: tx dropped due to L2 congestion
 3: insufficient funds to pay for ArbGas
-4: insufficient balance
-5: bad sequence number
+4: insufficient balance for callvalue
+5: [no longer used (previously: bad sequence number, superseded by 14 and 15)]
 6: message format error
+7: cannot deploy at requested address
+8: exceeded tx gas limit
+9: insufficient gas to cover L1 charges
+10: below minimum gas for a tx
+11: gas price too low
+12: no gas to auto-redeem retryable ticket
+13: sender not permitted
+14: sequence number too low
+15: sequence number too high
 255: unknown error
 
-EVM logs are formatted as an EVM value, as a linked list in reverse order, such as this: (_log3_, (_log2_, (_log1_, (_log0_, () ) ) ) ). In this example there are four EVM log items, with the first one being _log0_ and the last being _log3_. Each EVM log is structured as an AVM tuple _(address, marshalledData, topic0, topic1, ...)_, with as many topics as are present in that particular EVM log item.
+EVM logs are formatted as an EVM value, as a linked list in reverse order, such as this: (_log3_, (_log2_, (_log1_, (_log0_, () ) ) ) ). In this example there are four EVM log items, with the first one being _log0_ and the last being _log3_. Each EVM log is structured as an AVM tuple _(address, (dataSize, dataBuffer), topic0, topic1, ...)_, with as many topics as are present in that particular EVM log item.
 
 ##### Request IDs
 
@@ -256,7 +314,7 @@ hash(
 sender address (as uint),
 hash (
 chainID (uint),
-MarshalledDataHash(subtype-specific data)
+hash(subtype-specific data)
 )
 )
 
@@ -264,62 +322,61 @@ For other transactions, the requestID is computed from incoming message contents
 
 It is infeasible to find two distinct requests that have the same requestID. This is true because requestIDs are the output of a collision-free hash function, and it is not possible to create two distinct requests that will have the same input to the hash function. Signed transaction IDs cannot collide with the other types, because the other types' hash preimages both start with a zero byte (because sender address and chainID are zero-filled in the most-significant byte of a big-endian value) and the RLP encoding of a list cannot start with a zero byte. The other two types cannot have the same hash preimage because subtype-0 messages use a hash output as their second word, which with overwhelming probability will be too large to be feasible as the sequence number or batch index that occupies the same position in the default request ID scheme.
 
-##### MarshalledData and the MarshalledDataHash algorithm
+When an incoming message is included through the delayed inbox, the inbox sequence number gets adjusted so it doesn't overlap with the sequencer's inbox. For these messages, you can calculate the request ID by masking the high order bit, as follows: inboxSeqNum | (1 << 255).
 
-The MarshalledData format is a way to encode an arbitrary-size byte array as a set of nested tuples, in a format easily consumable by an Arbitrum VM. The MarshalledData representation of a bytearray is the result of this pseudocode:
+### Block summary
 
-function marshal(ba: ByteArray) -> MarshalledBytes {
-let nwords = (ba.size + 31) / 32;
-let words = ();
-let i = 0;
-while (i < nwords) {
-words = (ba[32*i .. 32*(i+1)], words); // zero-fill any bytes beyond end of ba
-i = i + 1;
-}
-return (ba.size, words);
-}
+A block summary is emitted at the end of every L1 block that contains any L2 transactions. No summary is emitted for a block that has no L2 activity.
 
-(In the above code, _ba[x..y]_ extracts bytes _x_ through _y-1_ inclusive from the byte array _ba_, and converts them in big-endian fashion to an unsigned integer. If _y_ is greater than the size of _ba_, any bytes beyond the end of _ba_ are implicitly zero-filled.)
+A block summary item consists of:
 
-The MarshalledDataHash algorithm computes a collision-free hash of a MarshalledData structure. It is defined by this pseudocode:
+- 1 (uint)
+- Arbitrum block number (uint)
+- timestamp (uint)
+- current ArbGas limit per block (uint)
+- statistics for this block: 5-tuple of
+  - total ArbGas used (uint)
+  - number of transactions (uint)
+  - number of EVM logs (uint)
+  - number of AVM logs (uint)
+  - number of sends (uint)
+- statistics for the chain since it was created (same format as previous item)
+- gas accounting summary: 5-tuple of:
+  - current ArbGas price in wei (uint)
+  - size of current ArbGas pool (uint)
+  - reserve funds in wei (uint)
+  - total wei paid to validators over all time (uint)
+  - address receiving validator payments (address encoded as uint)
+- previous block number that had a block summary, or 0 if this is the first block to have a block summary
+- Ethereum block number
 
-function marshalledDataHash(md: MarshalledData) -> uint256 {
-let (size, contents) = md;
-let ret = size;
-while (contents != () ) {
-ret = hash(ret, contents[0]);
-contents = contents[1];
-}
-return ret;
-}
+### Outgoing message contents
 
-## Outgoing messages
+ArbOS supports sending messages from Arbitrum contracts to L1. The contents of each message are emitted as a log item; and a Merkle root covering a batch of outgoing messages will later be published to the L1 as an Arbitrum Send.
 
-Outgoing messages reflect actions that require action at L1 or that need to be specifically visible to L1 contracts.
+The log item to publish the contents of a message consists of:
 
-An outgoing message consists of:
+- 2 (uint)
+- outgoing message batch number (uint)
+- index within outgoing message batch (uint)
+- size of message (uint)
+- message contents (buffer)
 
-- outgoing message type (uint)
-- sender (address)
-- type-specific data (byte array)
+## Arbitrum Sends
 
-There are four outgoing message types.
+Arbitrum Sends are values emitted by an Arbitrum chain that are recorded at L1. A send consists of a sequence of bytes, encoded as a pair: size (uint) and contents (buffer).
 
-**Type 0: Eth Withdrawal** is sent when an Eth withdrawal operation succeeds. It has type-specific data of:
+The contents of a Send consist of:
 
-- destination address (address encoded as uint)
-- amount, in wei (uint)
+- Send type (byte)
+- Type-specific data
 
-**Type 1: ERC20 Withdrawal** is sent when an ERC20 withdrawal operation succeeds. It has type-specific data of:
+Currently only one type is supported: an L2-to-L1 call, which has send type 3. Its type-specific data consists of:
 
-- token address (address encoded as uint),
-- destination address (address encoded as uint),
-- amount (uint)
-
-**Type 2: ERC721 Withdrawal** is sent when an ERC721 withdrawal operation succeeds. It has type-specific data of:
-
-- token address (address encoded as uint),
-- destination address (address encoded as uint),
-- token ID (uint)
-
-**Type 5: Buddy contract notification** is sent when a buddy contract deploy operation has concluded, whether or not the operation succeeded. It has one byte of type-specific data, which is 1 if the buddy contract was successfully created, or 0 otherwise.
+- L2 caller (address encoded as uint)
+- L1 destination (address encoded as uint)
+- Arbitrum block number (uint)
+- Ethereum block number (uint)
+- timestamp (uint)
+- callvalue (uint)
+- calldata (sequence of bytes)
