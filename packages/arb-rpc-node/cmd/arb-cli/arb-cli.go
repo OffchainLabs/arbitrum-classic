@@ -589,10 +589,27 @@ func pauseInbox(inboxAddress ethcommon.Address) error {
 	if err != nil {
 		return err
 	}
-	if err := waitForTx(tx, "PauseCreateRetryables"); err != nil {
+	return waitForTx(tx, "PauseCreateRetryables")
+}
+
+func startInboxRewrite(inboxAddress ethcommon.Address) error {
+	inbox, err := ethbridgecontracts.NewInbox(inboxAddress, config.client)
+	if err != nil {
 		return err
 	}
-	tx, err = inbox.StartRewriteAddress(config.auth)
+	tx, err := inbox.StartRewriteAddress(config.auth)
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "StartRewriteAddress")
+}
+
+func stopInboxRewrite(inboxAddress ethcommon.Address) error {
+	inbox, err := ethbridgecontracts.NewInbox(inboxAddress, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := inbox.StopRewriteAddress(config.auth)
 	if err != nil {
 		return err
 	}
@@ -1088,6 +1105,18 @@ func handleCommand(fields []string) error {
 		}
 		inbox := ethcommon.HexToAddress(fields[1])
 		return resumeInbox(inbox)
+	case "start-inbox-rewrite":
+		if len(fields) != 2 {
+			return errors.New("Expected [inbox]")
+		}
+		inbox := ethcommon.HexToAddress(fields[1])
+		return startInboxRewrite(inbox)
+	case "stop-inbox-rewrite":
+		if len(fields) != 2 {
+			return errors.New("Expected [inbox]")
+		}
+		inbox := ethcommon.HexToAddress(fields[1])
+		return stopInboxRewrite(inbox)
 	default:
 		fmt.Println("Unknown command")
 	}
