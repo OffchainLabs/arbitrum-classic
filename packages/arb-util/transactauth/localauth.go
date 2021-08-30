@@ -85,8 +85,10 @@ func (ta *LocalTransactAuth) Sign(addr ethcommon.Address, tx *types.Transaction)
 	return ta.signer(addr, tx)
 }
 
-func (ta *LocalTransactAuth) GetAuth() *bind.TransactOpts {
-	return ta.auth
+func (ta *LocalTransactAuth) GetAuth(ctx context.Context) *bind.TransactOpts {
+	auth := *ta.auth
+	auth.Context = ctx
+	return &auth
 }
 
 func (ta *LocalTransactAuth) From() ethcommon.Address {
