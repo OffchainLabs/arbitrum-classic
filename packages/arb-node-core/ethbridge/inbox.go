@@ -183,12 +183,12 @@ func AddSequencerL2BatchFromOriginCustomNonce(
 	lengths []*big.Int,
 	sectionsMetadata []*big.Int,
 	afterAcc [32]byte,
-	gasRefunder common.Address,
+	gasRefunder ethcommon.Address,
 ) (*arbtransaction.ArbTransaction, error) {
 	rawAuth := auth.GetAuth(ctx)
 	arbTx, err := transactauth.MakeTxCustomNonce(ctx, auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		if gasRefunder != (common.Address{}) {
-			return inbox.AddSequencerL2BatchFromOriginWithGasRefunder(auth, transactions, lengths, sectionsMetadata, afterAcc, gasRefunder.ToEthAddress())
+		if gasRefunder != (ethcommon.Address{}) {
+			return inbox.AddSequencerL2BatchFromOriginWithGasRefunder(auth, transactions, lengths, sectionsMetadata, afterAcc, gasRefunder)
 		} else {
 			return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
 		}

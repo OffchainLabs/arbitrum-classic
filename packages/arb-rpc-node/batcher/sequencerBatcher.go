@@ -20,10 +20,13 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -77,7 +80,8 @@ type SequencerBatcher struct {
 	config                          *configuration.Config
 	fb                              *fireblocks.Fireblocks
 	consecutiveShouldReorgGaps      int
-	gasRefunder                     common.Address
+	gasRefunderAddress              ethcommon.Address
+	gasRefunder                     *ethbridgecontracts.GasRefunder
 
 	signer    types.Signer
 	txQueue   chan txQueueItem
@@ -92,6 +96,16 @@ type SequencerBatcher struct {
 	// The total estimate of unpublished transactions' gas usage.
 	// Added to every time something is sequenced, zeroed when batch posted.
 	pendingBatchGasEstimateAtomic int64
+}
+
+var refundGasCostsDeniedEventID ethcommon.Hash
+
+func init() {
+	parsedGasRefunderABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.GasRefunderABI))
+	if err != nil {
+		panic(err)
+	}
+	refundGasCostsDeniedEventID = parsedGasRefunderABI.Events["RefundGasCostsDenied"].ID
 }
 
 func getChainTime(ctx context.Context, client ethutils.EthClient) (inbox.ChainTime, error) {
@@ -162,9 +176,24 @@ func NewSequencerBatcher(
 		return nil, errors.New("invalid batch creation block interval")
 	}
 
-	var gasRefunder common.Address
+	var gasRefunderAddr ethcommon.Address
+	var gasRefunder *ethbridgecontracts.GasRefunder
 	if len(config.Node.Sequencer.GasRefunderAddress) > 0 {
-		gasRefunder = common.HexToAddress(config.Node.Sequencer.GasRefunderAddress)
+		gasRefunderAddr = common.HexToAddress(config.Node.Sequencer.GasRefunderAddress).ToEthAddress()
+		gasRefunder, err = ethbridgecontracts.NewGasRefunder(gasRefunderAddr, client)
+		if err != nil {
+			return nil, err
+		}
+
+		if gasRefunderAddr != (ethcommon.Address{}) {
+			code, err := client.CodeAt(ctx, gasRefunderAddr, nil)
+			if err != nil {
+				return nil, err
+			}
+			if len(code) == 0 {
+				return nil, errors.New("gas refunder address specified but no contract is deployed at the address")
+			}
+		}
 	}
 
 	batcher := &SequencerBatcher{
@@ -182,6 +211,7 @@ func NewSequencerBatcher(
 		maxDelaySeconds:            maxDelaySeconds,
 		config:                     config,
 		gasRefunder:                gasRefunder,
+		gasRefunderAddress:         gasRefunderAddr,
 
 		// TODO make these configurable
 		updateTimestampInterval:         big.NewInt(4),
@@ -832,7 +862,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
 	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Int("items", len(batchItems)).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
-	arbTx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc, b.gasRefunder)
+	arbTx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc, b.gasRefunderAddress)
 	if err != nil {
 		return false, err
 	}
@@ -860,6 +890,10 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 			return
 		}
 
+		for _, log := range receipt.Logs {
+			b.handleBatchReceiptLog(log)
+		}
+
 		if b.feedBroadcaster != nil {
 			// Confirm feed messages that are already on chain
 			b.feedBroadcaster.ConfirmedAccumulator(lastAcc)
@@ -876,6 +910,24 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	})()
 
 	return publishingAllBatchItems, nil
+}
+
+func (b *SequencerBatcher) handleBatchReceiptLog(rawLog *types.Log) {
+	if rawLog.Address == b.gasRefunderAddress && rawLog.Topics[0] == refundGasCostsDeniedEventID {
+		parsedLog, err := b.gasRefunder.ParseRefundGasCostsDenied(*rawLog)
+		if err != nil {
+			logger.Warn().Err(err).Msg("failed to parse RefundGasCostsDenied log")
+			return
+		}
+		var loggingLog *zerolog.Event
+		if parsedLog.Reason == 0 || parsedLog.Reason == 1 {
+			// CONTRACT_NOT_ALLOWED or REFUNDEE_NOT_ALLOWED
+			loggingLog = logger.Error()
+		} else {
+			loggingLog = logger.Warn()
+		}
+		loggingLog.Int("reason", int(parsedLog.Reason)).Str("txHash", rawLog.TxHash.String()).Msg("batch posting gas costs refund denied")
+	}
 }
 
 func (b *SequencerBatcher) reorgAndModifySequencerMessages(ctx context.Context, prevMsgCount *big.Int, modifier func(*inbox.InboxMessage)) error {
