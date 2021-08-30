@@ -502,10 +502,15 @@ export const initUpgrades = (
         success = false
       }
       //  check implementation
-      let implementation = await hre.ethers.provider.getStorageAt(
-        deploymentData.proxyAddress,
-        IMPLEMENTATION_SLOT
+      let rawImplementation = await hre.ethers.provider.send(
+        'eth_getStorageAt',
+        [deploymentData.proxyAddress, IMPLEMENTATION_SLOT, 'latest']
       )
+      rawImplementation =
+        rawImplementation.length % 2 === 1
+          ? '0x0' + rawImplementation.substr(2)
+          : rawImplementation
+      let implementation = hre.ethers.utils.hexlify(rawImplementation)
       if (implementation.length > 42) {
         implementation =
           '0x' + implementation.substr(implementation.length - 40, 40)

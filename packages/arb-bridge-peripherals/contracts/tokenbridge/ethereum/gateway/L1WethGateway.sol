@@ -75,9 +75,12 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         address _l1Token,
         address _from,
         uint256 _amount
-    ) internal override {
+    ) internal override returns (uint256) {
         IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
         IWETH9(_l1Token).withdraw(_amount);
+        // the weth token doesn't contain any special behaviour that changes the amount
+        // when doing transfers / withdrawals. so we don't check the balanceOf
+        return _amount;
     }
 
     function inboundEscrowTransfer(

@@ -11,7 +11,6 @@ import {
   PopulatedTransaction,
   BaseContract,
   ContractTransaction,
-  Overrides,
   CallOverrides,
 } from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
@@ -19,38 +18,25 @@ import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
-interface L2CalledInterface extends ethers.utils.Interface {
+interface ArbitrumEnabledTokenInterface extends ethers.utils.Interface {
   functions: {
-    'onTokenTransfer(address,uint256,bytes)': FunctionFragment
-    'postDepositHook(uint256)': FunctionFragment
+    'isArbitrumEnabled()': FunctionFragment
   }
 
   encodeFunctionData(
-    functionFragment: 'onTokenTransfer',
-    values: [string, BigNumberish, BytesLike]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'postDepositHook',
-    values: [BigNumberish]
+    functionFragment: 'isArbitrumEnabled',
+    values?: undefined
   ): string
 
   decodeFunctionResult(
-    functionFragment: 'onTokenTransfer',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'postDepositHook',
+    functionFragment: 'isArbitrumEnabled',
     data: BytesLike
   ): Result
 
-  events: {
-    'Called(uint256)': EventFragment
-  }
-
-  getEvent(nameOrSignatureOrTopic: 'Called'): EventFragment
+  events: {}
 }
 
-export class L2Called extends BaseContract {
+export class ArbitrumEnabledToken extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -91,74 +77,25 @@ export class L2Called extends BaseContract {
     toBlock?: string | number | undefined
   ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
-  interface: L2CalledInterface
+  interface: ArbitrumEnabledTokenInterface
 
   functions: {
-    onTokenTransfer(
-      arg0: string,
-      arg1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    postDepositHook(
-      num: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<[number]>
   }
 
-  onTokenTransfer(
-    arg0: string,
-    arg1: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  postDepositHook(
-    num: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
+  isArbitrumEnabled(overrides?: CallOverrides): Promise<number>
 
   callStatic: {
-    onTokenTransfer(
-      arg0: string,
-      arg1: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    postDepositHook(num: BigNumberish, overrides?: CallOverrides): Promise<void>
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<number>
   }
 
-  filters: {
-    Called(num?: null): TypedEventFilter<[BigNumber], { num: BigNumber }>
-  }
+  filters: {}
 
   estimateGas: {
-    onTokenTransfer(
-      arg0: string,
-      arg1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    postDepositHook(
-      num: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
-    onTokenTransfer(
-      arg0: string,
-      arg1: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    postDepositHook(
-      num: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

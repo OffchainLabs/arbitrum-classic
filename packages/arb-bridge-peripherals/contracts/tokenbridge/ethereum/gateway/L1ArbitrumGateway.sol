@@ -22,20 +22,20 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 
 import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
-import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/ITransferAndCall.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
  */
-abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, EscrowAndCallGateway {
+abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -104,39 +104,25 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable override onlyCounterpartGateway returns (bytes memory) {
+    ) external payable override onlyCounterpartGateway {
         (uint256 exitNum, bytes memory callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(
             _data
         );
 
-        (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
-
-        if (callHookData.length > 0) {
-            bool success;
-            try this.inboundEscrowAndCall(_token, _amount, _from, _to, callHookData) {
-                success = true;
-            } catch {
-                // if reverted, then credit _from's account
-                inboundEscrowTransfer(_token, _from, _amount);
-                // success default value is false
-            }
-            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
-        } else {
-            inboundEscrowTransfer(_token, _to, _amount);
+        if (callHookData.length != 0) {
+            // callHookData should always be 0 since inboundEscrowAndCall is disabled
+            callHookData = bytes("");
         }
 
-        emit WithdrawalFinalized(_token, _from, _to, exitNum, _amount);
-        return bytes("");
-    }
+        // we ignore the returned data since the callHook feature is now disabled
+        (_to, ) = getExternalCall(exitNum, _to, callHookData);
+        inboundEscrowTransfer(_token, _to, _amount);
 
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        // amount of gas necessary to send user tokens in case
-        // of the "onTokenTransfer" call consumes all available gas
-        return 30000;
+        emit WithdrawalFinalized(_token, _from, _to, exitNum, _amount);
     }
 
     function getExternalCall(
-        uint256 _exitNum,
+        uint256, /* _exitNum */
         address _initialDestination,
         bytes memory _initialData
     ) public view virtual returns (address target, bytes memory data) {
@@ -150,14 +136,14 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address _l1Token,
         address _dest,
         uint256 _amount
-    ) internal virtual override {
+    ) internal virtual {
         // this method is virtual since different subclasses can handle escrow differently
         IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
 
     function createOutboundTx(
         address _from,
-        uint256 _tokenAmount,
+        uint256, /* _tokenAmount */
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
@@ -203,6 +189,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory res) {
+        require(isRouter(msg.sender), "NOT_FROM_ROUTER");
         // This function is set as public and virtual so that subclasses can override
         // it and add custom validation for callers (ie only whitelisted users)
         address _from;
@@ -219,12 +206,14 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             }
             // user encoded
             (_maxSubmissionCost, extraData) = abi.decode(extraData, (uint256, bytes));
+            // the inboundEscrowAndCall functionality has been disabled, so no data is allowed
+            require(extraData.length == 0, "EXTRA_DATA_DISABLED");
 
             require(_l1Token.isContract(), "L1_NOT_CONTRACT");
             address l2Token = calculateL2TokenAddress(_l1Token);
             require(l2Token != address(0), "NO_L2_TOKEN_SET");
 
-            outboundEscrowTransfer(_l1Token, _from, _amount);
+            _amount = outboundEscrowTransfer(_l1Token, _from, _amount);
 
             // we override the res field to save on the stack
             res = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
@@ -246,10 +235,13 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         address _l1Token,
         address _from,
         uint256 _amount
-    ) internal virtual {
+    ) internal virtual returns (uint256 amountReceived) {
         // this method is virtual since different subclasses can handle escrow differently
         // user funds are escrowed on the gateway using this function
+        uint256 prevBalance = IERC20(_l1Token).balanceOf(address(this));
         IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
+        uint256 postBalance = IERC20(_l1Token).balanceOf(address(this));
+        return SafeMath.sub(postBalance, prevBalance);
     }
 
     function getOutboundCalldata(

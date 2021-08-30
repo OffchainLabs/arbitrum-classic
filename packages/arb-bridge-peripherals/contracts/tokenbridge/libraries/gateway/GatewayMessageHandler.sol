@@ -62,7 +62,7 @@ library GatewayMessageHandler {
 
     function encodeFromRouterToGateway(address _from, bytes calldata _data)
         internal
-        view
+        pure
         returns (bytes memory res)
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
@@ -71,7 +71,7 @@ library GatewayMessageHandler {
 
     function parseFromRouterToGateway(bytes calldata _data)
         internal
-        view
+        pure
         returns (address, bytes memory res)
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it

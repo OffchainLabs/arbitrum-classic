@@ -85,5 +85,5 @@ abstract contract TokenGateway is ITokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable virtual override returns (bytes memory);
+    ) external payable virtual override;
 }
