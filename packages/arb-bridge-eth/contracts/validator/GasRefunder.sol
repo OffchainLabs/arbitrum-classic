@@ -179,6 +179,7 @@ contract GasRefunder is IGasRefunder, Ownable {
 
         if (ownBalance == 0) {
             emit RefundGasCostsDenied(refundee, msg.sender, RefundDenyReason.OUT_OF_FUNDS, gasUsed);
+            return false;
         }
 
         if (!allowedContracts[msg.sender]) {
