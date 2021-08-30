@@ -91,7 +91,7 @@ contract GasRefunder is IGasRefunder, Ownable {
         }
 
         // Cache these variables and retrieve them before measuring gasleft()
-        uint256 spenderBalance = refundee.balance;
+        uint256 refundeeBalance = refundee.balance;
         uint256 maxRefundeeBalanceCache = maxRefundeeBalance;
 
         // Add in a bit of a buffer for the tx costs not measured with gasleft
@@ -101,14 +101,14 @@ contract GasRefunder is IGasRefunder, Ownable {
 
         uint256 refundAmount = estGasPrice * gasUsed;
         if (
-            maxRefundeeBalanceCache != 0 && spenderBalance + refundAmount > maxRefundeeBalanceCache
+            maxRefundeeBalanceCache != 0 && refundeeBalance + refundAmount > maxRefundeeBalanceCache
         ) {
-            if (spenderBalance > maxRefundeeBalanceCache) {
+            if (refundeeBalance > maxRefundeeBalanceCache) {
                 // The refundee is already above their max balance
                 emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 1);
                 return;
             } else {
-                refundAmount = maxRefundeeBalanceCache - spenderBalance;
+                refundAmount = maxRefundeeBalanceCache - refundeeBalance;
             }
         }
 
