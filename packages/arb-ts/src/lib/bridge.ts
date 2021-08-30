@@ -24,6 +24,9 @@ import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import { L1WethGateway__factory } from './abi/factories/L1WethGateway__factory'
+import { Inbox__factory } from './abi/factories/Inbox__factory'
+import { Bridge__factory } from './abi/factories/Bridge__factory'
+import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
 
 import networks from './networks'
 
@@ -514,13 +517,11 @@ export class Bridge {
     indexInBatch: BigNumber,
     singleAttempt = false
   ) {
-    const inbox = await this.l1Bridge.getInbox()
-    const bridgeAddress = await inbox.bridge()
-
+    const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
     return BridgeHelper.triggerL2ToL1Transaction(
       batchNumber,
       indexInBatch,
-      bridgeAddress,
+      outboxAddress,
       this.l2Provider,
       this.l1Signer,
       singleAttempt
@@ -528,7 +529,7 @@ export class Bridge {
   }
 
   public tryOutboxExecute(
-    activeOutboxAddress: string,
+    outboxAddress: string,
     batchNumber: BigNumber,
     proof: Array<string>,
     path: BigNumber,
@@ -553,7 +554,7 @@ export class Bridge {
         amount,
         calldataForL1,
       },
-      activeOutboxAddress,
+      outboxAddress,
       this.l1Signer
     )
   }
@@ -581,11 +582,11 @@ export class Bridge {
 
   public waitUntilOutboxEntryCreated(
     batchNumber: BigNumber,
-    activeOutboxAddress: string
+    outboxAddress: string
   ) {
     return BridgeHelper.waitUntilOutboxEntryCreated(
       batchNumber,
-      activeOutboxAddress,
+      outboxAddress,
       this.l1Provider
     )
   }
@@ -635,23 +636,33 @@ export class Bridge {
     return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider)
   }
 
-  public async getOutboxAddress() {
-    if (this.outboxAddressCache) {
-      return this.outboxAddressCache
+  public async getOutboxAddressByBatchNum(batchNum: BigNumber) {
+    const inbox = Inbox__factory.connect(
+      (await this.l1Bridge.getInbox()).address,
+      this.l1Provider
+    )
+    const bridge = await Bridge__factory.connect(
+      await inbox.bridge(),
+      this.l1Provider
+    )
+    const oldOutboxAddress = await bridge.allowedOutboxList(0)
+    let newOutboxAddress: string
+    try {
+      newOutboxAddress = await bridge.allowedOutboxList(1)
+    } catch {
+      // new outbox not yet deployed; using old outbox
+      return oldOutboxAddress
     }
-    const inboxAddress = (await this.l1Bridge.getInbox()).address
-    const coreBridgeAddress = await BridgeHelper.getCoreBridgeFromInbox(
-      inboxAddress,
+    const oldOutbox = OldOutbox__factory.connect(
+      oldOutboxAddress,
       this.l1Provider
     )
-    const outboxAddress = await BridgeHelper.getActiveOutbox(
-      coreBridgeAddress,
-      this.l1Provider
-    )
-    this.outboxAddressCache = outboxAddress
-    return outboxAddress
-  }
+    const lastOldOutboxBatchNumber = await oldOutbox.outboxesLength()
 
+    return batchNum.lt(lastOldOutboxBatchNumber)
+      ? oldOutboxAddress
+      : newOutboxAddress
+  }
   /**
    * Returns {@link OutgoingMessageState} for given outgoing message
    */
@@ -659,7 +670,7 @@ export class Bridge {
     batchNumber: BigNumber,
     indexInBatch: BigNumber
   ) {
-    const outboxAddress = await this.getOutboxAddress()
+    const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
     return BridgeHelper.getOutgoingMessageState(
       batchNumber,
       indexInBatch,

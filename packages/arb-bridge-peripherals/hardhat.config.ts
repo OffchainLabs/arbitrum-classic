@@ -39,4 +39,19 @@ task('transfer-owner', 'deploy one logic')
     await transferAdmin(args.proxyaddress, args.newadmin)
   })
 
+task(
+  'remove-build-info',
+  'remove giant build info string from current_deployments json'
+).setAction(async (_, hre) => {
+  const { removeBuildInfoFiles } = initUpgrades(hre, __dirname)
+  await removeBuildInfoFiles()
+})
+
+task('etherscan-verify', 'verify current deployments in etherscan').setAction(
+  async (_, hre) => {
+    const { verifyDeployments } = await initUpgrades(hre, __dirname)
+    await verifyDeployments()
+  }
+)
+
 module.exports = config

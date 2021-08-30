@@ -37,6 +37,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/accounttype"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/operationtype"
 )
@@ -62,12 +63,14 @@ const (
 )
 
 type Fireblocks struct {
-	apiKey     string
-	assetId    string
-	baseUrl    string
-	signKey    *rsa.PrivateKey
-	sourceId   string
-	sourceType accounttype.AccountType
+	apiKey            string
+	assetId           string
+	baseUrl           string
+	signKey           *rsa.PrivateKey
+	sourceId          string
+	sourceType        accounttype.AccountType
+	internalWalletIds map[string]string
+	externalWalletIds map[string]string
 }
 
 type StatusBody struct {
@@ -82,8 +85,8 @@ type CreateTransactionBody struct {
 	Fee              string                          `json:"fee,omitempty"`
 	GasPrice         string                          `json:"gasPrice,omitempty"`
 	GasLimit         string                          `json:"gasLimit,omitempty"`
-	MaxPriorityFee   string                          `json:"maxPriorityFee"`
-	MaxTotalGasPrice string                          `json:"maxTotalGasPrice"`
+	MaxPriorityFee   string                          `json:"maxPriorityFee,omitempty"`
+	MaxTotalGasPrice string                          `json:"maxTotalGasPrice,omitempty"`
 	NetworkFee       string                          `json:"networkFee,omitempty"`
 	FeeLevel         string                          `json:"feeLevel,omitempty"`
 	MaxFee           string                          `json:"maxFee,omitempty"`
@@ -146,6 +149,18 @@ func NewDestinationTransferPeerPath(destinationType accounttype.AccountType, des
 	}
 
 	return &destination
+}
+
+func (fb *Fireblocks) NewDestinationTransferUsingAddress(addr string, tag string) *DestinationTransferPeerPath {
+	if id, found := fb.internalWalletIds[addr]; found {
+		return NewDestinationTransferPeerPath(accounttype.InternalWallet, id, tag)
+	}
+
+	if id, found := fb.externalWalletIds[addr]; found {
+		return NewDestinationTransferPeerPath(accounttype.ExternalWallet, id, tag)
+	}
+
+	return NewDestinationTransferPeerPath(accounttype.OneTimeAddress, addr, tag)
 }
 
 type OneTimeAddress struct {
@@ -308,16 +323,37 @@ type NetworkFee struct {
 	PriorityFee string `json:"priorityFee"`
 }
 
-func New(assetId string, baseUrl string, sourceType accounttype.AccountType, sourceId string, apiKey string, signKey *rsa.PrivateKey) *Fireblocks {
+func New(fireblocksConfig configuration.WalletFireblocks) (*Fireblocks, error) {
 	rand.Seed(time.Now().UnixNano())
-	return &Fireblocks{
-		apiKey:     apiKey,
-		assetId:    assetId,
-		baseUrl:    baseUrl,
-		signKey:    signKey,
-		sourceId:   sourceId,
-		sourceType: sourceType,
+
+	var signKey *rsa.PrivateKey
+	var err error
+	if len(fireblocksConfig.SSLKeyPassword) != 0 {
+		signKey, err = jwt.ParseRSAPrivateKeyFromPEMWithPassword([]byte(fireblocksConfig.SSLKey), fireblocksConfig.SSLKeyPassword)
+		if err != nil {
+			return nil, errors.Wrap(err, "problem with fireblocks privatekey with password")
+		}
+	} else {
+		signKey, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(fireblocksConfig.SSLKey))
+		if err != nil {
+			return nil, errors.Wrap(err, "problem with fireblocks privatekey")
+		}
 	}
+
+	sourceType, err := accounttype.New(fireblocksConfig.SourceType)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem with fireblocks source-type")
+	}
+	return &Fireblocks{
+		apiKey:            fireblocksConfig.APIKey,
+		assetId:           fireblocksConfig.AssetId,
+		baseUrl:           fireblocksConfig.BaseURL,
+		signKey:           signKey,
+		sourceId:          fireblocksConfig.SourceId,
+		sourceType:        *sourceType,
+		internalWalletIds: configuration.UnmarshalMap(fireblocksConfig.InternalWallets),
+		externalWalletIds: configuration.UnmarshalMap(fireblocksConfig.ExternalWallets),
+	}, nil
 }
 
 func (fb *Fireblocks) ListPendingTransactions() (*[]TransactionDetails, error) {
@@ -343,7 +379,7 @@ func (fb *Fireblocks) ListTransactions(statusList []string) (*[]TransactionDetai
 	if len(statusList) > 0 {
 		values.Set("status", strings.Join(statusList, ","))
 	}
-	resp, err := fb.getRequest("/v1/transactions", url.Values{})
+	resp, err := fb.getRequest("/v1/transactions", values)
 	if err != nil {
 		return nil, err
 	}
@@ -389,55 +425,63 @@ func (fb *Fireblocks) EstimateNetworkFees() (*NetworkFees, error) {
 	return &result, nil
 }
 
-func (fb *Fireblocks) CreateContractCall(
-	destinationType accounttype.AccountType,
-	destinationId string,
-	destinationTag string,
-	amount *big.Int,
-	maxPriorityFeeWei *big.Int,
-	maxTotalGasPriceWei *big.Int,
-	replaceTxByHash string,
-	callData string,
-) (*CreateTransactionResponse, error) {
-	return fb.CreateTransaction(
-		destinationType,
-		destinationId,
-		destinationTag,
-		amount,
-		operationtype.ContractCall,
-		maxPriorityFeeWei,
-		maxTotalGasPriceWei,
-		replaceTxByHash,
-		callData,
-	)
+func (fb *Fireblocks) CreateContractCall(input *CreateTransactionInput) (*CreateTransactionResponse, error) {
+	return fb.CreateTransaction(operationtype.ContractCall, input)
 }
 
-func (fb *Fireblocks) CreateTransaction(
-	destinationType accounttype.AccountType,
-	destinationId string,
-	destinationTag string,
-	amountWei *big.Int,
-	operation operationtype.OperationType,
-	maxPriorityFeeWei *big.Int,
-	maxTotalGasPriceWei *big.Int,
-	replaceTxByHash string,
-	callData string,
-) (*CreateTransactionResponse, error) {
+type CreateTransactionInput struct {
+	DestinationType     accounttype.AccountType
+	DestinationId       string
+	DestinationTag      string
+	AmountWei           *big.Int
+	GasLimitWei         *big.Int
+	GasPriceWei         *big.Int
+	MaxPriorityFeeWei   *big.Int
+	MaxTotalGasPriceWei *big.Int
+	ReplaceTxByHash     string
+	CallData            string
+}
+
+func (fb *Fireblocks) CreateTransaction(operation operationtype.OperationType, input *CreateTransactionInput) (*CreateTransactionResponse, error) {
 	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
-	amountEth := new(big.Rat).SetFrac(amountWei, divisor)
-	maxPriorityFee := new(big.Rat).SetFrac(maxPriorityFeeWei, divisor)
-	maxTotalGasPrice := new(big.Rat).SetFrac(maxTotalGasPriceWei, divisor)
+	amountEth := new(big.Rat).SetFrac(input.AmountWei, divisor)
+
+	var gasLimitString string
+	if input.GasLimitWei.Cmp(big.NewInt(0)) != 0 {
+		gasLimit := new(big.Rat).SetFrac(input.GasLimitWei, divisor)
+		gasLimitString = gasLimit.FloatString(18)
+	}
+
+	var gasPriceString string
+	if input.GasPriceWei.Cmp(big.NewInt(0)) != 0 {
+		gasPrice := new(big.Rat).SetFrac(input.GasPriceWei, divisor)
+		gasPriceString = gasPrice.FloatString(18)
+	}
+
+	var maxPriorityFeeString string
+	if input.MaxPriorityFeeWei.Cmp(big.NewInt(0)) != 0 {
+		maxPriorityFee := new(big.Rat).SetFrac(input.MaxPriorityFeeWei, divisor)
+		maxPriorityFeeString = maxPriorityFee.FloatString(18)
+	}
+
+	var maxTotalGasPriceString string
+	if input.MaxTotalGasPriceWei.Cmp(big.NewInt(0)) != 0 {
+		maxTotalGasPrice := new(big.Rat).SetFrac(input.MaxTotalGasPriceWei, divisor)
+		maxTotalGasPriceString = maxTotalGasPrice.FloatString(18)
+	}
 
 	body := &CreateTransactionBody{
 		AssetId:          fb.assetId,
 		Source:           TransferPeerPath{Type: fb.sourceType, Id: fb.sourceId},
-		Destination:      *NewDestinationTransferPeerPath(destinationType, destinationId, destinationTag),
+		Destination:      *NewDestinationTransferPeerPath(input.DestinationType, input.DestinationId, input.DestinationTag),
 		Amount:           amountEth.FloatString(18),
 		Operation:        operation,
-		MaxPriorityFee:   maxPriorityFee.FloatString(18),
-		MaxTotalGasPrice: maxTotalGasPrice.FloatString(18),
-		ReplaceTxByHash:  replaceTxByHash,
-		ExtraParameters:  TransactionExtraParameters{ContractCallData: callData},
+		GasLimit:         gasLimitString,
+		GasPrice:         gasPriceString,
+		MaxPriorityFee:   maxPriorityFeeString,
+		MaxTotalGasPrice: maxTotalGasPriceString,
+		ReplaceTxByHash:  input.ReplaceTxByHash,
+		ExtraParameters:  TransactionExtraParameters{ContractCallData: input.CallData},
 	}
 
 	resp, err := fb.postRequest("/v1/transactions", url.Values{}, body)
@@ -577,11 +621,6 @@ func (fb *Fireblocks) sendRequest(method string, path string, params url.Values,
 }
 
 func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Values, requestBody []byte) (*http.Response, error) {
-	token, err := fb.signJWT(path, requestBody)
-	if err != nil {
-		return nil, err
-	}
-
 	uri, err := url.ParseRequestURI(fb.baseUrl)
 	if err != nil {
 		return nil, err
@@ -589,6 +628,11 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 
 	uri.Path = path
 	uri.RawQuery = params.Encode()
+
+	token, err := fb.signJWT(uri, requestBody)
+	if err != nil {
+		return nil, err
+	}
 
 	client := &http.Client{}
 	var req *http.Request
@@ -639,7 +683,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 				Str("method", method).
 				Str("url", uri.String()).
 				Str("status", resp.Status).
-				Str("body", responseBodyStr).
+				Str("responsebody", responseBodyStr).
 				Msg("error returned when posting fireblocks request")
 			return nil, fmt.Errorf("nonce was already used")
 		}
@@ -650,7 +694,7 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 				Str("method", method).
 				Str("url", uri.String()).
 				Str("status", resp.Status).
-				Str("body", responseBodyStr).
+				Str("responsebody", responseBodyStr).
 				Msg("fireblocks requested object not found")
 			return nil, fmt.Errorf("status '%s' fireblocks requested object not found", resp.Status)
 		}
@@ -660,7 +704,8 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 			Str("method", method).
 			Str("url", uri.String()).
 			Str("status", resp.Status).
-			Str("body", responseBodyStr).
+			RawJSON("requestbody", requestBody).
+			Str("responsebody", responseBodyStr).
 			Msg("error returned when posting fireblocks request")
 		return nil, fmt.Errorf("status '%s' fireblocks response", resp.Status)
 	}
@@ -669,24 +714,29 @@ func (fb *Fireblocks) sendRequestImpl(method string, path string, params url.Val
 		Debug().
 		Str("method", method).
 		Str("url", uri.String()).
-		RawJSON("body", requestBody).
+		RawJSON("requestbody", requestBody).
 		Str("status", resp.Status).
 		Msg("sent fireblocks request")
 
 	return resp, nil
 }
 
-func (fb *Fireblocks) signJWT(path string, body []byte) (string, error) {
-	newPath := strings.Replace(path, "[", "%5B", -1)
-	newPath = strings.Replace(newPath, "]", "%5D", -1)
+func (fb *Fireblocks) signJWT(uri *url.URL, body []byte) (string, error) {
 	now := time.Now().Unix()
 	if body == nil {
 		body = []byte("null")
 	}
 
+	path := strings.Replace(uri.Path, "[", "%5B", -1)
+	path = strings.Replace(path, "]", "%5D", -1)
+
+	if len(uri.RawQuery) > 0 {
+		path += "?" + uri.RawQuery
+	}
+
 	bodyHash := sha256.Sum256(body)
 	claims := fireblocksClaims{
-		Uri:      newPath,
+		Uri:      path,
 		Nonce:    rand.Int63(),
 		Iat:      now,
 		Exp:      now + 55,

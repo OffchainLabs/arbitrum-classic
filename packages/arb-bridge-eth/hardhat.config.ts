@@ -147,6 +147,13 @@ task('core-transfer-admin', 'transfer proxy admin')
     await transferAdmin(args.proxyaddress, args.newadmin)
   })
 
+task('etherscan-verify', 'verify current deployments in etherscan').setAction(
+  async (_, hre) => {
+    const { verifyDeployments } = await initUpgrades(hre, __dirname)
+    await verifyDeployments()
+  }
+)
+
 task(
   'remove-build-info',
   'remove giant build info string from current_deployments json'

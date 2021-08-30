@@ -23,21 +23,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-
-	"github.com/rs/zerolog/log"
-
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "batcher").Logger()
@@ -56,7 +55,7 @@ const (
 )
 
 type l2TxSender interface {
-	SendL2MessageFromOrigin(ctx context.Context, data []byte) (*ethbridge.ArbTransaction, error)
+	SendL2MessageFromOrigin(ctx context.Context, data []byte) (*arbtransaction.ArbTransaction, error)
 	Sender() common.Address
 }
 
@@ -87,7 +86,7 @@ type TransactionBatcher interface {
 }
 
 type pendingSentBatch struct {
-	batchTx *ethbridge.ArbTransaction
+	batchTx *arbtransaction.ArbTransaction
 	txes    []*types.Transaction
 }
 
@@ -106,7 +105,7 @@ func NewStatefulBatcher(
 	ctx context.Context,
 	db *txdb.TxDB,
 	chainId *big.Int,
-	receiptFetcher *ethbridge.TransactAuth,
+	receiptFetcher transactauth.TransactAuth,
 	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
 ) (*Batcher, error) {
@@ -129,7 +128,7 @@ func NewStatelessBatcher(
 	ctx context.Context,
 	db *txdb.TxDB,
 	chainId *big.Int,
-	receiptFetcher ethbridge.ArbReceiptFetcher,
+	receiptFetcher transactauth.ArbReceiptFetcher,
 	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
 ) *Batcher {
@@ -147,7 +146,7 @@ func NewStatelessBatcher(
 func newBatcher(
 	ctx context.Context,
 	chainId *big.Int,
-	receiptFetcher ethbridge.ArbReceiptFetcher,
+	receiptFetcher transactauth.ArbReceiptFetcher,
 	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
 	pendingBatch batch,
@@ -268,7 +267,7 @@ func (m *Batcher) maybeSubmitBatch(ctx context.Context, maxBatchTime time.Durati
 }
 
 // checkForNextBatch expects the mutex to be held on entry and leaves it unlocked on return
-func (m *Batcher) checkForNextBatch(ctx context.Context, receiptFetcher ethbridge.ArbReceiptFetcher) error {
+func (m *Batcher) checkForNextBatch(ctx context.Context, receiptFetcher transactauth.ArbReceiptFetcher) error {
 	// Note: this is the only place where items can be removed
 	// from pendingSentBatches, so pendingSentBatches.Front() is
 	// guaranteed not to change when the server lock is released
@@ -278,7 +277,7 @@ func (m *Batcher) checkForNextBatch(ctx context.Context, receiptFetcher ethbridg
 
 	batch := m.pendingSentBatches.Front().Value.(*pendingSentBatch)
 	m.Unlock()
-	receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, batch.batchTx)
+	receipt, err := transactauth.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, batch.batchTx)
 	if err != nil {
 		m.Lock()
 		return err

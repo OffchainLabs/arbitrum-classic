@@ -17,17 +17,22 @@
 package ethbridge
 
 import (
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "ethbridge").Logger()
 
 type Bridge struct {
 	*DelayedBridgeWatcher
-	auth *TransactAuth
+	auth transactauth.TransactAuth
 }
 
-func NewBridge(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, auth *TransactAuth) (*Bridge, error) {
+func NewBridge(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, auth transactauth.TransactAuth) (*Bridge, error) {
 	watcher, err := NewDelayedBridgeWatcher(address, fromBlock, client)
 	if err != nil {
 		return nil, errors.WithStack(err)

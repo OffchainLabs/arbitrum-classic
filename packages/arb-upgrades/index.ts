@@ -25,6 +25,7 @@ const IMPLEMENTATION_SLOT =
 const BEACON_SLOT =
   '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50'
 
+const ROLLUP_CONSTRUCTOR_VAL = 42161
 const getAdminFromProxyStorage = async (
   hre: HardhatRuntimeEnvironment,
   proxyAddress: string
@@ -106,10 +107,30 @@ export const initUpgrades = (
     data: CurrentDeployments
   }> => {
     const { data: currentDeployments } = await getDeployments()
+    const val = await loadTmpDeployments()
+    if (val) return val
+
+    console.log('Creating a new tmp deployments file:')
+    const path = await tmpDeploymentsPath()
+    writeFileSync(path, JSON.stringify(currentDeployments))
+    return {
+      path,
+      data: currentDeployments,
+    }
+  }
+  const tmpDeploymentsPath = async () => {
     const network = await hre.ethers.provider.getNetwork()
+    return `${rootDir}/_deployments/${network.chainId}_tmp_deployment.json`
+  }
 
-    const path = `${rootDir}/deployments/${network.chainId}_tmp_deployment.json`
-
+  const loadTmpDeployments = async (): Promise<
+    | {
+        path: string
+        data: CurrentDeployments
+      }
+    | undefined
+  > => {
+    const path = await tmpDeploymentsPath()
     if (existsSync(path)) {
       console.log(
         `tmp deployments file found; do you want to resume deployments with it? ('Yes' to continue)`
@@ -119,22 +140,13 @@ export const initUpgrades = (
         console.log('exiting')
         process.exit(0)
       }
-
       const jsonBuff = readFileSync(path)
       return {
         path,
         data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
       }
     }
-    console.log('Creating a new tmp deployments file:')
-
-    writeFileSync(path, JSON.stringify(currentDeployments))
-    return {
-      path,
-      data: currentDeployments,
-    }
   }
-
   const getBuildInfoString = async (contractName: string) => {
     const names = await hre.artifacts.getAllFullyQualifiedNames()
     const contracts = names.filter(curr => curr.endsWith(`:${contractName}`))
@@ -168,13 +180,14 @@ export const initUpgrades = (
     for (const contractName of contractNames) {
       if (queuedUpdatesData[contractName]) {
         console.log(
-          `Update already queued up for ${contractName}; are you sure you want to continue?`
+          `Update already queued up for ${contractName}; would you redeploy it? ('Yes' to redeploy, otherwise we'll skip and used the queued update)`
         )
-        console.log(`('Yes') to continue:`)
         const res = await prompt('')
-        if (res.trim() !== 'Yes') {
-          console.log('Skipping...')
+        if (res.trim().toLowerCase() !== 'yes') {
+          console.log('Skipping redeploy and using the queued update')
           continue
+        } else {
+          console.log('Redeploying ', contractName)
         }
       }
 
@@ -201,7 +214,7 @@ export const initUpgrades = (
       // handle Rollup's constructor:
       const newLogic =
         contractName === ContractNames.Rollup
-          ? await contractFactory.deploy(42161)
+          ? await contractFactory.deploy(ROLLUP_CONSTRUCTOR_VAL)
           : await contractFactory.deploy()
       const deployedContract = await newLogic.deployed()
       const receipt = await deployedContract.deployTransaction.wait()
@@ -210,7 +223,7 @@ export const initUpgrades = (
         address: receipt.contractAddress,
         deployTxn: receipt.transactionHash,
         arbitrumCommitHash: currentCommit,
-        buildInfo: await getBuildInfoString(contractName),
+        buildInfo: '' /* await getBuildInfoString(contractName) */,
       }
       queuedUpdatesData[contractName] = newLogicData
       console.log(`Deployed ${contractName} Logic:`)
@@ -318,7 +331,9 @@ export const initUpgrades = (
         // handle UpgradeableBeacon proxy owned by Rollup
         const rollupAddress =
           tmpDeploymentsJsonData.contracts.Rollup.proxyAddress
-        const RollupAdmin = (await hre.ethers.getContractFactory('RollupAdmin'))
+        const RollupAdmin = (
+          await hre.ethers.getContractFactory(ContractNames.RollupAdminFacet)
+        )
           .attach(rollupAddress)
           .connect(signer)
         upgradeTx = await RollupAdmin.upgradeBeacon(
@@ -336,7 +351,9 @@ export const initUpgrades = (
         const adminFacetAddress = isRollupAdminFacet(contractName)
           ? queuedUpdateData.address
           : tmpDeploymentsJsonData.contracts.RollupAdminFacet.implAddress
-        const RollupAdmin = (await hre.ethers.getContractFactory('RollupAdmin'))
+        const RollupAdmin = (
+          await hre.ethers.getContractFactory(ContractNames.RollupAdminFacet)
+        )
           .attach(tmpDeploymentsJsonData.contracts.Rollup.proxyAddress)
           .connect(signer)
         upgradeTx = await RollupAdmin.setFacets(
@@ -362,7 +379,7 @@ export const initUpgrades = (
       const rec = await upgradeTx.wait()
       console.log('Upgrade receipt:', rec)
 
-      const buildInfo = await getBuildInfoString(contractName)
+      // const buildInfo = await getBuildInfoString(contractName)
 
       console.log(`Done updating ${contractName}`)
       const newDeploymentData: CurrentDeployment = {
@@ -370,7 +387,7 @@ export const initUpgrades = (
         implAddress: queuedUpdateData.address,
         implDeploymentTxn: queuedUpdateData.deployTxn,
         implArbitrumCommitHash: queuedUpdateData.arbitrumCommitHash,
-        implBuildInfo: buildInfo,
+        implBuildInfo: '',
       }
       console.log('Setting new tmp: deployment data')
 
@@ -394,6 +411,8 @@ export const initUpgrades = (
     console.log('Verifying deployments:')
 
     const { data: deploymentsJsonData } = await getDeployments()
+    const tmpDeploymentsJsonData = await loadTmpDeployments()
+
     let success = true
     const ProxyAdmin__factory = await hre.ethers.getContractFactory(
       'ProxyAdmin'
@@ -402,12 +421,18 @@ export const initUpgrades = (
       deploymentsJsonData.proxyAdminAddress
     )
     const proxyAdminOwner = await proxyAdmin.owner()
+    console.log('proxyAdmin owner:', proxyAdminOwner)
 
     for (const _contractName in deploymentsJsonData.contracts) {
       const contractName = _contractName as ContractNames
-      // console.warn('con', contractName);
+      const _currentDeploymentData = deploymentsJsonData.contracts[contractName]
+      const _tmpDeploymentData =
+        tmpDeploymentsJsonData &&
+        tmpDeploymentsJsonData.data.contracts[contractName]
 
-      const deploymentData = deploymentsJsonData.contracts[contractName]
+      const deploymentData = _tmpDeploymentData
+        ? _tmpDeploymentData
+        : _currentDeploymentData
 
       if (isBeacon(contractName)) {
         const UpgradeableBeacon = (
@@ -444,9 +469,9 @@ export const initUpgrades = (
       }
 
       if (isRollupAdminFacet(contractName) || isRollupUserFacet(contractName)) {
-        const Rollup = (await hre.ethers.getContractFactory('Rollup')).attach(
-          deploymentsJsonData.contracts.Rollup.proxyAddress
-        )
+        const Rollup = (
+          await hre.ethers.getContractFactory(ContractNames.Rollup)
+        ).attach(deploymentsJsonData.contracts.Rollup.proxyAddress)
         const facet = isRollupUserFacet(contractName)
           ? await Rollup.getUserFacet()
           : await Rollup.getAdminFacet()
@@ -603,6 +628,32 @@ export const initUpgrades = (
     writeFileSync(path, JSON.stringify(data))
   }
 
+  const verifyDeployments = async () => {
+    const { data } = await getDeployments()
+
+    for (const _contractName of Object.keys(data.contracts)) {
+      const contractName = _contractName as ContractNames
+      const contract = data.contracts[contractName]
+
+      try {
+        // Handle Rollup Constructor
+        if (contractName === ContractNames.Rollup) {
+          await hre.run('verify:verify', {
+            address: contract.implAddress,
+            constructorArguments: [ROLLUP_CONSTRUCTOR_VAL],
+            contract: 'contracts/rollup/Rollup.sol:Rollup',
+          })
+        } else {
+          await hre.run('verify:verify', {
+            address: contract.implAddress,
+          })
+        }
+      } catch (err) {
+        console.log(`failed to verify ${contractName}`, err)
+      }
+    }
+  }
+
   return {
     updateImplementations,
     verifyCurrentImplementations,
@@ -612,5 +663,6 @@ export const initUpgrades = (
     transferBeaconOwner,
     removeBuildInfoFiles,
     getDeployments,
+    verifyDeployments,
   }
 }

@@ -138,6 +138,8 @@ type Sequencer struct {
 	ReorgOutHugeMessages              bool              `koanf:"reorg-out-huge-messages"`
 	Lockout                           Lockout           `koanf:"lockout"`
 	L1PostingStrategy                 L1PostingStrategy `koanf:"l1-posting-strategy"`
+	PublishBatchesWithoutLockout      bool              `koanf:"publish-batches-without-lockout"`
+	RewriteSequencerAddress           bool              `koanf:"rewrite-sequencer-address"`
 }
 
 type WS struct {
@@ -199,15 +201,18 @@ type Wallet struct {
 }
 
 type WalletFireblocks struct {
-	APIKey         string     `koanf:"api-key,omitempty"`
-	AssetId        string     `koanf:"asset-id,omitempty"`
-	BaseURL        string     `koanf:"base-url,omitempty"`
-	FeedSigner     FeedSigner `koanf:"feed-signer"`
-	SourceAddress  string     `koanf:"source-address,omitempty"`
-	SourceId       string     `koanf:"source-id,omitempty"`
-	SourceType     string     `koanf:"source-type,omitempty"`
-	SSLKey         string     `koanf:"ssl-key,omitempty"`
-	SSLKeyPassword string     `koanf:"ssl-key-password,omitempty"`
+	APIKey               string     `koanf:"api-key,omitempty"`
+	AssetId              string     `koanf:"asset-id,omitempty"`
+	BaseURL              string     `koanf:"base-url,omitempty"`
+	DisableHandlePending bool       `koanf:"disable-handle-pending"`
+	ExternalWallets      string     `koanf:"external-wallets"`
+	FeedSigner           FeedSigner `koanf:"feed-signer"`
+	InternalWallets      string     `koanf:"internal-wallets"`
+	SourceAddress        string     `koanf:"source-address,omitempty"`
+	SourceId             string     `koanf:"source-id,omitempty"`
+	SourceType           string     `koanf:"source-type,omitempty"`
+	SSLKey               string     `koanf:"ssl-key,omitempty"`
+	SSLKeyPassword       string     `koanf:"ssl-key-password,omitempty"`
 }
 
 type FeedSigner struct {
@@ -312,6 +317,8 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.reorg-out-huge-messages", false, "erase any huge messages in database that cannot be published (DANGEROUS)")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
 	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
+	f.Bool("node.sequencer.publish-batches-without-lockout", false, "continue publishing batches (but not sequencing) without the lockout")
+	f.Bool("node.sequencer.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
@@ -752,10 +759,13 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 
 		// Don't keep printing configuration file and don't print wallet passwords
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"conf.dump":                              false,
-			"wallet.fireblocks.feed-signer.password": "",
-			"wallet.fireblocks.ssl-key-password":     "",
-			"wallet.local.password":                  "",
+			"conf.dump":                                 false,
+			"wallet.fireblocks.feed-signer.password":    "",
+			"wallet.fireblocks.feed-signer.private-key": "",
+			"wallet.fireblocks.ssl-key":                 "",
+			"wallet.fireblocks.ssl-key-password":        "",
+			"wallet.local.password":                     "",
+			"wallet.local.private-key":                  "",
 		}, "."), nil)
 
 		c, err := k.Marshal(json.Parser())
@@ -772,4 +782,18 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	out.Wallet = Wallet{}
 
 	return &out, &wallet, nil
+}
+
+func UnmarshalMap(marshalled string) map[string]string {
+	unmarshalled := make(map[string]string)
+	if len(marshalled) == 0 {
+		return unmarshalled
+	}
+	items := strings.Split(marshalled, ",")
+	for _, pair := range items {
+		item := strings.Split(pair, ":")
+		unmarshalled[item[0]] = item[1]
+	}
+
+	return unmarshalled
 }
