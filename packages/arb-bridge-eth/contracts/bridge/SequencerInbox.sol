@@ -220,9 +220,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         );
 
         if (gasRefunder != IGasRefunder(0)) {
-            try
-                gasRefunder.onGasSpent(msg.sender, startGasLeft - gasleft(), calldataSize)
-            {} catch {}
+            gasRefunder.onGasSpent(msg.sender, startGasLeft - gasleft(), calldataSize);
         }
     }
 

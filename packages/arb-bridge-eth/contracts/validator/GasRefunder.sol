@@ -52,7 +52,8 @@ contract GasRefunder is IGasRefunder, Ownable {
         CONTRACT_NOT_ALLOWED,
         REFUNDEE_NOT_ALLOWED,
         ALREADY_REFUNDED_THIS_BLOCK,
-        REFUNDEE_ABOVE_MAX_BALANCE
+        REFUNDEE_ABOVE_MAX_BALANCE,
+        OUT_OF_FUNDS
     }
 
     event RefundedGasCosts(
@@ -174,6 +175,12 @@ contract GasRefunder is IGasRefunder, Ownable {
     ) external override returns (bool success) {
         uint256 startGasLeft = gasleft();
 
+        uint256 ownBalance = address(this).balance;
+
+        if (ownBalance == 0) {
+            emit RefundGasCostsDenied(refundee, msg.sender, RefundDenyReason.OUT_OF_FUNDS, gasUsed);
+        }
+
         if (!allowedContracts[msg.sender]) {
             emit RefundGasCostsDenied(
                 refundee,
@@ -244,6 +251,10 @@ contract GasRefunder is IGasRefunder, Ownable {
             } else {
                 refundAmount = maxRefundeeBalance - refundeeBalance;
             }
+        }
+
+        if (refundAmount > ownBalance) {
+            refundAmount = ownBalance;
         }
 
         // It's expected that refundee is an EOA
