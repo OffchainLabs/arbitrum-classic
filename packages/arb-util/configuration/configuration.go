@@ -138,6 +138,8 @@ type Sequencer struct {
 	ReorgOutHugeMessages              bool              `koanf:"reorg-out-huge-messages"`
 	Lockout                           Lockout           `koanf:"lockout"`
 	L1PostingStrategy                 L1PostingStrategy `koanf:"l1-posting-strategy"`
+	PublishBatchesWithoutLockout      bool              `koanf:"publish-batches-without-lockout"`
+	RewriteSequencerAddress           bool              `koanf:"rewrite-sequencer-address"`
 }
 
 type WS struct {
@@ -315,6 +317,8 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.reorg-out-huge-messages", false, "erase any huge messages in database that cannot be published (DANGEROUS)")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
 	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
+	f.Bool("node.sequencer.publish-batches-without-lockout", false, "continue publishing batches (but not sequencing) without the lockout")
+	f.Bool("node.sequencer.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")

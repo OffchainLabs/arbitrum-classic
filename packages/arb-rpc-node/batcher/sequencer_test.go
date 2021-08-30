@@ -331,7 +331,9 @@ func TestSequencerBatcher(t *testing.T) {
 		}
 
 		time.Sleep(time.Second)
-		client.Commit()
+		for i := 0; i < 5; i++ {
+			client.Commit()
+		}
 	}
 
 	msgCount1, err := seqMon.Core.GetMessageCount()
