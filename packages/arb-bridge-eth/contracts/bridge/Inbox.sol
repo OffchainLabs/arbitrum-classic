@@ -227,7 +227,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     {
         require(!isCreateRetryablePaused, "CREATE_RETRYABLES_PAUSED");
         address sender = msg.sender;
-        address refundAddress = msg.sender;
+        address destinationAddress = msg.sender;
 
         if (shouldRewriteSender) {
             if (!Address.isContract(sender) && tx.origin == msg.sender) {
@@ -239,7 +239,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
                 // Here we preemptively reverse the mapping for EOAs so deposits work as expected
                 sender = AddressAliasHelper.undoL1ToL2Alias(sender);
             } else {
-                refundAddress = AddressAliasHelper.applyL1ToL2Alias(refundAddress);
+                destinationAddress = AddressAliasHelper.applyL1ToL2Alias(destinationAddress);
             }
         }
 
@@ -250,12 +250,12 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
                 abi.encodePacked(
                     // the beneficiary and other refund addresses don't get rewritten by arb-os
                     // so we use the original msg.sender value
-                    uint256(uint160(bytes20(refundAddress))),
+                    uint256(uint160(bytes20(destinationAddress))),
                     uint256(0),
                     msg.value,
                     maxSubmissionCost,
-                    uint256(uint160(bytes20(refundAddress))),
-                    uint256(uint160(bytes20(refundAddress))),
+                    uint256(uint160(bytes20(destinationAddress))),
+                    uint256(uint160(bytes20(destinationAddress))),
                     uint256(0),
                     uint256(0),
                     uint256(0),
