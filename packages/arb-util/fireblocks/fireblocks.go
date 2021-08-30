@@ -71,6 +71,7 @@ type Fireblocks struct {
 	sourceType        accounttype.AccountType
 	internalWalletIds map[string]string
 	externalWalletIds map[string]string
+	useFireblocksFees bool
 }
 
 type StatusBody struct {
@@ -353,6 +354,7 @@ func New(fireblocksConfig configuration.WalletFireblocks) (*Fireblocks, error) {
 		sourceType:        *sourceType,
 		internalWalletIds: configuration.UnmarshalMap(fireblocksConfig.InternalWallets),
 		externalWalletIds: configuration.UnmarshalMap(fireblocksConfig.ExternalWallets),
+		useFireblocksFees: fireblocksConfig.UseFireblocksFees,
 	}, nil
 }
 
@@ -468,6 +470,14 @@ func (fb *Fireblocks) CreateTransaction(operation operationtype.OperationType, i
 	if input.MaxTotalGasPriceWei.Cmp(big.NewInt(0)) != 0 {
 		maxTotalGasPrice := new(big.Rat).SetFrac(input.MaxTotalGasPriceWei, divisor)
 		maxTotalGasPriceString = maxTotalGasPrice.FloatString(18)
+	}
+
+	if fb.useFireblocksFees {
+		// Fireblocks sets its own fee amounts of we don't provide any
+		gasLimitString = ""
+		gasPriceString = ""
+		maxPriorityFeeString = ""
+		maxTotalGasPriceString = ""
 	}
 
 	body := &CreateTransactionBody{
