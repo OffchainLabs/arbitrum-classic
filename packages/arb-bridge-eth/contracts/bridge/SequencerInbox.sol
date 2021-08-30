@@ -23,6 +23,7 @@ import "./interfaces/IBridge.sol";
 import "../arch/Marshaling.sol";
 import "../libraries/Cloneable.sol";
 import "../rollup/Rollup.sol";
+import "../validator/IGasRefunder.sol";
 
 import "./Messages.sol";
 
@@ -185,6 +186,44 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             afterAcc,
             inboxAccs.length - 1
         );
+    }
+
+    function addSequencerL2BatchFromOriginWithGasRefunder(
+        bytes calldata transactions,
+        uint256[] calldata lengths,
+        uint256[] calldata sectionsMetadata,
+        bytes32 afterAcc,
+        IGasRefunder gasRefunder
+    ) external {
+        // solhint-disable-next-line avoid-tx-origin
+        require(msg.sender == tx.origin, "origin only");
+
+        // Add in a lower bound of calldata cost to the gas estimate
+        // startGasLeft = gasleft() + 4 * calldatasize()
+        uint256 startGasLeft;
+        assembly {
+            startGasLeft := mul(calldatasize(), 4)
+        }
+        startGasLeft += gasleft();
+
+        uint256 startNum = messageCount;
+        bytes32 beforeAcc = addSequencerL2BatchImpl(
+            transactions,
+            lengths,
+            sectionsMetadata,
+            afterAcc
+        );
+        emit SequencerBatchDeliveredFromOrigin(
+            startNum,
+            beforeAcc,
+            messageCount,
+            afterAcc,
+            inboxAccs.length - 1
+        );
+
+        if (gasRefunder != IGasRefunder(0)) {
+            gasRefunder.onGasSpent(msg.sender, startGasLeft - gasleft());
+        }
     }
 
     /**
