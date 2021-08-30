@@ -10,6 +10,7 @@ import {
   fundL2,
   skipIfMainnet,
 } from './testHelpers'
+import { OutgoingMessageState } from '../src/lib/bridge_helpers'
 
 describe('WETH', async () => {
   beforeEach('skipIfMainnet', function () {
@@ -44,6 +45,15 @@ describe('WETH', async () => {
       bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
 
     expect(withdrawEventData).to.exist
+
+    const outgoingMessageState = await bridge.getOutGoingMessageState(
+      withdrawEventData.batchNumber,
+      withdrawEventData.indexInBatch
+    )
+    expect(outgoingMessageState).to.equal(
+      OutgoingMessageState.UNCONFIRMED,
+      `weth withdraw getOutGoingMessageState returned ${OutgoingMessageState.UNCONFIRMED}`
+    )
 
     const _l2WethBalance = await bridge.getAndUpdateL2TokenData(
       l2Network.tokenBridge.l1Weth

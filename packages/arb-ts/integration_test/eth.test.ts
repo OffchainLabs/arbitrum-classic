@@ -14,7 +14,7 @@ import {
 } from './testHelpers'
 import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
 import { ARB_GAS_INFO } from '../src/lib/precompile_addresses'
-
+import { OutgoingMessageState } from '../src/lib/bridge_helpers'
 dotenv.config()
 
 describe('Ether', async () => {
@@ -120,6 +120,15 @@ describe('Ether', async () => {
     expect(withdrawEvents.length).to.equal(
       1,
       'eth withdraw getL2ToL1EventData failed'
+    )
+
+    const outgoingMessageState = await bridge.getOutGoingMessageState(
+      withdrawEventData.batchNumber,
+      withdrawEventData.indexInBatch
+    )
+    expect(outgoingMessageState).to.equal(
+      OutgoingMessageState.UNCONFIRMED,
+      `eth withdraw getOutGoingMessageState returned ${OutgoingMessageState.UNCONFIRMED}`
     )
 
     const etherBalance = await bridge.getL2EthBalance()

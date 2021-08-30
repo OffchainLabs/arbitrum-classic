@@ -13,6 +13,7 @@ import { Network } from '../src/lib/networks'
 import { expect } from 'chai'
 import config from './config'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
+import { OutgoingMessageState } from '../src/lib/bridge_helpers'
 
 import yargs from 'yargs/yargs'
 import chalk from 'chalk'
@@ -67,6 +68,15 @@ describe('Custom ERC20', () => {
       bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
 
     expect(withdrawEventData).to.exist
+
+    const outgoingMessageState = await bridge.getOutGoingMessageState(
+      withdrawEventData.batchNumber,
+      withdrawEventData.indexInBatch
+    )
+    expect(outgoingMessageState).to.equal(
+      OutgoingMessageState.UNCONFIRMED,
+      `custom token withdraw getOutGoingMessageState returned ${OutgoingMessageState.UNCONFIRMED}`
+    )
 
     const l2Data = await bridge.getAndUpdateL2TokenData(existentTestCustomToken)
     const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
