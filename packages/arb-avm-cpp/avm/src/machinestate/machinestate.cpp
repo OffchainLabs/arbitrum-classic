@@ -234,7 +234,7 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
     auto& op = loadCurrentOperation();
     auto opcode = op.opcode;
     if ((opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) &&
-        opcode != OpCode::SEND) {
+        opcode != OpCode::SEND && opcode != OpCode::BLAKE2BF) {
         return;
     }
     if (opcode == OpCode::SEND) {
@@ -265,6 +265,21 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
             std::fill_n(std::back_inserter(proof.standard_proof),
                         loc - data.size(), 0);
         }
+        return;
+    }
+    if (opcode == OpCode::BLAKE2BF) {
+        auto buffer = std::get_if<Buffer>(&stack[0]);
+        if (!buffer) {
+            return;
+        }
+        if (buffer->data_length() > 213 || buffer->data_length() < 4) {
+            // bad size for buffer
+            return;
+        }
+        auto blake2fData = buffer->toFlatVector();
+        blake2fData.resize(213, 0);
+        proof.standard_proof.insert(proof.standard_proof.end(),
+                                    blake2fData.begin(),  blake2fData.end());
         return;
     }
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
