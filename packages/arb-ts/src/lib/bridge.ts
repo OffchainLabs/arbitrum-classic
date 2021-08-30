@@ -678,7 +678,7 @@ export class Bridge {
     indexInBatch: BigNumber
   ) {
     const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
-    return BridgeHelper.getOutgoingMessageState(
+    return BridgeHelper.getOutGoingMessageState(
       batchNumber,
       indexInBatch,
       outboxAddress,

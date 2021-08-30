@@ -625,7 +625,7 @@ export class BridgeHelper {
     }
 
     if (singleAttempt) {
-      const outGoingMessageState = await BridgeHelper.getOutgoingMessageState(
+      const outGoingMessageState = await BridgeHelper.getOutGoingMessageState(
         batchNumber,
         indexInBatch,
         outboxAddress,
@@ -791,7 +791,7 @@ export class BridgeHelper {
     )
   }
 
-  static getOutgoingMessageState = async (
+  static getOutGoingMessageState = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
     outBoxAddress: string,
@@ -829,7 +829,7 @@ export class BridgeHelper {
         ? OutgoingMessageState.CONFIRMED
         : OutgoingMessageState.UNCONFIRMED
     } catch (e) {
-      console.warn('666: error in getOutgoingMessageState:', e)
+      console.warn('666: error in getOutGoingMessageState:', e)
       return OutgoingMessageState.NOT_FOUND
     }
   }
