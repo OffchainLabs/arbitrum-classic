@@ -213,6 +213,7 @@ type WalletFireblocks struct {
 	SourceType           string     `koanf:"source-type,omitempty"`
 	SSLKey               string     `koanf:"ssl-key,omitempty"`
 	SSLKeyPassword       string     `koanf:"ssl-key-password,omitempty"`
+	UseFireblocksFees    bool       `koanf:"use-fireblocks-fees"`
 }
 
 type FeedSigner struct {
