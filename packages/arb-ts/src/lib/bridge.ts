@@ -645,10 +645,10 @@ export class Bridge {
       await inbox.bridge(),
       this.l1Provider
     )
-    const oldOutboxAddress = await bridge.allowedInboxList(0)
+    const oldOutboxAddress = await bridge.allowedOutboxList(0)
     let newOutboxAddress: string
     try {
-      newOutboxAddress = await bridge.allowedInboxList(1)
+      newOutboxAddress = await bridge.allowedOutboxList(1)
     } catch {
       // new outbox not yet deployed; using old outbox
       return oldOutboxAddress
