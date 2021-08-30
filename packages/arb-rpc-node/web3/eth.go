@@ -22,6 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
@@ -104,7 +105,7 @@ func (s *Server) GetBalance(address *common.Address, blockNum rpc.BlockNumberOrH
 	return (*hexutil.Big)(balance), nil
 }
 
-func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockNum rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return nil, err
@@ -114,7 +115,7 @@ func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockN
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting storage")
 	}
-	return (*hexutil.Big)(storageVal), nil
+	return math.U256Bytes(storageVal), nil
 }
 
 func (s *Server) getTransactionCountInner(ctx context.Context, address *common.Address, blockNum rpc.BlockNumberOrHash, forwardingOnlyMode bool) (hexutil.Uint64, error) {
