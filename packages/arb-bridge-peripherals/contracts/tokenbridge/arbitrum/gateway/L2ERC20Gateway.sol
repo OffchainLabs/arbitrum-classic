@@ -79,7 +79,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         address l1ERC20,
         address expectedL2Address,
         address _from,
-        address _to,
+        address, /* _to */
         uint256 _amount,
         bytes memory deployData
     ) internal override returns (bool shouldHalt) {

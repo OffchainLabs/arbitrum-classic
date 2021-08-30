@@ -78,7 +78,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
 
     function createOutboundTx(
         address _from,
-        uint256 _tokenAmount,
+        uint256, /* _tokenAmount */
         bytes memory _outboundCalldata
     ) internal virtual returns (uint256) {
         // We make this function virtual since outboundTransfer logic is the same for many gateways
@@ -129,17 +129,14 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
      * @param _l1Token l1 address of token
      * @param _to destination address
      * @param _amount amount of tokens withdrawn
-     * @param _maxGas max gas provided for outbox execution market (todo)
-     * @param _gasPriceBid provided for outbox execution market (todo)
-     @ @return encoded unique identifier for withdrawal
+     * @return res encoded unique identifier for withdrawal
      */
-
     function outboundTransfer(
         address _l1Token,
         address _to,
         uint256 _amount,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
         bytes calldata _data
     ) public payable virtual override returns (bytes memory res) {
         // This function is set as public and virtual so that subclasses can override

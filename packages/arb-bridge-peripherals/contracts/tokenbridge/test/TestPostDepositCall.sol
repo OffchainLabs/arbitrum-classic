@@ -31,8 +31,8 @@ contract L2Called is ITransferAndCallReceiver {
     }
 
     function onTokenTransfer(
-        address sender,
-        uint256 amount,
+        address, /* sender */
+        uint256, /* amount */
         bytes calldata data
     ) external override {
         uint256 num = abi.decode(data, (uint256));

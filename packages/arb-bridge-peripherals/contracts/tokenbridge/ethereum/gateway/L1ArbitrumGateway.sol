@@ -122,7 +122,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
     }
 
     function getExternalCall(
-        uint256 _exitNum,
+        uint256, /* _exitNum */
         address _initialDestination,
         bytes memory _initialData
     ) public view virtual returns (address target, bytes memory data) {
@@ -143,7 +143,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
 
     function createOutboundTx(
         address _from,
-        uint256 _tokenAmount,
+        uint256, /* _tokenAmount */
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,

@@ -45,16 +45,14 @@ contract L2WethGateway is L2ArbitrumGateway {
     /**
      * @notice internal utility function used to handle when no contract is deployed at expected address
      * @param l1ERC20 L1 address of ERC20
-     * @param expectedL2Address L2 address of ERC20
-     * @param deployData encoded symbol/name/decimal data for initial deploy
      */
     function handleNoContract(
         address l1ERC20,
-        address expectedL2Address,
+        address, /* expectedL2Address */
         address _from,
-        address _to,
+        address, /* _to */
         uint256 _amount,
-        bytes memory deployData
+        bytes memory /* deployData */
     ) internal override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         // trigger withdrawal

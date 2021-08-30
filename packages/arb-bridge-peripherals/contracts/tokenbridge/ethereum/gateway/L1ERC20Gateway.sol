@@ -64,8 +64,11 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         view
         returns (bytes memory)
     {
-        (bool success, bytes memory res) =
-            targetContract.staticcall(abi.encodeWithSelector(targetFunction));
+        (
+            ,
+            /* bool success */
+            bytes memory res
+        ) = targetContract.staticcall(abi.encodeWithSelector(targetFunction));
         return res;
     }
 
@@ -77,12 +80,11 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         bytes memory _data
     ) public view override returns (bytes memory outboundCalldata) {
         // TODO: cheaper to make static calls or save isDeployed to storage?
-        bytes memory deployData =
-            abi.encode(
-                callStatic(_token, ERC20.name.selector),
-                callStatic(_token, ERC20.symbol.selector),
-                callStatic(_token, ERC20.decimals.selector)
-            );
+        bytes memory deployData = abi.encode(
+            callStatic(_token, ERC20.name.selector),
+            callStatic(_token, ERC20.symbol.selector),
+            callStatic(_token, ERC20.decimals.selector)
+        );
 
         outboundCalldata = abi.encodeWithSelector(
             ITokenGateway.finalizeInboundTransfer.selector,

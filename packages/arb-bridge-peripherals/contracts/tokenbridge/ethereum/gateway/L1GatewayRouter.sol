@@ -33,7 +33,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
     address public owner;
     address public inbox;
 
-    modifier onlyOwner {
+    modifier onlyOwner() {
         require(msg.sender == owner, "ONLY_OWNER");
         _;
     }
@@ -67,8 +67,10 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             l2NewDefaultGateway = TokenGateway(newL1DefaultGateway).counterpartGateway();
         }
 
-        bytes memory data =
-            abi.encodeWithSelector(L2GatewayRouter.setDefaultGateway.selector, l2NewDefaultGateway);
+        bytes memory data = abi.encodeWithSelector(
+            L2GatewayRouter.setDefaultGateway.selector,
+            l2NewDefaultGateway
+        );
 
         return
             sendTxToL2(
@@ -118,8 +120,11 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             }
         }
 
-        bytes memory data =
-            abi.encodeWithSelector(L2GatewayRouter.setGateway.selector, _token, _gateway);
+        bytes memory data = abi.encodeWithSelector(
+            L2GatewayRouter.setGateway.selector,
+            _token,
+            _gateway
+        );
 
         return
             sendTxToL2(
@@ -157,22 +162,22 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
 
     /**
      * @notice Allows L1 Token contract to trustlessly register its gateway.
-
-     * @param _gateway l1 gateway address
-     * @param _maxGas max gas for L2 retryable exrecution 
-     * @param _gasPriceBid gas price for L2 retryable ticket 
-     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et 
-     * @param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
-     * @return Retryable ticket ID
+     * param _gateway l1 gateway address
+     * param _maxGas max gas for L2 retryable exrecution
+     * param _gasPriceBid gas price for L2 retryable ticket
+     * param  _maxSubmissionCost base submission cost  L2 retryable tick3et
+     * param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
+     * return Retryable ticket ID
      */
     function setGateway(
-        address _gateway,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        uint256 _maxSubmissionCost,
-        address _creditBackAddress
+        address, /* _gateway */
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
+        uint256, /* _maxSubmissionCost */
+        address /* _creditBackAddress */
     ) public payable returns (uint256) {
         revert("SELF_REGISTRATION_DISABLED");
+        /*
         require(
             ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
             "NOT_ARB_ENABLED"
@@ -200,6 +205,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
                 _maxSubmissionCost,
                 _creditBackAddress
             );
+        */
     }
 
     function setGateways(

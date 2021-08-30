@@ -46,22 +46,22 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
     }
 
     function sendTxToL2(
-        address _inbox,
+        address, /* _inbox */
         address _to,
-        address _user,
-        uint256 _l1CallValue,
+        address, /* _user */
+        uint256, /* _l1CallValue */
         uint256 _l2CallValue,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
+        uint256, /* _maxSubmissionCost */
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
         bytes memory _data
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = _to.call{ value: _l2CallValue }(_data);
         assembly {
             switch success
-                case 0 {
-                    revert(add(retdata, 32), mload(retdata))
-                }
+            case 0 {
+                revert(add(retdata, 32), mload(retdata))
+            }
         }
         return 1337;
     }
@@ -87,16 +87,16 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
 abstract contract L2ArbitrumTestMessenger is L2ArbitrumMessenger {
     function sendTxToL1(
         uint256 _l1CallValue,
-        address _from,
+        address, /* _from */
         address _to,
         bytes memory _data
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = _to.call{ value: _l1CallValue }(_data);
         assembly {
             switch success
-                case 0 {
-                    revert(add(retdata, 32), mload(retdata))
-                }
+            case 0 {
+                revert(add(retdata, 32), mload(retdata))
+            }
         }
         return 1337;
     }
