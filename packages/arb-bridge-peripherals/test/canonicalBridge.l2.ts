@@ -162,36 +162,6 @@ describe('Bridge peripherals layer 2', () => {
     assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
   })
 
-  it('should have disabled post mint call', async function () {
-    const l1ERC20 = '0x0000000000000000000000000000000000000305'
-    const sender = '0x0000000000000000000000000000000000000003'
-    const amount = '1'
-    const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
-
-    // connect to account 3 to query as if gateway router
-    const l2ERC20Address = await testBridge
-      .connect(accounts[3])
-      .calculateL2TokenAddress(l1ERC20)
-
-    const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
-    assert.equal(preTokenCode, '0x', 'Something already deployed to address')
-
-    const L2Called = await ethers.getContractFactory('L2Called')
-    const l2Called = await L2Called.deploy()
-    const dest = l2Called.address
-    const num = 5
-    const callHookData = ethers.utils.defaultAbiCoder.encode(['uint256'], [num])
-
-    const data = ethers.utils.defaultAbiCoder.encode(
-      ['bytes', 'bytes'],
-      [initializeData, callHookData]
-    )
-
-    await expect(
-      testBridge.finalizeInboundTransfer(l1ERC20, sender, dest, amount, data)
-    ).to.be.revertedWith('')
-  })
-
   it('should revert post mint call correctly in outbound', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000325'
     const sender = '0x0000000000000000000000000000000000000005'
