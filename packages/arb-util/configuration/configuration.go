@@ -140,6 +140,7 @@ type Sequencer struct {
 	L1PostingStrategy                 L1PostingStrategy `koanf:"l1-posting-strategy"`
 	PublishBatchesWithoutLockout      bool              `koanf:"publish-batches-without-lockout"`
 	RewriteSequencerAddress           bool              `koanf:"rewrite-sequencer-address"`
+	MaxBatchGasCost                   int64             `koanf:"max-batch-gas-cost"`
 }
 
 type WS struct {
@@ -320,6 +321,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
 	f.Bool("node.sequencer.publish-batches-without-lockout", false, "continue publishing batches (but not sequencing) without the lockout")
 	f.Bool("node.sequencer.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
+	f.Int64("node.sequencer.max-batch-gas-cost", 2_000_000, "max L1 batch gas cost to post before splitting it up into multiple batches")
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
