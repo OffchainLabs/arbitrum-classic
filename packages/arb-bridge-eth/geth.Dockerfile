@@ -15,4 +15,4 @@ RUN echo arbitrum > password.txt && \
     mkdir -p data/keystore && \
     cp geth/keystore/* data/keystore && \
     geth --datadir data init geth/ethbridge.json
-ENTRYPOINT ["/usr/local/bin/geth", "--syncmode", "full", "--datadir", "data", "--allow-insecure-unlock", "--unlock", "0x81183c9c61bdf79db7330bbcda47be30c0a85064", "--password", "/home/user/password.txt", "--mine"]
+ENTRYPOINT ["/usr/local/bin/geth", "--syncmode", "full", "--datadir", "data", "--allow-insecure-unlock", "--unlock", "0x4F5FD0eA6724DfBf825714c2742A37E0c0d6D7d9", "--password", "/home/user/password.txt", "--mine"]

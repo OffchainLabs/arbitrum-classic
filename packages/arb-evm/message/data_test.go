@@ -58,7 +58,7 @@ func TestDecodeAddressIndex(t *testing.T) {
 }
 
 func TestDecodeAddressFull(t *testing.T) {
-	orig := common.HexToAddress("0x81183C9C61bdf79DB7330BBcda47Be30c0a85064")
+	orig := common.HexToAddress("0x4F5FD0eA6724DfBf825714c2742A37E0c0d6D7d9")
 	rawIndex, err := rlp.EncodeToBytes(orig)
 	if err != nil {
 		t.Fatal(err)
