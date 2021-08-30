@@ -360,13 +360,10 @@ func swapValidatorOwner(walletAddress, newOwner ethcommon.Address) error {
 		return err
 	}
 	tx, err := wallet.TransferOwnership(config.auth, newOwner)
-	fmt.Println("Waiting for receipt for", tx.Hash())
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "TransferOwnership")
 	if err != nil {
 		return err
 	}
-	fmt.Println("Transaction completed successfully")
-	return nil
+	return waitForTx(tx, "TransferOwnership")
 }
 
 func getWhitelist(inboxAddr ethcommon.Address) error {
