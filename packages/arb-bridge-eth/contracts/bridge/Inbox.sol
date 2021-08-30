@@ -42,7 +42,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
 
     IBridge public override bridge;
 
-    bool public isEthDepositPaused;
+    bool public isCreateRetryablePaused;
     bool public shouldRewriteSender;
 
     function initialize(IBridge _bridge, address _whitelist) external {
@@ -185,17 +185,17 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
 
     event PauseToggled(bool enabled);
 
-    /// @notice pauses eth deposits
-    function pauseEthDeposits() external override onlyOwner {
-        require(!isEthDepositPaused, "ALREADY_PAUSED");
-        isEthDepositPaused = true;
+    /// @notice pauses creating retryables
+    function pauseCreateRetryables() external override onlyOwner {
+        require(!isCreateRetryablePaused, "ALREADY_PAUSED");
+        isCreateRetryablePaused = true;
         emit PauseToggled(true);
     }
 
-    /// @notice unpauses eth deposits
-    function unpauseEthDeposits() external override onlyOwner {
-        require(isEthDepositPaused, "NOT_PAUSED");
-        isEthDepositPaused = false;
+    /// @notice unpauses creating retryables
+    function unpauseCreateRetryables() external override onlyOwner {
+        require(isCreateRetryablePaused, "NOT_PAUSED");
+        isCreateRetryablePaused = false;
         emit PauseToggled(false);
     }
 
@@ -225,17 +225,22 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         onlyWhitelisted
         returns (uint256)
     {
-        require(!isEthDepositPaused, "ETH_DEPOSIT_PAUSED");
+        require(!isCreateRetryablePaused, "CREATE_RETRYABLES_PAUSED");
         address sender = msg.sender;
+        address destinationAddress = msg.sender;
 
-        if (shouldRewriteSender && !Address.isContract(sender) && tx.origin == msg.sender) {
-            // isContract check fails if this function is called during a contract's constructor.
-            // We don't adjust the address for calls coming from L1 contracts since their addresses get remapped
-            // If the caller is an EOA, we adjust the address.
-            // This is needed because unsigned messages to the L2 (such as retryables)
-            // have the L1 sender address mapped.
-            // Here we preemptively reverse the mapping for EOAs so deposits work as expected
-            sender = AddressAliasHelper.undoL1ToL2Alias(sender);
+        if (shouldRewriteSender) {
+            if (!Address.isContract(sender) && tx.origin == msg.sender) {
+                // isContract check fails if this function is called during a contract's constructor.
+                // We don't adjust the address for calls coming from L1 contracts since their addresses get remapped
+                // If the caller is an EOA, we adjust the address.
+                // This is needed because unsigned messages to the L2 (such as retryables)
+                // have the L1 sender address mapped.
+                // Here we preemptively reverse the mapping for EOAs so deposits work as expected
+                sender = AddressAliasHelper.undoL1ToL2Alias(sender);
+            } else {
+                destinationAddress = AddressAliasHelper.applyL1ToL2Alias(destinationAddress);
+            }
         }
 
         return
@@ -245,12 +250,12 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
                 abi.encodePacked(
                     // the beneficiary and other refund addresses don't get rewritten by arb-os
                     // so we use the original msg.sender value
-                    uint256(uint160(bytes20(msg.sender))),
+                    uint256(uint160(bytes20(destinationAddress))),
                     uint256(0),
                     msg.value,
                     maxSubmissionCost,
-                    uint256(uint160(bytes20(msg.sender))),
-                    uint256(uint160(bytes20(msg.sender))),
+                    uint256(uint160(bytes20(destinationAddress))),
+                    uint256(uint160(bytes20(destinationAddress))),
                     uint256(0),
                     uint256(0),
                     uint256(0),
@@ -260,7 +265,51 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     }
 
     /**
-     * @notice Put an message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts
+     * @notice Put a message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts
+     * @dev Advanced usage only (does not rewrite aliases for excessFeeRefundAddress and callValueRefundAddress). createRetryableTicket method is the recommended standard.
+     * @param destAddr destination L2 contract address
+     * @param l2CallValue call value for retryable L2 message
+     * @param  maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+     * @param excessFeeRefundAddress maxgas x gasprice - execution cost gets credited here on L2 balance
+     * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled
+     * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param gasPriceBid price bid for L2 execution
+     * @param data ABI encoded data of L2 message
+     * @return unique id for retryable transaction (keccak256(requestID, uint(0) )
+     */
+    function createRetryableTicketNoRefundAliasRewrite(
+        address destAddr,
+        uint256 l2CallValue,
+        uint256 maxSubmissionCost,
+        address excessFeeRefundAddress,
+        address callValueRefundAddress,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        bytes calldata data
+    ) public payable virtual onlyWhitelisted returns (uint256) {
+        require(!isCreateRetryablePaused, "CREATE_RETRYABLES_PAUSED");
+
+        return
+            _deliverMessage(
+                L1MessageType_submitRetryableTx,
+                msg.sender,
+                abi.encodePacked(
+                    uint256(uint160(bytes20(destAddr))),
+                    l2CallValue,
+                    msg.value,
+                    maxSubmissionCost,
+                    uint256(uint160(bytes20(excessFeeRefundAddress))),
+                    uint256(uint160(bytes20(callValueRefundAddress))),
+                    maxGas,
+                    gasPriceBid,
+                    data.length,
+                    data
+                )
+            );
+    }
+
+    /**
+     * @notice Put a message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts
      * @dev all msg.value will deposited to callValueRefundAddress on L2
      * @param destAddr destination L2 contract address
      * @param l2CallValue call value for retryable L2 message
@@ -282,22 +331,27 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         uint256 gasPriceBid,
         bytes calldata data
     ) external payable virtual override onlyWhitelisted returns (uint256) {
+        // if a refund address is a contract, we apply the alias to it
+        // so that it can access its funds on the L2
+        // since the beneficiary and other refund addresses don't get rewritten by arb-os
+        if (shouldRewriteSender && Address.isContract(excessFeeRefundAddress)) {
+            excessFeeRefundAddress = AddressAliasHelper.applyL1ToL2Alias(excessFeeRefundAddress);
+        }
+        if (shouldRewriteSender && Address.isContract(callValueRefundAddress)) {
+            // this is the beneficiary. be careful since this is the address that can cancel the retryable in the L2
+            callValueRefundAddress = AddressAliasHelper.applyL1ToL2Alias(callValueRefundAddress);
+        }
+
         return
-            _deliverMessage(
-                L1MessageType_submitRetryableTx,
-                msg.sender,
-                abi.encodePacked(
-                    uint256(uint160(bytes20(destAddr))),
-                    l2CallValue,
-                    msg.value,
-                    maxSubmissionCost,
-                    uint256(uint160(bytes20(excessFeeRefundAddress))),
-                    uint256(uint160(bytes20(callValueRefundAddress))),
-                    maxGas,
-                    gasPriceBid,
-                    data.length,
-                    data
-                )
+            createRetryableTicketNoRefundAliasRewrite(
+                destAddr,
+                l2CallValue,
+                maxSubmissionCost,
+                excessFeeRefundAddress,
+                callValueRefundAddress,
+                maxGas,
+                gasPriceBid,
+                data
             );
     }
 
