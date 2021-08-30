@@ -563,6 +563,54 @@ func switchFees(enabled bool) error {
 	return waitForTx(tx, "SetChainParameters")
 }
 
+func switchAddressRewriting(enabled bool) error {
+	config.auth.GasPrice = big.NewInt(2066300000)
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	val := big.NewInt(0)
+	if enabled {
+		val = big.NewInt(1)
+	}
+	tx, err := arbOwner.SetChainParameter(config.auth, arbos.EnableL1ContractAddressAliasingParamId, val)
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "SetChainParameters")
+}
+
+func pauseInbox(inboxAddress ethcommon.Address) error {
+	inbox, err := ethbridgecontracts.NewInbox(inboxAddress, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := inbox.PauseCreateRetryables(config.auth)
+	if err != nil {
+		return err
+	}
+	if err := waitForTx(tx, "PauseCreateRetryables"); err != nil {
+		return err
+	}
+	tx, err = inbox.StartRewriteAddress(config.auth)
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "StartRewriteAddress")
+}
+
+func resumeInbox(inboxAddress ethcommon.Address) error {
+	inbox, err := ethbridgecontracts.NewInbox(inboxAddress, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := inbox.UnpauseCreateRetryables(config.auth)
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "UnpauseCreateRetryables")
+}
+
 func setDefaultAggregator(agg ethcommon.Address) error {
 	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, config.client)
 	if err != nil {
@@ -1024,6 +1072,22 @@ func handleCommand(fields []string) error {
 		}
 	case "check-allowed":
 		return checkAllowed()
+	case "switch-address-rewriting":
+		return switchAddressRewriting(true)
+	case "switch-address-rewriting-off":
+		return switchAddressRewriting(false)
+	case "pause-inbox":
+		if len(fields) != 2 {
+			return errors.New("Expected [inbox]")
+		}
+		inbox := ethcommon.HexToAddress(fields[1])
+		return pauseInbox(inbox)
+	case "resume-inbox":
+		if len(fields) != 2 {
+			return errors.New("Expected [inbox]")
+		}
+		inbox := ethcommon.HexToAddress(fields[1])
+		return resumeInbox(inbox)
 	default:
 		fmt.Println("Unknown command")
 	}
