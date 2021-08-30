@@ -47,7 +47,7 @@ task('bridge-transfer-admin-owner', 'transfer ownership of proxy admin')
   })
 
 task('bridge-transfer-beacon-owner', 'transfers beacon owner')
-  .addParam('address', 'current beacon address')
+  .addParam('beaconaddress', 'current beacon address')
   .addParam('newowner', 'new beacon owner')
   .setAction(async (args, hre) => {
     const { transferBeaconOwner } = initUpgrades(hre, __dirname)
