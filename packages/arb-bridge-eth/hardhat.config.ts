@@ -183,7 +183,7 @@ task('deploy-outbox-proxy', 'deploy outbox proxy')
     const TransparentUpgradeableProxyFactory =
       await hre.ethers.getContractFactory('TransparentUpgradeableProxy')
     const OutboxProxyDeployed = await TransparentUpgradeableProxyFactory.deploy(
-      args.outboxaddress,
+      args.outboxlogic,
       proxyAdminAddress,
       '0x'
     )
