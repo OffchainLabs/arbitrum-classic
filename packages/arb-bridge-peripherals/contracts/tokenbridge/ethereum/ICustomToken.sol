@@ -45,7 +45,4 @@ interface ICustomToken is ArbitrumEnabledToken {
     ) external virtual returns (bool);
 
     function balanceOf(address account) external view virtual returns (uint256);
-
-    /// @notice should return `0xa4b1` if token is enabled for arbitrum gateways
-    // function isArbitrumEnabled() external view virtual returns (uint8);
 }

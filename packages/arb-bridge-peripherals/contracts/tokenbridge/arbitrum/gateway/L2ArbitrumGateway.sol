@@ -278,7 +278,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
             }
 
             if (shouldWithdraw) {
-                // we override the gatewayData field to save on the stack
+                // we don't need the return value from triggerWithdrawal since this is forcing
+                // a withdrawal back to the L1 instead of composing with a L2 dapp
                 triggerWithdrawal(_token, address(this), _from, _amount, "");
                 return;
             }
