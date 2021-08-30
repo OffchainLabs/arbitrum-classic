@@ -650,22 +650,40 @@ export const initUpgrades = (
       )
     }
     const signer = signers[0]
+    console.log('Connecting to Upgradable Beacon at', upgradableBeaconAddress)
+
     const UpgradeableBeacon = (
       await hre.ethers.getContractFactory('UpgradeableBeacon')
     )
       .attach(upgradableBeaconAddress)
       .connect(signer)
 
+    // looks-like-an-UpgradeableBeacon sanity check
+    await UpgradeableBeacon.implementation()
+
+    console.log('Connected to Beacon; verifying that you are the owner')
+
     const beaconOwner = await UpgradeableBeacon.owner()
     if (beaconOwner.toLowerCase() !== signer.address.toLowerCase()) {
       throw new Error(
-        `Not connecetd as owner ${beaconOwner}, instead running as ${signer.address}`
+        `Not connected as owner ${beaconOwner}, instead running as ${signer.address}`
       )
     }
+    console.log('Verified 👍')
+
+    const newOwnerIsContract =
+      (await hre.ethers.provider.getCode(newOwner)).length > 2
 
     console.log(
-      `You are about to transfer owner ship of ${upgradableBeaconAddress} to ${newOwner}. You sure? ('Yes' to proceeed)`
+      `You are about to transfer owner ship of ${upgradableBeaconAddress} to ${newOwner}.`
     )
+
+    console.log(
+      'New owner address is ' + newOwnerIsContract
+        ? 'a contract address'
+        : 'an EOA'
+    )
+    console.log(`You sure? ('Yes' to proceed)`)
 
     const confirm = await prompt('')
     if (confirm !== 'Yes') {
