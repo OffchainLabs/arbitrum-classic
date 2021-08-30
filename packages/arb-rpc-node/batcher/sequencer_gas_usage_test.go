@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -43,7 +44,11 @@ func TestSequencerGasUsage(t *testing.T) {
 	gasRefunderAddr, _, gasRefunder, err := ethbridgecontracts.DeployGasRefunder(auth, clnt)
 	test.FailIfError(t, err)
 
-	_, err = gasRefunder.SetContractAllowed(auth, seqInboxAddr, true)
+	_, err = gasRefunder.AllowContracts(auth, []ethcommon.Address{seqInboxAddr})
+	test.FailIfError(t, err)
+	_, err = gasRefunder.AllowRefundees(auth, []ethcommon.Address{auth.From})
+	test.FailIfError(t, err)
+	_, err = gasRefunder.SetMaxSingleGasUsage(auth, big.NewInt(1_000_000_000))
 	test.FailIfError(t, err)
 
 	gasRefunderAuth := auths[1]
@@ -111,7 +116,7 @@ func TestSequencerGasUsage(t *testing.T) {
 
 	seq := big.NewInt(2)
 	for _, totalCount := range []int{1, 10, 100, 500} {
-		for _, dataSizePerTx := range []int{10, 100, 200} {
+		for _, dataSizePerTx := range []int{0, 1, 10, 100, 1000, 10000} {
 			l2Msg := message.L2Message{Data: common.RandBytes(dataSizePerTx)}
 			var transactionsData []byte
 			var lengths []*big.Int

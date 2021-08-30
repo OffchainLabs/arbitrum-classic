@@ -23,5 +23,5 @@ interface IGasRefunder {
         address payable spender,
         uint256 gasUsed,
         uint256 calldataSize
-    ) external;
+    ) external returns (bool success);
 }

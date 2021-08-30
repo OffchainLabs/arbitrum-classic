@@ -24,7 +24,9 @@ import "@openzeppelin/contracts-0.8/access/Ownable.sol";
 
 contract GasRefunder is IGasRefunder, Ownable {
     mapping(address => bool) public allowedContracts;
+    mapping(address => bool) public allowedRefundees;
     mapping(address => uint256) public lastContractRefund;
+    address public disallower;
     uint256 public maxRefundeeBalance;
     uint256 public extraGasMargin;
     uint256 public calldataCost;
@@ -35,12 +37,16 @@ contract GasRefunder is IGasRefunder, Ownable {
     event RefundedGasCosts(
         address indexed refundee,
         address indexed contractAddress,
+        bool indexed success,
         uint256 gas,
-        uint256 amountPaid,
-        bool success
+        uint256 gasPrice,
+        uint256 amountPaid
     );
-    // Reason can currently be 0 for contract already refunded this block,
-    // or 1 for the refundee is already over the max refundee balance.
+    // Current reason IDs:
+    // 0: Contract not allowed
+    // 1: Refundee not allowed
+    // 2: Contract already processed refund this block
+    // 3: Refundee is already above max balance
     event RefundGasCostsDenied(
         address indexed refundee,
         address indexed contractAddress,
@@ -49,7 +55,9 @@ contract GasRefunder is IGasRefunder, Ownable {
     );
     event Deposited(address sender, uint256 amount);
     event Withdrawn(address initiator, address destination, uint256 amount);
-    event ContractAllowedSet(address indexed contractAddress, bool allowed);
+    event ContractAllowedSet(address indexed addr, bool indexed allowed);
+    event RefundeeAllowedSet(address indexed addr, bool indexed allowed);
+    event DisallowerSet(address indexed addr);
     // Current parameter IDs:
     // 0: maxRefundeeBalance
     // 1: extraGasMargin
@@ -67,9 +75,43 @@ contract GasRefunder is IGasRefunder, Ownable {
         maxSingleGasUsage = 2e6; // 2 million gas
     }
 
-    function setContractAllowed(address contractAddress, bool allowed) external onlyOwner {
-        allowedContracts[contractAddress] = allowed;
-        emit ContractAllowedSet(contractAddress, allowed);
+    function setDisallower(address addr) external onlyOwner {
+        disallower = addr;
+        emit DisallowerSet(addr);
+    }
+
+    function allowContracts(address[] calldata addresses) external onlyOwner {
+        setContractsAllowedImpl(addresses, true);
+    }
+
+    function disallowContracts(address[] calldata addresses) external {
+        require(msg.sender == owner() || msg.sender == disallower, "NOT_AUTHORIZED");
+        setContractsAllowedImpl(addresses, false);
+    }
+
+    function setContractsAllowedImpl(address[] calldata addresses, bool allow) internal {
+        for (uint256 i = 0; i < addresses.length; i++) {
+            address addr = addresses[i];
+            allowedContracts[addr] = allow;
+            emit ContractAllowedSet(addr, allow);
+        }
+    }
+
+    function allowRefundees(address[] calldata addresses) external onlyOwner {
+        setRefundeesAllowedImpl(addresses, true);
+    }
+
+    function disallowRefundees(address[] calldata addresses) external {
+        require(msg.sender == owner() || msg.sender == disallower, "NOT_AUTHORIZED");
+        setRefundeesAllowedImpl(addresses, false);
+    }
+
+    function setRefundeesAllowedImpl(address[] calldata addresses, bool allow) internal {
+        for (uint256 i = 0; i < addresses.length; i++) {
+            address addr = addresses[i];
+            allowedRefundees[addr] = allow;
+            emit RefundeeAllowedSet(addr, allow);
+        }
     }
 
     function setMaxRefundeeBalance(uint256 newValue) external onlyOwner {
@@ -115,14 +157,22 @@ contract GasRefunder is IGasRefunder, Ownable {
         address payable refundee,
         uint256 gasUsed,
         uint256 calldataSize
-    ) external override {
+    ) external override returns (bool success) {
         uint256 startGasLeft = gasleft();
-        require(allowedContracts[msg.sender], "NOT_ALLOWED_CONTRACT");
+
+        if (!allowedContracts[msg.sender]) {
+            emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 0);
+            return false;
+        }
+        if (!allowedRefundees[refundee]) {
+            emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 1);
+            return false;
+        }
 
         if (lastContractRefund[msg.sender] == block.number) {
             // There was already a refund this block, don't refund further
-            emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 0);
-            return;
+            emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 2);
+            return false;
         }
         lastContractRefund[msg.sender] = block.number;
 
@@ -141,10 +191,10 @@ contract GasRefunder is IGasRefunder, Ownable {
 
         // Add in a bit of a buffer for the tx costs not measured with gasleft
         gasUsed += startGasLeft + extraGasMargin + (calldataSize * calldataCost);
-        // Split this up into two statements so that gasleft() comes after the storage load of extraGasMargin
+        // Split this up into two statements so that gasleft() comes after the storage loads
         gasUsed -= gasleft();
 
-        if (maxSingleGasUsageCached != 0 && gasUsed > maxSingleGasUsage) {
+        if (maxSingleGasUsageCached != 0 && gasUsed > maxSingleGasUsageCached) {
             gasUsed = maxSingleGasUsageCached;
         }
 
@@ -154,14 +204,14 @@ contract GasRefunder is IGasRefunder, Ownable {
         ) {
             if (refundeeBalance > maxRefundeeBalanceCache) {
                 // The refundee is already above their max balance
-                emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 1);
-                return;
+                emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 3);
+                return false;
             } else {
                 refundAmount = maxRefundeeBalanceCache - refundeeBalance;
             }
         }
 
-        bool success = refundee.send(refundAmount);
-        emit RefundedGasCosts(refundee, msg.sender, gasUsed, refundAmount, success);
+        success = refundee.send(refundAmount);
+        emit RefundedGasCosts(refundee, msg.sender, success, gasUsed, estGasPrice, refundAmount);
     }
 }
