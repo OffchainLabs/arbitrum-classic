@@ -63,11 +63,13 @@ describe('Custom ERC20', () => {
     )
     const withdrawRec = await withdrawRes.wait()
 
-    expect(withdrawRec.status).to.equal(1)
+    expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
     const withdrawEventData =
       bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
 
-    expect(withdrawEventData).to.exist
+    expect(withdrawEventData).to.exist(
+      'token getWithdrawalsInL2Transaction data came back empty'
+    )
 
     const outgoingMessageState = await bridge.getOutGoingMessageState(
       withdrawEventData.batchNumber,
@@ -83,7 +85,7 @@ describe('Custom ERC20', () => {
     expect(
       testWalletL2Balance &&
         testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenFundAmount)
-    ).to.be.true
+    ).to.be.true('wallet balance not properly deducted after withdraw')
     const walletAddress = await bridge.l1Signer.getAddress()
 
     const gatewayWithdrawEvents = await bridge.getGatewayWithdrawEventData(
@@ -91,14 +93,20 @@ describe('Custom ERC20', () => {
       walletAddress,
       { fromBlock: withdrawRec.blockNumber }
     )
-    expect(gatewayWithdrawEvents.length).to.equal(1)
+    expect(gatewayWithdrawEvents.length).to.equal(
+      1,
+      'token getGatewayWithdrawEventData query failed'
+    )
 
     const tokenWithdrawEvents = await bridge.getTokenWithdrawEventData(
       existentTestCustomToken,
       walletAddress,
       { fromBlock: withdrawRec.blockNumber }
     )
-    expect(tokenWithdrawEvents.length).to.equal(1)
+    expect(tokenWithdrawEvents.length).to.equal(
+      1,
+      'token getTokenWithdrawEventData query failed'
+    )
   })
 })
 
@@ -117,7 +125,7 @@ const depositTokenTest = async (bridge: Bridge) => {
 
   const data = await bridge.getAndUpdateL1TokenData(existentTestCustomToken)
   const allowed = data.ERC20 && data.ERC20.allowed
-  expect(allowed).to.be.true
+  expect(allowed).to.be.true('set token allowance failed')
 
   const expectedL1GatewayAddress = await bridge.l1Bridge.getGatewayAddress(
     testToken.address
@@ -141,13 +149,14 @@ const depositTokenTest = async (bridge: Bridge) => {
     initialBridgeTokenBalance
       .add(tokenDepositAmount)
       .eq(finalBridgeTokenBalance)
-  ).to.be.true
+  ).to.be.true('bridge balance not properly updated after deposit')
   await testRetryableTicket(bridge, depositRec)
 
   const l2Data = await bridge.getAndUpdateL2TokenData(existentTestCustomToken)
 
   const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
 
-  expect(testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmount)).to
-    .be.true
+  expect(
+    testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmount)
+  ).to.be.true('l2 wallet balance not properly updated after deposit')
 }

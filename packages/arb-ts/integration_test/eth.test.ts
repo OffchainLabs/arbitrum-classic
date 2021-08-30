@@ -33,9 +33,11 @@ describe('Ether', async () => {
     })
     const rec = await res.wait()
 
-    expect(rec.status).to.equal(1)
+    expect(rec.status).to.equal(1, 'ether transfer failed')
     const newBalance = await bridge.l2Provider.getBalance(randomAddress)
-    expect(newBalance.eq(amountToSend)).to.be.true
+    expect(newBalance.eq(amountToSend)).to.be.true(
+      "ether balance didn't update"
+    )
   })
   it('deposits ether', async () => {
     const { bridge } = await instantiateBridgeWithRandomWallet()
@@ -50,17 +52,20 @@ describe('Ether', async () => {
     const res = await bridge.depositETH(ethToDeposit)
     const rec = await res.wait()
 
-    expect(rec.status).to.equal(1)
+    expect(rec.status).to.equal(1, 'eth deposit L1 txn failed')
     const finalInboxBalance = await bridge.l1Bridge.l1Provider.getBalance(
       inbox.address
     )
-    expect(initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance))
+    expect(
+      initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),
+      'balance failed to update after eth deposit'
+    )
 
     const seqNumArr = await bridge.getInboxSeqNumFromContractTransaction(rec)
     if (seqNumArr === undefined) {
       throw new Error('no seq num')
     }
-    expect(seqNumArr.length).to.exist
+    expect(seqNumArr.length).to.exist('eth deposit seqNum not found')
 
     const seqNum = seqNumArr[0]
     const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)
@@ -72,7 +77,7 @@ describe('Ether', async () => {
       1000 * 60 * 12
     )
     prettyLog('l2 transaction found!')
-    expect(l2TxnRec.status).to.equal(1)
+    expect(l2TxnRec.status).to.equal(1, 'eth deposit l2 transaction not found')
 
     for (let i = 0; i < 60; i++) {
       prettyLog('balance check attempt ' + (i + 1))
@@ -102,7 +107,10 @@ describe('Ether', async () => {
       ARB_GAS_INFO,
       bridge.l2Provider
     )
-    expect(withdrawEthRec.status).to.equal(1)
+    expect(withdrawEthRec.status).to.equal(
+      1,
+      'initiate eth withdraw txn failed'
+    )
 
     const inWei = await arbGasInfo.getPricesInWei({
       blockTag: withdrawEthRec.blockNumber,
@@ -110,7 +118,9 @@ describe('Ether', async () => {
     const withdrawEventData =
       bridge.getWithdrawalsInL2Transaction(withdrawEthRec)[0]
 
-    expect(withdrawEventData).to.exist
+    expect(withdrawEventData).to.exist(
+      'eth withdraw getWithdrawalsInL2Transaction query came back empty'
+    )
 
     const myAddress = await bridge.l1Signer.getAddress()
 
