@@ -46,6 +46,13 @@ task('bridge-transfer-admin-owner', 'transfer ownership of proxy admin')
     await transferProxyAdminOwner(args.newowner)
   })
 
+task('bridge-transfer-beacon-owner', 'transfers beacon owner')
+  .addParam('address', 'current beacon address')
+  .addParam('newowner', 'new beacon owner')
+  .setAction(async (args, hre) => {
+    const { transferBeaconOwner } = initUpgrades(hre, __dirname)
+    await transferBeaconOwner(args.address, args.newowner)
+  })
 task(
   'remove-build-info',
   'remove giant build info string from current_deployments json'

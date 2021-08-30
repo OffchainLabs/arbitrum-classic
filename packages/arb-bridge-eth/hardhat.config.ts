@@ -130,8 +130,8 @@ task('core-verify-deployments', 'verifies implementations').setAction(
 )
 
 task('core-transfer-beacon-owner', 'transfers beacon owner')
-  .addParam('address', 'beacon contract')
-  .addParam('newowner', 'beacon contract')
+  .addParam('address', 'beacon contract address')
+  .addParam('newowner', 'new beacon owner')
 
   .setAction(async (args, hre) => {
     await handleFork(hre)
