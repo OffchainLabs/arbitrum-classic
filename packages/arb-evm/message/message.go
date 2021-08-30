@@ -170,3 +170,21 @@ func L2RemapAccount(account common.Address) common.Address {
 
 	return common.NewAddressFromBig(translated)
 }
+
+func L1RemapAccount(account common.Address) common.Address {
+
+	if account == (common.Address{}) {
+		return account
+	}
+
+	magic, _ := new(big.Int).SetString("1111000000000000000000000000000000001111", 16)
+	overflow := new(big.Int).Exp(big.NewInt(2), big.NewInt(20*8), nil)
+
+	translated := new(big.Int).SetBytes(account.Bytes())
+	translated.Sub(translated, magic)
+	if translated.Sign() == -1 {
+		translated.Add(translated, overflow)
+	}
+
+	return common.NewAddressFromBig(translated)
+}

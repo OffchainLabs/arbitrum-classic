@@ -27,10 +27,11 @@ import "../arbitrum/gateway/L2WethGateway.sol";
 import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
 import "../arbitrum/L2ArbitrumMessenger.sol";
+import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
 contract AddressMappingTest is L2ArbitrumMessenger {
     function getL1AddressTest(address sender) external pure returns (address l1Address) {
-        return L2ArbitrumMessenger.getL1Address(sender);
+        return AddressAliasHelper.undoL1ToL2Alias(sender);
     }
 }
 
@@ -45,22 +46,22 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
     }
 
     function sendTxToL2(
-        address _inbox,
+        address, /* _inbox */
         address _to,
-        address _user,
-        uint256 _l1CallValue,
+        address, /* _user */
+        uint256, /* _l1CallValue */
         uint256 _l2CallValue,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
+        uint256, /* _maxSubmissionCost */
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
         bytes memory _data
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = _to.call{ value: _l2CallValue }(_data);
         assembly {
             switch success
-                case 0 {
-                    revert(add(retdata, 32), mload(retdata))
-                }
+            case 0 {
+                revert(add(retdata, 32), mload(retdata))
+            }
         }
         return 1337;
     }
@@ -86,16 +87,16 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
 abstract contract L2ArbitrumTestMessenger is L2ArbitrumMessenger {
     function sendTxToL1(
         uint256 _l1CallValue,
-        address _from,
+        address, /* _from */
         address _to,
         bytes memory _data
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = _to.call{ value: _l1CallValue }(_data);
         assembly {
             switch success
-                case 0 {
-                    revert(add(retdata, 32), mload(retdata))
-                }
+            case 0 {
+                revert(add(retdata, 32), mload(retdata))
+            }
         }
         return 1337;
     }
@@ -156,10 +157,6 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
         bytes memory _data
     ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
         return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
-    }
-
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        return 50000;
     }
 
     address public stubAddressOracleReturn;
@@ -241,10 +238,6 @@ contract L2CustomGatewayTester is L2ArbitrumTestMessenger, L2CustomGateway {
     ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
         return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
     }
-
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        return 50000;
-    }
 }
 
 contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
@@ -306,9 +299,5 @@ contract L2WethGatewayTester is L2ArbitrumTestMessenger, L2WethGateway {
 
     function setL2WethAddress(address _l2Weth) external {
         L2WethGateway.l2Weth = _l2Weth;
-    }
-
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        return 50000;
     }
 }

@@ -173,6 +173,10 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.L1WethGateway__factory>
     getContractFactory(
+      name: 'ArbitrumEnabledToken',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ArbitrumEnabledToken__factory>
+    getContractFactory(
       name: 'ICustomToken',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ICustomToken__factory>
@@ -200,10 +204,6 @@ declare module 'hardhat/types/runtime' {
       name: 'ProxySetter',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ProxySetter__factory>
-    getContractFactory(
-      name: 'EscrowAndCallGateway',
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.EscrowAndCallGateway__factory>
     getContractFactory(
       name: 'GatewayRouter',
       signerOrOptions?: ethers.Signer | FactoryOptions

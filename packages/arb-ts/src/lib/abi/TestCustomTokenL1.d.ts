@@ -29,6 +29,7 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
+    'isArbitrumEnabled()': FunctionFragment
     'mint()': FunctionFragment
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
@@ -63,6 +64,10 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'isArbitrumEnabled',
+    values?: undefined
   ): string
   encodeFunctionData(functionFragment: 'mint', values?: undefined): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
@@ -116,6 +121,10 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'increaseAllowance',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'isArbitrumEnabled',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'mint', data: BytesLike): Result
@@ -223,6 +232,8 @@ export class TestCustomTokenL1 extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<[number]>
+
     mint(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
@@ -308,6 +319,8 @@ export class TestCustomTokenL1 extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  isArbitrumEnabled(overrides?: CallOverrides): Promise<number>
+
   mint(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
@@ -392,6 +405,8 @@ export class TestCustomTokenL1 extends BaseContract {
       addedValue: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
+
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<number>
 
     mint(overrides?: CallOverrides): Promise<void>
 
@@ -498,6 +513,8 @@ export class TestCustomTokenL1 extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<BigNumber>
+
     mint(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
@@ -586,6 +603,8 @@ export class TestCustomTokenL1 extends BaseContract {
       addedValue: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
+
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     mint(
       overrides?: Overrides & { from?: string | Promise<string> }

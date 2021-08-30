@@ -21,6 +21,9 @@ pragma solidity ^0.6.11;
 import "./L2ArbitrumGateway.sol";
 import "../../libraries/gateway/ICustomGateway.sol";
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
 contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
     // stores addresses of L2 tokens to be used
     mapping(address => address) public override l1ToL2Token;
@@ -31,26 +34,39 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
 
     /**
      * @notice internal utility function used to handle when no contract is deployed at expected address
-     * @param _l1Token L1 address of ERC20
-     * @param expectedL2Address L2 address of ERC20
-     * @param gatewayData encoded symbol/name/decimal data for initial deploy
      */
     function handleNoContract(
         address _l1Token,
-        address expectedL2Address,
+        address, /* expectedL2Address */
         address _from,
-        address _to,
+        address, /* _to */
         uint256 _amount,
-        bytes memory gatewayData
+        bytes memory /* gatewayData */
     ) internal override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         // trigger withdrawal
-        createOutboundTx(
-            address(this),
-            _amount,
-            getOutboundCalldata(_l1Token, address(this), _from, _amount, "")
-        );
+        // we don't need the return value from triggerWithdrawal since this is forcing a withdrawal back to the L1
+        // instead of composing with a L2 dapp
+        triggerWithdrawal(_l1Token, address(this), _from, _amount, "");
         return true;
+    }
+
+    function outboundEscrowTransfer(
+        address _l2Token,
+        address _from,
+        uint256 _amount
+    ) internal override returns (uint256 amountBurnt) {
+        uint256 prevBalance = IERC20(_l2Token).balanceOf(_from);
+
+        // in the custom gateway, we do the same behaviour as the superclass, but actually check
+        // for the balances of tokens to ensure that inflationary / deflationary changes in the amount
+        // are taken into account
+        // we ignore the return value since we actually query the token before and after to calculate
+        // the amount of tokens that were burnt
+        super.outboundEscrowTransfer(_l2Token, _from, _amount);
+
+        uint256 postBalance = IERC20(_l2Token).balanceOf(_from);
+        return SafeMath.sub(prevBalance, postBalance);
     }
 
     /**
