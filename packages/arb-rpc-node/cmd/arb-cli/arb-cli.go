@@ -202,7 +202,8 @@ func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) erro
 	}
 
 	fmt.Println("Submitting upgrade in", len(chunks), "chunks")
-	for _, upgradeChunk := range chunks {
+	for i, upgradeChunk := range chunks {
+		fmt.Println("Uploading chunk", i)
 		tx, err = arbOwner.ContinueCodeUpload(config.auth, hexutil.MustDecode(upgradeChunk))
 		if err != nil {
 			return err
@@ -210,6 +211,7 @@ func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) erro
 		if err := waitForTx(tx, "ContinueCodeUpload"); err != nil {
 			return err
 		}
+		time.Sleep(time.Second * 2)
 	}
 	time.Sleep(time.Second * 10)
 
