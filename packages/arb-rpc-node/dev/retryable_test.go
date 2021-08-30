@@ -577,7 +577,7 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 
 	checkRetryableCreationTx(t, client, retryableTx, requestId)
 	checkRetryableRedeem(t, client, requestId, redeemId, true)
-	checkRetryableExecution(t, client, retryableTx, requestId, retryableTx.MaxGas.Uint64(), retryableTx.GasPriceBid, true)
+	checkRetryableExecution(t, client, srv, retryableTx, requestId, retryableTx.MaxGas.Uint64(), retryableTx.GasPriceBid, true, sender)
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 	ticketResult, err := backend.db.GetRequest(ticketId)
@@ -684,7 +684,7 @@ func TestRetryableSeparateReceipts(t *testing.T) {
 
 	checkRetryableCreationTx(t, client, retryableTx, requestId)
 	checkRetryableRedeem(t, client, requestId, common.NewHashFromEth(tx.Hash()), true)
-	checkRetryableExecution(t, client, retryableTx, requestId, tx.Gas(), tx.GasPrice(), true)
+	checkRetryableExecution(t, client, srv, retryableTx, requestId, tx.Gas(), tx.GasPrice(), true, sender)
 }
 
 func TestRetryableEmptyDest(t *testing.T) {
@@ -718,7 +718,7 @@ func TestRetryableEmptyDest(t *testing.T) {
 
 	checkRetryableCreationTx(t, client, retryableTx, requestId)
 	checkRetryableRedeem(t, client, requestId, redeemId, true)
-	checkRetryableExecution(t, client, retryableTx, requestId, retryableTx.MaxGas.Uint64(), retryableTx.GasPriceBid, false)
+	checkRetryableExecution(t, client, srv, retryableTx, requestId, retryableTx.MaxGas.Uint64(), retryableTx.GasPriceBid, false, sender)
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 	ticketResult, err := backend.db.GetRequest(ticketId)
@@ -834,8 +834,9 @@ func checkRetryableRedeem(t *testing.T, client *web3.EthClient, requestId, redee
 	}
 }
 
-func checkRetryableExecution(t *testing.T, client *web3.EthClient, retryableTx message.RetryableTx, requestId common.Hash, redeemGas uint64, redeemGasPrice *big.Int, hasLog bool) {
+func checkRetryableExecution(t *testing.T, client *web3.EthClient, srv *aggregator.Server, retryableTx message.RetryableTx, requestId common.Hash, redeemGas uint64, redeemGasPrice *big.Int, hasLog bool, l1Sender common.Address) {
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+	l2Sender := message.L2RemapAccount(l1Sender)
 
 	simpleConn, err := arbostestcontracts.NewSimple(retryableTx.Destination.ToEthAddress(), client)
 	test.FailIfError(t, err)
@@ -860,7 +861,10 @@ func checkRetryableExecution(t *testing.T, client *web3.EthClient, retryableTx m
 		parsedLog, err := simpleConn.ParseTestEvent(*evmLog)
 		test.FailIfError(t, err)
 		if parsedLog.Value.Cmp(retryableTx.Value) != 0 {
-			t.Error("bad event data")
+			t.Error("bad event value data")
+		}
+		if parsedLog.Sender != l2Sender.ToEthAddress() {
+			t.Error("bad event sender data")
 		}
 	} else {
 		if len(ticketReceipt.Logs) != 0 {
@@ -893,5 +897,12 @@ func checkRetryableExecution(t *testing.T, client *web3.EthClient, retryableTx m
 	}
 	if ticketTransaction.Nonce() != 0 {
 		t.Error("unexpected nonce", ticketTransaction.Nonce())
+	}
+
+	redeemRequestResult, err := srv.GetRequestResult(requestId)
+	test.FailIfError(t, err)
+
+	if redeemRequestResult.IncomingRequest.Sender != l2Sender {
+		t.Error("incorrect incoming request sender. Got", redeemRequestResult.IncomingRequest.Sender.String(), "but expected", l2Sender.String())
 	}
 }
