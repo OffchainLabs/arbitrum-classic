@@ -97,6 +97,13 @@ func TestUpgrade(t *testing.T) {
 	_, err = simpleCon.Exists(auth)
 	test.FailIfError(t, err)
 
+	// Try to start a new upgrade to make sure the owner auth still works
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+	test.FailIfError(t, err)
+	auth.GasLimit = 10000000000
+	_, err = arbOwner.StartCodeUpload(auth)
+	test.FailIfError(t, err)
+
 	newVersion, err := arbSys.ArbOSVersion(&bind.CallOpts{})
 	test.FailIfError(t, err)
 
