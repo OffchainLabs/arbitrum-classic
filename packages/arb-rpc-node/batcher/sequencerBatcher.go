@@ -43,6 +43,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -61,7 +62,7 @@ type SequencerBatcher struct {
 	client                          ethutils.EthClient
 	delayedMessagesTargetDelay      *big.Int
 	sequencerInbox                  *ethbridgecontracts.SequencerInbox
-	auth                            ethbridge.TransactAuth
+	auth                            transactauth.TransactAuth
 	fromAddress                     common.Address
 	chainTimeCheckInterval          time.Duration
 	logBatchGasCosts                bool
@@ -135,12 +136,12 @@ func NewSequencerBatcher(
 		return nil, errors.New("Transaction auth address isn't for sequencer")
 	}
 
-	var transactAuth ethbridge.TransactAuth
+	var transactAuth transactauth.TransactAuth
 	var fb *fireblocks.Fireblocks
 	if len(walletConfig.Fireblocks.SSLKey) > 0 {
-		transactAuth, fb, err = ethbridge.NewFireblocksTransactAuth(ctx, client, auth, walletConfig)
+		transactAuth, fb, err = transactauth.NewFireblocksTransactAuth(ctx, client, auth, walletConfig)
 	} else {
-		transactAuth, err = ethbridge.NewTransactAuth(ctx, client, auth)
+		transactAuth, err = transactauth.NewTransactAuth(ctx, client, auth)
 
 	}
 	if err != nil {
@@ -593,7 +594,6 @@ const gasCostBase int = 70292
 const gasCostDelayedMessages int = 63505
 const gasCostPerMessage int = 1431
 const gasCostPerMessageByte int = 16
-const gasCostMaximum int = 2_000_000
 
 // Wait this long after batch confirmation before publishing a new batch
 const l1RacePrevention time.Duration = time.Second * 10
@@ -643,11 +643,39 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 				return false, err
 			}
 
+			// We also allow the empty address as it's used for the delayed messages end of block
+			if seqMsg.Sender != (common.Address{}) && seqMsg.Sender != b.fromAddress {
+				msg := "sequencer message in database contains messages from another sequencer"
+				if b.config.Node.Sequencer.RewriteSequencerAddress {
+					msg += "! Reorganizing to compensate..."
+				}
+
+				logger.
+					Error().
+					Str("messageAddress", seqMsg.Sender.String()).
+					Str("fromAddress", b.fromAddress.String()).
+					Str("sequenceNumber", seqMsg.InboxSeqNum.String()).
+					Msg(msg)
+
+				if b.config.Node.Sequencer.RewriteSequencerAddress {
+					b.reorgToNewSequencerAddress(ctx, prevMsgCount)
+
+					return false, errors.New("reorganized to rewrite sequencer address")
+				}
+
+				if len(transactionsLengths) > 0 {
+					// Still publish what we can
+					break
+				} else {
+					return false, errors.New("sequencer message in database begins with messages from another sequencer")
+				}
+			}
+
 			estimatedGasCost += gasCostPerMessage + gasCostPerMessageByte*len(seqMsg.Data)
 		} else {
 			estimatedGasCost += gasCostDelayedMessages
 		}
-		if i != 0 && estimatedGasCost >= gasCostMaximum && !skippingImplicitEndOfBlock {
+		if i != 0 && int64(estimatedGasCost) >= b.config.Node.Sequencer.MaxBatchGasCost && !skippingImplicitEndOfBlock {
 			publishingAllBatchItems = false
 			break
 		}
@@ -819,7 +847,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	atomic.StoreInt32(&b.publishingBatchAtomic, 1)
 	go (func() {
 		defer atomic.StoreInt32(&b.publishingBatchAtomic, 0)
-		receipt, err := ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.fromAddress.ToEthAddress(), arbTx, "addSequencerL2BatchFromOrigin", b.auth, b.auth)
+		receipt, err := transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.fromAddress.ToEthAddress(), arbTx, "addSequencerL2BatchFromOrigin", b.auth, b.auth)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error waiting for batch receipt")
 			return
@@ -843,7 +871,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	return publishingAllBatchItems, nil
 }
 
-func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount *big.Int, newChainTime inbox.ChainTime) error {
+func (b *SequencerBatcher) reorgAndModifySequencerMessages(ctx context.Context, prevMsgCount *big.Int, modifier func(*inbox.InboxMessage)) error {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 
@@ -860,7 +888,7 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 		}
 	}
 	for i := range batchItems {
-		item := batchItems[i]
+		item := &batchItems[i]
 		if len(item.SequencerMessage) == 0 {
 			item.Accumulator = common.Hash{}
 		} else {
@@ -868,11 +896,10 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 			if err != nil {
 				return err
 			}
-			seqMsg.ChainTime = newChainTime
+			modifier(&seqMsg)
 			item.SequencerMessage = seqMsg.ToBytes()
 			item.Accumulator = common.Hash{}
 		}
-		batchItems[i] = item
 	}
 	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
@@ -880,6 +907,21 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 	}
 
 	return nil
+}
+
+func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount *big.Int, newChainTime inbox.ChainTime) error {
+	return b.reorgAndModifySequencerMessages(ctx, prevMsgCount, func(msg *inbox.InboxMessage) {
+		msg.ChainTime = newChainTime
+	})
+}
+
+func (b *SequencerBatcher) reorgToNewSequencerAddress(ctx context.Context, prevMsgCount *big.Int) error {
+	return b.reorgAndModifySequencerMessages(ctx, prevMsgCount, func(msg *inbox.InboxMessage) {
+		// We don't modify the empty address as it's used for the delayed messages end of block
+		if msg.Sender != (common.Address{}) {
+			msg.Sender = b.fromAddress
+		}
+	})
 }
 
 func (b *SequencerBatcher) reorgOutHugeMsg(ctx context.Context, prevMsgCount *big.Int) error {
@@ -968,9 +1010,8 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			return
 		case <-time.After(b.chainTimeCheckInterval):
 		}
-		if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
-			continue
-		}
+
+		// Safely get the current chain time
 		newChainTime, err := getChainTime(ctx, b.client)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error getting chain time")
@@ -996,15 +1037,23 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		}
 		chainTime = newChainTime
 		blockNum := chainTime.BlockNum.AsInt()
+
+		// Determine if we should create a batch
+		shouldSequence := b.LockoutManager == nil || b.LockoutManager.ShouldSequence()
 		targetCreateBatch := new(big.Int).Add(b.lastCreatedBatchAt, b.createBatchBlockInterval)
 		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
-			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= int64(gasCostMaximum)*9/10 ||
+			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= b.config.Node.Sequencer.MaxBatchGasCost*9/10 ||
 			firstBatchCreation
+		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.PublishBatchesWithoutLockout {
+			// We don't have the lockout and publishing batches without the lockout is disabled
+			creatingBatch = false
+		}
 		if creatingBatch && atomic.LoadInt32(&b.publishingBatchAtomic) != 0 {
 			// The previous batch is still waiting on confirmation; don't attempt to create another yet
 			creatingBatch = false
 		}
 		if creatingBatch && blockNum.Cmp(new(big.Int).Add(targetCreateBatch, big.NewInt(b.config.Node.Sequencer.L1PostingStrategy.HighGasDelayBlocks))) < 0 {
+			// Check if gas price is too high, and if so, hold off on creating a batch
 			gasPrice, err := b.client.SuggestGasPrice(ctx)
 			if err != nil {
 				logger.Warn().Err(err).Msg("error getting gas price")
@@ -1016,25 +1065,31 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 				}
 			}
 		}
-		targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
+
+		// Maybe sequence delayed messages
 		sequencedDelayed := false
-		if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
-			sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime, false)
-			if err != nil {
-				logger.Error().Err(err).Msg("Error delivering delayed messages")
-				continue
-			}
-			b.lastSequencedDelayedAt = blockNum
-		}
-		targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
 		var dontPublishBlockNum *big.Int
-		if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed {
-			b.inboxReader.MessageDeliveryMutex.Lock()
-			b.latestChainTime = chainTime
-			// Avoid inefficency of publishing something that just got put in this timestamp
-			dontPublishBlockNum = b.latestChainTime.BlockNum.AsInt()
-			b.inboxReader.MessageDeliveryMutex.Unlock()
+		if shouldSequence {
+			targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
+			if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
+				sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime, false)
+				if err != nil {
+					logger.Error().Err(err).Msg("Error delivering delayed messages")
+					continue
+				}
+				b.lastSequencedDelayedAt = blockNum
+			}
+			targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
+			if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed {
+				b.inboxReader.MessageDeliveryMutex.Lock()
+				b.latestChainTime = chainTime
+				// Avoid inefficency of publishing something that just got put in this timestamp
+				dontPublishBlockNum = b.latestChainTime.BlockNum.AsInt()
+				b.inboxReader.MessageDeliveryMutex.Unlock()
+			}
 		}
+
+		// Maybe create a batch
 		if creatingBatch {
 			prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{
 				Context:     ctx,

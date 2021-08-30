@@ -138,6 +138,9 @@ type Sequencer struct {
 	ReorgOutHugeMessages              bool              `koanf:"reorg-out-huge-messages"`
 	Lockout                           Lockout           `koanf:"lockout"`
 	L1PostingStrategy                 L1PostingStrategy `koanf:"l1-posting-strategy"`
+	PublishBatchesWithoutLockout      bool              `koanf:"publish-batches-without-lockout"`
+	RewriteSequencerAddress           bool              `koanf:"rewrite-sequencer-address"`
+	MaxBatchGasCost                   int64             `koanf:"max-batch-gas-cost"`
 }
 
 type WS struct {
@@ -199,17 +202,19 @@ type Wallet struct {
 }
 
 type WalletFireblocks struct {
-	APIKey          string     `koanf:"api-key,omitempty"`
-	AssetId         string     `koanf:"asset-id,omitempty"`
-	BaseURL         string     `koanf:"base-url,omitempty"`
-	ExternalWallets string     `koanf:"external-wallets"`
-	FeedSigner      FeedSigner `koanf:"feed-signer"`
-	InternalWallets string     `koanf:"internal-wallets"`
-	SourceAddress   string     `koanf:"source-address,omitempty"`
-	SourceId        string     `koanf:"source-id,omitempty"`
-	SourceType      string     `koanf:"source-type,omitempty"`
-	SSLKey          string     `koanf:"ssl-key,omitempty"`
-	SSLKeyPassword  string     `koanf:"ssl-key-password,omitempty"`
+	APIKey               string     `koanf:"api-key,omitempty"`
+	AssetId              string     `koanf:"asset-id,omitempty"`
+	BaseURL              string     `koanf:"base-url,omitempty"`
+	DisableHandlePending bool       `koanf:"disable-handle-pending"`
+	ExternalWallets      string     `koanf:"external-wallets"`
+	FeedSigner           FeedSigner `koanf:"feed-signer"`
+	InternalWallets      string     `koanf:"internal-wallets"`
+	SourceAddress        string     `koanf:"source-address,omitempty"`
+	SourceId             string     `koanf:"source-id,omitempty"`
+	SourceType           string     `koanf:"source-type,omitempty"`
+	SSLKey               string     `koanf:"ssl-key,omitempty"`
+	SSLKeyPassword       string     `koanf:"ssl-key-password,omitempty"`
+	UseFireblocksFees    bool       `koanf:"use-fireblocks-fees"`
 }
 
 type FeedSigner struct {
@@ -314,6 +319,9 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.reorg-out-huge-messages", false, "erase any huge messages in database that cannot be published (DANGEROUS)")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
 	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
+	f.Bool("node.sequencer.publish-batches-without-lockout", false, "continue publishing batches (but not sequencing) without the lockout")
+	f.Bool("node.sequencer.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
+	f.Int64("node.sequencer.max-batch-gas-cost", 2_000_000, "max L1 batch gas cost to post before splitting it up into multiple batches")
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")

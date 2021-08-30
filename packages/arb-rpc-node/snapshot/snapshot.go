@@ -142,6 +142,27 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 }
 
 func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+	arbosRemappingEnabled := false
+	if s.arbosVersion >= 40 {
+		arbOwnerMsg := message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1 << 30),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
+				Payment:     big.NewInt(0),
+				Data:        arbos.GetChainParameterData(arbos.EnableL1ContractAddressAliasingParamId),
+			},
+		}
+		arbOwnerRes, _, err := s.Call(arbOwnerMsg, common.Address{})
+		if err != nil {
+			return nil, nil, err
+		}
+		if arbOwnerRes.ResultCode != evm.ReturnCode {
+			return nil, nil, errors.New("failed to query ArbOS address remapping state")
+		}
+		arbosRemappingEnabled = new(big.Int).SetBytes(arbOwnerRes.ReturnData).Sign() > 0
+	}
+
 	redeemGas := new(big.Int).Set(msg.MaxGas)
 	redeemGasPriceBid := new(big.Int).Set(msg.GasPriceBid)
 	msg.MaxGas = msg.MaxGas.SetUint64(0)
@@ -172,7 +193,11 @@ func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.A
 		targetHash2 = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(estimateSeqNum))
 		targetHash2 = hashing.SoliditySHA3(hashing.Bytes32(targetHash2), hashing.Uint256(big.NewInt(0)))
 	}
-	inboxMsg2 := message.NewInboxMessage(gasEstimationMessage, sender, estimateSeqNum, big.NewInt(0), s.time)
+	redeemer := sender
+	if arbosRemappingEnabled {
+		redeemer = message.L2RemapAccount(redeemer)
+	}
+	inboxMsg2 := message.NewInboxMessage(gasEstimationMessage, redeemer, estimateSeqNum, big.NewInt(0), s.time)
 
 	mach := s.mach.Clone()
 	assertion, debugPrints, _, err := mach.ExecuteAssertionAdvanced(

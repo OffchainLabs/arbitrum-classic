@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ethbridge
+package transactauth
 
 import (
 	"context"
@@ -25,11 +25,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/accounttype"
-	"github.com/pkg/errors"
 )
 
 type FireblocksTransactAuth struct {
@@ -62,13 +64,13 @@ func NewFireblocksTransactAuthAdvanced(
 		fb:     fb,
 	}
 
-	// Handle any pending transactions left from last time
-	/* TODO
-	err = waitForPendingTransactions(ctx, client, transactAuth, fb)
-	if err != nil {
-		return nil, nil, err
+	if !walletConfig.Fireblocks.DisableHandlePending {
+		// Handle any pending transactions left from last time process was running
+		err = waitForPendingTransactions(ctx, client, transactAuth, fb)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
-	*/
 
 	return transactAuth, fb, nil
 }
@@ -96,9 +98,12 @@ func waitForPendingTransactions(
 		}
 
 		if len(*pendingTx) == 0 {
-			break
+			logger.Info().Msg("no pending fireblocks transactions to take care of")
+			return nil
 		}
 
+		logger.Info().Int("count", len(*pendingTx)).Msg("pending fireblocks transactions need to be handled")
+		failed := false
 		for _, details := range *pendingTx {
 			if details.Status == fireblocks.Broadcasting {
 				logger.
@@ -115,10 +120,15 @@ func waitForPendingTransactions(
 					Data:  []byte(details.ExtraParameters.ContractCallData),
 				}
 				rawTx := types.NewTx(baseTx)
-				arbTx, err := NewFireblocksArbTransaction(rawTx, &details)
+				arbTx, err := arbtransaction.NewFireblocksArbTransaction(rawTx, &details)
 				if err != nil {
-					logger.Error().Err(err).Msg("unable to wait for pending transactions")
-					return err
+					logger.
+						Warn().
+						Err(err).
+						Str("id", details.Id).
+						Msg("error creating new version of pending transaction")
+					failed = true
+					continue
 				}
 				_, err = WaitForReceiptWithResultsAndReplaceByFee(
 					ctx,
@@ -130,7 +140,13 @@ func waitForPendingTransactions(
 					transactAuth,
 				)
 				if err != nil {
-					return err
+					logger.
+						Warn().
+						Err(err).
+						Str("id", details.Id).
+						Msg("error waiting for receipt for pending transaction")
+					failed = true
+					continue
 				}
 			} else {
 				logger.
@@ -142,16 +158,19 @@ func waitForPendingTransactions(
 			}
 		}
 
+		if failed {
+			// Stop trying to resolve pending transactions
+			return nil
+		}
+
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(5 * time.Second):
+		case <-time.After(10 * time.Second):
 		}
 	}
-
-	return nil
 }
-func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *ArbTransaction) (*types.Receipt, error) {
+func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
 	details, err := ta.fb.GetTransaction(tx.Id())
 	if err != nil {
 		logger.
@@ -180,19 +199,20 @@ func (ta *FireblocksTransactAuth) NonceAt(ctx context.Context, account ethcommon
 	return ta.client.NonceAt(ctx, account, blockNumber)
 }
 
-func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*ArbTransaction, error) {
-	txResponse, err := ta.fb.CreateContractCall(
-		accounttype.OneTimeAddress,
-		tx.To().Hex(),
-		"",
-		tx.Value(),
-		big.NewInt(int64(tx.Gas())),
-		tx.GasPrice(),
-		tx.GasTipCap(),
-		tx.GasFeeCap(),
-		replaceTxByHash,
-		ethcommon.Bytes2Hex(tx.Data()),
-	)
+func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error) {
+	input := fireblocks.CreateTransactionInput{
+		DestinationType:     accounttype.OneTimeAddress,
+		DestinationId:       tx.To().Hex(),
+		DestinationTag:      "",
+		AmountWei:           tx.Value(),
+		GasLimitWei:         big.NewInt(int64(tx.Gas())),
+		GasPriceWei:         tx.GasPrice(),
+		MaxPriorityFeeWei:   tx.GasTipCap(),
+		MaxTotalGasPriceWei: tx.GasFeeCap(),
+		ReplaceTxByHash:     replaceTxByHash,
+		CallData:            ethcommon.Bytes2Hex(tx.Data()),
+	}
+	txResponse, err := ta.fb.CreateContractCall(&input)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +259,7 @@ func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types
 		}
 
 		if len(details.TxHash) > 0 {
-			return NewFireblocksArbTransaction(tx, details)
+			return arbtransaction.NewFireblocksArbTransaction(tx, details)
 		}
 
 		// Hash not returned, keep trying
@@ -251,8 +271,10 @@ func (ta *FireblocksTransactAuth) Sign(addr ethcommon.Address, tx *types.Transac
 	return tx, nil
 }
 
-func (ta *FireblocksTransactAuth) getAuth() *bind.TransactOpts {
-	return ta.auth
+func (ta *FireblocksTransactAuth) GetAuth(ctx context.Context) *bind.TransactOpts {
+	auth := *ta.auth
+	auth.Context = ctx
+	return &auth
 }
 
 func (ta *FireblocksTransactAuth) From() ethcommon.Address {
