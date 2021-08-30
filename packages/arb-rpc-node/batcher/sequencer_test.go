@@ -182,6 +182,7 @@ func TestSequencerBatcher(t *testing.T) {
 			Sequencer: configuration.Sequencer{
 				CreateBatchBlockInterval:   40,
 				DelayedMessagesTargetDelay: 1,
+				MaxBatchGasCost:            2_000_000,
 			},
 		},
 	}
