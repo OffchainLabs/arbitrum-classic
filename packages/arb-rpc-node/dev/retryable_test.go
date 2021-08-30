@@ -129,6 +129,13 @@ func TestRetryableRedeem(t *testing.T) {
 	retryableTx, requestId := setupTicket(t, backend, sender, common.NewAddressFromEth(dest), simpleABI.Methods["exists"].ID, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
+	redeemRequestResult, err := srv.GetRequestResult(requestId)
+	test.FailIfError(t, err)
+
+	if redeemRequestResult.IncomingRequest.Sender != sender {
+		t.Error("incorrect incoming request sender. Got", redeemRequestResult.IncomingRequest.Sender.String(), "but expected", sender.String())
+	}
+
 	redeemReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
 	test.FailIfError(t, err)
 
@@ -209,6 +216,13 @@ func TestRetryableRedeem(t *testing.T) {
 		t.Fatal("final tx failed")
 	}
 
+	finalRequestResult, err := srv.GetRequestResult(ticketId)
+	test.FailIfError(t, err)
+
+	if finalRequestResult.IncomingRequest.Sender != sender {
+		t.Error("incorrect final request redeem sender. Got", finalRequestResult.IncomingRequest.Sender.String(), "but expected", sender.String())
+	}
+
 	redeemRequest, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 
@@ -241,6 +255,12 @@ func TestRetryableRedeem(t *testing.T) {
 	}
 	if txLogs[0].Topics[0] != simpleABI.Events["TestEvent"].ID {
 		t.Fatal("wrong event topic")
+	}
+
+	var senderInLog common.Address
+	copy(senderInLog[:], txLogs[0].Data[32+(32-20):])
+	if senderInLog != sender {
+		t.Fatal("wrong event sender data, got", senderInLog.String(), "but expected", sender.String())
 	}
 }
 
