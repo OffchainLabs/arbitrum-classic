@@ -34,7 +34,7 @@ var logger = log.With().Caller().Stack().Str("component", "message").Logger()
 
 const (
 	L2Type            inbox.Type = 3
-	OldInitType       inbox.Type = 4    // remove after upgrade 5
+	OldInitType       inbox.Type = 4 // remove after upgrade 5
 	EndOfBlockType    inbox.Type = 6
 	EthDepositTxType  inbox.Type = 7
 	RetryableType     inbox.Type = 9
@@ -151,4 +151,22 @@ func (t EndBlockMessage) Type() inbox.Type {
 
 func (t EndBlockMessage) AsData() []byte {
 	return nil
+}
+
+func L2RemapAccount(account common.Address) common.Address {
+
+	if account == (common.Address{}) {
+		return account
+	}
+
+	magic, _ := new(big.Int).SetString("1111000000000000000000000000000000001111", 16)
+	overflow := new(big.Int).Exp(big.NewInt(2), big.NewInt(20*8), nil)
+
+	translated := new(big.Int).SetBytes(account.Bytes())
+	translated.Add(translated, magic)
+	if translated.Cmp(overflow) == 1 {
+		translated.Sub(translated, overflow)
+	}
+
+	return common.NewAddressFromBig(translated)
 }
