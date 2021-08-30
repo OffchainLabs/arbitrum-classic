@@ -8,7 +8,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   await deploy('Rollup', {
     from: deployer,
-    args: [],
+    args: [1],
   })
 
   await deploy('RollupUserFacet', {

@@ -36,16 +36,17 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
@@ -455,7 +456,6 @@ func (b *L1Emulator) IncreaseTime(amount int64) {
 }
 
 func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator ethcommon.Address) error {
-
 	client := web3.NewEthClient(srv, true)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
@@ -463,10 +463,12 @@ func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator
 	}
 
 	tx, err := arbOwner.SetFairGasPriceSender(ownerAuth, aggregator, true)
+	arbTx := arbtransaction.NewArbTransaction(tx)
 	if err != nil {
 		return errors.Wrap(err, "error calling SetFairGasPriceSender")
 	}
-	_, err = ethbridge.WaitForReceiptWithResultsSimple(context.Background(), client, tx.Hash())
+
+	_, err = transactauth.WaitForReceiptWithResultsSimple(context.Background(), transactauth.NewEthArbReceiptFetcher(client), arbTx)
 	if err != nil {
 		return errors.Wrap(err, "error getting SetFairGasPriceSender receipt")
 	}

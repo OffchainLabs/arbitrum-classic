@@ -21,13 +21,20 @@ import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface IOutboxInterface extends ethers.utils.Interface {
   functions: {
+    'l2ToL1BatchNum()': FunctionFragment
     'l2ToL1Block()': FunctionFragment
     'l2ToL1EthBlock()': FunctionFragment
+    'l2ToL1OutputId()': FunctionFragment
     'l2ToL1Sender()': FunctionFragment
     'l2ToL1Timestamp()': FunctionFragment
+    'outboxEntryExists(uint256)': FunctionFragment
     'processOutgoingMessages(bytes,uint256[])': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'l2ToL1BatchNum',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'l2ToL1Block',
     values?: undefined
@@ -37,21 +44,37 @@ interface IOutboxInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'l2ToL1OutputId',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'l2ToL1Sender',
     values?: undefined
   ): string
   encodeFunctionData(
     functionFragment: 'l2ToL1Timestamp',
     values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'outboxEntryExists',
+    values: [BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'processOutgoingMessages',
     values: [BytesLike, BigNumberish[]]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'l2ToL1BatchNum',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'l2ToL1Block', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'l2ToL1EthBlock',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'l2ToL1OutputId',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -60,6 +83,10 @@ interface IOutboxInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'l2ToL1Timestamp',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'outboxEntryExists',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -120,13 +147,22 @@ export class IOutbox extends BaseContract {
   interface: IOutboxInterface
 
   functions: {
+    l2ToL1BatchNum(overrides?: CallOverrides): Promise<[BigNumber]>
+
     l2ToL1Block(overrides?: CallOverrides): Promise<[BigNumber]>
 
     l2ToL1EthBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
+    l2ToL1OutputId(overrides?: CallOverrides): Promise<[string]>
+
     l2ToL1Sender(overrides?: CallOverrides): Promise<[string]>
 
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    outboxEntryExists(
+      batchNum: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
 
     processOutgoingMessages(
       sendsData: BytesLike,
@@ -135,13 +171,22 @@ export class IOutbox extends BaseContract {
     ): Promise<ContractTransaction>
   }
 
+  l2ToL1BatchNum(overrides?: CallOverrides): Promise<BigNumber>
+
   l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
   l2ToL1EthBlock(overrides?: CallOverrides): Promise<BigNumber>
 
+  l2ToL1OutputId(overrides?: CallOverrides): Promise<string>
+
   l2ToL1Sender(overrides?: CallOverrides): Promise<string>
 
   l2ToL1Timestamp(overrides?: CallOverrides): Promise<BigNumber>
+
+  outboxEntryExists(
+    batchNum: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<boolean>
 
   processOutgoingMessages(
     sendsData: BytesLike,
@@ -150,13 +195,22 @@ export class IOutbox extends BaseContract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    l2ToL1BatchNum(overrides?: CallOverrides): Promise<BigNumber>
+
     l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
     l2ToL1EthBlock(overrides?: CallOverrides): Promise<BigNumber>
 
+    l2ToL1OutputId(overrides?: CallOverrides): Promise<string>
+
     l2ToL1Sender(overrides?: CallOverrides): Promise<string>
 
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<BigNumber>
+
+    outboxEntryExists(
+      batchNum: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<boolean>
 
     processOutgoingMessages(
       sendsData: BytesLike,
@@ -169,28 +223,28 @@ export class IOutbox extends BaseContract {
     OutBoxTransactionExecuted(
       destAddr?: string | null,
       l2Sender?: string | null,
-      outboxIndex?: BigNumberish | null,
+      outboxEntryIndex?: BigNumberish | null,
       transactionIndex?: null
     ): TypedEventFilter<
       [string, string, BigNumber, BigNumber],
       {
         destAddr: string
         l2Sender: string
-        outboxIndex: BigNumber
+        outboxEntryIndex: BigNumber
         transactionIndex: BigNumber
       }
     >
 
     OutboxEntryCreated(
       batchNum?: BigNumberish | null,
-      outboxIndex?: null,
+      outboxEntryIndex?: null,
       outputRoot?: null,
       numInBatch?: null
     ): TypedEventFilter<
       [BigNumber, BigNumber, string, BigNumber],
       {
         batchNum: BigNumber
-        outboxIndex: BigNumber
+        outboxEntryIndex: BigNumber
         outputRoot: string
         numInBatch: BigNumber
       }
@@ -198,13 +252,22 @@ export class IOutbox extends BaseContract {
   }
 
   estimateGas: {
+    l2ToL1BatchNum(overrides?: CallOverrides): Promise<BigNumber>
+
     l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
     l2ToL1EthBlock(overrides?: CallOverrides): Promise<BigNumber>
 
+    l2ToL1OutputId(overrides?: CallOverrides): Promise<BigNumber>
+
     l2ToL1Sender(overrides?: CallOverrides): Promise<BigNumber>
 
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<BigNumber>
+
+    outboxEntryExists(
+      batchNum: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     processOutgoingMessages(
       sendsData: BytesLike,
@@ -214,13 +277,22 @@ export class IOutbox extends BaseContract {
   }
 
   populateTransaction: {
+    l2ToL1BatchNum(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     l2ToL1Block(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     l2ToL1EthBlock(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
+    l2ToL1OutputId(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     l2ToL1Sender(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    outboxEntryExists(
+      batchNum: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
 
     processOutgoingMessages(
       sendsData: BytesLike,

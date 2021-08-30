@@ -138,6 +138,9 @@ type Sequencer struct {
 	ReorgOutHugeMessages              bool              `koanf:"reorg-out-huge-messages"`
 	Lockout                           Lockout           `koanf:"lockout"`
 	L1PostingStrategy                 L1PostingStrategy `koanf:"l1-posting-strategy"`
+	PublishBatchesWithoutLockout      bool              `koanf:"publish-batches-without-lockout"`
+	RewriteSequencerAddress           bool              `koanf:"rewrite-sequencer-address"`
+	MaxBatchGasCost                   int64             `koanf:"max-batch-gas-cost"`
 }
 
 type WS struct {
@@ -188,15 +191,52 @@ type Rollup struct {
 type Validator struct {
 	Strategy             string            `koanf:"strategy"`
 	UtilsAddress         string            `koanf:"utils-address"`
+	StakerDelay          time.Duration     `koanf:"staker-delay"`
 	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
 	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
 }
 
 type Wallet struct {
-	PasswordImpl string `koanf:"password"`
+	Fireblocks WalletFireblocks `koanf:"fireblocks"`
+	Local      WalletLocal      `koanf:"local"`
 }
 
-func (w Wallet) Password() *string {
+type WalletFireblocks struct {
+	APIKey               string     `koanf:"api-key,omitempty"`
+	AssetId              string     `koanf:"asset-id,omitempty"`
+	BaseURL              string     `koanf:"base-url,omitempty"`
+	DisableHandlePending bool       `koanf:"disable-handle-pending"`
+	ExternalWallets      string     `koanf:"external-wallets"`
+	FeedSigner           FeedSigner `koanf:"feed-signer"`
+	InternalWallets      string     `koanf:"internal-wallets"`
+	SourceAddress        string     `koanf:"source-address,omitempty"`
+	SourceId             string     `koanf:"source-id,omitempty"`
+	SourceType           string     `koanf:"source-type,omitempty"`
+	SSLKey               string     `koanf:"ssl-key,omitempty"`
+	SSLKeyPassword       string     `koanf:"ssl-key-password,omitempty"`
+	UseFireblocksFees    bool       `koanf:"use-fireblocks-fees"`
+}
+
+type FeedSigner struct {
+	Pathname     string `koanf:"pathname"`
+	PasswordImpl string `koanf:"password"`
+	PrivateKey   string `koanf:"private-key"`
+}
+
+func (f *FeedSigner) Password() *string {
+	if f.PasswordImpl == PASSWORD_NOT_SET {
+		return nil
+	}
+	return &f.PasswordImpl
+}
+
+type WalletLocal struct {
+	Pathname     string `koanf:"pathname"`
+	PasswordImpl string `koanf:"password"`
+	PrivateKey   string `koanf:"private-key"`
+}
+
+func (w WalletLocal) Password() *string {
 	if w.PasswordImpl == PASSWORD_NOT_SET {
 		return nil
 	}
@@ -245,6 +285,14 @@ func (c *Config) GetValidatorDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "validator_db")
 }
 
+func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+
+	AddForwarderTarget(f)
+
+	return ParseNonRelay(ctx, f, "cli-wallet")
+}
+
 func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
 	f.Float64(prefix+"l1-posting-strategy.high-gas-threshold", 150, "gwei threshold at which to consider gas price high and delay batch posting")
 	f.Int64(prefix+"l1-posting-strategy.high-gas-delay-blocks", 270, "wait up to this many more blocks when gas costs are high")
@@ -254,12 +302,12 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
+	AddForwarderTarget(f)
 	AddL1PostingStrategyOptions(f, "node.sequencer.")
 
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
-	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
 	f.String("node.forwarder.rpc-mode", "full", "RPC mode: either full, non-mutating (no eth_sendRawTransaction), or forwarding-only (only requests forwarded upstream are permitted)")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
@@ -271,11 +319,15 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.reorg-out-huge-messages", false, "erase any huge messages in database that cannot be published (DANGEROUS)")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
 	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
+	f.Bool("node.sequencer.publish-batches-without-lockout", false, "continue publishing batches (but not sequencing) without the lockout")
+	f.Bool("node.sequencer.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
+	f.Int64("node.sequencer.max-batch-gas-cost", 2_000_000, "max L1 batch gas cost to post before splitting it up into multiple batches")
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
-	return ParseNonRelay(ctx, f)
+
+	return ParseNonRelay(ctx, f, "rpc-wallet")
 }
 
 func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -286,12 +338,13 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "strategy for validator to use")
+	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
 
-	return ParseNonRelay(ctx, f)
+	return ParseNonRelay(ctx, f, "validator-wallet")
 }
 
-func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
@@ -314,9 +367,17 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 	f.String("persistent.chain", "", "path that chain specific state is located")
 
+	f.String("wallet.local.pathname", defaultWalletPathname, "path to store wallet in")
+	f.String("wallet.local.password", PASSWORD_NOT_SET, "password for wallet")
+	f.String("wallet.local.private-key", "", "wallet private key string")
+
+	f.String("wallet.fireblocks.feed-signer.pathname", "feed-signer-wallet", "path to store feed-signer wallet in")
+	f.String("wallet.fireblocks.feed-signer.password", PASSWORD_NOT_SET, "password for feed-signer wallet")
+	f.String("wallet.fireblocks.feed-signer.private-key", "", "wallet feed-signer private key string")
+
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
-	f.String("wallet.password", PASSWORD_NOT_SET, "password for wallet")
+	AddHealthcheckOptions(f)
 
 	k, err := beginCommonParse(f)
 	if err != nil {
@@ -368,7 +429,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 				"validator.utils-address":          "0x2B36F23ce0bAbD57553b26Da4C7a0585bac65DC1",
 				"validator.wallet-factory-address": "0xe17d8Fa6BC62590f840C5Dd35f300F77D55CC178",
 			}, "."), nil)
-
 			if err != nil {
 				return nil, nil, nil, nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
 			}
@@ -387,7 +447,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 				"validator.utils-address":          "0xbb14D9837f6E596167638Ba0963B9Ba8351F68CD",
 				"validator.wallet-factory-address": "0x5533D1578a39690B6aC692673F771b3fc668f0a3",
 			}, "."), nil)
-
 			if err != nil {
 				return nil, nil, nil, nil, errors.Wrap(err, "error setting testnet.rinkeby rollup parameters")
 			}
@@ -440,7 +499,17 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 	}
 
 	// Make machine relative to storage directory if not already absolute
-	out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
+	if !filepath.IsAbs(out.Rollup.Machine.Filename) {
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
+	}
+
+	// Make wallet directories relative to chain directory if not already absolute
+	if !filepath.IsAbs(wallet.Local.Pathname) {
+		wallet.Local.Pathname = path.Join(out.Persistent.Chain, wallet.Local.Pathname)
+	}
+	if !filepath.IsAbs(wallet.Fireblocks.FeedSigner.Pathname) {
+		wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.Chain, wallet.Fireblocks.FeedSigner.Pathname)
+	}
 
 	_, err = os.Stat(out.Rollup.Machine.Filename)
 	if os.IsNotExist(err) && len(out.Rollup.Machine.URL) != 0 {
@@ -496,6 +565,20 @@ func AddFeedOutputOptions(f *flag.FlagSet) {
 	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
 }
 
+func AddForwarderTarget(f *flag.FlagSet) {
+	f.String("node.forwarder.target", "", "url of another node to send transactions through")
+}
+
+func AddHealthcheckOptions(f *flag.FlagSet) {
+	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
+	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
+	f.Bool("healthcheck.l1-node", false, "enable checking the health of the L1 node")
+	f.Bool("healthcheck.metrics", false, "enable prometheus endpoint")
+	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
+	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
+	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
+}
+
 func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Bool("conf.dump", false, "print out currently active configuration file")
 	f.String("conf.env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
@@ -510,17 +593,10 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.StringSlice("feed.input.url", []string{}, "URL of sequencer feed source")
 
-	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
-	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
-	f.Bool("healthcheck.l1-node", false, "enable checking the health of the L1 node")
-	f.Bool("healthcheck.metrics", false, "serve healthcheck statistics over metrics interface")
-	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
-	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
-	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
-
 	f.Bool("metrics", false, "enable metrics")
 	f.String("metrics-server.addr", "127.0.0.1", "metrics server address")
 	f.String("metrics-server.port", "6070", "metrics server address")
+
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
 
@@ -655,17 +731,44 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	}
 	err := k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
 	if err != nil {
-
 		return nil, nil, err
+	}
+
+	if len(out.Wallet.Fireblocks.SSLKey) != 0 {
+		if len(out.Wallet.Fireblocks.APIKey) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.api-key")
+		}
+		if len(out.Wallet.Fireblocks.BaseURL) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.base-url")
+		}
+		if len(out.Wallet.Fireblocks.SSLKey) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.ssl-key")
+		}
+		if len(out.Wallet.Fireblocks.SourceAddress) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-address")
+		}
+		if len(out.Wallet.Fireblocks.SourceId) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-id")
+		}
+		if len(out.Wallet.Fireblocks.SourceType) == 0 {
+			return nil, nil, errors.New("fireblocks configured but missing fireblocks.source-type")
+		}
+
+		out.Wallet.Fireblocks.SSLKey = strings.Replace(out.Wallet.Fireblocks.SSLKey, "\\n", "\n", -1)
 	}
 
 	if out.Conf.Dump {
 		// Print out current configuration
 
-		// Don't keep printing configuration file and don't print wallet password
+		// Don't keep printing configuration file and don't print wallet passwords
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"conf.dump":       false,
-			"wallet.password": "",
+			"conf.dump":                                 false,
+			"wallet.fireblocks.feed-signer.password":    "",
+			"wallet.fireblocks.feed-signer.private-key": "",
+			"wallet.fireblocks.ssl-key":                 "",
+			"wallet.fireblocks.ssl-key-password":        "",
+			"wallet.local.password":                     "",
+			"wallet.local.private-key":                  "",
 		}, "."), nil)
 
 		c, err := k.Marshal(json.Parser())
@@ -677,9 +780,23 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 		os.Exit(1)
 	}
 
-	// Don't pass around password with normal configuration
+	// Don't pass around wallet contents with normal configuration
 	wallet := out.Wallet
-	out.Wallet.PasswordImpl = ""
+	out.Wallet = Wallet{}
 
 	return &out, &wallet, nil
+}
+
+func UnmarshalMap(marshalled string) map[string]string {
+	unmarshalled := make(map[string]string)
+	if len(marshalled) == 0 {
+		return unmarshalled
+	}
+	items := strings.Split(marshalled, ",")
+	for _, pair := range items {
+		item := strings.Split(pair, ":")
+		unmarshalled[item[0]] = item[1]
+	}
+
+	return unmarshalled
 }

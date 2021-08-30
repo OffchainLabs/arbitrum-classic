@@ -52,6 +52,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         whitelist = newSource;
         emit WhitelistSourceUpdated(newSource);
     }
+
     // end whitelist consumer
 
     function initialize(
@@ -60,7 +61,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         address _inbox,
         bytes32 _cloneableProxyHash,
         address _l2BeaconProxyFactory
-    ) public virtual {
+    ) public {
         L1ArbitrumExtendedGateway._initialize(_l2Counterpart, _router, _inbox);
         require(_cloneableProxyHash != bytes32(0), "INVALID_PROXYHASH");
         require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
@@ -68,12 +69,6 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         l2BeaconProxyFactory = _l2BeaconProxyFactory;
         // disable whitelist by default
         whitelist = address(0);
-    }
-
-    function postUpgradeInit() external {
-        require(whitelist == address(0), "ALREADY_INIT");
-        router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
-        whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
     }
 
     /**
@@ -94,7 +89,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override onlyWhitelisted returns (bytes memory) {
+    ) public payable override onlyWhitelisted returns (bytes memory) {
         return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
@@ -120,7 +115,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         address _to,
         uint256 _amount,
         bytes memory _data
-    ) public view virtual override returns (bytes memory outboundCalldata) {
+    ) public view override returns (bytes memory outboundCalldata) {
         // TODO: cheaper to make static calls or save isDeployed to storage?
         bytes memory deployData =
             abi.encode(
@@ -135,24 +130,18 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
             _from,
             _to,
             _amount,
-            abi.encode(deployData, _data)
+            GatewayMessageHandler.encodeToL2GatewayMsg(deployData, _data)
         );
 
         return outboundCalldata;
     }
 
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
         bytes32 salt = getSalt(l1ERC20);
         return Create2.computeAddress(salt, cloneableProxyHash, l2BeaconProxyFactory);
     }
 
-    function getSalt(address l1ERC20) internal view virtual returns (bytes32) {
+    function getSalt(address l1ERC20) internal view returns (bytes32) {
         // TODO: use a library
         return keccak256(abi.encode(counterpartGateway, keccak256(abi.encode(l1ERC20))));
     }

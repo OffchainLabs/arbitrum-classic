@@ -3,20 +3,19 @@
 ### update-ts-abi
 ### --------------------------------------------------------------------
 echo 'Generating typechain interfaces for arb-bridge-eth:'
-rm -rf packages/arb-bridge-eth/build
+rm -r ../../packages/arb-bridge-eth/build
 yarn workspace arb-bridge-eth typechain
 
 echo 'Generating typechain interfaces for arbos-contracts:'
-rm -rf packages/arb-os/contracts/src/types
+rm -r ../../packages/arb-os/contracts/src/types
 yarn workspace arbos-contracts typechain
 
 echo 'Generating typechain interfaces for arb-bridge-peripherals:'
-rm -rf packages/arb-bridge-peripherals/build
+rm -r ../../packages/arb-bridge-peripherals/build
 yarn workspace arb-bridge-peripherals typechain
 
 echo 'Copying interfaces into arb-ts:'
-
-rm -rf packages/arb-ts/src/lib/abi/*
+rm -r src/lib/abi/*
 
 cd ../arb-bridge-eth/build/types
 

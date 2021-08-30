@@ -35,11 +35,12 @@ import (
 )
 
 type Snapshot struct {
-	mach            machine.Machine
-	time            inbox.ChainTime
-	nextInboxSeqNum *big.Int
-	chainId         *big.Int
-	arbosVersion    uint64
+	mach                  machine.Machine
+	time                  inbox.ChainTime
+	nextInboxSeqNum       *big.Int
+	chainId               *big.Int
+	arbosVersion          uint64
+	arbosRemappingEnabled bool
 }
 
 func NewSnapshot(mach machine.Machine, time inbox.ChainTime, lastInboxSeq *big.Int) (*Snapshot, error) {
@@ -61,6 +62,29 @@ func NewSnapshot(mach machine.Machine, time inbox.ChainTime, lastInboxSeq *big.I
 		}
 		snap.chainId = chainId
 	}
+
+	if snap.arbosVersion >= 40 {
+		arbOwnerMsg := message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1 << 30),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
+				Payment:     big.NewInt(0),
+				Data:        arbos.GetChainParameterData(arbos.EnableL1ContractAddressAliasingParamId),
+			},
+		}
+		// Note: this .Call actually uses arbosRemappingEnabled which isn't set yet,
+		// but that's fine because the zero address is never rewritten regardless.
+		arbOwnerRes, _, err := snap.Call(arbOwnerMsg, common.Address{})
+		if err != nil {
+			return nil, err
+		}
+		if arbOwnerRes.ResultCode != evm.ReturnCode {
+			return nil, errors.New("failed to query ArbOS address remapping state")
+		}
+		snap.arbosRemappingEnabled = new(big.Int).SetBytes(arbOwnerRes.ReturnData).Sign() > 0
+	}
+
 	return snap, nil
 }
 
@@ -142,27 +166,6 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 }
 
 func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
-	arbosRemappingEnabled := false
-	if s.arbosVersion >= 40 {
-		arbOwnerMsg := message.ContractTransaction{
-			BasicTx: message.BasicTx{
-				MaxGas:      big.NewInt(1 << 30),
-				GasPriceBid: big.NewInt(0),
-				DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-				Payment:     big.NewInt(0),
-				Data:        arbos.GetChainParameterData(arbos.EnableL1ContractAddressAliasingParamId),
-			},
-		}
-		arbOwnerRes, _, err := s.Call(arbOwnerMsg, common.Address{})
-		if err != nil {
-			return nil, nil, err
-		}
-		if arbOwnerRes.ResultCode != evm.ReturnCode {
-			return nil, nil, errors.New("failed to query ArbOS address remapping state")
-		}
-		arbosRemappingEnabled = new(big.Int).SetBytes(arbOwnerRes.ReturnData).Sign() > 0
-	}
-
 	redeemGas := new(big.Int).Set(msg.MaxGas)
 	redeemGasPriceBid := new(big.Int).Set(msg.GasPriceBid)
 	msg.MaxGas = msg.MaxGas.SetUint64(0)
@@ -194,7 +197,7 @@ func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.A
 		targetHash2 = hashing.SoliditySHA3(hashing.Bytes32(targetHash2), hashing.Uint256(big.NewInt(0)))
 	}
 	redeemer := sender
-	if arbosRemappingEnabled {
+	if s.arbosRemappingEnabled {
 		redeemer = message.L2RemapAccount(redeemer)
 	}
 	inboxMsg2 := message.NewInboxMessage(gasEstimationMessage, redeemer, estimateSeqNum, big.NewInt(0), s.time)
@@ -257,6 +260,9 @@ func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) 
 	var targetHash common.Hash
 	if s.chainId != nil {
 		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+	}
+	if s.arbosRemappingEnabled {
+		sender = message.L1RemapAccount(sender)
 	}
 	return s.tryTx(message.NewSafeL2Message(msg), sender, targetHash, 100000000000)
 }

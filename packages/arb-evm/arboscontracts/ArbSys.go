@@ -27,7 +27,7 @@ var (
 )
 
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"uniqueId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"batchNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"indexInBatch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"arbBlockNum\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ethBlockNum\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"callvalue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"L2ToL1Transaction\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"arbBlockNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"arbChainID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"arbOSVersion\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getL1CallerAddressInfo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isTopLevelCall\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"useExceptionList\",\"type\":\"bool\"}],\"name\":\"mapL1ContractAddressToL2\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"name\":\"sendTxToL1\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"uniqueId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"batchNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"indexInBatch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"arbBlockNum\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ethBlockNum\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"callvalue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"L2ToL1Transaction\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"arbBlockNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"arbChainID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"arbOSVersion\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isTopLevelCall\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"mapL1SenderContractAddressToL2Alias\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"myCallersAddressWithoutAliasing\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"name\":\"sendTxToL1\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"wasMyCallersAddressAliased\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 
 // ArbSys is an auto generated Go binding around an Ethereum contract.
 type ArbSys struct {
@@ -264,38 +264,6 @@ func (_ArbSys *ArbSysCallerSession) ArbOSVersion() (*big.Int, error) {
 	return _ArbSys.Contract.ArbOSVersion(&_ArbSys.CallOpts)
 }
 
-// GetL1CallerAddressInfo is a free data retrieval call binding the contract method 0x513caba5.
-//
-// Solidity: function getL1CallerAddressInfo() view returns(bool, address)
-func (_ArbSys *ArbSysCaller) GetL1CallerAddressInfo(opts *bind.CallOpts) (bool, common.Address, error) {
-	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "getL1CallerAddressInfo")
-
-	if err != nil {
-		return *new(bool), *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-	out1 := *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
-
-	return out0, out1, err
-
-}
-
-// GetL1CallerAddressInfo is a free data retrieval call binding the contract method 0x513caba5.
-//
-// Solidity: function getL1CallerAddressInfo() view returns(bool, address)
-func (_ArbSys *ArbSysSession) GetL1CallerAddressInfo() (bool, common.Address, error) {
-	return _ArbSys.Contract.GetL1CallerAddressInfo(&_ArbSys.CallOpts)
-}
-
-// GetL1CallerAddressInfo is a free data retrieval call binding the contract method 0x513caba5.
-//
-// Solidity: function getL1CallerAddressInfo() view returns(bool, address)
-func (_ArbSys *ArbSysCallerSession) GetL1CallerAddressInfo() (bool, common.Address, error) {
-	return _ArbSys.Contract.GetL1CallerAddressInfo(&_ArbSys.CallOpts)
-}
-
 // GetStorageAt is a free data retrieval call binding the contract method 0xa169625f.
 //
 // Solidity: function getStorageAt(address account, uint256 index) view returns(uint256)
@@ -389,12 +357,12 @@ func (_ArbSys *ArbSysCallerSession) IsTopLevelCall() (bool, error) {
 	return _ArbSys.Contract.IsTopLevelCall(&_ArbSys.CallOpts)
 }
 
-// MapL1ContractAddressToL2 is a free data retrieval call binding the contract method 0x90dabcbc.
+// MapL1SenderContractAddressToL2Alias is a free data retrieval call binding the contract method 0x4dbbd506.
 //
-// Solidity: function mapL1ContractAddressToL2(address sender, address dest, bool useExceptionList) pure returns(address)
-func (_ArbSys *ArbSysCaller) MapL1ContractAddressToL2(opts *bind.CallOpts, sender common.Address, dest common.Address, useExceptionList bool) (common.Address, error) {
+// Solidity: function mapL1SenderContractAddressToL2Alias(address sender, address dest) pure returns(address)
+func (_ArbSys *ArbSysCaller) MapL1SenderContractAddressToL2Alias(opts *bind.CallOpts, sender common.Address, dest common.Address) (common.Address, error) {
 	var out []interface{}
-	err := _ArbSys.contract.Call(opts, &out, "mapL1ContractAddressToL2", sender, dest, useExceptionList)
+	err := _ArbSys.contract.Call(opts, &out, "mapL1SenderContractAddressToL2Alias", sender, dest)
 
 	if err != nil {
 		return *new(common.Address), err
@@ -406,18 +374,80 @@ func (_ArbSys *ArbSysCaller) MapL1ContractAddressToL2(opts *bind.CallOpts, sende
 
 }
 
-// MapL1ContractAddressToL2 is a free data retrieval call binding the contract method 0x90dabcbc.
+// MapL1SenderContractAddressToL2Alias is a free data retrieval call binding the contract method 0x4dbbd506.
 //
-// Solidity: function mapL1ContractAddressToL2(address sender, address dest, bool useExceptionList) pure returns(address)
-func (_ArbSys *ArbSysSession) MapL1ContractAddressToL2(sender common.Address, dest common.Address, useExceptionList bool) (common.Address, error) {
-	return _ArbSys.Contract.MapL1ContractAddressToL2(&_ArbSys.CallOpts, sender, dest, useExceptionList)
+// Solidity: function mapL1SenderContractAddressToL2Alias(address sender, address dest) pure returns(address)
+func (_ArbSys *ArbSysSession) MapL1SenderContractAddressToL2Alias(sender common.Address, dest common.Address) (common.Address, error) {
+	return _ArbSys.Contract.MapL1SenderContractAddressToL2Alias(&_ArbSys.CallOpts, sender, dest)
 }
 
-// MapL1ContractAddressToL2 is a free data retrieval call binding the contract method 0x90dabcbc.
+// MapL1SenderContractAddressToL2Alias is a free data retrieval call binding the contract method 0x4dbbd506.
 //
-// Solidity: function mapL1ContractAddressToL2(address sender, address dest, bool useExceptionList) pure returns(address)
-func (_ArbSys *ArbSysCallerSession) MapL1ContractAddressToL2(sender common.Address, dest common.Address, useExceptionList bool) (common.Address, error) {
-	return _ArbSys.Contract.MapL1ContractAddressToL2(&_ArbSys.CallOpts, sender, dest, useExceptionList)
+// Solidity: function mapL1SenderContractAddressToL2Alias(address sender, address dest) pure returns(address)
+func (_ArbSys *ArbSysCallerSession) MapL1SenderContractAddressToL2Alias(sender common.Address, dest common.Address) (common.Address, error) {
+	return _ArbSys.Contract.MapL1SenderContractAddressToL2Alias(&_ArbSys.CallOpts, sender, dest)
+}
+
+// MyCallersAddressWithoutAliasing is a free data retrieval call binding the contract method 0xd74523b3.
+//
+// Solidity: function myCallersAddressWithoutAliasing() view returns(address)
+func (_ArbSys *ArbSysCaller) MyCallersAddressWithoutAliasing(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _ArbSys.contract.Call(opts, &out, "myCallersAddressWithoutAliasing")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// MyCallersAddressWithoutAliasing is a free data retrieval call binding the contract method 0xd74523b3.
+//
+// Solidity: function myCallersAddressWithoutAliasing() view returns(address)
+func (_ArbSys *ArbSysSession) MyCallersAddressWithoutAliasing() (common.Address, error) {
+	return _ArbSys.Contract.MyCallersAddressWithoutAliasing(&_ArbSys.CallOpts)
+}
+
+// MyCallersAddressWithoutAliasing is a free data retrieval call binding the contract method 0xd74523b3.
+//
+// Solidity: function myCallersAddressWithoutAliasing() view returns(address)
+func (_ArbSys *ArbSysCallerSession) MyCallersAddressWithoutAliasing() (common.Address, error) {
+	return _ArbSys.Contract.MyCallersAddressWithoutAliasing(&_ArbSys.CallOpts)
+}
+
+// WasMyCallersAddressAliased is a free data retrieval call binding the contract method 0x175a260b.
+//
+// Solidity: function wasMyCallersAddressAliased() view returns(bool)
+func (_ArbSys *ArbSysCaller) WasMyCallersAddressAliased(opts *bind.CallOpts) (bool, error) {
+	var out []interface{}
+	err := _ArbSys.contract.Call(opts, &out, "wasMyCallersAddressAliased")
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// WasMyCallersAddressAliased is a free data retrieval call binding the contract method 0x175a260b.
+//
+// Solidity: function wasMyCallersAddressAliased() view returns(bool)
+func (_ArbSys *ArbSysSession) WasMyCallersAddressAliased() (bool, error) {
+	return _ArbSys.Contract.WasMyCallersAddressAliased(&_ArbSys.CallOpts)
+}
+
+// WasMyCallersAddressAliased is a free data retrieval call binding the contract method 0x175a260b.
+//
+// Solidity: function wasMyCallersAddressAliased() view returns(bool)
+func (_ArbSys *ArbSysCallerSession) WasMyCallersAddressAliased() (bool, error) {
+	return _ArbSys.Contract.WasMyCallersAddressAliased(&_ArbSys.CallOpts)
 }
 
 // SendTxToL1 is a paid mutator transaction binding the contract method 0x928c169a.

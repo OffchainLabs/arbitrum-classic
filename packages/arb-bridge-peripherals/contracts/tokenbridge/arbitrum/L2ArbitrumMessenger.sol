@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: Apache-2.0
+
+/*
+ * Copyright 2020, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+pragma solidity ^0.6.11;
+
+import "arbos-contracts/arbos/builtin/ArbSys.sol";
+
+/// @notice L2 utility contract to assist with L1 <=> L2 interactions
+/// @dev this is an abstract contract instead of library so the functions can be easily overriden when testing
+abstract contract L2ArbitrumMessenger {
+    address internal constant ARB_SYS_ADDRESS = address(100);
+
+    event TxToL1(address indexed _from, address indexed _to, uint256 indexed _id, bytes _data);
+
+    function sendTxToL1(
+        uint256 _l1CallValue,
+        address _from,
+        address _to,
+        bytes memory _data
+    ) internal virtual returns (uint256) {
+        uint256 _id = ArbSys(ARB_SYS_ADDRESS).sendTxToL1{ value: _l1CallValue }(_to, _data);
+        emit TxToL1(_from, _to, _id, _data);
+        return _id;
+    }
+
+    /// @notice Utility function that converts the msg.sender viewed in the L2 to the
+    /// address in the L1 that submitted a tx to the inbox
+    /// @param sender L2 address as viewed in msg.sender
+    /// @return l1Address the address in the L1 that triggered the tx to L2
+    function getL1Address(address sender) internal pure returns (address l1Address) {
+        uint160 offset = uint160(0x1111000000000000000000000000000000001111);
+        l1Address = address(uint160(sender) - offset);
+    }
+}

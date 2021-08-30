@@ -103,4 +103,10 @@ func TestWhitelist(t *testing.T) {
 
 	_, err = simple.Exists(senderAuth)
 	test.FailIfError(t, err)
+
+	allowed, err = arbOwner.IsAllowedSender(&bind.CallOpts{From: owner}, senderAuth.From)
+	test.FailIfError(t, err)
+	if !allowed {
+		t.Error("ArbOwner IsAllowedSender says sender isn't allowed, but they are")
+	}
 }

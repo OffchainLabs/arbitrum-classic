@@ -48,22 +48,22 @@ There are a total of 10 parameters that the L1 must pass to the L2 when creating
 
 5 of them have to do with allocating ETH/Gas:
 
-**DepositValue:** Total ETH deposited from L1 to L2.
-**CallValue:** Call-value for L2 transaction.
-**GasPrice:** L2 Gas price bid for immediate L2 execution attempt (queryable via standard eth*gasPrice RPC)
-**MaxGas:** Gas limit for immediate L2 execution attempt (can be estimated via \_NodeInterface.estimateRetryableTicket*)
-**MaxSubmissionCost:** Amount of ETH allocated to pay for the base submission fee. The base submission fee is a parameter unique to retryable transactions; the user is charged the base submission fee to cover the storage costs of keeping their ticket’s calldata in the retry buffer. (current base submission fee is queryable via `ArbRetryableTx.getSubmissionPrice`)
+- **DepositValue:** Total ETH deposited from L1 to L2.
+- **CallValue:** Call-value for L2 transaction.
+- **GasPrice:** L2 Gas price bid for immediate L2 execution attempt (queryable via standard eth\*gasPrice RPC)
+- **MaxGas:** Gas limit for immediate L2 execution attempt (can be estimated via \_NodeInterface.estimateRetryableTicket\*)
+- **MaxSubmissionCost:** Amount of ETH allocated to pay for the base submission fee. The base submission fee is a parameter unique to retryable transactions; the user is charged the base submission fee to cover the storage costs of keeping their ticket’s calldata in the retry buffer. (current base submission fee is queryable via `ArbRetryableTx.getSubmissionPrice`)
 
 Intuitively: if a user does not desire immediate redemption, they should provide a DepositValue of at least `CallValue + MaxSubmissionCost`. If they do desire immediate execution, they should provide a DepositValue of at least
 `CallValue + MaxSubmissionCost + (GasPrice x MaxGas).`
 
 ### Other Parameters
 
-**Destination Address:** Address from which transaction will be initiated on L2.
-**Credit-Back Address:** Address to which all excess gas is credited on L2; i.e., excess ETH for base submission cost (`MaxSubmissionCost - ActualSubmissionCostPaid`) and excess ETH provided for L2 execution (` (GasPrice x MaxGas) - ActualETHSpentInExecution`).
-**Beneficiary:** Address to which CallValue will be credited to on L2 if the retryable ticket times out or is cancelled. The Beneficiary is also the address with the right to cancel a Retryable Ticket (if the ticket hasn’t been redeemed yet).
-`Calldata:` data encoding the L2 contract call.
-`Calldata Size:` CallData size.
+- **Destination Address:** Address from which transaction will be initiated on L2.
+- **Credit-Back Address:** Address to which all excess gas is credited on L2; i.e., excess ETH for base submission cost (`MaxSubmissionCost - ActualSubmissionCostPaid`) and excess ETH provided for L2 execution (` (GasPrice x MaxGas) - ActualETHSpentInExecution`).
+- **Beneficiary:** Address to which CallValue will be credited to on L2 if the retryable ticket times out or is cancelled. The Beneficiary is also the address with the right to cancel a Retryable Ticket (if the ticket hasn’t been redeemed yet).
+  `Calldata:` data encoding the L2 contract call.
+  `Calldata Size:` CallData size.
 
 ### Retryable Transaction Lifecycle:
 

@@ -18,11 +18,13 @@
   },
   "scripts": {
     "build": "hardhat compile",
-    "test": "hardhat test",
-    "test:ci": "CI=true hardhat test",
-    "test:gas": "hardhat typechain && REPORT_GAS=true hardhat test --network localhost",
+    "test": "hardhat test test/*.spec.ts",
+    "test:ci": "CI=true yarn test",
+    "test:gas": "REPORT_GAS=true yarn test",
+    "test:fork": "SHOULD_FORK=1 hardhat test test/*.fork.ts",
     "test:gas:ci": "CI=true yarn test:gas && mv gasReporterOutput.json ../..",
-    "test:coverage": "hardhat typechain && hardhat coverage",
+    "test:fork:coverage": "SHOULD_FORK=1 hardhat coverage --testfiles 'test/*.fork.ts'",
+    "test:coverage": "hardhat coverage --testfiles 'test/*.spec.ts'",
     "lint:js": "eslint .",
     "lint:solidity": "solhint 'contracts/**/*.sol'",
     "lint": "yarn lint:solidity && yarn lint:js",
@@ -34,7 +36,9 @@
     "docker:build:geth": "docker build -t arb-bridge-eth-geth -f geth.Dockerfile .",
     "docker:geth": "rm -rf deployments/parity && ./scripts/launch-geth",
     "verify": "hardhat etherscan-verify --api-key $(dotenv -p ETHERSCAN_API_KEY)",
-    "typechain": "hardhat typechain"
+    "typechain": "hardhat typechain",
+    "slither": "slither . --hardhat-artifacts-directory build/contracts",
+    "hardhat": "hardhat"
   },
   "dependencies": {
     "@openzeppelin/contracts": "3.4.0",
@@ -58,6 +62,7 @@
     "@types/mocha": "^8.2.0",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
+    "audit-ci": "^4.1.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "dotenv-cli": "^4.0.0",
@@ -66,7 +71,7 @@
     "eslint-plugin-mocha": "^9.0.0",
     "eslint-plugin-prettier": "^3.4.0",
     "ethereum-waffle": "^3.2.0",
-    "hardhat": "^2.0.11",
+    "hardhat": "^2.6.1",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-spdx-license-identifier": "^2.0.2",
     "mocha": "^8.2.1",
@@ -75,7 +80,7 @@
     "prettier-plugin-solidity": "^1.0.0-beta.17",
     "solhint": "^3.2.0",
     "solhint-plugin-prettier": "^0.0.5",
-    "solidity-coverage": "^0.7.13",
+    "solidity-coverage": "https://github.com/fredlacs/solidity-coverage#eaa47c36470388d0c6f2c6615968534066f18841",
     "ts-generator": "^0.1.1",
     "typechain": "^5.1.2"
   }
