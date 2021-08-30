@@ -52,6 +52,27 @@ describe('WETH', async () => {
       _l2WethBalance && _l2WethBalance.ERC20 && _l2WethBalance.ERC20.balance
     expect(l2WethBalance && l2WethBalance.add(wethToWithdraw).eq(wethToWrap)).to
       .be.true
+
+    const walletAddress = await bridge.l1Signer.getAddress()
+    const gatewayWithdrawEvents = await bridge.getGatewayWithdrawEventData(
+      l2Network.tokenBridge.l2WethGateway,
+      walletAddress,
+      { fromBlock: withdrawRec.blockNumber }
+    )
+    expect(gatewayWithdrawEvents.length).to.equal(
+      1,
+      'weth getGatewayWithdrawEventData query failed'
+    )
+
+    const tokenWithdrawEvents = await bridge.getTokenWithdrawEventData(
+      l1Network.tokenBridge.l1Weth,
+      walletAddress,
+      { fromBlock: withdrawRec.blockNumber }
+    )
+    expect(tokenWithdrawEvents.length).to.equal(
+      1,
+      'weth getTokenWithdrawEventData query failed'
+    )
   })
 
   it('deposits WETH', async () => {

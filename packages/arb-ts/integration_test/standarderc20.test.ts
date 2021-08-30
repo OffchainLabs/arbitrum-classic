@@ -64,13 +64,15 @@ describe('standard ERC20', () => {
 
     const gatewayWithdrawEventData = await bridge.getGatewayWithdrawEventData(
       l2Network.tokenBridge.l2ERC20Gateway,
-      walletAddress
+      walletAddress,
+      { fromBlock: withdrawRec.blockNumber }
     )
     expect(gatewayWithdrawEventData.length).to.equal(1)
 
     const tokenWithdrawEvents = await bridge.getTokenWithdrawEventData(
       existentTestERC20,
-      walletAddress
+      walletAddress,
+      { fromBlock: withdrawRec.blockNumber }
     )
     expect(tokenWithdrawEvents.length).to.equal(1)
   })

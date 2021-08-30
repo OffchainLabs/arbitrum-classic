@@ -112,6 +112,16 @@ describe('Ether', async () => {
 
     expect(withdrawEventData).to.exist
 
+    const myAddress = await bridge.l1Signer.getAddress()
+
+    const withdrawEvents = await bridge.getL2ToL1EventData(myAddress, {
+      fromBlock: withdrawEthRec.blockNumber,
+    })
+    expect(withdrawEvents.length).to.equal(
+      1,
+      'eth withdraw getL2ToL1EventData failed'
+    )
+
     const etherBalance = await bridge.getL2EthBalance()
 
     const totalEth = etherBalance

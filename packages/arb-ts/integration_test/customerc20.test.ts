@@ -78,13 +78,15 @@ describe('Custom ERC20', () => {
 
     const gatewayWithdrawEvents = await bridge.getGatewayWithdrawEventData(
       l2Network.tokenBridge.l2CustomGateway,
-      walletAddress
+      walletAddress,
+      { fromBlock: withdrawRec.blockNumber }
     )
     expect(gatewayWithdrawEvents.length).to.equal(1)
 
     const tokenWithdrawEvents = await bridge.getTokenWithdrawEventData(
       existentTestCustomToken,
-      walletAddress
+      walletAddress,
+      { fromBlock: withdrawRec.blockNumber }
     )
     expect(tokenWithdrawEvents.length).to.equal(1)
   })
