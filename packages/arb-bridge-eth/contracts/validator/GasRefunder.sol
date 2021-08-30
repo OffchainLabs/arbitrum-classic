@@ -27,12 +27,33 @@ contract GasRefunder is IGasRefunder, Ownable {
     mapping(address => bool) public allowedRefundees;
     mapping(address => uint256) public lastContractRefund;
     address public disallower;
-    uint256 public maxRefundeeBalance;
-    uint256 public extraGasMargin;
-    uint256 public calldataCost;
-    uint256 public maxGasTip;
-    uint256 public maxGasCost;
-    uint256 public maxSingleGasUsage;
+
+    struct CommonParameters {
+        uint128 maxRefundeeBalance;
+        uint32 extraGasMargin;
+        uint8 calldataCost;
+        uint64 maxGasTip;
+        uint64 maxGasCost;
+        uint32 maxSingleGasUsage;
+    }
+
+    CommonParameters public commonParams;
+
+    enum CommonParameterKey {
+        MAX_REFUNDEE_BALANCE,
+        EXTRA_GAS_MARGIN,
+        CALLDATA_COST,
+        MAX_GAS_TIP,
+        MAX_GAS_COST,
+        MAX_SINGLE_GAS_USAGE
+    }
+
+    enum RefundDenyReason {
+        CONTRACT_NOT_ALLOWED,
+        REFUNDEE_NOT_ALLOWED,
+        ALREADY_REFUNDED_THIS_BLOCK,
+        REFUNDEE_ABOVE_MAX_BALANCE
+    }
 
     event RefundedGasCosts(
         address indexed refundee,
@@ -42,37 +63,28 @@ contract GasRefunder is IGasRefunder, Ownable {
         uint256 gasPrice,
         uint256 amountPaid
     );
-    // Current reason IDs:
-    // 0: Contract not allowed
-    // 1: Refundee not allowed
-    // 2: Contract already processed refund this block
-    // 3: Refundee is already above max balance
     event RefundGasCostsDenied(
         address indexed refundee,
         address indexed contractAddress,
-        uint256 gas,
-        uint256 reason
+        RefundDenyReason indexed reason,
+        uint256 gas
     );
     event Deposited(address sender, uint256 amount);
     event Withdrawn(address initiator, address destination, uint256 amount);
     event ContractAllowedSet(address indexed addr, bool indexed allowed);
     event RefundeeAllowedSet(address indexed addr, bool indexed allowed);
     event DisallowerSet(address indexed addr);
-    // Current parameter IDs:
-    // 0: maxRefundeeBalance
-    // 1: extraGasMargin
-    // 2: calldataCost
-    // 3: maxGasTip
-    // 4: maxGasCost
-    // 5: maxSingleGasUsage
-    event ParameterSet(uint256 indexed parameter, uint256 value);
+    event CommonParameterSet(CommonParameterKey indexed parameter, uint256 value);
 
     constructor() Ownable() {
-        extraGasMargin = 4000; // 4k gas
-        calldataCost = 12; // Between 4 for 0 bytes and 16 for non-zero bytes
-        maxGasTip = 2e9; // 2 gwei
-        maxGasCost = 120e9; // 120 gwei
-        maxSingleGasUsage = 2e6; // 2 million gas
+        commonParams = CommonParameters({
+            maxRefundeeBalance: 0, // no limit
+            extraGasMargin: 4000, // 4k gas
+            calldataCost: 12, // Between 4 for zero bytes and 16 for non-zero bytes
+            maxGasTip: 2e9, // 2 gwei
+            maxGasCost: 120e9, // 120 gwei
+            maxSingleGasUsage: 2e6 // 2 million gas
+        });
     }
 
     function setDisallower(address addr) external onlyOwner {
@@ -114,34 +126,34 @@ contract GasRefunder is IGasRefunder, Ownable {
         }
     }
 
-    function setMaxRefundeeBalance(uint256 newValue) external onlyOwner {
-        maxRefundeeBalance = newValue;
-        emit ParameterSet(0, newValue);
+    function setMaxRefundeeBalance(uint128 newValue) external onlyOwner {
+        commonParams.maxRefundeeBalance = newValue;
+        emit CommonParameterSet(CommonParameterKey.MAX_REFUNDEE_BALANCE, newValue);
     }
 
-    function setExtraGasMargin(uint256 newValue) external onlyOwner {
-        extraGasMargin = newValue;
-        emit ParameterSet(1, newValue);
+    function setExtraGasMargin(uint32 newValue) external onlyOwner {
+        commonParams.extraGasMargin = newValue;
+        emit CommonParameterSet(CommonParameterKey.EXTRA_GAS_MARGIN, newValue);
     }
 
-    function setCalldataCost(uint256 newValue) external onlyOwner {
-        calldataCost = newValue;
-        emit ParameterSet(2, newValue);
+    function setCalldataCost(uint8 newValue) external onlyOwner {
+        commonParams.calldataCost = newValue;
+        emit CommonParameterSet(CommonParameterKey.CALLDATA_COST, newValue);
     }
 
-    function setMaxGasTip(uint256 newValue) external onlyOwner {
-        maxGasTip = newValue;
-        emit ParameterSet(3, newValue);
+    function setMaxGasTip(uint64 newValue) external onlyOwner {
+        commonParams.maxGasTip = newValue;
+        emit CommonParameterSet(CommonParameterKey.MAX_GAS_TIP, newValue);
     }
 
-    function setMaxGasCost(uint256 newValue) external onlyOwner {
-        maxGasCost = newValue;
-        emit ParameterSet(4, newValue);
+    function setMaxGasCost(uint64 newValue) external onlyOwner {
+        commonParams.maxGasCost = newValue;
+        emit CommonParameterSet(CommonParameterKey.MAX_GAS_COST, newValue);
     }
 
-    function setMaxSingleGasUsage(uint256 newValue) external onlyOwner {
-        maxSingleGasUsage = newValue;
-        emit ParameterSet(5, newValue);
+    function setMaxSingleGasUsage(uint32 newValue) external onlyOwner {
+        commonParams.maxSingleGasUsage = newValue;
+        emit CommonParameterSet(CommonParameterKey.MAX_SINGLE_GAS_USAGE, newValue);
     }
 
     receive() external payable {
@@ -162,53 +174,74 @@ contract GasRefunder is IGasRefunder, Ownable {
         uint256 startGasLeft = gasleft();
 
         if (!allowedContracts[msg.sender]) {
-            emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 0);
+            emit RefundGasCostsDenied(
+                refundee,
+                msg.sender,
+                RefundDenyReason.CONTRACT_NOT_ALLOWED,
+                gasUsed
+            );
             return false;
         }
         if (!allowedRefundees[refundee]) {
-            emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 1);
+            emit RefundGasCostsDenied(
+                refundee,
+                msg.sender,
+                RefundDenyReason.REFUNDEE_NOT_ALLOWED,
+                gasUsed
+            );
             return false;
         }
 
         if (lastContractRefund[msg.sender] == block.number) {
             // There was already a refund this block, don't refund further
-            emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 2);
+            emit RefundGasCostsDenied(
+                refundee,
+                msg.sender,
+                RefundDenyReason.ALREADY_REFUNDED_THIS_BLOCK,
+                gasUsed
+            );
             return false;
         }
         lastContractRefund[msg.sender] = block.number;
 
-        uint256 estGasPrice = block.basefee + maxGasTip;
+        uint256 estGasPrice = block.basefee + commonParams.maxGasTip;
         if (tx.gasprice < estGasPrice) {
             estGasPrice = tx.gasprice;
         }
-        if (maxGasCost != 0 && estGasPrice > maxGasCost) {
-            estGasPrice = maxGasCost;
+        if (commonParams.maxGasCost != 0 && estGasPrice > commonParams.maxGasCost) {
+            estGasPrice = commonParams.maxGasCost;
         }
 
-        // Cache these variables and retrieve them before measuring gasleft()
+        // Retrieve these variables before measuring gasleft()
         uint256 refundeeBalance = refundee.balance;
-        uint256 maxRefundeeBalanceCache = maxRefundeeBalance;
-        uint256 maxSingleGasUsageCached = maxSingleGasUsage;
+        uint256 maxRefundeeBalance = commonParams.maxRefundeeBalance;
+        uint256 maxSingleGasUsage = commonParams.maxSingleGasUsage;
 
         // Add in a bit of a buffer for the tx costs not measured with gasleft
-        gasUsed += startGasLeft + extraGasMargin + (calldataSize * calldataCost);
+        gasUsed +=
+            startGasLeft +
+            commonParams.extraGasMargin +
+            (calldataSize * commonParams.calldataCost);
         // Split this up into two statements so that gasleft() comes after the storage loads
         gasUsed -= gasleft();
 
-        if (maxSingleGasUsageCached != 0 && gasUsed > maxSingleGasUsageCached) {
-            gasUsed = maxSingleGasUsageCached;
+        if (maxSingleGasUsage != 0 && gasUsed > maxSingleGasUsage) {
+            gasUsed = maxSingleGasUsage;
         }
 
         uint256 refundAmount = estGasPrice * gasUsed;
-        if (
-            maxRefundeeBalanceCache != 0 && refundeeBalance + refundAmount > maxRefundeeBalanceCache
-        ) {
-            if (refundeeBalance > maxRefundeeBalanceCache) {
+        if (maxRefundeeBalance != 0 && refundeeBalance + refundAmount > maxRefundeeBalance) {
+            if (refundeeBalance > maxRefundeeBalance) {
                 // The refundee is already above their max balance
-                emit RefundGasCostsDenied(refundee, msg.sender, gasUsed, 3);
+                emit RefundGasCostsDenied(
+                    refundee,
+                    msg.sender,
+                    RefundDenyReason.REFUNDEE_ABOVE_MAX_BALANCE,
+                    gasUsed
+                );
                 return false;
             } else {
-                refundAmount = maxRefundeeBalanceCache - refundeeBalance;
+                refundAmount = maxRefundeeBalance - refundeeBalance;
             }
         }
 

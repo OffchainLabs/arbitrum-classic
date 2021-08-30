@@ -27,10 +27,10 @@ var (
 )
 
 // GasRefunderABI is the input ABI used to generate the binding from.
-const GasRefunderABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"allowed\",\"type\":\"bool\"}],\"name\":\"ContractAllowedSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Deposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"DisallowerSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"parameter\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"ParameterSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"refundee\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"reason\",\"type\":\"uint256\"}],\"name\":\"RefundGasCostsDenied\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"refundee\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountPaid\",\"type\":\"uint256\"}],\"name\":\"RefundedGasCosts\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"allowed\",\"type\":\"bool\"}],\"name\":\"RefundeeAllowedSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"initiator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Withdrawn\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addresses\",\"type\":\"address[]\"}],\"name\":\"allowContracts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addresses\",\"type\":\"address[]\"}],\"name\":\"allowRefundees\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"allowedContracts\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"allowedRefundees\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"calldataCost\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addresses\",\"type\":\"address[]\"}],\"name\":\"disallowContracts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addresses\",\"type\":\"address[]\"}],\"name\":\"disallowRefundees\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"disallower\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"extraGasMargin\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"lastContractRefund\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"maxGasCost\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"maxGasTip\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"maxRefundeeBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"maxSingleGasUsage\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"refundee\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"gasUsed\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"calldataSize\",\"type\":\"uint256\"}],\"name\":\"onGasSpent\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"}],\"name\":\"setCalldataCost\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"setDisallower\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"}],\"name\":\"setExtraGasMargin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"}],\"name\":\"setMaxGasCost\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"}],\"name\":\"setMaxGasTip\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"}],\"name\":\"setMaxRefundeeBalance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"}],\"name\":\"setMaxSingleGasUsage\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"destination\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
+const GasRefunderABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"enumGasRefunder.CommonParameterKey\",\"name\":\"parameter\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"CommonParameterSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"allowed\",\"type\":\"bool\"}],\"name\":\"ContractAllowedSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Deposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"DisallowerSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"refundee\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"enumGasRefunder.RefundDenyReason\",\"name\":\"reason\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"}],\"name\":\"RefundGasCostsDenied\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"refundee\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"contractAddress\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountPaid\",\"type\":\"uint256\"}],\"name\":\"RefundedGasCosts\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"allowed\",\"type\":\"bool\"}],\"name\":\"RefundeeAllowedSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"initiator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Withdrawn\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addresses\",\"type\":\"address[]\"}],\"name\":\"allowContracts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addresses\",\"type\":\"address[]\"}],\"name\":\"allowRefundees\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"allowedContracts\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"allowedRefundees\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"commonParams\",\"outputs\":[{\"internalType\":\"uint128\",\"name\":\"maxRefundeeBalance\",\"type\":\"uint128\"},{\"internalType\":\"uint32\",\"name\":\"extraGasMargin\",\"type\":\"uint32\"},{\"internalType\":\"uint8\",\"name\":\"calldataCost\",\"type\":\"uint8\"},{\"internalType\":\"uint64\",\"name\":\"maxGasTip\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"maxGasCost\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"maxSingleGasUsage\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addresses\",\"type\":\"address[]\"}],\"name\":\"disallowContracts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addresses\",\"type\":\"address[]\"}],\"name\":\"disallowRefundees\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"disallower\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"lastContractRefund\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"refundee\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"gasUsed\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"calldataSize\",\"type\":\"uint256\"}],\"name\":\"onGasSpent\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"newValue\",\"type\":\"uint8\"}],\"name\":\"setCalldataCost\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"setDisallower\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"newValue\",\"type\":\"uint32\"}],\"name\":\"setExtraGasMargin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"newValue\",\"type\":\"uint64\"}],\"name\":\"setMaxGasCost\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"newValue\",\"type\":\"uint64\"}],\"name\":\"setMaxGasTip\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint128\",\"name\":\"newValue\",\"type\":\"uint128\"}],\"name\":\"setMaxRefundeeBalance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"newValue\",\"type\":\"uint32\"}],\"name\":\"setMaxSingleGasUsage\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"destination\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 
 // GasRefunderBin is the compiled bytecode used for deploying new contracts.
-var GasRefunderBin = "0x608060405234801561001057600080fd5b5061001a33610042565b610fa0600655600c6007556377359400600855641bf08eb000600955621e8480600a55610092565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b61119c806100a16000396000f3fe6080604052600436106101655760003560e01c8063b029df96116100c1578063cd499da31161007a578063cd499da314610421578063e3db8a4914610441578063e520745314610461578063efe12b0114610481578063f1e845ca146104a1578063f2fde38b146104c1578063f3fef3a3146104e157600080fd5b8063b029df9614610368578063bddaf01d1461037e578063c53d26a0146103ab578063c88bee17146103cb578063ca101295146103e1578063cd2c4e841461040157600080fd5b8063715018a61161011e578063715018a61461028a57806380599c3d1461029f5780638da5cb5b146102bf5780638e0bc1b6146102ec57806395554f7114610302578063a715dd5914610322578063a89d21731461033857600080fd5b80630119b029146101a957806325416bc9146101d25780633a16db73146101f457806351e0e26b14610214578063549e89bb14610254578063696e930c1461027457600080fd5b366101a457604080513381523460208201527f2da466a7b24304f47e87fa2e1e5a81b9831ce54fec19055ce277ca2f39ba42c4910160405180910390a1005b600080fd5b3480156101b557600080fd5b506101bf60085481565b6040519081526020015b60405180910390f35b3480156101de57600080fd5b506101f26101ed366004610f91565b610501565b005b34801561020057600080fd5b506101f261020f366004611006565b610549565b34801561022057600080fd5b5061024461022f366004610f13565b60016020526000908152604090205460ff1681565b60405190151581526020016101c9565b34801561026057600080fd5b506101f261026f366004611006565b6105a5565b34801561028057600080fd5b506101bf600a5481565b34801561029657600080fd5b506101f26105fa565b3480156102ab57600080fd5b506101f26102ba366004611006565b610635565b3480156102cb57600080fd5b506102d461068a565b6040516001600160a01b0390911681526020016101c9565b3480156102f857600080fd5b506101bf60065481565b34801561030e57600080fd5b506101f261031d366004611006565b610699565b34801561032e57600080fd5b506101bf60095481565b34801561034457600080fd5b50610244610353366004610f13565b60026020526000908152604090205460ff1681565b34801561037457600080fd5b506101bf60075481565b34801561038a57600080fd5b506101bf610399366004610f13565b60036020526000908152604090205481565b3480156103b757600080fd5b506101f26103c6366004611006565b6106ee565b3480156103d757600080fd5b506101bf60055481565b3480156103ed57600080fd5b506101f26103fc366004610f91565b610743565b34801561040d57600080fd5b506101f261041c366004611006565b61077e565b34801561042d57600080fd5b506101f261043c366004610f91565b6107d3565b34801561044d57600080fd5b5061024461045c366004610f5c565b61082c565b34801561046d57600080fd5b506101f261047c366004610f91565b610b07565b34801561048d57600080fd5b506004546102d4906001600160a01b031681565b3480156104ad57600080fd5b506101f26104bc366004610f13565b610b60565b3480156104cd57600080fd5b506101f26104dc366004610f13565b610bd9565b3480156104ed57600080fd5b506101f26104fc366004610f30565b610c79565b3361050a61068a565b6001600160a01b0316146105395760405162461bcd60e51b81526004016105309061101f565b60405180910390fd5b61054582826001610d8b565b5050565b3361055261068a565b6001600160a01b0316146105785760405162461bcd60e51b81526004016105309061101f565b6005819055604051818152600090600080516020611147833981519152906020015b60405180910390a250565b336105ae61068a565b6001600160a01b0316146105d45760405162461bcd60e51b81526004016105309061101f565b60078190556040518181526002906000805160206111478339815191529060200161059a565b3361060361068a565b6001600160a01b0316146106295760405162461bcd60e51b81526004016105309061101f565b6106336000610e2a565b565b3361063e61068a565b6001600160a01b0316146106645760405162461bcd60e51b81526004016105309061101f565b600a8190556040518181526005906000805160206111478339815191529060200161059a565b6000546001600160a01b031690565b336106a261068a565b6001600160a01b0316146106c85760405162461bcd60e51b81526004016105309061101f565b60098190556040518181526004906000805160206111478339815191529060200161059a565b336106f761068a565b6001600160a01b03161461071d5760405162461bcd60e51b81526004016105309061101f565b60088190556040518181526003906000805160206111478339815191529060200161059a565b3361074c61068a565b6001600160a01b0316146107725760405162461bcd60e51b81526004016105309061101f565b61054582826001610e7a565b3361078761068a565b6001600160a01b0316146107ad5760405162461bcd60e51b81526004016105309061101f565b60068190556040518181526001906000805160206111478339815191529060200161059a565b6107db61068a565b6001600160a01b0316336001600160a01b0316148061080457506004546001600160a01b031633145b6108205760405162461bcd60e51b815260040161053090611054565b61054582826000610d8b565b6000805a3360009081526001602052604090205490915060ff1661088957604080518581526000602082015233916001600160a01b0388169160008051602061112783398151915291015b60405180910390a36000915050610b00565b6001600160a01b03851660009081526002602052604090205460ff166108da57604080518581526001602082015233916001600160a01b038816916000805160206111278339815191529101610877565b3360009081526003602052604090205443141561092257604080518581526002602082015233916001600160a01b038816916000805160206111278339815191529101610877565b336000908152600360205260408120439055600854610941904861107c565b9050803a101561094e57503a5b60095415801590610960575060095481115b1561096a57506009545b600554600a546007546001600160a01b0389163192919061098b9088611094565b600654610998908761107c565b6109a2919061107c565b6109ac908961107c565b97505a6109b990896110b3565b975080158015906109c957508088115b156109d2578097505b60006109de8986611094565b905082158015906109f75750826109f5828661107c565b115b15610a545782841115610a4757604080518a81526003602082015233916001600160a01b038d1691600080516020611127833981519152910160405180910390a360009650505050505050610b00565b610a5184846110b3565b90505b6040516001600160a01b038b16908290600081818185875af1925050503d8060008114610a9d576040519150601f19603f3d011682016040523d82523d6000602084013e610aa2565b606091505b5050604080518b8152602081018890529081018390529097508715159033906001600160a01b038d16907fd0224505f828ccfcbc56ca0590d97442e239a7aa770f712948fd6388356b20de9060600160405180910390a45050505050505b9392505050565b610b0f61068a565b6001600160a01b0316336001600160a01b03161480610b3857506004546001600160a01b031633145b610b545760405162461bcd60e51b815260040161053090611054565b61054582826000610e7a565b33610b6961068a565b6001600160a01b031614610b8f5760405162461bcd60e51b81526004016105309061101f565b600480546001600160a01b0319166001600160a01b0383169081179091556040517fc388cec0895ad7ee4635898ec92207ca48d42256d4355f7042efef62c368a97990600090a250565b33610be261068a565b6001600160a01b031614610c085760405162461bcd60e51b81526004016105309061101f565b6001600160a01b038116610c6d5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610530565b610c7681610e2a565b50565b33610c8261068a565b6001600160a01b031614610ca85760405162461bcd60e51b81526004016105309061101f565b6000826001600160a01b03168260405160006040518083038185875af1925050503d8060008114610cf5576040519150601f19603f3d011682016040523d82523d6000602084013e610cfa565b606091505b5050905080610d3d5760405162461bcd60e51b815260206004820152600f60248201526e15d2551211149055d7d19052531151608a1b6044820152606401610530565b604080513381526001600160a01b03851660208201529081018390527fd1c19fbcd4551a5edfb66d43d2e337c04837afda3482b42bdf569a8fccdae5fb9060600160405180910390a1505050565b60005b82811015610e24576000848483818110610daa57610daa6110fb565b9050602002016020810190610dbf9190610f13565b6001600160a01b038116600081815260016020526040808220805460ff19168815159081179091559051939450927fb0918cd965657b8d231f8adba328fa810b6d61d800de9c795d40eb3623498c019190a35080610e1c816110ca565b915050610d8e565b50505050565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b60005b82811015610e24576000848483818110610e9957610e996110fb565b9050602002016020810190610eae9190610f13565b6001600160a01b038116600081815260026020526040808220805460ff19168815159081179091559051939450927ff544cca9d5484bfd447775bd759d12d53f1aa7c5f770be82c55070798ff9c63e9190a35080610f0b816110ca565b915050610e7d565b600060208284031215610f2557600080fd5b8135610b0081611111565b60008060408385031215610f4357600080fd5b8235610f4e81611111565b946020939093013593505050565b600080600060608486031215610f7157600080fd5b8335610f7c81611111565b95602085013595506040909401359392505050565b60008060208385031215610fa457600080fd5b823567ffffffffffffffff80821115610fbc57600080fd5b818501915085601f830112610fd057600080fd5b813581811115610fdf57600080fd5b8660208260051b8501011115610ff457600080fd5b60209290920196919550909350505050565b60006020828403121561101857600080fd5b5035919050565b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b6020808252600e908201526d1393d517d055551213d49256915160921b604082015260600190565b6000821982111561108f5761108f6110e5565b500190565b60008160001904831182151516156110ae576110ae6110e5565b500290565b6000828210156110c5576110c56110e5565b500390565b60006000198214156110de576110de6110e5565b5060010190565b634e487b7160e01b600052601160045260246000fd5b634e487b7160e01b600052603260045260246000fd5b6001600160a01b0381168114610c7657600080fdfe5ea5eb8c916c8ba2696eb02ba87979a3ba62781166df7c7e8770ca8e4d22f3fc0fda05912fc0926602ebe745a349eb343a59dc2248f8ca238f896f385712170ca2646970667358221220edf44434620a328ad46f8130c98a42b0ac952ac01253d17948f0b7a49e6acd6364736f6c63430008070033"
+var GasRefunderBin = "0x608060405234801561001057600080fd5b5061001a336100a5565b6040805160c08101825260008152610fa06020820152600c9181019190915263773594006060820152641bf08eb0006080820152621e848060a090910152600580546001600160e81b03191678773594000c00000fa000000000000000000000000000000000179055600680546001600160601b0319166a1e84800000001bf08eb0001790556100f5565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b611284806101046000396000f3fe60806040526004361061012e5760003560e01c8063bffe1780116100ab578063e52074531161006f578063e520745314610433578063efe12b0114610453578063f1e845ca14610473578063f2fde38b14610493578063f3fef3a3146104b3578063f52128eb146104d357600080fd5b8063bffe178014610306578063ca10129514610326578063cd499da314610346578063d513894814610366578063e3db8a491461041357600080fd5b80637edddf45116100f25780637edddf451461022e57806386b988951461024e5780638da5cb5b1461026e578063a89d21731461029b578063bddaf01d146102cb57600080fd5b806325416bc9146101725780632ccb03f214610194578063500de431146101b457806351e0e26b146101d4578063715018a61461021957600080fd5b3661016d57604080513381523460208201527f2da466a7b24304f47e87fa2e1e5a81b9831ce54fec19055ce277ca2f39ba42c4910160405180910390a1005b600080fd5b34801561017e57600080fd5b5061019261018d366004611018565b6104f3565b005b3480156101a057600080fd5b506101926101af3660046110db565b61053b565b3480156101c057600080fd5b506101926101cf3660046110b5565b6105b7565b3480156101e057600080fd5b506102046101ef366004610f9a565b60016020526000908152604090205460ff1681565b60405190151581526020015b60405180910390f35b34801561022557600080fd5b5061019261062b565b34801561023a57600080fd5b506101926102493660046110b5565b610666565b34801561025a57600080fd5b506101926102693660046110db565b6106ba565b34801561027a57600080fd5b50610283610715565b6040516001600160a01b039091168152602001610210565b3480156102a757600080fd5b506102046102b6366004610f9a565b60026020526000908152604090205460ff1681565b3480156102d757600080fd5b506102f86102e6366004610f9a565b60036020526000908152604090205481565b604051908152602001610210565b34801561031257600080fd5b50610192610321366004611104565b610724565b34801561033257600080fd5b50610192610341366004611018565b61078e565b34801561035257600080fd5b50610192610361366004611018565b6107c9565b34801561037257600080fd5b506005546006546103c5916001600160801b0381169163ffffffff600160801b830481169260ff600160a01b820416926001600160401b03600160a81b90920482169291811691600160401b9091041686565b604080516001600160801b03909716875263ffffffff958616602088015260ff909416938601939093526001600160401b0391821660608601521660808401521660a082015260c001610210565b34801561041f57600080fd5b5061020461042e366004610fe3565b610822565b34801561043f57600080fd5b5061019261044e366004611018565b610b1b565b34801561045f57600080fd5b50600454610283906001600160a01b031681565b34801561047f57600080fd5b5061019261048e366004610f9a565b610b74565b34801561049f57600080fd5b506101926104ae366004610f9a565b610bed565b3480156104bf57600080fd5b506101926104ce366004610fb7565b610c8d565b3480156104df57600080fd5b506101926104ee36600461108c565b610d9f565b336104fc610715565b6001600160a01b03161461052b5760405162461bcd60e51b815260040161052290611127565b60405180910390fd5b61053782826001610e12565b5050565b33610544610715565b6001600160a01b03161461056a5760405162461bcd60e51b815260040161052290611127565b6006805467ffffffffffffffff19166001600160401b03831617905560045b6040516001600160401b038316815260008051602061122f833981519152906020015b60405180910390a250565b336105c0610715565b6001600160a01b0316146105e65760405162461bcd60e51b815260040161052290611127565b6006805463ffffffff60401b1916600160401b63ffffffff84160217905560055b60405163ffffffff8316815260008051602061122f833981519152906020016105ac565b33610634610715565b6001600160a01b03161461065a5760405162461bcd60e51b815260040161052290611127565b6106646000610eb1565b565b3361066f610715565b6001600160a01b0316146106955760405162461bcd60e51b815260040161052290611127565b6005805463ffffffff60801b1916600160801b63ffffffff8416021790556001610607565b336106c3610715565b6001600160a01b0316146106e95760405162461bcd60e51b815260040161052290611127565b6005805467ffffffffffffffff60a81b1916600160a81b6001600160401b038416021790556003610589565b6000546001600160a01b031690565b3361072d610715565b6001600160a01b0316146107535760405162461bcd60e51b815260040161052290611127565b6005805460ff60a01b1916600160a01b60ff841602179055600260405160ff8316815260008051602061122f833981519152906020016105ac565b33610797610715565b6001600160a01b0316146107bd5760405162461bcd60e51b815260040161052290611127565b61053782826001610f01565b6107d1610715565b6001600160a01b0316336001600160a01b031614806107fa57506004546001600160a01b031633145b6108165760405162461bcd60e51b81526004016105229061115c565b61053782826000610e12565b6000805a3360009081526001602052604090205490915060ff1661088d5760005b60405185815233906001600160a01b038816907f2b8ae00e22d9eaf5a92820a22b947c007aee773fa36502ad7a1c9a464ab4932b9060200160405180910390a46000915050610b14565b6001600160a01b03851660009081526002602052604090205460ff166108b4576001610843565b336000908152600360205260409020544314156108d2576002610843565b33600090815260036020526040812043905560055461090190600160a81b90046001600160401b031648611184565b9050803a101561090e57503a5b6006546001600160401b03161580159061093257506006546001600160401b031681115b1561094557506006546001600160401b03165b6005546006546001600160a01b03881631916001600160801b03811691600160401b900463ffffffff169061098490600160a01b900460ff168861119c565b60055461099e90600160801b900463ffffffff1687611184565b6109a89190611184565b6109b29089611184565b97505a6109bf90896111bb565b975080158015906109cf57508088115b156109d8578097505b60006109e4898661119c565b905082158015906109fd5750826109fb8286611184565b115b15610a685782841115610a5b5760036040518a815233906001600160a01b038d16907f2b8ae00e22d9eaf5a92820a22b947c007aee773fa36502ad7a1c9a464ab4932b9060200160405180910390a460009650505050505050610b14565b610a6584846111bb565b90505b6040516001600160a01b038b16908290600081818185875af1925050503d8060008114610ab1576040519150601f19603f3d011682016040523d82523d6000602084013e610ab6565b606091505b5050604080518b8152602081018890529081018390529097508715159033906001600160a01b038d16907fd0224505f828ccfcbc56ca0590d97442e239a7aa770f712948fd6388356b20de9060600160405180910390a45050505050505b9392505050565b610b23610715565b6001600160a01b0316336001600160a01b03161480610b4c57506004546001600160a01b031633145b610b685760405162461bcd60e51b81526004016105229061115c565b61053782826000610f01565b33610b7d610715565b6001600160a01b031614610ba35760405162461bcd60e51b815260040161052290611127565b600480546001600160a01b0319166001600160a01b0383169081179091556040517fc388cec0895ad7ee4635898ec92207ca48d42256d4355f7042efef62c368a97990600090a250565b33610bf6610715565b6001600160a01b031614610c1c5760405162461bcd60e51b815260040161052290611127565b6001600160a01b038116610c815760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610522565b610c8a81610eb1565b50565b33610c96610715565b6001600160a01b031614610cbc5760405162461bcd60e51b815260040161052290611127565b6000826001600160a01b03168260405160006040518083038185875af1925050503d8060008114610d09576040519150601f19603f3d011682016040523d82523d6000602084013e610d0e565b606091505b5050905080610d515760405162461bcd60e51b815260206004820152600f60248201526e15d2551211149055d7d19052531151608a1b6044820152606401610522565b604080513381526001600160a01b03851660208201529081018390527fd1c19fbcd4551a5edfb66d43d2e337c04837afda3482b42bdf569a8fccdae5fb9060600160405180910390a1505050565b33610da8610715565b6001600160a01b031614610dce5760405162461bcd60e51b815260040161052290611127565b600580546001600160801b0319166001600160801b03831617905560006040516001600160801b038316815260008051602061122f833981519152906020016105ac565b60005b82811015610eab576000848483818110610e3157610e31611203565b9050602002016020810190610e469190610f9a565b6001600160a01b038116600081815260016020526040808220805460ff19168815159081179091559051939450927fb0918cd965657b8d231f8adba328fa810b6d61d800de9c795d40eb3623498c019190a35080610ea3816111d2565b915050610e15565b50505050565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b60005b82811015610eab576000848483818110610f2057610f20611203565b9050602002016020810190610f359190610f9a565b6001600160a01b038116600081815260026020526040808220805460ff19168815159081179091559051939450927ff544cca9d5484bfd447775bd759d12d53f1aa7c5f770be82c55070798ff9c63e9190a35080610f92816111d2565b915050610f04565b600060208284031215610fac57600080fd5b8135610b1481611219565b60008060408385031215610fca57600080fd5b8235610fd581611219565b946020939093013593505050565b600080600060608486031215610ff857600080fd5b833561100381611219565b95602085013595506040909401359392505050565b6000806020838503121561102b57600080fd5b82356001600160401b038082111561104257600080fd5b818501915085601f83011261105657600080fd5b81358181111561106557600080fd5b8660208260051b850101111561107a57600080fd5b60209290920196919550909350505050565b60006020828403121561109e57600080fd5b81356001600160801b0381168114610b1457600080fd5b6000602082840312156110c757600080fd5b813563ffffffff81168114610b1457600080fd5b6000602082840312156110ed57600080fd5b81356001600160401b0381168114610b1457600080fd5b60006020828403121561111657600080fd5b813560ff81168114610b1457600080fd5b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b6020808252600e908201526d1393d517d055551213d49256915160921b604082015260600190565b60008219821115611197576111976111ed565b500190565b60008160001904831182151516156111b6576111b66111ed565b500290565b6000828210156111cd576111cd6111ed565b500390565b60006000198214156111e6576111e66111ed565b5060010190565b634e487b7160e01b600052601160045260246000fd5b634e487b7160e01b600052603260045260246000fd5b6001600160a01b0381168114610c8a57600080fdfeda79b6b81f905f788560507c685a42d5a8ab209ee26538cbcf3ce3caed601f9ba26469706673582212202f24657f87d09fdb46758f61a1cc1972dc7c5e8483acc1db709904f349f22d2864736f6c63430008070033"
 
 // DeployGasRefunder deploys a new Ethereum contract, binding an instance of GasRefunder to it.
 func DeployGasRefunder(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *GasRefunder, error) {
@@ -250,35 +250,69 @@ func (_GasRefunder *GasRefunderCallerSession) AllowedRefundees(arg0 common.Addre
 	return _GasRefunder.Contract.AllowedRefundees(&_GasRefunder.CallOpts, arg0)
 }
 
-// CalldataCost is a free data retrieval call binding the contract method 0xb029df96.
+// CommonParams is a free data retrieval call binding the contract method 0xd5138948.
 //
-// Solidity: function calldataCost() view returns(uint256)
-func (_GasRefunder *GasRefunderCaller) CalldataCost(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function commonParams() view returns(uint128 maxRefundeeBalance, uint32 extraGasMargin, uint8 calldataCost, uint64 maxGasTip, uint64 maxGasCost, uint32 maxSingleGasUsage)
+func (_GasRefunder *GasRefunderCaller) CommonParams(opts *bind.CallOpts) (struct {
+	MaxRefundeeBalance *big.Int
+	ExtraGasMargin     uint32
+	CalldataCost       uint8
+	MaxGasTip          uint64
+	MaxGasCost         uint64
+	MaxSingleGasUsage  uint32
+}, error) {
 	var out []interface{}
-	err := _GasRefunder.contract.Call(opts, &out, "calldataCost")
+	err := _GasRefunder.contract.Call(opts, &out, "commonParams")
 
+	outstruct := new(struct {
+		MaxRefundeeBalance *big.Int
+		ExtraGasMargin     uint32
+		CalldataCost       uint8
+		MaxGasTip          uint64
+		MaxGasCost         uint64
+		MaxSingleGasUsage  uint32
+	})
 	if err != nil {
-		return *new(*big.Int), err
+		return *outstruct, err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.MaxRefundeeBalance = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.ExtraGasMargin = *abi.ConvertType(out[1], new(uint32)).(*uint32)
+	outstruct.CalldataCost = *abi.ConvertType(out[2], new(uint8)).(*uint8)
+	outstruct.MaxGasTip = *abi.ConvertType(out[3], new(uint64)).(*uint64)
+	outstruct.MaxGasCost = *abi.ConvertType(out[4], new(uint64)).(*uint64)
+	outstruct.MaxSingleGasUsage = *abi.ConvertType(out[5], new(uint32)).(*uint32)
 
-	return out0, err
+	return *outstruct, err
 
 }
 
-// CalldataCost is a free data retrieval call binding the contract method 0xb029df96.
+// CommonParams is a free data retrieval call binding the contract method 0xd5138948.
 //
-// Solidity: function calldataCost() view returns(uint256)
-func (_GasRefunder *GasRefunderSession) CalldataCost() (*big.Int, error) {
-	return _GasRefunder.Contract.CalldataCost(&_GasRefunder.CallOpts)
+// Solidity: function commonParams() view returns(uint128 maxRefundeeBalance, uint32 extraGasMargin, uint8 calldataCost, uint64 maxGasTip, uint64 maxGasCost, uint32 maxSingleGasUsage)
+func (_GasRefunder *GasRefunderSession) CommonParams() (struct {
+	MaxRefundeeBalance *big.Int
+	ExtraGasMargin     uint32
+	CalldataCost       uint8
+	MaxGasTip          uint64
+	MaxGasCost         uint64
+	MaxSingleGasUsage  uint32
+}, error) {
+	return _GasRefunder.Contract.CommonParams(&_GasRefunder.CallOpts)
 }
 
-// CalldataCost is a free data retrieval call binding the contract method 0xb029df96.
+// CommonParams is a free data retrieval call binding the contract method 0xd5138948.
 //
-// Solidity: function calldataCost() view returns(uint256)
-func (_GasRefunder *GasRefunderCallerSession) CalldataCost() (*big.Int, error) {
-	return _GasRefunder.Contract.CalldataCost(&_GasRefunder.CallOpts)
+// Solidity: function commonParams() view returns(uint128 maxRefundeeBalance, uint32 extraGasMargin, uint8 calldataCost, uint64 maxGasTip, uint64 maxGasCost, uint32 maxSingleGasUsage)
+func (_GasRefunder *GasRefunderCallerSession) CommonParams() (struct {
+	MaxRefundeeBalance *big.Int
+	ExtraGasMargin     uint32
+	CalldataCost       uint8
+	MaxGasTip          uint64
+	MaxGasCost         uint64
+	MaxSingleGasUsage  uint32
+}, error) {
+	return _GasRefunder.Contract.CommonParams(&_GasRefunder.CallOpts)
 }
 
 // Disallower is a free data retrieval call binding the contract method 0xefe12b01.
@@ -312,37 +346,6 @@ func (_GasRefunder *GasRefunderCallerSession) Disallower() (common.Address, erro
 	return _GasRefunder.Contract.Disallower(&_GasRefunder.CallOpts)
 }
 
-// ExtraGasMargin is a free data retrieval call binding the contract method 0x8e0bc1b6.
-//
-// Solidity: function extraGasMargin() view returns(uint256)
-func (_GasRefunder *GasRefunderCaller) ExtraGasMargin(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _GasRefunder.contract.Call(opts, &out, "extraGasMargin")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// ExtraGasMargin is a free data retrieval call binding the contract method 0x8e0bc1b6.
-//
-// Solidity: function extraGasMargin() view returns(uint256)
-func (_GasRefunder *GasRefunderSession) ExtraGasMargin() (*big.Int, error) {
-	return _GasRefunder.Contract.ExtraGasMargin(&_GasRefunder.CallOpts)
-}
-
-// ExtraGasMargin is a free data retrieval call binding the contract method 0x8e0bc1b6.
-//
-// Solidity: function extraGasMargin() view returns(uint256)
-func (_GasRefunder *GasRefunderCallerSession) ExtraGasMargin() (*big.Int, error) {
-	return _GasRefunder.Contract.ExtraGasMargin(&_GasRefunder.CallOpts)
-}
-
 // LastContractRefund is a free data retrieval call binding the contract method 0xbddaf01d.
 //
 // Solidity: function lastContractRefund(address ) view returns(uint256)
@@ -372,130 +375,6 @@ func (_GasRefunder *GasRefunderSession) LastContractRefund(arg0 common.Address) 
 // Solidity: function lastContractRefund(address ) view returns(uint256)
 func (_GasRefunder *GasRefunderCallerSession) LastContractRefund(arg0 common.Address) (*big.Int, error) {
 	return _GasRefunder.Contract.LastContractRefund(&_GasRefunder.CallOpts, arg0)
-}
-
-// MaxGasCost is a free data retrieval call binding the contract method 0xa715dd59.
-//
-// Solidity: function maxGasCost() view returns(uint256)
-func (_GasRefunder *GasRefunderCaller) MaxGasCost(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _GasRefunder.contract.Call(opts, &out, "maxGasCost")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// MaxGasCost is a free data retrieval call binding the contract method 0xa715dd59.
-//
-// Solidity: function maxGasCost() view returns(uint256)
-func (_GasRefunder *GasRefunderSession) MaxGasCost() (*big.Int, error) {
-	return _GasRefunder.Contract.MaxGasCost(&_GasRefunder.CallOpts)
-}
-
-// MaxGasCost is a free data retrieval call binding the contract method 0xa715dd59.
-//
-// Solidity: function maxGasCost() view returns(uint256)
-func (_GasRefunder *GasRefunderCallerSession) MaxGasCost() (*big.Int, error) {
-	return _GasRefunder.Contract.MaxGasCost(&_GasRefunder.CallOpts)
-}
-
-// MaxGasTip is a free data retrieval call binding the contract method 0x0119b029.
-//
-// Solidity: function maxGasTip() view returns(uint256)
-func (_GasRefunder *GasRefunderCaller) MaxGasTip(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _GasRefunder.contract.Call(opts, &out, "maxGasTip")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// MaxGasTip is a free data retrieval call binding the contract method 0x0119b029.
-//
-// Solidity: function maxGasTip() view returns(uint256)
-func (_GasRefunder *GasRefunderSession) MaxGasTip() (*big.Int, error) {
-	return _GasRefunder.Contract.MaxGasTip(&_GasRefunder.CallOpts)
-}
-
-// MaxGasTip is a free data retrieval call binding the contract method 0x0119b029.
-//
-// Solidity: function maxGasTip() view returns(uint256)
-func (_GasRefunder *GasRefunderCallerSession) MaxGasTip() (*big.Int, error) {
-	return _GasRefunder.Contract.MaxGasTip(&_GasRefunder.CallOpts)
-}
-
-// MaxRefundeeBalance is a free data retrieval call binding the contract method 0xc88bee17.
-//
-// Solidity: function maxRefundeeBalance() view returns(uint256)
-func (_GasRefunder *GasRefunderCaller) MaxRefundeeBalance(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _GasRefunder.contract.Call(opts, &out, "maxRefundeeBalance")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// MaxRefundeeBalance is a free data retrieval call binding the contract method 0xc88bee17.
-//
-// Solidity: function maxRefundeeBalance() view returns(uint256)
-func (_GasRefunder *GasRefunderSession) MaxRefundeeBalance() (*big.Int, error) {
-	return _GasRefunder.Contract.MaxRefundeeBalance(&_GasRefunder.CallOpts)
-}
-
-// MaxRefundeeBalance is a free data retrieval call binding the contract method 0xc88bee17.
-//
-// Solidity: function maxRefundeeBalance() view returns(uint256)
-func (_GasRefunder *GasRefunderCallerSession) MaxRefundeeBalance() (*big.Int, error) {
-	return _GasRefunder.Contract.MaxRefundeeBalance(&_GasRefunder.CallOpts)
-}
-
-// MaxSingleGasUsage is a free data retrieval call binding the contract method 0x696e930c.
-//
-// Solidity: function maxSingleGasUsage() view returns(uint256)
-func (_GasRefunder *GasRefunderCaller) MaxSingleGasUsage(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _GasRefunder.contract.Call(opts, &out, "maxSingleGasUsage")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// MaxSingleGasUsage is a free data retrieval call binding the contract method 0x696e930c.
-//
-// Solidity: function maxSingleGasUsage() view returns(uint256)
-func (_GasRefunder *GasRefunderSession) MaxSingleGasUsage() (*big.Int, error) {
-	return _GasRefunder.Contract.MaxSingleGasUsage(&_GasRefunder.CallOpts)
-}
-
-// MaxSingleGasUsage is a free data retrieval call binding the contract method 0x696e930c.
-//
-// Solidity: function maxSingleGasUsage() view returns(uint256)
-func (_GasRefunder *GasRefunderCallerSession) MaxSingleGasUsage() (*big.Int, error) {
-	return _GasRefunder.Contract.MaxSingleGasUsage(&_GasRefunder.CallOpts)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -655,24 +534,24 @@ func (_GasRefunder *GasRefunderTransactorSession) RenounceOwnership() (*types.Tr
 	return _GasRefunder.Contract.RenounceOwnership(&_GasRefunder.TransactOpts)
 }
 
-// SetCalldataCost is a paid mutator transaction binding the contract method 0x549e89bb.
+// SetCalldataCost is a paid mutator transaction binding the contract method 0xbffe1780.
 //
-// Solidity: function setCalldataCost(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactor) SetCalldataCost(opts *bind.TransactOpts, newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setCalldataCost(uint8 newValue) returns()
+func (_GasRefunder *GasRefunderTransactor) SetCalldataCost(opts *bind.TransactOpts, newValue uint8) (*types.Transaction, error) {
 	return _GasRefunder.contract.Transact(opts, "setCalldataCost", newValue)
 }
 
-// SetCalldataCost is a paid mutator transaction binding the contract method 0x549e89bb.
+// SetCalldataCost is a paid mutator transaction binding the contract method 0xbffe1780.
 //
-// Solidity: function setCalldataCost(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderSession) SetCalldataCost(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setCalldataCost(uint8 newValue) returns()
+func (_GasRefunder *GasRefunderSession) SetCalldataCost(newValue uint8) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetCalldataCost(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetCalldataCost is a paid mutator transaction binding the contract method 0x549e89bb.
+// SetCalldataCost is a paid mutator transaction binding the contract method 0xbffe1780.
 //
-// Solidity: function setCalldataCost(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactorSession) SetCalldataCost(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setCalldataCost(uint8 newValue) returns()
+func (_GasRefunder *GasRefunderTransactorSession) SetCalldataCost(newValue uint8) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetCalldataCost(&_GasRefunder.TransactOpts, newValue)
 }
 
@@ -697,108 +576,108 @@ func (_GasRefunder *GasRefunderTransactorSession) SetDisallower(addr common.Addr
 	return _GasRefunder.Contract.SetDisallower(&_GasRefunder.TransactOpts, addr)
 }
 
-// SetExtraGasMargin is a paid mutator transaction binding the contract method 0xcd2c4e84.
+// SetExtraGasMargin is a paid mutator transaction binding the contract method 0x7edddf45.
 //
-// Solidity: function setExtraGasMargin(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactor) SetExtraGasMargin(opts *bind.TransactOpts, newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setExtraGasMargin(uint32 newValue) returns()
+func (_GasRefunder *GasRefunderTransactor) SetExtraGasMargin(opts *bind.TransactOpts, newValue uint32) (*types.Transaction, error) {
 	return _GasRefunder.contract.Transact(opts, "setExtraGasMargin", newValue)
 }
 
-// SetExtraGasMargin is a paid mutator transaction binding the contract method 0xcd2c4e84.
+// SetExtraGasMargin is a paid mutator transaction binding the contract method 0x7edddf45.
 //
-// Solidity: function setExtraGasMargin(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderSession) SetExtraGasMargin(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setExtraGasMargin(uint32 newValue) returns()
+func (_GasRefunder *GasRefunderSession) SetExtraGasMargin(newValue uint32) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetExtraGasMargin(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetExtraGasMargin is a paid mutator transaction binding the contract method 0xcd2c4e84.
+// SetExtraGasMargin is a paid mutator transaction binding the contract method 0x7edddf45.
 //
-// Solidity: function setExtraGasMargin(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactorSession) SetExtraGasMargin(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setExtraGasMargin(uint32 newValue) returns()
+func (_GasRefunder *GasRefunderTransactorSession) SetExtraGasMargin(newValue uint32) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetExtraGasMargin(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetMaxGasCost is a paid mutator transaction binding the contract method 0x95554f71.
+// SetMaxGasCost is a paid mutator transaction binding the contract method 0x2ccb03f2.
 //
-// Solidity: function setMaxGasCost(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactor) SetMaxGasCost(opts *bind.TransactOpts, newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setMaxGasCost(uint64 newValue) returns()
+func (_GasRefunder *GasRefunderTransactor) SetMaxGasCost(opts *bind.TransactOpts, newValue uint64) (*types.Transaction, error) {
 	return _GasRefunder.contract.Transact(opts, "setMaxGasCost", newValue)
 }
 
-// SetMaxGasCost is a paid mutator transaction binding the contract method 0x95554f71.
+// SetMaxGasCost is a paid mutator transaction binding the contract method 0x2ccb03f2.
 //
-// Solidity: function setMaxGasCost(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderSession) SetMaxGasCost(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setMaxGasCost(uint64 newValue) returns()
+func (_GasRefunder *GasRefunderSession) SetMaxGasCost(newValue uint64) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetMaxGasCost(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetMaxGasCost is a paid mutator transaction binding the contract method 0x95554f71.
+// SetMaxGasCost is a paid mutator transaction binding the contract method 0x2ccb03f2.
 //
-// Solidity: function setMaxGasCost(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactorSession) SetMaxGasCost(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setMaxGasCost(uint64 newValue) returns()
+func (_GasRefunder *GasRefunderTransactorSession) SetMaxGasCost(newValue uint64) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetMaxGasCost(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetMaxGasTip is a paid mutator transaction binding the contract method 0xc53d26a0.
+// SetMaxGasTip is a paid mutator transaction binding the contract method 0x86b98895.
 //
-// Solidity: function setMaxGasTip(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactor) SetMaxGasTip(opts *bind.TransactOpts, newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setMaxGasTip(uint64 newValue) returns()
+func (_GasRefunder *GasRefunderTransactor) SetMaxGasTip(opts *bind.TransactOpts, newValue uint64) (*types.Transaction, error) {
 	return _GasRefunder.contract.Transact(opts, "setMaxGasTip", newValue)
 }
 
-// SetMaxGasTip is a paid mutator transaction binding the contract method 0xc53d26a0.
+// SetMaxGasTip is a paid mutator transaction binding the contract method 0x86b98895.
 //
-// Solidity: function setMaxGasTip(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderSession) SetMaxGasTip(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setMaxGasTip(uint64 newValue) returns()
+func (_GasRefunder *GasRefunderSession) SetMaxGasTip(newValue uint64) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetMaxGasTip(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetMaxGasTip is a paid mutator transaction binding the contract method 0xc53d26a0.
+// SetMaxGasTip is a paid mutator transaction binding the contract method 0x86b98895.
 //
-// Solidity: function setMaxGasTip(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactorSession) SetMaxGasTip(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setMaxGasTip(uint64 newValue) returns()
+func (_GasRefunder *GasRefunderTransactorSession) SetMaxGasTip(newValue uint64) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetMaxGasTip(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetMaxRefundeeBalance is a paid mutator transaction binding the contract method 0x3a16db73.
+// SetMaxRefundeeBalance is a paid mutator transaction binding the contract method 0xf52128eb.
 //
-// Solidity: function setMaxRefundeeBalance(uint256 newValue) returns()
+// Solidity: function setMaxRefundeeBalance(uint128 newValue) returns()
 func (_GasRefunder *GasRefunderTransactor) SetMaxRefundeeBalance(opts *bind.TransactOpts, newValue *big.Int) (*types.Transaction, error) {
 	return _GasRefunder.contract.Transact(opts, "setMaxRefundeeBalance", newValue)
 }
 
-// SetMaxRefundeeBalance is a paid mutator transaction binding the contract method 0x3a16db73.
+// SetMaxRefundeeBalance is a paid mutator transaction binding the contract method 0xf52128eb.
 //
-// Solidity: function setMaxRefundeeBalance(uint256 newValue) returns()
+// Solidity: function setMaxRefundeeBalance(uint128 newValue) returns()
 func (_GasRefunder *GasRefunderSession) SetMaxRefundeeBalance(newValue *big.Int) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetMaxRefundeeBalance(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetMaxRefundeeBalance is a paid mutator transaction binding the contract method 0x3a16db73.
+// SetMaxRefundeeBalance is a paid mutator transaction binding the contract method 0xf52128eb.
 //
-// Solidity: function setMaxRefundeeBalance(uint256 newValue) returns()
+// Solidity: function setMaxRefundeeBalance(uint128 newValue) returns()
 func (_GasRefunder *GasRefunderTransactorSession) SetMaxRefundeeBalance(newValue *big.Int) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetMaxRefundeeBalance(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetMaxSingleGasUsage is a paid mutator transaction binding the contract method 0x80599c3d.
+// SetMaxSingleGasUsage is a paid mutator transaction binding the contract method 0x500de431.
 //
-// Solidity: function setMaxSingleGasUsage(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactor) SetMaxSingleGasUsage(opts *bind.TransactOpts, newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setMaxSingleGasUsage(uint32 newValue) returns()
+func (_GasRefunder *GasRefunderTransactor) SetMaxSingleGasUsage(opts *bind.TransactOpts, newValue uint32) (*types.Transaction, error) {
 	return _GasRefunder.contract.Transact(opts, "setMaxSingleGasUsage", newValue)
 }
 
-// SetMaxSingleGasUsage is a paid mutator transaction binding the contract method 0x80599c3d.
+// SetMaxSingleGasUsage is a paid mutator transaction binding the contract method 0x500de431.
 //
-// Solidity: function setMaxSingleGasUsage(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderSession) SetMaxSingleGasUsage(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setMaxSingleGasUsage(uint32 newValue) returns()
+func (_GasRefunder *GasRefunderSession) SetMaxSingleGasUsage(newValue uint32) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetMaxSingleGasUsage(&_GasRefunder.TransactOpts, newValue)
 }
 
-// SetMaxSingleGasUsage is a paid mutator transaction binding the contract method 0x80599c3d.
+// SetMaxSingleGasUsage is a paid mutator transaction binding the contract method 0x500de431.
 //
-// Solidity: function setMaxSingleGasUsage(uint256 newValue) returns()
-func (_GasRefunder *GasRefunderTransactorSession) SetMaxSingleGasUsage(newValue *big.Int) (*types.Transaction, error) {
+// Solidity: function setMaxSingleGasUsage(uint32 newValue) returns()
+func (_GasRefunder *GasRefunderTransactorSession) SetMaxSingleGasUsage(newValue uint32) (*types.Transaction, error) {
 	return _GasRefunder.Contract.SetMaxSingleGasUsage(&_GasRefunder.TransactOpts, newValue)
 }
 
@@ -863,6 +742,151 @@ func (_GasRefunder *GasRefunderSession) Receive() (*types.Transaction, error) {
 // Solidity: receive() payable returns()
 func (_GasRefunder *GasRefunderTransactorSession) Receive() (*types.Transaction, error) {
 	return _GasRefunder.Contract.Receive(&_GasRefunder.TransactOpts)
+}
+
+// GasRefunderCommonParameterSetIterator is returned from FilterCommonParameterSet and is used to iterate over the raw logs and unpacked data for CommonParameterSet events raised by the GasRefunder contract.
+type GasRefunderCommonParameterSetIterator struct {
+	Event *GasRefunderCommonParameterSet // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *GasRefunderCommonParameterSetIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(GasRefunderCommonParameterSet)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(GasRefunderCommonParameterSet)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *GasRefunderCommonParameterSetIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *GasRefunderCommonParameterSetIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// GasRefunderCommonParameterSet represents a CommonParameterSet event raised by the GasRefunder contract.
+type GasRefunderCommonParameterSet struct {
+	Parameter uint8
+	Value     *big.Int
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterCommonParameterSet is a free log retrieval operation binding the contract event 0xda79b6b81f905f788560507c685a42d5a8ab209ee26538cbcf3ce3caed601f9b.
+//
+// Solidity: event CommonParameterSet(uint8 indexed parameter, uint256 value)
+func (_GasRefunder *GasRefunderFilterer) FilterCommonParameterSet(opts *bind.FilterOpts, parameter []uint8) (*GasRefunderCommonParameterSetIterator, error) {
+
+	var parameterRule []interface{}
+	for _, parameterItem := range parameter {
+		parameterRule = append(parameterRule, parameterItem)
+	}
+
+	logs, sub, err := _GasRefunder.contract.FilterLogs(opts, "CommonParameterSet", parameterRule)
+	if err != nil {
+		return nil, err
+	}
+	return &GasRefunderCommonParameterSetIterator{contract: _GasRefunder.contract, event: "CommonParameterSet", logs: logs, sub: sub}, nil
+}
+
+// WatchCommonParameterSet is a free log subscription operation binding the contract event 0xda79b6b81f905f788560507c685a42d5a8ab209ee26538cbcf3ce3caed601f9b.
+//
+// Solidity: event CommonParameterSet(uint8 indexed parameter, uint256 value)
+func (_GasRefunder *GasRefunderFilterer) WatchCommonParameterSet(opts *bind.WatchOpts, sink chan<- *GasRefunderCommonParameterSet, parameter []uint8) (event.Subscription, error) {
+
+	var parameterRule []interface{}
+	for _, parameterItem := range parameter {
+		parameterRule = append(parameterRule, parameterItem)
+	}
+
+	logs, sub, err := _GasRefunder.contract.WatchLogs(opts, "CommonParameterSet", parameterRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(GasRefunderCommonParameterSet)
+				if err := _GasRefunder.contract.UnpackLog(event, "CommonParameterSet", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseCommonParameterSet is a log parse operation binding the contract event 0xda79b6b81f905f788560507c685a42d5a8ab209ee26538cbcf3ce3caed601f9b.
+//
+// Solidity: event CommonParameterSet(uint8 indexed parameter, uint256 value)
+func (_GasRefunder *GasRefunderFilterer) ParseCommonParameterSet(log types.Log) (*GasRefunderCommonParameterSet, error) {
+	event := new(GasRefunderCommonParameterSet)
+	if err := _GasRefunder.contract.UnpackLog(event, "CommonParameterSet", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // GasRefunderContractAllowedSetIterator is returned from FilterContractAllowedSet and is used to iterate over the raw logs and unpacked data for ContractAllowedSet events raised by the GasRefunder contract.
@@ -1450,151 +1474,6 @@ func (_GasRefunder *GasRefunderFilterer) ParseOwnershipTransferred(log types.Log
 	return event, nil
 }
 
-// GasRefunderParameterSetIterator is returned from FilterParameterSet and is used to iterate over the raw logs and unpacked data for ParameterSet events raised by the GasRefunder contract.
-type GasRefunderParameterSetIterator struct {
-	Event *GasRefunderParameterSet // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *GasRefunderParameterSetIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(GasRefunderParameterSet)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(GasRefunderParameterSet)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *GasRefunderParameterSetIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *GasRefunderParameterSetIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// GasRefunderParameterSet represents a ParameterSet event raised by the GasRefunder contract.
-type GasRefunderParameterSet struct {
-	Parameter *big.Int
-	Value     *big.Int
-	Raw       types.Log // Blockchain specific contextual infos
-}
-
-// FilterParameterSet is a free log retrieval operation binding the contract event 0x0fda05912fc0926602ebe745a349eb343a59dc2248f8ca238f896f385712170c.
-//
-// Solidity: event ParameterSet(uint256 indexed parameter, uint256 value)
-func (_GasRefunder *GasRefunderFilterer) FilterParameterSet(opts *bind.FilterOpts, parameter []*big.Int) (*GasRefunderParameterSetIterator, error) {
-
-	var parameterRule []interface{}
-	for _, parameterItem := range parameter {
-		parameterRule = append(parameterRule, parameterItem)
-	}
-
-	logs, sub, err := _GasRefunder.contract.FilterLogs(opts, "ParameterSet", parameterRule)
-	if err != nil {
-		return nil, err
-	}
-	return &GasRefunderParameterSetIterator{contract: _GasRefunder.contract, event: "ParameterSet", logs: logs, sub: sub}, nil
-}
-
-// WatchParameterSet is a free log subscription operation binding the contract event 0x0fda05912fc0926602ebe745a349eb343a59dc2248f8ca238f896f385712170c.
-//
-// Solidity: event ParameterSet(uint256 indexed parameter, uint256 value)
-func (_GasRefunder *GasRefunderFilterer) WatchParameterSet(opts *bind.WatchOpts, sink chan<- *GasRefunderParameterSet, parameter []*big.Int) (event.Subscription, error) {
-
-	var parameterRule []interface{}
-	for _, parameterItem := range parameter {
-		parameterRule = append(parameterRule, parameterItem)
-	}
-
-	logs, sub, err := _GasRefunder.contract.WatchLogs(opts, "ParameterSet", parameterRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(GasRefunderParameterSet)
-				if err := _GasRefunder.contract.UnpackLog(event, "ParameterSet", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseParameterSet is a log parse operation binding the contract event 0x0fda05912fc0926602ebe745a349eb343a59dc2248f8ca238f896f385712170c.
-//
-// Solidity: event ParameterSet(uint256 indexed parameter, uint256 value)
-func (_GasRefunder *GasRefunderFilterer) ParseParameterSet(log types.Log) (*GasRefunderParameterSet, error) {
-	event := new(GasRefunderParameterSet)
-	if err := _GasRefunder.contract.UnpackLog(event, "ParameterSet", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
 // GasRefunderRefundGasCostsDeniedIterator is returned from FilterRefundGasCostsDenied and is used to iterate over the raw logs and unpacked data for RefundGasCostsDenied events raised by the GasRefunder contract.
 type GasRefunderRefundGasCostsDeniedIterator struct {
 	Event *GasRefunderRefundGasCostsDenied // Event containing the contract specifics and raw log
@@ -1666,15 +1545,15 @@ func (it *GasRefunderRefundGasCostsDeniedIterator) Close() error {
 type GasRefunderRefundGasCostsDenied struct {
 	Refundee        common.Address
 	ContractAddress common.Address
+	Reason          uint8
 	Gas             *big.Int
-	Reason          *big.Int
 	Raw             types.Log // Blockchain specific contextual infos
 }
 
-// FilterRefundGasCostsDenied is a free log retrieval operation binding the contract event 0x5ea5eb8c916c8ba2696eb02ba87979a3ba62781166df7c7e8770ca8e4d22f3fc.
+// FilterRefundGasCostsDenied is a free log retrieval operation binding the contract event 0x2b8ae00e22d9eaf5a92820a22b947c007aee773fa36502ad7a1c9a464ab4932b.
 //
-// Solidity: event RefundGasCostsDenied(address indexed refundee, address indexed contractAddress, uint256 gas, uint256 reason)
-func (_GasRefunder *GasRefunderFilterer) FilterRefundGasCostsDenied(opts *bind.FilterOpts, refundee []common.Address, contractAddress []common.Address) (*GasRefunderRefundGasCostsDeniedIterator, error) {
+// Solidity: event RefundGasCostsDenied(address indexed refundee, address indexed contractAddress, uint8 indexed reason, uint256 gas)
+func (_GasRefunder *GasRefunderFilterer) FilterRefundGasCostsDenied(opts *bind.FilterOpts, refundee []common.Address, contractAddress []common.Address, reason []uint8) (*GasRefunderRefundGasCostsDeniedIterator, error) {
 
 	var refundeeRule []interface{}
 	for _, refundeeItem := range refundee {
@@ -1684,18 +1563,22 @@ func (_GasRefunder *GasRefunderFilterer) FilterRefundGasCostsDenied(opts *bind.F
 	for _, contractAddressItem := range contractAddress {
 		contractAddressRule = append(contractAddressRule, contractAddressItem)
 	}
+	var reasonRule []interface{}
+	for _, reasonItem := range reason {
+		reasonRule = append(reasonRule, reasonItem)
+	}
 
-	logs, sub, err := _GasRefunder.contract.FilterLogs(opts, "RefundGasCostsDenied", refundeeRule, contractAddressRule)
+	logs, sub, err := _GasRefunder.contract.FilterLogs(opts, "RefundGasCostsDenied", refundeeRule, contractAddressRule, reasonRule)
 	if err != nil {
 		return nil, err
 	}
 	return &GasRefunderRefundGasCostsDeniedIterator{contract: _GasRefunder.contract, event: "RefundGasCostsDenied", logs: logs, sub: sub}, nil
 }
 
-// WatchRefundGasCostsDenied is a free log subscription operation binding the contract event 0x5ea5eb8c916c8ba2696eb02ba87979a3ba62781166df7c7e8770ca8e4d22f3fc.
+// WatchRefundGasCostsDenied is a free log subscription operation binding the contract event 0x2b8ae00e22d9eaf5a92820a22b947c007aee773fa36502ad7a1c9a464ab4932b.
 //
-// Solidity: event RefundGasCostsDenied(address indexed refundee, address indexed contractAddress, uint256 gas, uint256 reason)
-func (_GasRefunder *GasRefunderFilterer) WatchRefundGasCostsDenied(opts *bind.WatchOpts, sink chan<- *GasRefunderRefundGasCostsDenied, refundee []common.Address, contractAddress []common.Address) (event.Subscription, error) {
+// Solidity: event RefundGasCostsDenied(address indexed refundee, address indexed contractAddress, uint8 indexed reason, uint256 gas)
+func (_GasRefunder *GasRefunderFilterer) WatchRefundGasCostsDenied(opts *bind.WatchOpts, sink chan<- *GasRefunderRefundGasCostsDenied, refundee []common.Address, contractAddress []common.Address, reason []uint8) (event.Subscription, error) {
 
 	var refundeeRule []interface{}
 	for _, refundeeItem := range refundee {
@@ -1705,8 +1588,12 @@ func (_GasRefunder *GasRefunderFilterer) WatchRefundGasCostsDenied(opts *bind.Wa
 	for _, contractAddressItem := range contractAddress {
 		contractAddressRule = append(contractAddressRule, contractAddressItem)
 	}
+	var reasonRule []interface{}
+	for _, reasonItem := range reason {
+		reasonRule = append(reasonRule, reasonItem)
+	}
 
-	logs, sub, err := _GasRefunder.contract.WatchLogs(opts, "RefundGasCostsDenied", refundeeRule, contractAddressRule)
+	logs, sub, err := _GasRefunder.contract.WatchLogs(opts, "RefundGasCostsDenied", refundeeRule, contractAddressRule, reasonRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1738,9 +1625,9 @@ func (_GasRefunder *GasRefunderFilterer) WatchRefundGasCostsDenied(opts *bind.Wa
 	}), nil
 }
 
-// ParseRefundGasCostsDenied is a log parse operation binding the contract event 0x5ea5eb8c916c8ba2696eb02ba87979a3ba62781166df7c7e8770ca8e4d22f3fc.
+// ParseRefundGasCostsDenied is a log parse operation binding the contract event 0x2b8ae00e22d9eaf5a92820a22b947c007aee773fa36502ad7a1c9a464ab4932b.
 //
-// Solidity: event RefundGasCostsDenied(address indexed refundee, address indexed contractAddress, uint256 gas, uint256 reason)
+// Solidity: event RefundGasCostsDenied(address indexed refundee, address indexed contractAddress, uint8 indexed reason, uint256 gas)
 func (_GasRefunder *GasRefunderFilterer) ParseRefundGasCostsDenied(log types.Log) (*GasRefunderRefundGasCostsDenied, error) {
 	event := new(GasRefunderRefundGasCostsDenied)
 	if err := _GasRefunder.contract.UnpackLog(event, "RefundGasCostsDenied", log); err != nil {

@@ -48,7 +48,7 @@ func TestSequencerGasUsage(t *testing.T) {
 	test.FailIfError(t, err)
 	_, err = gasRefunder.AllowRefundees(auth, []ethcommon.Address{auth.From})
 	test.FailIfError(t, err)
-	_, err = gasRefunder.SetMaxSingleGasUsage(auth, big.NewInt(1_000_000_000))
+	_, err = gasRefunder.SetMaxSingleGasUsage(auth, 1_000_000_000)
 	test.FailIfError(t, err)
 
 	gasRefunderAuth := auths[1]
