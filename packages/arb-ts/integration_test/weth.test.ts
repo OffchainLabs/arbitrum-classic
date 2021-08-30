@@ -44,9 +44,8 @@ describe('WETH', async () => {
     const withdrawEventData =
       bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
 
-    expect(withdrawEventData).to.exist(
-      'getWithdrawalsInL2Transaction came back empty'
-    )
+    expect(withdrawEventData, 'getWithdrawalsInL2Transaction came back empty')
+      .to.exist
 
     const outgoingMessageState = await bridge.getOutGoingMessageState(
       withdrawEventData.batchNumber,
@@ -63,8 +62,9 @@ describe('WETH', async () => {
     const l2WethBalance =
       _l2WethBalance && _l2WethBalance.ERC20 && _l2WethBalance.ERC20.balance
     expect(
-      l2WethBalance && l2WethBalance.add(wethToWithdraw).eq(wethToWrap)
-    ).to.be.true('balance not properly updated after weth withdraw')
+      l2WethBalance && l2WethBalance.add(wethToWithdraw).eq(wethToWrap),
+      'balance not properly updated after weth withdraw'
+    ).to.be.true
 
     const walletAddress = await bridge.l1Signer.getAddress()
     const gatewayWithdrawEvents = await bridge.getGatewayWithdrawEventData(
@@ -113,7 +113,7 @@ describe('WETH', async () => {
 
     const data = await bridge.getAndUpdateL1TokenData(l1WethAddress)
     const allowed = data.ERC20 && data.ERC20.allowed
-    expect(allowed).to.be.true('failed to set allowance')
+    expect(allowed, 'failed to set allowance').to.be.true
 
     const depositRes = await bridge.deposit(l1WethAddress, wethToDeposit)
     const depositRec = await depositRes.wait()
@@ -124,7 +124,8 @@ describe('WETH', async () => {
     const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
 
     expect(
-      testWalletL2Balance && testWalletL2Balance.eq(wethToDeposit)
-    ).to.be.true('ether balance not updated after deposit')
+      testWalletL2Balance && testWalletL2Balance.eq(wethToDeposit),
+      'ether balance not updated after deposit'
+    ).to.be.true
   })
 })

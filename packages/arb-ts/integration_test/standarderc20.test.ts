@@ -56,9 +56,10 @@ describe('standard ERC20', () => {
     const withdrawEventData =
       bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
 
-    expect(withdrawEventData).to.exist(
+    expect(
+      withdrawEventData,
       'token withdraw getWithdrawalsInL2Transaction came back empty'
-    )
+    ).to.exist
 
     const outgoingMessageState = await bridge.getOutGoingMessageState(
       withdrawEventData.batchNumber,
@@ -73,8 +74,9 @@ describe('standard ERC20', () => {
     const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
     expect(
       testWalletL2Balance &&
-        testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenFundAmount)
-    ).to.be.true('token withdraw balance not deducted')
+        testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenFundAmount),
+      'token withdraw balance not deducted'
+    ).to.be.true
     const walletAddress = await bridge.l1Signer.getAddress()
 
     const gatewayWithdrawEventData = await bridge.getGatewayWithdrawEventData(
@@ -114,7 +116,7 @@ const depositTokenTest = async (bridge: Bridge) => {
 
   const data = await bridge.getAndUpdateL1TokenData(existentTestERC20)
   const allowed = data.ERC20 && data.ERC20.allowed
-  expect(allowed).to.be.true('set token allowance failed')
+  expect(allowed, 'set token allowance failed').to.be.true
 
   const expectedL1GatewayAddress = await bridge.l1Bridge.getGatewayAddress(
     testToken.address
@@ -134,8 +136,9 @@ const depositTokenTest = async (bridge: Bridge) => {
   expect(
     initialBridgeTokenBalance
       .add(tokenDepositAmount)
-      .eq(finalBridgeTokenBalance)
-  ).to.be.true('bridge balance not updated after L1 token deposit txn')
+      .eq(finalBridgeTokenBalance),
+    'bridge balance not updated after L1 token deposit txn'
+  ).to.be.true
   await testRetryableTicket(bridge, depositRec)
 
   const l2Data = await bridge.getAndUpdateL2TokenData(existentTestERC20)
@@ -143,6 +146,7 @@ const depositTokenTest = async (bridge: Bridge) => {
   const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
 
   expect(
-    testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmount)
-  ).to.be.true('l2 wallet not updated after deposit')
+    testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmount),
+    'l2 wallet not updated after deposit'
+  ).to.be.true
 }

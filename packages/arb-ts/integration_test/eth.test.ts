@@ -35,9 +35,8 @@ describe('Ether', async () => {
 
     expect(rec.status).to.equal(1, 'ether transfer failed')
     const newBalance = await bridge.l2Provider.getBalance(randomAddress)
-    expect(newBalance.eq(amountToSend)).to.be.true(
-      "ether balance didn't update"
-    )
+    expect(newBalance.eq(amountToSend), "ether balance didn't update").to.be
+      .true
   })
   it('deposits ether', async () => {
     const { bridge } = await instantiateBridgeWithRandomWallet()
@@ -65,7 +64,7 @@ describe('Ether', async () => {
     if (seqNumArr === undefined) {
       throw new Error('no seq num')
     }
-    expect(seqNumArr.length).to.exist('eth deposit seqNum not found')
+    expect(seqNumArr.length, 'eth deposit seqNum not found').to.exist
 
     const seqNum = seqNumArr[0]
     const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)
@@ -118,9 +117,10 @@ describe('Ether', async () => {
     const withdrawEventData =
       bridge.getWithdrawalsInL2Transaction(withdrawEthRec)[0]
 
-    expect(withdrawEventData).to.exist(
+    expect(
+      withdrawEventData,
       'eth withdraw getWithdrawalsInL2Transaction query came back empty'
-    )
+    ).to.exist
 
     const myAddress = await bridge.l1Signer.getAddress()
 
