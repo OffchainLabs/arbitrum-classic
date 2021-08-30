@@ -59,7 +59,7 @@ task('bridge-transfer-beacon-owner', 'transfers beacon owner')
   .addParam('newowner', 'new beacon owner')
   .setAction(async (args, hre) => {
     const { transferBeaconOwner } = initUpgrades(hre, __dirname)
-    await transferBeaconOwner(args.address, args.newowner)
+    await transferBeaconOwner(args.beaconaddress, args.newowner)
   })
 task(
   'remove-build-info',
