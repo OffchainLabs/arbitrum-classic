@@ -10,10 +10,6 @@ Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p), foll
 
 This repository is offered under the Apache 2.0 license. See LICENSE for details.
 
-## Current Status
-
-#### Arbitrum is currently Alpha software and should not be used in production environments.
-
 ## Quickstart
 
 Follow [the guide](https://developer.offchainlabs.com/docs/Developer_Quickstart/) on our developer site to build a demo dapp on Arbitrum.
