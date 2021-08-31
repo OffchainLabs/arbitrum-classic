@@ -27,6 +27,19 @@ const _abi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'isArbitrumEnabled',
+    outputs: [
+      {
+        internalType: 'uint8',
+        name: '',
+        type: 'uint8',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',

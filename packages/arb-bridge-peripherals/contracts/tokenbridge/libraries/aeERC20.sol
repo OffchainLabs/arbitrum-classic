@@ -27,6 +27,11 @@ import "./TransferAndCallToken.sol";
 contract aeERC20 is ERC20PermitUpgradeable, TransferAndCallToken {
     using AddressUpgradeable for address;
 
+    constructor() public initializer {
+        // this is expected to be used as the logic contract behind a proxy
+        // override the constructor if you don't wish to use the initialize method
+    }
+
     function _initialize(
         string memory name_,
         string memory symbol_,

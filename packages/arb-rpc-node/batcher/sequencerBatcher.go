@@ -594,7 +594,6 @@ const gasCostBase int = 70292
 const gasCostDelayedMessages int = 63505
 const gasCostPerMessage int = 1431
 const gasCostPerMessageByte int = 16
-const gasCostMaximum int = 2_000_000
 
 // Wait this long after batch confirmation before publishing a new batch
 const l1RacePrevention time.Duration = time.Second * 10
@@ -676,7 +675,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 		} else {
 			estimatedGasCost += gasCostDelayedMessages
 		}
-		if i != 0 && estimatedGasCost >= gasCostMaximum && !skippingImplicitEndOfBlock {
+		if i != 0 && int64(estimatedGasCost) >= b.config.Node.Sequencer.MaxBatchGasCost && !skippingImplicitEndOfBlock {
 			publishingAllBatchItems = false
 			break
 		}
@@ -1043,7 +1042,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		shouldSequence := b.LockoutManager == nil || b.LockoutManager.ShouldSequence()
 		targetCreateBatch := new(big.Int).Add(b.lastCreatedBatchAt, b.createBatchBlockInterval)
 		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
-			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= int64(gasCostMaximum)*9/10 ||
+			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= b.config.Node.Sequencer.MaxBatchGasCost*9/10 ||
 			firstBatchCreation
 		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.PublishBatchesWithoutLockout {
 			// We don't have the lockout and publishing batches without the lockout is disabled

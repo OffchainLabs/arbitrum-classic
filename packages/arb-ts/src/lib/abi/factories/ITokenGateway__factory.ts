@@ -55,13 +55,7 @@ const _abi = [
       },
     ],
     name: 'finalizeInboundTransfer',
-    outputs: [
-      {
-        internalType: 'bytes',
-        name: '',
-        type: 'bytes',
-      },
-    ],
+    outputs: [],
     stateMutability: 'payable',
     type: 'function',
   },
