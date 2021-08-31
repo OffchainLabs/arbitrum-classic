@@ -39,7 +39,9 @@ const main = async () => {
     throw new Error('L2 token set to different L1 token')
   }
 
-  const maxSubmissionCost = (await bridge.l2Bridge.getTxnSubmissionPrice(80))[0]
+  const maxSubmissionCost = (
+    await bridge.l2Bridge.getTxnSubmissionPrice(600)
+  )[0]
 
   console.log('sending L1 tx')
   const l1Tx = await l1CustomGateway.forceRegisterTokenToL2(

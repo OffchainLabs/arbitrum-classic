@@ -10,6 +10,9 @@ const argv = yargs(process.argv.slice(2)).options({
   l2Address: {
     type: 'string',
   },
+  txid: {
+    type: 'string',
+  },
 }).argv
 
 export default argv
