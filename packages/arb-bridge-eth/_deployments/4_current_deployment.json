@@ -99,5 +99,13 @@
       "implArbitrumCommitHash": "b034a588efe7b1b0801749e59de6226d5c12099a",
       "implBuildInfo": ""
     }
+  },
+  "non-proxy-contracts": {
+    "GasRefunder": {
+      "address": "0xBBeA02117225248de9ca68e5400794BF3f7F6a58",
+      "deploymentTxn": "0x87be003b34ad9e41b4f81d30d788ea40a78c1ab57cf7c6891bf4ae1801c9647a",
+      "arbitrumCommitHash": "8d74aa48db7ccd639ed7998331f7428aef8d0afe",
+      "implBuildInfo": ""
+    }
   }
 }
