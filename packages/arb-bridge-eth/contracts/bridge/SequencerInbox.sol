@@ -23,6 +23,7 @@ import "./interfaces/IBridge.sol";
 import "../arch/Marshaling.sol";
 import "../libraries/Cloneable.sol";
 import "../rollup/Rollup.sol";
+import "../validator/IGasRefunder.sol";
 
 import "./Messages.sol";
 
@@ -63,19 +64,11 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         // it is assumed that maxDelayBlocks and maxDelaySeconds are set by the rollup
     }
 
-    function postUpgradeInit() external {
+    function postUpgradeInit() external view {
         // it is assumed the sequencer inbox contract is behind a Proxy controlled by a
         // proxy admin. this function can only be called by the proxy admin contract
         address proxyAdmin = ProxyUtil.getProxyAdmin();
         require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
-
-        // the sequencer inbox needs to query the old rollup interface since it will be upgraded first
-        OldRollup _rollup = OldRollup(rollup);
-
-        maxDelayBlocks = _rollup.sequencerInboxMaxDelayBlocks();
-        maxDelaySeconds = _rollup.sequencerInboxMaxDelaySeconds();
-
-        isSequencer[deprecatedSequencer] = true;
     }
 
     /// @notice DEPRECATED - use isSequencer instead
@@ -185,6 +178,42 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             afterAcc,
             inboxAccs.length - 1
         );
+    }
+
+    function addSequencerL2BatchFromOriginWithGasRefunder(
+        bytes calldata transactions,
+        uint256[] calldata lengths,
+        uint256[] calldata sectionsMetadata,
+        bytes32 afterAcc,
+        IGasRefunder gasRefunder
+    ) external {
+        // solhint-disable-next-line avoid-tx-origin
+        require(msg.sender == tx.origin, "origin only");
+
+        uint256 startGasLeft = gasleft();
+        uint256 calldataSize;
+        assembly {
+            calldataSize := calldatasize()
+        }
+
+        uint256 startNum = messageCount;
+        bytes32 beforeAcc = addSequencerL2BatchImpl(
+            transactions,
+            lengths,
+            sectionsMetadata,
+            afterAcc
+        );
+        emit SequencerBatchDeliveredFromOrigin(
+            startNum,
+            beforeAcc,
+            messageCount,
+            afterAcc,
+            inboxAccs.length - 1
+        );
+
+        if (gasRefunder != IGasRefunder(0)) {
+            gasRefunder.onGasSpent(msg.sender, startGasLeft - gasleft(), calldataSize);
+        }
     }
 
     /**

@@ -751,6 +751,7 @@ export const initUpgrades = (
     transferAdmin,
     transferBeaconOwner,
     removeBuildInfoFiles,
+    getDeployments,
     verifyDeployments,
     transferMainProxyAdminOwner,
     transferProxyAdminOwner,
