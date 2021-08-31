@@ -142,6 +142,7 @@ type Sequencer struct {
 	RewriteSequencerAddress           bool              `koanf:"rewrite-sequencer-address"`
 	MaxBatchGasCost                   int64             `koanf:"max-batch-gas-cost"`
 	GasRefunderAddress                string            `koanf:"gas-refunder-address"`
+	GasRefunderExtraGas               uint64            `koanf:"gas-refunder-extra-gas"`
 }
 
 type WS struct {
@@ -324,6 +325,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
 	f.Int64("node.sequencer.max-batch-gas-cost", 2_000_000, "max L1 batch gas cost to post before splitting it up into multiple batches")
 	f.String("node.sequencer.gas-refunder-address", "", "address of the L1 gas refunder contract (optional)")
+	f.Uint64("node.sequencer.gas-refunder-extra-gas", 50_000, "amount of extra gas to supply for the gas refunder operation")
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
