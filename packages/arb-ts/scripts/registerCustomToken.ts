@@ -28,7 +28,9 @@ const main = async () => {
   if (
     owner.toLowerCase() !== (await bridge.l1Signer.getAddress()).toLowerCase()
   ) {
-    throw new Error('Current L1 signer is not owner')
+    throw new Error(
+      `Current L1 signer ${await bridge.l1Signer.getAddress()} is not owner ${owner}`
+    )
   }
 
   const token = await IArbToken__factory.connect(l2Address, bridge.l2Provider)
@@ -60,7 +62,7 @@ const main = async () => {
       '0x'
     )
   )[0].mul(2)
-  console.log(maxGas)
+  console.log('Max gas', maxGas)
 
   console.log('sending L1 tx')
   const l1Tx = await l1CustomGateway.forceRegisterTokenToL2(

@@ -33,6 +33,7 @@
     "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
     "setStandard": "ts-node scripts/setStandardGateways.ts",
     "setCustom": "ts-node scripts/setArbCustomGateways.ts",
+    "registerCustomToken": "ts-node scripts/registerCustomToken.ts",
     "cancelRetryable": "ts-node scripts/cancelRetryable.ts"
   },
   "dependencies": {
