@@ -34,7 +34,6 @@ type OutputStatistics struct {
 }
 
 type GasAccountingSummary struct {
-	PricePerL2Tx             *big.Int
 	PricePerL1CalldataByte   *big.Int
 	PricePerStorageCell      *big.Int
 	PricePerArbGasBase       *big.Int
@@ -176,23 +175,21 @@ func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
 
 func parseGasAccountingSummary(val value.Value) (*GasAccountingSummary, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 7 {
-		return nil, errors.New("expected gas accounting summary to be tuple of length 7")
+
+	offset := tup.Len() - 6;    // we skip the first field for old ArbOS versions
+	
+	if !ok || tup.Len() < 6 || tup.Len() > 7 {
+		return nil, errors.New("could not parse gas accounting summary")
 	}
 
 	// Tuple size already verified above, so error can be ignored
-	pricePerL2Tx, _ := tup.GetByInt64(0)
-	pricePerL1CalldataByte, _ := tup.GetByInt64(1)
-	pricePerStorageCell, _ := tup.GetByInt64(2)
-	pricePerArbGasBase, _ := tup.GetByInt64(3)
-	pricePerArbGasCongestion, _ := tup.GetByInt64(4)
-	pricePerArbGasTotal, _ := tup.GetByInt64(5)
-	gasPool, _ := tup.GetByInt64(6)
+	pricePerL1CalldataByte, _   := tup.GetByInt64(0 + offset)
+	pricePerStorageCell, _      := tup.GetByInt64(1 + offset)
+	pricePerArbGasBase, _       := tup.GetByInt64(2 + offset)
+	pricePerArbGasCongestion, _ := tup.GetByInt64(3 + offset)
+	pricePerArbGasTotal, _      := tup.GetByInt64(4 + offset)
+	gasPool, _                  := tup.GetByInt64(5 + offset)
 
-	pricePerL2TxInt, ok := pricePerL2Tx.(value.IntValue)
-	if !ok {
-		return nil, errors.New("pricePerL2Tx must be an int")
-	}
 	pricePerL1CalldataByteInt, ok := pricePerL1CalldataByte.(value.IntValue)
 	if !ok {
 		return nil, errors.New("pricePerL1CalldataByte must be an int")
@@ -218,7 +215,6 @@ func parseGasAccountingSummary(val value.Value) (*GasAccountingSummary, error) {
 		return nil, errors.New("gasPool must be an int")
 	}
 	return &GasAccountingSummary{
-		PricePerL2Tx:             pricePerL2TxInt.BigInt(),
 		PricePerL1CalldataByte:   pricePerL1CalldataByteInt.BigInt(),
 		PricePerStorageCell:      pricePerStorageCellInt.BigInt(),
 		PricePerArbGasBase:       pricePerArbGasBaseInt.BigInt(),

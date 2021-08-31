@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,11 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type mock struct {
@@ -55,21 +57,23 @@ func (m *mock) Sender() common.Address {
 	return m.sender
 }
 
-func (m *mock) SendL2MessageFromOrigin(_ context.Context, data []byte) (common.Hash, error) {
+func (m *mock) SendL2MessageFromOrigin(_ context.Context, data []byte) (*arbtransaction.ArbTransaction, error) {
 	m.Lock()
 	defer m.Unlock()
 	l1Hash := common.RandHash()
 	m.sentL1Txes[l1Hash] = true
 
+	tx := arbtransaction.NewMockArbTx(l1Hash.ToEthHash())
+
 	msg, err := message.L2Message{Data: data}.AbstractMessage()
 	if err != nil {
 		m.t.Error(err)
-		return common.Hash{}, err
+		return nil, err
 	}
 	batch, ok := msg.(message.TransactionBatch)
 	if !ok {
 		m.t.Error("expected msg to be batch")
-		return l1Hash, nil
+		return tx, nil
 	}
 	for _, rawTx := range batch.Transactions {
 		msg, err := message.L2Message{Data: rawTx}.AbstractMessage()
@@ -84,19 +88,19 @@ func (m *mock) SendL2MessageFromOrigin(_ context.Context, data []byte) (common.H
 		}
 		m.seenTxesChan <- compressedTx
 	}
-	return l1Hash, nil
+	return tx, nil
 }
 
-func (m *mock) TransactionReceipt(_ context.Context, txHash ethcommon.Hash) (*types.Receipt, error) {
+func (m *mock) TransactionReceipt(_ context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
 	m.Lock()
 	defer m.Unlock()
-	_, ok := m.sentL1Txes[common.NewHashFromEth(txHash)]
+	_, ok := m.sentL1Txes[common.NewHashFromEth(tx.Hash())]
 	if !ok {
 		return nil, errors.New("tx not sent")
 	}
 	return &types.Receipt{
 		Status:      1,
-		TxHash:      txHash,
+		TxHash:      tx.Hash(),
 		GasUsed:     0,
 		BlockNumber: big.NewInt(0),
 	}, nil

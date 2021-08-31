@@ -36,21 +36,27 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
 func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
+	nodeCacheConfig := configuration.NodeCache{
+		AllowSlowLookup: true,
+		LRUSize:         1000,
+		TimedExpire:     20 * time.Minute,
+	}
 	coreConfig := configuration.DefaultCoreSettings()
 
 	mon, err := monitor.NewMonitor(dir, arbosPath, coreConfig)
@@ -64,7 +70,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.
 		return nil, nil, nil, nil, err
 	}
 
-	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 10*time.Millisecond)
+	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 10*time.Millisecond, &nodeCacheConfig)
 	if err != nil {
 		mon.Close()
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
@@ -291,10 +297,10 @@ func (b *Backend) waitForBlockCount(blockCount uint64) error {
 	return nil
 }
 
-func (b *Backend) PendingTransactionCount(_ context.Context, _ common.Address) *uint64 {
+func (b *Backend) PendingTransactionCount(_ context.Context, _ common.Address) (*uint64, error) {
 	b.Lock()
 	defer b.Unlock()
-	return nil
+	return nil, nil
 }
 
 func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) error {
@@ -450,7 +456,6 @@ func (b *L1Emulator) IncreaseTime(amount int64) {
 }
 
 func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator ethcommon.Address) error {
-
 	client := web3.NewEthClient(srv, true)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
@@ -458,16 +463,18 @@ func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator
 	}
 
 	tx, err := arbOwner.SetFairGasPriceSender(ownerAuth, aggregator, true)
+	arbTx := arbtransaction.NewArbTransaction(tx)
 	if err != nil {
 		return errors.Wrap(err, "error calling SetFairGasPriceSender")
 	}
-	_, err = ethbridge.WaitForReceiptWithResultsSimple(context.Background(), client, tx.Hash())
+
+	_, err = transactauth.WaitForReceiptWithResultsSimple(context.Background(), transactauth.NewEthArbReceiptFetcher(client), arbTx)
 	if err != nil {
 		return errors.Wrap(err, "error getting SetFairGasPriceSender receipt")
 	}
-	_, err = arbOwner.SetFeesEnabled(ownerAuth, true)
+	_, err = arbOwner.SetChainParameter(ownerAuth, arbos.FeesEnabledParamId, big.NewInt(1))
 	if err != nil {
-		return errors.Wrap(err, "error calling SetFeesEnabled")
+		return errors.Wrap(err, "error calling SetChainParameter")
 	}
 	return nil
 }

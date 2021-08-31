@@ -42,7 +42,7 @@ func extractAddress(data []byte) (common.Address, []byte) {
 	return addr, data
 }
 
-func addressData(addr common.Address) []byte {
+func AddressData(addr common.Address) []byte {
 	ret := make([]byte, 0, 32)
 	ret = append(ret, make([]byte, 12)...)
 	ret = append(ret, addr[:]...)

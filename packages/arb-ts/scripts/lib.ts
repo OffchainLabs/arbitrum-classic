@@ -1,7 +1,6 @@
 import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
 import { instantiateBridge } from './instantiate_bridge'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
-import { ERC677Token__factory } from '../src/lib/abi/factories/ERC677Token__factory'
 
 export const setStandardGateWays = async (tokens: string[]) => {
   return setGateWays(tokens, 'standard')

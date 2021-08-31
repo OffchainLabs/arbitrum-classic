@@ -20,19 +20,29 @@ pragma solidity ^0.6.11;
 
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../ethereum/gateway/L1GatewayRouter.sol";
+import "../L2ArbitrumMessenger.sol";
+import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
 /**
  * @title Handles withdrawals from Ethereum into Arbitrum. Tokens are routered to their appropriate L2 gateway (Router itself also conforms to the Gateway interface).
  * @notice Router also serves as an L2-L1 token address oracle.
  */
-contract L2GatewayRouter is GatewayRouter {
-    function initialize(address _counterpartGateway, address _defaultGateway) public virtual {
-        GatewayRouter._initialize(_counterpartGateway, _defaultGateway);
+contract L2GatewayRouter is GatewayRouter, L2ArbitrumMessenger {
+    modifier onlyCounterpartGateway() override {
+        require(
+            msg.sender == counterpartGateway ||
+                AddressAliasHelper.undoL1ToL2Alias(msg.sender) == counterpartGateway,
+            "ONLY_COUNTERPART_GATEWAY"
+        );
+        _;
+    }
+
+    function initialize(address _counterpartGateway, address _defaultGateway) public {
+        GatewayRouter._initialize(_counterpartGateway, address(0), _defaultGateway);
     }
 
     function setGateway(address[] memory _l1Token, address[] memory _gateway)
         external
-        virtual
         onlyCounterpartGateway
     {
         // counterpart gateway (L1 router) should never allow wrong lengths
@@ -49,15 +59,11 @@ contract L2GatewayRouter is GatewayRouter {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) public payable virtual returns (bytes memory) {
+    ) public payable returns (bytes memory) {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
-    function setDefaultGateway(address newL2DefaultGateway)
-        external
-        virtual
-        onlyCounterpartGateway
-    {
+    function setDefaultGateway(address newL2DefaultGateway) external onlyCounterpartGateway {
         defaultGateway = newL2DefaultGateway;
         emit DefaultGatewayUpdated(newL2DefaultGateway);
     }

@@ -21,12 +21,19 @@ pragma solidity ^0.6.11;
 import "../ethereum/gateway/L1WethGateway.sol";
 import "../ethereum/gateway/L1CustomGateway.sol";
 import "../ethereum/gateway/L1ERC20Gateway.sol";
+import "../ethereum/L1ArbitrumMessenger.sol";
 
 import "../arbitrum/gateway/L2WethGateway.sol";
 import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
+import "../arbitrum/L2ArbitrumMessenger.sol";
+import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
-import "../libraries/gateway/ArbitrumMessenger.sol";
+contract AddressMappingTest is L2ArbitrumMessenger {
+    function getL1AddressTest(address sender) external pure returns (address l1Address) {
+        return AddressAliasHelper.undoL1ToL2Alias(sender);
+    }
+}
 
 // these contracts are used to "flatten" out communication between contracts
 // this way the token bridge can be tested fully in the base layer
@@ -39,23 +46,33 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
     }
 
     function sendTxToL2(
-        address _inbox,
+        address, /* _inbox */
         address _to,
-        address _user,
+        address, /* _user */
+        uint256, /* _l1CallValue */
         uint256 _l2CallValue,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
+        uint256, /* _maxSubmissionCost */
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
         bytes memory _data
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = _to.call{ value: _l2CallValue }(_data);
         assembly {
             switch success
-                case 0 {
-                    revert(add(retdata, 32), mload(retdata))
-                }
+            case 0 {
+                revert(add(retdata, 32), mload(retdata))
+            }
         }
         return 1337;
+    }
+
+    function getBridge(address _inboxMock) internal view virtual override returns (IBridge) {
+        if (shouldUseInbox) {
+            // the inbox mock covers the role of bridge/inbox/outbox
+            return IBridge(_inboxMock);
+        } else {
+            return IBridge(msg.sender);
+        }
     }
 
     function getL2ToL1Sender(address _inbox) internal view virtual override returns (address) {
@@ -70,16 +87,16 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
 abstract contract L2ArbitrumTestMessenger is L2ArbitrumMessenger {
     function sendTxToL1(
         uint256 _l1CallValue,
-        address _from,
+        address, /* _from */
         address _to,
         bytes memory _data
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = _to.call{ value: _l1CallValue }(_data);
         assembly {
             switch success
-                case 0 {
-                    revert(add(retdata, 32), mload(retdata))
-                }
+            case 0 {
+                revert(add(retdata, 32), mload(retdata))
+            }
         }
         return 1337;
     }
@@ -90,6 +107,7 @@ contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
         address _inbox,
         address _to,
         address _user,
+        uint256 _l1CallValue,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
@@ -101,6 +119,7 @@ contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
                 _inbox,
                 _to,
                 _user,
+                _l1CallValue,
                 _l2CallValue,
                 _maxSubmissionCost,
                 _maxGas,
@@ -117,6 +136,16 @@ contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
         returns (address)
     {
         return L1ArbitrumTestMessenger.getL2ToL1Sender(_inbox);
+    }
+
+    function getBridge(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (IBridge)
+    {
+        return L1ArbitrumTestMessenger.getBridge(_inbox);
     }
 }
 
@@ -130,18 +159,14 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
         return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
     }
 
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        return 50000;
-    }
-
     address public stubAddressOracleReturn;
 
     function setStubAddressOracleReturn(address _stubValue) external {
         stubAddressOracleReturn = _stubValue;
     }
 
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
+    function calculateL2TokenAddress(address l1ERC20)
+        public
         view
         virtual
         override
@@ -153,7 +178,7 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
         if (stubAddressOracleReturn != address(0)) {
             return stubAddressOracleReturn;
         }
-        return super._calculateL2TokenAddress(l1ERC20);
+        return super.calculateL2TokenAddress(l1ERC20);
     }
 }
 
@@ -162,6 +187,7 @@ contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
         address _inbox,
         address _to,
         address _user,
+        uint256 _l1CallValue,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
@@ -173,6 +199,7 @@ contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
                 _inbox,
                 _to,
                 _user,
+                _l1CallValue,
                 _l2CallValue,
                 _maxSubmissionCost,
                 _maxGas,
@@ -189,6 +216,16 @@ contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
         returns (address)
     {
         return L1ArbitrumTestMessenger.getL2ToL1Sender(_inbox);
+    }
+
+    function getBridge(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (IBridge)
+    {
+        return L1ArbitrumTestMessenger.getBridge(_inbox);
     }
 }
 
@@ -201,10 +238,6 @@ contract L2CustomGatewayTester is L2ArbitrumTestMessenger, L2CustomGateway {
     ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
         return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
     }
-
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        return 50000;
-    }
 }
 
 contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
@@ -212,17 +245,19 @@ contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
         address _inbox,
         address _to,
         address _user,
+        uint256 _l1CallValue,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal virtual override(L1WethGateway, L1ArbitrumTestMessenger) returns (uint256) {
+    ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
         return
             L1ArbitrumTestMessenger.sendTxToL2(
                 _inbox,
                 _to,
                 _user,
+                _l1CallValue,
                 _l2CallValue,
                 _maxSubmissionCost,
                 _maxGas,
@@ -239,6 +274,16 @@ contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
         returns (address)
     {
         return L1ArbitrumTestMessenger.getL2ToL1Sender(_inbox);
+    }
+
+    function getBridge(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (IBridge)
+    {
+        return L1ArbitrumTestMessenger.getBridge(_inbox);
     }
 }
 
@@ -254,9 +299,5 @@ contract L2WethGatewayTester is L2ArbitrumTestMessenger, L2WethGateway {
 
     function setL2WethAddress(address _l2Weth) external {
         L2WethGateway.l2Weth = _l2Weth;
-    }
-
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        return 50000;
     }
 }

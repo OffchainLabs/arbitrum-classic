@@ -81,7 +81,9 @@ func (m *Server) GetBlockCount() (uint64, error) {
 }
 
 func (m *Server) BlockNum(block *rpc.BlockNumber) (uint64, error) {
-	if *block == rpc.LatestBlockNumber || *block == rpc.PendingBlockNumber {
+	if block == nil {
+		return 0, errors.New("block number must not be null")
+	} else if *block == rpc.LatestBlockNumber || *block == rpc.PendingBlockNumber {
 		latest, err := m.db.LatestBlock()
 		if err != nil {
 			return 0, err
@@ -181,7 +183,7 @@ func (m *Server) Aggregator() *common.Address {
 	return m.batch.Aggregator()
 }
 
-func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
+func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error) {
 	return m.batch.PendingTransactionCount(ctx, account)
 }
 

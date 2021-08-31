@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -28,12 +27,9 @@ func TestSequencerGasUsage(t *testing.T) {
 
 	evBridgeAddr, _, evBridge, err := ethbridgetestcontracts.DeployRollupEventBridge(auth, clnt)
 	test.FailIfError(t, err)
-	rollupAddr, _, rollup, err := ethbridgetestcontracts.DeployRollupMock(auth, clnt)
+	_, _, seqInbox, err := ethbridgecontracts.DeploySequencerInbox(auth, clnt)
 	test.FailIfError(t, err)
 	clnt.Commit()
-
-	_, err = rollup.SetMock(auth, big.NewInt(150), big.NewInt(9000))
-	test.FailIfError(t, err)
 	_, err = evBridge.Initialize(auth, delayedInboxAddr, auth.From)
 	test.FailIfError(t, err)
 	clnt.Commit()
@@ -41,24 +37,21 @@ func TestSequencerGasUsage(t *testing.T) {
 	_, err = delayedBridge.SetInbox(auth, evBridgeAddr, true)
 	test.FailIfError(t, err)
 
+	_, err = seqInbox.Initialize(auth, delayedInboxAddr, auth.From, auth.From)
+	test.FailIfError(t, err)
+
 	clnt.Commit()
+
+	_, err = seqInbox.SetMaxDelay(auth, big.NewInt(150), big.NewInt(9000))
+	test.FailIfError(t, err)
 
 	_, err = evBridge.RollupInitialized(
 		auth,
 		big.NewInt(0),
 		big.NewInt(0),
-		big.NewInt(0),
-		ethcommon.Address{},
 		auth.From,
 		nil,
 	)
-	test.FailIfError(t, err)
-
-	_, _, seqInbox, err := ethbridgecontracts.DeploySequencerInbox(auth, clnt)
-	test.FailIfError(t, err)
-	clnt.Commit()
-
-	_, err = seqInbox.Initialize(auth, delayedInboxAddr, auth.From, rollupAddr)
 	test.FailIfError(t, err)
 	clnt.Commit()
 

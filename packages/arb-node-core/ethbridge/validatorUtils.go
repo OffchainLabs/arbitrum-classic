@@ -125,7 +125,7 @@ func (v *ValidatorUtils) GetConfig(ctx context.Context) (*RollupConfig, error) {
 	return &RollupConfig{
 		ConfirmPeriodBlocks:      config.ConfirmPeriodBlocks,
 		ExtraChallengeTimeBlocks: config.ExtraChallengeTimeBlocks,
-		ArbGasSpeedLimitPerBlock: config.ArbGasSpeedLimitPerBlock,
+		ArbGasSpeedLimitPerBlock: config.AvmGasSpeedLimitPerBlock,
 		BaseStake:                config.BaseStake,
 		StakeToken:               common.Address{},
 	}, nil

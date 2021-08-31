@@ -10,6 +10,7 @@ import { BytesLike } from '@ethersproject/bytes'
 
 import { RollupUserFacet } from '../build/types/RollupUserFacet'
 import { Bridge } from '../build/types/Bridge'
+import { hexDataLength } from '@ethersproject/bytes'
 
 const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -36,7 +37,7 @@ function assertionHash(
   )
 }
 
-function nodeHash(
+export function nodeHash(
   hasSibling: boolean,
   lastHash: BytesLike,
   assertionExecHash: BytesLike,
@@ -150,7 +151,8 @@ export class NodeState {
 function buildAccumulator(base: BytesLike, hashes: BytesLike[]): BytesLike {
   let acc = base
   for (const h of hashes) {
-    acc = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, h])
+    const hash = ethers.utils.solidityKeccak256(['bytes'], [h])
+    acc = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, hash])
   }
   return acc
 }
@@ -344,7 +346,7 @@ export class RollupContract {
     afterLogCount: BigNumberish
   ): Promise<ContractTransaction> {
     const messageData = ethers.utils.concat(sends)
-    const messageLengths = sends.map(msg => msg.length)
+    const messageLengths = sends.map(msg => hexDataLength(msg))
     return this.rollup.confirmNextNode(
       prevSendAcc,
       messageData,

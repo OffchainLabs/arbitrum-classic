@@ -178,6 +178,13 @@ func (c *Challenge) ProveContinuedExecution(
 	return errors.WithStack(err)
 }
 
+func (c *Challenge) Timeout(
+	ctx context.Context,
+) error {
+	_, err := c.builderCon.Timeout(authWithContext(ctx, c.builderAuth))
+	return errors.WithStack(err)
+}
+
 func cutsToHashes(cuts []core.Cut) [][32]byte {
 	cutHashes := make([][32]byte, 0, len(cuts))
 	for _, cut := range cuts {

@@ -21,22 +21,25 @@ import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface IRollupAdminInterface extends ethers.utils.Interface {
   functions: {
+    'forceConfirmNode(uint256,bytes32,bytes,uint256[],uint256,bytes32,uint256)': FunctionFragment
+    'forceCreateNode(bytes32,bytes32[3][2],uint256[4][2],bytes,uint256,uint256,uint256)': FunctionFragment
+    'forceRefundStaker(address[])': FunctionFragment
+    'forceResolveChallenge(address[],address[])': FunctionFragment
     'pause()': FunctionFragment
     'removeOldOutbox(address)': FunctionFragment
     'resume()': FunctionFragment
-    'setArbGasSpeedLimitPerBlock(uint256)': FunctionFragment
+    'setAvmGasSpeedLimitPerBlock(uint256)': FunctionFragment
     'setBaseStake(uint256)': FunctionFragment
     'setChallengeExecutionBisectionDegree(uint256)': FunctionFragment
     'setConfirmPeriodBlocks(uint256)': FunctionFragment
     'setExtraChallengeTimeBlocks(uint256)': FunctionFragment
     'setFacets(address,address)': FunctionFragment
     'setInbox(address,bool)': FunctionFragment
+    'setIsSequencer(address,bool)': FunctionFragment
     'setMinimumAssertionPeriod(uint256)': FunctionFragment
     'setOutbox(address)': FunctionFragment
     'setOwner(address)': FunctionFragment
-    'setSequencer(address)': FunctionFragment
-    'setSequencerInboxMaxDelayBlocks(uint256)': FunctionFragment
-    'setSequencerInboxMaxDelaySeconds(uint256)': FunctionFragment
+    'setSequencerInboxMaxDelay(uint256,uint256)': FunctionFragment
     'setStakeToken(address)': FunctionFragment
     'setValidator(address[],bool[])': FunctionFragment
     'setWhitelistEntries(address,address[],bool[])': FunctionFragment
@@ -44,6 +47,41 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
     'upgradeBeacon(address,address)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'forceConfirmNode',
+    values: [
+      BigNumberish,
+      BytesLike,
+      BytesLike,
+      BigNumberish[],
+      BigNumberish,
+      BytesLike,
+      BigNumberish
+    ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceCreateNode',
+    values: [
+      BytesLike,
+      [[BytesLike, BytesLike, BytesLike], [BytesLike, BytesLike, BytesLike]],
+      [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      BytesLike,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish
+    ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceRefundStaker',
+    values: [string[]]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceResolveChallenge',
+    values: [string[], string[]]
+  ): string
   encodeFunctionData(functionFragment: 'pause', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'removeOldOutbox',
@@ -51,7 +89,7 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(functionFragment: 'resume', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'setArbGasSpeedLimitPerBlock',
+    functionFragment: 'setAvmGasSpeedLimitPerBlock',
     values: [BigNumberish]
   ): string
   encodeFunctionData(
@@ -79,19 +117,18 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
     values: [string, boolean]
   ): string
   encodeFunctionData(
+    functionFragment: 'setIsSequencer',
+    values: [string, boolean]
+  ): string
+  encodeFunctionData(
     functionFragment: 'setMinimumAssertionPeriod',
     values: [BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'setOutbox', values: [string]): string
   encodeFunctionData(functionFragment: 'setOwner', values: [string]): string
-  encodeFunctionData(functionFragment: 'setSequencer', values: [string]): string
   encodeFunctionData(
-    functionFragment: 'setSequencerInboxMaxDelayBlocks',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'setSequencerInboxMaxDelaySeconds',
-    values: [BigNumberish]
+    functionFragment: 'setSequencerInboxMaxDelay',
+    values: [BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'setStakeToken',
@@ -114,6 +151,22 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
     values: [string, string]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'forceConfirmNode',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceCreateNode',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceRefundStaker',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceResolveChallenge',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'pause', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'removeOldOutbox',
@@ -121,7 +174,7 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'resume', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'setArbGasSpeedLimitPerBlock',
+    functionFragment: 'setAvmGasSpeedLimitPerBlock',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -143,21 +196,17 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'setFacets', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'setInbox', data: BytesLike): Result
   decodeFunctionResult(
+    functionFragment: 'setIsSequencer',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'setMinimumAssertionPeriod',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'setOutbox', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'setOwner', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'setSequencer',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setSequencerInboxMaxDelayBlocks',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setSequencerInboxMaxDelaySeconds',
+    functionFragment: 'setSequencerInboxMaxDelay',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -181,7 +230,11 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
 
-  events: {}
+  events: {
+    'OwnerFunctionCalled(uint256)': EventFragment
+  }
+
+  getEvent(nameOrSignatureOrTopic: 'OwnerFunctionCalled'): EventFragment
 }
 
 export class IRollupAdmin extends BaseContract {
@@ -228,6 +281,45 @@ export class IRollupAdmin extends BaseContract {
   interface: IRollupAdminInterface
 
   functions: {
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    forceRefundStaker(
+      stacker: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    forceResolveChallenge(
+      stackerA: string[],
+      stackerB: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     pause(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
@@ -241,8 +333,8 @@ export class IRollupAdmin extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -278,6 +370,12 @@ export class IRollupAdmin extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -293,17 +391,8 @@ export class IRollupAdmin extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    setSequencer(
-      newSequencer: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
@@ -340,6 +429,45 @@ export class IRollupAdmin extends BaseContract {
     ): Promise<ContractTransaction>
   }
 
+  forceConfirmNode(
+    nodeNum: BigNumberish,
+    beforeSendAcc: BytesLike,
+    sendsData: BytesLike,
+    sendLengths: BigNumberish[],
+    afterSendCount: BigNumberish,
+    afterLogAcc: BytesLike,
+    afterLogCount: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  forceCreateNode(
+    expectedNodeHash: BytesLike,
+    assertionBytes32Fields: [
+      [BytesLike, BytesLike, BytesLike],
+      [BytesLike, BytesLike, BytesLike]
+    ],
+    assertionIntFields: [
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+    ],
+    sequencerBatchProof: BytesLike,
+    beforeProposedBlock: BigNumberish,
+    beforeInboxMaxCount: BigNumberish,
+    prevNode: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  forceRefundStaker(
+    stacker: string[],
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  forceResolveChallenge(
+    stackerA: string[],
+    stackerB: string[],
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   pause(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
@@ -353,8 +481,8 @@ export class IRollupAdmin extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  setArbGasSpeedLimitPerBlock(
-    newArbGasSpeedLimitPerBlock: BigNumberish,
+  setAvmGasSpeedLimitPerBlock(
+    newAvmGasSpeedLimitPerBlock: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -390,6 +518,12 @@ export class IRollupAdmin extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  setIsSequencer(
+    newSequencer: string,
+    isSequencer: boolean,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   setMinimumAssertionPeriod(
     newPeriod: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
@@ -405,17 +539,8 @@ export class IRollupAdmin extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  setSequencer(
-    newSequencer: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  setSequencerInboxMaxDelayBlocks(
+  setSequencerInboxMaxDelay(
     newSequencerInboxMaxDelayBlocks: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  setSequencerInboxMaxDelaySeconds(
     newSequencerInboxMaxDelaySeconds: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
@@ -452,14 +577,53 @@ export class IRollupAdmin extends BaseContract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    forceRefundStaker(
+      stacker: string[],
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    forceResolveChallenge(
+      stackerA: string[],
+      stackerB: string[],
+      overrides?: CallOverrides
+    ): Promise<void>
+
     pause(overrides?: CallOverrides): Promise<void>
 
     removeOldOutbox(_outbox: string, overrides?: CallOverrides): Promise<void>
 
     resume(overrides?: CallOverrides): Promise<void>
 
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -495,6 +659,12 @@ export class IRollupAdmin extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
       overrides?: CallOverrides
@@ -504,14 +674,8 @@ export class IRollupAdmin extends BaseContract {
 
     setOwner(newOwner: string, overrides?: CallOverrides): Promise<void>
 
-    setSequencer(newSequencer: string, overrides?: CallOverrides): Promise<void>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
@@ -548,9 +712,52 @@ export class IRollupAdmin extends BaseContract {
     ): Promise<void>
   }
 
-  filters: {}
+  filters: {
+    OwnerFunctionCalled(
+      id?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { id: BigNumber }>
+  }
 
   estimateGas: {
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    forceRefundStaker(
+      stacker: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    forceResolveChallenge(
+      stackerA: string[],
+      stackerB: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     pause(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
@@ -564,8 +771,8 @@ export class IRollupAdmin extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -601,6 +808,12 @@ export class IRollupAdmin extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -616,17 +829,8 @@ export class IRollupAdmin extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    setSequencer(
-      newSequencer: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
@@ -664,6 +868,45 @@ export class IRollupAdmin extends BaseContract {
   }
 
   populateTransaction: {
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    forceRefundStaker(
+      stacker: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    forceResolveChallenge(
+      stackerA: string[],
+      stackerB: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
     pause(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
@@ -677,8 +920,8 @@ export class IRollupAdmin extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
@@ -714,6 +957,12 @@ export class IRollupAdmin extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -729,17 +978,8 @@ export class IRollupAdmin extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    setSequencer(
-      newSequencer: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>

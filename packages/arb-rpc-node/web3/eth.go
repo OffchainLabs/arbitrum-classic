@@ -22,8 +22,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -105,7 +105,7 @@ func (s *Server) GetBalance(address *common.Address, blockNum rpc.BlockNumberOrH
 	return (*hexutil.Big)(balance), nil
 }
 
-func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockNum rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return nil, err
@@ -115,11 +115,26 @@ func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockN
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting storage")
 	}
-	return (*hexutil.Big)(storageVal), nil
+	return math.U256Bytes(storageVal), nil
 }
 
-func (s *Server) GetTransactionCount(ctx context.Context, address *common.Address, blockNum rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
+func (s *Server) getTransactionCountInner(ctx context.Context, address *common.Address, blockNum rpc.BlockNumberOrHash, forwardingOnlyMode bool) (hexutil.Uint64, error) {
 	account := arbcommon.NewAddressFromEth(*address)
+
+	if blockNum.BlockNumber != nil && *blockNum.BlockNumber == rpc.PendingBlockNumber {
+		pending, err := s.srv.PendingTransactionCount(ctx, account)
+		if err != nil {
+			return 0, err
+		}
+		if pending != nil {
+			return hexutil.Uint64(*pending), nil
+		}
+	}
+
+	if forwardingOnlyMode {
+		return 0, errors.New("only pending transaction count supported in forwarder only mode")
+	}
+
 	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return 0, err
@@ -129,17 +144,7 @@ func (s *Server) GetTransactionCount(ctx context.Context, address *common.Addres
 		return 0, errors.Wrap(err, "error getting transaction count")
 	}
 
-	count := txCount.Uint64()
-	if blockNum.BlockNumber != nil && *blockNum.BlockNumber == rpc.PendingBlockNumber {
-		pending := s.srv.PendingTransactionCount(ctx, account)
-		if pending != nil {
-			if *pending > count {
-				count = *pending
-			}
-		}
-	}
-
-	return hexutil.Uint64(count), nil
+	return hexutil.Uint64(txCount.Uint64()), nil
 }
 
 func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil.Big, error) {
@@ -176,18 +181,6 @@ func (s *Server) GetCode(address *common.Address, blockNum rpc.BlockNumberOrHash
 		return nil, errors.Wrap(err, "error getting code")
 	}
 	return code, nil
-}
-
-func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (hexutil.Bytes, error) {
-	tx := new(types.Transaction)
-	if err := rlp.DecodeBytes(data, tx); err != nil {
-		return nil, err
-	}
-	err := s.srv.SendTransaction(ctx, tx)
-	if err != nil {
-		return nil, err
-	}
-	return tx.Hash().Bytes(), nil
 }
 
 func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {

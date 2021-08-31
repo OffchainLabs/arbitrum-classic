@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,11 +46,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var logger zerolog.Logger
@@ -93,6 +95,13 @@ func startup() error {
 	//fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 	//go http.ListenAndServe("localhost:6060", nil)
+
+	nodeCacheConfig := configuration.NodeCache{
+		AllowSlowLookup: true,
+		LRUSize:         1000,
+		TimedExpire:     20 * time.Minute,
+	}
+	coreConfig := configuration.DefaultCoreSettings()
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
@@ -189,7 +198,7 @@ func startup() error {
 	if err != nil {
 		return errors.Wrap(err, "error creating rollup")
 	}
-	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, ethclint, deployer.From, tx, "CreateRollup")
+	receipt, err := transactauth.WaitForReceiptWithResults(ctx, ethclint, deployer.From, arbtransaction.NewArbTransaction(tx), "CreateRollup", transactauth.NewEthArbReceiptFetcher(ethclint))
 	if err != nil {
 		return errors.Wrap(err, "error getting transaction receipt")
 	}
@@ -220,7 +229,6 @@ func startup() error {
 		}
 	}()
 
-	coreConfig := configuration.DefaultCoreSettings()
 	mon, err := monitor.NewMonitor(dbPath, arbosPath, coreConfig)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
@@ -281,22 +289,28 @@ func startup() error {
 		Auth:        seqAuth,
 		Core:        mon.Core,
 		InboxReader: inboxReader,
-		Config: configuration.Sequencer{
-			CreateBatchBlockInterval:   *createBatchBlockInterval,
-			DelayedMessagesTargetDelay: *delayedMessagesTargetDelay,
+	}
+	config := configuration.Config{
+		Feed: configuration.Feed{
+			Output: configuration.FeedOutput{
+				Addr:          "127.0.0.1",
+				IOTimeout:     2 * time.Second,
+				Port:          "9642",
+				Ping:          5 * time.Second,
+				ClientTimeout: 15 * time.Second,
+				Queue:         1,
+				Workers:       2,
+			},
+		},
+		Node: configuration.Node{
+			Sequencer: configuration.Sequencer{
+				CreateBatchBlockInterval:   *createBatchBlockInterval,
+				DelayedMessagesTargetDelay: *delayedMessagesTargetDelay,
+			},
 		},
 	}
-	settings := configuration.FeedOutput{
-		Addr:          "127.0.0.1",
-		IOTimeout:     2 * time.Second,
-		Port:          "9642",
-		Ping:          5 * time.Second,
-		ClientTimeout: 15 * time.Second,
-		Queue:         1,
-		Workers:       2,
-	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond, &nodeCacheConfig)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
@@ -315,7 +329,8 @@ func startup() error {
 		time.Duration(5)*time.Second,
 		batcherMode,
 		signer,
-		settings,
+		&config,
+		&config.Wallet,
 	)
 	if err != nil {
 		return err
@@ -347,7 +362,7 @@ func startup() error {
 		return err
 	}
 
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.NormalMode, nil)
 	if err != nil {
 		return err
 	}

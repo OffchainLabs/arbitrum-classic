@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -79,13 +80,12 @@ func NewForwarder(ctx context.Context, config configuration.Forwarder) (*Forward
 }
 
 // Return nil if no pending transaction count is available
-func (b *Forwarder) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
+func (b *Forwarder) PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error) {
 	nonce, err := b.client.PendingNonceAt(ctx, account.ToEthAddress())
 	if err != nil {
-		logger.Error().Stack().Err(err).Hex("account", account.Bytes()).Msg("Error fetching pending nonce from arb-node")
-		return nil
+		return nil, errors.Wrap(err, "error fetching pending nonce from forwarding target")
 	}
-	return &nonce
+	return &nonce, nil
 }
 
 func (b *Forwarder) SendTransaction(ctx context.Context, tx *types.Transaction) error {

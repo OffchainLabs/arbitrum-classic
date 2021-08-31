@@ -24,15 +24,22 @@ interface InboxInterface extends ethers.utils.Interface {
   functions: {
     'bridge()': FunctionFragment
     'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
+    'createRetryableTicketNoRefundAliasRewrite(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'depositEth(uint256)': FunctionFragment
     'initialize(address,address)': FunctionFragment
+    'isCreateRetryablePaused()': FunctionFragment
     'isMaster()': FunctionFragment
+    'pauseCreateRetryables()': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
     'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)': FunctionFragment
     'sendL2Message(bytes)': FunctionFragment
     'sendL2MessageFromOrigin(bytes)': FunctionFragment
     'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)': FunctionFragment
+    'shouldRewriteSender()': FunctionFragment
+    'startRewriteAddress()': FunctionFragment
+    'stopRewriteAddress()': FunctionFragment
+    'unpauseCreateRetryables()': FunctionFragment
     'updateWhitelistSource(address)': FunctionFragment
     'whitelist()': FunctionFragment
   }
@@ -52,6 +59,19 @@ interface InboxInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(
+    functionFragment: 'createRetryableTicketNoRefundAliasRewrite',
+    values: [
+      string,
+      BigNumberish,
+      BigNumberish,
+      string,
+      string,
+      BigNumberish,
+      BigNumberish,
+      BytesLike
+    ]
+  ): string
+  encodeFunctionData(
     functionFragment: 'depositEth',
     values: [BigNumberish]
   ): string
@@ -59,7 +79,15 @@ interface InboxInterface extends ethers.utils.Interface {
     functionFragment: 'initialize',
     values: [string, string]
   ): string
+  encodeFunctionData(
+    functionFragment: 'isCreateRetryablePaused',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'pauseCreateRetryables',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'sendContractTransaction',
     values: [BigNumberish, BigNumberish, string, BigNumberish, BytesLike]
@@ -92,6 +120,22 @@ interface InboxInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(
+    functionFragment: 'shouldRewriteSender',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'startRewriteAddress',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'stopRewriteAddress',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'unpauseCreateRetryables',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'updateWhitelistSource',
     values: [string]
   ): string
@@ -102,9 +146,21 @@ interface InboxInterface extends ethers.utils.Interface {
     functionFragment: 'createRetryableTicket',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'createRetryableTicketNoRefundAliasRewrite',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'depositEth', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'isCreateRetryablePaused',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'pauseCreateRetryables',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'sendContractTransaction',
     data: BytesLike
@@ -130,6 +186,22 @@ interface InboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'shouldRewriteSender',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'startRewriteAddress',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'stopRewriteAddress',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'unpauseCreateRetryables',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'updateWhitelistSource',
     data: BytesLike
   ): Result
@@ -138,6 +210,8 @@ interface InboxInterface extends ethers.utils.Interface {
   events: {
     'InboxMessageDelivered(uint256,bytes)': EventFragment
     'InboxMessageDeliveredFromOrigin(uint256)': EventFragment
+    'PauseToggled(bool)': EventFragment
+    'RewriteToggled(bool)': EventFragment
     'WhitelistSourceUpdated(address)': EventFragment
   }
 
@@ -145,6 +219,8 @@ interface InboxInterface extends ethers.utils.Interface {
   getEvent(
     nameOrSignatureOrTopic: 'InboxMessageDeliveredFromOrigin'
   ): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'PauseToggled'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'RewriteToggled'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
 }
 
@@ -206,6 +282,18 @@ export class Inbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    createRetryableTicketNoRefundAliasRewrite(
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     depositEth(
       maxSubmissionCost: BigNumberish,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
@@ -217,7 +305,13 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    isCreateRetryablePaused(overrides?: CallOverrides): Promise<[boolean]>
+
     isMaster(overrides?: CallOverrides): Promise<[boolean]>
+
+    pauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -265,6 +359,20 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    shouldRewriteSender(overrides?: CallOverrides): Promise<[boolean]>
+
+    startRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    stopRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    unpauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     updateWhitelistSource(
       newSource: string,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -287,6 +395,18 @@ export class Inbox extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  createRetryableTicketNoRefundAliasRewrite(
+    destAddr: string,
+    l2CallValue: BigNumberish,
+    maxSubmissionCost: BigNumberish,
+    excessFeeRefundAddress: string,
+    callValueRefundAddress: string,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    data: BytesLike,
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   depositEth(
     maxSubmissionCost: BigNumberish,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
@@ -298,7 +418,13 @@ export class Inbox extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  isCreateRetryablePaused(overrides?: CallOverrides): Promise<boolean>
+
   isMaster(overrides?: CallOverrides): Promise<boolean>
+
+  pauseCreateRetryables(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   sendContractTransaction(
     maxGas: BigNumberish,
@@ -346,6 +472,20 @@ export class Inbox extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  shouldRewriteSender(overrides?: CallOverrides): Promise<boolean>
+
+  startRewriteAddress(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  stopRewriteAddress(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  unpauseCreateRetryables(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   updateWhitelistSource(
     newSource: string,
     overrides?: Overrides & { from?: string | Promise<string> }
@@ -368,6 +508,18 @@ export class Inbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    createRetryableTicketNoRefundAliasRewrite(
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     depositEth(
       maxSubmissionCost: BigNumberish,
       overrides?: CallOverrides
@@ -379,7 +531,11 @@ export class Inbox extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    isCreateRetryablePaused(overrides?: CallOverrides): Promise<boolean>
+
     isMaster(overrides?: CallOverrides): Promise<boolean>
+
+    pauseCreateRetryables(overrides?: CallOverrides): Promise<void>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -426,6 +582,14 @@ export class Inbox extends BaseContract {
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    shouldRewriteSender(overrides?: CallOverrides): Promise<boolean>
+
+    startRewriteAddress(overrides?: CallOverrides): Promise<void>
+
+    stopRewriteAddress(overrides?: CallOverrides): Promise<void>
+
+    unpauseCreateRetryables(overrides?: CallOverrides): Promise<void>
 
     updateWhitelistSource(
       newSource: string,
@@ -448,6 +612,14 @@ export class Inbox extends BaseContract {
       messageNum?: BigNumberish | null
     ): TypedEventFilter<[BigNumber], { messageNum: BigNumber }>
 
+    PauseToggled(
+      enabled?: null
+    ): TypedEventFilter<[boolean], { enabled: boolean }>
+
+    RewriteToggled(
+      enabled?: null
+    ): TypedEventFilter<[boolean], { enabled: boolean }>
+
     WhitelistSourceUpdated(
       newSource?: null
     ): TypedEventFilter<[string], { newSource: string }>
@@ -457,6 +629,18 @@ export class Inbox extends BaseContract {
     bridge(overrides?: CallOverrides): Promise<BigNumber>
 
     createRetryableTicket(
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    createRetryableTicketNoRefundAliasRewrite(
       destAddr: string,
       l2CallValue: BigNumberish,
       maxSubmissionCost: BigNumberish,
@@ -479,7 +663,13 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    isCreateRetryablePaused(overrides?: CallOverrides): Promise<BigNumber>
+
     isMaster(overrides?: CallOverrides): Promise<BigNumber>
+
+    pauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -524,6 +714,20 @@ export class Inbox extends BaseContract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    shouldRewriteSender(overrides?: CallOverrides): Promise<BigNumber>
+
+    startRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    stopRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -550,6 +754,18 @@ export class Inbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
+    createRetryableTicketNoRefundAliasRewrite(
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
     depositEth(
       maxSubmissionCost: BigNumberish,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
@@ -561,7 +777,15 @@ export class Inbox extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
+    isCreateRetryablePaused(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    pauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -606,6 +830,22 @@ export class Inbox extends BaseContract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    shouldRewriteSender(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    startRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    stopRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 

@@ -46,16 +46,12 @@ contract Challenge is Cloneable, IChallenge {
 
     // Can only initialize once
     string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
-    // Can only bisect assertion in response to a challenge
-    string private constant BIS_STATE = "BIS_STATE";
     // deadline expired
     string private constant BIS_DEADLINE = "BIS_DEADLINE";
     // Only original asserter can continue bisect
     string private constant BIS_SENDER = "BIS_SENDER";
     // Incorrect previous state
     string private constant BIS_PREV = "BIS_PREV";
-    // Invalid assertion selected
-    string private constant CON_PROOF = "CON_PROOF";
     // Can't timeout before deadline
     string private constant TIMEOUT_DEADLINE = "TIMEOUT_DEADLINE";
 
@@ -268,7 +264,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes memory _executionProof,
         bytes memory _bufferProof,
         uint8 prover
-    ) public onlyOnTurn {
+    ) external onlyOnTurn {
         bytes32 rootHash;
         {
             (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
@@ -368,11 +364,15 @@ contract Challenge is Cloneable, IChallenge {
     }
 
     function _currentWin() private {
-        if (turn == Turn.Asserter) {
-            _asserterWin();
-        } else {
-            _challengerWin();
-        }
+        // As a safety measure, challenges can only be resolved by timeouts during mainnet beta.
+        // As state is 0, no move is possible. The other party will lose via timeout
+        challengeState = bytes32(0);
+
+        // if (turn == Turn.Asserter) {
+        //     _asserterWin();
+        // } else {
+        //     _challengerWin();
+        // }
     }
 
     function _asserterWin() private {
