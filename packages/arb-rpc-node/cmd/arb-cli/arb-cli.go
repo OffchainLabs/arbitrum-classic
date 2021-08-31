@@ -82,7 +82,7 @@ func waitForTxWithReceipt(tx *types.Transaction, method string) (*types.Receipt,
 }
 
 func waitForTx(tx *types.Transaction, method string) error {
-	fmt.Println("Waiting for receipt")
+	fmt.Println("Waiting for receipt for", tx.Hash())
 	_, err := transactauth.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, arbtransaction.NewArbTransaction(tx), method, transactauth.NewEthArbReceiptFetcher(config.client))
 	if err != nil {
 		return err
@@ -450,6 +450,18 @@ func disableL1Whitelist(inbox ethcommon.Address) error {
 	return waitForTx(tx, "UpdateWhitelistConsumers")
 }
 
+func setAVMGasLimit(rollup ethcommon.Address) error {
+	rollupCon, err := ethbridgecontracts.NewRollupAdminFacet(rollup, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := rollupCon.SetAvmGasSpeedLimitPerBlock(config.auth, big.NewInt(120000000))
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "SetAvmGasSpeedLimitPerBlock")
+}
+
 //func setMaxDelaySeconds(rollupAddr ethcommon.Address, newDelay *big.Int) error {
 //	admin, err := ethbridgecontracts.NewRollupAdminFacet(rollupAddr, config.client)
 //	if err != nil {
@@ -559,6 +571,33 @@ func switchFees(enabled bool) error {
 		return err
 	}
 	tx, err := arbOwner.SetChainParameter(config.auth, arbos.FeesEnabledParamId, big.NewInt(1))
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "SetChainParameters")
+}
+
+func setupGasParams() error {
+	config.auth.GasPrice = big.NewInt(2066300000)
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.SetChainParameter(config.auth, arbos.SpeedLimitPerSecondId, big.NewInt(80000))
+	if err != nil {
+		return err
+	}
+	if err := waitForTx(tx, "SetChainParameters"); err != nil {
+		return err
+	}
+	tx, err = arbOwner.SetChainParameter(config.auth, arbos.TxGasLimitId, big.NewInt(2400000))
+	if err != nil {
+		return err
+	}
+	if err := waitForTx(tx, "SetChainParameters"); err != nil {
+		return err
+	}
+	tx, err = arbOwner.SetChainParameter(config.auth, arbos.GasPoolMaxId, big.NewInt(57600000))
 	if err != nil {
 		return err
 	}
@@ -1165,6 +1204,17 @@ func handleCommand(fields []string) error {
 		}
 		inbox := ethcommon.HexToAddress(fields[1])
 		return stopInboxRewrite(inbox)
+	case "setup-gas-params":
+		if len(fields) != 1 {
+			return errors.New("Expected no args")
+		}
+		return setupGasParams()
+	case "set-avm-gas-limit":
+		if len(fields) != 2 {
+			return errors.New("Expected [rollup]")
+		}
+		rollup := ethcommon.HexToAddress(fields[1])
+		return setAVMGasLimit(rollup)
 	default:
 		fmt.Println("Unknown command")
 	}
