@@ -722,18 +722,26 @@ func checkAllowed() error {
 	return nil
 }
 
-func resetAllowedSenders(sendersFile string) error {
+func readSenders(sendersFile string) ([]ethcommon.Address, error) {
 	data, err := ioutil.ReadFile(sendersFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var senders []ethcommon.Address
 	if err := json.Unmarshal(data, &senders); err != nil {
-		return err
+		return nil, err
 	}
 	fmt.Println("Adding", len(senders), "senders")
 	fmt.Println("First", senders[0])
 	fmt.Println("Last", senders[len(senders)-1])
+	return senders, nil
+}
+
+func resetAllowedSenders(sendersFile string) error {
+	senders, err := readSenders(sendersFile)
+	if err != nil {
+		return err
+	}
 	config.auth.GasPrice = big.NewInt(1866300000)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
 	if err != nil {
@@ -753,6 +761,37 @@ func resetAllowedSenders(sendersFile string) error {
 	config.auth.Nonce = new(big.Int).SetUint64(startNonce)
 	for i, sender := range senders {
 		tx, err = arbOwner.AddAllowedSender(config.auth, sender)
+		if err != nil {
+			return err
+		}
+		config.auth.Nonce.Add(config.auth.Nonce, big.NewInt(1))
+		fmt.Println("Added sender", i)
+		if i%50 == 0 {
+			time.Sleep(time.Second)
+		}
+	}
+	return waitForTx(tx, "AddAllowedSender")
+}
+
+func addAllowedSendersMapped(sendersFile string) error {
+	senders, err := readSenders(sendersFile)
+	if err != nil {
+		return err
+	}
+	config.auth.GasPrice = big.NewInt(1866300000)
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	startNonce, err := config.client.PendingNonceAt(context.Background(), config.auth.From)
+	if err != nil {
+		return err
+	}
+	config.auth.Nonce = new(big.Int).SetUint64(startNonce)
+	var tx *types.Transaction
+	for i, sender := range senders {
+		addr := message.L2RemapAccount(common.NewAddressFromEth(sender)).ToEthAddress()
+		tx, err = arbOwner.AddAllowedSender(config.auth, addr)
 		if err != nil {
 			return err
 		}
@@ -918,6 +957,12 @@ func handleCommand(fields []string) error {
 		}
 		sendersFile := fields[1]
 		return resetAllowedSenders(sendersFile)
+	case "add-allowed-senders-mapped":
+		if len(fields) != 2 {
+			return errors.New("Expected [sender.json]")
+		}
+		sendersFile := fields[1]
+		return addAllowedSendersMapped(sendersFile)
 	case "deploy-1820":
 		return deployContractFromTx(eip1820Tx)
 	case "deploy-2470":
