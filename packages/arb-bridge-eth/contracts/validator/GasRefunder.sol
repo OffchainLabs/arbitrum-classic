@@ -82,8 +82,8 @@ contract GasRefunder is IGasRefunder, Ownable {
             maxRefundeeBalance: 0, // no limit
             extraGasMargin: 4000, // 4k gas
             calldataCost: 12, // Between 4 for zero bytes and 16 for non-zero bytes
-            maxGasTip: 2e9, // 2 gwei
-            maxGasCost: 120e9, // 120 gwei
+            maxGasTip: 2 gwei,
+            maxGasCost: 120 gwei,
             maxSingleGasUsage: 2e6 // 2 million gas
         });
     }
