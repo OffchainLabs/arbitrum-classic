@@ -890,8 +890,10 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 			return
 		}
 
-		for _, log := range receipt.Logs {
-			b.handleBatchReceiptLog(log)
+		if receipt != nil {
+			for _, log := range receipt.Logs {
+				b.handleBatchReceiptLog(log)
+			}
 		}
 
 		if b.feedBroadcaster != nil {
