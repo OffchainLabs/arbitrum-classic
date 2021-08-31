@@ -748,6 +748,19 @@ func addAllowedSender(sender ethcommon.Address) error {
 	return waitForTx(tx, "AddAllowedSender")
 }
 
+func allowAllSenders() error {
+	config.auth.GasPrice = big.NewInt(2066300000)
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.AllowAllSenders(config.auth)
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "AllowAllSenders")
+}
+
 func checkAllowed() error {
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
 	if err != nil {
@@ -1215,6 +1228,8 @@ func handleCommand(fields []string) error {
 		}
 		rollup := ethcommon.HexToAddress(fields[1])
 		return setAVMGasLimit(rollup)
+	case "allow-all-senders":
+		return allowAllSenders()
 	default:
 		fmt.Println("Unknown command")
 	}
