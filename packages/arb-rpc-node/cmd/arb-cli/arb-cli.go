@@ -697,6 +697,7 @@ func allowOnlyOwnerToSend() error {
 }
 
 func addAllowedSender(sender ethcommon.Address) error {
+	config.auth.GasPrice = big.NewInt(2066300000)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
 	if err != nil {
 		return err
