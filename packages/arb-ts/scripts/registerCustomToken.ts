@@ -47,7 +47,8 @@ const main = async () => {
     [l2Address],
     0,
     0,
-    maxSubmissionCost
+    maxSubmissionCost,
+    { value: maxSubmissionCost }
   )
   console.log('waiting for tx to be mined')
   const l1Receipt = await l1Tx.wait(3)
