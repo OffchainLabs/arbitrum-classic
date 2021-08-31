@@ -235,13 +235,6 @@ const config = {
   paths: {
     artifacts: 'build/contracts',
   },
-  solc: {
-    version: '0.5.17',
-    optimizer: {
-      enabled: true,
-      runs: 200,
-    },
-  },
   typechain: {
     outDir: 'build/types',
     target: 'ethers-v5',
@@ -363,13 +356,26 @@ const config = {
     apiKey: process.env['ETHERSCAN_API_KEY'],
   },
   solidity: {
-    version: '0.6.11',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 100,
+    compilers: [
+      {
+        version: '0.6.11',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 100,
+          },
+        },
       },
-    },
+      {
+        version: '0.8.7',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 100,
+          },
+        },
+      },
+    ],
   },
 }
 
