@@ -360,6 +360,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Uint64("node.chain-id", 42161, "chain id of the arbitrum chain")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
+	f.Int64("rollup.from-block", 0, "the block at L1 to start watching for the rollup related events")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
