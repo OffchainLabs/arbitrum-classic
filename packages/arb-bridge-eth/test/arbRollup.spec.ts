@@ -693,8 +693,9 @@ describe('ArbRollup', () => {
 
     const tx = await rollup.rollup
       .connect(accounts[2])
-      .withdrawStakerFunds(await accounts[2].getAddress(), { gasPrice: 0 })
-    await tx.wait()
+      .withdrawStakerFunds(await accounts[2].getAddress())
+    const receipt = await tx.wait()
+    const gasPaid = receipt.gasUsed.mul(receipt.effectiveGasPrice)
 
     const postBalance = await accounts[2].getBalance()
     const postWithdrawablefunds = await rollup.rollup.withdrawableFunds(
@@ -702,7 +703,9 @@ describe('ArbRollup', () => {
     )
 
     expect(postWithdrawablefunds).to.equal(0)
-    expect(postBalance).to.equal(prevBalance.add(prevWithdrawablefunds))
+    expect(postBalance.add(gasPaid)).to.equal(
+      prevBalance.add(prevWithdrawablefunds)
+    )
 
     // this gets deposit and removes staker
     await rollup.rollup
