@@ -162,6 +162,74 @@ task(
   await removeBuildInfoFiles()
 })
 
+task('deploy-outbox-logic', 'deploy and set a new outbox').setAction(
+  async (_, hre) => {
+    const OutboxFactory = await hre.ethers.getContractFactory('Outbox')
+    console.log('Deploying outbox logic')
+    const OutboxLogic = await OutboxFactory.deploy()
+    await OutboxLogic.deployed()
+    console.log('Outbox logic deployed at:', OutboxLogic.address)
+  }
+)
+
+task('deploy-outbox-proxy', 'deploy outbox proxy')
+  .addParam('outboxlogic', 'outbox logic')
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, __dirname)
+    const { data } = await getDeployments()
+    const proxyAdminAddress = data.proxyAdminAddress
+
+    console.log('Deploying Outbox TransparentUpgradeableProxy')
+    const TransparentUpgradeableProxyFactory =
+      await hre.ethers.getContractFactory('TransparentUpgradeableProxy')
+    const OutboxProxyDeployed = await TransparentUpgradeableProxyFactory.deploy(
+      args.outboxlogic,
+      proxyAdminAddress,
+      '0x'
+    )
+    await OutboxProxyDeployed.deployed()
+    console.log('Outbox proxy deployed at', OutboxProxyDeployed.address)
+  })
+
+task('init-outbox', 'deploy and set a new outbox')
+  .addParam('outboxproxy', '')
+
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, __dirname)
+    const { data } = await getDeployments()
+    const rollupAddress = data.contracts.Rollup.proxyAddress
+    const bridgeAddress = data.contracts.Bridge.proxyAddress
+
+    const Outbox = (await hre.ethers.getContractFactory('Outbox')).attach(
+      args.outboxproxy
+    )
+    const initializeRes = await Outbox.initialize(rollupAddress, bridgeAddress)
+    const initializeRec = await initializeRes.wait()
+    console.log('Outbox initialized', initializeRec)
+  })
+
+task('set-outbox', 'deploy and set a new outbox')
+  .addParam('outboxproxy', '')
+
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, __dirname)
+    const { data } = await getDeployments()
+    const rollupAddress = data.contracts.Rollup.proxyAddress
+    console.log('Sanity checking ')
+    const Rollup = (await hre.ethers.getContractFactory('Rollup')).attach(
+      rollupAddress
+    )
+    await Rollup.getUserFacet()
+    console.log('Rollup sanity checked ')
+    const RollupAdmin = (
+      await hre.ethers.getContractFactory('RollupAdminFacet')
+    ).attach(rollupAddress)
+    const setRollupRes = await RollupAdmin.setOutbox(args.outboxproxy)
+    const setRollupRec = await setRollupRes.wait()
+    console.log('Outbox set', setRollupRec)
+    console.log('all set 👍')
+  })
+
 const config = {
   defaultNetwork: 'hardhat',
   paths: {
