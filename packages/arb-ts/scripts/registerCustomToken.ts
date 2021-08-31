@@ -41,48 +41,23 @@ const main = async () => {
 
   const maxSubmissionCost = (await bridge.l2Bridge.getTxnSubmissionPrice(80))[0]
 
-  const nodeInterface = NodeInterface__factory.connect(
-    '0x00000000000000000000000000000000000000C8',
-    bridge.l2Provider
-  )
-
-  const gasPrice = (await bridge.l2Provider.getGasPrice()).mul(2)
-
-  const maxGas = (
-    await nodeInterface.estimateRetryableTicket(
-      l1Network.tokenBridge.l1CustomGateway,
-      utils.parseEther('0.5'),
-      l2Network.tokenBridge.l2CustomGateway,
-      0,
-      maxSubmissionCost,
-      await bridge.l2Signer.getAddress(),
-      await bridge.l2Signer.getAddress(),
-      10000000,
-      gasPrice,
-      '0x'
-    )
-  )[0].mul(2)
-  console.log('Max gas', maxGas)
-
   console.log('sending L1 tx')
   const l1Tx = await l1CustomGateway.forceRegisterTokenToL2(
     [l1Address],
     [l2Address],
-    maxGas,
-    gasPrice,
+    0,
+    0,
     maxSubmissionCost
   )
   console.log('waiting for tx to be mined')
   const l1Receipt = await l1Tx.wait(3)
   console.log('got L1 tx mined iwth hash ', l1Receipt.transactionHash)
 
-  const l2Retryable = await bridge.getL2TxHashByRetryableTicket(l1Receipt)
-  console.log('waiting for l2 tx with hash ', l2Retryable)
-
-  const l2RetryableReceipt = await bridge.l2Provider.waitForTransaction(
-    l2Retryable
-  )
-  console.log('Got it!')
+  console.log('redeeming retryable ticket:')
+  const redeemRes = await bridge.redeemRetryableTicket(l1Receipt)
+  const redeemRec = await redeemRes.wait()
+  console.log('Done redeeming:', redeemRec)
+  console.log(redeemRec.status === 1 ? ' success!' : 'failed...')
 }
 
 main()
