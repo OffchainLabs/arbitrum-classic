@@ -73,9 +73,9 @@
     },
     "SequencerInbox": {
       "proxyAddress": "0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef",
-      "implAddress": "0xa4b537d94Ec347cE97F340dF185c3b079Dc75760",
-      "implDeploymentTxn": "0xaff909656998de061d0509bfec0f9a95d0b850d145f95f3451277fc4ffea1f46",
-      "implArbitrumCommitHash": "71eb134aa9be05e108d25ab0f9a7d4c62aacc0bd",
+      "implAddress": "0x9685e7281Fb1507B6f141758d80B08752faF0c43",
+      "implDeploymentTxn": "0x51bea4c6ebbfd83ee5700404f9d9ab00c42e06df301bc9f2ddea027f1633e3a0",
+      "implArbitrumCommitHash": "c49e68241bc9a25ac4c46d6f48676cc967424695",
       "implBuildInfo": ""
     },
     "Bridge": {
@@ -97,6 +97,14 @@
       "implAddress": "0xc4940069140142236D4065b866018f7b2BeC77fD",
       "implDeploymentTxn": "0xd6dc4d8ed2cc893b3bb19f9b1be175e994aae4dd94710ca8e06030f91d7707a6",
       "implArbitrumCommitHash": "71eb134aa9be05e108d25ab0f9a7d4c62aacc0bd",
+      "implBuildInfo": ""
+    }
+  },
+  "non-proxy-contracts": {
+    "GasRefunder": {
+      "address": "0x284c1875694058b213866f5f2ad015b5a4b9438b",
+      "deploymentTxn": "0xac34d7dce8cd027246787f0097c7981c6c53e049d5d9e40bb1a32acd347cc3c6",
+      "arbitrumCommitHash": "8d74aa48db7ccd639ed7998331f7428aef8d0afe",
       "implBuildInfo": ""
     }
   }
