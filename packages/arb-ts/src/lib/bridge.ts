@@ -800,7 +800,11 @@ export class Bridge {
   }
 
   public async getRetryablesL1(filter?: ethers.providers.Filter) {
-    return BridgeHelper.getRetryablesL1(this.l1Provider, filter)
+    return BridgeHelper.getRetryablesL1(
+      this.l1Provider,
+      await this.getBridgeAddress(),
+      filter
+    )
   }
 
   public async getL1GatewaySetEventData(_l1GatewayRouterAddress?: string) {

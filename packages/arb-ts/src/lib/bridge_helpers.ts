@@ -716,10 +716,10 @@ export class BridgeHelper {
 
   static getRetryablesL1 = async (
     l1Provider: providers.Provider,
+    bridgeAddress: string,
     filter?: providers.Filter
   ) => {
     const { chainId } = await l1Provider.getNetwork()
-    const bridgeAddress = networks[chainId].tokenBridge.bridge
 
     const contract = Bridge__factory.connect(bridgeAddress, l1Provider)
     const logs = await BridgeHelper.getEventLogs(
