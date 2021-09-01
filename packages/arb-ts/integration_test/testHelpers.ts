@@ -47,15 +47,19 @@ export const testRetryableTicket = async (
   )
   prettyLog('Waiting for retryable ticket')
 
-  const retryableTicketReceipt = await bridge.l2Bridge.l2Provider.waitForTransaction(
-    retryableTicket,
-    undefined,
-    1000 * 60 * 15
-  )
+  const retryableTicketReceipt =
+    await bridge.l2Bridge.l2Provider.waitForTransaction(
+      retryableTicket,
+      undefined,
+      1000 * 60 * 15
+    )
 
   prettyLog('retryableTicketReceipt found:')
 
-  expect(retryableTicketReceipt.status).to.equal(1)
+  expect(retryableTicketReceipt.status).to.equal(
+    1,
+    'retryable ticket txn failed'
+  )
 
   prettyLog(`Waiting for auto redeem transaction (this shouldn't take long`)
   const autoRedeemReceipt = await bridge.l2Bridge.l2Provider.waitForTransaction(
@@ -65,13 +69,15 @@ export const testRetryableTicket = async (
   )
   prettyLog('autoRedeem receipt found!')
 
-  expect(autoRedeemReceipt.status).to.equal(1)
+  expect(autoRedeemReceipt.status).to.equal(1, 'autoredeem txn failed')
   prettyLog('Getting redemption')
-  const redemptionReceipt = await bridge.l2Bridge.l2Provider.getTransactionReceipt(
-    redeemTransaction
-  )
+  const redemptionReceipt =
+    await bridge.l2Bridge.l2Provider.getTransactionReceipt(redeemTransaction)
 
-  expect(redemptionReceipt && redemptionReceipt.status).equals(1)
+  expect(redemptionReceipt && redemptionReceipt.status).equals(
+    1,
+    'redeem txn failed'
+  )
 }
 
 export const prettyLog = (text: string) => {

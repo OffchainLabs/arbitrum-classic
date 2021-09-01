@@ -2,19 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IERC20Upgradeable } from '../IERC20Upgradeable'
-
-export class IERC20Upgradeable__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IERC20Upgradeable {
-    return new Contract(address, _abi, signerOrProvider) as IERC20Upgradeable
-  }
-}
+import type {
+  IERC20Upgradeable,
+  IERC20UpgradeableInterface,
+} from '../IERC20Upgradeable'
 
 const _abi = [
   {
@@ -201,3 +194,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class IERC20Upgradeable__factory {
+  static readonly abi = _abi
+  static createInterface(): IERC20UpgradeableInterface {
+    return new utils.Interface(_abi) as IERC20UpgradeableInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IERC20Upgradeable {
+    return new Contract(address, _abi, signerOrProvider) as IERC20Upgradeable
+  }
+}

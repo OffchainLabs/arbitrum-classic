@@ -42,7 +42,7 @@ type ArbOutputLookup interface {
 	GetDelayedMessageCount() (*big.Int, error)
 	GetTotalDelayedMessagesSequenced() (*big.Int, error)
 
-	GetMachineForSideload(uint64) (machine.Machine, error)
+	GetMachineForSideload(uint64, bool) (machine.Machine, error)
 }
 
 type InMemoryOutputLookup struct {

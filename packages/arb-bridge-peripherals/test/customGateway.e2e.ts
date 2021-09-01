@@ -17,7 +17,7 @@
 /* eslint-env node, mocha */
 import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
 
 describe('Bridge peripherals end-to-end custom gateway', () => {
@@ -98,12 +98,22 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       l1CustomToken.address
     )
 
-    await l1CustomToken.registerTokenOnL2(
-      l2Token.address,
+    await expect(
+      l1CustomToken.registerTokenOnL2(
+        l2Token.address,
+        0,
+        0,
+        0,
+        accounts[0].address
+      )
+    ).to.be.revertedWith('SELF_REGISTRATION_DISABLED')
+
+    await l1TestBridge.forceRegisterTokenToL2(
+      [l1CustomToken.address],
+      [l2Token.address],
       0,
       0,
-      0,
-      accounts[0].address
+      0
     )
 
     // send escrowed tokens to bridge
@@ -133,7 +143,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     )
     assert.equal(l2TokenAddress, l2Token.address, 'Token Pair not correct')
     const l2Balance = await l2Token.balanceOf(accounts[0].address)
-    assert.equal(l2Balance, tokenAmount, 'Tokens not minted')
+    assert.equal(l2Balance.toNumber(), tokenAmount, 'Tokens not minted')
   })
 
   it('should withdraw tokens', async function () {
@@ -149,12 +159,12 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       l1CustomToken.address
     )
 
-    await l1CustomToken.registerTokenOnL2(
-      l2Token.address,
+    await l1TestBridge.forceRegisterTokenToL2(
+      [l1CustomToken.address],
+      [l2Token.address],
       0,
       0,
-      0,
-      accounts[0].address
+      0
     )
 
     // send escrowed tokens to bridge
@@ -198,12 +208,12 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     const l1CustomToken = await L1CustomToken.deploy(l1TestBridge.address)
 
     // register a non-existent L2 token so we can test the force withdrawal
-    await l1CustomToken.registerTokenOnL2(
-      '0x0000000000000000000000000000000000000001',
+    await l1TestBridge.forceRegisterTokenToL2(
+      [l1CustomToken.address],
+      ['0x0000000000000000000000000000000000000001'],
       0,
       0,
-      0,
-      accounts[0].address
+      0
     )
 
     // send escrowed tokens to bridge

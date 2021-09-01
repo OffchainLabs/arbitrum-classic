@@ -22,16 +22,17 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -95,6 +96,14 @@ func (r *DelayedBridgeWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int
 	return latestHeader.Number, nil
 }
 
+func (r *DelayedBridgeWatcher) GetAccumulator(ctx context.Context, sequenceNumber *big.Int, blockNumber *big.Int) (common.Hash, error) {
+	opts := &bind.CallOpts{
+		Context:     ctx,
+		BlockNumber: blockNumber,
+	}
+	return r.con.InboxAccs(opts, sequenceNumber)
+}
+
 func (r *DelayedBridgeWatcher) LookupMessagesInRange(ctx context.Context, from, to *big.Int) ([]*DeliveredInboxMessage, error) {
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
@@ -139,6 +148,7 @@ func (r *DelayedBridgeWatcher) LookupMessageBlock(ctx context.Context, messageNu
 		return nil, errors.New("too many logs")
 	}
 	ethLog := logs[0]
+	logger.Info().Uint64("block", ethLog.BlockNumber).Msg("found starting message block")
 	return &common.BlockId{
 		Height:     common.NewTimeBlocksInt(int64(ethLog.BlockNumber)),
 		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),

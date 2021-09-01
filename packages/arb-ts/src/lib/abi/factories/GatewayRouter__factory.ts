@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { GatewayRouter } from '../GatewayRouter'
-
-export class GatewayRouter__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): GatewayRouter {
-    return new Contract(address, _abi, signerOrProvider) as GatewayRouter
-  }
-}
+import type { GatewayRouter, GatewayRouterInterface } from '../GatewayRouter'
 
 const _abi = [
   {
@@ -47,92 +37,6 @@ const _abi = [
       },
     ],
     name: 'GatewaySet',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_transferId',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'InboundTransferFinalized',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_transferId',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'OutboundTransferInitiated',
     type: 'event',
   },
   {
@@ -215,38 +119,32 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: '_token',
+        name: '',
         type: 'address',
       },
       {
         internalType: 'address',
-        name: '_from',
+        name: '',
         type: 'address',
       },
       {
         internalType: 'address',
-        name: '_to',
+        name: '',
         type: 'address',
       },
       {
         internalType: 'uint256',
-        name: '_amount',
+        name: '',
         type: 'uint256',
       },
-      {
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'finalizeInboundTransfer',
-    outputs: [
       {
         internalType: 'bytes',
         name: '',
         type: 'bytes',
       },
     ],
+    name: 'finalizeInboundTransfer',
+    outputs: [],
     stateMutability: 'payable',
     type: 'function',
   },
@@ -303,19 +201,6 @@ const _abi = [
         internalType: 'bytes',
         name: '',
         type: 'bytes',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'isRouter',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
       },
     ],
     stateMutability: 'view',
@@ -386,6 +271,13 @@ const _abi = [
   },
   {
     inputs: [],
+    name: 'postUpgradeInit',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'router',
     outputs: [
       {
@@ -398,3 +290,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class GatewayRouter__factory {
+  static readonly abi = _abi
+  static createInterface(): GatewayRouterInterface {
+    return new utils.Interface(_abi) as GatewayRouterInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): GatewayRouter {
+    return new Contract(address, _abi, signerOrProvider) as GatewayRouter
+  }
+}

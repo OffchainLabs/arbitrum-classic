@@ -2,19 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ISequencerInbox } from '../ISequencerInbox'
-
-export class ISequencerInbox__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ISequencerInbox {
-    return new Contract(address, _abi, signerOrProvider) as ISequencerInbox
-  }
-}
+import type {
+  ISequencerInbox,
+  ISequencerInboxInterface,
+} from '../ISequencerInbox'
 
 const _abi = [
   {
@@ -66,11 +59,36 @@ const _abi = [
       {
         indexed: false,
         internalType: 'address',
-        name: 'newAddress',
+        name: 'addr',
         type: 'address',
       },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'isSequencer',
+        type: 'bool',
+      },
     ],
-    name: 'SequencerAddressUpdated',
+    name: 'IsSequencerUpdated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'newMaxDelayBlocks',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'newMaxDelaySeconds',
+        type: 'uint256',
+      },
+    ],
+    name: 'MaxDelayUpdated',
     type: 'event',
   },
   {
@@ -204,6 +222,25 @@ const _abi = [
     type: 'function',
   },
   {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'seq',
+        type: 'address',
+      },
+    ],
+    name: 'isSequencer',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'maxDelayBlocks',
     outputs: [
@@ -255,7 +292,7 @@ const _abi = [
         type: 'uint256',
       },
     ],
-    name: 'proveBatchContainsSequenceNumber',
+    name: 'proveInboxContainsMessage',
     outputs: [
       {
         internalType: 'uint256',
@@ -272,16 +309,65 @@ const _abi = [
     type: 'function',
   },
   {
-    inputs: [
+    inputs: [],
+    name: 'sequencer',
+    outputs: [
       {
         internalType: 'address',
-        name: 'newSequencer',
+        name: '',
         type: 'address',
       },
     ],
-    name: 'setSequencer',
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'addr',
+        type: 'address',
+      },
+      {
+        internalType: 'bool',
+        name: 'isSequencer',
+        type: 'bool',
+      },
+    ],
+    name: 'setIsSequencer',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'newMaxDelayBlocks',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'newMaxDelaySeconds',
+        type: 'uint256',
+      },
+    ],
+    name: 'setMaxDelay',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },
 ]
+
+export class ISequencerInbox__factory {
+  static readonly abi = _abi
+  static createInterface(): ISequencerInboxInterface {
+    return new utils.Interface(_abi) as ISequencerInboxInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ISequencerInbox {
+    return new Contract(address, _abi, signerOrProvider) as ISequencerInbox
+  }
+}

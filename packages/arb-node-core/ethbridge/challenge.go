@@ -22,12 +22,12 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
@@ -175,6 +175,13 @@ func (c *Challenge) ProveContinuedExecution(
 		beforeCut.TotalGasConsumed,
 		beforeCut.RestHash(),
 	)
+	return errors.WithStack(err)
+}
+
+func (c *Challenge) Timeout(
+	ctx context.Context,
+) error {
+	_, err := c.builderCon.Timeout(authWithContext(ctx, c.builderAuth))
 	return errors.WithStack(err)
 }
 

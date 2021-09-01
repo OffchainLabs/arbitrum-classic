@@ -2,115 +2,22 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { L2ArbitrumGateway } from '../L2ArbitrumGateway'
-
-export class L2ArbitrumGateway__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): L2ArbitrumGateway {
-    return new Contract(address, _abi, signerOrProvider) as L2ArbitrumGateway
-  }
-}
+import type {
+  L2ArbitrumGateway,
+  L2ArbitrumGatewayInterface,
+} from '../L2ArbitrumGateway'
 
 const _abi = [
   {
     anonymous: false,
     inputs: [
       {
-        indexed: false,
-        internalType: 'address',
-        name: 'token',
-        type: 'address',
-      },
-      {
         indexed: true,
         internalType: 'address',
-        name: '_from',
+        name: 'l1Token',
         type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_transferId',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'InboundTransferFinalized',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_transferId',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'OutboundTransferInitiated',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'bool',
-        name: 'success',
-        type: 'bool',
       },
       {
         indexed: true,
@@ -130,14 +37,8 @@ const _abi = [
         name: '_amount',
         type: 'uint256',
       },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'callHookData',
-        type: 'bytes',
-      },
     ],
-    name: 'TransferAndCallTriggered',
+    name: 'DepositFinalized',
     type: 'event',
   },
   {
@@ -169,6 +70,49 @@ const _abi = [
       },
     ],
     name: 'TxToL1',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'l1Token',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_to',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: '_l2ToL1Id',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: '_exitNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: '_amount',
+        type: 'uint256',
+      },
+    ],
+    name: 'WithdrawalInitiated',
     type: 'event',
   },
   {
@@ -245,27 +189,8 @@ const _abi = [
       },
     ],
     name: 'finalizeInboundTransfer',
-    outputs: [
-      {
-        internalType: 'bytes',
-        name: '',
-        type: 'bytes',
-      },
-    ],
+    outputs: [],
     stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'gasReserveIfCallRevert',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'pure',
     type: 'function',
   },
   {
@@ -311,39 +236,6 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: '_l2Address',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'inboundEscrowAndCall',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
         name: '_l1Token',
         type: 'address',
       },
@@ -393,12 +285,12 @@ const _abi = [
       },
       {
         internalType: 'uint256',
-        name: '_maxGas',
+        name: '',
         type: 'uint256',
       },
       {
         internalType: 'uint256',
-        name: '_gasPriceBid',
+        name: '',
         type: 'uint256',
       },
       {
@@ -411,7 +303,7 @@ const _abi = [
     outputs: [
       {
         internalType: 'bytes',
-        name: '',
+        name: 'res',
         type: 'bytes',
       },
     ],
@@ -439,3 +331,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class L2ArbitrumGateway__factory {
+  static readonly abi = _abi
+  static createInterface(): L2ArbitrumGatewayInterface {
+    return new utils.Interface(_abi) as L2ArbitrumGatewayInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): L2ArbitrumGateway {
+    return new Contract(address, _abi, signerOrProvider) as L2ArbitrumGateway
+  }
+}

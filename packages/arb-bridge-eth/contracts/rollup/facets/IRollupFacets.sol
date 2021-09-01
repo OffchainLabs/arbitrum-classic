@@ -36,6 +36,8 @@ interface IRollupUser {
 }
 
 interface IRollupAdmin {
+    event OwnerFunctionCalled(uint256 indexed id);
+
     /**
      * @notice Add a contract authorized to put messages into this rollup's inbox
      * @param _outbox Outbox contract to add
@@ -107,13 +109,13 @@ interface IRollupAdmin {
 
     /**
      * @notice Set speed limit per block
-     * @param newArbGasSpeedLimitPerBlock maximum arbgas to be used per block
+     * @param newAvmGasSpeedLimitPerBlock maximum avmgas to be used per block
      */
-    function setArbGasSpeedLimitPerBlock(uint256 newArbGasSpeedLimitPerBlock) external;
+    function setAvmGasSpeedLimitPerBlock(uint256 newAvmGasSpeedLimitPerBlock) external;
 
     /**
      * @notice Set base stake required for an assertion
-     * @param newBaseStake maximum arbgas to be used per block
+     * @param newBaseStake maximum avmgas to be used per block
      */
     function setBaseStake(uint256 newBaseStake) external;
 
@@ -126,16 +128,14 @@ interface IRollupAdmin {
     function setStakeToken(address newStakeToken) external;
 
     /**
-     * @notice Set max delay in blocks for sequencer inbox
+     * @notice Set max delay for sequencer inbox
      * @param newSequencerInboxMaxDelayBlocks max number of blocks
-     */
-    function setSequencerInboxMaxDelayBlocks(uint256 newSequencerInboxMaxDelayBlocks) external;
-
-    /**
-     * @notice Set max delay in seconds for sequencer inbox
      * @param newSequencerInboxMaxDelaySeconds max number of seconds
      */
-    function setSequencerInboxMaxDelaySeconds(uint256 newSequencerInboxMaxDelaySeconds) external;
+    function setSequencerInboxMaxDelay(
+        uint256 newSequencerInboxMaxDelayBlocks,
+        uint256 newSequencerInboxMaxDelaySeconds
+    ) external;
 
     /**
      * @notice Set execution bisection degree
@@ -171,10 +171,11 @@ interface IRollupAdmin {
     ) external;
 
     /**
-     * @notice Updates a sequencer address at the sequencer inbox
-     * @param newSequencer new sequencer address to be used
+     * @notice Updates whether an address is a sequencer at the sequencer inbox
+     * @param newSequencer address to be modified
+     * @param isSequencer whether this address should be authorized as a sequencer
      */
-    function setSequencer(address newSequencer) external;
+    function setIsSequencer(address newSequencer, bool isSequencer) external;
 
     /**
      * @notice Upgrades the implementation of a beacon controlled by the rollup
@@ -182,4 +183,28 @@ interface IRollupAdmin {
      * @param newImplementation new address of implementation
      */
     function upgradeBeacon(address beacon, address newImplementation) external;
+
+    function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external;
+
+    function forceRefundStaker(address[] memory stacker) external;
+
+    function forceCreateNode(
+        bytes32 expectedNodeHash,
+        bytes32[3][2] calldata assertionBytes32Fields,
+        uint256[4][2] calldata assertionIntFields,
+        bytes calldata sequencerBatchProof,
+        uint256 beforeProposedBlock,
+        uint256 beforeInboxMaxCount,
+        uint256 prevNode
+    ) external;
+
+    function forceConfirmNode(
+        uint256 nodeNum,
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
+    ) external;
 }

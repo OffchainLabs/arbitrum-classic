@@ -24,8 +24,8 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
@@ -81,7 +81,8 @@ func (r *Rollup) ConfirmNextNode(ctx context.Context, assertion *core.Assertion,
 		assertion.After.LogAcc,
 		assertion.After.TotalLogCount,
 	)
-	return errors.WithStack(err)
+	// Do not use errors.WithStack so that any existing error stack is preserved
+	return err
 }
 
 func (r *Rollup) NewStake(ctx context.Context, amount *big.Int) error {

@@ -8,8 +8,9 @@ import {
 } from '@ethersproject/contracts'
 import { BytesLike } from '@ethersproject/bytes'
 
-import { Rollup } from '../build/types/Rollup'
+import { RollupUserFacet } from '../build/types/RollupUserFacet'
 import { Bridge } from '../build/types/Bridge'
+import { hexDataLength } from '@ethersproject/bytes'
 
 const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -36,7 +37,7 @@ function assertionHash(
   )
 }
 
-function nodeHash(
+export function nodeHash(
   hasSibling: boolean,
   lastHash: BytesLike,
   assertionExecHash: BytesLike,
@@ -150,7 +151,8 @@ export class NodeState {
 function buildAccumulator(base: BytesLike, hashes: BytesLike[]): BytesLike {
   let acc = base
   for (const h of hashes) {
-    acc = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, h])
+    const hash = ethers.utils.solidityKeccak256(['bytes'], [h])
+    acc = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [acc, hash])
   }
   return acc
 }
@@ -273,7 +275,7 @@ export interface NodeCreatedEvent {
 }
 
 export class RollupContract {
-  constructor(public rollup: Rollup) {}
+  constructor(public rollup: RollupUserFacet) {}
 
   connect(signerOrProvider: Signer | Provider | string): RollupContract {
     return new RollupContract(this.rollup.connect(signerOrProvider))
@@ -319,7 +321,7 @@ export class RollupContract {
     if (ev.name != 'NodeCreated') {
       throw 'wrong event type'
     }
-    const parsedEv = (ev as any) as {
+    const parsedEv = ev as any as {
       args: NodeCreatedEvent
     }
     const node = new Node(
@@ -344,7 +346,7 @@ export class RollupContract {
     afterLogCount: BigNumberish
   ): Promise<ContractTransaction> {
     const messageData = ethers.utils.concat(sends)
-    const messageLengths = sends.map(msg => msg.length)
+    const messageLengths = sends.map(msg => hexDataLength(msg))
     return this.rollup.confirmNextNode(
       prevSendAcc,
       messageData,
@@ -394,12 +396,12 @@ export class RollupContract {
     return this.rollup.returnOldDeposit(stakerAddress)
   }
 
-  removeZombieStaker(
-    nodeNum: BigNumberish,
-    stakerAddress: string
-  ): Promise<ContractTransaction> {
-    return this.rollup.removeZombieStaker(nodeNum, stakerAddress)
-  }
+  // removeZombieStaker(
+  //   nodeNum: BigNumberish,
+  //   stakerAddress: string
+  // ): Promise<ContractTransaction> {
+  //   return this.rollup.removeZombieStaker(nodeNum, stakerAddress)
+  // }
 
   latestConfirmed(): Promise<BigNumber> {
     return this.rollup.latestConfirmed()
@@ -409,13 +411,13 @@ export class RollupContract {
     return this.rollup.getNode(index)
   }
 
-  async inboxMaxValue(): Promise<BytesLike> {
-    const bridgeAddress = await this.rollup.bridge()
-    const Bridge = await ethers.getContractFactory('Bridge')
-    const bridge = Bridge.attach(bridgeAddress) as Bridge
-    const inboxInfo = await bridge.inboxInfo()
-    return inboxInfo[1]
-  }
+  // async inboxMaxValue(): Promise<BytesLike> {
+  //   const bridgeAddress = await this.rollup.delayedBridge()
+  //   const Bridge = await ethers.getContractFactory('Bridge')
+  //   const bridge = Bridge.attach(bridgeAddress) as Bridge
+  //   const inboxInfo = await bridge.inboxInfo()
+  //   return inboxInfo[1]
+  // }
 
   currentRequiredStake(): Promise<BigNumber> {
     return this.rollup.currentRequiredStake()

@@ -9,31 +9,37 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface InboxInterface extends ethers.utils.Interface {
   functions: {
     'bridge()': FunctionFragment
     'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
+    'createRetryableTicketNoRefundAliasRewrite(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'depositEth(uint256)': FunctionFragment
     'initialize(address,address)': FunctionFragment
+    'isCreateRetryablePaused()': FunctionFragment
     'isMaster()': FunctionFragment
+    'pauseCreateRetryables()': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
     'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)': FunctionFragment
     'sendL2Message(bytes)': FunctionFragment
     'sendL2MessageFromOrigin(bytes)': FunctionFragment
     'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)': FunctionFragment
+    'shouldRewriteSender()': FunctionFragment
+    'startRewriteAddress()': FunctionFragment
+    'stopRewriteAddress()': FunctionFragment
+    'unpauseCreateRetryables()': FunctionFragment
     'updateWhitelistSource(address)': FunctionFragment
     'whitelist()': FunctionFragment
   }
@@ -53,6 +59,19 @@ interface InboxInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(
+    functionFragment: 'createRetryableTicketNoRefundAliasRewrite',
+    values: [
+      string,
+      BigNumberish,
+      BigNumberish,
+      string,
+      string,
+      BigNumberish,
+      BigNumberish,
+      BytesLike
+    ]
+  ): string
+  encodeFunctionData(
     functionFragment: 'depositEth',
     values: [BigNumberish]
   ): string
@@ -60,7 +79,15 @@ interface InboxInterface extends ethers.utils.Interface {
     functionFragment: 'initialize',
     values: [string, string]
   ): string
+  encodeFunctionData(
+    functionFragment: 'isCreateRetryablePaused',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'pauseCreateRetryables',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'sendContractTransaction',
     values: [BigNumberish, BigNumberish, string, BigNumberish, BytesLike]
@@ -93,6 +120,22 @@ interface InboxInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(
+    functionFragment: 'shouldRewriteSender',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'startRewriteAddress',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'stopRewriteAddress',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'unpauseCreateRetryables',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'updateWhitelistSource',
     values: [string]
   ): string
@@ -103,9 +146,21 @@ interface InboxInterface extends ethers.utils.Interface {
     functionFragment: 'createRetryableTicket',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'createRetryableTicketNoRefundAliasRewrite',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'depositEth', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'isCreateRetryablePaused',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'pauseCreateRetryables',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'sendContractTransaction',
     data: BytesLike
@@ -131,6 +186,22 @@ interface InboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'shouldRewriteSender',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'startRewriteAddress',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'stopRewriteAddress',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'unpauseCreateRetryables',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'updateWhitelistSource',
     data: BytesLike
   ): Result
@@ -139,6 +210,8 @@ interface InboxInterface extends ethers.utils.Interface {
   events: {
     'InboxMessageDelivered(uint256,bytes)': EventFragment
     'InboxMessageDeliveredFromOrigin(uint256)': EventFragment
+    'PauseToggled(bool)': EventFragment
+    'RewriteToggled(bool)': EventFragment
     'WhitelistSourceUpdated(address)': EventFragment
   }
 
@@ -146,26 +219,56 @@ interface InboxInterface extends ethers.utils.Interface {
   getEvent(
     nameOrSignatureOrTopic: 'InboxMessageDeliveredFromOrigin'
   ): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'PauseToggled'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'RewriteToggled'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
 }
 
-export class Inbox extends Contract {
+export class Inbox extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: InboxInterface
 
   functions: {
     bridge(overrides?: CallOverrides): Promise<[string]>
-
-    'bridge()'(overrides?: CallOverrides): Promise<[string]>
 
     createRetryableTicket(
       destAddr: string,
@@ -176,10 +279,10 @@ export class Inbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+    createRetryableTicketNoRefundAliasRewrite(
       destAddr: string,
       l2CallValue: BigNumberish,
       maxSubmissionCost: BigNumberish,
@@ -188,34 +291,27 @@ export class Inbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     depositEth(
       maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'depositEth(uint256)'(
-      maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     initialize(
       _bridge: string,
       _whitelist: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'initialize(address,address)'(
-      _bridge: string,
-      _whitelist: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    isCreateRetryablePaused(overrides?: CallOverrides): Promise<[boolean]>
 
     isMaster(overrides?: CallOverrides): Promise<[boolean]>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
+    pauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -223,16 +319,7 @@ export class Inbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendL1FundedContractTransaction(
@@ -240,15 +327,7 @@ export class Inbox extends Contract {
       gasPriceBid: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendL1FundedUnsignedTransaction(
@@ -257,36 +336,17 @@ export class Inbox extends Contract {
       nonce: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendL2Message(
       messageData: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'sendL2Message(bytes)'(
-      messageData: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendL2MessageFromOrigin(
       messageData: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'sendL2MessageFromOrigin(bytes)'(
-      messageData: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     sendUnsignedTransaction(
@@ -296,37 +356,32 @@ export class Inbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+    shouldRewriteSender(overrides?: CallOverrides): Promise<[boolean]>
+
+    startRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    stopRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    unpauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     updateWhitelistSource(
       newSource: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateWhitelistSource(address)'(
-      newSource: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     whitelist(overrides?: CallOverrides): Promise<[string]>
-
-    'whitelist()'(overrides?: CallOverrides): Promise<[string]>
   }
 
   bridge(overrides?: CallOverrides): Promise<string>
-
-  'bridge()'(overrides?: CallOverrides): Promise<string>
 
   createRetryableTicket(
     destAddr: string,
@@ -337,10 +392,10 @@ export class Inbox extends Contract {
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
     data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+  createRetryableTicketNoRefundAliasRewrite(
     destAddr: string,
     l2CallValue: BigNumberish,
     maxSubmissionCost: BigNumberish,
@@ -349,34 +404,27 @@ export class Inbox extends Contract {
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
     data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   depositEth(
     maxSubmissionCost: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'depositEth(uint256)'(
-    maxSubmissionCost: BigNumberish,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   initialize(
     _bridge: string,
     _whitelist: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'initialize(address,address)'(
-    _bridge: string,
-    _whitelist: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  isCreateRetryablePaused(overrides?: CallOverrides): Promise<boolean>
 
   isMaster(overrides?: CallOverrides): Promise<boolean>
 
-  'isMaster()'(overrides?: CallOverrides): Promise<boolean>
+  pauseCreateRetryables(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   sendContractTransaction(
     maxGas: BigNumberish,
@@ -384,16 +432,7 @@ export class Inbox extends Contract {
     destAddr: string,
     amount: BigNumberish,
     data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    destAddr: string,
-    amount: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendL1FundedContractTransaction(
@@ -401,15 +440,7 @@ export class Inbox extends Contract {
     gasPriceBid: BigNumberish,
     destAddr: string,
     data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    destAddr: string,
-    data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendL1FundedUnsignedTransaction(
@@ -418,36 +449,17 @@ export class Inbox extends Contract {
     nonce: BigNumberish,
     destAddr: string,
     data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    nonce: BigNumberish,
-    destAddr: string,
-    data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendL2Message(
     messageData: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'sendL2Message(bytes)'(
-    messageData: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendL2MessageFromOrigin(
     messageData: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'sendL2MessageFromOrigin(bytes)'(
-    messageData: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendUnsignedTransaction(
@@ -457,37 +469,32 @@ export class Inbox extends Contract {
     destAddr: string,
     amount: BigNumberish,
     data: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    nonce: BigNumberish,
-    destAddr: string,
-    amount: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
+  shouldRewriteSender(overrides?: CallOverrides): Promise<boolean>
+
+  startRewriteAddress(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  stopRewriteAddress(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  unpauseCreateRetryables(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   updateWhitelistSource(
     newSource: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateWhitelistSource(address)'(
-    newSource: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   whitelist(overrides?: CallOverrides): Promise<string>
 
-  'whitelist()'(overrides?: CallOverrides): Promise<string>
-
   callStatic: {
     bridge(overrides?: CallOverrides): Promise<string>
-
-    'bridge()'(overrides?: CallOverrides): Promise<string>
 
     createRetryableTicket(
       destAddr: string,
@@ -501,7 +508,7 @@ export class Inbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+    createRetryableTicketNoRefundAliasRewrite(
       destAddr: string,
       l2CallValue: BigNumberish,
       maxSubmissionCost: BigNumberish,
@@ -518,37 +525,19 @@ export class Inbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'depositEth(uint256)'(
-      maxSubmissionCost: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     initialize(
       _bridge: string,
       _whitelist: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address,address)'(
-      _bridge: string,
-      _whitelist: string,
-      overrides?: CallOverrides
-    ): Promise<void>
+    isCreateRetryablePaused(overrides?: CallOverrides): Promise<boolean>
 
     isMaster(overrides?: CallOverrides): Promise<boolean>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<boolean>
+    pauseCreateRetryables(overrides?: CallOverrides): Promise<void>
 
     sendContractTransaction(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       destAddr: string,
@@ -565,24 +554,7 @@ export class Inbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     sendL1FundedUnsignedTransaction(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       nonce: BigNumberish,
@@ -596,17 +568,7 @@ export class Inbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'sendL2Message(bytes)'(
-      messageData: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     sendL2MessageFromOrigin(
-      messageData: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'sendL2MessageFromOrigin(bytes)'(
       messageData: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -621,49 +583,51 @@ export class Inbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
+    shouldRewriteSender(overrides?: CallOverrides): Promise<boolean>
+
+    startRewriteAddress(overrides?: CallOverrides): Promise<void>
+
+    stopRewriteAddress(overrides?: CallOverrides): Promise<void>
+
+    unpauseCreateRetryables(overrides?: CallOverrides): Promise<void>
 
     updateWhitelistSource(
-      newSource: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'updateWhitelistSource(address)'(
       newSource: string,
       overrides?: CallOverrides
     ): Promise<void>
 
     whitelist(overrides?: CallOverrides): Promise<string>
-
-    'whitelist()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
     InboxMessageDelivered(
-      messageNum: BigNumberish | null,
-      data: null
-    ): EventFilter
+      messageNum?: BigNumberish | null,
+      data?: null
+    ): TypedEventFilter<
+      [BigNumber, string],
+      { messageNum: BigNumber; data: string }
+    >
 
     InboxMessageDeliveredFromOrigin(
-      messageNum: BigNumberish | null
-    ): EventFilter
+      messageNum?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { messageNum: BigNumber }>
 
-    WhitelistSourceUpdated(newSource: null): EventFilter
+    PauseToggled(
+      enabled?: null
+    ): TypedEventFilter<[boolean], { enabled: boolean }>
+
+    RewriteToggled(
+      enabled?: null
+    ): TypedEventFilter<[boolean], { enabled: boolean }>
+
+    WhitelistSourceUpdated(
+      newSource?: null
+    ): TypedEventFilter<[string], { newSource: string }>
   }
 
   estimateGas: {
     bridge(overrides?: CallOverrides): Promise<BigNumber>
 
-    'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
-
     createRetryableTicket(
       destAddr: string,
       l2CallValue: BigNumberish,
@@ -673,10 +637,10 @@ export class Inbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+    createRetryableTicketNoRefundAliasRewrite(
       destAddr: string,
       l2CallValue: BigNumberish,
       maxSubmissionCost: BigNumberish,
@@ -685,34 +649,27 @@ export class Inbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     depositEth(
       maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'depositEth(uint256)'(
-      maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     initialize(
       _bridge: string,
       _whitelist: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'initialize(address,address)'(
-      _bridge: string,
-      _whitelist: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
+    isCreateRetryablePaused(overrides?: CallOverrides): Promise<BigNumber>
 
     isMaster(overrides?: CallOverrides): Promise<BigNumber>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<BigNumber>
+    pauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -720,16 +677,7 @@ export class Inbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendL1FundedContractTransaction(
@@ -737,15 +685,7 @@ export class Inbox extends Contract {
       gasPriceBid: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendL1FundedUnsignedTransaction(
@@ -754,36 +694,17 @@ export class Inbox extends Contract {
       nonce: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendL2Message(
       messageData: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'sendL2Message(bytes)'(
-      messageData: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendL2MessageFromOrigin(
       messageData: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'sendL2MessageFromOrigin(bytes)'(
-      messageData: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     sendUnsignedTransaction(
@@ -793,39 +714,34 @@ export class Inbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+    shouldRewriteSender(overrides?: CallOverrides): Promise<BigNumber>
+
+    startRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    stopRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    unpauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     updateWhitelistSource(
       newSource: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateWhitelistSource(address)'(
-      newSource: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     whitelist(overrides?: CallOverrides): Promise<BigNumber>
-
-    'whitelist()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
     bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     createRetryableTicket(
       destAddr: string,
       l2CallValue: BigNumberish,
@@ -835,10 +751,10 @@ export class Inbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+    createRetryableTicketNoRefundAliasRewrite(
       destAddr: string,
       l2CallValue: BigNumberish,
       maxSubmissionCost: BigNumberish,
@@ -847,34 +763,29 @@ export class Inbox extends Contract {
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     depositEth(
       maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'depositEth(uint256)'(
-      maxSubmissionCost: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     initialize(
       _bridge: string,
       _whitelist: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'initialize(address,address)'(
-      _bridge: string,
-      _whitelist: string,
-      overrides?: Overrides
+    isCreateRetryablePaused(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'isMaster()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    pauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -882,16 +793,7 @@ export class Inbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendL1FundedContractTransaction(
@@ -899,15 +801,7 @@ export class Inbox extends Contract {
       gasPriceBid: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendL1FundedUnsignedTransaction(
@@ -916,36 +810,17 @@ export class Inbox extends Contract {
       nonce: BigNumberish,
       destAddr: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendL2Message(
       messageData: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'sendL2Message(bytes)'(
-      messageData: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendL2MessageFromOrigin(
       messageData: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'sendL2MessageFromOrigin(bytes)'(
-      messageData: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     sendUnsignedTransaction(
@@ -955,31 +830,30 @@ export class Inbox extends Contract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      nonce: BigNumberish,
-      destAddr: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
+    shouldRewriteSender(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    startRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    stopRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    unpauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     updateWhitelistSource(
       newSource: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateWhitelistSource(address)'(
-      newSource: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     whitelist(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'whitelist()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

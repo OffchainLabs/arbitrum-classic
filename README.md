@@ -1,4 +1,4 @@
-<p align="center"><img src="https://offchainlabs.com/c79291eee1a8e736eebd9a2c708dbe44.png" width="600"></p>
+<p align="center"><img src="docs/assets/offchain_labs_logo.png" width="600"></p>
 
 # Arbitrum Monorepo
 
@@ -9,10 +9,6 @@ Arbitrum is a Layer 2 cryptocurrency platform that makes smart contracts scalabl
 Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p), follow the [developer guide](https://developer.offchainlabs.com), and read the [white paper](https://developer.offchainlabs.com/docs/inside_arbitrum)!
 
 This repository is offered under the Apache 2.0 license. See LICENSE for details.
-
-## Current Status
-
-#### Arbitrum is currently Alpha software and should not be used in production environments.
 
 ## Quickstart
 

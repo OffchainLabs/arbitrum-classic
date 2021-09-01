@@ -34,11 +34,12 @@ var logger = log.With().Caller().Stack().Str("component", "message").Logger()
 
 const (
 	L2Type            inbox.Type = 3
-	InitType          inbox.Type = 4
+	OldInitType       inbox.Type = 4 // remove after upgrade 5
 	EndOfBlockType    inbox.Type = 6
 	EthDepositTxType  inbox.Type = 7
 	RetryableType     inbox.Type = 9
 	GasEstimationType inbox.Type = 10
+	InitType          inbox.Type = 11
 )
 
 type Message interface {
@@ -72,7 +73,7 @@ func NestedMessage(data []byte, kind inbox.Type) (Message, error) {
 	case L2Type:
 		return L2Message{Data: data}, nil
 	case InitType:
-		return NewInitFromData(data), nil
+		return NewInitFromData(data)
 	case EthDepositTxType:
 		return NewEthDepositTxFromData(data), nil
 	case RetryableType:
@@ -131,7 +132,7 @@ func (t GasEstimationMessage) AsData() []byte {
 func (t GasEstimationMessage) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, 3)
-	ret = append(ret, addressData(t.Aggregator)...)
+	ret = append(ret, AddressData(t.Aggregator)...)
 	ret = append(ret, math.U256Bytes(t.ComputationLimit)...)
 	ret = append(ret, t.TxData...)
 	return ret
@@ -150,4 +151,40 @@ func (t EndBlockMessage) Type() inbox.Type {
 
 func (t EndBlockMessage) AsData() []byte {
 	return nil
+}
+
+func L2RemapAccount(account common.Address) common.Address {
+
+	if account == (common.Address{}) {
+		return account
+	}
+
+	magic, _ := new(big.Int).SetString("1111000000000000000000000000000000001111", 16)
+	overflow := new(big.Int).Exp(big.NewInt(2), big.NewInt(20*8), nil)
+
+	translated := new(big.Int).SetBytes(account.Bytes())
+	translated.Add(translated, magic)
+	if translated.Cmp(overflow) == 1 {
+		translated.Sub(translated, overflow)
+	}
+
+	return common.NewAddressFromBig(translated)
+}
+
+func L1RemapAccount(account common.Address) common.Address {
+
+	if account == (common.Address{}) {
+		return account
+	}
+
+	magic, _ := new(big.Int).SetString("1111000000000000000000000000000000001111", 16)
+	overflow := new(big.Int).Exp(big.NewInt(2), big.NewInt(20*8), nil)
+
+	translated := new(big.Int).SetBytes(account.Bytes())
+	translated.Sub(translated, magic)
+	if translated.Sign() == -1 {
+		translated.Add(translated, overflow)
+	}
+
+	return common.NewAddressFromBig(translated)
 }

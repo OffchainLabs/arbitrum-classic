@@ -23,7 +23,10 @@ import { PayableOverrides } from '@ethersproject/contracts'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
+import { L1WethGateway__factory } from './abi/factories/L1WethGateway__factory'
+import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { Bridge__factory } from './abi/factories/Bridge__factory'
+import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
 
 import networks from './networks'
 
@@ -43,10 +46,16 @@ export class Bridge {
   l2Bridge: L2Bridge
   walletAddressCache?: string
   outboxAddressCache?: string
+  isCustomNetwork: boolean
 
-  constructor(l1BridgeObj: L1Bridge, l2BridgeObj: L2Bridge) {
+  constructor(
+    l1BridgeObj: L1Bridge,
+    l2BridgeObj: L2Bridge,
+    isCustomNetwork = false
+  ) {
     this.l1Bridge = l1BridgeObj
     this.l2Bridge = l2BridgeObj
+    this.isCustomNetwork = isCustomNetwork
   }
 
   public updateAllBalances() {
@@ -70,31 +79,30 @@ export class Bridge {
 
     const l1Network = networks[l1ChainId]
     const l2Network = networks[l2ChainId]
-
-    if (l1Network) {
-      if (l1Network.isArbitrum)
-        throw new Error('Connected to an Arbitrum networks as the L1...')
-      l1GatewayRouterAddress = l1Network.tokenBridge.l1GatewayRouter
-    } else if (!l1GatewayRouterAddress) {
-      throw new Error(
-        'Network not in config, and no l1GatewayRouter Address provided'
-      )
-    }
-
-    if (l2Network) {
-      if (!l2Network.isArbitrum)
-        throw new Error('Connected to an L1 network as the L2...')
-      l2GatewayRouterAddress = l2Network.tokenBridge.l2GatewayRouter
-    } else if (!l2GatewayRouterAddress) {
-      throw new Error(
-        'Network not in config, and no l2GatewayRouter address provided'
-      )
-    }
-
+    let isCustomNetwork = false
     if (l1Network && l2Network) {
       if (l1Network.partnerChainID !== l2Network.chainID)
         throw new Error('L1 and L2 networks are not connected')
+      if (l1Network.isArbitrum)
+        throw new Error('Connected to an Arbitrum networks as the L1...')
+      if (!l2Network.isArbitrum)
+        throw new Error('Connected to an L1 network as the L2...')
+
+      l1GatewayRouterAddress = l1Network.tokenBridge.l1GatewayRouter
+
+      l2GatewayRouterAddress = l2Network.tokenBridge.l2GatewayRouter
+    } else {
+      isCustomNetwork = true
     }
+    if (!l2GatewayRouterAddress)
+      throw new Error(
+        'Network not in config, and no l2GatewayRouter address provided'
+      )
+
+    if (!l1GatewayRouterAddress)
+      throw new Error(
+        'Network not in config, and no l1GatewayRouter Address provided'
+      )
 
     // check routers are deployed
     const l1RouterCode = await ethSigner.provider.getCode(
@@ -113,7 +121,7 @@ export class Bridge {
 
     const l1BridgeObj = new L1Bridge(l1GatewayRouterAddress, ethSigner)
     const l2BridgeObj = new L2Bridge(l2GatewayRouterAddress, arbSigner)
-    return { l1BridgeObj, l2BridgeObj }
+    return { l1BridgeObj, l2BridgeObj, isCustomNetwork }
   }
 
   static async init(
@@ -122,13 +130,14 @@ export class Bridge {
     l1GatewayRouterAddress?: string,
     l2GatewayRouterAddress?: string
   ) {
-    const { l1BridgeObj, l2BridgeObj } = await this._createBridges(
-      ethSigner,
-      arbSigner,
-      l1GatewayRouterAddress,
-      l2GatewayRouterAddress
-    )
-    return new Bridge(l1BridgeObj, l2BridgeObj)
+    const { l1BridgeObj, l2BridgeObj, isCustomNetwork } =
+      await this._createBridges(
+        ethSigner,
+        arbSigner,
+        l1GatewayRouterAddress,
+        l2GatewayRouterAddress
+      )
+    return new Bridge(l1BridgeObj, l2BridgeObj, isCustomNetwork)
   }
 
   /**
@@ -202,6 +211,23 @@ export class Bridge {
     return this.l1Bridge.depositETH(value, maxSubmissionPrice, overrides)
   }
 
+  private async looksLikeWethGateway(potentialWethGatewayAddress: string) {
+    try {
+      const potentialWethGateway = L1WethGateway__factory.connect(
+        potentialWethGatewayAddress,
+        this.l1Provider
+      )
+      await potentialWethGateway.l1Weth()
+      return true
+    } catch (err) {
+      if (err.code === 'CALL_EXCEPTION') {
+        return false
+      } else {
+        throw err
+      }
+    }
+  }
+
   /**
    * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
    */
@@ -227,9 +253,12 @@ export class Bridge {
 
     let estimateGasCallValue = constants.Zero
 
-    if (l1WethGatewayAddress === expectedL1GatewayAddress) {
-      // forwarded deposited eth as call value for weth deposit
-
+    // if it's a weth deposit, include callvalue for the gas estimate for the retryable
+    if (this.isCustomNetwork) {
+      if (await this.looksLikeWethGateway(expectedL1GatewayAddress)) {
+        estimateGasCallValue = amount
+      }
+    } else if (l1WethGatewayAddress === expectedL1GatewayAddress) {
       estimateGasCallValue = amount
     }
 
@@ -518,13 +547,11 @@ export class Bridge {
     indexInBatch: BigNumber,
     singleAttempt = false
   ) {
-    const inbox = await this.l1Bridge.getInbox()
-    const bridgeAddress = await inbox.bridge()
-
+    const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
     return BridgeHelper.triggerL2ToL1Transaction(
       batchNumber,
       indexInBatch,
-      bridgeAddress,
+      outboxAddress,
       this.l2Provider,
       this.l1Signer,
       singleAttempt
@@ -532,7 +559,7 @@ export class Bridge {
   }
 
   public tryOutboxExecute(
-    activeOutboxAddress: string,
+    outboxAddress: string,
     batchNumber: BigNumber,
     proof: Array<string>,
     path: BigNumber,
@@ -557,7 +584,7 @@ export class Bridge {
         amount,
         calldataForL1,
       },
-      activeOutboxAddress,
+      outboxAddress,
       this.l1Signer
     )
   }
@@ -585,11 +612,11 @@ export class Bridge {
 
   public waitUntilOutboxEntryCreated(
     batchNumber: BigNumber,
-    activeOutboxAddress: string
+    outboxAddress: string
   ) {
     return BridgeHelper.waitUntilOutboxEntryCreated(
       batchNumber,
-      activeOutboxAddress,
+      outboxAddress,
       this.l1Provider
     )
   }
@@ -606,8 +633,8 @@ export class Bridge {
    */
   public async getTokenWithdrawEventData(
     l1TokenAddress: string,
-    destinationAddress?: string,
-    l2BlockNumber?: number
+    fromAddress?: string,
+    filter?: ethers.providers.Filter
   ) {
     const gatewayAddress = await this.l2Bridge.l2GatewayRouter.getGateway(
       l1TokenAddress
@@ -616,12 +643,12 @@ export class Bridge {
       return []
     }
 
-    return BridgeHelper.getOutBoundTransferInitiatedLogs(
+    return BridgeHelper.getTokenWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
       l1TokenAddress,
-      destinationAddress,
-      l2BlockNumber
+      fromAddress,
+      filter
     )
   }
 
@@ -631,18 +658,22 @@ export class Bridge {
 
   public async getGatewayWithdrawEventData(
     gatewayAddress: string,
-    destinationAddress?: string
+    fromAddress?: string,
+    filter?: ethers.providers.Filter
   ) {
-    return BridgeHelper.getOutBoundTransferInitiatedLogs(
+    return BridgeHelper.getGatewayWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
-      '',
-      destinationAddress
+      fromAddress,
+      filter
     )
   }
 
-  public async getL2ToL1EventData(destinationAddress: string) {
-    return BridgeHelper.getL2ToL1EventData(destinationAddress, this.l2Provider)
+  public async getL2ToL1EventData(
+    fromAddress: string,
+    filter?: ethers.providers.Filter
+  ) {
+    return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider, filter)
   }
 
   public async getEthWithdrawals(
@@ -656,30 +687,33 @@ export class Bridge {
     )
   }
 
-  public async getOutboxAddress() {
-    if (this.outboxAddressCache) {
-      return this.outboxAddressCache
-    }
-
-    const l1ChainId = await this.l1Signer.getChainId()
-    if (networks[l1ChainId]) {
-      this.outboxAddressCache = networks[l1ChainId].tokenBridge.outbox
-      return this.outboxAddressCache
-    }
-
-    const inboxAddress = (await this.l1Bridge.getInbox()).address
-    const coreBridgeAddress = await BridgeHelper.getCoreBridgeFromInbox(
-      inboxAddress,
+  public async getOutboxAddressByBatchNum(batchNum: BigNumber) {
+    const inbox = Inbox__factory.connect(
+      (await this.l1Bridge.getInbox()).address,
       this.l1Provider
     )
-    const outboxAddress = await BridgeHelper.getActiveOutbox(
-      coreBridgeAddress,
+    const bridge = await Bridge__factory.connect(
+      await inbox.bridge(),
       this.l1Provider
     )
-    this.outboxAddressCache = outboxAddress
-    return outboxAddress
+    const oldOutboxAddress = await bridge.allowedOutboxList(0)
+    let newOutboxAddress: string
+    try {
+      newOutboxAddress = await bridge.allowedOutboxList(1)
+    } catch {
+      // new outbox not yet deployed; using old outbox
+      return oldOutboxAddress
+    }
+    const oldOutbox = OldOutbox__factory.connect(
+      oldOutboxAddress,
+      this.l1Provider
+    )
+    const lastOldOutboxBatchNumber = await oldOutbox.outboxesLength()
+
+    return batchNum.lt(lastOldOutboxBatchNumber)
+      ? oldOutboxAddress
+      : newOutboxAddress
   }
-
   /**
    * Returns {@link OutgoingMessageState} for given outgoing message
    */
@@ -688,8 +722,8 @@ export class Bridge {
     indexInBatch: BigNumber,
     l1BlockNumber?: number
   ) {
-    const outboxAddress = await this.getOutboxAddress()
-    return BridgeHelper.getOutgoingMessageState(
+    const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
+    return BridgeHelper.getOutGoingMessageState(
       batchNumber,
       indexInBatch,
       outboxAddress,
@@ -766,20 +800,32 @@ export class Bridge {
   public async getRetryablesL1(l1BlockNumber?: number) {
     return BridgeHelper.getRetryablesL1(this.l1Provider, l1BlockNumber)
   }
-  public async getL1GatewaySetEventData() {
+  public async getL1GatewaySetEventData(_l1GatewayRouterAddress?: string) {
+    if (this.isCustomNetwork && !_l1GatewayRouterAddress)
+      throw new Error('Must supply _l1GatewayRouterAddress for custom network ')
+
     const l1ChainId = await this.l1Signer.getChainId()
     const l1GatewayRouterAddress =
-      networks[l1ChainId].tokenBridge.l1GatewayRouter
+      _l1GatewayRouterAddress || networks[l1ChainId].tokenBridge.l1GatewayRouter
+    if (!l1GatewayRouterAddress)
+      throw new Error('No l2GatewayRouterAddress provided')
+
     return BridgeHelper.getGatewaySetEventData(
       l1GatewayRouterAddress,
       this.l1Provider
     )
   }
 
-  public async getL2GatewaySetEventData() {
+  public async getL2GatewaySetEventData(_l2GatewayRouterAddress?: string) {
+    if (this.isCustomNetwork && !_l2GatewayRouterAddress)
+      throw new Error('Must supply _l2GatewayRouterAddress for custom network ')
+
     const l1ChainId = await this.l1Signer.getChainId()
     const l2GatewayRouterAddress =
-      networks[l1ChainId].tokenBridge.l2GatewayRouter
+      _l2GatewayRouterAddress || networks[l1ChainId].tokenBridge.l2GatewayRouter
+    if (!l2GatewayRouterAddress)
+      throw new Error('No l2GatewayRouterAddress provided')
+
     return BridgeHelper.getGatewaySetEventData(
       l2GatewayRouterAddress,
       this.l2Provider

@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbosmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 func TestInit(t *testing.T) {

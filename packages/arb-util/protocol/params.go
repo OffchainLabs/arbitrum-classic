@@ -17,51 +17,26 @@
 package protocol
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/big"
 	"math/rand"
+	
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-// If StakeToken is 0, stake requirement is ETH measured in Wei, otherwise stake requirement is units of stakeStoken
 type ChainParams struct {
-	StakeRequirement          *big.Int
-	StakeToken                common.Address
 	GracePeriod               *common.TimeBlocks
-	MaxExecutionSteps         uint64
 	ArbGasSpeedLimitPerSecond uint64
 }
 
 func NewRandomChainParams() ChainParams {
 	return ChainParams{
-		StakeRequirement:          common.RandBigInt(),
-		StakeToken:                common.RandAddress(),
 		GracePeriod:               common.NewTimeBlocks(common.RandBigInt()),
-		MaxExecutionSteps:         rand.Uint64(),
 		ArbGasSpeedLimitPerSecond: rand.Uint64(),
 	}
-}
-
-func (cp ChainParams) WithStakeRequirement(amount *big.Int) ChainParams {
-	ret := cp
-	ret.StakeRequirement = amount
-	return ret
-}
-
-func (cp ChainParams) WithStakeToken(address common.Address) ChainParams {
-	ret := cp
-	ret.StakeToken = address
-	return ret
 }
 
 func (cp ChainParams) WithGracePeriod(period *common.TimeBlocks) ChainParams {
 	ret := cp
 	ret.GracePeriod = period
-	return ret
-}
-
-func (cp ChainParams) WithMaxExecutionSteps(steps uint64) ChainParams {
-	ret := cp
-	ret.MaxExecutionSteps = steps
 	return ret
 }
 
@@ -72,9 +47,5 @@ func (cp ChainParams) WithArbGasSpeedLimitPerSecond(limit uint64) ChainParams {
 }
 
 func (cp ChainParams) Equals(cp2 ChainParams) bool {
-	return cp.StakeRequirement.Cmp(cp2.StakeRequirement) == 0 &&
-		cp.StakeToken == cp2.StakeToken &&
-		cp.GracePeriod == cp2.GracePeriod &&
-		cp.MaxExecutionSteps == cp2.MaxExecutionSteps &&
-		cp.ArbGasSpeedLimitPerSecond == cp2.ArbGasSpeedLimitPerSecond
+	return cp.GracePeriod == cp2.GracePeriod && cp.ArbGasSpeedLimitPerSecond == cp2.ArbGasSpeedLimitPerSecond
 }

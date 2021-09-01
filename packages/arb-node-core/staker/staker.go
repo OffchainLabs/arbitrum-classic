@@ -23,15 +23,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
@@ -47,11 +49,14 @@ const (
 
 type Staker struct {
 	*Validator
-	activeChallenge *challenge.Challenger
-	strategy        Strategy
-	fromBlock       int64
-	baseCallOpts    bind.CallOpts
-	auth            *ethbridge.TransactAuth
+	activeChallenge     *challenge.Challenger
+	strategy            Strategy
+	fromBlock           int64
+	baseCallOpts        bind.CallOpts
+	auth                transactauth.TransactAuth
+	config              configuration.Validator
+	highGasBlocksBuffer *big.Int
+	lastActCalledBlock  *big.Int
 }
 
 func NewStaker(
@@ -63,22 +68,26 @@ func NewStaker(
 	validatorUtilsAddress common.Address,
 	strategy Strategy,
 	callOpts bind.CallOpts,
-	auth *ethbridge.TransactAuth,
+	auth transactauth.TransactAuth,
+	config configuration.Validator,
 ) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress, callOpts)
 	if err != nil {
 		return nil, nil, err
 	}
 	return &Staker{
-		Validator:    val,
-		strategy:     strategy,
-		fromBlock:    fromBlock,
-		baseCallOpts: callOpts,
-		auth:         auth,
+		Validator:           val,
+		strategy:            strategy,
+		fromBlock:           fromBlock,
+		baseCallOpts:        callOpts,
+		auth:                auth,
+		config:              config,
+		highGasBlocksBuffer: big.NewInt(config.L1PostingStrategy.HighGasDelayBlocks),
+		lastActCalledBlock:  nil,
 	}, val.delayedBridge, nil
 }
 
-func (s *Staker) RunInBackground(ctx context.Context) chan bool {
+func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration) chan bool {
 	done := make(chan bool)
 	go func() {
 		defer func() {
@@ -86,18 +95,22 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 		}()
 		backoff := time.Second
 		for {
-			tx, err := s.Act(ctx)
-			if err == nil && tx != nil {
+			arbTx, err := s.Act(ctx)
+			if err == nil && arbTx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
-				_, err = ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking", s.auth)
+				_, err = transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.auth)
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
-					logger.Info().Str("hash", tx.Hash().String()).Msg("Successfully executed transaction")
+					logger.Info().Str("hash", arbTx.Hash().String()).Msg("Successfully executed transaction")
 				}
 			}
 			if err != nil {
 				logger.Warn().Err(err).Send()
-				<-time.After(backoff)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(backoff):
+				}
 				if backoff < 60*time.Second {
 					backoff *= 2
 				}
@@ -106,15 +119,72 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 				backoff = time.Second
 			}
 			// Force a GC run to clean up any execution cursors while we wait
-			delay := time.After(time.Minute)
+			delay := time.After(stakerDelay)
 			runtime.GC()
-			<-delay
+			select {
+			case <-ctx.Done():
+				return
+			case <-delay:
+			}
 		}
 	}()
 	return done
 }
 
-func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
+func (s *Staker) shouldAct(ctx context.Context) bool {
+	var gasPriceHigh = false
+	var gasPriceFloat float64
+	gasPrice, err := s.client.SuggestGasPrice(ctx)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error getting gas price")
+	} else {
+		gasPriceFloat = float64(gasPrice.Int64()) / 1e9
+		if gasPriceFloat >= s.config.L1PostingStrategy.HighGasThreshold {
+			gasPriceHigh = true
+		}
+	}
+	latestBlockInfo, err := s.client.BlockInfoByNumber(ctx, nil)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error getting latest block")
+		return true
+	}
+	latestBlockNum := latestBlockInfo.Number.ToInt()
+	if s.lastActCalledBlock == nil {
+		s.lastActCalledBlock = latestBlockNum
+	}
+	blocksSinceActCalled := new(big.Int).Sub(latestBlockNum, s.lastActCalledBlock)
+	s.lastActCalledBlock = latestBlockNum
+	if gasPriceHigh {
+		// We're eating into the high gas buffer to delay our tx
+		s.highGasBlocksBuffer.Sub(s.highGasBlocksBuffer, blocksSinceActCalled)
+	} else {
+		// We'll make a tx if necessary, so we can add to the buffer for future high gas
+		s.highGasBlocksBuffer.Add(s.highGasBlocksBuffer, blocksSinceActCalled)
+	}
+	// Clamp `s.highGasBlocksBuffer` to between 0 and HighGasDelayBlocks
+	if s.highGasBlocksBuffer.Sign() < 0 {
+		s.highGasBlocksBuffer.SetInt64(0)
+	} else if s.highGasBlocksBuffer.Cmp(big.NewInt(s.config.L1PostingStrategy.HighGasDelayBlocks)) > 0 {
+		s.highGasBlocksBuffer.SetInt64(s.config.L1PostingStrategy.HighGasDelayBlocks)
+	}
+	if gasPriceHigh && s.highGasBlocksBuffer.Sign() > 0 {
+		logger.
+			Info().
+			Float64("gasPrice", gasPriceFloat).
+			Float64("highGasPriceConfig", s.config.L1PostingStrategy.HighGasThreshold).
+			Str("highGasBuffer", s.highGasBlocksBuffer.String()).
+			Msg("not acting yet as gas price is high")
+		return false
+	} else {
+		return true
+	}
+}
+
+func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error) {
+	if !s.shouldAct(ctx) {
+		// The fact that we're delaying acting is alreay logged in `shouldAct`
+		return nil, nil
+	}
 	s.builder.ClearTransactions()
 	rawInfo, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {
@@ -158,13 +228,13 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	}
 	if shouldResolveNodes {
 		// Keep the stake of this validator placed if we plan on staking further
-		tx, err := s.removeOldStakers(ctx, effectiveStrategy >= StakeLatestStrategy)
-		if err != nil || tx != nil {
-			return tx, err
+		arbTx, err := s.removeOldStakers(ctx, effectiveStrategy >= StakeLatestStrategy)
+		if err != nil || arbTx != nil {
+			return arbTx, err
 		}
-		tx, err = s.resolveTimedOutChallenges(ctx)
-		if err != nil || tx != nil {
-			return tx, err
+		arbTx, err = s.resolveTimedOutChallenges(ctx)
+		if err != nil || arbTx != nil {
+			return arbTx, err
 		}
 		if err := s.resolveNextNode(ctx, rawInfo, s.fromBlock); err != nil {
 			return nil, err

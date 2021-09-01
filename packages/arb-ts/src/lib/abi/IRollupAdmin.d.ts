@@ -9,35 +9,37 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface IRollupAdminInterface extends ethers.utils.Interface {
   functions: {
+    'forceConfirmNode(uint256,bytes32,bytes,uint256[],uint256,bytes32,uint256)': FunctionFragment
+    'forceCreateNode(bytes32,bytes32[3][2],uint256[4][2],bytes,uint256,uint256,uint256)': FunctionFragment
+    'forceRefundStaker(address[])': FunctionFragment
+    'forceResolveChallenge(address[],address[])': FunctionFragment
     'pause()': FunctionFragment
     'removeOldOutbox(address)': FunctionFragment
     'resume()': FunctionFragment
-    'setArbGasSpeedLimitPerBlock(uint256)': FunctionFragment
+    'setAvmGasSpeedLimitPerBlock(uint256)': FunctionFragment
     'setBaseStake(uint256)': FunctionFragment
     'setChallengeExecutionBisectionDegree(uint256)': FunctionFragment
     'setConfirmPeriodBlocks(uint256)': FunctionFragment
     'setExtraChallengeTimeBlocks(uint256)': FunctionFragment
     'setFacets(address,address)': FunctionFragment
     'setInbox(address,bool)': FunctionFragment
+    'setIsSequencer(address,bool)': FunctionFragment
     'setMinimumAssertionPeriod(uint256)': FunctionFragment
     'setOutbox(address)': FunctionFragment
     'setOwner(address)': FunctionFragment
-    'setSequencer(address)': FunctionFragment
-    'setSequencerInboxMaxDelayBlocks(uint256)': FunctionFragment
-    'setSequencerInboxMaxDelaySeconds(uint256)': FunctionFragment
+    'setSequencerInboxMaxDelay(uint256,uint256)': FunctionFragment
     'setStakeToken(address)': FunctionFragment
     'setValidator(address[],bool[])': FunctionFragment
     'setWhitelistEntries(address,address[],bool[])': FunctionFragment
@@ -45,6 +47,41 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
     'upgradeBeacon(address,address)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'forceConfirmNode',
+    values: [
+      BigNumberish,
+      BytesLike,
+      BytesLike,
+      BigNumberish[],
+      BigNumberish,
+      BytesLike,
+      BigNumberish
+    ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceCreateNode',
+    values: [
+      BytesLike,
+      [[BytesLike, BytesLike, BytesLike], [BytesLike, BytesLike, BytesLike]],
+      [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      BytesLike,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish
+    ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceRefundStaker',
+    values: [string[]]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'forceResolveChallenge',
+    values: [string[], string[]]
+  ): string
   encodeFunctionData(functionFragment: 'pause', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'removeOldOutbox',
@@ -52,7 +89,7 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(functionFragment: 'resume', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'setArbGasSpeedLimitPerBlock',
+    functionFragment: 'setAvmGasSpeedLimitPerBlock',
     values: [BigNumberish]
   ): string
   encodeFunctionData(
@@ -80,19 +117,18 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
     values: [string, boolean]
   ): string
   encodeFunctionData(
+    functionFragment: 'setIsSequencer',
+    values: [string, boolean]
+  ): string
+  encodeFunctionData(
     functionFragment: 'setMinimumAssertionPeriod',
     values: [BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'setOutbox', values: [string]): string
   encodeFunctionData(functionFragment: 'setOwner', values: [string]): string
-  encodeFunctionData(functionFragment: 'setSequencer', values: [string]): string
   encodeFunctionData(
-    functionFragment: 'setSequencerInboxMaxDelayBlocks',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'setSequencerInboxMaxDelaySeconds',
-    values: [BigNumberish]
+    functionFragment: 'setSequencerInboxMaxDelay',
+    values: [BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'setStakeToken',
@@ -115,6 +151,22 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
     values: [string, string]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'forceConfirmNode',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceCreateNode',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceRefundStaker',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'forceResolveChallenge',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'pause', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'removeOldOutbox',
@@ -122,7 +174,7 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'resume', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'setArbGasSpeedLimitPerBlock',
+    functionFragment: 'setAvmGasSpeedLimitPerBlock',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -144,21 +196,17 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'setFacets', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'setInbox', data: BytesLike): Result
   decodeFunctionResult(
+    functionFragment: 'setIsSequencer',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'setMinimumAssertionPeriod',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'setOutbox', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'setOwner', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'setSequencer',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setSequencerInboxMaxDelayBlocks',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setSequencerInboxMaxDelaySeconds',
+    functionFragment: 'setSequencerInboxMaxDelay',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -182,484 +230,404 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
 
-  events: {}
+  events: {
+    'OwnerFunctionCalled(uint256)': EventFragment
+  }
+
+  getEvent(nameOrSignatureOrTopic: 'OwnerFunctionCalled'): EventFragment
 }
 
-export class IRollupAdmin extends Contract {
+export class IRollupAdmin extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: IRollupAdminInterface
 
   functions: {
-    pause(overrides?: Overrides): Promise<ContractTransaction>
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
-    'pause()'(overrides?: Overrides): Promise<ContractTransaction>
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    forceRefundStaker(
+      stacker: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    forceResolveChallenge(
+      stackerA: string[],
+      stackerB: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    pause(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     removeOldOutbox(
       _outbox: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'removeOldOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
+    resume(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    resume(overrides?: Overrides): Promise<ContractTransaction>
-
-    'resume()'(overrides?: Overrides): Promise<ContractTransaction>
-
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setArbGasSpeedLimitPerBlock(uint256)'(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
-      overrides?: Overrides
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setBaseStake(
       newBaseStake: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setBaseStake(uint256)'(
-      newBaseStake: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setChallengeExecutionBisectionDegree(
       newChallengeExecutionBisectionDegree: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setChallengeExecutionBisectionDegree(uint256)'(
-      newChallengeExecutionBisectionDegree: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setConfirmPeriodBlocks(
       newConfirmPeriod: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setConfirmPeriodBlocks(uint256)'(
-      newConfirmPeriod: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setExtraChallengeTimeBlocks(
       newExtraTimeBlocks: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setExtraChallengeTimeBlocks(uint256)'(
-      newExtraTimeBlocks: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setFacets(
       newAdminFacet: string,
       newUserFacet: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setFacets(address,address)'(
-      newAdminFacet: string,
-      newUserFacet: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setInbox(
       _inbox: string,
       _enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'setInbox(address,bool)'(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: Overrides
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setMinimumAssertionPeriod(uint256)'(
-      newPeriod: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setOutbox(
       _outbox: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setOwner(
       newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'setOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    setSequencer(
-      newSequencer: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setSequencer(address)'(
-      newSequencer: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setSequencerInboxMaxDelayBlocks(uint256)'(
-      newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setSequencerInboxMaxDelaySeconds(uint256)'(
-      newSequencerInboxMaxDelaySeconds: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setStakeToken(
       newStakeToken: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setStakeToken(address)'(
-      newStakeToken: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setValidator(
       _validator: string[],
       _val: boolean[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setValidator(address[],bool[])'(
-      _validator: string[],
-      _val: boolean[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     setWhitelistEntries(
       whitelist: string,
       user: string[],
       val: boolean[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setWhitelistEntries(address,address[],bool[])'(
-      whitelist: string,
-      user: string[],
-      val: boolean[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     updateWhitelistConsumers(
       whitelist: string,
       newWhitelist: string,
       targets: string[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateWhitelistConsumers(address,address,address[])'(
-      whitelist: string,
-      newWhitelist: string,
-      targets: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     upgradeBeacon(
       beacon: string,
       newImplementation: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'upgradeBeacon(address,address)'(
-      beacon: string,
-      newImplementation: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
-  pause(overrides?: Overrides): Promise<ContractTransaction>
+  forceConfirmNode(
+    nodeNum: BigNumberish,
+    beforeSendAcc: BytesLike,
+    sendsData: BytesLike,
+    sendLengths: BigNumberish[],
+    afterSendCount: BigNumberish,
+    afterLogAcc: BytesLike,
+    afterLogCount: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
-  'pause()'(overrides?: Overrides): Promise<ContractTransaction>
+  forceCreateNode(
+    expectedNodeHash: BytesLike,
+    assertionBytes32Fields: [
+      [BytesLike, BytesLike, BytesLike],
+      [BytesLike, BytesLike, BytesLike]
+    ],
+    assertionIntFields: [
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+    ],
+    sequencerBatchProof: BytesLike,
+    beforeProposedBlock: BigNumberish,
+    beforeInboxMaxCount: BigNumberish,
+    prevNode: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  forceRefundStaker(
+    stacker: string[],
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  forceResolveChallenge(
+    stackerA: string[],
+    stackerB: string[],
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  pause(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   removeOldOutbox(
     _outbox: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'removeOldOutbox(address)'(
-    _outbox: string,
-    overrides?: Overrides
+  resume(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  resume(overrides?: Overrides): Promise<ContractTransaction>
-
-  'resume()'(overrides?: Overrides): Promise<ContractTransaction>
-
-  setArbGasSpeedLimitPerBlock(
-    newArbGasSpeedLimitPerBlock: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setArbGasSpeedLimitPerBlock(uint256)'(
-    newArbGasSpeedLimitPerBlock: BigNumberish,
-    overrides?: Overrides
+  setAvmGasSpeedLimitPerBlock(
+    newAvmGasSpeedLimitPerBlock: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setBaseStake(
     newBaseStake: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setBaseStake(uint256)'(
-    newBaseStake: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setChallengeExecutionBisectionDegree(
     newChallengeExecutionBisectionDegree: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setChallengeExecutionBisectionDegree(uint256)'(
-    newChallengeExecutionBisectionDegree: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setConfirmPeriodBlocks(
     newConfirmPeriod: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setConfirmPeriodBlocks(uint256)'(
-    newConfirmPeriod: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setExtraChallengeTimeBlocks(
     newExtraTimeBlocks: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setExtraChallengeTimeBlocks(uint256)'(
-    newExtraTimeBlocks: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setFacets(
     newAdminFacet: string,
     newUserFacet: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setFacets(address,address)'(
-    newAdminFacet: string,
-    newUserFacet: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setInbox(
     _inbox: string,
     _enabled: boolean,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'setInbox(address,bool)'(
-    _inbox: string,
-    _enabled: boolean,
-    overrides?: Overrides
+  setIsSequencer(
+    newSequencer: string,
+    isSequencer: boolean,
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setMinimumAssertionPeriod(
     newPeriod: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setMinimumAssertionPeriod(uint256)'(
-    newPeriod: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setOutbox(
     _outbox: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setOutbox(address)'(
-    _outbox: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setOwner(
     newOwner: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'setOwner(address)'(
-    newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  setSequencer(
-    newSequencer: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setSequencer(address)'(
-    newSequencer: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  setSequencerInboxMaxDelayBlocks(
+  setSequencerInboxMaxDelay(
     newSequencerInboxMaxDelayBlocks: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setSequencerInboxMaxDelayBlocks(uint256)'(
-    newSequencerInboxMaxDelayBlocks: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  setSequencerInboxMaxDelaySeconds(
     newSequencerInboxMaxDelaySeconds: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setSequencerInboxMaxDelaySeconds(uint256)'(
-    newSequencerInboxMaxDelaySeconds: BigNumberish,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setStakeToken(
     newStakeToken: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setStakeToken(address)'(
-    newStakeToken: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setValidator(
     _validator: string[],
     _val: boolean[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setValidator(address[],bool[])'(
-    _validator: string[],
-    _val: boolean[],
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   setWhitelistEntries(
     whitelist: string,
     user: string[],
     val: boolean[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setWhitelistEntries(address,address[],bool[])'(
-    whitelist: string,
-    user: string[],
-    val: boolean[],
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   updateWhitelistConsumers(
     whitelist: string,
     newWhitelist: string,
     targets: string[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateWhitelistConsumers(address,address,address[])'(
-    whitelist: string,
-    newWhitelist: string,
-    targets: string[],
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   upgradeBeacon(
     beacon: string,
     newImplementation: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'upgradeBeacon(address,address)'(
-    beacon: string,
-    newImplementation: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
-    pause(overrides?: CallOverrides): Promise<void>
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
 
-    'pause()'(overrides?: CallOverrides): Promise<void>
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    forceRefundStaker(
+      stacker: string[],
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    forceResolveChallenge(
+      stackerA: string[],
+      stackerB: string[],
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    pause(overrides?: CallOverrides): Promise<void>
 
     removeOldOutbox(_outbox: string, overrides?: CallOverrides): Promise<void>
 
-    'removeOldOutbox(address)'(
-      _outbox: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     resume(overrides?: CallOverrides): Promise<void>
 
-    'resume()'(overrides?: CallOverrides): Promise<void>
-
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setArbGasSpeedLimitPerBlock(uint256)'(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
     setBaseStake(
-      newBaseStake: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setBaseStake(uint256)'(
       newBaseStake: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
@@ -669,17 +637,7 @@ export class IRollupAdmin extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setChallengeExecutionBisectionDegree(uint256)'(
-      newChallengeExecutionBisectionDegree: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     setConfirmPeriodBlocks(
-      newConfirmPeriod: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setConfirmPeriodBlocks(uint256)'(
       newConfirmPeriod: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
@@ -689,18 +647,7 @@ export class IRollupAdmin extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setExtraChallengeTimeBlocks(uint256)'(
-      newExtraTimeBlocks: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     setFacets(
-      newAdminFacet: string,
-      newUserFacet: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setFacets(address,address)'(
       newAdminFacet: string,
       newUserFacet: string,
       overrides?: CallOverrides
@@ -712,69 +659,28 @@ export class IRollupAdmin extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setInbox(address,bool)'(
-      _inbox: string,
-      _enabled: boolean,
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
       overrides?: CallOverrides
     ): Promise<void>
 
     setMinimumAssertionPeriod(
-      newPeriod: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setMinimumAssertionPeriod(uint256)'(
       newPeriod: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
     setOutbox(_outbox: string, overrides?: CallOverrides): Promise<void>
 
-    'setOutbox(address)'(
-      _outbox: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     setOwner(newOwner: string, overrides?: CallOverrides): Promise<void>
 
-    'setOwner(address)'(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    setSequencer(newSequencer: string, overrides?: CallOverrides): Promise<void>
-
-    'setSequencer(address)'(
-      newSequencer: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setSequencerInboxMaxDelayBlocks(uint256)'(
-      newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    setSequencerInboxMaxDelaySeconds(
-      newSequencerInboxMaxDelaySeconds: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setSequencerInboxMaxDelaySeconds(uint256)'(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
     setStakeToken(
-      newStakeToken: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setStakeToken(address)'(
       newStakeToken: string,
       overrides?: CallOverrides
     ): Promise<void>
@@ -785,20 +691,7 @@ export class IRollupAdmin extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setValidator(address[],bool[])'(
-      _validator: string[],
-      _val: boolean[],
-      overrides?: CallOverrides
-    ): Promise<void>
-
     setWhitelistEntries(
-      whitelist: string,
-      user: string[],
-      val: boolean[],
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setWhitelistEntries(address,address[],bool[])'(
       whitelist: string,
       user: string[],
       val: boolean[],
@@ -812,448 +705,314 @@ export class IRollupAdmin extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'updateWhitelistConsumers(address,address,address[])'(
-      whitelist: string,
-      newWhitelist: string,
-      targets: string[],
-      overrides?: CallOverrides
-    ): Promise<void>
-
     upgradeBeacon(
-      beacon: string,
-      newImplementation: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'upgradeBeacon(address,address)'(
       beacon: string,
       newImplementation: string,
       overrides?: CallOverrides
     ): Promise<void>
   }
 
-  filters: {}
+  filters: {
+    OwnerFunctionCalled(
+      id?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { id: BigNumber }>
+  }
 
   estimateGas: {
-    pause(overrides?: Overrides): Promise<BigNumber>
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
-    'pause()'(overrides?: Overrides): Promise<BigNumber>
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
-    removeOldOutbox(_outbox: string, overrides?: Overrides): Promise<BigNumber>
+    forceRefundStaker(
+      stacker: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
-    'removeOldOutbox(address)'(
+    forceResolveChallenge(
+      stackerA: string[],
+      stackerB: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    pause(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    removeOldOutbox(
       _outbox: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    resume(overrides?: Overrides): Promise<BigNumber>
-
-    'resume()'(overrides?: Overrides): Promise<BigNumber>
-
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
-      overrides?: Overrides
+    resume(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'setArbGasSpeedLimitPerBlock(uint256)'(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
-      overrides?: Overrides
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setBaseStake(
       newBaseStake: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setBaseStake(uint256)'(
-      newBaseStake: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setChallengeExecutionBisectionDegree(
       newChallengeExecutionBisectionDegree: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setChallengeExecutionBisectionDegree(uint256)'(
-      newChallengeExecutionBisectionDegree: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setConfirmPeriodBlocks(
       newConfirmPeriod: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setConfirmPeriodBlocks(uint256)'(
-      newConfirmPeriod: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setExtraChallengeTimeBlocks(
       newExtraTimeBlocks: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setExtraChallengeTimeBlocks(uint256)'(
-      newExtraTimeBlocks: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setFacets(
       newAdminFacet: string,
       newUserFacet: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setFacets(address,address)'(
-      newAdminFacet: string,
-      newUserFacet: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setInbox(
       _inbox: string,
       _enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'setInbox(address,bool)'(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: Overrides
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'setMinimumAssertionPeriod(uint256)'(
-      newPeriod: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    setOutbox(_outbox: string, overrides?: Overrides): Promise<BigNumber>
-
-    'setOutbox(address)'(
+    setOutbox(
       _outbox: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    setOwner(newOwner: string, overrides?: Overrides): Promise<BigNumber>
-
-    'setOwner(address)'(
+    setOwner(
       newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    setSequencer(
-      newSequencer: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setSequencer(address)'(
-      newSequencer: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setSequencerInboxMaxDelayBlocks(uint256)'(
-      newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setSequencerInboxMaxDelaySeconds(uint256)'(
-      newSequencerInboxMaxDelaySeconds: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setStakeToken(
       newStakeToken: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setStakeToken(address)'(
-      newStakeToken: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setValidator(
       _validator: string[],
       _val: boolean[],
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setValidator(address[],bool[])'(
-      _validator: string[],
-      _val: boolean[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     setWhitelistEntries(
       whitelist: string,
       user: string[],
       val: boolean[],
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setWhitelistEntries(address,address[],bool[])'(
-      whitelist: string,
-      user: string[],
-      val: boolean[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     updateWhitelistConsumers(
       whitelist: string,
       newWhitelist: string,
       targets: string[],
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateWhitelistConsumers(address,address,address[])'(
-      whitelist: string,
-      newWhitelist: string,
-      targets: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     upgradeBeacon(
       beacon: string,
       newImplementation: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'upgradeBeacon(address,address)'(
-      beacon: string,
-      newImplementation: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
-    pause(overrides?: Overrides): Promise<PopulatedTransaction>
+    forceConfirmNode(
+      nodeNum: BigNumberish,
+      beforeSendAcc: BytesLike,
+      sendsData: BytesLike,
+      sendLengths: BigNumberish[],
+      afterSendCount: BigNumberish,
+      afterLogAcc: BytesLike,
+      afterLogCount: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
-    'pause()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    forceCreateNode(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
+      ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      sequencerBatchProof: BytesLike,
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
+      prevNode: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    forceRefundStaker(
+      stacker: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    forceResolveChallenge(
+      stackerA: string[],
+      stackerB: string[],
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    pause(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     removeOldOutbox(
       _outbox: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'removeOldOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
+    resume(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    resume(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'resume()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    setArbGasSpeedLimitPerBlock(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setArbGasSpeedLimitPerBlock(uint256)'(
-      newArbGasSpeedLimitPerBlock: BigNumberish,
-      overrides?: Overrides
+    setAvmGasSpeedLimitPerBlock(
+      newAvmGasSpeedLimitPerBlock: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setBaseStake(
       newBaseStake: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setBaseStake(uint256)'(
-      newBaseStake: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setChallengeExecutionBisectionDegree(
       newChallengeExecutionBisectionDegree: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setChallengeExecutionBisectionDegree(uint256)'(
-      newChallengeExecutionBisectionDegree: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setConfirmPeriodBlocks(
       newConfirmPeriod: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setConfirmPeriodBlocks(uint256)'(
-      newConfirmPeriod: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setExtraChallengeTimeBlocks(
       newExtraTimeBlocks: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setExtraChallengeTimeBlocks(uint256)'(
-      newExtraTimeBlocks: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setFacets(
       newAdminFacet: string,
       newUserFacet: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setFacets(address,address)'(
-      newAdminFacet: string,
-      newUserFacet: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setInbox(
       _inbox: string,
       _enabled: boolean,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'setInbox(address,bool)'(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: Overrides
+    setIsSequencer(
+      newSequencer: string,
+      isSequencer: boolean,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setMinimumAssertionPeriod(
       newPeriod: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setMinimumAssertionPeriod(uint256)'(
-      newPeriod: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setOutbox(
       _outbox: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setOwner(
       newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'setOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    setSequencer(
-      newSequencer: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setSequencer(address)'(
-      newSequencer: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    setSequencerInboxMaxDelayBlocks(
+    setSequencerInboxMaxDelay(
       newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setSequencerInboxMaxDelayBlocks(uint256)'(
-      newSequencerInboxMaxDelayBlocks: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    setSequencerInboxMaxDelaySeconds(
       newSequencerInboxMaxDelaySeconds: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setSequencerInboxMaxDelaySeconds(uint256)'(
-      newSequencerInboxMaxDelaySeconds: BigNumberish,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setStakeToken(
       newStakeToken: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setStakeToken(address)'(
-      newStakeToken: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setValidator(
       _validator: string[],
       _val: boolean[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setValidator(address[],bool[])'(
-      _validator: string[],
-      _val: boolean[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     setWhitelistEntries(
       whitelist: string,
       user: string[],
       val: boolean[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setWhitelistEntries(address,address[],bool[])'(
-      whitelist: string,
-      user: string[],
-      val: boolean[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     updateWhitelistConsumers(
       whitelist: string,
       newWhitelist: string,
       targets: string[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateWhitelistConsumers(address,address,address[])'(
-      whitelist: string,
-      newWhitelist: string,
-      targets: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     upgradeBeacon(
       beacon: string,
       newImplementation: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'upgradeBeacon(address,address)'(
-      beacon: string,
-      newImplementation: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

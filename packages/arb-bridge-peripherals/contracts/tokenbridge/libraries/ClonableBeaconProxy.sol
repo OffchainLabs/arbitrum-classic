@@ -35,7 +35,7 @@ contract BeaconProxyFactory is ProxySetter {
     }
 
     function createProxy(bytes32 userSalt) external returns (address) {
-        // consumer should check if createdContract == address(0), ie fail deploy
+        // deployment will fail and this function will revert if contract `salt` is not unique
         bytes32 salt = getSalt(msg.sender, userSalt);
         address createdContract = address(new ClonableBeaconProxy{ salt: salt }());
         return createdContract;

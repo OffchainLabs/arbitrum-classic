@@ -26,8 +26,8 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
@@ -125,7 +125,7 @@ func (v *ValidatorUtils) GetConfig(ctx context.Context) (*RollupConfig, error) {
 	return &RollupConfig{
 		ConfirmPeriodBlocks:      config.ConfirmPeriodBlocks,
 		ExtraChallengeTimeBlocks: config.ExtraChallengeTimeBlocks,
-		ArbGasSpeedLimitPerBlock: config.ArbGasSpeedLimitPerBlock,
+		ArbGasSpeedLimitPerBlock: config.AvmGasSpeedLimitPerBlock,
 		BaseStake:                config.BaseStake,
 		StakeToken:               common.Address{},
 	}, nil

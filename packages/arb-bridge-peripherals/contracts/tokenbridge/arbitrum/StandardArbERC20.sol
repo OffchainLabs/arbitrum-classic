@@ -34,14 +34,14 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
      * @param _data encoded symbol/name/decimal data for initial deploy
      */
     function bridgeInit(address _l1Address, bytes memory _data) public virtual {
-        (bytes memory name, bytes memory symbol, bytes memory decimals) =
+        (bytes memory name_, bytes memory symbol_, bytes memory decimals_) =
             abi.decode(_data, (bytes, bytes, bytes));
         // what if decode reverts? shouldn't as this is encoded by L1 contract
 
         L2GatewayToken._initialize(
-            BytesParserWithDefault.toString(name, ""),
-            BytesParserWithDefault.toString(symbol, ""),
-            BytesParserWithDefault.toUint8(decimals, 18),
+            BytesParserWithDefault.toString(name_, ""),
+            BytesParserWithDefault.toString(symbol_, ""),
+            BytesParserWithDefault.toUint8(decimals_, 18),
             msg.sender, // _l2Gateway,
             _l1Address // _l1Counterpart
         );

@@ -34,13 +34,13 @@ contract ValidatorUtils {
         returns (
             uint256 confirmPeriodBlocks,
             uint256 extraChallengeTimeBlocks,
-            uint256 arbGasSpeedLimitPerBlock,
+            uint256 avmGasSpeedLimitPerBlock,
             uint256 baseStake
         )
     {
         confirmPeriodBlocks = rollup.confirmPeriodBlocks();
         extraChallengeTimeBlocks = rollup.extraChallengeTimeBlocks();
-        arbGasSpeedLimitPerBlock = rollup.arbGasSpeedLimitPerBlock();
+        avmGasSpeedLimitPerBlock = rollup.avmGasSpeedLimitPerBlock();
         baseStake = rollup.baseStake();
     }
 

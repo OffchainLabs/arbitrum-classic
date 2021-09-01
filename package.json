@@ -13,6 +13,7 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
+    "audit:ci": "audit-ci -l -a 1748",
     "install:deps": "./scripts/install-deps",
     "install:validator": "./scripts/install-validator",
     "update:abi": "yarn go:generate && yarn workspace arb-ts update:abi",
@@ -25,7 +26,6 @@
     "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
     "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
-    "prepare": "yarn workspace arb-ts prepare",
     "go:vet": "./scripts/run-go-packages \"go list ./... | grep -v 'arb-node-core/ethbridge[^/]*contracts' | xargs go vet\"",
     "go:generate": "./scripts/run-go-packages 'go generate ./...'",
     "go:tidy": "./scripts/run-go-packages 'go mod tidy'",
@@ -49,16 +49,21 @@
       "packages/tools",
       "packages/arb-bridge-peripherals",
       "packages/arb-ts",
-      "packages/arb-os/contracts"
+      "packages/arb-os/contracts",
+      "packages/arb-upgrades"
+    ],
+    "nohoist": [
+      "**/@openzeppelin/contracts",
+      "**/@openzeppelin/contracts-upgradeable"
     ]
   },
   "devDependencies": {
-    "eslint": "^7.3.1",
-    "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-mocha": "^7.0.1",
-    "eslint-plugin-prettier": "^3.1.4",
-    "prettier": "^2.0.5",
-    "prettier-plugin-solidity": "^1.0.0-alpha.54",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-mocha": "^9.0.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "prettier": "^2.3.2",
+    "prettier-plugin-solidity": "^1.0.0-beta.17",
     "solidity-docgen": "^0.5.11"
   },
   "resolutions": {

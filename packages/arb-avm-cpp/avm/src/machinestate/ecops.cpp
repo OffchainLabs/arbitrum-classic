@@ -137,16 +137,16 @@ std::variant<G1<alt_bn128_pp>, std::string> g1PfromBytes(const G1Point& point) {
 
     if (mpz_sgn(mpzx) == 0 && mpz_sgn(mpzy) == 0) {
         mpz_clears(mpzx, mpzy, modulus, NULL);
-        G1<alt_bn128_pp> P(alt_bn128_Fq::zero(), alt_bn128_Fq::one(),
-                           alt_bn128_Fq::zero());
-        return P;
+        return G1<alt_bn128_pp>::zero();
     }
 
     if (mpz_cmp(mpzx, modulus) >= 0) {
+        mpz_clears(mpzx, mpzy, modulus, NULL);
         return std::string("bad x");
     }
 
     if (mpz_cmp(mpzy, modulus) >= 0) {
+        mpz_clears(mpzx, mpzy, modulus, NULL);
         return std::string("bad y");
     }
 
@@ -191,24 +191,26 @@ std::variant<G2<alt_bn128_pp>, std::string> g2PfromBytes(const G2Point& point) {
     if (mpz_sgn(mpzxc0) == 0 && mpz_sgn(mpzxc1) == 0 && mpz_sgn(mpzyc0) == 0 &&
         mpz_sgn(mpzyc1) == 0) {
         mpz_clears(mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus, NULL);
-        G2<alt_bn128_pp> P(alt_bn128_Fq2::zero(), alt_bn128_Fq2::one(),
-                           alt_bn128_Fq2::zero());
-        return P;
+        return G2<alt_bn128_pp>::zero();
     }
 
     if (mpz_cmp(mpzxc0, modulus) >= 0) {
+        mpz_clears(mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus, NULL);
         return std::string("bad x0");
     }
 
     if (mpz_cmp(mpzxc1, modulus) >= 0) {
+        mpz_clears(mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus, NULL);
         return std::string("bad x1");
     }
 
     if (mpz_cmp(mpzyc0, modulus) >= 0) {
+        mpz_clears(mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus, NULL);
         return std::string("bad y0");
     }
 
     if (mpz_cmp(mpzyc1, modulus) >= 0) {
+        mpz_clears(mpzxc0, mpzxc1, mpzyc0, mpzyc1, modulus, NULL);
         return std::string("bad y1");
     }
 
@@ -248,8 +250,11 @@ std::variant<alt_bn128_GT, std::string> ecpairing_internal(
         if (std::holds_alternative<std::string>(g2)) {
             return std::get<std::string>(g2);
         }
-        prod = prod * alt_bn128_pp::pairing(std::get<G1<alt_bn128_pp>>(g1),
-                                            std::get<G2<alt_bn128_pp>>(g2));
+        auto g1p = std::get<G1<alt_bn128_pp>>(g1);
+        auto g2p = std::get<G2<alt_bn128_pp>>(g2);
+        if (!g1p.is_zero() && !g2p.is_zero()) {
+            prod = prod * alt_bn128_pp::pairing(g1p, g2p);
+        }
     }
 
     return alt_bn128_final_exponentiation(prod);

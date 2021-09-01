@@ -2,36 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Signer } from 'ethers'
+import { Signer, utils, Contract, ContractFactory, Overrides } from 'ethers'
 import { Provider, TransactionRequest } from '@ethersproject/providers'
-import { Contract, ContractFactory, Overrides } from '@ethersproject/contracts'
-
-import type { Fibonacci } from '../Fibonacci'
-
-export class Fibonacci__factory extends ContractFactory {
-  constructor(signer?: Signer) {
-    super(_abi, _bytecode, signer)
-  }
-
-  deploy(overrides?: Overrides): Promise<Fibonacci> {
-    return super.deploy(overrides || {}) as Promise<Fibonacci>
-  }
-  getDeployTransaction(overrides?: Overrides): TransactionRequest {
-    return super.getDeployTransaction(overrides || {})
-  }
-  attach(address: string): Fibonacci {
-    return super.attach(address) as Fibonacci
-  }
-  connect(signer: Signer): Fibonacci__factory {
-    return super.connect(signer) as Fibonacci__factory
-  }
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): Fibonacci {
-    return new Contract(address, _abi, signerOrProvider) as Fibonacci
-  }
-}
+import type { Fibonacci, FibonacciInterface } from '../Fibonacci'
 
 const _abi = [
   {
@@ -115,3 +88,37 @@ const _abi = [
 
 const _bytecode =
   '0x608060405234801561001057600080fd5b50610345806100206000396000f3fe60806040526004361061003f5760003560e01c80632ddec39b1461004457806339f484b71461007257806390a3e3de146100a1578063c1cbf7cf146100f0575b600080fd5b6100706004803603602081101561005a57600080fd5b810190808035906020019092919050505061013f565b005b34801561007e57600080fd5b50610087610248565b604051808215151515815260200191505060405180910390f35b3480156100ad57600080fd5b506100da600480360360208110156100c457600080fd5b81019080803590602001909291905050506102d1565b6040518082815260200191505060405180910390f35b3480156100fc57600080fd5b506101296004803603602081101561011357600080fd5b81019080803590602001909291905050506102f1565b6040518082815260200191505060405180910390f35b6000600190806001815401808255809150506001900390600052602060002001600090919091909150556000600190806001815401808255809150506001900390600052602060002001600090919091909150556000600290505b8181101561020d5760008060028303815481106101b357fe5b9060005260206000200154600060018403815481106101ce57fe5b9060005260206000200154019080600181540180825580915050600190039060005260206000200160009091909190915055808060010191505061019a565b507f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d2414816040518082815260200191505060405180910390a150565b6000606473ffffffffffffffffffffffffffffffffffffffff166308bd624c6040518163ffffffff1660e01b815260040160206040518083038186803b15801561029157600080fd5b505afa1580156102a5573d6000803e3d6000fd5b505050506040513d60208110156102bb57600080fd5b8101908080519060200190929190505050905090565b60008082815481106102df57fe5b90600052602060002001549050919050565b60006102ff6001830161013f565b610308826102d1565b905091905056fea26469706673582212203cdeceb69508e4f233631a1719828346ba5bc2f32bb0c4428a363e6e998af68064736f6c634300060b0033'
+
+export class Fibonacci__factory extends ContractFactory {
+  constructor(signer?: Signer) {
+    super(_abi, _bytecode, signer)
+  }
+
+  deploy(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<Fibonacci> {
+    return super.deploy(overrides || {}) as Promise<Fibonacci>
+  }
+  getDeployTransaction(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): TransactionRequest {
+    return super.getDeployTransaction(overrides || {})
+  }
+  attach(address: string): Fibonacci {
+    return super.attach(address) as Fibonacci
+  }
+  connect(signer: Signer): Fibonacci__factory {
+    return super.connect(signer) as Fibonacci__factory
+  }
+  static readonly bytecode = _bytecode
+  static readonly abi = _abi
+  static createInterface(): FibonacciInterface {
+    return new utils.Interface(_abi) as FibonacciInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): Fibonacci {
+    return new Contract(address, _abi, signerOrProvider) as Fibonacci
+  }
+}

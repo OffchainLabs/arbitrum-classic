@@ -27,13 +27,13 @@ export interface balancesMap {
 
   const deposits = (await BridgeHelper.getEventLogs('Deposit', WETH9, [])).map(
     (log: any) =>
-      (WETH9.interface.parseLog(log).args as unknown) as WethDepositEvent
+      WETH9.interface.parseLog(log).args as unknown as WethDepositEvent
   )
   const transfers = (
     await BridgeHelper.getEventLogs('Transfer', WETH9, [])
   ).map(
     (log: any) =>
-      (WETH9.interface.parseLog(log).args as unknown) as WethTransferEvent
+      WETH9.interface.parseLog(log).args as unknown as WethTransferEvent
   )
 
   console.log(

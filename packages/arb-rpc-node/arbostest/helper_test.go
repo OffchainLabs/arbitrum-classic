@@ -22,7 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/math"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -41,10 +41,7 @@ const printArbOSLog = false
 
 func initMsg(t *testing.T, options []message.ChainConfigOption) message.Init {
 	params := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(0),
-		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
-		MaxExecutionSteps:         0,
 		ArbGasSpeedLimitPerSecond: 1000000000,
 	}
 	init, err := message.NewInitMessage(params, owner, options)
@@ -345,7 +342,7 @@ func makeSimpleInbox(t *testing.T, messages []message.Message) []inbox.InboxMess
 
 	ib := &InboxBuilder{}
 	options := []message.ChainConfigOption{message.ChainIDConfig{ChainId: chainId}}
-	ib.AddMessage(initMsg(t, options), chain, big.NewInt(0), chainTime)
+	ib.AddMessage(initMsg(t, options), common.Address{}, big.NewInt(0), chainTime)
 	for _, msg := range messages {
 		ib.AddMessage(msg, sender, big.NewInt(0), chainTime)
 	}
