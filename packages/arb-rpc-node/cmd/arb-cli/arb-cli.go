@@ -604,6 +604,31 @@ func setupGasParams() error {
 	return waitForTx(tx, "SetChainParameters")
 }
 
+func setFeeCollector(sender, feeCollector ethcommon.Address) error {
+	config.auth.GasPrice = big.NewInt(2066300000)
+	ownerCon, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	isOwner, err := ownerCon.IsAllowedSender(&bind.CallOpts{}, config.auth.From)
+	if err != nil {
+		return err
+	}
+	if !isOwner {
+		return errors.New("not owner")
+	}
+
+	agg, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := agg.SetFeeCollector(config.auth, sender, feeCollector)
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "SetFeeCollector")
+}
+
 func switchAddressRewriting(enabled bool) error {
 	config.auth.GasPrice = big.NewInt(2066300000)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
@@ -670,6 +695,7 @@ func resumeInbox(inboxAddress ethcommon.Address) error {
 }
 
 func setDefaultAggregator(agg ethcommon.Address) error {
+	config.auth.GasPrice = big.NewInt(2066300000)
 	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, config.client)
 	if err != nil {
 		return err
@@ -691,6 +717,21 @@ func setFairGasPriceSender(sender ethcommon.Address) error {
 		return err
 	}
 	return waitForTx(tx, "SetFairGasPriceSender")
+}
+
+func getFairGasPriceSenders() error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	senders, err := arbOwner.GetAllFairGasPriceSenders(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(senders); i += 32 {
+		fmt.Println("Sender:", hexutil.Encode(senders[i:i+32]))
+	}
+	return nil
 }
 
 //func setFeeRecipients(congestionRecipient, networkRecipient ethcommon.Address) error {
@@ -955,7 +996,7 @@ func spam() error {
 }
 
 func handleCommand(fields []string) error {
-	switch fields[0] {
+	switch strings.TrimSpace(fields[0]) {
 	case "enable-fees":
 		if len(fields) != 2 {
 			return errors.New("Expected a true or false argument")
@@ -979,6 +1020,8 @@ func handleCommand(fields []string) error {
 		}
 		agg := ethcommon.HexToAddress(fields[1])
 		return setFairGasPriceSender(agg)
+	case "get-fair-gas-price-senders":
+		return getFairGasPriceSenders()
 	//case "set-fee-recipients":
 	//	if len(fields) != 3 {
 	//		return errors.New("Expected [congestion] [network]")
@@ -1230,6 +1273,13 @@ func handleCommand(fields []string) error {
 		return setAVMGasLimit(rollup)
 	case "allow-all-senders":
 		return allowAllSenders()
+	case "set-fee-collector":
+		if len(fields) != 3 {
+			return errors.New("Expected [sender] [feeCollector]")
+		}
+		sender := ethcommon.HexToAddress(fields[1])
+		feeCollector := ethcommon.HexToAddress(fields[2])
+		return setFeeCollector(sender, feeCollector)
 	default:
 		fmt.Println("Unknown command")
 	}
