@@ -16,8 +16,8 @@
 
 #include <avm/machinestate/machineoperation.hpp>
 
-#include <avm/machinestate/ecops.hpp>
 #include <avm/machinestate/blake2b.hpp>
+#include <avm/machinestate/ecops.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
 #include <PicoSHA2/picosha2.h>
@@ -537,13 +537,14 @@ uint32_t blake2F_numrounds(const Buffer& b) {
     if (b.size() < 32) {
         throw bad_pop_type{};
     }
-    uint32_t rounds = endian_load<uint32_t, 4, order::big>(b.get_many(0,4).data());
+    uint32_t rounds =
+        endian_load<uint32_t, 4, order::big>(b.get_many(0, 4).data());
     if (rounds > 0xffff) {
         rounds = 0xffff;
     }
     return rounds;
 }
-}
+}  // namespace internal
 
 void blake2bF(MachineState& m) {
     m.stack.prepForMod(1);
@@ -553,20 +554,20 @@ void blake2bF(MachineState& m) {
     unsigned char* currentByte = encodedBytes.data();
 
     uint32_t rounds = internal::blake2F_numrounds(encodedBuffer);
-    currentByte+=4;
+    currentByte += 4;
 
     std::array<uint64_t, 8> h;
-    for (int i=0; i < 8; i++) {
+    for (int i = 0; i < 8; i++) {
         h[i] = endian_load<uint64_t, 8, order::little>(currentByte);
         currentByte += 8;
     }
     std::array<uint64_t, 16> msg;
-    for (int i=0; i < 16; i++) {
+    for (int i = 0; i < 16; i++) {
         msg[i] = endian_load<uint64_t, 8, order::little>(currentByte);
         currentByte += 8;
     }
     std::array<uint64_t, 2> t;
-    for (int i=0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
         t[i] = endian_load<uint64_t, 8, order::little>(currentByte);
         currentByte += 8;
     }
@@ -583,14 +584,16 @@ void blake2bF(MachineState& m) {
 
     uint8_t outBytes[64];
     currentByte = outBytes;
-    for (int i=0; i < 8; i++) {
+    for (int i = 0; i < 8; i++) {
         endian_store<uint64_t, 8, order::little>(currentByte, h[i]);
         currentByte += 8;
     }
 
-    Buffer outBuff = Buffer::fromData(std::vector<uint8_t>(outBytes, currentByte));
+    Buffer outBuff =
+        Buffer::fromData(std::vector<uint8_t>(outBytes, currentByte));
 
     m.stack[0] = outBuff;
+    ++m.pc;
 }
 
 uint64_t blake2bF_variable_gas_cost(const MachineState& m) {

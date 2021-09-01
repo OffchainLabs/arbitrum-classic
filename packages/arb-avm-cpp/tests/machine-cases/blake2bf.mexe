@@ -1,0 +1,7 @@
+{"version":2,"static_val":{"Tuple":[]},"extensions":[],"code":[
+  {"opcode": 160, "immediate": null, "_comment": "newbuffer"},
+  {"opcode":  59, "immediate": {"Int": "2"}, "_comment": "noop to push a 2 to the stack (the value for setbuffer8)"},
+  {"opcode":  59, "immediate": {"Int": "0"}, "_comment": "noop to push a 0 to the stack (the index into the buffer for setbuffer8)"},
+  {"opcode": 164, "immediate": null, "_comment": "setbuffer8 to set the first byte to 2"},
+  {"opcode":  38, "immediate": null, "_comment": "blake2bf"}
+]}
