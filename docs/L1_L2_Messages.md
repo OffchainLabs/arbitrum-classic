@@ -93,7 +93,7 @@ If the Retryable Ticket is cancelled or expires before it is redeemed, Callvalue
 
 ### Depositing ETH via Retryables
 
-Currently, the canonical method for depositing ETH into Arbitrum is to create a retryable ticket using the [Inbox.depositEth](<(./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md)>) method. A Retryable Ticket is created with 0 Callvalue, 0 MaxGas, 0 GasPrice, and empty Calldata. The DepositValue credited to the sender’s account in step 1 simply remains there.
+Currently, the canonical method for depositing ETH into Arbitrum is to create a retryable ticket using the [Inbox.depositEth](./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md) method. A Retryable Ticket is created with 0 Callvalue, 0 MaxGas, 0 GasPrice, and empty Calldata. The DepositValue credited to the sender’s account in step 1 simply remains there.
 
 The Retryable Ticket gets put in the retry buffer and can in theory be redeemed, but redeeming is a no-op.
 
@@ -126,7 +126,7 @@ In the normal, happy case, a retryable ticket is automatically redeemed and exec
 
 To redeem the retryable, any account can call `ArbRetryableTx.redeem(redemption-txn-id)`. To cancel, the beneficiary address can call `ArbRetryableTx.cancel(redemption-txn-id)`.
 
-See the [ArbRetryableTx](<(./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md)>) interface for other related methods, and [arb-ts](https://arb-ts-docs.netlify.app/) for convenience methods around using retryables.
+See the [ArbRetryableTx](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) interface for other related methods, and [arb-ts](https://arb-ts-docs.netlify.app/) for convenience methods around using retryables.
 
 ### Demo
 
