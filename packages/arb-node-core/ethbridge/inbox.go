@@ -183,10 +183,43 @@ func AddSequencerL2BatchFromOriginCustomNonce(
 	lengths []*big.Int,
 	sectionsMetadata []*big.Int,
 	afterAcc [32]byte,
+	gasRefunder ethcommon.Address,
+	gasRefunderExtraGas uint64,
 ) (*arbtransaction.ArbTransaction, error) {
 	rawAuth := auth.GetAuth(ctx)
 	arbTx, err := transactauth.MakeTxCustomNonce(ctx, auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
+		if gasRefunder != (ethcommon.Address{}) {
+			tx, err := inbox.AddSequencerL2BatchFromOriginWithGasRefunder(auth, transactions, lengths, sectionsMetadata, afterAcc, gasRefunder)
+			if err != nil {
+				return nil, err
+			}
+			newGasLimit := tx.Gas() + gasRefunderExtraGas
+			if tx.Type() == types.DynamicFeeTxType {
+				tx = types.NewTx(&types.DynamicFeeTx{
+					ChainID:    tx.ChainId(),
+					Nonce:      tx.Nonce(),
+					GasTipCap:  tx.GasTipCap(),
+					GasFeeCap:  tx.GasFeeCap(),
+					Gas:        newGasLimit,
+					To:         tx.To(),
+					Value:      tx.Value(),
+					Data:       tx.Data(),
+					AccessList: tx.AccessList(),
+				})
+			} else {
+				tx = types.NewTx(&types.LegacyTx{
+					Nonce:    tx.Nonce(),
+					GasPrice: tx.GasPrice(),
+					Gas:      newGasLimit,
+					To:       tx.To(),
+					Value:    tx.Value(),
+					Data:     tx.Data(),
+				})
+			}
+			return auth.Signer(auth.From, tx)
+		} else {
+			return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
+		}
 	}, nonce)
 	if err != nil {
 		return nil, err
