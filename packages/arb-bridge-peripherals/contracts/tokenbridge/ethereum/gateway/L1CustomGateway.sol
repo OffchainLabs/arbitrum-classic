@@ -186,4 +186,10 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 _data
             );
     }
+
+    function setOwner(address newOwner) external {
+        require(msg.sender == owner, "NOT_FROM_OWNER");
+        require(newOwner != owner, "ALREADY_OWNER");
+        owner = newOwner;
+    }
 }
