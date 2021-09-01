@@ -127,38 +127,6 @@ export type ChainIdOrProvider = BigNumber | providers.Provider
  * Stateless helper methods; most wrapped / accessible (and documented) via {@link Bridge}
  */
 export class BridgeHelper {
-  static getOutBoundTransferInitiatedLogs = async (
-    provider: providers.Provider,
-    gatewayAddress: string,
-    tokenAddress?: string,
-    destinationAddress?: string,
-    toBlock?: number
-  ) => {
-    const gatewayContract = TokenGateway__factory.connect(
-      gatewayAddress,
-      provider
-    )
-    const topics = [
-      tokenAddress ? utils.hexZeroPad(tokenAddress, 32) : null,
-      destinationAddress ? utils.hexZeroPad(destinationAddress, 32) : null,
-    ]
-    const logs = await BridgeHelper.getEventLogs(
-      'OutboundTransferInitiated',
-      gatewayContract,
-      // @ts-ignore
-      topics,
-      { toBlock: toBlock || 'latest' }
-    )
-
-    return logs.map(log => {
-      const data = {
-        ...gatewayContract.interface.parseLog(log).args,
-        txHash: log.transactionHash,
-      }
-      return data as unknown as OutboundTransferInitiatedResult
-    })
-  }
-
   static calculateL2TransactionHash = async (
     inboxSequenceNumber: BigNumber,
     chainIdOrL2Provider: ChainIdOrProvider

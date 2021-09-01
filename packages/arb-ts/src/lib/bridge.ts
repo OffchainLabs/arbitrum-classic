@@ -720,7 +720,7 @@ export class Bridge {
   public async getOutGoingMessageState(
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
-    l1BlockNumber?: number
+    asOfL1BlockNumber?: number
   ) {
     const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
     return BridgeHelper.getOutGoingMessageState(
@@ -729,7 +729,7 @@ export class Bridge {
       outboxAddress,
       this.l1Provider,
       this.l2Provider,
-      l1BlockNumber
+      asOfL1BlockNumber
     )
   }
 
@@ -797,9 +797,10 @@ export class Bridge {
     return Bridge__factory.connect(bridgeAddress, this.l1Provider)
   }
 
-  public async getRetryablesL1(l1BlockNumber?: number) {
-    return BridgeHelper.getRetryablesL1(this.l1Provider, l1BlockNumber)
+  public async getRetryablesL1(filter?: ethers.providers.Filter) {
+    return BridgeHelper.getRetryablesL1(this.l1Provider, filter)
   }
+
   public async getL1GatewaySetEventData(_l1GatewayRouterAddress?: string) {
     if (this.isCustomNetwork && !_l1GatewayRouterAddress)
       throw new Error('Must supply _l1GatewayRouterAddress for custom network ')

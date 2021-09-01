@@ -1,11 +1,14 @@
 import { Bridge } from './bridge'
 import { L2ToL1EventResult } from './bridge_helpers'
+import { TransactionReceipt } from '@ethersproject/providers'
 
 import { Signer, constants } from 'ethers'
 import { ArbOwner__factory } from './abi/factories/ArbOwner__factory'
 import { ARB_OWNER } from './precompile_addresses'
 import { OutgoingMessageState } from './bridge_helpers'
 import { ERC20__factory } from './abi/factories/ERC20__factory'
+
+const wait = async (ms: number) => await new Promise(r => setTimeout(r, ms))
 
 export class BridgeMonitor extends Bridge {
   static async init(
@@ -28,8 +31,11 @@ export class BridgeMonitor extends Bridge {
     l2BlockNumber?: number
   ) => {
     const ethL1 = await this.l1EthSupply(l1BlockNumber)
+
     const ethL2 = await this.l2EthSupply(l2BlockNumber)
+
     const ethIn = await this.totalIncomingEth(l1BlockNumber)
+
     const ethOut = await this.totalOutgoingEth(l2BlockNumber)
 
     const ethAccountedFor = ethL2.add(ethOut).add(ethIn)
@@ -54,12 +60,23 @@ export class BridgeMonitor extends Bridge {
   }
 
   public totalIncomingEth = async (l1BlockNumber?: number) => {
-    const allRetryables = await this.getRetryablesL1(l1BlockNumber)
+    await this.l1Bridge.getInbox()
+    const allRetryables = await this.getRetryablesL1({
+      toBlock: l1BlockNumber || 'latest',
+    })
     const l1TxnRecs = await Promise.all(
       allRetryables.map(retryLog =>
         this.l1Provider.getTransactionReceipt(retryLog.txHash)
       )
     )
+
+    // const l1TxnRecs: TransactionReceipt[] =[]
+    // for (let retryableLog of allRetryables) {
+    //   await wait(100)
+    //   const rec = await  this.l1Provider.getTransactionReceipt(retryableLog.txHash)
+    //   console.log('got one');
+    //   l1TxnRecs.push(rec)
+    // }
 
     const l1TxnCallvalueArr = (
       await Promise.all(
@@ -74,7 +91,6 @@ export class BridgeMonitor extends Bridge {
     )
 
     // sum up the call value from unredeemed retryables
-    // TODO: this doesn't cover the callvalue for unredeemed retryables (that have some calldata)
     return l2RetryRedeemRecs.reduce((acc, redeemRec, i) => {
       if (!redeemRec) {
         return acc.add(l1TxnCallvalueArr[i])
@@ -87,6 +103,7 @@ export class BridgeMonitor extends Bridge {
     l1BlockNumber?: number,
     l2BlockNumber?: number
   ) => {
+    await this.l1Bridge.getInbox()
     const allEthWithdrawals = (
       await this.getEthWithdrawals(undefined, l2BlockNumber)
     ).filter(event => event.callvalue.gt(constants.AddressZero))
