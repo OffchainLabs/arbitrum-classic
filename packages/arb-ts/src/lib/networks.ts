@@ -27,8 +27,6 @@ export interface TokenBridge {
   l1Weth: string
   l1ProxyAdmin: string
   l2ProxyAdmin: string
-  bridge: string
-  outbox: string
 }
 
 export interface Networks {
@@ -51,8 +49,6 @@ const mainnetBridge: TokenBridge = {
   l1Weth: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
   l1ProxyAdmin: '0x9aD46fac0Cf7f790E5be05A0F15223935A0c0aDa',
   l2ProxyAdmin: '0xd570aCE65C43af47101fC6250FD6fC63D1c22a86',
-  bridge: '0x011B6E24FfB0B5f5fCc564cf4183C5BBBc96D515',
-  outbox: '0x667e23ABd27E623c11d4CC00ca3EC4d0bD63337a',
 }
 
 const RinkebyBridge: TokenBridge = {
@@ -68,8 +64,6 @@ const RinkebyBridge: TokenBridge = {
   l1Weth: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
   l1ProxyAdmin: '0x0DbAF24efA2bc9Dd1a6c0530DD252BCcF883B89A',
   l2ProxyAdmin: '0x58816566EB91815Cc07f3Ad5230eE0820fe1A19a',
-  bridge: '0x9a28E783c47bBEB813F32B861A431d0776681E95',
-  outbox: '0xefa1a42D3c4699822eE42677515A64b658be1bFc',
 }
 
 export const networks: Networks = {

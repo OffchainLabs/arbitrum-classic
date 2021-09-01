@@ -48,8 +48,8 @@ export class BridgeMonitor extends Bridge {
   }
 
   public l1EthSupply = async (l1BlockNumber?: number) => {
-    const bridge = await this.getBridgeContract()
-    return this.l1Provider.getBalance(bridge.address, l1BlockNumber)
+    const bridgeAddress = await this.getBridgeAddress()
+    return this.l1Provider.getBalance(bridgeAddress, l1BlockNumber)
   }
 
   public l2EthSupply = async (l2BlockNumber?: number) => {

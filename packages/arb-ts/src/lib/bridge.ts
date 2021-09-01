@@ -791,10 +791,12 @@ export class Bridge {
     )
   }
 
-  public async getBridgeContract() {
-    const l1ChainId = await this.l1Signer.getChainId()
-    const bridgeAddress = networks[l1ChainId].tokenBridge.bridge
-    return Bridge__factory.connect(bridgeAddress, this.l1Provider)
+  public async getBridgeAddress() {
+    const inbox = Inbox__factory.connect(
+      (await this.l1Bridge.getInbox()).address,
+      this.l1Provider
+    )
+    return inbox.bridge()
   }
 
   public async getRetryablesL1(filter?: ethers.providers.Filter) {
