@@ -32,7 +32,7 @@ value CoreValueLoader::loadValue(const uint256_t& hash) {
         throw std::runtime_error(std::string("Value loading failed: ") +
                                  status->ToString());
     }
-    restoreCodeSegments(tx, core_code, cache, segment_ids);
+    restoreCodeSegments(tx, core_code, cache, segment_ids, true);
     return std::get<CountedData<value>>(res).data;
 }
 

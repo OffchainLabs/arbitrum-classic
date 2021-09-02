@@ -64,6 +64,8 @@ type Core struct {
 	MessageProcessCount    int           `koanf:"message-process-count"`
 	SaveRocksdbInterval    time.Duration `koanf:"save-rocksdb-interval"`
 	SaveRocksdbPath        string        `koanf:"save-rocksdb-path"`
+	LazyLoadCoreMachine    bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries bool          `koanf:"lazy-load-archive-queries"`
 }
 
 type CoreCache struct {
@@ -374,6 +376,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
 	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
 	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
+	f.Bool("core.lazy-load-core-machine", false, "if the core machine should be loaded as it's run")
+	f.Bool("core.lazy-load-archive-queries", true, "if the archive queries should be loaded as they're run")
 
 	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
 	f.Int("node.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")

@@ -254,7 +254,8 @@ bool ArbCore::initialized() const {
 template <class T>
 std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
                                            uint256_t machineHash,
-                                           ValueCache& value_cache) {
+                                           ValueCache& value_cache,
+                                           bool lazy_load) {
     auto results = getMachineStateKeys(tx, machineHash);
     if (std::holds_alternative<rocksdb::Status>(results)) {
         throw std::runtime_error("failed to load machine state");
@@ -266,7 +267,7 @@ std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
             .data;
     if (std::holds_alternative<MachineStateKeys>(res)) {
         return getMachineUsingStateKeys<T>(tx, std::get<MachineStateKeys>(res),
-                                           value_cache);
+                                           value_cache, lazy_load);
     }
 
     // Machine not found
@@ -276,17 +277,20 @@ std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
 template std::unique_ptr<Machine> ArbCore::getMachineImpl(
     ReadTransaction& tx,
     uint256_t machineHash,
-    ValueCache& value_cache);
+    ValueCache& value_cache,
+    bool lazy_load);
 template std::unique_ptr<MachineThread> ArbCore::getMachineImpl(
     ReadTransaction& tx,
     uint256_t machineHash,
-    ValueCache& value_cache);
+    ValueCache& value_cache,
+    bool lazy_load);
 
 template <class T>
 std::unique_ptr<T> ArbCore::getMachine(uint256_t machineHash,
                                        ValueCache& value_cache) {
     ReadSnapshotTransaction tx(data_storage);
-    return getMachineImpl<T>(tx, machineHash, value_cache);
+    return getMachineImpl<T>(tx, machineHash, value_cache,
+                             coreConfig.lazy_load_archive_queries);
 }
 
 template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t, ValueCache&);
@@ -508,7 +512,8 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     try {
                         if (std::holds_alternative<rocksdb::Status>(setup)) {
                             setup = getMachineUsingStateKeys<MachineThread>(
-                                tx, checkpoint, cache);
+                                tx, checkpoint, cache,
+                                coreConfig.lazy_load_core_machine);
                         }
 
                         // Machine loaded from database or from
@@ -726,7 +731,8 @@ template <class T>
 std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     const ReadTransaction& transaction,
     const MachineStateKeys& state_data,
-    ValueCache& value_cache) const {
+    ValueCache& value_cache,
+    bool lazy_load) const {
     std::set<uint64_t> segment_ids;
 
     auto static_results = ::getValueImpl(transaction, state_data.static_hash,
@@ -742,7 +748,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
 
     auto register_results =
         ::getValueImpl(transaction, state_data.register_hash, segment_ids,
-                       value_cache, ENABLE_LAZY_LOADING);
+                       value_cache, lazy_load);
     if (std::holds_alternative<rocksdb::Status>(register_results)) {
         std::stringstream ss;
         ss << "failed loaded core machine register with hash "
@@ -778,7 +784,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     segment_ids.insert(state_data.pc.pc.segment);
     segment_ids.insert(state_data.err_pc.pc.segment);
 
-    restoreCodeSegments(transaction, core_code, value_cache, segment_ids);
+    restoreCodeSegments(transaction, core_code, value_cache, segment_ids,
+                        lazy_load);
 
     auto state = MachineState{
         state_data.output,
@@ -801,11 +808,13 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
 template std::unique_ptr<Machine> ArbCore::getMachineUsingStateKeys(
     const ReadTransaction& transaction,
     const MachineStateKeys& state_data,
-    ValueCache& value_cache) const;
+    ValueCache& value_cache,
+    bool lazy_load) const;
 template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
     const ReadTransaction& transaction,
     const MachineStateKeys& state_data,
-    ValueCache& value_cache) const;
+    ValueCache& value_cache,
+    bool lazy_load) const;
 
 constexpr uint256_t old_machine_cache_interval = 1'000'000;
 constexpr size_t old_machine_cache_max_size = 20;
@@ -1868,8 +1877,9 @@ std::unique_ptr<Machine>& ArbCore::resolveExecutionCursorMachine(
             std::get<MachineStateKeys>(execution_cursor.machine);
         // Cache isn't very relevant as we're lazy loading
         auto cache = ValueCache(1, 0);
-        execution_cursor.machine =
-            getMachineUsingStateKeys<Machine>(tx, machine_state_keys, cache);
+        execution_cursor.machine = getMachineUsingStateKeys<Machine>(
+            tx, machine_state_keys, cache,
+            coreConfig.lazy_load_archive_queries);
     }
     return std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
 }

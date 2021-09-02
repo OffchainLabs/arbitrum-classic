@@ -30,15 +30,14 @@ class Transaction;
 class UnsafeCodeSegment;
 class Code;
 
-constexpr bool ENABLE_LAZY_LOADING = true;
-
 uint64_t getNextSegmentID(std::shared_ptr<DataStorage> store);
 void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id);
 
 void restoreCodeSegments(const ReadTransaction& transaction,
                          const std::shared_ptr<CoreCode>& core_code,
                          ValueCache& value_cache,
-                         std::set<uint64_t> segment_ids);
+                         std::set<uint64_t> segment_ids,
+                         bool lazy_load);
 std::shared_ptr<UnsafeCodeSegment> getCodeSegment(
     const ReadTransaction& tx,
     uint64_t segment_id,

@@ -36,7 +36,9 @@ CArbStorage* createArbStorage(const char* db_path,
                               int32_t lru_cache_size,
                               int32_t debug,
                               int32_t save_rocksdb_interval,
-                              const char* save_rocksdb_path) {
+                              const char* save_rocksdb_path,
+                              int32_t lazy_load_core_machine,
+                              int32_t lazy_load_archive_queries) {
     auto string_filename = std::string(db_path);
     auto string_save_rocksdb_path = std::string(save_rocksdb_path);
     ArbCoreConfig coreConfig{};
@@ -48,6 +50,8 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.debug = debug;
     coreConfig.save_rocksdb_interval = save_rocksdb_interval;
     coreConfig.save_rocksdb_path = string_save_rocksdb_path;
+    coreConfig.lazy_load_core_machine = lazy_load_core_machine;
+    coreConfig.lazy_load_archive_queries = lazy_load_archive_queries;
 
     try {
         auto storage = new ArbStorage(string_filename, coreConfig);

@@ -32,7 +32,9 @@ CArbStorage* createArbStorage(const char* db_path,
                               int32_t lru_cache_size,
                               int32_t debug,
                               int32_t save_rocksdb_interval,
-                              const char* save_rocksdb_path);
+                              const char* save_rocksdb_path,
+                              int32_t lazy_load_core_machine,
+                              int32_t lazy_load_archive_queries);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);

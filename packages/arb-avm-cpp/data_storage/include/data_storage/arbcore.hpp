@@ -85,6 +85,12 @@ struct ArbCoreConfig {
     // Rocksdb checkpoints will be saved in save_rocksdb_path/timestamp/
     std::string save_rocksdb_path;
 
+    // Whether to lazy load the core machine
+    bool lazy_load_core_machine;
+
+    // Whether to lazy load archive queries
+    bool lazy_load_archive_queries;
+
     ArbCoreConfig() = default;
 };
 
@@ -221,7 +227,8 @@ class ArbCore {
     std::unique_ptr<T> getMachineUsingStateKeys(
         const ReadTransaction& transaction,
         const MachineStateKeys& state_data,
-        ValueCache& value_cache) const;
+        ValueCache& value_cache,
+        bool lazy_load) const;
 
     ValueLoader makeValueLoader() const;
 
@@ -235,7 +242,8 @@ class ArbCore {
     template <class T>
     std::unique_ptr<T> getMachineImpl(ReadTransaction& tx,
                                       uint256_t machineHash,
-                                      ValueCache& value_cache);
+                                      ValueCache& value_cache,
+                                      bool lazy_load);
     rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
 
    public:

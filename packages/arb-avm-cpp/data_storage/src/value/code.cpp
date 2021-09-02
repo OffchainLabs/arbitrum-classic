@@ -261,7 +261,8 @@ std::vector<uint256_t> loadHashes(const ReadTransaction& tx,
 void restoreCodeSegments(const ReadTransaction& transaction,
                          const std::shared_ptr<CoreCode>& core_code,
                          ValueCache& value_cache,
-                         std::set<uint64_t> segment_ids) {
+                         std::set<uint64_t> segment_ids,
+                         bool lazy_load) {
     bool loaded_segment = true;
     while (loaded_segment) {
         loaded_segment = false;
@@ -272,7 +273,7 @@ void restoreCodeSegments(const ReadTransaction& transaction,
                 continue;
             }
             auto segment = getCodeSegment(transaction, *it, next_segment_ids,
-                                          value_cache, ENABLE_LAZY_LOADING);
+                                          value_cache, lazy_load);
             core_code->restoreExistingSegment(std::move(segment));
             loaded_segment = true;
         }

@@ -37,17 +37,20 @@ type ArbStorage struct {
 	c unsafe.Pointer
 }
 
+func boolToCInt(b bool) C.int {
+	x := 0
+	if b {
+		x = 1
+	}
+	return C.int(x)
+}
+
 func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, error) {
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
 
 	cSaveRocksdbPath := C.CString(coreConfig.SaveRocksdbPath)
 	defer C.free(unsafe.Pointer(cSaveRocksdbPath))
-
-	debugInt := 0
-	if coreConfig.Debug {
-		debugInt = 1
-	}
 
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
 	saveRocksdbIntervalSeconds := int(coreConfig.SaveRocksdbInterval.Seconds())
@@ -58,9 +61,11 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		C.int(coreConfig.GasCheckpointFrequency),
 		C.int(cacheExpirationSeconds),
 		C.int(coreConfig.Cache.LRUSize),
-		C.int(debugInt),
+		boolToCInt(coreConfig.Debug),
 		C.int(saveRocksdbIntervalSeconds),
 		cSaveRocksdbPath,
+		boolToCInt(coreConfig.LazyLoadCoreMachine),
+		boolToCInt(coreConfig.LazyLoadArchiveQueries),
 	)
 
 	if cArbStorage == nil {
