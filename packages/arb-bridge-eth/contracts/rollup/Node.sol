@@ -80,8 +80,8 @@ contract Node is Cloneable, INode {
         uint256 _prev,
         uint256 _deadlineBlock
     ) external override {
-        require(rollup == address(0), "ALREADY_INIT");
         require(_rollup != address(0), "ROLLUP_ADDR");
+        require(rollup == address(0), "ALREADY_INIT");
         rollup = _rollup;
         stateHash = _stateHash;
         challengeHash = _challengeHash;
@@ -125,11 +125,6 @@ contract Node is Cloneable, INode {
             firstChildBlock = block.number;
         }
         latestChildNumber = number;
-    }
-
-    function resetChildren() external override onlyRollup {
-        firstChildBlock = 0;
-        latestChildNumber = 0;
     }
 
     function newChildConfirmDeadline(uint256 deadline) external override onlyRollup {

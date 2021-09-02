@@ -20,7 +20,8 @@ pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 
-import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
+import { ArbitrumEnabledToken } from "../ICustomToken.sol";
+import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../arbitrum/gateway/L2GatewayRouter.sol";
 
@@ -32,7 +33,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
     address public owner;
     address public inbox;
 
-    modifier onlyOwner {
+    modifier onlyOwner() {
         require(msg.sender == owner, "ONLY_OWNER");
         _;
     }
@@ -43,32 +44,11 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         address _whitelist,
         address _counterpartGateway,
         address _inbox
-    ) public virtual {
-        GatewayRouter._initialize(_counterpartGateway, _defaultGateway);
+    ) public {
+        GatewayRouter._initialize(_counterpartGateway, address(0), _defaultGateway);
         owner = _owner;
         WhitelistConsumer.whitelist = _whitelist;
         inbox = _inbox;
-    }
-
-    function sendTxToL2(
-        address _user,
-        uint256 _l2CallValue,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes memory _data
-    ) internal virtual returns (uint256) {
-        return
-            L1ArbitrumMessenger.sendTxToL2(
-                inbox,
-                counterpartGateway,
-                _user,
-                _l2CallValue,
-                _maxSubmissionCost,
-                _maxGas,
-                _gasPriceBid,
-                _data
-            );
     }
 
     function setDefaultGateway(
@@ -76,7 +56,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable virtual onlyOwner returns (uint256) {
+    ) external payable onlyOwner returns (uint256) {
         defaultGateway = newL1DefaultGateway;
 
         emit DefaultGatewayUpdated(newL1DefaultGateway);
@@ -87,10 +67,25 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             l2NewDefaultGateway = TokenGateway(newL1DefaultGateway).counterpartGateway();
         }
 
-        bytes memory data =
-            abi.encodeWithSelector(L2GatewayRouter.setDefaultGateway.selector, l2NewDefaultGateway);
+        bytes memory data = abi.encodeWithSelector(
+            L2GatewayRouter.setDefaultGateway.selector,
+            l2NewDefaultGateway
+        );
 
-        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                msg.sender,
+                msg.value,
+                0,
+                L2GasParams({
+                    _maxSubmissionCost: _maxSubmissionCost,
+                    _maxGas: _maxGas,
+                    _gasPriceBid: _gasPriceBid
+                }),
+                data
+            );
     }
 
     function setOwner(address newOwner) external onlyOwner {
@@ -114,14 +109,37 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             emit GatewaySet(_token[i], _gateway[i]);
             // overwrite memory so the L2 router receives the L2 address of each gateway
             if (_gateway[i] != address(0)) {
+                // if we are assigning a gateway to the token, the address oracle of the gateway
+                // must return something other than the 0 address
+                // this check helps avoid misconfiguring gateways
+                require(
+                    TokenGateway(_gateway[i]).calculateL2TokenAddress(_token[i]) != address(0),
+                    "TOKEN_NOT_HANDLED_BY_GATEWAY"
+                );
                 _gateway[i] = TokenGateway(_gateway[i]).counterpartGateway();
             }
         }
 
-        bytes memory data =
-            abi.encodeWithSelector(L2GatewayRouter.setGateway.selector, _token, _gateway);
+        bytes memory data = abi.encodeWithSelector(
+            L2GatewayRouter.setGateway.selector,
+            _token,
+            _gateway
+        );
 
-        return sendTxToL2(_creditBackAddress, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
+        return
+            sendTxToL2(
+                inbox,
+                counterpartGateway,
+                _creditBackAddress,
+                msg.value,
+                0,
+                L2GasParams({
+                    _maxSubmissionCost: _maxSubmissionCost,
+                    _maxGas: _maxGas,
+                    _gasPriceBid: _gasPriceBid
+                }),
+                data
+            );
     }
 
     /**
@@ -144,23 +162,33 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
 
     /**
      * @notice Allows L1 Token contract to trustlessly register its gateway.
-
-     * @param _gateway l1 gateway address
-     * @param _maxGas max gas for L2 retryable exrecution 
-     * @param _gasPriceBid gas price for L2 retryable ticket 
-     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et 
-     * @param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
-     * @return Retryable ticket ID
+     * param _gateway l1 gateway address
+     * param _maxGas max gas for L2 retryable exrecution
+     * param _gasPriceBid gas price for L2 retryable ticket
+     * param  _maxSubmissionCost base submission cost  L2 retryable tick3et
+     * param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
+     * return Retryable ticket ID
      */
     function setGateway(
-        address _gateway,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        uint256 _maxSubmissionCost,
-        address _creditBackAddress
+        address, /* _gateway */
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
+        uint256, /* _maxSubmissionCost */
+        address /* _creditBackAddress */
     ) public payable returns (uint256) {
-        require(address(msg.sender).isContract(), "NOT_FROM_CONTRACT");
+        revert("SELF_REGISTRATION_DISABLED");
+        /*
+        require(
+            ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
+            "NOT_ARB_ENABLED"
+        );
         require(_gateway.isContract(), "NOT_TO_CONTRACT");
+
+        address currGateway = l1TokenToGateway[msg.sender];
+        if (currGateway != address(0)) {
+            // if gateway is already set, don't allow it to set a different gateway
+            require(currGateway == _gateway, "NO_UPDATE_TO_DIFFERENT_ADDR");
+        }
 
         address[] memory _tokenArr = new address[](1);
         _tokenArr[0] = address(msg.sender);
@@ -177,6 +205,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
                 _maxSubmissionCost,
                 _creditBackAddress
             );
+        */
     }
 
     function setGateways(
@@ -199,13 +228,14 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override onlyWhitelisted returns (bytes memory) {
+    ) public payable override onlyWhitelisted returns (bytes memory) {
         // will revert if msg.sender is not whitelisted
-        super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
+        return super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
-    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+    modifier onlyCounterpartGateway() override {
         // don't expect messages from L2 router
-        return false;
+        revert("ONLY_COUNTERPART_GATEWAY");
+        _;
     }
 }

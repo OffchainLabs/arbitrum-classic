@@ -26,11 +26,6 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -38,13 +33,18 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 func deployRollup(
@@ -151,7 +151,7 @@ func TestSequencerBatcher(t *testing.T) {
 	l2ChainId := common.RandBigInt()
 
 	chainIdConfig := message.ChainIDConfig{ChainId: l2ChainId}
-	init, err := message.NewInitMessage(protocol.ChainParams{}, common.RandAddress(), []message.ChainConfigOption{chainIdConfig})
+	init, err := message.NewInitMessage(protocol.ChainParams{}, owner, []message.ChainConfigOption{chainIdConfig})
 	test.FailIfError(t, err)
 	extraConfig := init.ExtraConfig
 
@@ -177,6 +177,20 @@ func TestSequencerBatcher(t *testing.T) {
 		extraConfig,
 	)
 
+	gasRefunderAddr, _, _, err := ethbridgecontracts.DeployGasRefunder(auth, clnt)
+	test.FailIfError(t, err)
+
+	config := configuration.Config{
+		Node: configuration.Node{
+			Sequencer: configuration.Sequencer{
+				CreateBatchBlockInterval:   40,
+				DelayedMessagesTargetDelay: 1,
+				MaxBatchGasCost:            2_000_000,
+				GasRefunderAddress:         gasRefunderAddr.String(),
+			},
+		},
+	}
+
 	bridgeUtilsAddr, _, _, err := ethbridgecontracts.DeployBridgeUtils(auth, client)
 	test.FailIfError(t, err)
 
@@ -192,7 +206,7 @@ func TestSequencerBatcher(t *testing.T) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, rollupBlock.Int64(), client, bind.CallOpts{})
 	test.FailIfError(t, err)
 
-	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	transactAuth, err := transactauth.NewTransactAuth(ctx, client, auth)
 	test.FailIfError(t, err)
 
 	delayedInbox, err := ethbridge.NewStandardInbox(delayedInboxAddr, client, transactAuth)
@@ -212,10 +226,26 @@ func TestSequencerBatcher(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
-	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	_, err = seqMon.StartInboxReader(
+		ctx,
+		client,
+		common.NewAddressFromEth(rollupAddr),
+		rollupBlock.Int64(),
+		common.NewAddressFromEth(bridgeUtilsAddr),
+		nil,
+		dummySequencerFeed,
+	)
 	test.FailIfError(t, err)
 
-	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	_, err = otherMon.StartInboxReader(
+		ctx,
+		client,
+		common.NewAddressFromEth(rollupAddr),
+		rollupBlock.Int64(),
+		common.NewAddressFromEth(bridgeUtilsAddr),
+		nil,
+		dummySequencerFeed,
+	)
 	test.FailIfError(t, err)
 
 	batcher, err := NewSequencerBatcher(
@@ -224,14 +254,12 @@ func TestSequencerBatcher(t *testing.T) {
 		l2ChainId,
 		seqMon.Reader,
 		client,
-		configuration.Sequencer{
-			CreateBatchBlockInterval:   40,
-			DelayedMessagesTargetDelay: 1,
-		},
 		seqInbox,
 		auth,
 		dummyDataSigner,
 		nil,
+		&config,
+		&config.Wallet,
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true
@@ -308,7 +336,9 @@ func TestSequencerBatcher(t *testing.T) {
 		}
 
 		time.Sleep(time.Second)
-		client.Commit()
+		for i := 0; i < 5; i++ {
+			client.Commit()
+		}
 	}
 
 	msgCount1, err := seqMon.Core.GetMessageCount()

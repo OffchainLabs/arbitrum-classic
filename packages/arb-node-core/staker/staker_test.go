@@ -45,6 +45,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 func deployRollup(
@@ -183,9 +184,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	validatorWalletFactory, _, _, err := ethbridgecontracts.DeployValidatorWalletCreator(auth, client)
 	test.FailIfError(t, err)
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	valAuth, err := transactauth.NewTransactAuth(ctx, client, auth)
 	test.FailIfError(t, err)
-	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2)
+	val2Auth, err := transactauth.NewTransactAuth(ctx, client, auth2)
 	test.FailIfError(t, err)
 
 	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client)
@@ -323,12 +324,12 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	faultyStakerDead := false
 
 	stakerMadeFirstMove := false
-	for i := 400; i >= 0; i-- {
+	for i := 1000; i >= 0; i-- {
 		if (i % 2) == 0 {
 			fmt.Println("Honest staker acting")
-			tx, err := staker.Act(ctx)
+			arbTx, err := staker.Act(ctx)
 			test.FailIfError(t, err)
-			if tx != nil {
+			if arbTx != nil {
 				stakerMadeFirstMove = true
 			}
 		} else if (!faultyStakerAlive || !faultyStakerDead) && stakerMadeFirstMove {
@@ -361,10 +362,13 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 		latestConfirmed, err := staker.rollup.LatestConfirmedNode(ctx)
 		test.FailIfError(t, err)
-		if latestConfirmed.Cmp(targetNode) >= 0 {
+		stakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress))
+		test.FailIfError(t, err)
+
+		if latestConfirmed.Cmp(targetNode) >= 0 && stakerInfo.CurrentChallenge == nil {
 			break
 		} else if i == 0 {
-			t.Fatal("Node not confirmed")
+			t.Fatal("Node not confirmed and/or challenge not ended")
 		}
 	}
 
@@ -424,7 +428,7 @@ func TestChallengeToOSP(t *testing.T) {
 
 func TestChallengeToInboxOSP(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, new(big.Int).Add(inboxGas, big.NewInt(10000)), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(1190), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {

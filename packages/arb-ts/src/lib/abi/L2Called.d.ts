@@ -95,8 +95,8 @@ export class L2Called extends BaseContract {
 
   functions: {
     onTokenTransfer(
-      sender: string,
-      amount: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       data: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
@@ -108,8 +108,8 @@ export class L2Called extends BaseContract {
   }
 
   onTokenTransfer(
-    sender: string,
-    amount: BigNumberish,
+    arg0: string,
+    arg1: BigNumberish,
     data: BytesLike,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
@@ -121,8 +121,8 @@ export class L2Called extends BaseContract {
 
   callStatic: {
     onTokenTransfer(
-      sender: string,
-      amount: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
@@ -136,8 +136,8 @@ export class L2Called extends BaseContract {
 
   estimateGas: {
     onTokenTransfer(
-      sender: string,
-      amount: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       data: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
@@ -150,8 +150,8 @@ export class L2Called extends BaseContract {
 
   populateTransaction: {
     onTokenTransfer(
-      sender: string,
-      amount: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       data: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>

@@ -53,11 +53,11 @@ func RunBindingGen() error {
 	})
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "bridge"),
-		[]string{"Bridge", "Inbox", "Outbox", "OutboxEntry", "SequencerInbox", "BridgeUtils"},
+		[]string{"Bridge", "Inbox", "Outbox", "SequencerInbox", "BridgeUtils"},
 	)...)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "validator"),
-		[]string{"Validator", "ValidatorUtils", "ValidatorWalletCreator"},
+		[]string{"Validator", "ValidatorUtils", "ValidatorWalletCreator", "GasRefunder"},
 	)...)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(oz, "contracts", "token", "ERC20"),

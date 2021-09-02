@@ -27,20 +27,16 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     'counterpartGateway()': FunctionFragment
     'encodeWithdrawal(uint256,address)': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
-    'gasReserveIfCallRevert()': FunctionFragment
     'getExternalCall(uint256,address,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'inbox()': FunctionFragment
     'initialize(address,address,address,bytes32,address)': FunctionFragment
     'l2BeaconProxyFactory()': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
-    'parseInboundData(bytes)': FunctionFragment
     'postUpgradeInit()': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
     'router()': FunctionFragment
     'transferExitAndCall(uint256,address,address,bytes,bytes)': FunctionFragment
-    'updateWhitelistSource(address)': FunctionFragment
     'whitelist()': FunctionFragment
   }
 
@@ -65,20 +61,12 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
-    functionFragment: 'gasReserveIfCallRevert',
-    values?: undefined
-  ): string
-  encodeFunctionData(
     functionFragment: 'getExternalCall',
     values: [BigNumberish, string, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'inboundEscrowAndCall',
-    values: [string, BigNumberish, string, string, BytesLike]
   ): string
   encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
   encodeFunctionData(
@@ -101,10 +89,6 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(
-    functionFragment: 'parseInboundData',
-    values: [BytesLike]
-  ): string
-  encodeFunctionData(
     functionFragment: 'postUpgradeInit',
     values?: undefined
   ): string
@@ -116,10 +100,6 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'transferExitAndCall',
     values: [BigNumberish, string, string, BytesLike, BytesLike]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'updateWhitelistSource',
-    values: [string]
   ): string
   encodeFunctionData(functionFragment: 'whitelist', values?: undefined): string
 
@@ -144,19 +124,11 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'gasReserveIfCallRevert',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
     functionFragment: 'getExternalCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(
     functionFragment: 'getOutboundCalldata',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'inboundEscrowAndCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
@@ -167,10 +139,6 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'parseInboundData',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -186,27 +154,19 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     functionFragment: 'transferExitAndCall',
     data: BytesLike
   ): Result
-  decodeFunctionResult(
-    functionFragment: 'updateWhitelistSource',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'whitelist', data: BytesLike): Result
 
   events: {
-    'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
-    'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
-    'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
+    'DepositInitiated(address,address,address,uint256,uint256)': EventFragment
     'TxToL2(address,address,uint256,bytes)': EventFragment
-    'WhitelistSourceUpdated(address)': EventFragment
     'WithdrawRedirected(address,address,uint256,bytes,bytes,bool)': EventFragment
+    'WithdrawalFinalized(address,address,address,uint256,uint256)': EventFragment
   }
 
-  getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'DepositInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawRedirected'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
 }
 
 export class L1ERC20Gateway extends BaseContract {
@@ -277,8 +237,6 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<[BigNumber]>
-
     getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
@@ -294,15 +252,6 @@ export class L1ERC20Gateway extends BaseContract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
 
     inbox(overrides?: CallOverrides): Promise<[string]>
 
@@ -327,13 +276,6 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    parseInboundData(
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
-    >
-
     postUpgradeInit(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
@@ -341,7 +283,13 @@ export class L1ERC20Gateway extends BaseContract {
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string, string] & { _newTo: string; _newData: string }>
+    ): Promise<
+      [boolean, string, string] & {
+        isExit: boolean
+        _newTo: string
+        _newData: string
+      }
+    >
 
     router(overrides?: CallOverrides): Promise<[string]>
 
@@ -351,11 +299,6 @@ export class L1ERC20Gateway extends BaseContract {
       _newDestination: string,
       _newData: BytesLike,
       _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    updateWhitelistSource(
-      newSource: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -386,8 +329,6 @@ export class L1ERC20Gateway extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
-
   getExternalCall(
     _exitNum: BigNumberish,
     _initialDestination: string,
@@ -403,15 +344,6 @@ export class L1ERC20Gateway extends BaseContract {
     _data: BytesLike,
     overrides?: CallOverrides
   ): Promise<string>
-
-  inboundEscrowAndCall(
-    _l2Address: string,
-    _amount: BigNumberish,
-    _from: string,
-    _to: string,
-    _data: BytesLike,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
 
   inbox(overrides?: CallOverrides): Promise<string>
 
@@ -436,11 +368,6 @@ export class L1ERC20Gateway extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  parseInboundData(
-    _data: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<[BigNumber, string] & { _exitNum: BigNumber; _extraData: string }>
-
   postUpgradeInit(
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
@@ -448,7 +375,13 @@ export class L1ERC20Gateway extends BaseContract {
   redirectedExits(
     arg0: BytesLike,
     overrides?: CallOverrides
-  ): Promise<[string, string] & { _newTo: string; _newData: string }>
+  ): Promise<
+    [boolean, string, string] & {
+      isExit: boolean
+      _newTo: string
+      _newData: string
+    }
+  >
 
   router(overrides?: CallOverrides): Promise<string>
 
@@ -458,11 +391,6 @@ export class L1ERC20Gateway extends BaseContract {
     _newDestination: string,
     _newData: BytesLike,
     _data: BytesLike,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  updateWhitelistSource(
-    newSource: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -491,9 +419,7 @@ export class L1ERC20Gateway extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
-
-    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+    ): Promise<void>
 
     getExternalCall(
       _exitNum: BigNumberish,
@@ -510,15 +436,6 @@ export class L1ERC20Gateway extends BaseContract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     inbox(overrides?: CallOverrides): Promise<string>
 
@@ -543,19 +460,18 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    parseInboundData(
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
-    >
-
     postUpgradeInit(overrides?: CallOverrides): Promise<void>
 
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string, string] & { _newTo: string; _newData: string }>
+    ): Promise<
+      [boolean, string, string] & {
+        isExit: boolean
+        _newTo: string
+        _newData: string
+      }
+    >
 
     router(overrides?: CallOverrides): Promise<string>
 
@@ -568,67 +484,24 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    updateWhitelistSource(
-      newSource: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     whitelist(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
-    InboundTransferFinalized(
-      token?: null,
+    DepositInitiated(
+      l1Token?: null,
       _from?: string | null,
       _to?: string | null,
-      _transferId?: BigNumberish | null,
-      _amount?: null,
-      _data?: null
+      _sequenceNumber?: BigNumberish | null,
+      _amount?: null
     ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, string],
+      [string, string, string, BigNumber, BigNumber],
       {
-        token: string
+        l1Token: string
         _from: string
         _to: string
-        _transferId: BigNumber
+        _sequenceNumber: BigNumber
         _amount: BigNumber
-        _data: string
-      }
-    >
-
-    OutboundTransferInitiated(
-      token?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _transferId?: BigNumberish | null,
-      _amount?: null,
-      _data?: null
-    ): TypedEventFilter<
-      [string, string, string, BigNumber, BigNumber, string],
-      {
-        token: string
-        _from: string
-        _to: string
-        _transferId: BigNumber
-        _amount: BigNumber
-        _data: string
-      }
-    >
-
-    TransferAndCallTriggered(
-      success?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _amount?: null,
-      callHookData?: null
-    ): TypedEventFilter<
-      [boolean, string, string, BigNumber, string],
-      {
-        success: boolean
-        _from: string
-        _to: string
-        _amount: BigNumber
-        callHookData: string
       }
     >
 
@@ -641,10 +514,6 @@ export class L1ERC20Gateway extends BaseContract {
       [string, string, BigNumber, string],
       { _from: string; _to: string; _seqNum: BigNumber; _data: string }
     >
-
-    WhitelistSourceUpdated(
-      newSource?: null
-    ): TypedEventFilter<[string], { newSource: string }>
 
     WithdrawRedirected(
       from?: string | null,
@@ -662,6 +531,23 @@ export class L1ERC20Gateway extends BaseContract {
         newData: string
         data: string
         madeExternalCall: boolean
+      }
+    >
+
+    WithdrawalFinalized(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _exitNum?: BigNumberish | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _exitNum: BigNumber
+        _amount: BigNumber
       }
     >
   }
@@ -691,8 +577,6 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
-
     getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
@@ -707,15 +591,6 @@ export class L1ERC20Gateway extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     inbox(overrides?: CallOverrides): Promise<BigNumber>
@@ -741,11 +616,6 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    parseInboundData(
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     postUpgradeInit(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
@@ -763,11 +633,6 @@ export class L1ERC20Gateway extends BaseContract {
       _newDestination: string,
       _newData: BytesLike,
       _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    updateWhitelistSource(
-      newSource: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -799,10 +664,6 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    gasReserveIfCallRevert(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
@@ -817,15 +678,6 @@ export class L1ERC20Gateway extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -853,11 +705,6 @@ export class L1ERC20Gateway extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    parseInboundData(
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     postUpgradeInit(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
@@ -875,11 +722,6 @@ export class L1ERC20Gateway extends BaseContract {
       _newDestination: string,
       _newData: BytesLike,
       _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    updateWhitelistSource(
-      newSource: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 

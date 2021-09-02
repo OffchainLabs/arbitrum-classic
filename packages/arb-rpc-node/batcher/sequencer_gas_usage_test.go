@@ -28,12 +28,9 @@ func TestSequencerGasUsage(t *testing.T) {
 
 	evBridgeAddr, _, evBridge, err := ethbridgetestcontracts.DeployRollupEventBridge(auth, clnt)
 	test.FailIfError(t, err)
-	rollupAddr, _, rollup, err := ethbridgetestcontracts.DeployRollupMock(auth, clnt)
+	seqInboxAddr, _, seqInbox, err := ethbridgecontracts.DeploySequencerInbox(auth, clnt)
 	test.FailIfError(t, err)
 	clnt.Commit()
-
-	_, err = rollup.SetMock(auth, big.NewInt(150), big.NewInt(9000))
-	test.FailIfError(t, err)
 	_, err = evBridge.Initialize(auth, delayedInboxAddr, auth.From)
 	test.FailIfError(t, err)
 	clnt.Commit()
@@ -41,24 +38,38 @@ func TestSequencerGasUsage(t *testing.T) {
 	_, err = delayedBridge.SetInbox(auth, evBridgeAddr, true)
 	test.FailIfError(t, err)
 
+	_, err = seqInbox.Initialize(auth, delayedInboxAddr, auth.From, auth.From)
+	test.FailIfError(t, err)
+
+	gasRefunderAddr, _, gasRefunder, err := ethbridgecontracts.DeployGasRefunder(auth, clnt)
+	test.FailIfError(t, err)
+
+	_, err = gasRefunder.AllowContracts(auth, []ethcommon.Address{seqInboxAddr})
+	test.FailIfError(t, err)
+	_, err = gasRefunder.AllowRefundees(auth, []ethcommon.Address{auth.From})
+	test.FailIfError(t, err)
+	_, err = gasRefunder.SetMaxSingleGasUsage(auth, 1_000_000_000)
+	test.FailIfError(t, err)
+
+	gasRefunderAuth := auths[1]
+	authBalance, err := clnt.BalanceAt(context.Background(), gasRefunderAuth.From, nil)
+	test.FailIfError(t, err)
+	gasRefunderAuth.Value = new(big.Int).Div(authBalance, big.NewInt(2))
+	_, err = gasRefunder.Receive(gasRefunderAuth)
+	test.FailIfError(t, err)
+
 	clnt.Commit()
+
+	_, err = seqInbox.SetMaxDelay(auth, big.NewInt(150), big.NewInt(9000))
+	test.FailIfError(t, err)
 
 	_, err = evBridge.RollupInitialized(
 		auth,
 		big.NewInt(0),
 		big.NewInt(0),
-		big.NewInt(0),
-		ethcommon.Address{},
 		auth.From,
 		nil,
 	)
-	test.FailIfError(t, err)
-
-	_, _, seqInbox, err := ethbridgecontracts.DeploySequencerInbox(auth, clnt)
-	test.FailIfError(t, err)
-	clnt.Commit()
-
-	_, err = seqInbox.Initialize(auth, delayedInboxAddr, auth.From, rollupAddr)
 	test.FailIfError(t, err)
 	clnt.Commit()
 
@@ -84,14 +95,19 @@ func TestSequencerGasUsage(t *testing.T) {
 	)
 	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endBlockMsg, initBatchItem.Accumulator)
 
+	seqBalance, err := clnt.BalanceAt(context.Background(), auth.From, nil)
+	test.FailIfError(t, err)
+	t.Log("sequencer balance at start", seqBalance)
+
 	delayedAccInt := new(big.Int).SetBytes(delayedAcc[:])
 	metadata := []*big.Int{big.NewInt(0), chainTime.BlockNum.AsInt(), chainTime.Timestamp, big.NewInt(1), delayedAccInt}
-	_, err = seqInbox.AddSequencerL2BatchFromOrigin(
+	_, err = seqInbox.AddSequencerL2BatchFromOriginWithGasRefunder(
 		auth,
 		nil,
 		nil,
 		metadata,
 		endBlockBatchItem.Accumulator,
+		gasRefunderAddr,
 	)
 	test.FailIfError(t, err)
 	clnt.Commit()
@@ -126,12 +142,13 @@ func TestSequencerGasUsage(t *testing.T) {
 			}
 
 			metadata := []*big.Int{big.NewInt(int64(totalCount)), chainTime.BlockNum.AsInt(), chainTime.Timestamp, big.NewInt(1), big.NewInt(0)}
-			tx, err := seqInbox.AddSequencerL2BatchFromOrigin(
+			tx, err := seqInbox.AddSequencerL2BatchFromOriginWithGasRefunder(
 				auth,
 				transactionsData,
 				lengths,
 				metadata,
 				prevAcc,
+				gasRefunderAddr,
 			)
 			test.FailIfError(t, err)
 			clnt.Commit()
@@ -141,4 +158,7 @@ func TestSequencerGasUsage(t *testing.T) {
 		}
 	}
 
+	seqBalance, err = clnt.BalanceAt(context.Background(), auth.From, nil)
+	test.FailIfError(t, err)
+	t.Log("sequencer balance at end", seqBalance)
 }

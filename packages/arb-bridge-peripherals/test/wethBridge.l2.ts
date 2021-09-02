@@ -17,7 +17,7 @@
 /* eslint-env node, mocha */
 import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
 
 describe('Bridge peripherals weth layer 2', () => {
@@ -46,14 +46,20 @@ describe('Bridge peripherals weth layer 2', () => {
 
     testBridge = testBridge.attach(proxy.address)
 
+    await expect(
+      l2Weth.initialize('WETH9', 'WETH', 18, testBridge.address, l1WethAddr)
+    ).to.be.revertedWith('Initializable: contract is already initialized')
+    l2Weth = await Proxy.deploy(l2Weth.address, accounts[1].address, '0x')
+    l2Weth = await L2Weth.attach(l2Weth.address)
+
+    await l2Weth.initialize('WETH9', 'WETH', 18, testBridge.address, l1WethAddr)
+
     await testBridge.initialize(
       accounts[0].address, // l1 counterpart
       accounts[3].address, // l2 router
       l1WethAddr,
       l2Weth.address
     )
-
-    await l2Weth.initialize('WETH9', 'WETH', 18, testBridge.address, l1WethAddr)
   })
 
   it('should deposit weth correctly', async function () {

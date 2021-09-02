@@ -23,16 +23,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
@@ -52,7 +53,7 @@ type Staker struct {
 	strategy            Strategy
 	fromBlock           int64
 	baseCallOpts        bind.CallOpts
-	auth                *ethbridge.TransactAuth
+	auth                transactauth.TransactAuth
 	config              configuration.Validator
 	highGasBlocksBuffer *big.Int
 	lastActCalledBlock  *big.Int
@@ -67,7 +68,7 @@ func NewStaker(
 	validatorUtilsAddress common.Address,
 	strategy Strategy,
 	callOpts bind.CallOpts,
-	auth *ethbridge.TransactAuth,
+	auth transactauth.TransactAuth,
 	config configuration.Validator,
 ) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress, callOpts)
@@ -86,7 +87,7 @@ func NewStaker(
 	}, val.delayedBridge, nil
 }
 
-func (s *Staker) RunInBackground(ctx context.Context) chan bool {
+func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration) chan bool {
 	done := make(chan bool)
 	go func() {
 		defer func() {
@@ -94,18 +95,22 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 		}()
 		backoff := time.Second
 		for {
-			tx, err := s.Act(ctx)
-			if err == nil && tx != nil {
+			arbTx, err := s.Act(ctx)
+			if err == nil && arbTx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
-				_, err = ethbridge.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking", s.auth)
+				_, err = transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.auth)
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
-					logger.Info().Str("hash", tx.Hash().String()).Msg("Successfully executed transaction")
+					logger.Info().Str("hash", arbTx.Hash().String()).Msg("Successfully executed transaction")
 				}
 			}
 			if err != nil {
 				logger.Warn().Err(err).Send()
-				<-time.After(backoff)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(backoff):
+				}
 				if backoff < 60*time.Second {
 					backoff *= 2
 				}
@@ -114,9 +119,13 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 				backoff = time.Second
 			}
 			// Force a GC run to clean up any execution cursors while we wait
-			delay := time.After(time.Minute)
+			delay := time.After(stakerDelay)
 			runtime.GC()
-			<-delay
+			select {
+			case <-ctx.Done():
+				return
+			case <-delay:
+			}
 		}
 	}()
 	return done
@@ -171,7 +180,7 @@ func (s *Staker) shouldAct(ctx context.Context) bool {
 	}
 }
 
-func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
+func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error) {
 	if !s.shouldAct(ctx) {
 		// The fact that we're delaying acting is alreay logged in `shouldAct`
 		return nil, nil
@@ -219,13 +228,13 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	}
 	if shouldResolveNodes {
 		// Keep the stake of this validator placed if we plan on staking further
-		tx, err := s.removeOldStakers(ctx, effectiveStrategy >= StakeLatestStrategy)
-		if err != nil || tx != nil {
-			return tx, err
+		arbTx, err := s.removeOldStakers(ctx, effectiveStrategy >= StakeLatestStrategy)
+		if err != nil || arbTx != nil {
+			return arbTx, err
 		}
-		tx, err = s.resolveTimedOutChallenges(ctx)
-		if err != nil || tx != nil {
-			return tx, err
+		arbTx, err = s.resolveTimedOutChallenges(ctx)
+		if err != nil || arbTx != nil {
+			return arbTx, err
 		}
 		if err := s.resolveNextNode(ctx, rawInfo, s.fromBlock); err != nil {
 			return nil, err

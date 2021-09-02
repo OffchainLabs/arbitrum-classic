@@ -25,11 +25,15 @@ interface IInboxInterface extends ethers.utils.Interface {
     'bridge()': FunctionFragment
     'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'depositEth(uint256)': FunctionFragment
+    'pauseCreateRetryables()': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
     'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)': FunctionFragment
     'sendL2Message(bytes)': FunctionFragment
     'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)': FunctionFragment
+    'startRewriteAddress()': FunctionFragment
+    'stopRewriteAddress()': FunctionFragment
+    'unpauseCreateRetryables()': FunctionFragment
   }
 
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
@@ -49,6 +53,10 @@ interface IInboxInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'depositEth',
     values: [BigNumberish]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'pauseCreateRetryables',
+    values?: undefined
   ): string
   encodeFunctionData(
     functionFragment: 'sendContractTransaction',
@@ -77,6 +85,18 @@ interface IInboxInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
+  encodeFunctionData(
+    functionFragment: 'startRewriteAddress',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'stopRewriteAddress',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'unpauseCreateRetryables',
+    values?: undefined
+  ): string
 
   decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
   decodeFunctionResult(
@@ -84,6 +104,10 @@ interface IInboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'depositEth', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'pauseCreateRetryables',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'sendContractTransaction',
     data: BytesLike
@@ -102,6 +126,18 @@ interface IInboxInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'sendUnsignedTransaction',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'startRewriteAddress',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'stopRewriteAddress',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'unpauseCreateRetryables',
     data: BytesLike
   ): Result
 
@@ -179,6 +215,10 @@ export class IInbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    pauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     sendContractTransaction(
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
@@ -219,6 +259,18 @@ export class IInbox extends BaseContract {
       data: BytesLike,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
+
+    startRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    stopRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    unpauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
   }
 
   bridge(overrides?: CallOverrides): Promise<string>
@@ -238,6 +290,10 @@ export class IInbox extends BaseContract {
   depositEth(
     maxSubmissionCost: BigNumberish,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  pauseCreateRetryables(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   sendContractTransaction(
@@ -281,6 +337,18 @@ export class IInbox extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  startRewriteAddress(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  stopRewriteAddress(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  unpauseCreateRetryables(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   callStatic: {
     bridge(overrides?: CallOverrides): Promise<string>
 
@@ -300,6 +368,8 @@ export class IInbox extends BaseContract {
       maxSubmissionCost: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    pauseCreateRetryables(overrides?: CallOverrides): Promise<void>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -341,6 +411,12 @@ export class IInbox extends BaseContract {
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    startRewriteAddress(overrides?: CallOverrides): Promise<void>
+
+    stopRewriteAddress(overrides?: CallOverrides): Promise<void>
+
+    unpauseCreateRetryables(overrides?: CallOverrides): Promise<void>
   }
 
   filters: {
@@ -377,6 +453,10 @@ export class IInbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    pauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     sendContractTransaction(
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
@@ -415,6 +495,18 @@ export class IInbox extends BaseContract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    startRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    stopRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
@@ -439,6 +531,10 @@ export class IInbox extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
+    pauseCreateRetryables(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
     sendContractTransaction(
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
@@ -477,6 +573,18 @@ export class IInbox extends BaseContract {
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    startRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    stopRewriteAddress(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    unpauseCreateRetryables(
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }

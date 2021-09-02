@@ -17,6 +17,8 @@
 package common
 
 import (
+	"math/big"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -31,6 +33,10 @@ func init() {
 
 func NewAddressFromEth(a ethcommon.Address) Address {
 	return Address(a)
+}
+
+func NewAddressFromBig(int *big.Int) Address {
+	return NewAddressFromEth(ethcommon.BigToAddress(int))
 }
 
 func AddressArrayFromEth(addresses []ethcommon.Address) []Address {

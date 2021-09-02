@@ -24,16 +24,19 @@ import "./IWETH9.sol";
 /// @title Arbitrum extended WETH
 contract aeWETH is L2GatewayToken, IWETH9 {
     function initialize(
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals,
-        address _l2Gateway,
-        address _l1Address
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address l2Gateway_,
+        address l1Address_
     ) external {
-        L2GatewayToken._initialize(_name, _symbol, _decimals, _l2Gateway, _l1Address);
+        L2GatewayToken._initialize(name_, symbol_, decimals_, l2Gateway_, l1Address_);
     }
 
-    function bridgeMint(address account, uint256 amount) external virtual override {
+    function bridgeMint(
+        address, /* account */
+        uint256 /* amount */
+    ) external virtual override {
         // we want weth to always be fully collaterized
         revert("NO_BRIDGE_MINT");
     }

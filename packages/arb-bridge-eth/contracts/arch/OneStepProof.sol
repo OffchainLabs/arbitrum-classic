@@ -613,11 +613,11 @@ contract OneStepProof is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        context.afterMachine.arbGasRemaining = val1.intVal;
+        context.afterMachine.avmGasRemaining = val1.intVal;
     }
 
     function executePushGasInsn(AssertionContext memory context) internal pure {
-        pushVal(context.stack, Value.newInt(context.afterMachine.arbGasRemaining));
+        pushVal(context.stack, Value.newInt(context.afterMachine.avmGasRemaining));
     }
 
     function executeErrCodePointInsn(AssertionContext memory context) internal pure {

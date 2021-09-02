@@ -37,7 +37,7 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         address _inbox,
         address _l1Weth,
         address _l2Weth
-    ) public virtual {
+    ) public {
         L1ArbitrumExtendedGateway._initialize(_l1Counterpart, _l1Router, _inbox);
         require(_l1Weth != address(0), "INVALID_L1WETH");
         require(_l2Weth != address(0), "INVALID_L2WETH");
@@ -45,87 +45,61 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         l2Weth = _l2Weth;
     }
 
-    function postUpgradeInit() external {}
-
     function createOutboundTx(
-        address _l1Token,
         address _from,
-        address _to,
-        uint256 _amount,
+        uint256 _tokenAmount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
-        bytes memory _extraData
-    ) internal virtual override returns (uint256) {
+        bytes memory _outboundCalldata
+    ) internal override returns (uint256) {
         return
             sendTxToL2(
+                inbox,
+                counterpartGateway,
                 _from,
-                _amount, // send token amount to L2 as call value
-                _maxSubmissionCost,
-                _maxGas,
-                _gasPriceBid,
-                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData)
+                // msg.value does not include weth withdrawn from user, we need to add in that amount
+                msg.value + _tokenAmount,
+                // send token amount to L2 as call value
+                _tokenAmount,
+                L2GasParams({
+                    _maxSubmissionCost: _maxSubmissionCost,
+                    _maxGas: _maxGas,
+                    _gasPriceBid: _gasPriceBid
+                }),
+                _outboundCalldata
             );
-    }
-
-    function sendTxToL2(
-        address _inbox,
-        address _to,
-        address _user,
-        uint256 _l2CallValue,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes memory _data
-    ) internal virtual override returns (uint256) {
-        // msg.value does not include weth withdrawn from user, we need to add in that amount
-        uint256 seqNum =
-            IInbox(_inbox).createRetryableTicket{ value: msg.value + _l2CallValue }(
-                _to,
-                _l2CallValue,
-                _maxSubmissionCost,
-                _user,
-                _user,
-                _maxGas,
-                _gasPriceBid,
-                _data
-            );
-        emit TxToL2(_user, _to, seqNum, _data);
-        return seqNum;
     }
 
     function outboundEscrowTransfer(
         address _l1Token,
         address _from,
         uint256 _amount
-    ) internal virtual override {
+    ) internal override returns (uint256) {
         IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
         IWETH9(_l1Token).withdraw(_amount);
+        // the weth token doesn't contain any special behaviour that changes the amount
+        // when doing transfers / withdrawals. so we don't check the balanceOf
+        return _amount;
     }
 
     function inboundEscrowTransfer(
         address _l1Token,
         address _dest,
         uint256 _amount
-    ) internal virtual override {
+    ) internal override {
         IWETH9(_l1Token).deposit{ value: _amount }();
         IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
 
     /**
      * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * @dev the L1 and L2 address oracles may not always be in sync.
      * For example, a custom token may have been registered but not deploy or the contract self destructed.
      * @param l1ERC20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
-    function _calculateL2TokenAddress(address l1ERC20)
-        internal
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
         if (l1ERC20 != l1Weth) {
             // invalid L1 weth address
             return address(0);

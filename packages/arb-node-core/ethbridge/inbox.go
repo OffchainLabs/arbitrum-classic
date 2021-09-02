@@ -30,9 +30,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 var l2MessageFromOriginCallABI abi.Method
@@ -128,10 +130,10 @@ func (r *StandardInboxWatcher) parseMessage(txData map[string]*types.Transaction
 
 type StandardInbox struct {
 	*StandardInboxWatcher
-	auth *TransactAuth
+	auth transactauth.TransactAuth
 }
 
-func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*StandardInbox, error) {
+func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth transactauth.TransactAuth) (*StandardInbox, error) {
 	watcher, err := NewStandardInboxWatcher(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -143,40 +145,89 @@ func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth
 }
 
 func (s *StandardInbox) Sender() common.Address {
-	return common.NewAddressFromEth(s.auth.auth.From)
+	return common.NewAddressFromEth(s.auth.From())
 }
 
-func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte) (common.Hash, error) {
-	tx, err := s.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte) (*arbtransaction.ArbTransaction, error) {
+	return transactauth.MakeTx(ctx, s.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return s.con.SendL2MessageFromOrigin(auth, data)
 	})
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return common.NewHashFromEth(tx.Hash()), nil
 }
 
-func AddSequencerL2BatchFromOrigin(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, transactions []byte, lengths []*big.Int, sectionsMetadata []*big.Int, afterAcc [32]byte) (*types.Transaction, error) {
-	tx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+func AddSequencerL2BatchFromOrigin(
+	ctx context.Context,
+	inbox *ethbridgecontracts.SequencerInbox,
+	auth transactauth.TransactAuth,
+	transactions []byte,
+	lengths []*big.Int,
+	sectionsMetadata []*big.Int,
+	afterAcc [32]byte,
+) (*arbtransaction.ArbTransaction, error) {
+	arbTx, err := transactauth.MakeTx(ctx, auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
 	})
 	if err != nil {
 		return nil, err
 	}
-	return tx, nil
+	return arbTx, nil
 }
 
-// Like AddSequencerL2BatchFromOrigin but with a custom nonce that will be incremented on success
-func AddSequencerL2BatchFromOriginCustomNonce(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, nonce *big.Int, transactions []byte, lengths []*big.Int, sectionsMetadata []*big.Int, afterAcc [32]byte) (*types.Transaction, error) {
-	rawAuth := auth.getAuth(ctx)
-	rawAuth.Nonce = nonce
-	tx, err := inbox.AddSequencerL2BatchFromOrigin(rawAuth, transactions, lengths, sectionsMetadata, afterAcc)
+// AddSequencerL2BatchFromOriginCustomNonce is like AddSequencerL2BatchFromOrigin but with a custom nonce that will
+// be incremented on success.  This is to handle the case when a stuck transaction is present on startup.
+func AddSequencerL2BatchFromOriginCustomNonce(
+	ctx context.Context,
+	inbox *ethbridgecontracts.SequencerInbox,
+	auth transactauth.TransactAuth,
+	nonce *big.Int,
+	transactions []byte,
+	lengths []*big.Int,
+	sectionsMetadata []*big.Int,
+	afterAcc [32]byte,
+	gasRefunder ethcommon.Address,
+	gasRefunderExtraGas uint64,
+) (*arbtransaction.ArbTransaction, error) {
+	rawAuth := auth.GetAuth(ctx)
+	arbTx, err := transactauth.MakeTxCustomNonce(ctx, auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		if gasRefunder != (ethcommon.Address{}) {
+			tx, err := inbox.AddSequencerL2BatchFromOriginWithGasRefunder(auth, transactions, lengths, sectionsMetadata, afterAcc, gasRefunder)
+			if err != nil {
+				return nil, err
+			}
+			newGasLimit := tx.Gas() + gasRefunderExtraGas
+			if tx.Type() == types.DynamicFeeTxType {
+				tx = types.NewTx(&types.DynamicFeeTx{
+					ChainID:    tx.ChainId(),
+					Nonce:      tx.Nonce(),
+					GasTipCap:  tx.GasTipCap(),
+					GasFeeCap:  tx.GasFeeCap(),
+					Gas:        newGasLimit,
+					To:         tx.To(),
+					Value:      tx.Value(),
+					Data:       tx.Data(),
+					AccessList: tx.AccessList(),
+				})
+			} else {
+				tx = types.NewTx(&types.LegacyTx{
+					Nonce:    tx.Nonce(),
+					GasPrice: tx.GasPrice(),
+					Gas:      newGasLimit,
+					To:       tx.To(),
+					Value:    tx.Value(),
+					Data:     tx.Data(),
+				})
+			}
+			return auth.Signer(auth.From, tx)
+		} else {
+			return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
+		}
+	}, nonce)
 	if err != nil {
 		return nil, err
 	}
 	nonce.Add(nonce, big.NewInt(1))
-	if auth.auth.Nonce.Cmp(nonce) < 0 {
-		auth.auth.Nonce.Set(nonce)
+	if rawAuth.Nonce.Cmp(nonce) < 0 {
+		rawAuth.Nonce.Set(nonce)
 	}
-	return tx, nil
+
+	return arbTx, nil
 }

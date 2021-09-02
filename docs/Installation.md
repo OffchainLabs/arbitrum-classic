@@ -24,7 +24,7 @@ open -a Docker
 Once the Docker app appears in the menu bar, wait until the yellow light turns
 green (no need to log into Docker).
 
-#### Ubuntu 18.04
+#### Ubuntu 20.04
 
 Using apt:
 
@@ -43,7 +43,7 @@ Also setup docker compose using the [official instructions](https://docs.docker.
 touch ~/.bashrc
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.35.3/install.sh | bash
 . ~/.bashrc
-nvm install 10.16.3
+nvm install --lts
 
 curl -o- -L https://yarnpkg.com/install.sh | bash
 . ~/.bashrc
@@ -62,7 +62,7 @@ Here are the important dependencies in case you are not running on a supported O
 - [truffle](https://truffleframework.com/docs/truffle/getting-started/installation)
 - [yarn](https://yarnpkg.com/en/)
 
-> Requires `node -v` version 8, 10 or 12
+> Requires `node -v` version >=12
 
 > Requires`python3 --version` 3.6 or greater
 
@@ -88,17 +88,17 @@ For most users we recommend that you run Arbitrum through our easy docker setup.
 brew install autoconf automake boost cmake gmp go libtool rocksdb openssl
 ```
 
-#### Ubuntu 18.04
+#### Ubuntu 20.04
 
 ```bash
 sudo add-apt-repository -y ppa:longsleep/golang-backports
 sudo apt update
-sudo apt install -y autoconf automake cmake libboost-dev libboost-filesystem-dev libgmp-dev librocksdb-dev libssl-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libtool golang-go clang-format cmake-format
+sudo apt install -y autoconf automake cmake libboost-dev libboost-filesystem-dev libgmp-dev libssl-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev libtool golang-go clang-format
 
 git clone -b v6.11.4 https://github.com/facebook/rocksdb
 cd rocksdb
-make shared_lib
-make install
+make -j 16 shared_lib
+sudo make install-shared
 ```
 
 ## Install Arbitrum

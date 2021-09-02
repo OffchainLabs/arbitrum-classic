@@ -70,4 +70,12 @@ interface IInbox is IMessageProvider {
     function depositEth(uint256 maxSubmissionCost) external payable returns (uint256);
 
     function bridge() external view returns (IBridge);
+
+    function pauseCreateRetryables() external;
+
+    function unpauseCreateRetryables() external;
+
+    function startRewriteAddress() external;
+
+    function stopRewriteAddress() external;
 }

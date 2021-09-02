@@ -16,7 +16,7 @@ const _abi = [
       {
         indexed: false,
         internalType: 'address',
-        name: 'token',
+        name: 'l1Token',
         type: 'address',
       },
       {
@@ -34,7 +34,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'uint256',
-        name: '_transferId',
+        name: '_sequenceNumber',
         type: 'uint256',
       },
       {
@@ -43,94 +43,8 @@ const _abi = [
         name: '_amount',
         type: 'uint256',
       },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
     ],
-    name: 'InboundTransferFinalized',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'address',
-        name: 'token',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'uint256',
-        name: '_transferId',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'OutboundTransferInitiated',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'bool',
-        name: 'success',
-        type: 'bool',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'callHookData',
-        type: 'bytes',
-      },
-    ],
-    name: 'TransferAndCallTriggered',
+    name: 'DepositInitiated',
     type: 'event',
   },
   {
@@ -162,6 +76,43 @@ const _abi = [
       },
     ],
     name: 'TxToL2',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'l1Token',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_to',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: '_exitNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: '_amount',
+        type: 'uint256',
+      },
+    ],
+    name: 'WithdrawalFinalized',
     type: 'event',
   },
   {
@@ -225,34 +176,15 @@ const _abi = [
       },
     ],
     name: 'finalizeInboundTransfer',
-    outputs: [
-      {
-        internalType: 'bytes',
-        name: '',
-        type: 'bytes',
-      },
-    ],
+    outputs: [],
     stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'gasReserveIfCallRevert',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'pure',
     type: 'function',
   },
   {
     inputs: [
       {
         internalType: 'uint256',
-        name: '_exitNum',
+        name: '',
         type: 'uint256',
       },
       {
@@ -322,39 +254,6 @@ const _abi = [
     type: 'function',
   },
   {
-    inputs: [
-      {
-        internalType: 'address',
-        name: '_l2Address',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'inboundEscrowAndCall',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
     inputs: [],
     name: 'inbox',
     outputs: [
@@ -412,27 +311,10 @@ const _abi = [
     type: 'function',
   },
   {
-    inputs: [
-      {
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'parseInboundData',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '_exitNum',
-        type: 'uint256',
-      },
-      {
-        internalType: 'bytes',
-        name: '_extraData',
-        type: 'bytes',
-      },
-    ],
-    stateMutability: 'pure',
+    inputs: [],
+    name: 'postUpgradeInit',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {

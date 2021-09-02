@@ -1,4 +1,5 @@
 import { task } from 'hardhat/config'
+import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
 import 'dotenv/config'
 import * as fs from 'fs'
 
@@ -10,10 +11,22 @@ import 'solidity-coverage'
 import 'hardhat-spdx-license-identifier'
 import 'hardhat-gas-reporter'
 import '@nomiclabs/hardhat-etherscan'
+import { initUpgrades } from 'arb-upgrades'
 
 const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
 const setupVerifyTask = verifyTask.default
 setupVerifyTask()
+
+const handleFork = async (hre: HardhatRuntimeEnvironment) => {
+  const network = hre.network
+  if (network.name === 'fork') {
+    await hre.network.provider.send('hardhat_setBalance', [
+      (await hre.ethers.getSigners())[0].address,
+      '0x16189AD417E380000',
+    ])
+  }
+  return true
+}
 
 if (!process.env['DEVNET_PRIVKEY']) console.warn('No devnet privkey set')
 
@@ -85,17 +98,142 @@ task('deposit', 'Deposit coins into ethbridge')
     await inbox.depositEth(dest, { value: amount })
   })
 
+task('core-deploy-logic-one', 'deploy one logic')
+  .addParam('contract', 'contract to deploy')
+  .setAction(async (args, hre) => {
+    await handleFork(hre)
+    const { contract } = args
+    const { deployLogic } = initUpgrades(hre, __dirname)
+    await deployLogic(contract)
+  })
+
+task('core-deploy-logic-all', 'deploy all logic contracts').setAction(
+  async (_, hre) => {
+    await handleFork(hre)
+    const { deployLogicAll } = initUpgrades(hre, __dirname)
+    await deployLogicAll()
+  }
+)
+
+task('core-trigger-upgrades', 'triggers upgrade').setAction(async (_, hre) => {
+  await handleFork(hre)
+  const { updateImplementations } = initUpgrades(hre, __dirname)
+  await updateImplementations()
+})
+
+task('core-verify-deployments', 'verifies implementations').setAction(
+  async (_, hre) => {
+    await handleFork(hre)
+    const { verifyCurrentImplementations } = initUpgrades(hre, __dirname)
+    await verifyCurrentImplementations()
+  }
+)
+
+task('core-transfer-beacon-owner', 'transfers beacon owner')
+  .addParam('address', 'beacon contract')
+  .addParam('newowner', 'beacon contract')
+
+  .setAction(async (args, hre) => {
+    await handleFork(hre)
+    const { transferBeaconOwner } = initUpgrades(hre, __dirname)
+    await transferBeaconOwner(args.address, args.newowner)
+  })
+
+task('core-transfer-admin', 'transfer proxy admin')
+  .addParam('proxyaddress', 'proxy address')
+  .addParam('newadmin', 'address of new admin')
+  .setAction(async (args, hre) => {
+    const { transferAdmin } = initUpgrades(hre, __dirname)
+    await transferAdmin(args.proxyaddress, args.newadmin)
+  })
+
+task('etherscan-verify', 'verify current deployments in etherscan').setAction(
+  async (_, hre) => {
+    const { verifyDeployments } = await initUpgrades(hre, __dirname)
+    await verifyDeployments()
+  }
+)
+
+task(
+  'remove-build-info',
+  'remove giant build info string from current_deployments json'
+).setAction(async (_, hre) => {
+  const { removeBuildInfoFiles } = initUpgrades(hre, __dirname)
+  await removeBuildInfoFiles()
+})
+
+task('deploy-outbox-logic', 'deploy and set a new outbox').setAction(
+  async (_, hre) => {
+    const OutboxFactory = await hre.ethers.getContractFactory('Outbox')
+    console.log('Deploying outbox logic')
+    const OutboxLogic = await OutboxFactory.deploy()
+    await OutboxLogic.deployed()
+    console.log('Outbox logic deployed at:', OutboxLogic.address)
+  }
+)
+
+task('deploy-outbox-proxy', 'deploy outbox proxy')
+  .addParam('outboxlogic', 'outbox logic')
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, __dirname)
+    const { data } = await getDeployments()
+    const proxyAdminAddress = data.proxyAdminAddress
+
+    console.log('Deploying Outbox TransparentUpgradeableProxy')
+    const TransparentUpgradeableProxyFactory =
+      await hre.ethers.getContractFactory('TransparentUpgradeableProxy')
+    const OutboxProxyDeployed = await TransparentUpgradeableProxyFactory.deploy(
+      args.outboxlogic,
+      proxyAdminAddress,
+      '0x'
+    )
+    await OutboxProxyDeployed.deployed()
+    console.log('Outbox proxy deployed at', OutboxProxyDeployed.address)
+  })
+
+task('init-outbox', 'deploy and set a new outbox')
+  .addParam('outboxproxy', '')
+
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, __dirname)
+    const { data } = await getDeployments()
+    const rollupAddress = data.contracts.Rollup.proxyAddress
+    const bridgeAddress = data.contracts.Bridge.proxyAddress
+
+    const Outbox = (await hre.ethers.getContractFactory('Outbox')).attach(
+      args.outboxproxy
+    )
+    const initializeRes = await Outbox.initialize(rollupAddress, bridgeAddress)
+    const initializeRec = await initializeRes.wait()
+    console.log('Outbox initialized', initializeRec)
+  })
+
+task('set-outbox', 'deploy and set a new outbox')
+  .addParam('outboxproxy', '')
+
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, __dirname)
+    const { data } = await getDeployments()
+    const rollupAddress = data.contracts.Rollup.proxyAddress
+    console.log('Sanity checking ')
+    const Rollup = (await hre.ethers.getContractFactory('Rollup')).attach(
+      rollupAddress
+    )
+    await Rollup.getUserFacet()
+    console.log('Rollup sanity checked ')
+    const RollupAdmin = (
+      await hre.ethers.getContractFactory('RollupAdminFacet')
+    ).attach(rollupAddress)
+    const setRollupRes = await RollupAdmin.setOutbox(args.outboxproxy)
+    const setRollupRec = await setRollupRes.wait()
+    console.log('Outbox set', setRollupRec)
+    console.log('all set 👍')
+  })
+
 const config = {
   defaultNetwork: 'hardhat',
   paths: {
     artifacts: 'build/contracts',
-  },
-  solc: {
-    version: '0.5.17',
-    optimizer: {
-      enabled: true,
-      runs: 200,
-    },
   },
   typechain: {
     outDir: 'build/types',
@@ -118,15 +256,20 @@ const config = {
   networks: {
     hardhat: {
       chainId: 1337,
+      throwOnTransactionFailures: true,
       allowUnlimitedContractSize: true,
       accounts: {
-        accountsBalance: '10000000000000000000000000',
+        accountsBalance: '1000000000000000000000000000',
       },
-      blockGasLimit: 20000000,
+      blockGasLimit: 200000000,
       // mining: {
       //   auto: false,
       //   interval: 1000,
       // },
+      forking: {
+        url: 'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY'],
+        enabled: process.env['SHOULD_FORK'] === '1',
+      },
     },
     local_development: {
       url: 'http://127.0.0.1:7545',
@@ -137,12 +280,21 @@ const config = {
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
     },
-    // mainnet: {
-    //   url: process.env['MAINNET_URL'],
-    //   accounts: process.env['MAINNET_PRIVKEY']
-    //     ? [process.env['MAINNET_PRIVKEY']]
-    //     : [],
-    // },
+    mainnet: {
+      url: 'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY'],
+      accounts: process.env['MAINNET_PRIVKEY']
+        ? [process.env['MAINNET_PRIVKEY']]
+        : [],
+    },
+    fork: {
+      url: 'http://127.0.0.1:8545/',
+    },
+    arbitrum1: {
+      url: 'https://arb1.arbitrum.io/rpc',
+      accounts: process.env['MAINNET_PRIVKEY']
+        ? [process.env['MAINNET_PRIVKEY']]
+        : [],
+    },
     rinkeby: {
       url: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
       accounts: process.env['DEVNET_PRIVKEY']
@@ -198,18 +350,32 @@ const config = {
   },
   mocha: {
     timeout: 0,
+    bail: true,
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],
   },
   solidity: {
-    version: '0.6.11',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 100,
+    compilers: [
+      {
+        version: '0.6.11',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 100,
+          },
+        },
       },
-    },
+      {
+        version: '0.8.7',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 100,
+          },
+        },
+      },
+    ],
   },
 }
 
