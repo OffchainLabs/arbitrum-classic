@@ -695,7 +695,10 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 					Msg(msg)
 
 				if b.config.Node.Sequencer.RewriteSequencerAddress {
-					b.reorgToNewSequencerAddress(ctx, prevMsgCount)
+					err := b.reorgToNewSequencerAddress(ctx, prevMsgCount)
+					if err != nil {
+						return false, errors.Wrap(err, "error during reorg to rewrite sequencer address")
+					}
 
 					return false, errors.New("reorganized to rewrite sequencer address")
 				}
