@@ -195,12 +195,11 @@ const gen = async () => {
   const validateResult = ajv.compile(schema)
   const validResult = validateResult(previousJSON)
   if (!validResult) {
-    console.log('errors in new schema')
-
+    console.log('Schematic errors in new JSON, cancelling write:')
     console.log(validateResult.errors)
-    // return
+    return
   } else {
-    console.log('new schema is valid')
+    console.log('new JSON is valid')
   }
 
   console.log(`Generating JSON with ${tokens.length} tokens`)
