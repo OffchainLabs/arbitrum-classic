@@ -10,17 +10,15 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
+	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.0
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.8.0
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.8.0
 	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.8.0
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.8.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.7.1
 	github.com/rs/zerolog v1.23.0
-	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
-	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
-	gotest.tools/gotestsum v1.7.0 // indirect
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
