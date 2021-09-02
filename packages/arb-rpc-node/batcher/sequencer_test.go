@@ -370,4 +370,12 @@ func TestSequencerBatcher(t *testing.T) {
 	if seqMonAcc != otherMonAcc {
 		t.Fatal("accumulators differ between monitors")
 	}
+
+	estBaseFee, baseFeeSampleSize := batcher.RecommendedBaseFee()
+	if baseFeeSampleSize < 1 {
+		t.Error("baseFeeSample size should be at least 1")
+	}
+	if estBaseFee < gasCostBase/15 || estBaseFee > gasCostBase/4 {
+		t.Error("estBaseFee out of bounds", estBaseFee)
+	}
 }
