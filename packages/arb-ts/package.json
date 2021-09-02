@@ -41,7 +41,6 @@
     "@ethersproject/bytes": "^5.0.8",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@types/promise-poller": "^1.7.0",
-    "@uniswap/token-lists": "^1.0.0-beta.24",
     "dotenv": "^10.0.0",
     "ethers": "^5.1.0"
   },
@@ -53,6 +52,9 @@
     "@types/mocha": "^7.0.2",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
+    "@uniswap/token-lists": "^1.0.0-beta.25",
+    "ajv": "^8.6.2",
+    "ajv-formats": "^2.1.1",
     "axios": "^0.21.1",
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",

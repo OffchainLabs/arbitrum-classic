@@ -89,7 +89,7 @@ export const networks: Networks = {
   },
   '42161': {
     chainID: '42161',
-    name: 'Arb1',
+    name: 'Arbitrum One',
     explorerUrl: 'https://mainnet-arb-explorer.netlify.app',
     partnerChainID: '1',
     isArbitrum: true,
