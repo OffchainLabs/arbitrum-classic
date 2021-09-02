@@ -147,7 +147,7 @@ func (e *ExecutionImpl) OneStepProof(
 	if opcode == 0x72 {
 		// INBOX proving
 		seqNum := previousCut.TotalMessagesRead
-		batch, err := LookupBatchContaining(ctx, lookup, sequencerInbox, seqNum)
+		batch, err := sequencerInbox.LookupBatchContaining(ctx, lookup, seqNum)
 		if err != nil {
 			return err
 		}

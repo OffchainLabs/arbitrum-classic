@@ -43,8 +43,8 @@ class DataCursor {
     std::mutex reorg_mutex;
     uint256_t pending_total_count;
     std::vector<char> current_total_key;
-    std::vector<value> data;
-    std::vector<value> deleted_data;
+    std::vector<MachineEmission<value>> data;
+    std::vector<MachineEmission<value>> deleted_data;
     std::string error_string;
 
     // Input value

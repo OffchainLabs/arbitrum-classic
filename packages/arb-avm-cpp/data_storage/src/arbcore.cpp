@@ -42,7 +42,7 @@
 #endif
 
 namespace {
-constexpr uint256_t arbcore_schema_version = 2;
+constexpr uint256_t arbcore_schema_version = 3;
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
@@ -1107,9 +1107,10 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
     return true;
 }
 
-rocksdb::Status ArbCore::saveLogs(ReadWriteTransaction& tx,
-                                  const std::vector<value>& vals) {
-    if (vals.empty()) {
+rocksdb::Status ArbCore::saveLogs(
+    ReadWriteTransaction& tx,
+    const std::vector<MachineEmission<value>>& logs) {
+    if (logs.empty()) {
         return rocksdb::Status::OK();
     }
     auto log_result = logInsertedCountImpl(tx);
@@ -1118,8 +1119,8 @@ rocksdb::Status ArbCore::saveLogs(ReadWriteTransaction& tx,
     }
 
     auto log_index = log_result.data;
-    for (const auto& val : vals) {
-        auto value_result = saveValue(tx, val);
+    for (const auto& log : logs) {
+        auto value_result = saveValue(tx, log.val);
         if (!value_result.status.ok()) {
             return value_result.status;
         }
@@ -1128,13 +1129,14 @@ rocksdb::Status ArbCore::saveLogs(ReadWriteTransaction& tx,
         marshal_uint256_t(log_index, key);
         auto key_slice = vecToSlice(key);
 
-        std::vector<unsigned char> value_hash;
-        marshal_uint256_t(hash_value(val), value_hash);
-        rocksdb::Slice value_hash_slice(
-            reinterpret_cast<const char*>(value_hash.data()),
-            value_hash.size());
+        std::vector<unsigned char> log_info;
+        marshal_uint256_t(hash_value(log.val), log_info);
+        marshal_uint256_t(log.inbox.count, log_info);
+        marshal_uint256_t(log.inbox.accumulator, log_info);
+        rocksdb::Slice log_info_slice(
+            reinterpret_cast<const char*>(log_info.data()), log_info.size());
 
-        auto status = tx.logPut(key_slice, value_hash_slice);
+        auto status = tx.logPut(key_slice, log_info_slice);
         if (!status.ok()) {
             return status;
         }
@@ -1144,18 +1146,18 @@ rocksdb::Status ArbCore::saveLogs(ReadWriteTransaction& tx,
     return updateLogInsertedCount(tx, log_index);
 }
 
-ValueResult<std::vector<value>> ArbCore::getLogs(uint256_t index,
-                                                 uint256_t count,
-                                                 ValueCache& valueCache) {
+ValueResult<std::vector<MachineEmission<value>>>
+ArbCore::getLogs(uint256_t index, uint256_t count, ValueCache& valueCache) {
     ReadSnapshotTransaction tx(data_storage);
 
     return getLogsNoLock(tx, index, count, valueCache);
 }
 
-ValueResult<std::vector<value>> ArbCore::getLogsNoLock(ReadTransaction& tx,
-                                                       uint256_t index,
-                                                       uint256_t count,
-                                                       ValueCache& valueCache) {
+ValueResult<std::vector<MachineEmission<value>>> ArbCore::getLogsNoLock(
+    ReadTransaction& tx,
+    uint256_t index,
+    uint256_t count,
+    ValueCache& valueCache) {
     if (count == 0) {
         return {rocksdb::Status::OK(), {}};
     }
@@ -1173,31 +1175,38 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(ReadTransaction& tx,
         count = max_log_count - index;
     }
 
-    std::vector<unsigned char> key;
-    marshal_uint256_t(index, key);
+    std::vector<unsigned char> lower_key;
+    marshal_uint256_t(index, lower_key);
+    auto lower_slice = vecToSlice(lower_key);
 
-    auto hash_result = tx.logGetUint256Vector(vecToSlice(key),
-                                              intx::narrow_cast<size_t>(count));
-    if (!hash_result.status.ok()) {
-        return {hash_result.status, {}};
-    }
+    std::vector<unsigned char> upper_key;
+    marshal_uint256_t(index + count, upper_key);
+    auto upper_slice = vecToSlice(upper_key);
 
-    std::vector<value> logs;
-    for (const auto& hash : hash_result.data) {
+    auto it = tx.logGetIterator(&lower_slice, &upper_slice);
+    it->SeekToFirst();
+    std::vector<MachineEmission<value>> logs;
+    while (it->Valid()) {
+        auto info = it->value().data();
+        auto hash = extractUint256(info);
         auto val_result = getValue(tx, hash, valueCache, false);
         if (std::holds_alternative<rocksdb::Status>(val_result)) {
             return {std::get<rocksdb::Status>(val_result), {}};
         }
-        logs.push_back(
-            std::move(std::get<CountedData<value>>(val_result).data));
+        auto inbox_count = extractUint256(info);
+        auto inbox_accumulator = extractUint256(info);
+        auto inbox = InboxState{inbox_count, inbox_accumulator};
+        auto val = std::move(std::get<CountedData<value>>(val_result).data);
+        logs.push_back(MachineEmission<value>{val, inbox});
+        it->Next();
     }
 
-    return {rocksdb::Status::OK(), std::move(logs)};
+    return {it->status(), std::move(logs)};
 }
 
 rocksdb::Status ArbCore::saveSends(
     ReadWriteTransaction& tx,
-    const std::vector<std::vector<unsigned char>>& sends) {
+    const std::vector<MachineEmission<std::vector<unsigned char>>>& sends) {
     if (sends.empty()) {
         return rocksdb::Status::OK();
     }
@@ -1211,8 +1220,12 @@ rocksdb::Status ArbCore::saveSends(
         std::vector<unsigned char> key;
         marshal_uint256_t(send_count, key);
         auto key_slice = vecToSlice(key);
+        std::vector<unsigned char> val_data;
+        marshal_uint256_t(send.inbox.count, val_data);
+        marshal_uint256_t(send.inbox.accumulator, val_data);
+        val_data.insert(val_data.end(), send.val.begin(), send.val.end());
 
-        auto status = tx.sendPut(key_slice, vecToSlice(send));
+        auto status = tx.sendPut(key_slice, vecToSlice(val_data));
         if (!status.ok()) {
             return status;
         }
@@ -1586,11 +1599,28 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
         count = max_send_count - index;
     }
 
-    std::vector<unsigned char> key;
-    marshal_uint256_t(index, key);
-    auto key_slice = vecToSlice(key);
+    std::vector<unsigned char> lower_key;
+    marshal_uint256_t(index, lower_key);
+    auto lower_slice = vecToSlice(lower_key);
 
-    return tx.sendGetVectorVector(key_slice, intx::narrow_cast<size_t>(count));
+    std::vector<unsigned char> upper_key;
+    marshal_uint256_t(index + count, upper_key);
+    auto upper_slice = vecToSlice(upper_key);
+
+    auto it = tx.sendGetIterator(&lower_slice, &upper_slice);
+    it->SeekToFirst();
+    std::vector<std::vector<unsigned char>> send_data;
+    while (it->Valid()) {
+        auto value = it->value();
+        // Skip inbox metadata
+        auto data_start = value.data() + 64;
+        auto data_end = value.data() + value.size();
+        std::vector<unsigned char> data(data_start, data_end);
+        send_data.push_back(data);
+        it->Next();
+    }
+
+    return {it->status(), send_data};
 }
 
 ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {

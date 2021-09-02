@@ -89,7 +89,7 @@ TEST_CASE("ARBOS test vectors") {
                                 << block_log_count << " block logs");
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
                 INFO("Checking log " << k);
-                CHECK(assertion.logs[k] == logs[k]);
+                CHECK(assertion.logs[k].val == logs[k]);
                 if (std::get<Tuple>(logs[k]).get_element(0) ==
                     value{uint256_t{1}}) {
                     block_log_count++;
@@ -99,7 +99,7 @@ TEST_CASE("ARBOS test vectors") {
             REQUIRE(assertion.sends.size() == sends.size());
             for (size_t k = 0; k < assertion.sends.size(); ++k) {
                 INFO("Checking send " << k);
-                CHECK(assertion.sends[k] == sends[k]);
+                CHECK(assertion.sends[k].val == sends[k]);
             }
             CHECK(assertion.gas_count == total_gas_target);
             {

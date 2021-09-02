@@ -178,7 +178,32 @@ func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, erro
 	return receiveByteSliceArray(result.array), nil
 }
 
-func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, error) {
+func unmarshalLog(marshaled []byte) (core.ValueAndInbox, error) {
+	reader := bytes.NewReader(marshaled)
+	var inboxData [64]byte
+	_, err := reader.Read(inboxData[:])
+	if err != nil {
+		return core.ValueAndInbox{}, err
+	}
+	inboxCount := new(big.Int).SetBytes(inboxData[:32])
+	var inboxAccumulator common.Hash
+	copy(inboxAccumulator[:], inboxData[32:])
+
+	val, err := value.UnmarshalValue(reader)
+	if err != nil {
+		return core.ValueAndInbox{}, err
+	}
+
+	return core.ValueAndInbox{
+		Value: val,
+		Inbox: core.InboxState{
+			Count:       inboxCount,
+			Accumulator: inboxAccumulator,
+		},
+	}, nil
+}
+
+func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]core.ValueAndInbox, error) {
 	if count.Cmp(big.NewInt(0)) == 0 {
 		return nil, nil
 	}
@@ -189,14 +214,14 @@ func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, 
 		return nil, errors.New("failed to get logs")
 	}
 
-	marshaledValues := receiveByteSliceArray(result.array)
-	logVals := make([]value.Value, 0, len(marshaledValues))
-	for _, marshaledValue := range marshaledValues {
-		val, err := value.UnmarshalValue(bytes.NewReader(marshaledValue))
+	marshaledLogs := receiveByteSliceArray(result.array)
+	logVals := make([]core.ValueAndInbox, 0, len(marshaledLogs))
+	for _, marshaledLog := range marshaledLogs {
+		log, err := unmarshalLog(marshaledLog)
 		if err != nil {
 			return nil, err
 		}
-		logVals = append(logVals, val)
+		logVals = append(logVals, log)
 	}
 	return logVals, nil
 }
@@ -412,7 +437,7 @@ func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	return nil
 }
 
-func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, []value.Value, error) {
+func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []core.ValueAndInbox, []core.ValueAndInbox, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
@@ -427,20 +452,20 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Va
 
 	firstIndex := receiveBigInt(result.first_index)
 	data := receiveByteSliceArray(result.first_array)
-	logs := make([]value.Value, len(data))
+	logs := make([]core.ValueAndInbox, len(data))
 	for i, slice := range data {
 		var err error
-		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
+		logs[i], err = unmarshalLog(slice[:])
 		if err != nil {
 			return nil, nil, nil, err
 		}
 	}
 
 	deletedData := receiveByteSliceArray(result.second_array)
-	deletedLogs := make([]value.Value, len(deletedData))
+	deletedLogs := make([]core.ValueAndInbox, len(deletedData))
 	for i, slice := range deletedData {
 		var err error
-		deletedLogs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
+		deletedLogs[i], err = unmarshalLog(slice[:])
 		if err != nil {
 			return nil, nil, nil, err
 		}

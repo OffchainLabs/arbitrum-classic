@@ -47,7 +47,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type SequencerLockoutManager interface {
@@ -258,10 +257,10 @@ func shouldIncludeTxResult(txRes *evm.TxResult) bool {
 	return false
 }
 
-func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) {
+func txLogsToResults(logs []core.ValueAndInbox) (map[common.Hash]*evm.TxResult, error) {
 	resMap := make(map[common.Hash]*evm.TxResult)
 	for _, log := range logs {
-		res, err := evm.NewResultFromValue(log)
+		res, err := evm.NewResultFromValue(log.Value)
 		if err != nil {
 			return nil, err
 		}

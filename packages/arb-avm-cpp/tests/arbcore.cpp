@@ -179,7 +179,7 @@ TEST_CASE("ArbCore tests") {
         REQUIRE(logsRes.status.ok());
         REQUIRE(logsRes.data.size() == logs.size());
         for (size_t k = 0; k < logs.size(); ++k) {
-            REQUIRE(logsRes.data[k] == logs[k]);
+            REQUIRE(logsRes.data[k].val == logs[k]);
         }
 
         auto sendsRes = arbCore->getSends(0, sends.size());
@@ -205,7 +205,8 @@ TEST_CASE("ArbCore tests") {
                     REQUIRE(result.data.logs.size() <=
                             logs.size() - logs_count);
                     for (uint64_t k = 0; k < result.data.logs.size(); ++k) {
-                        REQUIRE(result.data.logs[k] == logs[logs_count + k]);
+                        REQUIRE(result.data.logs[k].val ==
+                                logs[logs_count + k]);
                     }
                     logs_count += result.data.logs.size();
                     REQUIRE(arbCore->logsCursorConfirmReceived(0));

@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/rs/zerolog/log"
 )
 
@@ -79,8 +78,8 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 		}
 
 		var firstIndex *big.Int
-		var logs []value.Value
-		var deletedLogs []value.Value
+		var logs []ValueAndInbox
+		var deletedLogs []ValueAndInbox
 		for {
 			select {
 			case <-ctx.Done():

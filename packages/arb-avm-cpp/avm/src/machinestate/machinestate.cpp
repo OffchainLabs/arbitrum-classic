@@ -83,13 +83,15 @@ void MachineState::addProcessedMessage(const MachineMessage& message) {
 void MachineState::addProcessedSend(std::vector<uint8_t> data) {
     output.send_count = output.send_count + 1;
     output.send_acc = ::hash(output.send_acc, ::hash(data));
-    context.sends.push_back(std::move(data));
+    context.sends.push_back(MachineEmission<std::vector<uint8_t>>{
+        std::move(data), output.fully_processed_inbox});
 }
 
 void MachineState::addProcessedLog(value log_val) {
     output.log_count = output.log_count + 1;
     output.log_acc = ::hash(output.log_acc, hash_value(log_val));
-    context.logs.push_back(std::move(log_val));
+    context.logs.push_back(MachineEmission<value>{
+        std::move(log_val), output.fully_processed_inbox});
 }
 
 MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}

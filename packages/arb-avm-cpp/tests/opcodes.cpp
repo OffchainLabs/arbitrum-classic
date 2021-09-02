@@ -891,10 +891,14 @@ TEST_CASE("OPCODE: BREAKPOINT opcode is correct") {
 TEST_CASE("OPCODE: LOG opcode is correct") {
     SECTION("log") {
         MachineState m;
+        InboxState inbox{123, 456};
+        m.output.fully_processed_inbox = inbox;
         m.stack.push(uint256_t{3});
         m.runOp(OpCode::LOG);
         REQUIRE(m.stack.stacksize() == 0);
-        REQUIRE(m.context.logs[0] == value{uint256_t(3)});
+        REQUIRE(m.context.logs.size() == 1);
+        REQUIRE(m.context.logs[0].val == value{uint256_t(3)});
+        REQUIRE(m.context.logs[0].inbox == inbox);
     }
 }
 

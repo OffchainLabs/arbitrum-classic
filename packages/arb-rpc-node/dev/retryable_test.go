@@ -200,7 +200,7 @@ func TestRetryableRedeem(t *testing.T) {
 		t.Fatal("final tx failed")
 	}
 
-	redeemRequest, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	redeemRequest, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 
 	if len(redeemRequest.ReturnData) != 0 {
@@ -215,7 +215,7 @@ func TestRetryableRedeem(t *testing.T) {
 	} else {
 		txLogs = finalReceipt.Logs
 
-		finalRequest, err := backend.db.GetRequest(ticketId)
+		finalRequest, _, err := backend.db.GetRequest(ticketId)
 		test.FailIfError(t, err)
 
 		if len(finalRequest.ReturnData) != 32 {
@@ -470,10 +470,10 @@ func TestRetryableWithReturnData(t *testing.T) {
 	tx, err := retryable.Redeem(otherAuth, ticketId)
 	test.FailIfError(t, err)
 
-	res, err := backend.db.GetRequest(ticketId)
+	res, _, err := backend.db.GetRequest(ticketId)
 	test.FailIfError(t, err)
 
-	res2, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	res2, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 
 	if len(res.ReturnData) != 32 {
@@ -523,7 +523,7 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 	checkRetryableExecution(t, client, retryableTx, requestId, retryableTx.MaxGas.Uint64(), retryableTx.GasPriceBid, true)
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-	ticketResult, err := backend.db.GetRequest(ticketId)
+	ticketResult, _, err := backend.db.GetRequest(ticketId)
 	test.FailIfError(t, err)
 	t.Log("Ticket result", ticketResult.IncomingRequest)
 	test.FailIfError(t, err)
@@ -573,7 +573,7 @@ func TestRetryableImmediateNoGas(t *testing.T) {
 	}
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-	ticketResult, err := backend.db.GetRequest(ticketId)
+	ticketResult, _, err := backend.db.GetRequest(ticketId)
 	test.FailIfError(t, err)
 	if ticketResult != nil {
 		t.Fatal("expected no result because redeem failed")
@@ -649,7 +649,7 @@ func TestRetryableEmptyDest(t *testing.T) {
 	checkRetryableExecution(t, client, retryableTx, requestId, retryableTx.MaxGas.Uint64(), retryableTx.GasPriceBid, false)
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-	ticketResult, err := backend.db.GetRequest(ticketId)
+	ticketResult, _, err := backend.db.GetRequest(ticketId)
 	test.FailIfError(t, err)
 	t.Log("Ticket result", ticketResult.IncomingRequest)
 	test.FailIfError(t, err)

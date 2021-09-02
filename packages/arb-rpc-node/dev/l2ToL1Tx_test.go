@@ -107,7 +107,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+		arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 		test.FailIfError(t, err)
 		if len(arbRes.ReturnData) != 32 {
 			t.Fatal("expected return data")

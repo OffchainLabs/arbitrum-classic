@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
@@ -86,6 +87,7 @@ func (r *SequencerInboxWatcher) CurrentBlockHeight(ctx context.Context) (*big.In
 }
 
 type SequencerBatchRef interface {
+	GetRawLog() types.Log
 	GetBatchIndex() *big.Int
 	GetBeforeCount() *big.Int
 	GetBeforeAcc() common.Hash
@@ -112,6 +114,7 @@ func (r *SequencerInboxWatcher) LookupBatchesInRange(ctx context.Context, from, 
 }
 
 type SequencerBatch struct {
+	rawLog             types.Log
 	transactionsData   []byte
 	transactionLengths []*big.Int
 	sectionsMetadata   []*big.Int
@@ -120,8 +123,11 @@ type SequencerBatch struct {
 	BeforeAcc          common.Hash
 	AfterCount         *big.Int
 	AfterAcc           common.Hash
-	DelayedAcc         common.Hash
 	Sequencer          common.Address
+}
+
+func (b SequencerBatch) GetRawLog() types.Log {
+	return b.rawLog
 }
 
 func (b SequencerBatch) GetBatchIndex() *big.Int {
@@ -264,14 +270,17 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 }
 
 type sequencerBatchOriginRef struct {
-	blockHash   ethcommon.Hash
-	txIndex     uint
+	rawLog      types.Log
 	batchIndex  *big.Int
 	beforeCount *big.Int
 	beforeAcc   common.Hash
 	afterCount  *big.Int
 	afterAcc    common.Hash
 	delayedAcc  common.Hash
+}
+
+func (b sequencerBatchOriginRef) GetRawLog() types.Log {
+	return b.rawLog
 }
 
 func (b sequencerBatchOriginRef) GetBatchIndex() *big.Int {
@@ -307,6 +316,7 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			}
 
 			refs = append(refs, SequencerBatch{
+				rawLog:             log,
 				transactionsData:   parsed.Transactions,
 				transactionLengths: parsed.Lengths,
 				sectionsMetadata:   parsed.SectionsMetadata,
@@ -323,8 +333,7 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				return nil, errors.WithStack(err)
 			}
 			refs = append(refs, sequencerBatchOriginRef{
-				blockHash:   log.BlockHash,
-				txIndex:     log.TxIndex,
+				rawLog:      log,
 				batchIndex:  parsed.SeqBatchIndex,
 				beforeCount: parsed.FirstMessageNum,
 				beforeAcc:   parsed.BeforeAcc,
@@ -345,6 +354,7 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			delayedAccInt := new(big.Int).SetBytes(parsed.AfterAccAndDelayed[1][:])
 			sectionsMetadata := []*big.Int{big.NewInt(0), blockNum, blockTime, parsed.TotalDelayedMessagesRead, delayedAccInt}
 			refs = append(refs, SequencerBatch{
+				rawLog:           log,
 				sectionsMetadata: sectionsMetadata,
 				BatchIndex:       parsed.SeqBatchIndex,
 				BeforeCount:      parsed.FirstMessageNum,
@@ -365,7 +375,7 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 	}
 	ref := genericRef.(sequencerBatchOriginRef)
 
-	tx, err := r.client.TransactionInBlock(ctx, ref.blockHash, ref.txIndex)
+	tx, err := r.client.TransactionInBlock(ctx, ref.rawLog.BlockHash, ref.rawLog.TxIndex)
 	if err != nil {
 		return SequencerBatch{}, errors.WithStack(err)
 	}
@@ -381,6 +391,7 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		return SequencerBatch{}, err
 	}
 	return SequencerBatch{
+		rawLog:             ref.rawLog,
 		transactionsData:   args["transactions"].([]byte),
 		transactionLengths: args["lengths"].([]*big.Int),
 		sectionsMetadata:   args["sectionsMetadata"].([]*big.Int),
@@ -388,11 +399,42 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		BeforeAcc:          ref.beforeAcc,
 		AfterCount:         ref.afterCount,
 		AfterAcc:           ref.afterAcc,
-		DelayedAcc:         ref.delayedAcc,
 		Sequencer:          common.NewAddressFromEth(sender),
 	}, nil
 }
 
 func (r *SequencerInboxWatcher) GetMaxDelayBlocks(ctx context.Context) (*big.Int, error) {
 	return r.con.MaxDelayBlocks(&bind.CallOpts{Context: ctx})
+}
+
+func (r *SequencerInboxWatcher) LookupBatchContaining(ctx context.Context, lookup core.ArbCoreLookup, seqNum *big.Int) (SequencerBatchRef, error) {
+	fromBlock, err := lookup.GetSequencerBlockNumberAt(seqNum)
+	if err != nil {
+		return nil, err
+	}
+	maxDelay, err := r.GetMaxDelayBlocks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	toBlock := new(big.Int).Add(fromBlock, maxDelay)
+	latestBlockNumber, err := r.CurrentBlockHeight(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if toBlock.Cmp(latestBlockNumber) > 0 {
+		toBlock = latestBlockNumber
+	}
+
+	batchRefs, err := r.LookupBatchesInRange(ctx, fromBlock, toBlock)
+	if err != nil {
+		return nil, err
+	}
+	var found SequencerBatchRef
+	for _, batchRef := range batchRefs {
+		if seqNum.Cmp(batchRef.GetBeforeCount()) >= 0 && seqNum.Cmp(batchRef.GetAfterCount()) < 0 {
+			found = batchRef
+			break
+		}
+	}
+	return found, nil
 }
