@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,20 +39,20 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
       inbox_messages_consumed(0) {}
 
 MachineStateKeys::MachineStateKeys(const MachineState& machine)
-    : static_hash(hash_value(machine.static_val)),
+    : output(machine.output),
+      pc(machine.pc, machine.loadCurrentInstruction()),
+      static_hash(hash_value(machine.static_val)),
       register_hash(hash_value(machine.registerVal)),
       datastack_hash(machine.stack.hash()),
       auxstack_hash(machine.auxstack.hash()),
       arb_gas_remaining(machine.arb_gas_remaining),
-      pc(machine.pc, machine.loadCurrentInstruction()),
-      err_pc(machine.errpc),
-      status(machine.state),
-      output(machine.output) {}
+      state(machine.state),
+      err_pc(machine.errpc) {}
 
 uint256_t MachineStateKeys::machineHash() const {
-    if (status == Status::Halted)
+    if (state == Status::Halted)
         return 0;
-    if (status == Status::Error)
+    if (state == Status::Error)
         return 1;
 
     std::array<unsigned char, 32 * 7> data{};
@@ -94,37 +94,39 @@ void MachineState::addProcessedLog(value log_val) {
 
 MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
 
-MachineState::MachineState(std::shared_ptr<Code> code_, value static_val_)
-    : code(std::move(code_)),
+MachineState::MachineState(std::shared_ptr<CoreCode> code_, value static_val_)
+    : pc(code_->initialCodePointRef()),
+      code(std::move(code_)),
       static_val(std::move(static_val_)),
-      arb_gas_remaining(max_arb_gas_remaining),
-      pc(code->initialCodePointRef()) {}
+      arb_gas_remaining(max_arb_gas_remaining) {}
 
-MachineState::MachineState(std::shared_ptr<Code> code_,
+MachineState::MachineState(MachineOutput output_,
+                           CodePointRef pc_,
+                           std::shared_ptr<Code> code_,
+                           ValueLoader value_loader_,
                            value register_val_,
                            value static_val_,
                            Datastack stack_,
                            Datastack auxstack_,
                            uint256_t arb_gas_remaining_,
                            Status state_,
-                           CodePointRef pc_,
-                           CodePointStub errpc_,
-                           MachineOutput output_)
-    : code(std::move(code_)),
+                           CodePointStub errpc_)
+    : output(output_),
+      pc(pc_),
+      code(std::move(code_)),
+      value_loader(std::move(value_loader_)),
       registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
       stack(std::move(stack_)),
       auxstack(std::move(auxstack_)),
       arb_gas_remaining(arb_gas_remaining_),
       state(state_),
-      pc(pc_),
-      errpc(errpc_),
-      output(std::move(output_)) {}
+      errpc(errpc_) {}
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
     auto executable = loadExecutable(executable_filename);
-    auto code = std::make_shared<Code>(0);
+    auto code = std::make_shared<CoreCode>(0);
     code->addSegment(std::move(executable.code));
     return MachineState{std::move(code), std::move(executable.static_val)};
 }
@@ -174,11 +176,11 @@ std::vector<unsigned char> MachineState::marshalState() const {
 }
 
 void insertSizes(std::vector<unsigned char>& buf,
-                 int sz1,
-                 int sz2,
-                 int sz3,
-                 int sz4) {
-    int acc = 1;
+                 uint32_t sz1,
+                 uint32_t sz2,
+                 uint32_t sz3,
+                 uint32_t sz4) {
+    uint32_t acc = 1;
     buf.push_back(static_cast<uint8_t>(acc));
     acc += sz1 / 32;
     buf.push_back(static_cast<uint8_t>(acc));
@@ -436,25 +438,25 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
 }
 
 CodePoint MachineState::loadCurrentInstruction() const {
-    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
+    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
         loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
     }
-    return loaded_segment->segment->loadCodePoint(pc.pc);
+    return loaded_segment->loadCodePoint(pc.pc);
 }
 
 const Operation& MachineState::loadCurrentOperation() const {
-    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
+    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
         loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
     }
-    return loaded_segment->segment->loadOperation(pc.pc);
+    return loaded_segment->loadOperation(pc.pc);
 }
 
-uint256_t MachineState::nextGasCost() const {
+uint256_t MachineState::nextGasCost() {
     auto& op = loadCurrentOperation();
     return gasCost(op);
 }
 
-uint256_t MachineState::gasCost(const Operation& op) const {
+uint256_t MachineState::gasCost(const Operation& op) {
     auto base_gas = instructionGasCosts()[static_cast<size_t>(op.opcode)];
     if (op.opcode == OpCode::ECPAIRING) {
         base_gas += machineoperation::ec_pairing_variable_gas_cost(*this);
@@ -489,10 +491,9 @@ BlockReason MachineState::runOne() {
     bool is_valid_instruction =
         instructionValidity()[static_cast<size_t>(op.opcode)];
 
-    uint64_t stack_arg_count =
-        is_valid_instruction ? InstructionStackPops.at(op.opcode).size() : 0;
+    uint64_t stack_arg_count = stackArgCount()[static_cast<size_t>(op.opcode)];
     uint64_t auxstack_arg_count =
-        is_valid_instruction ? InstructionAuxStackPops.at(op.opcode).size() : 0;
+        auxstackArgCount()[static_cast<size_t>(op.opcode)];
 
     // We're only blocked if we can't execute at all
     BlockReason blockReason = [&]() -> BlockReason {
@@ -537,7 +538,7 @@ BlockReason MachineState::runOne() {
             // Charge an error instruction instead
             arb_gas_remaining += gas_cost;
             output.arb_gas_used -= gas_cost;
-        } catch (const std::exception&) {
+        } catch (const avm_exception&) {
             state = Status::Error;
         }
 
@@ -882,4 +883,27 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
 
 uint256_t MachineState::getTotalMessagesRead() const {
     return output.fully_processed_inbox.count;
+}
+
+bool MachineOutput::operator==(const MachineOutput& other) const {
+    return fully_processed_inbox == other.fully_processed_inbox &&
+           total_steps == other.total_steps &&
+           arb_gas_used == other.arb_gas_used && send_acc == other.send_acc &&
+           log_acc == other.log_acc && send_count == other.send_count &&
+           log_count == other.log_count &&
+           l1_block_number == other.l1_block_number &&
+           l2_block_number == other.l2_block_number &&
+           last_inbox_timestamp == other.last_inbox_timestamp &&
+           last_sideload == other.last_sideload;
+}
+bool MachineOutput::operator!=(const MachineOutput& other) const {
+    return !(*this == other);
+}
+
+bool InboxState::operator==(const InboxState& other) const {
+    return count == other.count && accumulator == other.accumulator;
+}
+
+bool InboxState::operator!=(const InboxState& other) const {
+    return !(*this == other);
 }

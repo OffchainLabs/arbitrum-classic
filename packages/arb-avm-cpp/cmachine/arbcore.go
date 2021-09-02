@@ -501,5 +501,4 @@ func (ac *ArbCore) GetMachineForSideload(blockNumber uint64, allowSlowLookup boo
 	}
 
 	return WrapCMachine(cMachineResult.machine), nil
-
 }

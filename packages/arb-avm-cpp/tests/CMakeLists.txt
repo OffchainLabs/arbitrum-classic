@@ -42,10 +42,12 @@ add_executable(
 		datastack.cpp
 		ecops.cpp
 		ecops.hpp
+		helper.cpp
         machine.cpp
 		main.cpp
         messagestore.cpp
 		opcodes.cpp
+		sideloadcache.cpp
 		value.cpp
         valuecache.cpp)
 

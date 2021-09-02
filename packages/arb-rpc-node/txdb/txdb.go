@@ -23,28 +23,26 @@ import (
 	"strings"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
-
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	lru "github.com/hashicorp/golang-lru"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/blockcache"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -64,8 +62,9 @@ type TxDB struct {
 	pendingLogsFeed event.Feed
 	blockProcFeed   event.Feed
 
-	snapshotLRUCache  *lru.Cache
-	blockInfoLRUCache *lru.Cache
+	snapshotLRUCache   *lru.Cache
+	blockInfoLRUCache  *lru.Cache
+	snapshotTimedCache *blockcache.BlockCache
 }
 
 func New(
@@ -91,12 +90,17 @@ func New(
 			return nil, nil, err
 		}
 	}
+	snapshotTimedCache, err := blockcache.New(cacheConfig.TimedInitialSize, cacheConfig.TimedExpire)
+	if err != nil {
+		return nil, nil, err
+	}
 	db := &TxDB{
-		Lookup:            arbCore,
-		as:                as,
-		snapshotLRUCache:  snapshotLRUCache,
-		blockInfoLRUCache: blockInfoLRUCache,
-		allowSlowLookup:   cacheConfig.AllowSlowLookup,
+		Lookup:             arbCore,
+		as:                 as,
+		snapshotLRUCache:   snapshotLRUCache,
+		blockInfoLRUCache:  blockInfoLRUCache,
+		snapshotTimedCache: snapshotTimedCache,
+		allowSlowLookup:    cacheConfig.AllowSlowLookup,
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
@@ -240,6 +244,7 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 			}
 			db.blockInfoLRUCache.Remove(reorgBlockHeight)
 		}
+		db.snapshotTimedCache.Reorg(reorgBlockHeight)
 	}
 
 	return nil
@@ -512,6 +517,10 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 			return cachedSnap.(*snapshot.Snapshot), nil
 		}
 	}
+	_, cachedSnap := db.snapshotTimedCache.Get(info.Header.Number.Uint64())
+	if cachedSnap != nil {
+		return cachedSnap, nil
+	}
 	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64(), db.allowSlowLookup)
 	if err != nil || mach == nil {
 		return nil, err
@@ -527,6 +536,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if db.snapshotLRUCache != nil {
 		db.snapshotLRUCache.Add(info.Header.Number.Uint64(), snap)
 	}
+	db.snapshotTimedCache.Add(info.Header, snap)
 	return snap, nil
 }
 

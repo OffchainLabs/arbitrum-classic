@@ -93,13 +93,15 @@ if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     )
     if (BREW_OPENSSL EQUAL 0 AND EXISTS "${BREW_OPENSSL_PREFIX}")
         message(STATUS "Found OpenSSL keg installed by Homebrew at ${BREW_OPENSSL_PREFIX}")
-        set(OPENSSL_ROOT_DIR "${BREW_OPENSSL_PREFIX}/")
-        set(OPENSSL_INCLUDE_DIR "${BREW_OPENSSL_PREFIX}/include")
-        set(OPENSSL_LIBRARIES "${BREW_OPENSSL_PREFIX}/lib")
-        set(OPENSSL_CRYPTO_LIBRARY "${BREW_OPENSSL_PREFIX}/lib/libcrypto.dylib")
-        set(OPENSSL_SSL_LIBRARY (ADVANCED) "${BREW_OPENSSL_PREFIX}/lib/libssl.dylib")
+        set(OPENSSL_ROOT_DIR "${BREW_OPENSSL_PREFIX}/" CACHE INTERNAL "")
+        set(OPENSSL_INCLUDE_DIR "${BREW_OPENSSL_PREFIX}/include" CACHE INTERNAL "")
+        set(OPENSSL_LIBRARIES "${BREW_OPENSSL_PREFIX}/lib" CACHE INTERNAL "")
+        set(OPENSSL_CRYPTO_LIBRARY "${BREW_OPENSSL_PREFIX}/lib/libcrypto.dylib" CACHE INTERNAL "")
+        set(OPENSSL_SSL_LIBRARY (ADVANCED) "${BREW_OPENSSL_PREFIX}/lib/libssl.dylib" CACHE INTERNAL "")
     endif()
 endif()
+
+find_package(OpenSSL REQUIRED)
 
 find_package(Boost 1.65 COMPONENTS filesystem system REQUIRED)
 if(NOT TARGET Boost::boost)
@@ -126,7 +128,7 @@ include(CodeCoverage)
 include(Formatting)
 
 file(GLOB_RECURSE ALL_CODE_FILES
-	${PROJECT_SOURCE_DIR}/avm_values/*.[ch]pp
+    ${PROJECT_SOURCE_DIR}/avm_values/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/avm/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/app/*.[ch]pp
     ${PROJECT_SOURCE_DIR}/tests/*.[h]pp
@@ -185,6 +187,7 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm" AND NOT AVM_FUZZER)
             " $<TARGET_LINKER_FILE:avm_values>"
             " $<TARGET_LINKER_FILE:ff>"
             " ${JEMALLOC_LINK_LIBRARIES}"
+            " $<TARGET_LINKER_FILE:OpenSSL::Crypto>"
         )
         configure_file( ${INFILE} ${MIDDLEFILE} )
         file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})

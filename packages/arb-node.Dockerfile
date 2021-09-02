@@ -36,7 +36,7 @@ RUN cd arb-avm-cpp/build && \
     cmake .. && \
     cmake --build . -j $(nproc)
 
-FROM offchainlabs/backend-base:0.3.3 as arb-validator-builder
+FROM offchainlabs/backend-base:0.3.4 as arb-validator-builder
 
 # Build dependencies
 COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/

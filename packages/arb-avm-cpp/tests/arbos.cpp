@@ -29,6 +29,7 @@
 TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
     ValueCache value_cache{1, 0};
+    ArbCoreConfig coreConfig{};
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
@@ -64,7 +65,6 @@ TEST_CASE("ARBOS test vectors") {
             }
             auto total_gas_target = j.at("total_gas").get<uint64_t>();
 
-            ArbCoreConfig coreConfig{};
             ArbStorage storage(dbpath, coreConfig);
             REQUIRE(storage.initialize(arb_os_path).ok());
             auto mach = storage.getInitialMachine();
@@ -72,8 +72,8 @@ TEST_CASE("ARBOS test vectors") {
             config.inbox_messages = messages;
             mach->machine_state.context = AssertionContext(config);
             auto assertion = mach->run();
-            INFO("Machine ran for " << assertion.gasCount << " gas with target "
-                                    << total_gas_target);
+            INFO("Machine ran for " << assertion.gas_count
+                                    << " gas with target " << total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
             uint64_t block_log_count = 0;
             uint64_t tx_log_count = 0;
@@ -101,10 +101,10 @@ TEST_CASE("ARBOS test vectors") {
                 INFO("Checking send " << k);
                 CHECK(assertion.sends[k] == sends[k]);
             }
-            CHECK(assertion.gasCount == total_gas_target);
+            CHECK(assertion.gas_count == total_gas_target);
             {
                 auto tx = storage.makeReadWriteTransaction();
-                saveMachine(*tx, *mach);
+                saveTestMachine(*tx, *mach);
                 tx->commit();
             }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,27 @@
  * limitations under the License.
  */
 
-#include <avm_values/code.hpp>
+#ifndef unloadedvalue_hpp
+#define unloadedvalue_hpp
 
-Code::~Code() = default;
+#include <avm_values/valuetype.hpp>
 
-void CoreCode::commitChanges(
-    RunningCode& code,
-    const std::map<uint64_t, uint64_t>& segment_counts) {
-    const std::unique_lock<std::shared_mutex> lock(mutex);
-    impl->next_segment_num = code.fillInCode(impl->segments, segment_counts);
+struct UnloadedValue {
+    ValueTypes type;
+    uint256_t hash;
+    uint256_t value_size;
+};
+
+inline bool operator==(const UnloadedValue& val1, const UnloadedValue& val2) {
+    return val1.hash == val2.hash;
 }
+
+inline bool operator!=(const UnloadedValue& val1, const UnloadedValue& val2) {
+    return val1.hash != val2.hash;
+}
+
+inline uint256_t hash(const UnloadedValue& uv) {
+    return uv.hash;
+}
+
+#endif /* unloadedvalue_hpp */

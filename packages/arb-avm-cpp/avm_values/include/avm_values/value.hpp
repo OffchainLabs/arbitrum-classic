@@ -20,6 +20,7 @@
 #include <avm_values/bigint.hpp>
 #include <avm_values/buffer.hpp>
 #include <avm_values/opcodes.hpp>
+#include <avm_values/unloadedvalue.hpp>
 #include <avm_values/valuetype.hpp>
 
 #include <variant>
@@ -31,12 +32,14 @@ class HashPreImage;
 class Code;
 struct CodePointStub;
 struct CodePointRef;
+struct UnloadedValue;
 
 using value = std::variant<Tuple,
                            uint256_t,
                            CodePointStub,
                            std::shared_ptr<HashPreImage>,
-                           Buffer>;
+                           Buffer,
+                           UnloadedValue>;
 
 struct TuplePlaceholder {
     uint8_t values;

@@ -94,7 +94,6 @@ func startup() error {
 	privKeyString := fs.String("privkey", "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76", "funded private key")
 	//fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
-	//go http.ListenAndServe("localhost:6060", nil)
 
 	nodeCacheConfig := configuration.NodeCache{
 		AllowSlowLookup: true,
@@ -102,6 +101,8 @@ func startup() error {
 		TimedExpire:     20 * time.Minute,
 	}
 	coreConfig := configuration.DefaultCoreSettings()
+
+	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {

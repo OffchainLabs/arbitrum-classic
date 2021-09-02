@@ -27,16 +27,24 @@
 #include <set>
 
 class Transaction;
-class CodeSegment;
+class UnsafeCodeSegment;
 class Code;
+
+constexpr bool ENABLE_LAZY_LOADING = true;
 
 uint64_t getNextSegmentID(std::shared_ptr<DataStorage> store);
 void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id);
 
-std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
-                                            uint64_t segment_id,
-                                            std::set<uint64_t>& segment_ids,
-                                            ValueCache& value_cache);
+void restoreCodeSegments(const ReadTransaction& transaction,
+                         const std::shared_ptr<CoreCode>& core_code,
+                         ValueCache& value_cache,
+                         std::set<uint64_t> segment_ids);
+std::shared_ptr<UnsafeCodeSegment> getCodeSegment(
+    const ReadTransaction& tx,
+    uint64_t segment_id,
+    std::set<uint64_t>& segment_ids,
+    ValueCache& value_cache,
+    bool lazy_load);
 rocksdb::Status saveCode(ReadWriteTransaction& tx,
                          const Code& code,
                          std::map<uint64_t, uint64_t>& segment_counts);
