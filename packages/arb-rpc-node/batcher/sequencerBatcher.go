@@ -1072,7 +1072,7 @@ func (b *SequencerBatcher) RecommendedBaseFee() (int, int) {
 	if average == 0 || sample == 0 {
 		return 0, 0
 	}
-	return int(float32(gasCostBase) / average), int(sample)
+	return int(float32(gasCostBase)/average) + 2*gasCostPerMessage, int(sample)
 }
 
 const runningTxPerBatchAverageMemory float32 = 10

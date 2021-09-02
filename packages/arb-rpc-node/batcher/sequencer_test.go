@@ -375,7 +375,7 @@ func TestSequencerBatcher(t *testing.T) {
 	if baseFeeSampleSize < 1 {
 		t.Error("baseFeeSample size should be at least 1")
 	}
-	if estBaseFee < gasCostBase/15 || estBaseFee > gasCostBase/4 {
+	if estBaseFee < gasCostBase/15+2*gasCostPerMessage || estBaseFee > gasCostBase/4+2*gasCostPerMessage {
 		t.Error("estBaseFee out of bounds", estBaseFee)
 	}
 }
