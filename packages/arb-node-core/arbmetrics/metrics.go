@@ -21,7 +21,7 @@ type Config struct {
 
 func NewMetricsConfig(config configuration.MetricsServer) *Config {
 	if config.Enable {
-		exp.Setup(config.Endpoint.Addr + ":" + config.Endpoint.Port)
+		exp.Setup(config.Addr + ":" + config.Port)
 	}
 
 	registry := metrics.DefaultRegistry

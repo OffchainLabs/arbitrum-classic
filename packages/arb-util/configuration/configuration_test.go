@@ -57,14 +57,14 @@ func TestNodeConfig(t *testing.T) {
 	ctx := context.Background()
 
 	mock.chainId = 1
-	conf, _, _, _, err := ParseNode(ctx, []string{"--l1.url", "http://127.0.0.1:5344"})
+	conf, _, _, _, err := ParseNode(ctx, []string{"arb-node", "--l1.url", "http://127.0.0.1:5344"})
 	test.FailIfError(t, err)
 	if conf.Rollup.Address != arbitrumOneRollupAddress {
 		t.Error("didn't get correct rollup address")
 	}
 
 	mock.chainId = 4
-	conf, _, _, _, err = ParseNode(ctx, []string{"--l1.url", "http://127.0.0.1:5344"})
+	conf, _, _, _, err = ParseNode(ctx, []string{"arb-node", "--l1.url", "http://127.0.0.1:5344"})
 	test.FailIfError(t, err)
 	if conf.Rollup.Address != rinkebyTestnetRollupAddress {
 		t.Error("didn't get correct rollup address")

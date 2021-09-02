@@ -362,12 +362,12 @@ func startup() error {
 	}
 
 	go func() {
-		rpcConfig := configuration.Endpoint{
+		rpcConfig := configuration.RPC{
 			Addr: "0.0.0.0",
 			Port: "8547",
 			Path: "/",
 		}
-		wsConfig := configuration.Endpoint{
+		wsConfig := configuration.WS{
 			Addr: "0.0.0.0",
 			Port: "8548",
 			Path: "/",

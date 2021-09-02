@@ -82,7 +82,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, walletConfig, l1URL, l1ChainId, err := configuration.ParseValidator(ctx)
+	config, walletConfig, l1URL, l1ChainId, err := configuration.ParseValidator(ctx, os.Args)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		len(config.Validator.UtilsAddress) == 0 || len(config.Validator.WalletFactoryAddress) == 0 ||

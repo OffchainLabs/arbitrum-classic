@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package configuration
 
 import (
@@ -12,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/confmap"
@@ -24,11 +41,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 const PASSWORD_NOT_SET = "PASSWORD_NOT_SET"
+
+var arbitrumOneRollupAddress = "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A"
+var rinkebyTestnetRollupAddress = "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c"
 
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
 
@@ -107,6 +125,20 @@ type Healthcheck struct {
 	Metrics       bool   `koanf:"metrics"`
 	MetricsPrefix string `koanf:"metrics-prefix"`
 	Sequencer     bool   `koanf:"sequencer"`
+
+	MaxL1BlockDiff           int64
+	MaxMessagesSyncDiff      int64
+	MaxInboxSyncDiff         int64
+	MaxLogsProcessedSyncDiff int64
+	MaxL2BlockDiff           int64
+	ForwarderReadyURL        string
+}
+
+type MetricsServer struct {
+	Enable bool   `koanf:"enable"`
+	Prefix string `koanf:"prefix"`
+	Addr   string `koanf:"addr"`
+	Port   string `koanf:"port"`
 }
 
 type Lockout struct {
@@ -293,8 +325,8 @@ type Config struct {
 	Wallet        Wallet     `koanf:"wallet"`
 
 	// The following field needs to be top level for compatibility with the underlying go-ethereum lib
-	Metrics       bool    `koanf:"metrics"`
-	MetricsServer Metrics `koanf:"metrics-server"`
+	Metrics       bool          `koanf:"metrics"`
+	MetricsServer MetricsServer `koanf:"metrics-server"`
 }
 
 func (c *Config) GetNodeDatabasePath() string {
@@ -305,12 +337,12 @@ func (c *Config) GetValidatorDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "validator_db")
 }
 
-func ParseCLI(ctx context.Context) (*Config, *Wallet, string, *big.Int, error) {
-	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+func ParseCLI(ctx context.Context, args []string) (*Config, *Wallet, string, *big.Int, error) {
+	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
 	AddForwarderTarget(f)
 
-	return ParseNonRelay(ctx, f, "cli-wallet")
+	return ParseNonRelay(ctx, f, args, "cli-wallet")
 }
 
 func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
@@ -318,7 +350,7 @@ func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
 	f.Int64(prefix+"l1-posting-strategy.high-gas-delay-blocks", 270, "wait up to this many more blocks when gas costs are high")
 }
 
-func ParseNode(ctx context.Context) (*Config, *Wallet, string, *big.Int, error) {
+func ParseNode(ctx context.Context, args []string) (*Config, *Wallet, string, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
@@ -351,10 +383,10 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, string, *big.Int, error) 
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
 
-	return ParseNonRelay(ctx, f, "rpc-wallet")
+	return ParseNonRelay(ctx, f, args, "rpc-wallet")
 }
 
-func ParseValidator(ctx context.Context) (*Config, *Wallet, string, *big.Int, error) {
+func ParseValidator(ctx context.Context, args []string) (*Config, *Wallet, string, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
@@ -366,10 +398,10 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, string, *big.Int, er
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
 	f.Bool("validator.dont-challenge", false, "don't challenge any other validators' assertions")
 
-	return ParseNonRelay(ctx, f, "validator-wallet")
+	return ParseNonRelay(ctx, f, args, "validator-wallet")
 }
 
-func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, string, *big.Int, error) {
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet, args []string, defaultWalletPathname string) (*Config, *Wallet, string, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Bool("core.profile.just-metadata", false, "just print database metadata and exit")
@@ -410,7 +442,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 	AddHealthcheckOptions(f)
 
-	k, err := beginCommonParse(f)
+	f.Bool("metrics-server.enable", false, "enable metrics server")
+	f.String("metrics-server.prefix", "", "prefix for arbitrum metrics")
+
+	k, err := beginCommonParse(f, args)
 	if err != nil {
 		return nil, nil, "", nil, err
 	}
@@ -420,7 +455,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		return nil, nil, "", nil, errors.New("required parameter --l1.url is missing")
 	}
 
-	l1Client, err := ethutils.NewRPCEthClient(l1URL)
+	l1Client, err := ethclient.DialContext(ctx, l1URL)
 	if err != nil {
 		return nil, nil, "", nil, errors.Wrapf(err, "error connecting to ethereum L1 node: %s", l1URL)
 	}
@@ -453,7 +488,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 				"node.chain-id":                    "42161",
 				"node.forwarder.target":            "https://arb1.arbitrum.io/rpc",
 				"persistent.chain":                 "mainnet",
-				"rollup.address":                   "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
+				"rollup.address":                   arbitrumOneRollupAddress,
 				"rollup.from-block":                "12525700",
 				"rollup.machine.filename":          "mainnet.arb1.mexe",
 				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe",
@@ -471,7 +506,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 				"node.chain-id":                    "421611",
 				"node.forwarder.target":            "https://rinkeby.arbitrum.io/rpc",
 				"persistent.chain":                 "rinkeby",
-				"rollup.address":                   "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
+				"rollup.address":                   rinkebyTestnetRollupAddress,
 				"rollup.from-block":                "8700589",
 				"rollup.machine.filename":          "testnet.rinkeby.mexe",
 				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe",
@@ -569,12 +604,12 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	return out, wallet, l1URL, l1ChainId, nil
 }
 
-func ParseRelay() (*Config, error) {
-	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+func ParseRelay(args []string) (*Config, error) {
+	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
 	AddFeedOutputOptions(f)
 
-	k, err := beginCommonParse(f)
+	k, err := beginCommonParse(f, args)
 	if err != nil {
 		return nil, err
 	}
@@ -610,7 +645,7 @@ func AddHealthcheckOptions(f *flag.FlagSet) {
 	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
 }
 
-func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
+func beginCommonParse(f *flag.FlagSet, args []string) (*koanf.Koanf, error) {
 	f.Bool("conf.dump", false, "print out currently active configuration file")
 	f.String("conf.env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
 	f.String("conf.file", "", "name of configuration file")
@@ -633,7 +668,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	f.Bool("pprof-enable", false, "enable profiling server")
 
-	err := f.Parse(os.Args[1:])
+	err := f.Parse(args[1:])
 	if err != nil {
 		return nil, err
 	}

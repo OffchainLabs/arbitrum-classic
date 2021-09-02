@@ -115,7 +115,7 @@ func startup() error {
 		go func() {
 			mux := http.NewServeMux()
 			mux.Handle("/health/ready", healthhttp.HandleHealthJSON(health))
-			if err := http.ListenAndServe(config.Healthcheck.Endpoint.Addr+":"+config.Healthcheck.Endpoint.Port, mux); err != nil {
+			if err := http.ListenAndServe(config.Healthcheck.Addr+":"+config.Healthcheck.Port, mux); err != nil {
 				log.Error().Err(err).Msg("healthcheck server failed")
 			}
 		}()

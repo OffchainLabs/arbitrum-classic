@@ -63,7 +63,7 @@ func (n *NodeHealth) Launch() {
 			mux := http.NewServeMux()
 			mux.Handle("/health/ready", healthhttp.HandleHealthJSON(n.Ready))
 			mux.Handle("/synced/ready", healthhttp.HandleHealthJSON(n.Synced))
-			if err := http.ListenAndServe(n.config.Endpoint.Addr+":"+n.config.Endpoint.Port, mux); err != nil {
+			if err := http.ListenAndServe(n.config.Addr+":"+n.config.Port, mux); err != nil {
 				log.Error().Err(err).Msg("healthcheck server failed")
 			}
 		}()
