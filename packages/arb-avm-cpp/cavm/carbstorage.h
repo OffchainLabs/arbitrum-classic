@@ -24,17 +24,21 @@
 extern "C" {
 #endif
 
+typedef struct {
+    int32_t message_process_count;
+    int32_t checkpoint_load_gas_cost;
+    int32_t min_gas_checkpoint_frequency;
+    int32_t cache_expiration_seconds;
+    int32_t lru_cache_size;
+    int32_t debug;
+    int32_t save_rocksdb_interval;
+    const char* save_rocksdb_path;
+    int32_t lazy_load_core_machine;
+    int32_t lazy_load_archive_queries;
+} CArbCoreConfig;
+
 CArbStorage* createArbStorage(const char* db_path,
-                              int32_t message_process_count,
-                              int32_t checkpoint_load_gas_cost,
-                              int32_t min_gas_checkpoint_frequency,
-                              int32_t cache_expiration_seconds,
-                              int32_t lru_cache_size,
-                              int32_t debug,
-                              int32_t save_rocksdb_interval,
-                              const char* save_rocksdb_path,
-                              int32_t lazy_load_core_machine,
-                              int32_t lazy_load_archive_queries);
+                              CArbCoreConfig arb_core_config);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);

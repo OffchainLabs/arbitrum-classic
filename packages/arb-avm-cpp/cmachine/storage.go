@@ -54,19 +54,20 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
 	saveRocksdbIntervalSeconds := int(coreConfig.SaveRocksdbInterval.Seconds())
-	cArbStorage := C.createArbStorage(
-		cDbPath,
-		C.int(coreConfig.MessageProcessCount),
-		C.int(coreConfig.CheckpointLoadGasCost),
-		C.int(coreConfig.GasCheckpointFrequency),
-		C.int(cacheExpirationSeconds),
-		C.int(coreConfig.Cache.LRUSize),
-		boolToCInt(coreConfig.Debug),
-		C.int(saveRocksdbIntervalSeconds),
-		cSaveRocksdbPath,
-		boolToCInt(coreConfig.LazyLoadCoreMachine),
-		boolToCInt(coreConfig.LazyLoadArchiveQueries),
-	)
+	cConfig := C.CArbCoreConfig{
+		message_process_count:        C.int(coreConfig.MessageProcessCount),
+		checkpoint_load_gas_cost:     C.int(coreConfig.CheckpointLoadGasCost),
+		min_gas_checkpoint_frequency: C.int(coreConfig.GasCheckpointFrequency),
+		cache_expiration_seconds:     C.int(cacheExpirationSeconds),
+		lru_cache_size:               C.int(coreConfig.Cache.LRUSize),
+		debug:                        boolToCInt(coreConfig.Debug),
+		save_rocksdb_interval:        C.int(saveRocksdbIntervalSeconds),
+		save_rocksdb_path:            cSaveRocksdbPath,
+		lazy_load_core_machine:       boolToCInt(coreConfig.LazyLoadCoreMachine),
+		lazy_load_archive_queries:    boolToCInt(coreConfig.LazyLoadArchiveQueries),
+	}
+
+	cArbStorage := C.createArbStorage(cDbPath, cConfig)
 
 	if cArbStorage == nil {
 		return nil, errors.Errorf("error creating ArbStorage %v", dbPath)
