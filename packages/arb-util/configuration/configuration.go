@@ -57,6 +57,7 @@ type CoreCache struct {
 }
 
 type CoreProfile struct {
+	LoadCount           int64 `koanf:"load-count"`
 	ReorgTo             int64 `koanf:"reorg-to"`
 	ResetAllExceptInbox bool  `koanf:"reset-all-except-inbox"`
 	RunUntil            int64 `koanf:"run-until"`

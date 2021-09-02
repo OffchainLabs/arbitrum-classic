@@ -522,19 +522,6 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     return tx.commit();
 }
 
-std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
-    ReadTransaction& tx,
-    const uint256_t& arb_gas_used) const {
-    std::vector<unsigned char> key;
-    marshal_uint256_t(arb_gas_used, key);
-
-    auto result = tx.checkpointGetVector(vecToSlice(key));
-    if (!result.status.ok()) {
-        return result.status;
-    }
-    return extractMachineStateKeys(result.data.begin());
-}
-
 bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
     auto it = std::unique_ptr<rocksdb::Iterator>(tx.checkpointGetIterator());
     it->SeekToLast();
@@ -884,8 +871,45 @@ void ArbCore::operator()() {
                     std::chrono::duration_cast<std::chrono::seconds>(end_time -
                                                                      begin_time)
                         .count();
-                std::cerr << "Done, profiling took " << duration << " seconds"
+                std::cerr << "Done processing " << begin_message << " to "
+                          << last_machine->machine_state.output
+                                 .fully_processed_inbox.count
+                          << ", profiling took " << duration << " seconds"
                           << std::endl;
+
+                if (coreConfig.profile_load_count > 0) {
+                    auto load_begin_time = std::chrono::steady_clock::now();
+                    auto target_gas =
+                        last_machine->machine_state.output.arb_gas_used;
+                    for (uint64_t i = 0; i < coreConfig.profile_load_count;
+                         i++) {
+                        std::cerr << "Loading machine " << i << std::endl;
+                        auto current_execution =
+                            getClosestExecutionMachine(tx, target_gas);
+                        if (std::holds_alternative<rocksdb::Status>(
+                                current_execution)) {
+                            std::cerr
+                                << "Error loading profile machine number " << i
+                                << ": "
+                                << std::get<rocksdb::Status>(current_execution)
+                                       .ToString()
+                                << std::endl;
+                            break;
+                        }
+                    }
+
+                    auto load_end_time = std::chrono::steady_clock::now();
+                    auto load_duration =
+                        std::chrono::duration_cast<std::chrono::seconds>(
+                            load_end_time - load_begin_time)
+                            .count();
+                    std::cerr << "Done loading "
+                              << coreConfig.profile_load_count
+                              << " machines, profiling took " << load_duration
+                              << " seconds" << std::endl;
+                }
+
+                // Exit now that profiling is complete
                 break;
             }
         }

@@ -77,6 +77,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		cSaveRocksdbPath,
 		C.int64_t(coreConfig.Profile.ReorgTo),
 		C.int64_t(coreConfig.Profile.RunUntil),
+		C.int64_t(coreConfig.Profile.LoadCount),
 	)
 
 	if cArbStorage == nil {

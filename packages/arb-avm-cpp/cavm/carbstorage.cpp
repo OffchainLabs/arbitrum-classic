@@ -54,7 +54,8 @@ CArbStorage* createArbStorage(const char* db_path,
                               int32_t save_rocksdb_interval,
                               const char* save_rocksdb_path,
                               int64_t profile_reorg_to,
-                              int64_t profile_run_until) {
+                              int64_t profile_run_until,
+                              int64_t profile_load_count) {
     auto string_filename = std::string(db_path);
     auto string_save_rocksdb_path = std::string(save_rocksdb_path);
     ArbCoreConfig coreConfig{};
@@ -68,6 +69,7 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.save_rocksdb_path = string_save_rocksdb_path;
     coreConfig.profile_reorg_to = profile_reorg_to;
     coreConfig.profile_run_until = profile_run_until;
+    coreConfig.profile_load_count = profile_load_count;
 
     try {
         auto storage = new ArbStorage(string_filename, coreConfig);
