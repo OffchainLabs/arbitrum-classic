@@ -29,7 +29,7 @@ interface IOutbox {
         address indexed destAddr,
         address indexed l2Sender,
         uint256 indexed outboxEntryIndex,
-        uint256 transactionIndex
+        uint256 merklePath
     );
 
     function l2ToL1Sender() external view returns (address);

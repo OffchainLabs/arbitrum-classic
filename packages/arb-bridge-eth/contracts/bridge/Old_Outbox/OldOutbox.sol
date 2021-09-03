@@ -123,7 +123,7 @@ contract OldOutbox is IOutbox, Cloneable {
      * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired and
      * @param outboxIndex Index of OutboxEntry in outboxes array
      * @param proof Merkle proof of message inclusion in outbox entry
-     * @param index Merkle path to message
+     * @param merklePath Merkle path to message
      * @param l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)
      * @param destAddr destination address for L1 contract call
      * @param l2Block l2 block number at which sendTxToL1 call was made
@@ -135,7 +135,7 @@ contract OldOutbox is IOutbox, Cloneable {
     function executeTransaction(
         uint256 outboxIndex,
         bytes32[] calldata proof,
-        uint256 index,
+        uint256 merklePath,
         address l2Sender,
         address destAddr,
         uint256 l2Block,
@@ -154,8 +154,8 @@ contract OldOutbox is IOutbox, Cloneable {
             calldataForL1
         );
 
-        spendOutput(outboxIndex, proof, index, userTx);
-        emit OutBoxTransactionExecuted(destAddr, l2Sender, outboxIndex, index);
+        spendOutput(outboxIndex, proof, merklePath, userTx);
+        emit OutBoxTransactionExecuted(destAddr, l2Sender, outboxIndex, merklePath);
 
         address currentSender = _sender;
         uint128 currentL2Block = _l2Block;
@@ -178,21 +178,21 @@ contract OldOutbox is IOutbox, Cloneable {
     function spendOutput(
         uint256 outboxIndex,
         bytes32[] memory proof,
-        uint256 path,
+        uint256 merklePath,
         bytes32 item
     ) internal {
         require(proof.length < 256, "PROOF_TOO_LONG");
-        require(path < 2**proof.length, "PATH_NOT_MINIMAL");
+        require(merklePath < 2**proof.length, "PATH_NOT_MINIMAL");
 
         // Hash the leaf an extra time to prove it's a leaf
-        bytes32 calcRoot = calculateMerkleRoot(proof, path, item);
+        bytes32 calcRoot = calculateMerkleRoot(proof, merklePath, item);
         OutboxEntry outbox = outboxes[outboxIndex];
         require(address(outbox) != address(0), "NO_OUTBOX");
 
         // With a minimal path, the pair of path and proof length should always identify
         // a unique leaf. The path itself is not enough since the path length to different
         // leaves could potentially be different
-        bytes32 uniqueKey = keccak256(abi.encodePacked(path, proof.length));
+        bytes32 uniqueKey = keccak256(abi.encodePacked(merklePath, proof.length));
         uint256 numRemaining = outbox.spendOutput(calcRoot, uniqueKey);
 
         if (numRemaining == 0) {
@@ -246,10 +246,10 @@ contract OldOutbox is IOutbox, Cloneable {
 
     function calculateMerkleRoot(
         bytes32[] memory proof,
-        uint256 path,
+        uint256 merklePath,
         bytes32 item
     ) public pure returns (bytes32) {
-        return MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
+        return MerkleLib.calculateRoot(proof, merklePath, keccak256(abi.encodePacked(item)));
     }
 
     function outboxEntryExists(uint256 batchNum) public view override returns (bool) {
