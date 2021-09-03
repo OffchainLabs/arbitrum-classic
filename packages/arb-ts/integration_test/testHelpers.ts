@@ -8,10 +8,15 @@ import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 import yargs from 'yargs/yargs'
 import config from './config'
 
-const argv = yargs(process.argv.slice(2)).argv
-let networkID = argv.networkID as string
+const argv = yargs(process.argv.slice(2))
+  .options({
+    networkID: {
+      type: 'string',
+    },
+  })
+  .parseSync()
 
-networkID = networkID || '4'
+const networkID = argv.networkID || '4'
 if (!config[networkID]) {
   throw new Error('network not supported')
 }
