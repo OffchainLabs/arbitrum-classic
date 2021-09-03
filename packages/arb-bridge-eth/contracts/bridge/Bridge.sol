@@ -62,16 +62,15 @@ contract Bridge is OwnableUpgradeable, IBridge {
     ) external payable override returns (uint256) {
         require(allowedInboxesMap[msg.sender].allowed, "NOT_FROM_INBOX");
         uint256 count = inboxAccs.length;
-        bytes32 messageHash =
-            Messages.messageHash(
-                kind,
-                sender,
-                block.number,
-                block.timestamp, // solhint-disable-line not-rely-on-time
-                count,
-                tx.gasprice,
-                messageDataHash
-            );
+        bytes32 messageHash = Messages.messageHash(
+            kind,
+            sender,
+            block.number,
+            block.timestamp, // solhint-disable-line not-rely-on-time
+            count,
+            tx.gasprice,
+            messageDataHash
+        );
         bytes32 prevAcc = 0;
         if (count > 0) {
             prevAcc = inboxAccs[count - 1];

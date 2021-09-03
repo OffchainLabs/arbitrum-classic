@@ -18,7 +18,7 @@ package protocol
 
 import (
 	"math/rand"
-	
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
