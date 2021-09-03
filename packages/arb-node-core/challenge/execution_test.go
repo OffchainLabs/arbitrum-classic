@@ -1,34 +1,43 @@
 package challenge
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"math/big"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
+type ChallengeTestData struct {
+	ChallengedAssertion *core.Assertion
+	Messages            []inbox.InboxMessage
+	Moves               []Move
+}
+
 func runExecutionTest(t *testing.T, startGas *big.Int, endGas *big.Int, faultConfig FaultConfig, asserterMayFail bool) int {
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
-	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge, messages := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
 
 	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
-	challengedNode, err := initializeChallengeData(t, faultyCore, startGas, endGas)
+	challengedAssertion, err := initializeChallengeData(t, faultyCore, startGas, endGas)
 	if err != nil {
 		t.Fatal("Error with initializeChallengeData")
 	}
 
-	startChallenge(challengedNode)
-	return executeChallenge(
+	startChallenge(challengedAssertion)
+	rounds, moves := executeChallenge(
 		t,
-		challengedNode,
+		challengedAssertion,
 		mon.Core,
 		faultyCore,
 		asserterMayFail,
@@ -38,6 +47,17 @@ func runExecutionTest(t *testing.T, startGas *big.Int, endGas *big.Int, faultCon
 		asserterWallet,
 		challengerWallet,
 	)
+
+	challengeData := ChallengeTestData{
+		ChallengedAssertion: challengedAssertion,
+		Messages:            messages,
+		Moves:               moves,
+	}
+	o, err := json.Marshal(challengeData)
+	test.FailIfError(t, err)
+	err = ioutil.WriteFile(t.Name()+".json", o, 0777)
+	test.FailIfError(t, err)
+	return rounds
 }
 
 func TestChallengeToOSP(t *testing.T) {
@@ -53,20 +73,6 @@ func makeInit() message.Init {
 		Owner:       common.RandAddress(),
 		ExtraConfig: []byte{},
 	}
-}
-
-func makeInitMsg() inbox.InboxMessage {
-	chain := common.RandAddress()
-	return message.NewInboxMessage(
-		makeInit(),
-		chain,
-		big.NewInt(0),
-		big.NewInt(0),
-		inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocksInt(0),
-			Timestamp: big.NewInt(0),
-		},
-	)
 }
 
 func TestChallengeToOSPWithMessage(t *testing.T) {
@@ -99,7 +105,7 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 func TestChallengeToUnreachableSmall(t *testing.T) {
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
-	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge, _ := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(1 << 30))
 	test.FailIfError(t, err)
 	startGas := cursor.TotalGasConsumed()
@@ -108,13 +114,13 @@ func TestChallengeToUnreachableSmall(t *testing.T) {
 	faultConfig := FaultConfig{StallMachineAt: startGas}
 	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
-	challengedNode, _ := initializeChallengeData(t, faultyCore, startGas, endGas)
+	challengedAssertion, _ := initializeChallengeData(t, faultyCore, startGas, endGas)
 
-	startChallenge(challengedNode)
+	startChallenge(challengedAssertion)
 
 	executeChallenge(
 		t,
-		challengedNode,
+		challengedAssertion,
 		mon.Core,
 		faultyCore,
 		true,

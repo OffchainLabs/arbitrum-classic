@@ -22,14 +22,14 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *big.Int) *big.Int {
@@ -41,7 +41,7 @@ func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *b
 }
 
 func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *protocol.MerkleTree) {
-	cutHashes := cutsToHashes(bisection.Cuts)
+	cutHashes := common.HashSliceToRaw(bisection.Cuts)
 	segmentCount := len(cutHashes) - 1
 	chunks := make([][32]byte, 0, segmentCount)
 	segmentStart := new(big.Int).Set(bisection.ChallengedSegment.Start)
@@ -90,11 +90,15 @@ func addStackTrace(err error) error {
 func (c *Challenge) BisectExecution(
 	ctx context.Context,
 	prevBisection *core.Bisection,
+	startState *core.ExecutionState,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-	subCuts []core.Cut,
+	subCuts []common.Hash,
 ) error {
-	subCutHashes := cutsToHashes(subCuts)
+	if startState.CutHash() != subCuts[0] {
+		return errors.New("start state doesn't match initial cut")
+	}
+	subCutHashes := common.HashSliceToRaw(subCuts)
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
 	_, err := c.builderCon.BisectExecution(
@@ -104,8 +108,8 @@ func (c *Challenge) BisectExecution(
 		challengedSegment.Start,
 		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
-		subCuts[0].(*core.ExecutionState).TotalGasConsumed,
-		subCuts[0].(*core.ExecutionState).RestHash(),
+		startState.TotalGasConsumed,
+		startState.RestHash(),
 		subCutHashes,
 	)
 
@@ -183,12 +187,4 @@ func (c *Challenge) Timeout(
 ) error {
 	_, err := c.builderCon.Timeout(authWithContext(ctx, c.builderAuth))
 	return errors.WithStack(err)
-}
-
-func cutsToHashes(cuts []core.Cut) [][32]byte {
-	cutHashes := make([][32]byte, 0, len(cuts))
-	for _, cut := range cuts {
-		cutHashes = append(cutHashes, cut.CutHash())
-	}
-	return cutHashes
 }

@@ -2,55 +2,70 @@ package challenge
 
 import (
 	"context"
+	"encoding/json"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-type ExecutionImpl struct {
-}
-
-func (e *ExecutionImpl) SegmentTarget() int {
+func SegmentTarget() int {
 	return 400
 }
 
-var unreachableCut core.SimpleCut = core.NewSimpleCut([32]byte{})
+var unreachableCut common.Hash
 
-func getCut(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, gasTarget *big.Int) (core.Cut, *big.Int, error) {
+func getCutRaw(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, gasTarget *big.Int) (*core.ExecutionState, bool, *big.Int, error) {
 	state, steps, err := execTracker.GetExecutionState(gasTarget)
 	if err != nil {
-		return nil, nil, err
+		return nil, false, nil, err
 	}
 	if state.TotalMessagesRead.Cmp(maxTotalMessagesRead) > 0 || state.TotalGasConsumed.Cmp(gasTarget) < 0 {
 		// Execution read more messages than provided so assertion should have
 		// stopped short
-		return unreachableCut, steps, nil
+		return nil, false, steps, nil
 	}
-	return state, steps, nil
+	return state, true, steps, nil
 }
 
-func (e *ExecutionImpl) GetCuts(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int) ([]core.Cut, error) {
+func cutHash(state *core.ExecutionState, reachable bool) common.Hash {
+	if !reachable {
+		return unreachableCut
+	}
+	return state.CutHash()
+}
+
+func getCut(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, gasTarget *big.Int) (common.Hash, *big.Int, error) {
+	state, reachable, steps, err := getCutRaw(execTracker, maxTotalMessagesRead, gasTarget)
+	if err != nil {
+		return common.Hash{}, nil, err
+	}
+	return cutHash(state, reachable), steps, nil
+}
+
+func GetCuts(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int) (*core.ExecutionState, []common.Hash, error) {
 	execTracker := core.NewExecutionTracker(lookup, true, offsets, true)
-	cuts := make([]core.Cut, 0, len(offsets))
+	cuts := make([]common.Hash, 0, len(offsets))
+	var startState *core.ExecutionState
 	for i, offset := range offsets {
-		cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, offset)
+		cut, reachable, _, err := getCutRaw(execTracker, assertion.After.TotalMessagesRead, offset)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if i == 0 {
-			_, ok := cut.(*core.ExecutionState)
-			if !ok {
-				return nil, errors.New("first cut is unreachable")
+			if !reachable {
+				return nil, nil, errors.New("first cut is unreachable")
 			}
+			startState = cut
 		}
-
-		cuts = append(cuts, cut)
+		cuts = append(cuts, cutHash(cut, reachable))
 	}
-	return cuts, nil
+	return startState, cuts, nil
 }
 
 type DivergenceInfo struct {
@@ -59,7 +74,7 @@ type DivergenceInfo struct {
 	EndIsUnreachable bool
 }
 
-func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int, cuts []core.Cut) (DivergenceInfo, error) {
+func FindFirstDivergence(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int, cuts []common.Hash) (DivergenceInfo, error) {
 	errRes := DivergenceInfo{
 		DifferentIndex:   0,
 		SegmentSteps:     big.NewInt(0),
@@ -72,7 +87,7 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion
 		if err != nil {
 			return errRes, err
 		}
-		if localCut.CutHash() != cuts[i].CutHash() {
+		if localCut != cuts[i] {
 			return DivergenceInfo{
 				DifferentIndex:   i,
 				SegmentSteps:     new(big.Int).Sub(newSteps, lastSteps),
@@ -84,32 +99,13 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion
 	return errRes, errors.New("no divergence found in cuts")
 }
 
-func (e *ExecutionImpl) Bisect(
-	ctx context.Context,
-	challenge *ethbridge.Challenge,
-	prevBisection *core.Bisection,
-	segmentToChallenge int,
-	inconsistentSegment *core.ChallengeSegment,
-	subCuts []core.Cut,
-) error {
-	logger.Info().Str("start", inconsistentSegment.Start.String()).Str("end", inconsistentSegment.GetEnd().String()).Msg("Bisecting challenge")
-	return challenge.BisectExecution(
-		ctx,
-		prevBisection,
-		segmentToChallenge,
-		inconsistentSegment,
-		subCuts,
-	)
-}
-
-func (e *ExecutionImpl) getSegmentStartInfo(lookup core.ArbCoreLookup, assertion *core.Assertion, segment *core.ChallengeSegment) (*core.ExecutionState, machine.Machine, error) {
+func getSegmentStartInfo(lookup core.ArbCoreLookup, assertion *core.Assertion, segment *core.ChallengeSegment) (*core.ExecutionState, machine.Machine, error) {
 	execTracker := core.NewExecutionTracker(lookup, true, []*big.Int{segment.Start}, true)
-	cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, segment.Start)
+	state, reachable, _, err := getCutRaw(execTracker, assertion.After.TotalMessagesRead, segment.Start)
 	if err != nil {
 		return nil, nil, err
 	}
-	execCut, ok := cut.(*core.ExecutionState)
-	if !ok {
+	if !reachable {
 		return nil, nil, errors.New("attempted to one step prove blocked machine")
 	}
 
@@ -118,81 +114,194 @@ func (e *ExecutionImpl) getSegmentStartInfo(lookup core.ArbCoreLookup, assertion
 		return nil, nil, err
 	}
 
-	return execCut, beforeMachine, nil
+	return state, beforeMachine, nil
 }
 
-func (e *ExecutionImpl) OneStepProof(
+type Move interface {
+	execute(context.Context, *ethbridge.Challenge) error
+}
+
+type BisectMove struct {
+	prevBisection       *core.Bisection
+	startState          *core.ExecutionState
+	segmentToChallenge  int
+	inconsistentSegment *core.ChallengeSegment
+	subCuts             []common.Hash
+}
+
+func (m *BisectMove) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Kind                string
+		PrevBisection       *core.Bisection
+		StartState          *core.ExecutionState
+		SegmentToChallenge  int
+		InconsistentSegment *core.ChallengeSegment
+		SubCuts             []common.Hash
+	}{
+		Kind:                "Bisect",
+		PrevBisection:       m.prevBisection,
+		StartState:          m.startState,
+		SegmentToChallenge:  m.segmentToChallenge,
+		InconsistentSegment: m.inconsistentSegment,
+		SubCuts:             m.subCuts,
+	})
+}
+
+func (m *BisectMove) execute(ctx context.Context, challenge *ethbridge.Challenge) error {
+	logger.Info().
+		Str("start", m.inconsistentSegment.Start.String()).
+		Str("end", m.inconsistentSegment.GetEnd().String()).
+		Msg("Bisecting challenge")
+	return challenge.BisectExecution(
+		ctx,
+		m.prevBisection,
+		m.startState,
+		m.segmentToChallenge,
+		m.inconsistentSegment,
+		m.subCuts,
+	)
+}
+
+type ProveContinuedMove struct {
+	assertion          *core.Assertion
+	prevBisection      *core.Bisection
+	segmentToChallenge int
+	challengedSegment  *core.ChallengeSegment
+	previousCut        *core.ExecutionState
+}
+
+func (m *ProveContinuedMove) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Kind               string
+		Assertion          *core.Assertion
+		PrevBisection      *core.Bisection
+		SegmentToChallenge int
+		ChallengedSegment  *core.ChallengeSegment
+		PreviousCut        *core.ExecutionState
+	}{
+		Kind:               "ProveContinuedExecution",
+		Assertion:          m.assertion,
+		PrevBisection:      m.prevBisection,
+		SegmentToChallenge: m.segmentToChallenge,
+		ChallengedSegment:  m.challengedSegment,
+		PreviousCut:        m.previousCut,
+	})
+}
+
+func (m *ProveContinuedMove) execute(ctx context.Context, challenge *ethbridge.Challenge) error {
+	logger.Info().
+		Str("start", m.challengedSegment.Start.String()).
+		Str("end", m.challengedSegment.GetEnd().String()).
+		Msg("Proving continued execution")
+
+	return challenge.ProveContinuedExecution(
+		ctx,
+		m.prevBisection,
+		m.segmentToChallenge,
+		m.challengedSegment,
+		m.previousCut,
+	)
+}
+
+type OneStepProofMove struct {
+	assertion          *core.Assertion
+	prevBisection      *core.Bisection
+	segmentToChallenge int
+	challengedSegment  *core.ChallengeSegment
+	previousCut        *core.ExecutionState
+	proofData          []byte
+	bufferProofData    []byte
+}
+
+func NewOneStepProofMove(
 	ctx context.Context,
-	challenge *ethbridge.Challenge,
-	sequencerInbox *ethbridge.SequencerInboxWatcher,
-	lookup core.ArbCoreLookup,
 	assertion *core.Assertion,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-) error {
-	previousCut, previousMachine, err := e.getSegmentStartInfo(lookup, assertion, challengedSegment)
+	sequencerInbox *ethbridge.SequencerInboxWatcher,
+	lookup core.ArbCoreLookup,
+) (*OneStepProofMove, error) {
+	previousCut, previousMachine, err := getSegmentStartInfo(lookup, assertion, challengedSegment)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	proofData, bufferProofData, err := previousMachine.MarshalForProof()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	opcode := proofData[0]
-	logger.Info().Int("opcode", int(opcode)).Str("gas", previousCut.TotalGasConsumed.String()).Msg("Issuing one step proof")
-
 	if opcode == 0x72 {
 		// INBOX proving
 		seqNum := previousCut.TotalMessagesRead
 		batch, err := LookupBatchContaining(ctx, lookup, sequencerInbox, seqNum)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if batch == nil {
-			return errors.New("Failed to lookup batch containing message")
+			return nil, errors.New("Failed to lookup batch containing message")
 		}
 		inboxProof, err := lookup.GenInboxProof(seqNum, batch.GetBatchIndex(), batch.GetAfterCount())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		proofData = append(proofData, inboxProof...)
 	}
 
+	return &OneStepProofMove{
+		assertion:          assertion,
+		prevBisection:      prevBisection,
+		segmentToChallenge: segmentToChallenge,
+		challengedSegment:  challengedSegment,
+		previousCut:        previousCut,
+		proofData:          proofData,
+		bufferProofData:    bufferProofData,
+	}, nil
+}
+
+func (m *OneStepProofMove) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Kind               string
+		Assertion          *core.Assertion
+		PrevBisection      *core.Bisection
+		SegmentToChallenge int
+		ChallengedSegment  *core.ChallengeSegment
+		PreviousCut        *core.ExecutionState
+		ProofData          hexutil.Bytes
+		BufferProofData    hexutil.Bytes
+	}{
+		Kind:               "OneStepProof",
+		Assertion:          m.assertion,
+		PrevBisection:      m.prevBisection,
+		SegmentToChallenge: m.segmentToChallenge,
+		ChallengedSegment:  m.challengedSegment,
+		PreviousCut:        m.previousCut,
+		ProofData:          m.proofData,
+		BufferProofData:    m.bufferProofData,
+	})
+}
+
+func (m *OneStepProofMove) execute(ctx context.Context, challenge *ethbridge.Challenge) error {
+	opcode := m.proofData[0]
+	logger.Info().Int("opcode", int(opcode)).Str("gas", m.previousCut.TotalGasConsumed.String()).Msg("Issuing one step proof")
+
 	return challenge.OneStepProveExecution(
 		ctx,
-		prevBisection,
-		segmentToChallenge,
-		challengedSegment,
-		previousCut,
-		proofData,
-		bufferProofData,
+		m.prevBisection,
+		m.segmentToChallenge,
+		m.challengedSegment,
+		m.previousCut,
+		m.proofData,
+		m.bufferProofData,
 		opcode,
 	)
 }
 
-func (e *ExecutionImpl) ProveContinuedExecution(
-	ctx context.Context,
-	challenge *ethbridge.Challenge,
-	lookup core.ArbCoreLookup,
-	assertion *core.Assertion,
-	prevBisection *core.Bisection,
-	segmentToChallenge int,
-	challengedSegment *core.ChallengeSegment,
-) error {
-	logger.Info().Str("start", challengedSegment.Start.String()).Str("end", challengedSegment.GetEnd().String()).Msg("Proving continued execution")
-	previousCut, _, err := e.getSegmentStartInfo(lookup, assertion, challengedSegment)
-	if err != nil {
-		return err
-	}
+type TimeoutMove struct {
+}
 
-	return challenge.ProveContinuedExecution(
-		ctx,
-		prevBisection,
-		segmentToChallenge,
-		challengedSegment,
-		previousCut,
-	)
+func (m *TimeoutMove) execute(ctx context.Context, challenge *ethbridge.Challenge) error {
+	return challenge.Timeout(ctx)
 }

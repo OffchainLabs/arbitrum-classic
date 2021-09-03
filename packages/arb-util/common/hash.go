@@ -47,6 +47,10 @@ func (h Hash) ToEthHash() ethcommon.Hash {
 	return ethcommon.Hash(h)
 }
 
+func (h Hash) MarshalText() ([]byte, error) {
+	return []byte(h.String()), nil
+}
+
 func NewEthHashesFromHashes(a []Hash) []ethcommon.Hash {
 	ret := make([]ethcommon.Hash, 0, len(a))
 	for _, t := range a {
