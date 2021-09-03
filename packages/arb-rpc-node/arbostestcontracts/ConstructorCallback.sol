@@ -40,10 +40,9 @@ contract ConstructorCallback2 {
     }
 
     function test2() external payable {
-        (bool success, bytes memory returnData) =
-            address(msg.sender).call(
-                abi.encodeWithSelector(ConstructorCallback.test.selector, msg.sender)
-            );
+        (bool success, bytes memory returnData) = address(msg.sender).call(
+            abi.encodeWithSelector(ConstructorCallback.test.selector, msg.sender)
+        );
         emit TestEvent3(success, returnData);
     }
 }
