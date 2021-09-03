@@ -184,6 +184,7 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm" AND NOT AVM_FUZZER)
             " $<TARGET_LINKER_FILE:avm>"
             " $<TARGET_LINKER_FILE:avm_values>"
             " $<TARGET_LINKER_FILE:ff>"
+            " $<TARGET_LINKER_FILE:secp256k1>"
             " ${JEMALLOC_LINK_LIBRARIES}"
         )
         configure_file( ${INFILE} ${MIDDLEFILE} )

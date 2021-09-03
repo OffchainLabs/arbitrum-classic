@@ -42,7 +42,8 @@ func (c *Challenger) HandleConflict(ctx context.Context) (Move, error) {
 		return nil, err
 	}
 	if isTimedOut {
-		return &TimeoutMove{}, nil
+		move := &TimeoutMove{}
+		return move, move.execute(ctx, c.challenge)
 	}
 
 	responder, err := c.challenge.CurrentResponder(ctx)
