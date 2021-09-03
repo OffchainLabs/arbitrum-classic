@@ -83,7 +83,7 @@ export interface OutBoxTransactionExecuted {
   destAddr: string
   l2Sender: string
   outboxIndex: BigNumber
-  transactionIndex: BigNumber
+  merklePath: BigNumber
 }
 
 export interface GatewaySet {
@@ -789,9 +789,8 @@ export class BridgeHelper {
           .args as unknown as OutBoxTransactionExecuted
     )
     return (
-      parsedData.filter(executedEvent =>
-        executedEvent.transactionIndex.eq(path)
-      ).length === 1
+      parsedData.filter(executedEvent => executedEvent.merklePath.eq(path))
+        .length === 1
     )
   }
 
