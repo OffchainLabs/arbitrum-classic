@@ -69,13 +69,23 @@ library Hashing {
             bytes32 res = keccak1(bytes32(bytes32FromArray(data, startOffset, rawDataLength)));
             return (res, res == keccak1(bytes32(0)));
         }
-        (bytes32 h2, bool zero2) =
-            merkleRoot(data, rawDataLength, startOffset + dataLength / 2, dataLength / 2, false);
+        (bytes32 h2, bool zero2) = merkleRoot(
+            data,
+            rawDataLength,
+            startOffset + dataLength / 2,
+            dataLength / 2,
+            false
+        );
         if (zero2 && pack) {
             return merkleRoot(data, rawDataLength, startOffset, dataLength / 2, pack);
         }
-        (bytes32 h1, bool zero1) =
-            merkleRoot(data, rawDataLength, startOffset, dataLength / 2, false);
+        (bytes32 h1, bool zero1) = merkleRoot(
+            data,
+            rawDataLength,
+            startOffset,
+            dataLength / 2,
+            false
+        );
         return (keccak2(h1, h2), zero1 && zero2);
     }
 
@@ -89,8 +99,13 @@ library Hashing {
         uint256 startOffset,
         uint256 length
     ) internal pure returns (bytes32) {
-        (bytes32 mhash, ) =
-            merkleRoot(buf, startOffset + length, startOffset, roundUpToPow2(length), true);
+        (bytes32 mhash, ) = merkleRoot(
+            buf,
+            startOffset + length,
+            startOffset,
+            roundUpToPow2(length),
+            true
+        );
         return keccak2(bytes32(uint256(123)), mhash);
     }
 

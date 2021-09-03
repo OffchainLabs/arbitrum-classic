@@ -176,19 +176,19 @@ func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
 func parseGasAccountingSummary(val value.Value) (*GasAccountingSummary, error) {
 	tup, ok := val.(*value.TupleValue)
 
-	offset := tup.Len() - 6;    // we skip the first field for old ArbOS versions
-	
+	offset := tup.Len() - 6 // we skip the first field for old ArbOS versions
+
 	if !ok || tup.Len() < 6 || tup.Len() > 7 {
 		return nil, errors.New("could not parse gas accounting summary")
 	}
 
 	// Tuple size already verified above, so error can be ignored
-	pricePerL1CalldataByte, _   := tup.GetByInt64(0 + offset)
-	pricePerStorageCell, _      := tup.GetByInt64(1 + offset)
-	pricePerArbGasBase, _       := tup.GetByInt64(2 + offset)
+	pricePerL1CalldataByte, _ := tup.GetByInt64(0 + offset)
+	pricePerStorageCell, _ := tup.GetByInt64(1 + offset)
+	pricePerArbGasBase, _ := tup.GetByInt64(2 + offset)
 	pricePerArbGasCongestion, _ := tup.GetByInt64(3 + offset)
-	pricePerArbGasTotal, _      := tup.GetByInt64(4 + offset)
-	gasPool, _                  := tup.GetByInt64(5 + offset)
+	pricePerArbGasTotal, _ := tup.GetByInt64(4 + offset)
+	gasPool, _ := tup.GetByInt64(5 + offset)
 
 	pricePerL1CalldataByteInt, ok := pricePerL1CalldataByte.(value.IntValue)
 	if !ok {

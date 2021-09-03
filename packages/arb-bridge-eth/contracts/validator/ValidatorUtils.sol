@@ -24,9 +24,18 @@ import "../rollup/Rollup.sol";
 import "../challenge/IChallenge.sol";
 
 contract ValidatorUtils {
-    enum ConfirmType { NONE, VALID, INVALID }
+    enum ConfirmType {
+        NONE,
+        VALID,
+        INVALID
+    }
 
-    enum NodeConflict { NONE, FOUND, INDETERMINATE, INCOMPLETE }
+    enum NodeConflict {
+        NONE,
+        FOUND,
+        INDETERMINATE,
+        INCOMPLETE
+    }
 
     function getConfig(Rollup rollup)
         external

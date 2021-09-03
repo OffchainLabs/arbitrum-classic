@@ -26,11 +26,14 @@ import { NodeFactory } from '../build/types/NodeFactory'
 let nodeFactory: NodeFactory
 describe('NodeFactory', () => {
   it('should deploy contracts', async function () {
-    await run("deploy", {"tags": "test"})
+    await run('deploy', { tags: 'test' })
 
-    const NodeFactoryDeployment = await deployments.get("NodeFactory")
-    const nodeFactoryDeployment = await ethers.getContractAt("NodeFactory", NodeFactoryDeployment.address)
-    
+    const NodeFactoryDeployment = await deployments.get('NodeFactory')
+    const nodeFactoryDeployment = await ethers.getContractAt(
+      'NodeFactory',
+      NodeFactoryDeployment.address
+    )
+
     nodeFactory = nodeFactoryDeployment as NodeFactory
   })
 
