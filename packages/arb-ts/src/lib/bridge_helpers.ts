@@ -438,7 +438,9 @@ export class BridgeHelper {
       return res
     } catch (e) {
       const expectedError = "batch doesn't exist"
-      const actualError = e && (e.message || (e.error && e.error.message))
+      const err = e as any
+      const actualError =
+        err && (err.message || (err.error && err.error.message))
       if (actualError.includes(expectedError)) {
         console.log(
           'Withdrawal detected, but batch not created yet. Going to wait a bit.'
@@ -506,7 +508,9 @@ export class BridgeHelper {
       return res
     } catch (e) {
       const expectedError = "batch doesn't exist"
-      const actualError = e && (e.message || (e.error && e.error.message))
+      const err = e as any
+      const actualError =
+        err && (err.message || (err.error && err.error.message))
       if (actualError.includes(expectedError)) {
         console.log('Withdrawal detected, but batch not created yet.')
       } else {

@@ -66,18 +66,13 @@ export const initUpgrades = (
   }> => {
     const network = await hre.ethers.provider.getNetwork()
     const path = `${rootDir}/_deployments/${network.chainId}_queued-updates.json`
-    try {
-      const jsonBuff = readFileSync(path)
-      return { path, data: JSON.parse(jsonBuff.toString()) as QueuedUpdates }
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        console.log('New network; creating queued updates file')
-        writeFileSync(path, JSON.stringify({}))
-        return { path, data: {} }
-      } else {
-        throw err
-      }
+    if (!existsSync(path)) {
+      console.log('New network; creating queued updates file')
+      writeFileSync(path, JSON.stringify({}))
+      return { path, data: {} }
     }
+    const jsonBuff = readFileSync(path)
+    return { path, data: JSON.parse(jsonBuff.toString()) as QueuedUpdates }
   }
 
   const getDeployments = async (): Promise<{
@@ -86,19 +81,14 @@ export const initUpgrades = (
   }> => {
     const network = await hre.ethers.provider.getNetwork()
     const path = `${rootDir}/_deployments/${network.chainId}_current_deployment.json`
-    try {
-      const jsonBuff = readFileSync(path)
-      return {
-        path,
-        data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
-      }
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        console.log(
-          'New network; need to set up _current_deployments.json file'
-        )
-      }
-      throw err
+    if (!existsSync(path)) {
+      console.log('New network; need to set up _current_deployments.json file')
+      throw Error('No current deployments')
+    }
+    const jsonBuff = readFileSync(path)
+    return {
+      path,
+      data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
     }
   }
 

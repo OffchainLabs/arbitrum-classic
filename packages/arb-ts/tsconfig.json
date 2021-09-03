@@ -15,5 +15,5 @@
     "esModuleInterop": true,
     "experimentalDecorators": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js"]
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js", "scripts/**/*.ts"]
 }
