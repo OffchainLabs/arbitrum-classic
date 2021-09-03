@@ -62,7 +62,7 @@ func NewInitFromData(data []byte) (Init, error) {
 	}
 	arbGasSpeedLimit, data := extractUInt256(data)
 	paramId, data = extractUInt256(data)
-		if paramId != new(big.Int).SetBytes(chainOwnerParamId[:]) {
+	if paramId != new(big.Int).SetBytes(chainOwnerParamId[:]) {
 		return Init{}, errors.New("Unexpected owner parameter id in init message")
 	}
 	owner, data := extractAddress(data)
@@ -82,7 +82,7 @@ func (m Init) Type() inbox.Type {
 
 func (m Init) AsData() []byte {
 	data := make([]byte, 0)
- 	data = append(data, challengePeriodParamId[:]...)
+	data = append(data, challengePeriodParamId[:]...)
 	data = append(data, math.U256Bytes(m.GracePeriod.AsInt())...)
 	data = append(data, speedLimitParamId[:]...)
 	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.ArbGasSpeedLimitPerSecond))...)
@@ -117,7 +117,7 @@ func (c FeeConfig) AsData() []byte {
 	data = append(data, math.U256Bytes(c.L1GasPerL2Calldata)...)
 	data = append(data, hashing.SoliditySHA3([]byte("L1GasPerStorage")).Bytes()...)
 	data = append(data, math.U256Bytes(c.L1GasPerStorage)...)
-	data = append(data, hashing.SoliditySHA3([]byte("ArbGasDivisor")).Bytes()...)
+	data = append(data, hashing.SoliditySHA3([]byte("AvmGasPerArbGas")).Bytes()...)
 	data = append(data, math.U256Bytes(c.ArbGasDivisor)...)
 	data = append(data, hashing.SoliditySHA3([]byte("NetworkFeeRecipient")).Bytes()...)
 	data = append(data, AddressData(c.NetFeeRecipient)...)

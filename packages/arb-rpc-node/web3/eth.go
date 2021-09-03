@@ -196,6 +196,10 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash) (hexu
 	if err != nil {
 		return nil, err
 	}
+	if snap.ArbosVersion() >= 42 && (callArgs.GasPrice == nil || callArgs.GasPrice.ToInt().Sign() <= 0) {
+		callArgs.GasPrice = (*hexutil.Big)(big.NewInt(1 << 60))
+	}
+
 	from, msg := buildCallMsg(callArgs, s.maxCallGas)
 
 	res, _, err := snap.Call(msg, from)
@@ -219,6 +223,9 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	snap, err := s.getSnapshot(&blockNum)
 	if err != nil {
 		return 0, err
+	}
+	if snap.ArbosVersion() >= 42 && (args.GasPrice == nil || args.GasPrice.ToInt().Sign() <= 0) {
+		args.GasPrice = (*hexutil.Big)(big.NewInt(1 << 60))
 	}
 	from, tx := buildTransactionForEstimation(args)
 	var agg arbcommon.Address
