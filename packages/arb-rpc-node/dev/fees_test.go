@@ -419,20 +419,28 @@ const conData = "0x61520456600436101561000d57613e0a565b600035601c526000513415610
 
 func TestDeploy(t *testing.T) {
 	skipBelowVersion(t, 3)
-	backend, _, client, auth, _, _, _, _, cancel := setupFeeChain(t)
+	backend, web3SServer, client, auth, _, _, _, _, cancel := setupFeeChain(t)
 	defer cancel()
 	ctx := context.Background()
 	estimatedGas, err := client.EstimateGas(ctx, ethereum.CallMsg{
 		From: auth.From,
 		Data: hexutil.MustDecode(conData),
 	})
+	t.Log("estimated", estimatedGas, "gas")
 	test.FailIfError(t, err)
 	t.Log("estimated", estimatedGas)
 	nonce, err := client.PendingNonceAt(ctx, auth.From)
 	test.FailIfError(t, err)
+
+	gasPriceHex, err := web3SServer.GasPrice()
+	gasPrice := gasPriceHex.ToInt()
+	test.FailIfError(t, err)
+
+	t.Log("gas price", gasPrice)
+
 	tx := types.NewTx(&types.LegacyTx{
 		Nonce:    nonce,
-		GasPrice: big.NewInt(0),
+		GasPrice: new(big.Int).Mul(gasPrice, big.NewInt(8)),
 		Gas:      estimatedGas * 2,
 		Value:    big.NewInt(0),
 		Data:     hexutil.MustDecode(conData),
