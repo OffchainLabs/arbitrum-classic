@@ -37,6 +37,10 @@ interface RetryableGasArgs {
   maxSubmissionPricePercentIncrease?: BigNumber
 }
 
+function isError(error: Error): error is NodeJS.ErrnoException {
+  return error instanceof Error
+}
+
 const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
@@ -205,7 +209,11 @@ export class Bridge {
       await potentialWethGateway.l1Weth()
       return true
     } catch (err) {
-      if (err.code === 'CALL_EXCEPTION') {
+      if (
+        err instanceof Error &&
+        isError(err) &&
+        err.code === ethers.utils.Logger.errors.CALL_EXCEPTION
+      ) {
         return false
       } else {
         throw err

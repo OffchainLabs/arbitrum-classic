@@ -28,7 +28,6 @@
     ]
   },
   "dependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "hardhat-deploy-ethers": "^0.3.0-beta.10"
+    "@nomiclabs/hardhat-ethers": "^2.0.2"
   }
 }
