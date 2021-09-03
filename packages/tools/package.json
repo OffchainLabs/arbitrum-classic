@@ -11,15 +11,15 @@
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.1",
-    "@types/yargs": "^15.0.5",
+    "@types/yargs": "^17.0.2",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
-    "arb-ts": "^0.0.28",
+    "arb-ts": "^0.0.35",
     "ethers": "^5.0.24",
-    "fs-extra": "^9.0.1",
-    "ts-node": "^9.0.0",
+    "fs-extra": "^10.0.0",
+    "ts-node": "^10.2.1",
     "typescript": "^4.2.2",
-    "yargs": "^15.4.1"
+    "yargs": "^17.1.1"
   },
   "workspaces": {
     "nohoist": [
