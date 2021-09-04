@@ -8,7 +8,7 @@ sidebar_label: Special Features
 
 Every Arbitrum chain includes a native, pre-compiled Address Table Registry contract. This contract allows users to register an address, mapping it to some index, which can thenceforth be used to retrieve the address, thereby saving bytes of calldata.
 
-See [address_table](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/address_table) for a demo of client-side interactions with the address table.
+See [address-table](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/address-table) for a demo of client-side interactions with the address table.
 
 The address table interface is here:
 

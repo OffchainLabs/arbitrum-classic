@@ -1,0 +1,3 @@
+packages/arb-bridge-eth/test/proofs/*.json
+slither.db.json
+docs/sol_contract_docs

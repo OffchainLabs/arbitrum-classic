@@ -23,7 +23,7 @@ abstract contract WhitelistConsumer {
 
     event WhitelistSourceUpdated(address newSource);
 
-    modifier onlyWhitelisted {
+    modifier onlyWhitelisted() {
         if (whitelist != address(0)) {
             require(Whitelist(whitelist).isAllowed(msg.sender), "NOT_WHITELISTED");
         }
@@ -48,7 +48,7 @@ contract Whitelist {
         owner = msg.sender;
     }
 
-    modifier onlyOwner {
+    modifier onlyOwner() {
         require(msg.sender == owner, "ONLY_OWNER");
         _;
     }

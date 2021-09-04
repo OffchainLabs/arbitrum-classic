@@ -69,7 +69,6 @@ func addEnableFeesMessages(ib *InboxBuilder) {
 	}
 }
 
-
 type txTemplate struct {
 	GasPrice *big.Int
 	Gas      uint64
@@ -666,17 +665,17 @@ func TestArbOSFees(t *testing.T) {
 
 		aggregatorDiff := calcDiffSigned(l1ToAgg, new(big.Rat).SetInt(aggBal))
 		networkDiff := calcDiffSigned(totalToNetworkFee, new(big.Rat).SetInt(netFeeRecipientBal))
-		
+
 		if new(big.Rat).Abs(aggregatorDiff).Cmp(big.NewRat(1, 100)) > 0 {
 			as_float, _ := aggregatorDiff.Float64()
-			t.Error("unexpected aggregator fee collected", 100.0 * as_float,
+			t.Error("unexpected aggregator fee collected", 100.0*as_float,
 				"\naggregatorDiff", aggregatorDiff, "\naggBal", aggBal, "\nl1ToAgg",
 				l1ToAgg, "\nnetFeeRecipientBal", netFeeRecipientBal, "\nl1ToNetwork",
 				l1ToNetwork, "\ntotalToNetworkFee", totalToNetworkFee)
 		}
 		if new(big.Rat).Abs(networkDiff).Cmp(big.NewRat(1, 100)) > 0 {
 			as_float, _ := networkDiff.Float64()
-			t.Error("unexpected network fee collected", 100.0 * as_float, networkDiff)
+			t.Error("unexpected network fee collected", 100.0*as_float, networkDiff)
 		}
 	}
 

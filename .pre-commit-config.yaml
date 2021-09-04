@@ -50,8 +50,8 @@ repos:
         entry: ./node_modules/.bin/prettier --write --list-different
         files: \.sol$
         additional_dependencies:
-          - 'prettier@2.0.5'
-          - 'prettier-plugin-solidity@^1.0.0-alpha.54'
+          - 'prettier@2.3.2'
+          - 'prettier-plugin-solidity@^1.0.0-beta.17'
       - id: go-vet
         name: Go Vet
         entry: ./scripts/run-go-packages "go list ./... | grep -v 'arb-node-core/ethbridge[^/]*contracts' | xargs go vet"

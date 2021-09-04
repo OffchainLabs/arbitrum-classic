@@ -63,7 +63,7 @@ func NewInitFromData(data []byte) (Init, error) {
 	}
 	arbGasSpeedLimit, data := extractUInt256(data)
 	paramId, data = extractUInt256(data)
-		if paramId != new(big.Int).SetBytes(chainOwnerParamId[:]) {
+	if paramId != new(big.Int).SetBytes(chainOwnerParamId[:]) {
 		return Init{}, errors.New("Unexpected owner parameter id in init message")
 	}
 	owner, data := extractAddress(data)
@@ -78,15 +78,15 @@ func NewInitFromData(data []byte) (Init, error) {
 }
 
 func (m Init) Type() inbox.Type {
-	if (m.OldStyle) {
-		return OldInitType  // remove after upgrade 5
+	if m.OldStyle {
+		return OldInitType // remove after upgrade 5
 	}
 	return InitType
 }
 
 func (m Init) AsData() []byte {
 	data := make([]byte, 0)
- 	data = append(data, challengePeriodParamId[:]...)
+	data = append(data, challengePeriodParamId[:]...)
 	data = append(data, math.U256Bytes(m.GracePeriod.AsInt())...)
 	data = append(data, speedLimitParamId[:]...)
 	data = append(data, math.U256Bytes(new(big.Int).SetUint64(m.ArbGasSpeedLimitPerSecond))...)

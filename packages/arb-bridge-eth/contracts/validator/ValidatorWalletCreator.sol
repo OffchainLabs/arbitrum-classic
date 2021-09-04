@@ -45,8 +45,9 @@ contract ValidatorWalletCreator is Ownable {
 
     function createWallet() external returns (address) {
         ProxyAdmin admin = new ProxyAdmin();
-        address proxy =
-            address(new TransparentUpgradeableProxy(address(template), address(admin), ""));
+        address proxy = address(
+            new TransparentUpgradeableProxy(address(template), address(admin), "")
+        );
         admin.transferOwnership(msg.sender);
         Validator(proxy).initialize();
         Validator(proxy).transferOwnership(msg.sender);

@@ -1,12 +1,21 @@
 import { ethers, deployments, run, network } from 'hardhat'
 import { assert, expect } from 'chai'
 import { networks } from 'arb-ts/src/lib/networks'
+import { CurrentDeployments } from 'arb-upgrades/types'
+import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs'
 
 describe('Mainnet fork', () => {
   it('should upgrade rollup contract correctly', async function () {
     const chainId = (await ethers.provider.getNetwork()).chainId
 
-    const delayedInboxAddress = networks[chainId].tokenBridge.inbox
+    const deploymentData = readFileSync(
+      `../_deployments/${chainId}_current_deployment.json`
+    )
+    const deployments = JSON.parse(
+      deploymentData.toString()
+    ) as CurrentDeployments
+
+    const delayedInboxAddress = deployments.contracts.Inbox.proxyAddress
 
     const delayedInbox = await ethers.getContractAt(
       'Inbox',

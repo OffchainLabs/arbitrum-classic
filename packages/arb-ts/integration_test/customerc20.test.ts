@@ -15,7 +15,6 @@ import config from './config'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 import { OutgoingMessageState } from '../src/lib/bridge_helpers'
 
-import yargs from 'yargs/yargs'
 import chalk from 'chalk'
 import {
   fundL1,
