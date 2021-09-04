@@ -35,6 +35,7 @@ interface RetryableGasArgs {
   maxGas?: BigNumber
   gasPriceBid?: BigNumber
   maxSubmissionPricePercentIncrease?: BigNumber
+  maxGasPercentIncrease?: BigNumber
 }
 
 function isError(error: Error): error is NodeJS.ErrnoException {
@@ -305,7 +306,8 @@ export class Bridge {
             depositCalldata
           )
         )[0],
-        BigNumber.from(DEFAULT_MAX_GAS_PERCENT_INCREASE)
+        retryableGasArgs.maxGasPercentIncrease ||
+          BigNumber.from(DEFAULT_MAX_GAS_PERCENT_INCREASE)
       )
 
     // calculate required forwarding gas
