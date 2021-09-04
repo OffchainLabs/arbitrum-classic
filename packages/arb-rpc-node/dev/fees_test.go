@@ -166,6 +166,8 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	_, err = arbOwner.SetChainParameter(auth, arbos.FeesEnabledParamId, big.NewInt(1))
 	test.FailIfError(t, err)
 	auth.GasLimit = 0
+	// Reset this, which geth mutates, but changes after fees are enabled
+	auth.GasPrice = nil
 
 	if arbosVersion < 22 {
 		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
@@ -228,8 +230,6 @@ func TestFees(t *testing.T) {
 		t.Log("Fee col bal", feeCollectorBal)
 	}
 
-	// Reset this, which geth mutates, but changes after fees are enabled
-	auth.GasPrice = nil
 	for i := 0; i < 5; i++ {
 		t.Log("tx", i)
 		tx, err := arbOwner.SetChainParameter(auth, arbos.DefaultAggregatorParamId, big.NewInt(0))
@@ -434,7 +434,7 @@ func TestDeploy(t *testing.T) {
 	test.FailIfError(t, err)
 	tx := types.NewTx(&types.LegacyTx{
 		Nonce:    nonce,
-		GasPrice: big.NewInt(0),
+		GasPrice: big.NewInt(1 << 60),
 		Gas:      estimatedGas * 2,
 		Value:    big.NewInt(0),
 		Data:     hexutil.MustDecode(conData),

@@ -69,7 +69,6 @@ func addEnableFeesMessages(ib *InboxBuilder) {
 	}
 }
 
-
 type txTemplate struct {
 	GasPrice *big.Int
 	Gas      uint64
@@ -134,7 +133,7 @@ func TestArbOSFees(t *testing.T) {
 	rawTxes := []txTemplate{
 		// Successful call to constructor
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      300000000,
 			Value:    big.NewInt(0),
 			Data:     conDataSuccess,
@@ -145,7 +144,7 @@ func TestArbOSFees(t *testing.T) {
 		},
 		// Successful call to method without storage
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      100000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
@@ -157,7 +156,7 @@ func TestArbOSFees(t *testing.T) {
 		},
 		// Successful call to storage allocating method
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      100000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
@@ -169,7 +168,7 @@ func TestArbOSFees(t *testing.T) {
 		},
 		// Successful eth transfer to EOA
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      100000000,
 			To:       &eoaDest,
 			Value:    big.NewInt(100000),
@@ -180,7 +179,7 @@ func TestArbOSFees(t *testing.T) {
 		},
 		// Reverted constructor
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      1000000000,
 			Value:    big.NewInt(0),
 			Data:     conDataFailure,
@@ -191,7 +190,7 @@ func TestArbOSFees(t *testing.T) {
 		},
 		// Reverted storage allocating function call
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      100000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
@@ -203,7 +202,7 @@ func TestArbOSFees(t *testing.T) {
 		},
 		// Reverted since insufficient funds
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      1000000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
@@ -366,7 +365,7 @@ func TestArbOSFees(t *testing.T) {
 		for _, tx := range ethTxes {
 			compressed := message.NewCompressedECDSAFromEth(tx)
 			compressed.GasLimit = big.NewInt(0)
-			compressed.GasPrice = big.NewInt(0)
+			compressed.GasPrice = big.NewInt(1 << 60)
 			msg, err := message.NewGasEstimationMessage(aggregator, big.NewInt(100000000), compressed)
 			test.FailIfError(t, err)
 			estimateFeeIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)
@@ -666,17 +665,17 @@ func TestArbOSFees(t *testing.T) {
 
 		aggregatorDiff := calcDiffSigned(l1ToAgg, new(big.Rat).SetInt(aggBal))
 		networkDiff := calcDiffSigned(totalToNetworkFee, new(big.Rat).SetInt(netFeeRecipientBal))
-		
+
 		if new(big.Rat).Abs(aggregatorDiff).Cmp(big.NewRat(1, 100)) > 0 {
 			as_float, _ := aggregatorDiff.Float64()
-			t.Error("unexpected aggregator fee collected", 100.0 * as_float,
+			t.Error("unexpected aggregator fee collected", 100.0*as_float,
 				"\naggregatorDiff", aggregatorDiff, "\naggBal", aggBal, "\nl1ToAgg",
 				l1ToAgg, "\nnetFeeRecipientBal", netFeeRecipientBal, "\nl1ToNetwork",
 				l1ToNetwork, "\ntotalToNetworkFee", totalToNetworkFee)
 		}
 		if new(big.Rat).Abs(networkDiff).Cmp(big.NewRat(1, 100)) > 0 {
 			as_float, _ := networkDiff.Float64()
-			t.Error("unexpected network fee collected", 100.0 * as_float, networkDiff)
+			t.Error("unexpected network fee collected", 100.0*as_float, networkDiff)
 		}
 	}
 

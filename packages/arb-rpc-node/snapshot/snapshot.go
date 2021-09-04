@@ -67,7 +67,7 @@ func NewSnapshot(mach machine.Machine, time inbox.ChainTime, lastInboxSeq *big.I
 		arbOwnerMsg := message.ContractTransaction{
 			BasicTx: message.BasicTx{
 				MaxGas:      big.NewInt(1 << 30),
-				GasPriceBid: snap.makeGasPriceBid(),
+				GasPriceBid: snap.MaxGasPriceBid(),
 				DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 				Payment:     big.NewInt(0),
 				Data:        arbos.GetChainParameterData(arbos.EnableL1ContractAddressAliasingParamId),
@@ -92,7 +92,7 @@ func (s *Snapshot) ArbosVersion() uint64 {
 	return s.arbosVersion
 }
 
-func (s *Snapshot) makeGasPriceBid() *big.Int {
+func (s *Snapshot) MaxGasPriceBid() *big.Int {
 	if s.arbosVersion >= 42 {
 		return big.NewInt(1 << 60)
 	} else {
@@ -296,7 +296,7 @@ func (s *Snapshot) basicCallUnsafe(data []byte, dest common.Address) (*evm.TxRes
 	msg := message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
-			GasPriceBid: s.makeGasPriceBid(),
+			GasPriceBid: s.MaxGasPriceBid(),
 			DestAddress: dest,
 			Payment:     big.NewInt(0),
 			Data:        data,
@@ -310,7 +310,7 @@ func (s *Snapshot) basicCall(data []byte, dest common.Address) (*evm.TxResult, e
 	msg := message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
-			GasPriceBid: s.makeGasPriceBid(),
+			GasPriceBid: s.MaxGasPriceBid(),
 			DestAddress: dest,
 			Payment:     big.NewInt(0),
 			Data:        data,

@@ -892,7 +892,7 @@ func checkRetryableExecution(t *testing.T, client *web3.EthClient, srv *aggregat
 	if gasPercentage < .84 {
 		t.Error("bad gas percentage", gasPercentage, ticketTransaction.Gas(), redeemGas)
 	}
-	if ticketTransaction.GasPrice().Cmp(redeemGasPrice) != 0 {
+	if ticketTransaction.GasPrice().Cmp(redeemGasPrice) > 0 {
 		t.Error("gas price doesn't match", ticketTransaction.GasPrice(), "instead of", redeemGasPrice)
 	}
 	if ticketTransaction.Nonce() != 0 {

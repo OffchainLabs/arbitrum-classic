@@ -93,7 +93,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	nonce := uint64(342)
 	ownerTx := message.Transaction{
 		MaxGas:      big.NewInt(100000000),
-		GasPriceBid: big.NewInt(0),
+		GasPriceBid: big.NewInt(1 << 60),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(100),
