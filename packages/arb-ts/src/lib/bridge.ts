@@ -15,12 +15,15 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
-import { L1Bridge } from './l1Bridge'
-import { L2Bridge } from './l2Bridge'
-import { BridgeHelper } from './bridge_helpers'
-import { PayableOverrides } from '@ethersproject/contracts'
-import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
+
+import { Filter, TransactionReceipt } from '@ethersproject/abstract-provider'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumber } from '@ethersproject/bignumber'
+import { ContractReceipt, PayableOverrides } from '@ethersproject/contracts'
+import { Logger } from '@ethersproject/logger'
+import constants from '@ethersproject/constants'
+import { parseEther } from '@ethersproject/units'
+
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import { L1WethGateway__factory } from './abi/factories/L1WethGateway__factory'
@@ -28,6 +31,10 @@ import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
 
+import { L1Bridge } from './l1Bridge'
+import { L2Bridge } from './l2Bridge'
+import { BridgeHelper } from './bridge_helpers'
+import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks from './networks'
 
 interface RetryableGasArgs {
@@ -215,7 +222,7 @@ export class Bridge {
       if (
         err instanceof Error &&
         isError(err) &&
-        err.code === ethers.utils.Logger.errors.CALL_EXCEPTION
+        err.code === Logger.errors.CALL_EXCEPTION
       ) {
         return false
       } else {
@@ -295,7 +302,7 @@ export class Bridge {
         (
           await nodeInterface.estimateRetryableTicket(
             expectedL1GatewayAddress,
-            ethers.utils.parseEther('0.05').add(estimateGasCallValue),
+            parseEther('0.05').add(estimateGasCallValue),
             l2Dest,
             estimateGasCallValue,
             maxSubmissionPrice,
@@ -391,7 +398,7 @@ export class Bridge {
   }
 
   public async getInboxSeqNumFromContractTransaction(
-    l1Transaction: ethers.providers.TransactionReceipt
+    l1Transaction: TransactionReceipt
   ): Promise<BigNumber[] | undefined> {
     return BridgeHelper.getInboxSeqNumFromContractTransaction(
       l1Transaction,
@@ -498,24 +505,18 @@ export class Bridge {
     return this.l2Bridge.arbRetryableTx.cancel(redemptionTxHash)
   }
 
-  public getBuddyDeployInL2Transaction(
-    l2Transaction: ethers.providers.TransactionReceipt
-  ) {
+  public getBuddyDeployInL2Transaction(l2Transaction: TransactionReceipt) {
     return BridgeHelper.getBuddyDeployInL2Transaction(l2Transaction)
   }
 
-  public getWithdrawalsInL2Transaction(
-    l2Transaction: ethers.providers.TransactionReceipt
-  ) {
+  public getWithdrawalsInL2Transaction(l2Transaction: TransactionReceipt) {
     return BridgeHelper.getWithdrawalsInL2Transaction(
       l2Transaction,
       this.l2Provider
     )
   }
 
-  public async getDepositTokenEventData(
-    l1Transaction: ethers.providers.TransactionReceipt
-  ) {
+  public async getDepositTokenEventData(l1Transaction: TransactionReceipt) {
     const defaultGatewayAddress = (await this.l1Bridge.getDefaultL1Gateway())
       .address
     return BridgeHelper.getDepositTokenEventData(
@@ -619,7 +620,7 @@ export class Bridge {
   public async getTokenWithdrawEventData(
     l1TokenAddress: string,
     fromAddress?: string,
-    filter?: ethers.providers.Filter
+    filter?: Filter
   ) {
     const gatewayAddress = await this.l2Bridge.l2GatewayRouter.getGateway(
       l1TokenAddress
@@ -641,7 +642,7 @@ export class Bridge {
   public async getGatewayWithdrawEventData(
     gatewayAddress: string,
     fromAddress?: string,
-    filter?: ethers.providers.Filter
+    filter?: Filter
   ) {
     return BridgeHelper.getGatewayWithdrawEventData(
       this.l2Provider,
@@ -651,10 +652,7 @@ export class Bridge {
     )
   }
 
-  public async getL2ToL1EventData(
-    fromAddress: string,
-    filter?: ethers.providers.Filter
-  ) {
+  public async getL2ToL1EventData(fromAddress: string, filter?: Filter) {
     return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider, filter)
   }
 

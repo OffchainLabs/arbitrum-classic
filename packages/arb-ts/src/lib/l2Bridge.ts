@@ -15,22 +15,21 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, providers, ethers } from 'ethers'
-import { ArbSys } from './abi/ArbSys'
+
+import { Provider } from '@ethersproject/abstract-provider'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumber } from '@ethersproject/bignumber'
+import { PayableOverrides } from '@ethersproject/contracts'
+
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
+import { ArbSys } from './abi/ArbSys'
+import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__factory'
 import { StandardArbERC20 } from './abi/StandardArbERC20'
 import { ICustomToken } from './abi/ICustomToken'
-import { ICustomToken__factory } from './abi/factories/ICustomToken__factory'
 import { L2GatewayRouter__factory } from './abi/factories/L2GatewayRouter__factory'
 import { L2GatewayRouter } from './abi/L2GatewayRouter'
-import { L2ERC20Gateway } from './abi/L2ERC20Gateway'
-
-import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__factory'
-import { IArbToken } from './abi/IArbToken'
-import { IArbToken__factory } from './abi/factories/IArbToken__factory'
 import { ArbRetryableTx__factory } from './abi/factories/ArbRetryableTx__factory'
 import { ArbRetryableTx } from './abi/ArbRetryableTx'
-import { PayableOverrides } from '@ethersproject/contracts'
 
 import {
   ARB_SYS_ADDRESS,
@@ -53,7 +52,7 @@ export class L2Bridge {
   arbSys: ArbSys
   l2GatewayRouter: L2GatewayRouter
   l2Tokens: Tokens
-  l2Provider: providers.Provider
+  l2Provider: Provider
   arbRetryableTx: ArbRetryableTx
   walletAddressCache?: string
 
