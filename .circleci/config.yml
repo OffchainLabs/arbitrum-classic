@@ -212,6 +212,7 @@ jobs:
   backend:
     docker:
       - image: offchainlabs/backend-base:0.3.2
+    parallelism: 4
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -232,19 +233,27 @@ jobs:
       - restore_cache: *restore_go_cache
       - run:
           name: test arb-util
-          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
+          command: |
+            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES $PACKAGE_NAMES
           working_directory: /home/user/project/packages/arb-util
       - run:
           name: test arb-avm-cpp
-          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-cpp.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
+          command: |
+            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-cpp.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES $PACKAGE_NAMES
           working_directory: /home/user/project/packages/arb-avm-cpp
       - run:
           name: test arb-evm
-          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-evm.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
+          command: |
+            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-evm.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES $PACKAGE_NAMES
           working_directory: /home/user/project/packages/arb-evm
       - run:
           name: test arb-node-core
-          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-node-core.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
+          command: |
+            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-node-core.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES $PACKAGE_NAMES
           working_directory: /home/user/project/packages/arb-node-core
       - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
@@ -253,6 +262,7 @@ jobs:
   backend-rpc:
     docker:
       - image: offchainlabs/backend-base:0.3.2
+    parallelism: 4
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -273,7 +283,9 @@ jobs:
       - restore_cache: *restore_go_cache
       - run:
           name: test arb-rpc-node
-          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
+          command: |
+            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+            gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES $PACKAGE_NAMES
           working_directory: /home/user/project/packages/arb-rpc-node
       - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
