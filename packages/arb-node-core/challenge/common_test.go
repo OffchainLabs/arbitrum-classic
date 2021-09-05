@@ -46,13 +46,12 @@ func executeChallenge(
 	challengedAssertion *core.Assertion,
 	correctLookup core.ArbCoreLookup,
 	falseLookup core.ArbCoreLookup,
-	asserterMayFail bool,
 	client *ethutils.SimulatedEthClient,
 	tester *ethbridgetestcontracts.ChallengeTester,
 	seqInboxAddr ethcommon.Address,
 	asserterWallet *ethbridge.ValidatorWallet,
 	challengerWallet *ethbridge.ValidatorWallet,
-) (int, []Move) {
+) ([]Move, error) {
 	ctx := context.Background()
 
 	challengeAddress, err := tester.Challenge(&bind.CallOpts{})
@@ -100,11 +99,10 @@ func executeChallenge(
 		} else {
 			move, err := asserter.HandleConflict(ctx)
 			moves = append(moves, move)
-			if asserterMayFail && err != nil {
+			if err != nil {
 				t.Logf("Asserter failed challenge: %v", err.Error())
-				return rounds, moves
+				return moves, err
 			}
-			test.FailIfError(t, err)
 			arbTx, err := asserterWallet.ExecuteTransactions(ctx, asserterBackend)
 			test.FailIfError(t, err)
 			client.Commit()
@@ -127,7 +125,7 @@ func executeChallenge(
 	}
 
 	checkChallengeCompleted(t, tester, challengerWallet.Address().ToEthAddress(), asserterWallet.Address().ToEthAddress())
-	return rounds, moves
+	return moves, nil
 }
 
 func checkTurn(t *testing.T, challenge *ethbridge.ChallengeWatcher, turn ethbridge.ChallengeTurn) {
