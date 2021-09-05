@@ -3,9 +3,12 @@ import { Provider } from '@ethersproject/providers'
 import { Signer, BigNumber, BigNumberish } from 'ethers'
 import { ContractTransaction, PayableOverrides } from '@ethersproject/contracts'
 import { BytesLike } from '@ethersproject/bytes'
+import { Interface } from '@ethersproject/abi'
+import { Log } from '@ethersproject/abstract-provider'
 
 import { RollupUserFacet, RollupAdminFacet } from '../../build/types'
 import { hexDataLength } from '@ethersproject/bytes'
+import { LogDescription } from 'ethers/lib/utils'
 
 const zerobytes32 =
   '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -173,6 +176,69 @@ export function makeAssertion(
   }
 }
 
+async function nodeFromNodeCreatedLog(
+  blockNumber: number,
+  log: LogDescription
+): Promise<{ node: Node; event: NodeCreatedEvent }> {
+  if (log.name != 'NodeCreated') {
+    throw Error('wrong event type')
+  }
+  const parsedEv = log as any as {
+    args: NodeCreatedEvent
+  }
+  const ev = parsedEv.args
+  const node = {
+    proposedBlock: blockNumber,
+    assertion: {
+      beforeState: {
+        machineHash: ev.assertionBytes32Fields[0][0],
+        inboxCount: ev.assertionIntFields[0][1],
+        gasUsed: ev.assertionIntFields[0][0],
+        sendCount: ev.assertionIntFields[0][2],
+        logCount: ev.assertionIntFields[0][3],
+        sendAcc: ev.assertionBytes32Fields[0][1],
+        logAcc: ev.assertionBytes32Fields[0][2],
+      },
+      afterState: {
+        machineHash: ev.assertionBytes32Fields[1][0],
+        inboxCount: ev.assertionIntFields[1][1],
+        gasUsed: ev.assertionIntFields[1][0],
+        sendCount: ev.assertionIntFields[1][2],
+        logCount: ev.assertionIntFields[1][3],
+        sendAcc: ev.assertionBytes32Fields[1][1],
+        logAcc: ev.assertionBytes32Fields[1][2],
+      },
+    },
+    inboxMaxCount: ev.inboxMaxCount,
+    nodeHash: ev.nodeHash,
+  }
+  const event = parsedEv.args
+  return { node, event }
+}
+
+async function nodeFromTx(
+  abi: Interface,
+  tx: ContractTransaction
+): Promise<{ node: Node; event: NodeCreatedEvent }> {
+  const receipt = await tx.wait()
+  if (receipt.logs == undefined) {
+    throw Error('expected receipt to have logs')
+  }
+  const evs = receipt.logs
+    .map(log => {
+      try {
+        return abi.parseLog(log)
+      } catch (e) {
+        return undefined
+      }
+    })
+    .filter(ev => ev && ev.name == 'NodeCreated')
+  if (evs.length != 1) {
+    throw Error('unique event not found')
+  }
+  return nodeFromNodeCreatedLog(receipt.blockNumber, evs[0]!)
+}
+
 export class RollupContract {
   constructor(public rollup: RollupUserFacet) {}
 
@@ -220,27 +286,7 @@ export class RollupContract {
       parentNode.inboxMaxCount,
       batchProof
     )
-    const receipt = await tx.wait()
-    if (receipt.logs == undefined) {
-      throw Error('expected receipt to have logs')
-    }
-
-    const ev = this.rollup.interface.parseLog(
-      receipt.logs[receipt.logs.length - 1]
-    )
-    if (ev.name != 'NodeCreated') {
-      throw 'wrong event type'
-    }
-    const parsedEv = ev as any as {
-      args: NodeCreatedEvent
-    }
-    const node = {
-      assertion: assertion,
-      proposedBlock: receipt.blockNumber!,
-      inboxMaxCount: parsedEv.args.inboxMaxCount,
-      nodeHash: newNodeHash,
-    }
-    const event = parsedEv.args
+    const { node, event } = await nodeFromTx(this.rollup.interface, tx)
     return { tx, node, event }
   }
 
@@ -360,32 +406,6 @@ export async function forceCreateNode(
     prevNode.inboxMaxCount,
     prevNodeIndex
   )
-  const receipt = await tx.wait()
-  if (receipt.logs == undefined) {
-    throw Error('expected receipt to have logs')
-  }
-
-  const evs = receipt.logs
-    .map(log => {
-      try {
-        return rollupAdmin.interface.parseLog(log)
-      } catch (e) {
-        return undefined
-      }
-    })
-    .filter(ev => ev && ev.name == 'NodeCreated')
-  if (evs.length != 1) {
-    throw Error('unique event not found')
-  }
-  const parsedEv = evs[0] as any as {
-    args: NodeCreatedEvent
-  }
-  const node = {
-    assertion: assertion,
-    proposedBlock: receipt.blockNumber!,
-    inboxMaxCount: parsedEv.args.inboxMaxCount,
-    nodeHash: newNodeHash,
-  }
-  const event = parsedEv.args
+  const { node, event } = await nodeFromTx(rollupAdmin.interface, tx)
   return { tx, node, event }
 }

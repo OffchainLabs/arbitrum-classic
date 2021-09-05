@@ -223,14 +223,6 @@ function makeSimpleAssertion(
   return makeAssertion(prevState, gasUsed, zerobytes32, [], [], [])
 }
 
-function makeSimpleAssertion2(
-  prevState: ExecutionState,
-  gasUsed: BigNumberish,
-  sends: BytesLike[] = []
-): Assertion {
-  return makeAssertion(prevState, gasUsed, zerobytes32, [], sends, [])
-}
-
 async function makeNode(
   rollup: RollupContract,
   parentNode: Node,
@@ -238,10 +230,15 @@ async function makeNode(
   sends: BytesLike[] = []
 ): Promise<{ tx: ContractTransaction; node: Node }> {
   const block = await ethers.provider.getBlock('latest')
-  const assertion = makeSimpleAssertion2(
+  const gasUsed =
+    (block.number - parentNode.proposedBlock + 1) * avmGasSpeedLimitPerBlock
+  const assertion = makeAssertion(
     parentNode.assertion.afterState,
-    (block.number - parentNode.proposedBlock + 1) * avmGasSpeedLimitPerBlock,
-    sends
+    gasUsed,
+    zerobytes32,
+    [],
+    sends,
+    []
   )
   const { tx, node, event } = await rollup.stakeOnNewNode(
     parentNode,
@@ -250,6 +247,7 @@ async function makeNode(
     '0x',
     prevNode
   )
+  expect(node.assertion).to.eql(assertion)
   assert.equal(event.nodeHash, node.nodeHash)
   assert.equal(event.executionHash, assertionExecutionHash(node.assertion))
   return { tx, node }
@@ -837,6 +835,7 @@ describe('ArbRollup', () => {
       prevNode,
       prevLatestConfirmed
     )
+    expect(forceCreatedNode1.assertion).to.eql(assertion)
 
     const adminNodeNum = await rollup.rollup.latestNodeCreated()
     const midLatestConfirmed = await rollup.rollup.latestConfirmed()
