@@ -26,7 +26,7 @@
     "test:fork:coverage": "SHOULD_FORK=1 hardhat coverage --testfiles 'test/*.fork.ts'",
     "test:coverage": "hardhat coverage --testfiles 'test/*.spec.ts'",
     "lint:js": "eslint .",
-    "lint:solidity": "solhint 'contracts/**/*.sol'",
+    "lint:solidity": "solhint --ignore-path .solhint-ignore-8 'contracts/**/*.sol' && solhint -c .solhint-8.json 'contracts/validator/GasRefunder.sol'",
     "lint": "yarn lint:solidity && yarn lint:js",
     "format": "prettier './**/*.{js,json,md,ts,yml,sol}' --write && yarn lint --fix",
     "run:local:geth": "./scripts/run-geth && rm -rf deployments/parity && yarn deploy:live --network parity",
