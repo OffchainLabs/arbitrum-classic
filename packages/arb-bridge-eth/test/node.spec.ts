@@ -17,7 +17,7 @@
 /* eslint-env node, mocha */
 import { ethers, run, deployments } from 'hardhat'
 
-import { NodeFactory } from '../build/types/NodeFactory'
+import { NodeFactory } from '../build/types'
 
 let nodeFactory: NodeFactory
 describe('NodeFactory', () => {

@@ -1,17 +1,11 @@
 import { ethers } from 'hardhat'
-import { Provider } from '@ethersproject/providers'
-import { Signer, BigNumber, BigNumberish } from 'ethers'
+import { Interface, LogDescription } from '@ethersproject/abi'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumberish, BigNumber } from '@ethersproject/bignumber'
+import { BytesLike, hexDataLength } from '@ethersproject/bytes'
 import { ContractTransaction, PayableOverrides } from '@ethersproject/contracts'
-import { BytesLike } from '@ethersproject/bytes'
-import { Interface } from '@ethersproject/abi'
-import { Log } from '@ethersproject/abstract-provider'
-
+import { Provider } from '@ethersproject/providers'
 import { RollupUserFacet, RollupAdminFacet } from '../../build/types'
-import { hexDataLength } from '@ethersproject/bytes'
-import { LogDescription } from 'ethers/lib/utils'
-
-const zerobytes32 =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
 
 export interface ExecutionState {
   machineHash: BytesLike
@@ -45,17 +39,6 @@ export function nodeHash(
   return ethers.utils.solidityKeccak256(
     ['bool', 'bytes32', 'bytes32', 'bytes32'],
     [hasSibling, lastHash, assertionExecHash, inboxAcc]
-  )
-}
-
-function challengeRootHash(
-  execution: BytesLike,
-  gasUsed: BigNumberish,
-  maxMessageCount: BigNumberish
-): BytesLike {
-  return ethers.utils.solidityKeccak256(
-    ['bytes32', 'uint256', 'uint256'],
-    [execution, gasUsed, maxMessageCount]
   )
 }
 
@@ -290,7 +273,10 @@ export class RollupContract {
     return { tx, node, event }
   }
 
-  stakeOnExistingNode(nodeNum: BigNumberish, nodeHash: BytesLike) {
+  stakeOnExistingNode(
+    nodeNum: BigNumberish,
+    nodeHash: BytesLike
+  ): Promise<ContractTransaction> {
     return this.rollup.stakeOnExistingNode(nodeNum, nodeHash)
   }
 

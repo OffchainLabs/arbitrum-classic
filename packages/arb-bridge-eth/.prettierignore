@@ -4,3 +4,5 @@ coverage
 deployments
 dist
 slither.db.json
+test/proofs
+test/challenges

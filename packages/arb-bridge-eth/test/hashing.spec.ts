@@ -18,7 +18,7 @@
 
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
-import { HashingTester } from '../build/types/HashingTester'
+import { HashingTester } from '../build/types'
 
 const { utils } = ethers
 

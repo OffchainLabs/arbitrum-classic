@@ -17,13 +17,10 @@
 /* eslint-env node, mocha */
 
 import { ethers } from 'hardhat'
-import { assert, expect } from 'chai'
-import { ValueTester } from '../build/types/ValueTester'
+import { assert } from 'chai'
+import { ValueTester } from '../build/types'
 
 import testCases from './test_cases.json'
-
-const testVal =
-  '0x5345325345325345325345325345325345325345325345325345325345325435'
 
 describe('Value', () => {
   let valueTester: ValueTester

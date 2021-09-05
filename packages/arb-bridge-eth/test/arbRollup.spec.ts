@@ -16,14 +16,13 @@
 
 /* eslint-env node, mocha */
 import { ethers, deployments, run } from 'hardhat'
-import { Signer, BigNumberish, Contract, BytesLike, BigNumber } from 'ethers'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumberish, BigNumber } from '@ethersproject/bignumber'
+import { BytesLike, hexConcat, zeroPad } from '@ethersproject/bytes'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { assert, expect } from 'chai'
-import { Challenge } from '../build/types/Challenge'
-// import { RollupTester } from '../build/types/RollupTester'
+import { Challenge, RollupAdminFacet, RollupUserFacet } from '../build/types'
 import { initializeAccounts } from './utils'
-import { hexConcat, zeroPad } from '@ethersproject/bytes'
-import { RollupAdminFacet, RollupUserFacet } from '../build/types'
 
 import {
   Node,
@@ -54,9 +53,6 @@ const ZERO_ADDR = ethers.constants.AddressZero
 
 let rollup: RollupContract
 let rollupAdmin: RollupAdminFacet
-let challenge: Challenge
-// let rollupTester: RollupTester
-// let assertionInfo: Assertion
 let accounts: Signer[]
 
 type RollupConfig = [
@@ -272,11 +268,6 @@ const initNewRollup = async () => {
     logCount: 0,
     sendAcc: zerobytes32,
     logAcc: zerobytes32,
-  }
-  const initialNodeState = {
-    execState: initialExecState,
-    proposedBlock: blockCreated,
-    inboxMaxCount: 1,
   }
   const initialAssertion = makeAssertion(
     initialExecState,
@@ -896,7 +887,7 @@ describe('ArbRollup', () => {
       .connect(accounts[1])
       .newStake({ value: await rollup.currentRequiredStake() })
 
-    const { node } = await makeSimpleNode(rollup.connect(accounts[1]), prevNode)
+    await makeSimpleNode(rollup.connect(accounts[1]), prevNode)
   })
 
   it('should not allow node to be re initialized', async function () {
