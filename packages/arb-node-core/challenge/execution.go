@@ -305,3 +305,11 @@ type TimeoutMove struct {
 func (m *TimeoutMove) execute(ctx context.Context, challenge *ethbridge.Challenge) error {
 	return challenge.Timeout(ctx)
 }
+
+func (m *TimeoutMove) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Kind string
+	}{
+		Kind: "Timeout",
+	})
+}

@@ -25,7 +25,7 @@ contract BridgeMock is Bridge {
         activeOutbox = msg.sender;
     }
 
-    function deliverMessageToInbox(
+    function deliverMessageToInboxTest(
         uint8 kind,
         address sender,
         uint256 blockNumber,

@@ -85,7 +85,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
             kind,
             sender,
             blockNumber,
-            blockTimestamp, // solhint-disable-line not-rely-on-time
+            blockTimestamp,
             count,
             gasPrice,
             messageDataHash
