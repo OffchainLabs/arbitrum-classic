@@ -15,20 +15,25 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, providers, constants, utils } from 'ethers'
+
+import { defaultAbiCoder } from '@ethersproject/abi'
+import { Provider } from '@ethersproject/abstract-provider'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumber } from '@ethersproject/bignumber'
+import { PayableOverrides } from '@ethersproject/contracts'
+import constants from '@ethersproject/constants'
+
 import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
 import { L1GatewayRouter } from './abi/L1GatewayRouter'
-import { L1ERC20Gateway } from './abi/L1ERC20Gateway'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
-
-import { Inbox } from './abi/Inbox'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
+import { Inbox } from './abi/Inbox'
+import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { ERC20 } from './abi/ERC20'
+
 import networks from './networks'
 
-import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { addressToSymbol } from './bridge_helpers'
-import { PayableOverrides } from '@ethersproject/contracts'
 
 const MIN_APPROVAL = constants.MaxUint256
 //TODO handle address update / lowercase
@@ -63,7 +68,7 @@ export class L1Bridge {
   walletAddressCache?: string
   inboxCached?: Inbox
   l1Tokens: Tokens
-  l1Provider: providers.Provider
+  l1Provider: Provider
   chainIdCache?: number
 
   constructor(l1GatewayRouterAddress: string, l1Signer: Signer) {
@@ -243,7 +248,7 @@ export class L1Bridge {
     if (!tokenData.ERC20) {
       throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
     }
-    const data = utils.defaultAbiCoder.encode(
+    const data = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
     )
