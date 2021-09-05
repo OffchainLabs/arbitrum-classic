@@ -25,7 +25,6 @@ import "../libraries/Precompiles.sol";
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
 contract OneStepProofHash is OneStepProofCommon {
-
     uint64 internal constant BLAKE2BF_BASE_GAS_COST = 10;
     uint64 internal constant BLAKE2BF_ROUND_GAS_COST = 10;
     uint256 internal constant BLAKE2BF_DATA_LENGTH = 213;
@@ -115,13 +114,17 @@ contract OneStepProofHash is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        require(context.proof.length == context.offset + BLAKE2BF_DATA_LENGTH, "WRONG_BLAKE2F_BADDATA");
+        require(
+            context.proof.length == context.offset + BLAKE2BF_DATA_LENGTH,
+            "WRONG_BLAKE2F_BADDATA"
+        );
         bytes memory blake2fData = new bytes(BLAKE2BF_DATA_LENGTH);
         for (uint256 i = 0; i < BLAKE2BF_DATA_LENGTH; i++) {
             blake2fData[i] = context.proof[context.offset + i];
         }
         bytes32 bufferHash = Hashing.bytesToBufferHash(blake2fData, 0, BLAKE2BF_DATA_LENGTH);
         require(val.hash() == bufferHash, "WRONG_BLAKE2F_BADDATA");
+        require(blake2fData[212] == 0x01 || blake2fData[212] == 0, "WRONG_BLAKE2F_BADDATA");
 
         // rounds is a big-endian uint32_t we trim at 0xffff
         if (blake2fData[0] != 0 || blake2fData[1] != 0) {
@@ -130,7 +133,7 @@ contract OneStepProofHash is OneStepProofCommon {
             blake2fData[2] = 0xff;
             blake2fData[3] = 0xff;
         }
-        uint rounds = (uint(uint8(blake2fData[2])) << 8) | uint(uint8(blake2fData[3]));
+        uint256 rounds = (uint256(uint8(blake2fData[2])) << 8) | uint256(uint8(blake2fData[3]));
 
         //calculate gas
         if (deductGas(context, uint64(BLAKE2BF_ROUND_GAS_COST * rounds))) {
@@ -146,13 +149,27 @@ contract OneStepProofHash is OneStepProofCommon {
         bytes memory result = new bytes(BLAKE2BF_RESULT_LENGTH);
         bool success;
         assembly {
-            success := staticcall(sub(gas(), 2000), 0x09, blake2fData, BLAKE2BF_DATA_LENGTH, result, BLAKE2BF_RESULT_LENGTH)
+            success := staticcall(
+                sub(gas(), 2000),
+                0x09,
+                add(blake2fData, 32),
+                BLAKE2BF_DATA_LENGTH,
+                add(result, 32),
+                BLAKE2BF_RESULT_LENGTH
+            )
         }
         if (!success) {
-                handleOpcodeError(context);
+            handleOpcodeError(context);
         }
-        bytes32 resultHash = Hashing.bytesToBufferHash(result, 0, BLAKE2BF_RESULT_LENGTH);
-        pushVal(context.stack, Value.newBuffer(resultHash));
+        (bytes32 resultMerkle, ) = Hashing.merkleRoot(
+            result,
+            BLAKE2BF_RESULT_LENGTH,
+            0,
+            Hashing.roundUpToPow2(BLAKE2BF_RESULT_LENGTH),
+            true
+        );
+
+        pushVal(context.stack, Value.newBuffer(resultMerkle));
     }
 
     function opInfo(uint256 opCode)
@@ -176,6 +193,9 @@ contract OneStepProofHash is OneStepProofCommon {
             return (1, 0, 600, executeKeccakFInsn);
         } else if (opCode == OP_SHA256_F) {
             return (3, 0, 250, executeSha256FInsn);
+        } else if (opCode == OP_RSVD_RIPEMD) {
+            //not yet supported
+            return (0, 0, ERROR_GAS_COST, handleOpcodeError);
         } else if (opCode == OP_BLAKE2B_F) {
             return (1, 0, 10, executeBlake2bFInsn);
         } else {

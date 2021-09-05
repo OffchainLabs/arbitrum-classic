@@ -534,8 +534,8 @@ uint32_t blake2F_numrounds(const Buffer& b) {
     if (b.lastIndex() > 212) {
         throw bad_pop_type{};
     }
-    if (b.size() < 32) {
-        throw bad_pop_type{};
+    if (b.size() < 4) {
+        return 0;
     }
     uint32_t rounds =
         endian_load<uint32_t, 4, order::big>(b.get_many(0, 4).data());

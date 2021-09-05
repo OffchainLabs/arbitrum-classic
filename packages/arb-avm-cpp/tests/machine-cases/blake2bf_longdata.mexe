@@ -1,7 +1,7 @@
 {"version":2,"static_val":{"Tuple":[]},"extensions":[],"code":[
   {"opcode": 160, "immediate": null, "_comment": "newbuffer"},
   {"opcode":  59, "immediate": {"Int": "2"}, "_comment": "noop to push a 2 to the stack (the value for setbuffer8)"},
-  {"opcode":  59, "immediate": {"Int": "3"}, "_comment": "noop to push a 3 to the stack (the index into the buffer for setbuffer8)"},
-  {"opcode": 164, "immediate": null, "_comment": "setbuffer8 to set byte 3 to 2"},
+  {"opcode":  59, "immediate": {"Int": "250"}, "_comment": "noop to push a 3 to the stack (the index into the buffer for setbuffer8)"},
+  {"opcode": 164, "immediate": null, "_comment": "setbuffer8 to set byte 250 to 2"},
   {"opcode":  38, "immediate": null, "_comment": "blake2bf"}
 ]}

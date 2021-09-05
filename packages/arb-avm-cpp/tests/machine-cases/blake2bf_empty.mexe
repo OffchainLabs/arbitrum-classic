@@ -1,0 +1,4 @@
+{"version":2,"static_val":{"Tuple":[]},"extensions":[],"code":[
+  {"opcode": 160, "immediate": null, "_comment": "newbuffer"},
+  {"opcode":  38, "immediate": null, "_comment": "blake2bf"}
+]}

@@ -75,6 +75,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
     uint8 internal constant OP_ETHHASH2 = 0x22;
     uint8 internal constant OP_KECCAK_F = 0x23;
     uint8 internal constant OP_SHA256_F = 0x24;
+    uint8 internal constant OP_RSVD_RIPEMD = 0x25; //not yet supported
     uint8 internal constant OP_BLAKE2B_F = 0x26;
 
     // Stack, Memory, Storage and Flow Operations
@@ -164,8 +165,13 @@ abstract contract OneStepProofCommon is IOneStepProof {
             bytes32[4] memory fields
         )
     {
-        AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridges);
+        AssertionContext memory context = initializeExecutionContext(
+            initialMessagesRead,
+            accs,
+            proof,
+            bproof,
+            bridges
+        );
 
         executeOp(context);
 
@@ -179,8 +185,13 @@ abstract contract OneStepProofCommon is IOneStepProof {
         bytes calldata proof,
         bytes calldata bproof
     ) external view override returns (string memory startMachine, string memory afterMachine) {
-        AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridges);
+        AssertionContext memory context = initializeExecutionContext(
+            initialMessagesRead,
+            accs,
+            proof,
+            bproof,
+            bridges
+        );
 
         executeOp(context);
         startMachine = Machine.toString(context.startMachine);

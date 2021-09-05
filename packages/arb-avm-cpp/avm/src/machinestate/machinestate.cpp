@@ -272,14 +272,19 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
         if (!buffer) {
             return;
         }
-        if (buffer->data_length() > 213 || buffer->data_length() < 4) {
+
+        if (buffer->data_length() > 213) {
             // bad size for buffer
             return;
         }
         auto blake2fData = buffer->toFlatVector();
         blake2fData.resize(213, 0);
+        if (blake2fData[213] != 0 && blake2fData[213] != 1) {
+            // illegal value
+            return;
+        }
         proof.standard_proof.insert(proof.standard_proof.end(),
-                                    blake2fData.begin(),  blake2fData.end());
+                                    blake2fData.begin(), blake2fData.end());
         return;
     }
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
