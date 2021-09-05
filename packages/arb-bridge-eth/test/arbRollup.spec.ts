@@ -954,7 +954,7 @@ describe('ArbRollup', () => {
     prevNode = node
   })
 
-  it('should confirm node with sends and it should take under 3 million gas', async function () {
+  it('should confirm node with sends and it should take under 3 million gas [ @skip-on-coverage ]', async function () {
     await tryAdvanceChain(confirmationPeriodBlocks * 2)
     const { beforeState: prevExecState, afterState: postExecState } =
       prevNode.assertion
