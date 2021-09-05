@@ -16,7 +16,8 @@
 
 /* eslint-env node, mocha */
 import { ethers } from 'hardhat'
-import { BigNumber, Signer } from 'ethers'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumber } from '@ethersproject/bignumber'
 import { expect } from 'chai'
 import { Challenge } from '../build/types'
 import { initializeAccounts } from './utils'

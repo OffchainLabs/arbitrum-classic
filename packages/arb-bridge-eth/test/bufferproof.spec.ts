@@ -18,7 +18,7 @@
 
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
-import { BufferProofTester } from '../build/types/BufferProofTester'
+import { BufferProofTester } from '../build/types'
 
 const { utils } = ethers
 

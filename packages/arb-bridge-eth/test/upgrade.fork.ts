@@ -1,8 +1,7 @@
-import { ethers, deployments, run, network } from 'hardhat'
-import { assert, expect } from 'chai'
-import { networks } from 'arb-ts/src/lib/networks'
+import { ethers, network } from 'hardhat'
+import { expect } from 'chai'
 import { CurrentDeployments } from 'arb-upgrades/types'
-import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs'
+import { readFileSync } from 'fs'
 
 describe('Mainnet fork', () => {
   it('should upgrade rollup contract correctly', async function () {

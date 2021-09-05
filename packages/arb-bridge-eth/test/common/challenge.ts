@@ -17,7 +17,7 @@
 /* eslint-env node, mocha */
 
 import { ethers } from 'hardhat'
-import { BigNumberish, BigNumber } from 'ethers'
+import { BigNumberish, BigNumber } from '@ethersproject/bignumber'
 import { BytesLike } from '@ethersproject/bytes'
 import { ContractTransaction } from '@ethersproject/contracts'
 

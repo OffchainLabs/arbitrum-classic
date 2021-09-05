@@ -17,14 +17,16 @@
 /* eslint-env node, mocha */
 
 import { ethers } from 'hardhat'
-import { BigNumber, BigNumberish } from 'ethers'
-import { TransactionReceipt } from '@ethersproject/providers'
+import { BigNumberish, BigNumber } from '@ethersproject/bignumber'
 import { BytesLike } from '@ethersproject/bytes'
+import { TransactionReceipt } from '@ethersproject/providers'
 import { expect, assert } from 'chai'
-import { OneStepProofTester } from '../build/types/OneStepProofTester'
-import { IOneStepProof } from '../build/types/IOneStepProof'
-import { Bridge } from '../build/types/Bridge'
-import { SequencerInbox } from '../build/types/SequencerInbox'
+import {
+  Bridge,
+  IOneStepProof,
+  OneStepProofTester,
+  SequencerInbox,
+} from '../build/types'
 import * as fs from 'fs'
 
 const { utils } = ethers
