@@ -1,8 +1,8 @@
 import { Bridge, BridgeHelper, networks } from '../src'
 import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
 
-import yargs from 'yargs/yargs'
 import dotenv from 'dotenv'
+import args from './getCLargs'
 dotenv.config()
 
 const pk = process.env['DEVNET_PRIVKEY'] as string
@@ -25,8 +25,7 @@ export const instantiateBridge = async (
       )
   }
 
-  const argv = yargs(process.argv.slice(2)).argv
-  let networkID = argv.networkID as number
+  let networkID = args.networkID
   if (!networkID) {
     verbose &&
       console.log(

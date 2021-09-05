@@ -513,8 +513,12 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        bytes32 res =
-            setBuffer8(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
+        bytes32 res = setBuffer8(
+            val1.bufferHash,
+            val2.intVal,
+            val3.intVal,
+            decodeProof(context.bufProof)
+        );
         pushVal(context.stack, Value.newBuffer(res));
     }
 
@@ -530,8 +534,12 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        bytes32 res =
-            setBuffer64(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
+        bytes32 res = setBuffer64(
+            val1.bufferHash,
+            val2.intVal,
+            val3.intVal,
+            decodeProof(context.bufProof)
+        );
         pushVal(context.stack, Value.newBuffer(res));
     }
 
@@ -547,8 +555,12 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        bytes32 res =
-            setBuffer256(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
+        bytes32 res = setBuffer256(
+            val1.bufferHash,
+            val2.intVal,
+            val3.intVal,
+            decodeProof(context.bufProof)
+        );
         pushVal(context.stack, Value.newBuffer(res));
     }
 

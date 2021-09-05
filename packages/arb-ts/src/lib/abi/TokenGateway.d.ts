@@ -217,7 +217,7 @@ export class TokenGateway extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
+    ): Promise<void>
 
     getOutboundCalldata(
       _token: string,

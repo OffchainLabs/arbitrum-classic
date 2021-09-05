@@ -119,38 +119,32 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: '_token',
+        name: '',
         type: 'address',
       },
       {
         internalType: 'address',
-        name: '_from',
+        name: '',
         type: 'address',
       },
       {
         internalType: 'address',
-        name: '_to',
+        name: '',
         type: 'address',
       },
       {
         internalType: 'uint256',
-        name: '_amount',
+        name: '',
         type: 'uint256',
       },
-      {
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'finalizeInboundTransfer',
-    outputs: [
       {
         internalType: 'bytes',
         name: '',
         type: 'bytes',
       },
     ],
+    name: 'finalizeInboundTransfer',
+    outputs: [],
     stateMutability: 'payable',
     type: 'function',
   },

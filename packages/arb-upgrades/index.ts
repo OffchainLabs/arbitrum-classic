@@ -66,18 +66,13 @@ export const initUpgrades = (
   }> => {
     const network = await hre.ethers.provider.getNetwork()
     const path = `${rootDir}/_deployments/${network.chainId}_queued-updates.json`
-    try {
-      const jsonBuff = readFileSync(path)
-      return { path, data: JSON.parse(jsonBuff.toString()) as QueuedUpdates }
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        console.log('New network; creating queued updates file')
-        writeFileSync(path, JSON.stringify({}))
-        return { path, data: {} }
-      } else {
-        throw err
-      }
+    if (!existsSync(path)) {
+      console.log('New network; creating queued updates file')
+      writeFileSync(path, JSON.stringify({}))
+      return { path, data: {} }
     }
+    const jsonBuff = readFileSync(path)
+    return { path, data: JSON.parse(jsonBuff.toString()) as QueuedUpdates }
   }
 
   const getDeployments = async (): Promise<{
@@ -86,19 +81,14 @@ export const initUpgrades = (
   }> => {
     const network = await hre.ethers.provider.getNetwork()
     const path = `${rootDir}/_deployments/${network.chainId}_current_deployment.json`
-    try {
-      const jsonBuff = readFileSync(path)
-      return {
-        path,
-        data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
-      }
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        console.log(
-          'New network; need to set up _current_deployments.json file'
-        )
-      }
-      throw err
+    if (!existsSync(path)) {
+      console.log('New network; need to set up _current_deployments.json file')
+      throw Error('No current deployments')
+    }
+    const jsonBuff = readFileSync(path)
+    return {
+      path,
+      data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
     }
   }
 
@@ -502,10 +492,15 @@ export const initUpgrades = (
         success = false
       }
       //  check implementation
-      let implementation = await hre.ethers.provider.getStorageAt(
-        deploymentData.proxyAddress,
-        IMPLEMENTATION_SLOT
+      let rawImplementation = await hre.ethers.provider.send(
+        'eth_getStorageAt',
+        [deploymentData.proxyAddress, IMPLEMENTATION_SLOT, 'latest']
       )
+      rawImplementation =
+        rawImplementation.length % 2 === 1
+          ? '0x0' + rawImplementation.substr(2)
+          : rawImplementation
+      let implementation = hre.ethers.utils.hexlify(rawImplementation)
       if (implementation.length > 42) {
         implementation =
           '0x' + implementation.substr(implementation.length - 40, 40)
@@ -662,6 +657,7 @@ export const initUpgrades = (
     transferAdmin,
     transferBeaconOwner,
     removeBuildInfoFiles,
+    getDeployments,
     verifyDeployments,
   }
 }

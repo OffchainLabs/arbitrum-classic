@@ -30,7 +30,11 @@ import "./ChallengeLib.sol";
 contract Challenge is Cloneable, IChallenge {
     using SafeMath for uint256;
 
-    enum Turn { NoChallenge, Asserter, Challenger }
+    enum Turn {
+        NoChallenge,
+        Asserter,
+        Challenger
+    }
 
     event InitiatedChallenge();
     event Bisected(
@@ -76,7 +80,7 @@ contract Challenge is Cloneable, IChallenge {
     // This is the root of a merkle tree with nodes like (prev, next, steps)
     bytes32 public challengeState;
 
-    modifier onlyOnTurn {
+    modifier onlyOnTurn() {
         require(msg.sender == currentResponder(), BIS_SENDER);
         require(block.number.sub(lastMoveBlock) <= currentResponderTimeLeft(), BIS_DEADLINE);
 
@@ -154,8 +158,8 @@ contract Challenge is Cloneable, IChallenge {
         if (_chainHashes[_chainHashes.length - 1] != UNREACHABLE_ASSERTION) {
             require(_challengedSegmentLength > 1, "TOO_SHORT");
         }
-        uint256 challengeExecutionBisectionDegree =
-            resultReceiver.challengeExecutionBisectionDegree();
+        uint256 challengeExecutionBisectionDegree = resultReceiver
+            .challengeExecutionBisectionDegree();
         require(
             _chainHashes.length ==
                 bisectionDegree(_challengedSegmentLength, challengeExecutionBisectionDegree) + 1,
@@ -174,13 +178,12 @@ contract Challenge is Cloneable, IChallenge {
             "invalid segment length"
         );
 
-        bytes32 bisectionHash =
-            ChallengeLib.bisectionChunkHash(
-                _challengedSegmentStart,
-                _challengedSegmentLength,
-                _chainHashes[0],
-                _oldEndHash
-            );
+        bytes32 bisectionHash = ChallengeLib.bisectionChunkHash(
+            _challengedSegmentStart,
+            _challengedSegmentLength,
+            _chainHashes[0],
+            _oldEndHash
+        );
         require(
             ChallengeLib.verifySegmentProof(
                 challengeState,
@@ -191,12 +194,11 @@ contract Challenge is Cloneable, IChallenge {
             BIS_PREV
         );
 
-        bytes32 newChallengeState =
-            ChallengeLib.updatedBisectionRoot(
-                _chainHashes,
-                _challengedSegmentStart,
-                _challengedSegmentLength
-            );
+        bytes32 newChallengeState = ChallengeLib.updatedBisectionRoot(
+            _chainHashes,
+            _challengedSegmentStart,
+            _challengedSegmentLength
+        );
         challengeState = newChallengeState;
 
         emit Bisected(
@@ -218,13 +220,12 @@ contract Challenge is Cloneable, IChallenge {
     ) external onlyOnTurn {
         bytes32 beforeChainHash = ChallengeLib.assertionHash(_gasUsedBefore, _assertionRest);
 
-        bytes32 bisectionHash =
-            ChallengeLib.bisectionChunkHash(
-                _challengedSegmentStart,
-                _challengedSegmentLength,
-                beforeChainHash,
-                _oldEndHash
-            );
+        bytes32 bisectionHash = ChallengeLib.bisectionChunkHash(
+            _challengedSegmentStart,
+            _challengedSegmentLength,
+            beforeChainHash,
+            _oldEndHash
+        );
         require(
             ChallengeLib.verifySegmentProof(
                 challengeState,
@@ -267,8 +268,9 @@ contract Challenge is Cloneable, IChallenge {
     ) external onlyOnTurn {
         bytes32 rootHash;
         {
-            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
-                executors[prover].executeStep(
+            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) = executors[
+                prover
+            ].executeStep(
                     bridges,
                     _initialMessagesRead,
                     _initialAccs,

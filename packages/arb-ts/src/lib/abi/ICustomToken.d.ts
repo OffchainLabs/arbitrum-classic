@@ -22,11 +22,16 @@ import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 interface ICustomTokenInterface extends ethers.utils.Interface {
   functions: {
     'balanceOf(address)': FunctionFragment
+    'isArbitrumEnabled()': FunctionFragment
     'registerTokenOnL2(address,uint256,uint256,uint256,address)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'isArbitrumEnabled',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'registerTokenOnL2',
     values: [string, BigNumberish, BigNumberish, BigNumberish, string]
@@ -37,6 +42,10 @@ interface ICustomTokenInterface extends ethers.utils.Interface {
   ): string
 
   decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'isArbitrumEnabled',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'registerTokenOnL2',
     data: BytesLike
@@ -95,6 +104,8 @@ export class ICustomToken extends BaseContract {
   functions: {
     balanceOf(account: string, overrides?: CallOverrides): Promise<[BigNumber]>
 
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<[number]>
+
     registerTokenOnL2(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
@@ -114,6 +125,8 @@ export class ICustomToken extends BaseContract {
 
   balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
 
+  isArbitrumEnabled(overrides?: CallOverrides): Promise<number>
+
   registerTokenOnL2(
     l2CustomTokenAddress: string,
     maxSubmissionCost: BigNumberish,
@@ -132,6 +145,8 @@ export class ICustomToken extends BaseContract {
 
   callStatic: {
     balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<number>
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,
@@ -155,6 +170,8 @@ export class ICustomToken extends BaseContract {
   estimateGas: {
     balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
 
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<BigNumber>
+
     registerTokenOnL2(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
@@ -177,6 +194,8 @@ export class ICustomToken extends BaseContract {
       account: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    isArbitrumEnabled(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,

@@ -67,7 +67,7 @@ function getProver(op: number) {
   }
 }
 
-describe.only('OneStepProof', function () {
+describe('OneStepProof', function () {
   before(async () => {
     const OneStepProofTester = await ethers.getContractFactory(
       'OneStepProofTester'

@@ -24,7 +24,7 @@
     "@openzeppelin/contracts-upgradeable": "3.4.0",
     "@openzeppelin/upgrades-core": "^1.7.6",
     "@types/chai": "^4.2.15",
-    "@types/mocha": "^8.2.0",
+    "@types/mocha": "^9.0.0",
     "@types/node": "^14.14.28",
     "arbos-contracts": "^1.0.0",
     "chai": "^4.2.0",
@@ -32,7 +32,7 @@
     "ethers": "^5.4.5",
     "hardhat": "^2.6.1",
     "sol2uml": "^1.1.25",
-    "ts-node": "^9.1.1",
+    "ts-node": "^10.2.1",
     "typechain": "^5.1.2",
     "typescript": "^4.2.2"
   },

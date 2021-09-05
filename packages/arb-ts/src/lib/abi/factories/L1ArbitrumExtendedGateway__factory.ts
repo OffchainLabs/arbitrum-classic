@@ -51,43 +51,6 @@ const _abi = [
     anonymous: false,
     inputs: [
       {
-        indexed: false,
-        internalType: 'bool',
-        name: 'success',
-        type: 'bool',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'callHookData',
-        type: 'bytes',
-      },
-    ],
-    name: 'TransferAndCallTriggered',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
         indexed: true,
         internalType: 'address',
         name: '_from',
@@ -280,27 +243,8 @@ const _abi = [
       },
     ],
     name: 'finalizeInboundTransfer',
-    outputs: [
-      {
-        internalType: 'bytes',
-        name: '',
-        type: 'bytes',
-      },
-    ],
+    outputs: [],
     stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'gasReserveIfCallRevert',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'pure',
     type: 'function',
   },
   {
@@ -374,39 +318,6 @@ const _abi = [
       },
     ],
     stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: '_l2Address',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'inboundEscrowAndCall',
-    outputs: [],
-    stateMutability: 'nonpayable',
     type: 'function',
   },
   {

@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "0.0.35",
+  "version": "0.0.36",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -41,7 +41,6 @@
     "@ethersproject/bytes": "^5.0.8",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@types/promise-poller": "^1.7.0",
-    "@uniswap/token-lists": "^1.0.0-beta.24",
     "dotenv": "^10.0.0",
     "ethers": "^5.1.0"
   },
@@ -50,21 +49,24 @@
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",
-    "@types/mocha": "^7.0.2",
+    "@types/mocha": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
+    "@uniswap/token-lists": "^1.0.0-beta.25",
+    "ajv": "^8.6.2",
+    "ajv-formats": "^2.1.1",
     "axios": "^0.21.1",
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",
     "chalk": "^4.1.0",
-    "ethereum-waffle": "^2.3.0",
+    "ethereum-waffle": "^3.4.0",
     "install-peers-cli": "^2.2.0",
-    "mocha": "^7.2.0",
+    "mocha": "^9.1.1",
     "nyc": "^15.1.0",
     "typedoc": "^0.21.5",
     "typedoc-plugin-markdown": "^3.10.4",
     "typescript": "^4.2.2",
-    "yargs": "^16.2.0"
+    "yargs": "^17.1.1"
   },
   "files": [
     "dist/**/*"

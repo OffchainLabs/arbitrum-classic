@@ -8,7 +8,7 @@ import "./IRollupFacets.sol";
 abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
 
-    modifier onlyValidator {
+    modifier onlyValidator() {
         require(isValidator[msg.sender], "NOT_VALIDATOR");
         _;
     }
@@ -156,7 +156,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @param assertionBytes32Fields Assertion data for creating
      * @param assertionIntFields Assertion data for creating
      * @param beforeProposedBlock Block number at previous assertion
-     * @param beforeInboxMaxCount Inbox count at previous assertion 
+     * @param beforeInboxMaxCount Inbox count at previous assertion
      * @param sequencerBatchProof Proof data for ensuring expected state of inbox (used in Nodehash to protect against reorgs)
      */
     function stakeOnNewNode(
@@ -169,14 +169,13 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     ) external onlyValidator whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
-        RollupLib.Assertion memory assertion =
-            RollupLib.decodeAssertion(
-                assertionBytes32Fields,
-                assertionIntFields,
-                beforeProposedBlock,
-                beforeInboxMaxCount,
-                sequencerBridge.messageCount()
-            );
+        RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
+            assertionBytes32Fields,
+            assertionIntFields,
+            beforeProposedBlock,
+            beforeInboxMaxCount,
+            sequencerBridge.messageCount()
+        );
 
         {
             uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
@@ -318,30 +317,26 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         );
 
         // Calculate upper limit for allowed node proposal time:
-        uint256 commonEndTime =
-            getNode(node1.prev())
-                .firstChildBlock() // Dispute start: dispute timer for a node starts when its first child is created
-                .add(
-                node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
-            );
+        uint256 commonEndTime = getNode(node1.prev()).firstChildBlock().add( // Dispute start: dispute timer for a node starts when its first child is created
+            node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
+        );
         if (commonEndTime < proposedTimes[1]) {
             // The 2nd node was created too late; loses challenge automatically.
             completeChallengeImpl(stakers[0], stakers[1]);
             return;
         }
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
-        address challengeAddress =
-            challengeFactory.createChallenge(
-                address(this),
-                executionHashes[0],
-                maxMessageCounts[0],
-                stakers[0],
-                stakers[1],
-                commonEndTime.sub(proposedTimes[0]),
-                commonEndTime.sub(proposedTimes[1]),
-                sequencerBridge,
-                delayedBridge
-            ); // trusted external call
+        address challengeAddress = challengeFactory.createChallenge(
+            address(this),
+            executionHashes[0],
+            maxMessageCounts[0],
+            stakers[0],
+            stakers[1],
+            commonEndTime.sub(proposedTimes[0]),
+            commonEndTime.sub(proposedTimes[1]),
+            sequencerBridge,
+            delayedBridge
+        ); // trusted external call
 
         challengeStarted(stakers[0], stakers[1], challengeAddress);
 
@@ -448,10 +443,30 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         if (_blockNumber < firstUnresolvedDeadline) {
             return baseStake;
         }
-        uint24[10] memory numerators =
-            [1, 122971, 128977, 80017, 207329, 114243, 314252, 129988, 224562, 162163];
-        uint24[10] memory denominators =
-            [1, 114736, 112281, 64994, 157126, 80782, 207329, 80017, 128977, 86901];
+        uint24[10] memory numerators = [
+            1,
+            122971,
+            128977,
+            80017,
+            207329,
+            114243,
+            314252,
+            129988,
+            224562,
+            162163
+        ];
+        uint24[10] memory denominators = [
+            1,
+            114736,
+            112281,
+            64994,
+            157126,
+            80782,
+            207329,
+            80017,
+            128977,
+            86901
+        ];
         uint256 firstUnresolvedAge = _blockNumber.sub(firstUnresolvedDeadline);
         uint256 periodsPassed = firstUnresolvedAge.mul(10).div(confirmPeriodBlocks);
         // Overflow check
