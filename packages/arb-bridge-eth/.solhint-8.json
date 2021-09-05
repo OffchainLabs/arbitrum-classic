@@ -4,6 +4,6 @@
   "rules": {
     "mark-callable-contracts": "none",
     "prettier/prettier": "error",
-    "compiler-version": ["error", "^0.6.11"]
+    "compiler-version": ["error", "^0.8.7"]
   }
 }
