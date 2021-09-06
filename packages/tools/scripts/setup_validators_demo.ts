@@ -1,6 +1,7 @@
-import * as ethers from 'ethers'
-import { EventFragment } from '@ethersproject/abi'
-import { L1Bridge, RollupCreator__factory, Inbox__factory } from 'arb-ts'
+import { JsonRpcProvider } from '@ethersproject/providers'
+import { Wallet } from '@ethersproject/wallet'
+import { parseEther } from '@ethersproject/units'
+import { Inbox__factory } from 'arb-ts'
 import * as yargs from 'yargs'
 import * as fs from 'fs-extra'
 import { setupValidatorStates } from './setup_validators'
@@ -8,7 +9,7 @@ import { setupValidatorStates } from './setup_validators'
 import * as addresses from '../../arb-bridge-eth/bridge_eth_addresses.json'
 import { execSync } from 'child_process'
 
-const provider = new ethers.providers.JsonRpcProvider('http://localhost:7545')
+const provider = new JsonRpcProvider('http://localhost:7545')
 
 const wallet = provider.getSigner(0)
 const root = '../../'
@@ -39,14 +40,14 @@ async function setupRollup(
   }
 }
 
-async function initializeWallets(count: number): Promise<ethers.Wallet[]> {
-  const wallets: ethers.Wallet[] = []
+async function initializeWallets(count: number): Promise<Wallet[]> {
+  const wallets: Wallet[] = []
   const waits = []
   for (let i = 0; i < count; i++) {
-    const newWallet = ethers.Wallet.createRandom()
+    const newWallet = Wallet.createRandom()
     const tx = {
       to: newWallet.address,
-      value: ethers.utils.parseEther('5.0'),
+      value: parseEther('5.0'),
     }
     const send = await wallet.sendTransaction(tx)
     wallets.push(newWallet)
@@ -66,7 +67,7 @@ async function initializeClientWallets(inboxAddress: string): Promise<void> {
   ]
 
   const inbox = Inbox__factory.connect(inboxAddress, wallet)
-  const amount = ethers.utils.parseEther('100')
+  const amount = parseEther('100')
 
   for (const address of addresses) {
     await inbox.depositEth(address, { value: amount })
