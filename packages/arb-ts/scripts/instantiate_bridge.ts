@@ -1,8 +1,29 @@
-import { Bridge, BridgeHelper, networks } from '../src'
-import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict'
+
+import { JsonRpcProvider } from '@ethersproject/providers'
+import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
 import args from './getCLargs'
+import { Bridge, networks } from '../src'
+import { Network } from '../src/lib/networks'
+
 dotenv.config()
 
 const pk = process.env['DEVNET_PRIVKEY'] as string
@@ -14,7 +35,7 @@ const defaultNetworkId = 4
 export const instantiateBridge = async (
   l1pkParam?: string,
   l2PkParam?: string
-) => {
+): Promise<{ bridge: Bridge; l1Network: Network; l2Network: Network }> => {
   if (!l1pkParam) {
     if (!pk && !mnemonic)
       throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
@@ -45,8 +66,8 @@ export const instantiateBridge = async (
     : network
   const l2Network = networks[l1Network.partnerChainID]
 
-  const ethProvider = new providers.JsonRpcProvider(l1Network.rpcURL)
-  const arbProvider = new providers.JsonRpcProvider(l2Network.rpcURL)
+  const ethProvider = new JsonRpcProvider(l1Network.rpcURL)
+  const arbProvider = new JsonRpcProvider(l2Network.rpcURL)
 
   const l1Signer = (() => {
     if (l1pkParam) {

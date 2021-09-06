@@ -16,10 +16,10 @@
 /* eslint-env node */
 'use strict'
 
-import { Provider } from '@ethersproject/abstract-provider'
+import { Block, Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
-import { PayableOverrides } from '@ethersproject/contracts'
+import { ContractTransaction, PayableOverrides } from '@ethersproject/contracts'
 
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { ArbSys } from './abi/ArbSys'
@@ -88,7 +88,7 @@ export class L2Bridge {
     value: BigNumber,
     destinationAddress?: string,
     overrides?: PayableOverrides
-  ) {
+  ): Promise<ContractTransaction> {
     const address = destinationAddress || (await this.getWalletAddress())
     return this.arbSys.functions.withdrawEth(address, {
       value,
@@ -96,7 +96,7 @@ export class L2Bridge {
     })
   }
 
-  public getLatestBlock() {
+  public getLatestBlock(): Promise<Block> {
     return this.l2Provider.getBlock('latest')
   }
   /**
@@ -107,7 +107,7 @@ export class L2Bridge {
     amount: BigNumber,
     destinationAddress?: string,
     overrides: PayableOverrides = {}
-  ) {
+  ): Promise<ContractTransaction> {
     const to = destinationAddress || (await this.getWalletAddress())
 
     return this.l2GatewayRouter.functions[
@@ -115,7 +115,7 @@ export class L2Bridge {
     ](erc20l1Address, to, amount, '0x', overrides)
   }
 
-  public async updateAllL2Tokens() {
+  public async updateAllL2Tokens(): Promise<Tokens> {
     for (const l1Address in this.l2Tokens) {
       const l2Address = this.l2Tokens[l1Address]?.ERC20?.contract.address
       if (l2Address) {
@@ -128,7 +128,7 @@ export class L2Bridge {
   public async getAndUpdateL2TokenData(
     erc20L1Address: string,
     l2ERC20Address: string
-  ) {
+  ): Promise<L2TokenData | undefined> {
     const tokenData = this.l2Tokens[erc20L1Address] || {
       ERC20: undefined,
       CUSTOM: undefined,
@@ -184,12 +184,14 @@ export class L2Bridge {
   //     .then(([res]) => res)
   // }
 
-  public async getGatewayAddress(erc20L1Address: string) {
+  public async getGatewayAddress(erc20L1Address: string): Promise<string> {
     return (await this.l2GatewayRouter.functions.getGateway(erc20L1Address))
       .gateway
   }
 
-  public getERC20L1Address(erc20L2Address: string) {
+  public getERC20L1Address(
+    erc20L2Address: string
+  ): Promise<string> | undefined {
     try {
       const arbERC20 = StandardArbERC20__factory.connect(
         erc20L2Address,
@@ -203,11 +205,13 @@ export class L2Bridge {
     }
   }
 
-  public getTxnSubmissionPrice(dataSize: BigNumber | number) {
+  public getTxnSubmissionPrice(
+    dataSize: BigNumber | number
+  ): Promise<[BigNumber, BigNumber]> {
     return this.arbRetryableTx.functions.getSubmissionPrice(dataSize)
   }
 
-  public async getWalletAddress() {
+  public async getWalletAddress(): Promise<string> {
     if (this.walletAddressCache) {
       return this.walletAddressCache
     }

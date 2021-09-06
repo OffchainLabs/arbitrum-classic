@@ -21,6 +21,7 @@ import {
   Provider,
   TransactionReceipt,
   Filter,
+  Log,
 } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
@@ -39,8 +40,9 @@ import { L2ArbitrumGateway__factory } from './abi/factories/L2ArbitrumGateway__f
 import { Whitelist__factory } from './abi/factories/Whitelist__factory'
 
 import { NODE_INTERFACE_ADDRESS, ARB_SYS_ADDRESS } from './precompile_addresses'
+import { NodeInterface__factory } from './abi'
 
-export const addressToSymbol = (erc20L1Address: string) => {
+export const addressToSymbol = (erc20L1Address: string): string => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
 }
 
@@ -136,6 +138,18 @@ export type ChainIdOrProvider = BigNumber | Provider
 
 const ADDRESS_ALIAS_OFFSET = '0x1111000000000000000000000000000000001111'
 
+export interface MessageBatchProofInfo {
+  proof: string[]
+  path: BigNumber
+  l2Sender: string
+  l1Dest: string
+  l2Block: BigNumber
+  l1Block: BigNumber
+  timestamp: BigNumber
+  amount: BigNumber
+  calldataForL1: string
+}
+
 /**
  * Stateless helper methods; most wrapped / accessible (and documented) via {@link Bridge}
  */
@@ -143,7 +157,7 @@ export class BridgeHelper {
   static calculateL2TransactionHash = async (
     inboxSequenceNumber: BigNumber,
     chainIdOrL2Provider: ChainIdOrProvider
-  ) => {
+  ): Promise<string> => {
     const l2ChainId = BigNumber.isBigNumber(chainIdOrL2Provider)
       ? chainIdOrL2Provider
       : BigNumber.from((await chainIdOrL2Provider.getNetwork()).chainId)
@@ -159,7 +173,7 @@ export class BridgeHelper {
     )
   }
 
-  static bitFlipSeqNum = (seqNum: BigNumber) => {
+  static bitFlipSeqNum = (seqNum: BigNumber): BigNumber => {
     return seqNum.or(BigNumber.from(1).shl(255))
   }
 
@@ -205,7 +219,7 @@ export class BridgeHelper {
   static waitForRetryableReceipt = async (
     seqNum: BigNumber,
     l2Provider: Provider
-  ) => {
+  ): Promise<TransactionReceipt> => {
     const l2RetryableHash =
       await BridgeHelper.calculateL2RetryableTransactionHash(seqNum, l2Provider)
     return l2Provider.waitForTransaction(l2RetryableHash)
@@ -214,7 +228,7 @@ export class BridgeHelper {
   static getL2Transaction = async (
     l2TransactionHash: string,
     l2Provider: Provider
-  ) => {
+  ): Promise<TransactionReceipt> => {
     const txReceipt = await l2Provider.getTransactionReceipt(l2TransactionHash)
     if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
     return txReceipt
@@ -223,7 +237,7 @@ export class BridgeHelper {
   static getL1Transaction = async (
     l1TransactionHash: string,
     l1Provider: Provider
-  ) => {
+  ): Promise<TransactionReceipt> => {
     const txReceipt = await l1Provider.getTransactionReceipt(l1TransactionHash)
     if (!txReceipt) throw new Error("Can't find L1 transaction receipt?")
     return txReceipt
@@ -231,7 +245,7 @@ export class BridgeHelper {
 
   static getBuddyDeployInL2Transaction = async (
     l2Transaction: TransactionReceipt
-  ) => {
+  ): Promise<BuddyDeployEventResult[]> => {
     const iface = new Interface([
       `event Deployed(address indexed _sender, address indexed _contract, uint256 indexed withdrawalId, bool _success)`,
     ])
@@ -267,7 +281,7 @@ export class BridgeHelper {
     l1TokenAddress: string,
     fromAddress?: string,
     filter?: Filter
-  ) {
+  ): Promise<WithdrawalInitiated[]> {
     const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
       l2Provider
@@ -279,7 +293,6 @@ export class BridgeHelper {
     const logs = await BridgeHelper.getEventLogs(
       'WithdrawalInitiated',
       gatewayContract,
-      // @ts-ignore
       topics,
       filter
     )
@@ -303,7 +316,7 @@ export class BridgeHelper {
     gatewayAddress: string,
     fromAddress?: string,
     filter?: Filter
-  ) {
+  ): Promise<WithdrawalInitiated[]> {
     const gatewayContract = L2ArbitrumGateway__factory.connect(
       gatewayAddress,
       l2Provider
@@ -315,7 +328,6 @@ export class BridgeHelper {
     const logs = await BridgeHelper.getEventLogs(
       'WithdrawalInitiated',
       gatewayContract,
-      // @ts-ignore
       topics,
       filter
     )
@@ -332,9 +344,9 @@ export class BridgeHelper {
   public static getEventLogs = (
     eventName: string,
     connectedContract: Contract,
-    topics: string | string[] = [],
+    topics: (string | string[] | null)[] = [],
     filter: Filter = {}
-  ) => {
+  ): Promise<Log[]> => {
     const iface = connectedContract.interface
     const event = iface.getEvent(eventName)
     const eventTopic = iface.getEventTopic(event)
@@ -350,7 +362,7 @@ export class BridgeHelper {
   static getGatewaySetEventData = async (
     gatewayRouterAddress: string,
     provider: Provider
-  ) => {
+  ): Promise<GatewaySet[]> => {
     const contract = L1GatewayRouter__factory.connect(
       gatewayRouterAddress,
       provider
@@ -380,7 +392,7 @@ export class BridgeHelper {
   static getCoreBridgeFromInbox = (
     inboxAddress: string,
     l1Provider: Provider
-  ) => {
+  ): Promise<string> => {
     const contract = Inbox__factory.connect(inboxAddress, l1Provider)
     return contract.functions.bridge().then(([res]) => res)
   }
@@ -388,7 +400,7 @@ export class BridgeHelper {
   static getInboxSeqNumFromContractTransaction = async (
     l1Transaction: TransactionReceipt,
     inboxAddress: string
-  ) => {
+  ): Promise<BigNumber[] | undefined> => {
     const factory = new Inbox__factory()
     const contract = factory.attach(inboxAddress)
     const iface = contract.interface
@@ -422,44 +434,13 @@ export class BridgeHelper {
     indexInBatch: BigNumber,
     l2Provider: Provider,
     retryDelay = 500
-  ): Promise<{
-    proof: Array<string>
-    path: BigNumber
-    l2Sender: string
-    l1Dest: string
-    l2Block: BigNumber
-    l1Block: BigNumber
-    timestamp: BigNumber
-    amount: BigNumber
-    calldataForL1: string
-  }> => {
-    const contractInterface = new Interface([
-      `function lookupMessageBatchProof(uint256 batchNum, uint64 index)
-          external
-          view
-          returns (
-              bytes32[] memory proof,
-              uint256 path,
-              address l2Sender,
-              address l1Dest,
-              uint256 l2Block,
-              uint256 l1Block,
-              uint256 timestamp,
-              uint256 amount,
-              bytes memory calldataForL1
-          )`,
-    ])
-    const nodeInterface = new Contract(
+  ): Promise<MessageBatchProofInfo> => {
+    const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
-      contractInterface
-    ).connect(l2Provider)
-
+      l2Provider
+    )
     try {
-      const res = await nodeInterface.callStatic.lookupMessageBatchProof(
-        batchNumber,
-        indexInBatch
-      )
-      return res
+      return nodeInterface.lookupMessageBatchProof(batchNumber, indexInBatch)
     } catch (e) {
       const expectedError = "batch doesn't exist"
       const err = e as any
@@ -486,50 +467,20 @@ export class BridgeHelper {
     }
   }
 
-  static wait = (ms: number) => new Promise(res => setTimeout(res, ms))
+  static wait = (ms: number): Promise<unknown> =>
+    new Promise(res => setTimeout(res, ms))
 
   static tryGetProofOnce = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
     l2Provider: Provider
-  ): Promise<{
-    proof: Array<string>
-    path: BigNumber
-    l2Sender: string
-    l1Dest: string
-    l2Block: BigNumber
-    l1Block: BigNumber
-    timestamp: BigNumber
-    amount: BigNumber
-    calldataForL1: string
-  } | null> => {
-    const contractInterface = new Interface([
-      `function lookupMessageBatchProof(uint256 batchNum, uint64 index)
-          external
-          view
-          returns (
-              bytes32[] memory proof,
-              uint256 path,
-              address l2Sender,
-              address l1Dest,
-              uint256 l2Block,
-              uint256 l1Block,
-              uint256 timestamp,
-              uint256 amount,
-              bytes memory calldataForL1
-          )`,
-    ])
-    const nodeInterface = new Contract(
+  ): Promise<MessageBatchProofInfo | null> => {
+    const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
-      contractInterface
-    ).connect(l2Provider)
-
+      l2Provider
+    )
     try {
-      const res = await nodeInterface.callStatic.lookupMessageBatchProof(
-        batchNumber,
-        indexInBatch
-      )
-      return res
+      return nodeInterface.lookupMessageBatchProof(batchNumber, indexInBatch)
     } catch (e) {
       const expectedError = "batch doesn't exist"
       const err = e as any
@@ -559,7 +510,7 @@ export class BridgeHelper {
     outboxAddress: string,
     l1Provider: Provider,
     retryDelay = 500
-  ) => {
+  ): Promise<void> => {
     const exists = await BridgeHelper.outboxEntryExists(
       batchNumber,
       outboxAddress,
@@ -585,7 +536,7 @@ export class BridgeHelper {
   static getActiveOutbox = async (
     rollupAddress: string,
     l1Provider: Provider
-  ) => {
+  ): Promise<string> => {
     return Rollup__factory.connect(rollupAddress, l1Provider).outbox()
   }
 
@@ -635,7 +586,7 @@ export class BridgeHelper {
     l2Provider: Provider,
     l1Signer: Signer,
     singleAttempt = false
-  ) => {
+  ): Promise<ContractTransaction> => {
     const l1Provider = l1Signer.provider
     if (!l1Provider) throw new Error('Signer must be connected to L2 provider')
 
@@ -708,7 +659,7 @@ export class BridgeHelper {
     fromAddress: string,
     l2Provider: Provider,
     filter?: Filter
-  ) => {
+  ): Promise<L2ToL1EventResult[]> => {
     const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
 
     const logs = await BridgeHelper.getEventLogs(
@@ -731,7 +682,7 @@ export class BridgeHelper {
     nodeNum: BigNumber,
     rollupAddress: string,
     l1Provider: Provider
-  ) => {
+  ): Promise<boolean> => {
     const contract = Rollup__factory.connect(rollupAddress, l1Provider)
     const logs = await BridgeHelper.getEventLogs('NodeConfirmed', contract, [
       bytes.hexZeroPad(nodeNum.toHexString(), 32),
@@ -742,7 +693,7 @@ export class BridgeHelper {
   static getNodeCreatedEvents = (
     rollupAddress: string,
     l1Provider: Provider
-  ) => {
+  ): Promise<Log[]> => {
     const contract = Rollup__factory.connect(rollupAddress, l1Provider)
     return BridgeHelper.getEventLogs('NodeCreated', contract)
   }
@@ -751,7 +702,7 @@ export class BridgeHelper {
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
     l2Provider: Provider
-  ) => {
+  ): Promise<L2ToL1EventResult[]> => {
     const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
 
     const topics = [null, null, bytes.hexZeroPad(batchNumber.toHexString(), 32)]
@@ -759,7 +710,6 @@ export class BridgeHelper {
     const logs = await BridgeHelper.getEventLogs(
       'L2ToL1Transaction',
       contract,
-      // @ts-ignore
       topics
     )
 
@@ -777,7 +727,7 @@ export class BridgeHelper {
   static calculateOutgoingMessageId = (
     path: BigNumber,
     proofLength: BigNumber
-  ) => {
+  ): string => {
     return keccak256(
       defaultAbiCoder.encode(['uint256', 'uint256'], [path, proofLength])
     )
@@ -796,7 +746,6 @@ export class BridgeHelper {
     const logs = await BridgeHelper.getEventLogs(
       'OutBoxTransactionExecuted',
       contract,
-      // @ts-ignore
       topics
     )
     const parsedData = logs.map(
@@ -857,20 +806,20 @@ export class BridgeHelper {
     address: string,
     whiteListAddress: string,
     l1Provider: Provider
-  ) {
+  ): Promise<boolean> {
     const whiteList = Whitelist__factory.connect(whiteListAddress, l1Provider)
     return whiteList.isAllowed(address)
   }
 
-  static applyL1ToL2Alias(l1Address: string) {
+  static applyL1ToL2Alias(l1Address: string): BigNumber {
     return BigNumber.from(l1Address).add(ADDRESS_ALIAS_OFFSET)
   }
 
-  static undoL1ToL2Alias(l2Address: string) {
+  static undoL1ToL2Alias(l2Address: string): BigNumber {
     return BigNumber.from(l2Address).sub(ADDRESS_ALIAS_OFFSET)
   }
 
-  static percentIncrease(num: BigNumber, increase: BigNumber) {
+  static percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
     return num.add(num.mul(increase).div(100))
   }
 }
