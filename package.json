@@ -68,8 +68,6 @@
   },
   "resolutions": {
     "eth-sig-util/ethereumjs-abi": "^0.6.8-1",
-    "typechain/truffle-v4/truffle": "^4.0.0",
-    "typechain/truffle-v5/truffle": "^5.0.0",
     "typechain/web3-v1/web3": "^1.0.0"
   }
 }
