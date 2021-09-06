@@ -14,7 +14,7 @@
     "@types/yargs": "^17.0.2",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
-    "arb-ts": "^0.0.35",
+    "arb-ts": "^0.0.36",
     "ethers": "^5.0.24",
     "fs-extra": "^10.0.0",
     "ts-node": "^10.2.1",
