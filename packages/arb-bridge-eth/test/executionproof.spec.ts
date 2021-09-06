@@ -58,9 +58,9 @@ let bridge: Bridge
 let sequencerInbox: SequencerInbox
 
 function getProver(op: number) {
-  if ((op >= 0xa1 && op <= 0xa6) || op == 0x70) {
+  if ((op >= 0xa1 && op <= 0xa6) || op == 0x70 || op == 0x26) {
     return 1
-  } else if (op >= 0x20 && op <= 0x26) {
+  } else if (op >= 0x20 && op <= 0x24) {
     return 2
   } else {
     return 0

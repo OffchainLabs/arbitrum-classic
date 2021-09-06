@@ -52,6 +52,11 @@ import "./Machine.sol";
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
 contract OneStepProof2 is OneStepProofCommon {
+    uint64 internal constant BLAKE2BF_BASE_GAS_COST = 10;
+    uint64 internal constant BLAKE2BF_ROUND_GAS_COST = 10;
+    uint256 internal constant BLAKE2BF_DATA_LENGTH = 213;
+    uint256 internal constant BLAKE2BF_RESULT_LENGTH = 64;
+
     /* solhint-disable no-inline-assembly */
 
     function makeZeros() internal pure returns (bytes32[] memory) {
@@ -564,6 +569,86 @@ contract OneStepProof2 is OneStepProofCommon {
         pushVal(context.stack, Value.newBuffer(res));
     }
 
+    function executeBlake2bFInsn(AssertionContext memory context) internal view {
+        Value.Data memory val = popVal(context.stack);
+        if (!val.isBuffer()) {
+            handleOpcodeError(context);
+            return;
+        }
+
+        // buffer too long: length (uint32) appended to the proof,
+        // bufferproof prooves the last byte.
+        if (context.proof.length == context.offset + 32) {
+            uint256 bytePosition = uint256(bytes32FromArray(context.proof, context.offset));
+            require(bytePosition < (1 << 64), "BLAKE2F_BUF_BAD_SIZE");
+            require(bytePosition >= BLAKE2BF_DATA_LENGTH, "BLAKE2F_BUF_BAD_SIZE");
+            require(
+                0 != getBuffer8(val.bufferHash, bytePosition, decodeProof(context.bufProof)),
+                "BLAKE2F_LONGBUF_ZERO"
+            );
+            // blake2f really did get a too-long buffer
+            handleOpcodeError(context);
+            return;
+        }
+        // buffer not too long:
+        // the full blake2f data, exactly 213 bytes, is appended to the proof
+        require(
+            context.proof.length == context.offset + BLAKE2BF_DATA_LENGTH,
+            "WRONG_BLAKE2F_BADDATA"
+        );
+        bytes memory blake2fData = new bytes(BLAKE2BF_DATA_LENGTH);
+        for (uint256 i = 0; i < BLAKE2BF_DATA_LENGTH; i++) {
+            blake2fData[i] = context.proof[context.offset + i];
+        }
+        bytes32 bufferHash = Hashing.bytesToBufferHash(blake2fData, 0, BLAKE2BF_DATA_LENGTH);
+        require(val.hash() == bufferHash, "WRONG_BLAKE2F_BADDATA");
+        require(blake2fData[212] == 0x01 || blake2fData[212] == 0, "WRONG_BLAKE2F_BADDATA");
+
+        // rounds is a big-endian uint32_t we trim at 0xffff
+        if (blake2fData[0] != 0 || blake2fData[1] != 0) {
+            blake2fData[0] = 0x00;
+            blake2fData[1] = 0x00;
+            blake2fData[2] = 0xff;
+            blake2fData[3] = 0xff;
+        }
+        uint256 rounds = (uint256(uint8(blake2fData[2])) << 8) | uint256(uint8(blake2fData[3]));
+
+        //calculate gas
+        if (deductGas(context, uint64(BLAKE2BF_ROUND_GAS_COST * rounds))) {
+            // When we run out of gas, we only charge for an error + gas_set
+            // That means we need to deduct the previously charged base cost here
+            context.gas -= BLAKE2BF_BASE_GAS_COST;
+            handleError(context);
+            return;
+        }
+
+        //call ETH precompile
+        bytes memory result = new bytes(BLAKE2BF_RESULT_LENGTH);
+        bool success;
+        assembly {
+            success := staticcall(
+                sub(gas(), 2000),
+                0x09,
+                add(blake2fData, 32),
+                BLAKE2BF_DATA_LENGTH,
+                add(result, 32),
+                BLAKE2BF_RESULT_LENGTH
+            )
+        }
+        if (!success) {
+            handleOpcodeError(context);
+        }
+        (bytes32 resultMerkle, ) = Hashing.merkleRoot(
+            result,
+            BLAKE2BF_RESULT_LENGTH,
+            0,
+            Hashing.roundUpToPow2(BLAKE2BF_RESULT_LENGTH),
+            true
+        );
+
+        pushVal(context.stack, Value.newBuffer(resultMerkle));
+    }
+
     function opInfo(uint256 opCode)
         internal
         pure
@@ -589,6 +674,8 @@ contract OneStepProof2 is OneStepProofCommon {
             return (3, 0, 100, executeSetBuffer256);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
+        } else if (opCode == OP_BLAKE2B_F) {
+            return (1, 0, 10, executeBlake2bFInsn);
         } else {
             revert("use another contract to handle other opcodes");
         }

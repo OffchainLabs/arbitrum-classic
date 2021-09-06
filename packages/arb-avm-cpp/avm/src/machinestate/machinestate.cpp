@@ -270,19 +270,22 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
     if (opcode == OpCode::BLAKE2BF) {
         auto buffer = std::get_if<Buffer>(&stack[0]);
         if (!buffer) {
+            // bad argument - no need to prove anything
             return;
         }
 
-        if (buffer->data_length() > 213) {
-            // bad size for buffer
+        if (buffer->lastIndex() > 213) {
+            // bad size for buffer - prove it
+            auto buf_proof = buffer->makeProof(buffer->lastIndex() - 1);
+            insertSizes(proof.buffer_proof, buf_proof.size(), 0, 0, 0);
+            proof.buffer_proof.insert(proof.buffer_proof.end(),
+                                      buf_proof.begin(), buf_proof.end());
+            marshal_uint256_t(uint256_t(buffer->lastIndex()),
+                              proof.standard_proof);
             return;
         }
         auto blake2fData = buffer->toFlatVector();
         blake2fData.resize(213, 0);
-        if (blake2fData[213] != 0 && blake2fData[213] != 1) {
-            // illegal value
-            return;
-        }
         proof.standard_proof.insert(proof.standard_proof.end(),
                                     blake2fData.begin(), blake2fData.end());
         return;
