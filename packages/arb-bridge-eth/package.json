@@ -48,7 +48,6 @@
     "dotenv": "^10.0.0",
     "ethers": "^5.4.0",
     "hardhat-deploy": "^0.9.1",
-    "ts-node": "^10.2.1",
     "typescript": "^4.2.2"
   },
   "devDependencies": {
@@ -63,14 +62,10 @@
     "@typechain/ethers-v5": "^7.0.1",
     "@typechain/hardhat": "^2.3.0",
     "@types/chai": "^4.2.11",
-    "@types/chai-as-promised": "^7.1.2",
     "@types/mocha": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
-    "audit-ci": "^4.1.0",
     "chai": "^4.2.0",
-    "chai-as-promised": "^7.1.1",
-    "dotenv-cli": "^4.0.0",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-mocha": "^9.0.0",
@@ -87,7 +82,6 @@
     "solhint": "^3.2.0",
     "solhint-plugin-prettier": "^0.0.5",
     "solidity-coverage": "v0.7.17",
-    "ts-generator": "^0.1.1",
     "typechain": "^5.1.2"
   }
 }
