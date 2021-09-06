@@ -27,11 +27,11 @@ import (
 var codeFile string
 
 func init() {
-	files, err := gotest.OpCodeTestFiles()
+	codeFileIn, err := gotest.DefaultTestFile()
 	if err != nil {
 		panic(err)
 	}
-	codeFile = files[0]
+	codeFile = codeFileIn
 }
 
 func TestCheckpoint(t *testing.T) {

@@ -17,11 +17,12 @@
 package cmachine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"math/big"
 	"os"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 func TestExecutionCursor(t *testing.T) {

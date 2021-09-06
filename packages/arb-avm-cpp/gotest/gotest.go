@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -46,6 +47,19 @@ func OpCodeTestFiles() ([]string, error) {
 	}
 
 	return filenames, nil
+}
+
+func DefaultTestFile() (string, error) {
+	fileNameList, err := OpCodeTestFiles()
+	if err != nil {
+		return "", err
+	}
+	for _, fileName := range fileNameList {
+		if strings.HasSuffix(fileName, "buffer_test.mexe") {
+			return fileName, nil
+		}
+	}
+	return fileNameList[0], nil
 }
 
 func ArbOSTestFiles() ([]string, error) {
