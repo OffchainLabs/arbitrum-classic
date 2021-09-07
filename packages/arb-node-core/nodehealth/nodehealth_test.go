@@ -84,7 +84,7 @@ func startTestingServerFail(testConfig *testConfigStruct) {
 	httpMux := http.NewServeMux()
 
 	//Readiness check that always fails
-	health.AddReadinessCheck("failing-check", func() error {
+	health.AddReadinessCheck("failing_check", func() error {
 		return fmt.Errorf("example failure")
 	})
 
@@ -99,7 +99,7 @@ func startTestingServerPass(testConfig *testConfigStruct) {
 	httpMux := http.NewServeMux()
 
 	//Readiness check that always fails
-	health.AddReadinessCheck("pass-check", func() error {
+	health.AddReadinessCheck("pass_check", func() error {
 		return nil
 	})
 
