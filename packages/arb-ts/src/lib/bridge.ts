@@ -35,6 +35,7 @@ interface RetryableGasArgs {
   maxGas?: BigNumber
   gasPriceBid?: BigNumber
   maxSubmissionPricePercentIncrease?: BigNumber
+  maxGasPercentIncrease?: BigNumber
 }
 
 function isError(error: Error): error is NodeJS.ErrnoException {
@@ -42,6 +43,8 @@ function isError(error: Error): error is NodeJS.ErrnoException {
 }
 
 const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
+const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
+
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
  */
@@ -288,20 +291,24 @@ export class Bridge {
 
     const maxGas =
       retryableGasArgs.maxGas ||
-      (
-        await nodeInterface.estimateRetryableTicket(
-          expectedL1GatewayAddress,
-          ethers.utils.parseEther('0.05').add(estimateGasCallValue),
-          l2Dest,
-          estimateGasCallValue,
-          maxSubmissionPrice,
-          sender,
-          sender,
-          0,
-          0,
-          depositCalldata
-        )
-      )[0]
+      BridgeHelper.percentIncrease(
+        (
+          await nodeInterface.estimateRetryableTicket(
+            expectedL1GatewayAddress,
+            ethers.utils.parseEther('0.05').add(estimateGasCallValue),
+            l2Dest,
+            estimateGasCallValue,
+            maxSubmissionPrice,
+            sender,
+            sender,
+            0,
+            0,
+            depositCalldata
+          )
+        )[0],
+        retryableGasArgs.maxGasPercentIncrease ||
+          BigNumber.from(DEFAULT_MAX_GAS_PERCENT_INCREASE)
+      )
 
     // calculate required forwarding gas
     let ethDeposit = overrides && (await overrides.value)
