@@ -112,6 +112,8 @@ export enum OutgoingMessageState {
 
 export type ChainIdOrProvider = BigNumber | providers.Provider
 
+const ADDRESS_ALIAS_OFFSET = '0x1111000000000000000000000000000000001111'
+
 /**
  * Stateless helper methods; most wrapped / accessible (and documented) via {@link Bridge}
  */
@@ -438,7 +440,9 @@ export class BridgeHelper {
       return res
     } catch (e) {
       const expectedError = "batch doesn't exist"
-      const actualError = e && (e.message || (e.error && e.error.message))
+      const err = e as any
+      const actualError =
+        err && (err.message || (err.error && err.error.message))
       if (actualError.includes(expectedError)) {
         console.log(
           'Withdrawal detected, but batch not created yet. Going to wait a bit.'
@@ -506,7 +510,9 @@ export class BridgeHelper {
       return res
     } catch (e) {
       const expectedError = "batch doesn't exist"
-      const actualError = e && (e.message || (e.error && e.error.message))
+      const err = e as any
+      const actualError =
+        err && (err.message || (err.error && err.error.message))
       if (actualError.includes(expectedError)) {
         console.log('Withdrawal detected, but batch not created yet.')
       } else {
@@ -840,6 +846,14 @@ export class BridgeHelper {
   ) {
     const whiteList = Whitelist__factory.connect(whiteListAddress, l1Provider)
     return whiteList.isAllowed(address)
+  }
+
+  static applyL1ToL2Alias(l1Address: string) {
+    return BigNumber.from(l1Address).add(ADDRESS_ALIAS_OFFSET)
+  }
+
+  static undoL1ToL2Alias(l2Address: string) {
+    return BigNumber.from(l2Address).sub(ADDRESS_ALIAS_OFFSET)
   }
 
   static percentIncrease(num: BigNumber, increase: BigNumber) {

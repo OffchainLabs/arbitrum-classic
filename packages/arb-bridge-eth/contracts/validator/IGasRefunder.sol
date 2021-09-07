@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +16,12 @@
  * limitations under the License.
  */
 
-#ifndef valuetype_h
-#define valuetype_h
+pragma solidity >=0.6.11 <0.7.0||>=0.8.7 <0.9.0;
 
-// Proof values will only include values types up to TUPLE + 8 (11)
-// All types declared with types creater than 11 are used for the internal
-// marshalling format Used to pass values between the AVM and the validator
-enum ValueTypes {
-    NUM,
-    CODEPT,
-    HASH_PRE_IMAGE,
-    TUPLE,
-    BUFFER = 12,
-    CODE_POINT_STUB = 13
-};
-
-#endif /* valuetype_h */
+interface IGasRefunder {
+    function onGasSpent(
+        address payable spender,
+        uint256 gasUsed,
+        uint256 calldataSize
+    ) external returns (bool success);
+}

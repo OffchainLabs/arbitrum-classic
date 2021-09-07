@@ -159,16 +159,15 @@ contract Outbox is IOutbox, Cloneable {
     ) external virtual {
         bytes32 outputId;
         {
-            bytes32 userTx =
-                calculateItemHash(
-                    l2Sender,
-                    destAddr,
-                    l2Block,
-                    l1Block,
-                    l2Timestamp,
-                    amount,
-                    calldataForL1
-                );
+            bytes32 userTx = calculateItemHash(
+                l2Sender,
+                destAddr,
+                l2Block,
+                l1Block,
+                l2Timestamp,
+                amount,
+                calldataForL1
+            );
 
             outputId = recordOutputAsSpent(batchNum, proof, index, userTx);
             emit OutBoxTransactionExecuted(destAddr, l2Sender, batchNum, index);

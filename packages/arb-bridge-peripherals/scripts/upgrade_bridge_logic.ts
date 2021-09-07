@@ -24,7 +24,7 @@ const main = async () => {
   ).deployed()
 
   const currAdmin = await proxyAdmin.getProxyAdmin(proxyAddress)
-  if(currAdmin.toLowerCase() !== proxyAdmin.address.toLowerCase())
+  if (currAdmin.toLowerCase() !== proxyAdmin.address.toLowerCase())
     throw new Error("ProxyAdmin doens't control TransparentProxy")
 
   const proxyAdminOwner = await proxyAdmin.owner()
@@ -41,35 +41,37 @@ const main = async () => {
       'You are expecting the wrong logic address for the current implementation'
     )
 
-
   // deploy new logic
-  console.log("Deploying logic contract")
+  console.log('Deploying logic contract')
   const Factory = await ethers.getContractFactory('ArbTokenBridge')
   const logicContract = await Factory.deploy()
   await logicContract.deployed()
-  console.log("Deployed logic contract")
+  console.log('Deployed logic contract')
   // Watch out as initialize is already called!
 
-  console.log("Upgrading logic contract")
-  const upgradeTx = await proxyAdmin.upgrade(proxyAddress, logicContract.address)
+  console.log('Upgrading logic contract')
+  const upgradeTx = await proxyAdmin.upgrade(
+    proxyAddress,
+    logicContract.address
+  )
   const upgradeTxReceipt = await upgradeTx.wait()
-  console.log("Upgraded logic address")
+  console.log('Upgraded logic address')
 
   // verify proxy points to new logic
-  console.log("Verifying new logic address")
+  console.log('Verifying new logic address')
   const newLogicAddress = await proxyAdmin.getProxyImplementation(proxyAddress)
 
-  if(newLogicAddress.toLowerCase() !== logicContract.address.toLowerCase() ) {
-    console.log("logicContract deployTx")
+  if (newLogicAddress.toLowerCase() !== logicContract.address.toLowerCase()) {
+    console.log('logicContract deployTx')
     console.log(logicContract.deployTransaction)
 
-    console.log("upgradeTxReceipt")
+    console.log('upgradeTxReceipt')
     console.log(upgradeTxReceipt)
 
-    throw new Error("New logic address is not correctly set.")
+    throw new Error('New logic address is not correctly set.')
   }
 
-  console.log("Upgrade success!")
+  console.log('Upgrade success!')
   console.log(`Old logic address ${oldLogicAddress}`)
   console.log(`New logic address ${logicContract.address}`)
   console.log(`In transaction ${upgradeTx.hash}`)

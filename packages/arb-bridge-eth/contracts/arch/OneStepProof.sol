@@ -264,9 +264,8 @@ contract OneStepProof is OneStepProofCommon {
     }
 
     function executeStackemptyInsn(AssertionContext memory context) internal pure {
-        bool empty =
-            context.stack.length == 0 &&
-                context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash();
+        bool empty = context.stack.length == 0 &&
+            context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash();
         pushVal(context.stack, Value.newBoolean(empty));
     }
 
@@ -283,9 +282,8 @@ contract OneStepProof is OneStepProofCommon {
     }
 
     function executeAuxstackemptyInsn(AssertionContext memory context) internal pure {
-        bool empty =
-            context.auxstack.length == 0 &&
-                context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash();
+        bool empty = context.auxstack.length == 0 &&
+            context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash();
         pushVal(context.stack, Value.newBoolean(empty));
     }
 
@@ -442,8 +440,11 @@ contract OneStepProof is OneStepProofCommon {
             (context.offset, gasPriceL1) = Marshaling.deserializeInt(proof, context.offset);
             uint256 messageDataLength;
             (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
-            bytes32 messageBufHash =
-                Hashing.bytesToBufferHash(proof, context.offset, messageDataLength);
+            bytes32 messageBufHash = Hashing.bytesToBufferHash(
+                proof,
+                context.offset,
+                messageDataLength
+            );
 
             uint256 offset = context.offset;
             bytes32 messageDataHash;

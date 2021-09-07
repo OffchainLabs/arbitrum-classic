@@ -479,8 +479,9 @@ contract RollupCore is IRollupCore {
         INode prevNode
     ) internal view returns (uint256 deadlineBlock) {
         // Set deadline rounding up to the nearest block
-        uint256 checkTime =
-            gasUsed.add(avmGasSpeedLimitPerBlock.sub(1)).div(avmGasSpeedLimitPerBlock);
+        uint256 checkTime = gasUsed.add(avmGasSpeedLimitPerBlock.sub(1)).div(
+            avmGasSpeedLimitPerBlock
+        );
 
         deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(
             checkTime
