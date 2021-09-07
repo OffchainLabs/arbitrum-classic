@@ -191,7 +191,7 @@ func startup() error {
 		}
 	}
 
-	mon, err := monitor.NewMonitor(config.GetValidatorDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
+	mon, err := monitor.NewMonitor(config.Persistent.DatabasePath, config.Rollup.Machine.Filename, &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}

@@ -239,6 +239,7 @@ type NodeCache struct {
 
 type Persistent struct {
 	Chain        string `koanf:"chain"`
+	DatabasePath string `koanf:"database-path"`
 	GlobalConfig string `koanf:"global-config"`
 }
 
@@ -325,6 +326,7 @@ type Config struct {
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
+	FileInfo           bool        `koanf:"file-info"`
 	L1                 struct {
 		ChainID int    `koanf:"chain-id"`
 		URL     string `koanf:"url"`
@@ -547,8 +549,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 	f.Uint64("l1.chain-id", 0, "if set other than 0, will be used to validate database and L1 connection")
 
-	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 	f.String("persistent.chain", "", "path that chain specific state is located")
+	f.String("persistent.database-path", defaultDatabasePathname, "path to save database in")
+	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
 	f.String("rollup.machine.filename", "", "file to load machine from")
@@ -677,6 +680,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	if len(out.Rollup.Machine.Filename) == 0 {
 		// Machine not provided, so use default
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
+	}
+
+	// Make database directory relative to persistent storage directory if not already absolute
+	if !filepath.IsAbs(out.Persistent.DatabasePath) {
+		out.Persistent.DatabasePath = path.Join(out.Persistent.Chain, out.Persistent.DatabasePath)
 	}
 
 	// Make rocksdb backup directory relative to persistent storage directory if not already absolute
@@ -1003,6 +1011,15 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	// Don't pass around wallet contents with normal configuration
 	wallet := out.Wallet
 	out.Wallet = Wallet{}
+
+	if out.FileInfo {
+		fmt.Printf("Database:         %s\n", out.Persistent.DatabasePath)
+		fmt.Printf("Database Backup:  %s\n", out.Core.SaveRocksdbPath)
+		fmt.Printf("Machine:          %s\n", out.Rollup.Machine.Filename)
+		fmt.Printf("Wallet DIrectory: %s\n", wallet.Local.Pathname)
+
+		os.Exit(0)
+	}
 
 	return &out, &wallet, nil
 }

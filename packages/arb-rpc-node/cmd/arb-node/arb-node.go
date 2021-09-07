@@ -194,7 +194,7 @@ func startup() error {
 		Int64("fromBlock", config.Rollup.FromBlock).
 		Msg("Launching arbitrum node")
 
-	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
+	mon, err := monitor.NewMonitor(config.Persistent.DatabasePath, config.Rollup.Machine.Filename, &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
