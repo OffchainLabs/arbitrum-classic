@@ -1784,7 +1784,7 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
     {
         std::shared_lock<std::shared_mutex> guard(old_machine_cache_mutex);
         auto cache_it = old_machine_cache.upper_bound(total_gas_used);
-        if (cache_it != old_machine_cache.begin()) {
+        if (cache_it != old_machine_cache.end()) {
             cache_it--;
             return ExecutionCursor(
                 std::make_unique<Machine>(*cache_it->second));
@@ -2724,7 +2724,7 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
         std::shared_lock<std::shared_mutex> lock(sideload_cache_mutex);
         // Look for the first value after the value we want
         auto it = sideload_cache.upper_bound(block_number);
-        if (it != sideload_cache.begin()) {
+        if (it != sideload_cache.end()) {
             // Go back a value to find the one we want
             it--;
             return {rocksdb::Status::OK(),
