@@ -103,7 +103,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external virtual override returns (bool success, bytes memory returnData) {
+    ) external override returns (bool success, bytes memory returnData) {
         require(allowedOutboxesMap[msg.sender].allowed, "NOT_FROM_OUTBOX");
         if (data.length > 0) require(destAddr.isContract(), "NO_CODE_AT_DEST");
         address currentOutbox = activeOutbox;
