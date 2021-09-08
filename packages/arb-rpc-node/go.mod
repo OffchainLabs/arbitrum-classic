@@ -3,6 +3,7 @@ module github.com/offchainlabs/arbitrum/packages/arb-rpc-node
 go 1.13
 
 require (
+	github.com/AppsFlyer/go-sundheit v0.5.0
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/ethereum/go-ethereum v1.10.8
 	github.com/ethersphere/bee v0.6.2
