@@ -604,12 +604,10 @@ contract OneStepProof2 is OneStepProofCommon {
         require(val.hash() == bufferHash, "WRONG_BLAKE2F_BADDATA");
         require(blake2fData[212] == 0x01 || blake2fData[212] == 0, "WRONG_BLAKE2F_BADDATA");
 
-        // rounds is a big-endian uint32_t we trim at 0xffff
+        // rounds is a big-endian uint32_t, values over 0xffff are illegal
         if (blake2fData[0] != 0 || blake2fData[1] != 0) {
-            blake2fData[0] = 0x00;
-            blake2fData[1] = 0x00;
-            blake2fData[2] = 0xff;
-            blake2fData[3] = 0xff;
+            handleOpcodeError(context);
+            return;
         }
         uint256 rounds = (uint256(uint8(blake2fData[2])) << 8) | uint256(uint8(blake2fData[3]));
 

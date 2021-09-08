@@ -540,7 +540,7 @@ uint32_t blake2F_numrounds(const Buffer& b) {
     uint32_t rounds =
         endian_load<uint32_t, 4, order::big>(b.get_many(0, 4).data());
     if (rounds > 0xffff) {
-        rounds = 0xffff;
+        throw bad_pop_type{};
     }
     return rounds;
 }
