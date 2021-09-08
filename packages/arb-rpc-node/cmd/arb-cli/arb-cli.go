@@ -42,6 +42,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
@@ -354,6 +355,23 @@ func enableValidators(rollup ethcommon.Address, validators []ethcommon.Address) 
 		return err
 	}
 	return waitForTx(tx, "CreateRollup")
+}
+
+func mostRecentNodeConfirmed(rollup ethcommon.Address) error {
+	con, err := ethbridge.NewRollupWatcher(rollup, 12525700, config.client, bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	latestConfirmed, err := con.LatestConfirmedNode(context.Background())
+	if err != nil {
+		return err
+	}
+	node, err := con.LookupNode(context.Background(), latestConfirmed)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Found creation", node.BlockProposed)
+	return nil
 }
 
 func swapValidatorOwner(walletAddress, newOwner ethcommon.Address) error {
@@ -1280,6 +1298,12 @@ func handleCommand(fields []string) error {
 		sender := ethcommon.HexToAddress(fields[1])
 		feeCollector := ethcommon.HexToAddress(fields[2])
 		return setFeeCollector(sender, feeCollector)
+	case "most-recent-confirmed":
+		if len(fields) != 2 {
+			return errors.New("Expected [rollup]")
+		}
+		rollup := ethcommon.HexToAddress(fields[1])
+		return mostRecentNodeConfirmed(rollup)
 	default:
 		fmt.Println("Unknown command")
 	}
