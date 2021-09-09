@@ -276,9 +276,9 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
             return;
         }
 
-        if (buffer->lastIndex() > 213) {
+        if (buffer->lastIndex() >= 213) {
             // bad size for buffer - prove it
-            auto buf_proof = buffer->makeProof(buffer->lastIndex() - 1);
+            auto buf_proof = buffer->makeProof(buffer->lastIndex());
             insertSizes(proof.buffer_proof, buf_proof.size(), 0, 0, 0);
             proof.buffer_proof.insert(proof.buffer_proof.end(),
                                       buf_proof.begin(), buf_proof.end());

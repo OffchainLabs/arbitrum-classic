@@ -602,7 +602,12 @@ contract OneStepProof2 is OneStepProofCommon {
         }
         bytes32 bufferHash = Hashing.bytesToBufferHash(blake2fData, 0, BLAKE2BF_DATA_LENGTH);
         require(val.hash() == bufferHash, "WRONG_BLAKE2F_BADDATA");
-        require(blake2fData[212] == 0x01 || blake2fData[212] == 0, "WRONG_BLAKE2F_BADDATA");
+
+        // The final byte must be a boolean indicating if this is the final round
+        if (uint8(blake2fData[212]) > 1) {
+            handleOpcodeError(context);
+            return;
+        }
 
         // rounds is a big-endian uint32_t, values over 0xffff are illegal
         if (blake2fData[0] != 0 || blake2fData[1] != 0) {
