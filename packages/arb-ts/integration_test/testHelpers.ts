@@ -42,7 +42,7 @@ const argv = yargs(process.argv.slice(2))
   })
   .parseSync()
 
-const networkID = argv.networkID || '4'
+const networkID = (argv.networkID as '1' | '4' | '1337') || '4'
 if (!config[networkID]) {
   throw new Error('network not supported')
 }
