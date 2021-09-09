@@ -28,22 +28,6 @@
 #include <iostream>
 #include <string>
 
-int resetAllExceptInbox(const char* db_path, const char* executable_path) {
-    try {
-        auto status = resetDBExceptInbox(db_path, executable_path);
-        if (!status.ok()) {
-            std::cerr << "Error resetting DB except inbox: "
-                      << status.ToString() << std::endl;
-            return 0;
-        }
-
-        return 1;
-    } catch (const std::exception& e) {
-        std::cerr << "Error creating storage: " << e.what() << std::endl;
-        return 0;
-    }
-}
-
 CArbStorage* createArbStorage(const char* db_path,
                               CArbCoreConfig arb_core_config) {
     auto string_filename = std::string(db_path);

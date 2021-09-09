@@ -42,7 +42,6 @@ typedef struct {
     int32_t profile_just_metadata;
 } CArbCoreConfig;
 
-int resetAllExceptInbox(const char* db_path, const char* executable_path);
 CArbStorage* createArbStorage(const char* db_path,
                               CArbCoreConfig arb_core_config);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
