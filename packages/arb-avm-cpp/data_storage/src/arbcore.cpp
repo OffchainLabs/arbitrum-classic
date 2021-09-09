@@ -162,87 +162,89 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     }
 
     if (coreConfig.profile_reset_db_except_inbox) {
-        {{ReadWriteTransaction tx(data_storage);
-        saveNextSegmentID(tx, 0);
-        auto s = tx.commit();
-        if (!s.ok()) {
-            std::cerr << "Error resetting segment: " << s.ToString()
-                      << std::endl;
-            return s;
+        {
+            ReadWriteTransaction tx(data_storage);
+            saveNextSegmentID(tx, 0);
+            auto s = tx.commit();
+            if (!s.ok()) {
+                std::cerr << "Error resetting segment: " << s.ToString()
+                          << std::endl;
+                return s;
+            }
+        }
+        {
+            auto s = data_storage->clearDBExceptInbox();
+            if (!s.ok()) {
+                std::cerr << "Error deleting columns: " << s.ToString()
+                          << std::endl;
+                return s;
+            }
         }
     }
-}
-{
-    auto s = data_storage->clearDBExceptInbox();
-    if (!s.ok()) {
-        std::cerr << "Error deleting columns: " << s.ToString() << std::endl;
-        return s;
+
+    rocksdb::Status status;
+    if (coreConfig.profile_reorg_to != 0) {
+        status = reorgToMessageCountOrBefore(coreConfig.profile_reorg_to, false,
+                                             cache);
+    } else {
+        status = reorgToMessageCountOrBefore(0, true, cache);
     }
-}
-}
+    if (status.ok()) {
+        return status;
+    }
 
-rocksdb::Status status;
-if (coreConfig.profile_reorg_to != 0) {
-    status =
-        reorgToMessageCountOrBefore(coreConfig.profile_reorg_to, false, cache);
-} else {
-    status = reorgToMessageCountOrBefore(0, true, cache);
-}
-if (status.ok()) {
-    return status;
-}
+    if (!status.IsNotFound()) {
+        std::cerr << "Error with initial reorg: " << status.ToString()
+                  << std::endl;
+        return status;
+    }
 
-if (!status.IsNotFound()) {
-    std::cerr << "Error with initial reorg: " << status.ToString() << std::endl;
-    return status;
-}
+    code->addSegment(executable.code);
+    machine = std::make_unique<MachineThread>(
+        MachineState{code, executable.static_val});
 
-code->addSegment(executable.code);
-machine =
-    std::make_unique<MachineThread>(MachineState{code, executable.static_val});
+    last_machine = std::make_unique<Machine>(*machine);
 
-last_machine = std::make_unique<Machine>(*machine);
+    ReadWriteTransaction tx(data_storage);
+    // Need to initialize database from scratch
 
-ReadWriteTransaction tx(data_storage);
-// Need to initialize database from scratch
-
-status = saveCheckpoint(tx);
-if (!status.ok()) {
-    std::cerr << "failed to save initial checkpoint into db: "
-              << status.ToString() << std::endl;
-    return status;
-}
-
-status = updateLogInsertedCount(tx, 0);
-if (!status.ok()) {
-    std::cerr << "failed to initialize log inserted count: "
-              << status.ToString() << std::endl;
-    return status;
-}
-status = updateSendInsertedCount(tx, 0);
-if (!status.ok()) {
-    std::cerr << "failed to initialize send inserted count: "
-              << status.ToString() << std::endl;
-    return status;
-}
-
-for (size_t i = 0; i < logs_cursors.size(); i++) {
-    status = logsCursorSaveCurrentTotalCount(tx, i, 0);
+    status = saveCheckpoint(tx);
     if (!status.ok()) {
-        std::cerr << "failed to initialize logscursor counts: "
+        std::cerr << "failed to save initial checkpoint into db: "
                   << status.ToString() << std::endl;
         return status;
     }
-}
 
-status = tx.commit();
-if (!status.ok()) {
-    std::cerr << "failed to commit initial state into db: " << status.ToString()
-              << std::endl;
-    return status;
-}
+    status = updateLogInsertedCount(tx, 0);
+    if (!status.ok()) {
+        std::cerr << "failed to initialize log inserted count: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
+    status = updateSendInsertedCount(tx, 0);
+    if (!status.ok()) {
+        std::cerr << "failed to initialize send inserted count: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
 
-return rocksdb::Status::OK();
+    for (size_t i = 0; i < logs_cursors.size(); i++) {
+        status = logsCursorSaveCurrentTotalCount(tx, i, 0);
+        if (!status.ok()) {
+            std::cerr << "failed to initialize logscursor counts: "
+                      << status.ToString() << std::endl;
+            return status;
+        }
+    }
+
+    status = tx.commit();
+    if (!status.ok()) {
+        std::cerr << "failed to commit initial state into db: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
+
+    return rocksdb::Status::OK();
 }
 
 bool ArbCore::initialized() const {
