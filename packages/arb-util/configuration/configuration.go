@@ -46,6 +46,8 @@ type Core struct {
 	Profile                CoreProfile   `koanf:"profile"`
 	Debug                  bool          `koanf:"debug"`
 	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
+	LazyLoadCoreMachine    bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries bool          `koanf:"lazy-load-archive-queries"`
 	MessageProcessCount    int           `koanf:"message-process-count"`
 	SaveRocksdbInterval    time.Duration `koanf:"save-rocksdb-interval"`
 	SaveRocksdbPath        string        `koanf:"save-rocksdb-path"`
@@ -57,6 +59,7 @@ type CoreCache struct {
 }
 
 type CoreProfile struct {
+	JustMetadata        bool  `koanf:"just-metadata"`
 	LoadCount           int64 `koanf:"load-count"`
 	ReorgTo             int64 `koanf:"reorg-to"`
 	ResetAllExceptInbox bool  `koanf:"reset-all-except-inbox"`

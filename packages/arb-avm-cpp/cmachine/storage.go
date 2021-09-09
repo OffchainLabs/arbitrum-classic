@@ -37,18 +37,12 @@ type ArbStorage struct {
 	c unsafe.Pointer
 }
 
-func ResetAllExceptInbox(dbPath string, execPath string) error {
-	cDbPath := C.CString(dbPath)
-	defer C.free(unsafe.Pointer(cDbPath))
-	cExecPath := C.CString(execPath)
-	defer C.free(unsafe.Pointer(cExecPath))
-
-	ok := C.resetAllExceptInbox(cDbPath, cExecPath)
-	if ok == 0 {
-		return errors.New("unable to reset all except inbox")
+func boolToCInt(b bool) C.int {
+	x := 0
+	if b {
+		x = 1
 	}
-
-	return nil
+	return C.int(x)
 }
 
 func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, error) {
@@ -58,27 +52,26 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	cSaveRocksdbPath := C.CString(coreConfig.SaveRocksdbPath)
 	defer C.free(unsafe.Pointer(cSaveRocksdbPath))
 
-	debugInt := 0
-	if coreConfig.Debug {
-		debugInt = 1
-	}
-
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
 	saveRocksdbIntervalSeconds := int(coreConfig.SaveRocksdbInterval.Seconds())
-	cArbStorage := C.createArbStorage(
-		cDbPath,
-		C.int(coreConfig.MessageProcessCount),
-		C.int(coreConfig.CheckpointLoadGasCost),
-		C.int(coreConfig.GasCheckpointFrequency),
-		C.int(cacheExpirationSeconds),
-		C.int(coreConfig.Cache.LRUSize),
-		C.int(debugInt),
-		C.int(saveRocksdbIntervalSeconds),
-		cSaveRocksdbPath,
-		C.int64_t(coreConfig.Profile.ReorgTo),
-		C.int64_t(coreConfig.Profile.RunUntil),
-		C.int64_t(coreConfig.Profile.LoadCount),
-	)
+	cConfig := C.CArbCoreConfig{
+		message_process_count:         C.int(coreConfig.MessageProcessCount),
+		checkpoint_load_gas_cost:      C.int(coreConfig.CheckpointLoadGasCost),
+		min_gas_checkpoint_frequency:  C.int(coreConfig.GasCheckpointFrequency),
+		cache_expiration_seconds:      C.int(cacheExpirationSeconds),
+		lru_cache_size:                C.int(coreConfig.Cache.LRUSize),
+		debug:                         boolToCInt(coreConfig.Debug),
+		save_rocksdb_interval:         C.int(saveRocksdbIntervalSeconds),
+		save_rocksdb_path:             cSaveRocksdbPath,
+		lazy_load_core_machine:        boolToCInt(coreConfig.LazyLoadCoreMachine),
+		lazy_load_archive_queries:     boolToCInt(coreConfig.LazyLoadArchiveQueries),
+		profile_reorg_to:              C.int(coreConfig.Profile.ReorgTo),
+		profile_run_until:             C.int(coreConfig.Profile.RunUntil),
+		profile_load_count:            C.int(coreConfig.Profile.LoadCount),
+		profile_reset_db_except_inbox: boolToCInt(coreConfig.Profile.ResetAllExceptInbox),
+	}
+
+	cArbStorage := C.createArbStorage(cDbPath, cConfig)
 
 	if cArbStorage == nil {
 		return nil, errors.Errorf("error creating ArbStorage %v", dbPath)

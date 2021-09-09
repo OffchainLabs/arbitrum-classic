@@ -59,7 +59,4 @@ class ArbStorage {
     makeReadWriteTransaction();
 };
 
-rocksdb::Status resetDBExceptInbox(const std::string& dbpath,
-                                   const std::string& arbospath);
-
 #endif /* arbstorage_hpp */

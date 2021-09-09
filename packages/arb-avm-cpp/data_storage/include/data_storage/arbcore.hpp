@@ -95,6 +95,12 @@ struct ArbCoreConfig {
     // Load specified number of machines backwards from profile_run_until
     uint64_t profile_load_count{0};
 
+    // Delete all database entries except for inbox
+    bool profile_reset_db_except_inbox{false};
+
+    // Exit after printing out metadata from database
+    bool profile_just_metadata;
+
     ArbCoreConfig() = default;
 };
 

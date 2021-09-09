@@ -46,13 +46,6 @@ type Monitor struct {
 }
 
 func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
-	if coreConfig.Profile.ResetAllExceptInbox {
-		err := cmachine.ResetAllExceptInbox(dbDir, contractFile)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	storage, err := cmachine.NewArbStorage(dbDir, coreConfig)
 	if err != nil {
 		return nil, err

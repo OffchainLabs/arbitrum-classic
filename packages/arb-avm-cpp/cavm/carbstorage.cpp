@@ -45,31 +45,28 @@ int resetAllExceptInbox(const char* db_path, const char* executable_path) {
 }
 
 CArbStorage* createArbStorage(const char* db_path,
-                              int32_t message_process_count,
-                              int32_t checkpoint_load_gas_cost,
-                              int32_t min_gas_checkpoint_frequency,
-                              int32_t cache_expiration_seconds,
-                              int32_t lru_cache_size,
-                              int32_t debug,
-                              int32_t save_rocksdb_interval,
-                              const char* save_rocksdb_path,
-                              int64_t profile_reorg_to,
-                              int64_t profile_run_until,
-                              int64_t profile_load_count) {
+                              CArbCoreConfig arb_core_config) {
     auto string_filename = std::string(db_path);
-    auto string_save_rocksdb_path = std::string(save_rocksdb_path);
+    auto string_save_rocksdb_path =
+        std::string(arb_core_config.save_rocksdb_path);
     ArbCoreConfig coreConfig{};
-    coreConfig.message_process_count = message_process_count;
-    coreConfig.checkpoint_load_gas_cost = checkpoint_load_gas_cost;
-    coreConfig.min_gas_checkpoint_frequency = min_gas_checkpoint_frequency;
-    coreConfig.timed_cache_expiration_seconds = cache_expiration_seconds;
-    coreConfig.lru_sideload_cache_size = lru_cache_size;
-    coreConfig.debug = debug;
-    coreConfig.save_rocksdb_interval = save_rocksdb_interval;
+    coreConfig.message_process_count = arb_core_config.message_process_count;
+    coreConfig.checkpoint_load_gas_cost =
+        arb_core_config.checkpoint_load_gas_cost;
+    coreConfig.min_gas_checkpoint_frequency =
+        arb_core_config.min_gas_checkpoint_frequency;
+    coreConfig.timed_cache_expiration_seconds =
+        arb_core_config.cache_expiration_seconds;
+    coreConfig.lru_sideload_cache_size = arb_core_config.lru_cache_size;
+    coreConfig.debug = arb_core_config.debug;
+    coreConfig.save_rocksdb_interval = arb_core_config.save_rocksdb_interval;
     coreConfig.save_rocksdb_path = string_save_rocksdb_path;
-    coreConfig.profile_reorg_to = profile_reorg_to;
-    coreConfig.profile_run_until = profile_run_until;
-    coreConfig.profile_load_count = profile_load_count;
+    coreConfig.profile_reorg_to = arb_core_config.profile_reorg_to;
+    coreConfig.profile_run_until = arb_core_config.profile_run_until;
+    coreConfig.profile_load_count = arb_core_config.profile_load_count;
+    coreConfig.profile_reset_db_except_inbox =
+        arb_core_config.profile_reset_db_except_inbox;
+    coreConfig.profile_just_metadata = arb_core_config.profile_just_metadata;
 
     try {
         auto storage = new ArbStorage(string_filename, coreConfig);
