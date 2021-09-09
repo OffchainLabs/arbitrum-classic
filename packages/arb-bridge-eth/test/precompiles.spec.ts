@@ -19,7 +19,7 @@
 import { ethers } from 'hardhat'
 import { BytesLike } from '@ethersproject/bytes'
 import { expect } from 'chai'
-import { PrecompilesTester } from '../build/types/PrecompilesTester'
+import { PrecompilesTester } from '../build/types'
 
 let precompilesTester: PrecompilesTester
 

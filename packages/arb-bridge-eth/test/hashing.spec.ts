@@ -17,8 +17,8 @@
 /* eslint-env node, mocha */
 
 import { ethers } from 'hardhat'
-import { use, expect } from 'chai'
-import { HashingTester } from '../build/types/HashingTester'
+import { expect } from 'chai'
+import { HashingTester } from '../build/types'
 
 const { utils } = ethers
 

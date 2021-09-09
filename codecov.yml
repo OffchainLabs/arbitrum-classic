@@ -15,8 +15,8 @@ flags:
 
 ignore:
   - 'packages/arb-rpc-node/arbostestcontracts'
-  - 'packages/arb-node-core/ethbridgecontracts'
-  - 'packages/arb-node-core/ethbridgetestcontracts'
+  - 'packages/arb-util/ethbridgecontracts'
+  - 'packages/arb-util/ethbridgetestcontracts'
   - 'packages/arb-evm/arboscontracts'
   - 'packages/arb-avm-cpp/external/keccak'
   - 'packages/arb-ts/src/lib/abi'

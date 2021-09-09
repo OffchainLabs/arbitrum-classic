@@ -1,26 +1,34 @@
-import {
-  providers,
-  utils,
-  Wallet,
-  BigNumber,
-  constants,
-  ethers,
-  ContractReceipt,
-} from 'ethers'
-import { Bridge } from '../src/lib/bridge'
-import { Network } from '../src/lib/networks'
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict'
 
 import { expect } from 'chai'
-import config from './config'
+
+import { BigNumber } from '@ethersproject/bignumber'
+
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
+
+import { Bridge } from '../src/lib/bridge'
 import { OutgoingMessageState } from '../src/lib/bridge_helpers'
 
-import chalk from 'chalk'
 import {
   fundL1,
   fundL2,
   testRetryableTicket,
-  prettyLog,
   warn,
   instantiateBridgeWithRandomWallet,
   fundL2Token,
@@ -28,7 +36,6 @@ import {
   skipIfMainnet,
   existentTestCustomToken,
 } from './testHelpers'
-const { Zero, AddressZero } = constants
 
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', function () {
@@ -116,10 +123,10 @@ const depositTokenTest = async (bridge: Bridge) => {
     bridge.l1Signer
   )
   const mintRes = await testToken.mint()
-  const mintRec = await mintRes.wait()
+  await mintRes.wait()
 
   const approveRes = await bridge.approveToken(existentTestCustomToken)
-  const approveRec = await approveRes.wait()
+  await approveRes.wait()
 
   const data = await bridge.getAndUpdateL1TokenData(existentTestCustomToken)
   const allowed = data.ERC20 && data.ERC20.allowed

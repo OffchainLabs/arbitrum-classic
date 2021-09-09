@@ -10,21 +10,17 @@
     "arbos:upgrade": "ts-node ./scripts/update-arbos.ts init"
   },
   "devDependencies": {
+    "@ethersproject/providers": "^5.4.5",
+    "@ethersproject/units": "^5.4.0",
+    "@ethersproject/wallet": "^5.4.0",
     "@types/fs-extra": "^9.0.1",
     "@types/yargs": "^17.0.2",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
-    "arb-ts": "^0.0.35",
-    "ethers": "^5.0.24",
+    "arb-ts": "^0.0.36",
     "fs-extra": "^10.0.0",
     "ts-node": "^10.2.1",
     "typescript": "^4.2.2",
     "yargs": "^17.1.1"
-  },
-  "workspaces": {
-    "nohoist": [
-      "@types/fs-extra",
-      "fs-extra"
-    ]
   }
 }
