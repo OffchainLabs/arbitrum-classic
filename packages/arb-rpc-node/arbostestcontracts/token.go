@@ -4,6 +4,7 @@
 package arbostestcontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,20 +28,31 @@ var (
 	_ = event.NewSubscription
 )
 
+// FailedERC20MetaData contains all meta data concerning the FailedERC20 contract.
+var FailedERC20MetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"adminMint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x6080604052348015600f57600080fd5b5060cf8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e58306f914602d575b600080fd5b605660048036036040811015604157600080fd5b506001600160a01b0381351690602001356058565b005b6040805162461bcd60e51b81526020600482015260116024820152706d696e7420616c77617973206661696c7360781b604482015290519081900360640190fdfea2646970667358221220ca64146f5426ebd333e3caf063afc082cee815732ed7b575cb1f3fc4220a97d564736f6c634300060c0033",
+}
+
 // FailedERC20ABI is the input ABI used to generate the binding from.
-const FailedERC20ABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"adminMint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// Deprecated: Use FailedERC20MetaData.ABI instead.
+var FailedERC20ABI = FailedERC20MetaData.ABI
 
 // FailedERC20Bin is the compiled bytecode used for deploying new contracts.
-var FailedERC20Bin = "0x6080604052348015600f57600080fd5b5060cf8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e58306f914602d575b600080fd5b605660048036036040811015604157600080fd5b506001600160a01b0381351690602001356058565b005b6040805162461bcd60e51b81526020600482015260116024820152706d696e7420616c77617973206661696c7360781b604482015290519081900360640190fdfea2646970667358221220ca64146f5426ebd333e3caf063afc082cee815732ed7b575cb1f3fc4220a97d564736f6c634300060c0033"
+// Deprecated: Use FailedERC20MetaData.Bin instead.
+var FailedERC20Bin = FailedERC20MetaData.Bin
 
 // DeployFailedERC20 deploys a new Ethereum contract, binding an instance of FailedERC20 to it.
 func DeployFailedERC20(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *FailedERC20, error) {
-	parsed, err := abi.JSON(strings.NewReader(FailedERC20ABI))
+	parsed, err := FailedERC20MetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(FailedERC20Bin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(FailedERC20Bin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -209,20 +222,31 @@ func (_FailedERC20 *FailedERC20TransactorSession) AdminMint(account common.Addre
 	return _FailedERC20.Contract.AdminMint(&_FailedERC20.TransactOpts, account, amount)
 }
 
+// FailedERC721MetaData contains all meta data concerning the FailedERC721 contract.
+var FailedERC721MetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"adminMint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x6080604052348015600f57600080fd5b5060cf8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e58306f914602d575b600080fd5b605660048036036040811015604157600080fd5b506001600160a01b0381351690602001356058565b005b6040805162461bcd60e51b81526020600482015260116024820152706d696e7420616c77617973206661696c7360781b604482015290519081900360640190fdfea26469706673582212200788e51560c6e4e15b8b7bfedf9586081b78b6989428ef7b1d4f06a380e3223464736f6c634300060c0033",
+}
+
 // FailedERC721ABI is the input ABI used to generate the binding from.
-const FailedERC721ABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"adminMint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// Deprecated: Use FailedERC721MetaData.ABI instead.
+var FailedERC721ABI = FailedERC721MetaData.ABI
 
 // FailedERC721Bin is the compiled bytecode used for deploying new contracts.
-var FailedERC721Bin = "0x6080604052348015600f57600080fd5b5060cf8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e58306f914602d575b600080fd5b605660048036036040811015604157600080fd5b506001600160a01b0381351690602001356058565b005b6040805162461bcd60e51b81526020600482015260116024820152706d696e7420616c77617973206661696c7360781b604482015290519081900360640190fdfea26469706673582212200788e51560c6e4e15b8b7bfedf9586081b78b6989428ef7b1d4f06a380e3223464736f6c634300060c0033"
+// Deprecated: Use FailedERC721MetaData.Bin instead.
+var FailedERC721Bin = FailedERC721MetaData.Bin
 
 // DeployFailedERC721 deploys a new Ethereum contract, binding an instance of FailedERC721 to it.
 func DeployFailedERC721(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *FailedERC721, error) {
-	parsed, err := abi.JSON(strings.NewReader(FailedERC721ABI))
+	parsed, err := FailedERC721MetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(FailedERC721Bin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(FailedERC721Bin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}

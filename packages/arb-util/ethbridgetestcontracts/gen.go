@@ -47,6 +47,12 @@ func RunBindingGen() error {
 		[]string{"ChallengeTester", "MachineTester", "RollupCreatorNoProxy", "RollupMock"},
 	)...)
 
+	ozBase := filepath.Join(artifactsFolder, "@openzeppelin", "contracts")
+	contracts = append(contracts, binding.GenerateContractsList(
+		filepath.Join(ozBase, "proxy"),
+		[]string{"TransparentUpgradeableProxy"},
+	)...)
+
 	for _, con := range contracts {
 		err := binding.GenerateBinding(con.File, con.Contract, "ethbridgetestcontracts")
 		if err != nil {
