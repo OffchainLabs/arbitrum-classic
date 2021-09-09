@@ -4,6 +4,7 @@
 package arbostestcontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,20 +28,31 @@ var (
 	_ = event.NewSubscription
 )
 
+// GasUsedMetaData contains all meta data concerning the GasUsed contract.
+var GasUsedMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"shouldRevert\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"fail\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"noop\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sstore\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x60806040526040516101633803806101638339818101604052602081101561002657600080fd5b5051801561007b576040805162461bcd60e51b815260206004820152601e60248201527f53686f756c646e277420686176652061736b656420746f207265766572740000604482015290519081900360640190fd5b5060d98061008a6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80635dfc2e4a146041578063703c2d1a146049578063a9cc471814604f575b600080fd5b60476055565b005b60476057565b60476062565b565b600080546001019055565b60018054810190556040805162461bcd60e51b81526020600482015260096024820152681d1e0819985a5b195960ba1b604482015290519081900360640190fdfea26469706673582212201277d08f46fceea88142fe53a937b6f37fde255d70801b6e979a512375ffa74264736f6c634300060c0033",
+}
+
 // GasUsedABI is the input ABI used to generate the binding from.
-const GasUsedABI = "[{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"shouldRevert\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"fail\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"noop\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sstore\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// Deprecated: Use GasUsedMetaData.ABI instead.
+var GasUsedABI = GasUsedMetaData.ABI
 
 // GasUsedBin is the compiled bytecode used for deploying new contracts.
-var GasUsedBin = "0x60806040526040516101633803806101638339818101604052602081101561002657600080fd5b5051801561007b576040805162461bcd60e51b815260206004820152601e60248201527f53686f756c646e277420686176652061736b656420746f207265766572740000604482015290519081900360640190fd5b5060d98061008a6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80635dfc2e4a146041578063703c2d1a146049578063a9cc471814604f575b600080fd5b60476055565b005b60476057565b60476062565b565b600080546001019055565b60018054810190556040805162461bcd60e51b81526020600482015260096024820152681d1e0819985a5b195960ba1b604482015290519081900360640190fdfea26469706673582212201277d08f46fceea88142fe53a937b6f37fde255d70801b6e979a512375ffa74264736f6c634300060c0033"
+// Deprecated: Use GasUsedMetaData.Bin instead.
+var GasUsedBin = GasUsedMetaData.Bin
 
 // DeployGasUsed deploys a new Ethereum contract, binding an instance of GasUsed to it.
 func DeployGasUsed(auth *bind.TransactOpts, backend bind.ContractBackend, shouldRevert bool) (common.Address, *types.Transaction, *GasUsed, error) {
-	parsed, err := abi.JSON(strings.NewReader(GasUsedABI))
+	parsed, err := GasUsedMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(GasUsedBin), backend, shouldRevert)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(GasUsedBin), backend, shouldRevert)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
