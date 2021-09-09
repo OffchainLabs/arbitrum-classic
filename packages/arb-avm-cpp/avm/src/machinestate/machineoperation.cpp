@@ -534,12 +534,14 @@ uint32_t blake2F_numrounds(const Buffer& b) {
     if (b.lastIndex() > 212) {
         throw bad_pop_type{};
     }
-    if (b.size() < 4) {
-        return 0;
-    }
     uint32_t rounds =
         endian_load<uint32_t, 4, order::big>(b.get_many(0, 4).data());
     if (rounds > 0xffff) {
+        throw bad_pop_type{};
+    }
+    // The last byte must represent a boolean indicating if this is the final
+    // round
+    if (b.get(212) > 1) {
         throw bad_pop_type{};
     }
     return rounds;
@@ -572,13 +574,11 @@ void blake2bF(MachineState& m) {
         currentByte += 8;
     }
     uint8_t f = *currentByte;
-    bool final_indicator;
-    if (f == 1)
-        final_indicator = 1;
-    else if (f == 0)
-        final_indicator = 0;
-    else
-        throw bad_pop_type{};
+    if (f > 1) {
+        assert(false &&
+               "final_indicator wasn't validated by blake2F_numrounds");
+    }
+    bool final_indicator = f;
 
     blake2b_F(rounds, t, final_indicator, msg, h);
 

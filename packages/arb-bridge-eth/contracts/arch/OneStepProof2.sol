@@ -638,9 +638,7 @@ contract OneStepProof2 is OneStepProofCommon {
                 BLAKE2BF_RESULT_LENGTH
             )
         }
-        if (!success) {
-            handleOpcodeError(context);
-        }
+        require(success, "BLAKE2BF_FAILURE");
         (bytes32 resultMerkle, ) = Hashing.merkleRoot(
             result,
             BLAKE2BF_RESULT_LENGTH,
