@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import dotenv from 'dotenv'
 
 import { Wallet } from '@ethersproject/wallet'
-import constants from '@ethersproject/constants'
+import { Zero } from '@ethersproject/constants'
 import { parseEther } from '@ethersproject/units'
 
 import {
@@ -101,7 +101,7 @@ describe('Ether', async () => {
       prettyLog('balance check attempt ' + (i + 1))
       await wait(5000)
       const testWalletL2EthBalance = await bridge.getL2EthBalance()
-      if (testWalletL2EthBalance.gt(constants.Zero)) {
+      if (testWalletL2EthBalance.gt(Zero)) {
         prettyLog(`balance updated!  ${testWalletL2EthBalance.toString()}`)
         expect(true).to.be.true
         return

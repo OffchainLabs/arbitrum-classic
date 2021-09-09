@@ -29,7 +29,7 @@ import {
   PayableOverrides,
 } from '@ethersproject/contracts'
 import { Logger } from '@ethersproject/logger'
-import constants from '@ethersproject/constants'
+import { Zero } from '@ethersproject/constants'
 import { parseEther } from '@ethersproject/units'
 
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
@@ -279,7 +279,7 @@ export class Bridge {
       erc20L1Address
     )
 
-    let estimateGasCallValue = constants.Zero
+    let estimateGasCallValue = Zero
 
     // if it's a weth deposit, include callvalue for the gas estimate for the retryable
     if (this.isCustomNetwork) {
