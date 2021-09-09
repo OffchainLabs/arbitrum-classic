@@ -28,6 +28,9 @@ const tokensAddresses: string[] = ((args.addresses || args.address) as string)
   .split(',')
   .map((address: string) => address.trim())
 
+if (tokensAddresses.length === 0) {
+  throw new Error('Include some tokens to set')
+}
 tokensAddresses.forEach((address: string) => {
   if (!(address.startsWith('0x') && address.length === 42)) {
     throw new Error(address + " doesn't look like a token address")
