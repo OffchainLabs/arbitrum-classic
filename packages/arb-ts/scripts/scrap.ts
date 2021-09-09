@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 /* eslint-env node */
+// import { instantiateBridge } from "./instantiate_bridge";
 'use strict'
 ;(async () => {
   // const { bridge } = await instantiateBridge()
