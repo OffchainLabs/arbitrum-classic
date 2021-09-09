@@ -23,6 +23,9 @@ const argv = yargs(process.argv.slice(2))
     address: {
       type: 'string',
     },
+    addresses: {
+      type: 'string',
+    },
     txid: {
       type: 'string',
     },

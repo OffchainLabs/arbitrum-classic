@@ -19,15 +19,23 @@
 import { setStandardGateWays } from './lib'
 import args from './getCLargs'
 
-if (!args.address) {
-  throw new Error('Include token address (--address 0xmyaddress)')
+if (!(args.address || args.addresses)) {
+  throw new Error(
+    'Include token address(es) (--address 0xmyaddress) or   (--addresses 0xmyaddress,0xmyotheraddress,0xmythirdaddress)'
+  )
 }
+const tokensAddresses: string[] = ((args.addresses || args.address) as string)
+  .split(',')
+  .map((address: string) => address.trim())
 
-const tokens: string[] = [args.address as string]
-if (tokens.length === 0) {
-  throw new Error('Include some tokens to set')
-}
+tokensAddresses.forEach((address: string) => {
+  if (!(address.startsWith('0x') && address.length === 42)) {
+    throw new Error(address + " doesn't look like a token address")
+  }
+})
 
-setStandardGateWays(tokens).then(() => {
+console.log('Setting tokens to standard gateway:', tokensAddresses)
+
+setStandardGateWays(tokensAddresses).then(() => {
   console.log('done')
 })
