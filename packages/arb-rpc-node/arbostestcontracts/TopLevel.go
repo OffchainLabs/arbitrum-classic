@@ -4,6 +4,7 @@
 package arbostestcontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,8 +28,14 @@ var (
 	_ = event.NewSubscription
 )
 
+// ArbSysMetaData contains all meta data concerning the ArbSys contract.
+var ArbSysMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"isTopLevelCall\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+}
+
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"inputs\":[],\"name\":\"isTopLevelCall\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+// Deprecated: Use ArbSysMetaData.ABI instead.
+var ArbSysABI = ArbSysMetaData.ABI
 
 // ArbSys is an auto generated Go binding around an Ethereum contract.
 type ArbSys struct {
@@ -202,20 +210,31 @@ func (_ArbSys *ArbSysCallerSession) IsTopLevelCall() (bool, error) {
 	return _ArbSys.Contract.IsTopLevelCall(&_ArbSys.CallOpts)
 }
 
+// TopLevelMetaData contains all meta data concerning the TopLevel contract.
+var TopLevelMetaData = &bind.MetaData{
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"top\",\"type\":\"bool\"}],\"name\":\"TopLevelEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"isTopLevel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nestedNotTop\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b50610173806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c806339f484b71461003b578063813c13b114610045575b600080fd5b61004361004d565b005b6100436100e8565b600060646001600160a01b03166308bd624c6040518163ffffffff1660e01b815260040160206040518083038186803b15801561008957600080fd5b505afa15801561009d573d6000803e3d6000fd5b505050506040513d60208110156100b357600080fd5b5051604051909150811515907f9cd8e0cef591b8295292293a053ccf65910a134f855c5fdb104fe56fa1d0722d90600090a250565b306001600160a01b03166339f484b76040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561012357600080fd5b505af1158015610137573d6000803e3d6000fd5b5050505056fea2646970667358221220451e18e5c6fb7a8f3facbd6fbecfbb9134c3b40eb7fcc8904b58b0ed97b375f364736f6c634300060c0033",
+}
+
 // TopLevelABI is the input ABI used to generate the binding from.
-const TopLevelABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"top\",\"type\":\"bool\"}],\"name\":\"TopLevelEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"isTopLevel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nestedNotTop\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// Deprecated: Use TopLevelMetaData.ABI instead.
+var TopLevelABI = TopLevelMetaData.ABI
 
 // TopLevelBin is the compiled bytecode used for deploying new contracts.
-var TopLevelBin = "0x608060405234801561001057600080fd5b50610173806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c806339f484b71461003b578063813c13b114610045575b600080fd5b61004361004d565b005b6100436100e8565b600060646001600160a01b03166308bd624c6040518163ffffffff1660e01b815260040160206040518083038186803b15801561008957600080fd5b505afa15801561009d573d6000803e3d6000fd5b505050506040513d60208110156100b357600080fd5b5051604051909150811515907f9cd8e0cef591b8295292293a053ccf65910a134f855c5fdb104fe56fa1d0722d90600090a250565b306001600160a01b03166339f484b76040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561012357600080fd5b505af1158015610137573d6000803e3d6000fd5b5050505056fea2646970667358221220451e18e5c6fb7a8f3facbd6fbecfbb9134c3b40eb7fcc8904b58b0ed97b375f364736f6c634300060c0033"
+// Deprecated: Use TopLevelMetaData.Bin instead.
+var TopLevelBin = TopLevelMetaData.Bin
 
 // DeployTopLevel deploys a new Ethereum contract, binding an instance of TopLevel to it.
 func DeployTopLevel(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *TopLevel, error) {
-	parsed, err := abi.JSON(strings.NewReader(TopLevelABI))
+	parsed, err := TopLevelMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(TopLevelBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(TopLevelBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
