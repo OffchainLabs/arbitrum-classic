@@ -4,6 +4,7 @@
 package arbostestcontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,20 +28,31 @@ var (
 	_ = event.NewSubscription
 )
 
+// ConstructorCallbackMetaData contains all meta data concerning the ConstructorCallback contract.
+var ConstructorCallbackMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"dataLength\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"dataLength\",\"type\":\"address\"}],\"name\":\"TestEvent2\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"data\",\"type\":\"address\"}],\"name\":\"test\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x608060408190523681527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a1336001600160a01b03166366e41cb76040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561006a57600080fd5b505af115801561007e573d6000803e3d6000fd5b5050505060c7806100906000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063bb29998e14602d575b600080fd5b605060048036036020811015604157600080fd5b50356001600160a01b03166052565b005b604080516001600160a01b038316815290517fba829c4567200650d8324f5576706bb44be221bc498741a8ddaa9a2739407b7d9181900360200190a15056fea2646970667358221220bd86493538c1d9a00ae7c9a3a334b1dd6ae55f8122422647d819a53637f4e3db64736f6c634300060c0033",
+}
+
 // ConstructorCallbackABI is the input ABI used to generate the binding from.
-const ConstructorCallbackABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"dataLength\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"dataLength\",\"type\":\"address\"}],\"name\":\"TestEvent2\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"data\",\"type\":\"address\"}],\"name\":\"test\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// Deprecated: Use ConstructorCallbackMetaData.ABI instead.
+var ConstructorCallbackABI = ConstructorCallbackMetaData.ABI
 
 // ConstructorCallbackBin is the compiled bytecode used for deploying new contracts.
-var ConstructorCallbackBin = "0x608060408190523681527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a1336001600160a01b03166366e41cb76040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561006a57600080fd5b505af115801561007e573d6000803e3d6000fd5b5050505060c7806100906000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063bb29998e14602d575b600080fd5b605060048036036020811015604157600080fd5b50356001600160a01b03166052565b005b604080516001600160a01b038316815290517fba829c4567200650d8324f5576706bb44be221bc498741a8ddaa9a2739407b7d9181900360200190a15056fea2646970667358221220dc241cdf7845b7fdaaaab29fea9f4e5de294eb5ed17f7a4b4e26de97500d9c4464736f6c634300060c0033"
+// Deprecated: Use ConstructorCallbackMetaData.Bin instead.
+var ConstructorCallbackBin = ConstructorCallbackMetaData.Bin
 
 // DeployConstructorCallback deploys a new Ethereum contract, binding an instance of ConstructorCallback to it.
 func DeployConstructorCallback(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ConstructorCallback, error) {
-	parsed, err := abi.JSON(strings.NewReader(ConstructorCallbackABI))
+	parsed, err := ConstructorCallbackMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ConstructorCallbackBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(ConstructorCallbackBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -477,20 +490,31 @@ func (_ConstructorCallback *ConstructorCallbackFilterer) ParseTestEvent2(log typ
 	return event, nil
 }
 
+// ConstructorCallback2MetaData contains all meta data concerning the ConstructorCallback2 contract.
+var ConstructorCallback2MetaData = &bind.MetaData{
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"returnData\",\"type\":\"bytes\"}],\"name\":\"TestEvent3\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"test\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"test2\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b5061037c806100206000396000f3fe6080604052600436106100295760003560e01c806366e41cb71461002e578063f8a8fd6d14610038575b600080fd5b610036610040565b005b6100366101b6565b6040805133602480830182905283518084039091018152604490920183526020820180516001600160e01b0316635d94ccc760e11b1781529251825160009460609492918291908083835b602083106100aa5780518252601f19909201916020918201910161008b565b6001836020036101000a0380198251168184511680821785525050505050509050019150506000604051808303816000865af19150503d806000811461010c576040519150601f19603f3d011682016040523d82523d6000602084013e610111565b606091505b50915091508115157fe7713ed83c9f3ef742bc9aec2c297f6bc4c7be68042d4aa69be6ba74848d1882826040518080602001828103825283818151815260200191508051906020019080838360005b83811015610178578181015183820152602001610160565b50505050905090810190601f1680156101a55780820380516001836020036101000a031916815260200191505b509250505060405180910390a25050565b6040516101c2906101e2565b604051809103906000f0801580156101de573d6000803e3d6000fd5b5050565b610157806101f08339019056fe608060408190523681527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a1336001600160a01b03166366e41cb76040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561006a57600080fd5b505af115801561007e573d6000803e3d6000fd5b5050505060c7806100906000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063bb29998e14602d575b600080fd5b605060048036036020811015604157600080fd5b50356001600160a01b03166052565b005b604080516001600160a01b038316815290517fba829c4567200650d8324f5576706bb44be221bc498741a8ddaa9a2739407b7d9181900360200190a15056fea2646970667358221220bd86493538c1d9a00ae7c9a3a334b1dd6ae55f8122422647d819a53637f4e3db64736f6c634300060c0033a26469706673582212204f85473267682fe0de9ce65ceec2d8ed6b6cbeba40b9baa15b090627566612cd64736f6c634300060c0033",
+}
+
 // ConstructorCallback2ABI is the input ABI used to generate the binding from.
-const ConstructorCallback2ABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"returnData\",\"type\":\"bytes\"}],\"name\":\"TestEvent3\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"test\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"test2\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+// Deprecated: Use ConstructorCallback2MetaData.ABI instead.
+var ConstructorCallback2ABI = ConstructorCallback2MetaData.ABI
 
 // ConstructorCallback2Bin is the compiled bytecode used for deploying new contracts.
-var ConstructorCallback2Bin = "0x608060405234801561001057600080fd5b5061037c806100206000396000f3fe6080604052600436106100295760003560e01c806366e41cb71461002e578063f8a8fd6d14610038575b600080fd5b610036610040565b005b6100366101b6565b6040805133602480830182905283518084039091018152604490920183526020820180516001600160e01b0316635d94ccc760e11b1781529251825160009460609492918291908083835b602083106100aa5780518252601f19909201916020918201910161008b565b6001836020036101000a0380198251168184511680821785525050505050509050019150506000604051808303816000865af19150503d806000811461010c576040519150601f19603f3d011682016040523d82523d6000602084013e610111565b606091505b50915091508115157fe7713ed83c9f3ef742bc9aec2c297f6bc4c7be68042d4aa69be6ba74848d1882826040518080602001828103825283818151815260200191508051906020019080838360005b83811015610178578181015183820152602001610160565b50505050905090810190601f1680156101a55780820380516001836020036101000a031916815260200191505b509250505060405180910390a25050565b6040516101c2906101e2565b604051809103906000f0801580156101de573d6000803e3d6000fd5b5050565b610157806101f08339019056fe608060408190523681527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a1336001600160a01b03166366e41cb76040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561006a57600080fd5b505af115801561007e573d6000803e3d6000fd5b5050505060c7806100906000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063bb29998e14602d575b600080fd5b605060048036036020811015604157600080fd5b50356001600160a01b03166052565b005b604080516001600160a01b038316815290517fba829c4567200650d8324f5576706bb44be221bc498741a8ddaa9a2739407b7d9181900360200190a15056fea2646970667358221220dc241cdf7845b7fdaaaab29fea9f4e5de294eb5ed17f7a4b4e26de97500d9c4464736f6c634300060c0033a2646970667358221220a462b1a9d732c4322f32afeb3a520e81ccc720954479b9c40a40c9d28393137c64736f6c634300060c0033"
+// Deprecated: Use ConstructorCallback2MetaData.Bin instead.
+var ConstructorCallback2Bin = ConstructorCallback2MetaData.Bin
 
 // DeployConstructorCallback2 deploys a new Ethereum contract, binding an instance of ConstructorCallback2 to it.
 func DeployConstructorCallback2(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ConstructorCallback2, error) {
-	parsed, err := abi.JSON(strings.NewReader(ConstructorCallback2ABI))
+	parsed, err := ConstructorCallback2MetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ConstructorCallback2Bin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(ConstructorCallback2Bin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}

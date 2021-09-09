@@ -34,4 +34,12 @@ contract Transfer {
     function send2(address payable wrapped) external {
         Transfer(wrapped).send();
     }
+
+    function send3() external {
+        address(this).transfer(1);
+    }
+
+    function send4(uint256 gas) external {
+        address(this).call{ value: 1 }{ gas: gas }("");
+    }
 }
