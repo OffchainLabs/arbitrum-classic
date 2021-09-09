@@ -18,7 +18,7 @@
 
 import { expect } from 'chai'
 
-import constants from '@ethersproject/constants'
+import { AddressZero } from '@ethersproject/constants'
 
 import { L1ERC20Gateway__factory } from '../src/lib/abi/factories/L1ERC20Gateway__factory'
 import { L2ERC20Gateway__factory } from '../src/lib/abi/factories/L2ERC20Gateway__factory'
@@ -116,7 +116,7 @@ describe('sanity checks (read-only)', async () => {
       l1Network.tokenBridge.l2CustomGateway,
       bridge.l2Signer
     )
-    expect(l2Address === constants.AddressZero).to.be.false
+    expect(l2Address === AddressZero).to.be.false
 
     const l2AddressOnGateway = await l2CustomGateway.l1ToL2Token(
       existentTestCustomToken
