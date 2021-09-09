@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat'
-import { Signer } from 'ethers'
+import { Signer } from '@ethersproject/abstract-signer'
 
 export async function initializeAccounts(): Promise<Signer[]> {
   const [account0] = await ethers.getSigners()

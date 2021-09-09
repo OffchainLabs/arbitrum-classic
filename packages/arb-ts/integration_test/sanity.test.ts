@@ -1,4 +1,25 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict'
+
 import { expect } from 'chai'
+
+import constants from '@ethersproject/constants'
+
 import { L1ERC20Gateway__factory } from '../src/lib/abi/factories/L1ERC20Gateway__factory'
 import { L2ERC20Gateway__factory } from '../src/lib/abi/factories/L2ERC20Gateway__factory'
 import { L1CustomGateway__factory } from '../src/lib/abi/factories/L1CustomGateway__factory'
@@ -7,15 +28,10 @@ import { L1WethGateway__factory } from '../src/lib/abi/factories/L1WethGateway__
 import { L2WethGateway__factory } from '../src/lib/abi/factories/L2WethGateway__factory'
 import { L2GatewayRouter__factory } from '../src/lib/abi/factories/L2GatewayRouter__factory'
 import { L1GatewayRouter__factory } from '../src/lib/abi/factories/L1GatewayRouter__factory'
-
-import { TestCustomTokenL1__factory } from '../src/lib/abi/factories/TestCustomTokenL1__factory'
-import { IArbToken__factory } from '../src/lib/abi/factories/IArbToken__factory'
-
 import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
 
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 import { existentTestERC20, existentTestCustomToken } from './testHelpers'
-import { constants } from 'ethers'
 
 const expectIgnoreCase = (expected: string, actual: string) => {
   expect(expected.toLocaleLowerCase()).to.equal(actual.toLocaleLowerCase())
@@ -82,7 +98,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('customtoken gateway properly set', async () => {
-    const { bridge, l1Network, l2Network } = await instantiateBridge()
+    const { bridge, l1Network } = await instantiateBridge()
 
     const l1customGatewayAddress = await bridge.l1Bridge.getGatewayAddress(
       existentTestCustomToken
@@ -193,7 +209,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('l1 gateway router points to right gateways', async () => {
-    const { bridge, l1Network, l2Network } = await instantiateBridge()
+    const { bridge, l1Network } = await instantiateBridge()
 
     const gateway = await bridge.l1Bridge.getGatewayAddress(
       l1Network.tokenBridge.l1Weth

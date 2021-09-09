@@ -18,6 +18,7 @@ package inbox
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -186,6 +187,24 @@ func NewRandomInboxMessage() InboxMessage {
 		Data:        common.RandBytes(200),
 		ChainTime:   NewRandomChainTime(),
 	}
+}
+
+func (im InboxMessage) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Kind        Type
+		Sender      common.Address
+		InboxSeqNum *big.Int
+		GasPrice    *big.Int
+		Data        hexutil.Bytes
+		ChainTime   ChainTime
+	}{
+		Kind:        im.Kind,
+		Sender:      im.Sender,
+		InboxSeqNum: im.InboxSeqNum,
+		GasPrice:    im.GasPrice,
+		Data:        im.Data,
+		ChainTime:   im.ChainTime,
+	})
 }
 
 func (im InboxMessage) String() string {

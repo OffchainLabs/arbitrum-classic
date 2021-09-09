@@ -171,6 +171,5 @@ func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targe
 			return false, errors.New("inbox reorg while evaluating assertion")
 		}
 	}
-
-	return assertion.After.Equals(localExecutionState), nil
+	return assertion.After.CutHash() == localExecutionState.CutHash(), nil
 }

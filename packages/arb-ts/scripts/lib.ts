@@ -1,11 +1,35 @@
-import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
-import { instantiateBridge } from './instantiate_bridge'
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict'
+
+import { ContractReceipt } from '@ethersproject/contracts'
+
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 
-export const setStandardGateWays = async (tokens: string[]) => {
+import { instantiateBridge } from './instantiate_bridge'
+
+export const setStandardGateWays = async (
+  tokens: string[]
+): Promise<ContractReceipt> => {
   return setGateWays(tokens, 'standard')
 }
-export const setArbCustomGateways = async (tokens: string[]) => {
+export const setArbCustomGateways = async (
+  tokens: string[]
+): Promise<ContractReceipt> => {
   return setGateWays(tokens, 'arbCustom')
 }
 
@@ -13,7 +37,7 @@ export const setGateWays = async (
   tokens: string[],
   type: 'standard' | 'arbCustom',
   overrideGateways: string[] = []
-) => {
+): Promise<ContractReceipt> => {
   const { bridge, l1Network } = await instantiateBridge()
   if (tokens.length === 0) {
     throw new Error('Include some tokens to set')
@@ -87,7 +111,7 @@ export const setGateWays = async (
   return redeemRec
 }
 
-export const checkRetryableStatus = async (l1Hash: string) => {
+export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
   const { bridge } = await instantiateBridge()
   const { l1Provider } = bridge.l1Bridge
   const { l2Provider } = bridge.l2Bridge
