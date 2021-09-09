@@ -268,7 +268,9 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
         return;
     }
     if (opcode == OpCode::BLAKE2BF) {
-        auto buffer = std::get_if<Buffer>(&stack[0]);
+        // Find the buffer
+        auto buffer = op.immediate ? std::get_if<Buffer>(&*op.immediate)
+                                   : std::get_if<Buffer>(&stack[0]);
         if (!buffer) {
             // bad argument - no need to prove anything
             return;
