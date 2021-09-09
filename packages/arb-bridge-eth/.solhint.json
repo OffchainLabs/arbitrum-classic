@@ -3,6 +3,7 @@
   "plugins": ["prettier"],
   "rules": {
     "mark-callable-contracts": "none",
-    "prettier/prettier": "error"
+    "prettier/prettier": "error",
+    "compiler-version": ["error", "^0.6.11"]
   }
 }

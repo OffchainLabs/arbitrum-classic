@@ -3,3 +3,5 @@ coverage
 build
 deployments
 dist
+test/proofs
+test/challenges

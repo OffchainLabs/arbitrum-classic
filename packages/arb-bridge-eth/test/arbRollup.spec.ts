@@ -16,23 +16,28 @@
 
 /* eslint-env node, mocha */
 import { ethers, deployments, run } from 'hardhat'
-import { Signer, BigNumberish, Contract, BytesLike, BigNumber } from 'ethers'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumberish, BigNumber } from '@ethersproject/bignumber'
+import { BytesLike, hexConcat, zeroPad } from '@ethersproject/bytes'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { assert, expect } from 'chai'
-import { Challenge } from '../build/types/Challenge'
-// import { RollupTester } from '../build/types/RollupTester'
+import { Challenge, RollupAdminFacet, RollupUserFacet } from '../build/types'
 import { initializeAccounts } from './utils'
-import { hexConcat, zeroPad } from '@ethersproject/bytes'
-import { RollupUserFacet } from '../build/types'
 
 import {
   Node,
-  ExecutionState,
-  NodeState,
   Assertion,
   RollupContract,
+  challengeHash,
   nodeHash,
-} from './rolluplib'
+  nodeStateHash,
+  ExecutionState,
+  assertionExecutionHash,
+  assertionGasUsed,
+  makeAssertion,
+  forceCreateNode,
+} from './common/rolluplib'
+import { bisectExecution } from './common/challenge'
 
 const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
@@ -47,10 +52,7 @@ const sequencerDelaySeconds = 900
 const ZERO_ADDR = ethers.constants.AddressZero
 
 let rollup: RollupContract
-let rollupAdmin: Contract
-let challenge: Challenge
-// let rollupTester: RollupTester
-// let assertionInfo: Assertion
+let rollupAdmin: RollupAdminFacet
 let accounts: Signer[]
 
 type RollupConfig = [
@@ -172,11 +174,9 @@ async function tryAdvanceChain(blocks: number): Promise<void> {
   }
 }
 
-function makeSimpleAssertion(
-  prevNodeState: NodeState,
-  gasUsed: BigNumberish
-): Assertion {
-  return new Assertion(prevNodeState, gasUsed, zerobytes32, [], [], [])
+async function advancePastAssertion(a: Assertion): Promise<void> {
+  const checkTime = assertionGasUsed(a).div(avmGasSpeedLimitPerBlock).toNumber()
+  await tryAdvanceChain(confirmationPeriodBlocks + checkTime)
 }
 
 async function makeSimpleNode(
@@ -186,9 +186,8 @@ async function makeSimpleNode(
 ): Promise<{ tx: ContractTransaction; node: Node }> {
   const block = await ethers.provider.getBlock('latest')
   const challengedAssertion = makeSimpleAssertion(
-    parentNode.afterState,
-    (block.number - parentNode.afterState.proposedBlock + 1) *
-      avmGasSpeedLimitPerBlock
+    parentNode.assertion.afterState,
+    (block.number - parentNode.proposedBlock + 1) * avmGasSpeedLimitPerBlock
   )
   const { tx, node, event } = await rollup.stakeOnNewNode(
     parentNode,
@@ -198,7 +197,7 @@ async function makeSimpleNode(
     prevNode
   )
   assert.equal(event.nodeHash, node.nodeHash)
-  assert.equal(event.executionHash, node.executionHash())
+  assert.equal(event.executionHash, assertionExecutionHash(node.assertion))
   return { tx, node }
 }
 
@@ -213,12 +212,11 @@ const makeSends = (count: number, batchStart = 0) => {
   )
 }
 
-function makeAssertion(
-  prevNodeState: NodeState,
-  gasUsed: BigNumberish,
-  sends: BytesLike[] = []
+function makeSimpleAssertion(
+  prevState: ExecutionState,
+  gasUsed: BigNumberish
 ): Assertion {
-  return new Assertion(prevNodeState, gasUsed, zerobytes32, [], sends, [])
+  return makeAssertion(prevState, gasUsed, zerobytes32, [], [], [])
 }
 
 async function makeNode(
@@ -228,11 +226,15 @@ async function makeNode(
   sends: BytesLike[] = []
 ): Promise<{ tx: ContractTransaction; node: Node }> {
   const block = await ethers.provider.getBlock('latest')
+  const gasUsed =
+    (block.number - parentNode.proposedBlock + 1) * avmGasSpeedLimitPerBlock
   const assertion = makeAssertion(
-    parentNode.afterState,
-    (block.number - parentNode.afterState.proposedBlock + 1) *
-      avmGasSpeedLimitPerBlock,
-    sends
+    parentNode.assertion.afterState,
+    gasUsed,
+    zerobytes32,
+    [],
+    sends,
+    []
   )
   const { tx, node, event } = await rollup.stakeOnNewNode(
     parentNode,
@@ -241,8 +243,9 @@ async function makeNode(
     '0x',
     prevNode
   )
+  expect(node.assertion).to.eql(assertion)
   assert.equal(event.nodeHash, node.nodeHash)
-  assert.equal(event.executionHash, node.executionHash())
+  assert.equal(event.executionHash, assertionExecutionHash(node.assertion))
   return { tx, node }
 }
 
@@ -257,35 +260,33 @@ const initNewRollup = async () => {
   const NodeContract = await ethers.getContractFactory('Node')
   const node = NodeContract.attach(nodeAddress)
 
-  const newState = new NodeState(
-    new ExecutionState(0, initialVmState, 0, 0, 0, zerobytes32, zerobytes32),
-    blockCreated,
-    1
-  )
-
-  const initialExecState = new ExecutionState(
-    0,
-    initialVmState,
-    0,
-    0,
-    0,
-    zerobytes32,
-    zerobytes32
-  )
-  const initialNodeState = new NodeState(initialExecState, blockCreated, 1)
-  const initialAssertion = new Assertion(
-    initialNodeState,
+  const initialExecState = {
+    gasUsed: 0,
+    machineHash: initialVmState,
+    inboxCount: 0,
+    sendCount: 0,
+    logCount: 0,
+    sendAcc: zerobytes32,
+    logAcc: zerobytes32,
+  }
+  const initialAssertion = makeAssertion(
+    initialExecState,
     0,
     initialVmState,
     [],
     [],
     []
   )
-  prevNode = new Node(initialAssertion, blockCreated, 1, zerobytes32)
+  prevNode = {
+    assertion: initialAssertion,
+    proposedBlock: blockCreated,
+    inboxMaxCount: 1,
+    nodeHash: zerobytes32,
+  }
 
   assert.equal(
     await node.stateHash(),
-    prevNode.afterState.hash(),
+    nodeStateHash(prevNode),
     'initial confirmed node should have set initial state'
   )
   return rollup
@@ -507,10 +508,7 @@ describe('ArbRollup', () => {
   })
 
   it('should fail to confirm first staker node', async function () {
-    await tryAdvanceChain(
-      confirmationPeriodBlocks +
-        challengedNode.checkTime(avmGasSpeedLimitPerBlock)
-    )
+    await advancePastAssertion(challengedNode.assertion)
     await expect(
       rollup.confirmNextNode(zerobytes32, 0, [], zerobytes32, 0)
     ).to.be.revertedWith('NOT_ALL_STAKED')
@@ -556,11 +554,7 @@ describe('ArbRollup', () => {
   })
 
   it('asserter should win via timeout', async function () {
-    await tryAdvanceChain(
-      confirmationPeriodBlocks +
-        challengedNode.checkTime(avmGasSpeedLimitPerBlock) +
-        1
-    )
+    await advancePastAssertion(challengedNode.assertion)
     await challenge.connect(accounts[1]).timeout()
   })
 
@@ -614,30 +608,18 @@ describe('ArbRollup', () => {
 
   it('challenger should reply in challenge', async function () {
     const chunks = Array(401).fill(zerobytes32)
-    chunks[0] = challengedNode.beforeState.execState.challengeHash()
-
-    await challenge
-      .connect(accounts[2])
-      .bisectExecution(
-        [],
-        0,
-        challengedNode.beforeState.execState.gasUsed,
-        ethers.BigNumber.from(challengedNode.afterState.execState.gasUsed).sub(
-          challengedNode.beforeState.execState.gasUsed
-        ),
-        challengedNode.afterState.execState.challengeHash(),
-        challengedNode.beforeState.execState.gasUsed,
-        challengedNode.beforeState.execState.challengeRestHash(),
-        chunks
-      )
+    chunks[0] = challengeHash(challengedNode.assertion.beforeState)
+    await bisectExecution(
+      challenge.connect(accounts[2]),
+      [],
+      0,
+      challengedNode.assertion,
+      chunks
+    )
   })
 
   it('challenger should win via timeout', async function () {
-    await tryAdvanceChain(
-      confirmationPeriodBlocks +
-        challengedNode.checkTime(avmGasSpeedLimitPerBlock) +
-        1
-    )
+    await advancePastAssertion(challengedNode.assertion)
     await challenge.timeout()
   })
 
@@ -820,9 +802,8 @@ describe('ArbRollup', () => {
 
     const block = await ethers.provider.getBlock('latest')
     const assertion = makeSimpleAssertion(
-      prevNode.afterState,
-      (block.number - prevNode.afterState.proposedBlock + 1) *
-        avmGasSpeedLimitPerBlock
+      prevNode.assertion.afterState,
+      (block.number - prevNode.proposedBlock + 1) * avmGasSpeedLimitPerBlock
     )
 
     const hasSibling = true
@@ -832,27 +813,20 @@ describe('ArbRollup', () => {
         await rollup.rollup.getNodeHash(
           await rollup.rollup.latestNodeCreated()
         ),
-        assertion.executionHash(),
+        assertionExecutionHash(assertion),
         zerobytes32
       )
 
     const forceNode1Hash = await newNodeHash()
-    const forceCreateTx1 = await rollupAdmin.forceCreateNode(
+    const { node: forceCreatedNode1 } = await forceCreateNode(
+      rollupAdmin,
       forceNode1Hash,
-      assertion.bytes32Fields(),
-      assertion.intFields(),
+      assertion,
       '0x',
-      prevNode.afterState.proposedBlock,
-      prevNode.afterState.inboxMaxCount,
+      prevNode,
       prevLatestConfirmed
     )
-    const forceCreateReceipt1 = await forceCreateTx1.wait()
-    const forceCreatedNode1 = new Node(
-      assertion,
-      forceCreateReceipt1.blockNumber,
-      assertion.afterState.inboxCount,
-      forceNode1Hash
-    )
+    expect(forceCreatedNode1.assertion).to.eql(assertion)
 
     const adminNodeNum = await rollup.rollup.latestNodeCreated()
     const midLatestConfirmed = await rollup.rollup.latestConfirmed()
@@ -860,13 +834,12 @@ describe('ArbRollup', () => {
 
     expect(adminNodeNum.toNumber()).to.equal(node2Num.toNumber() + 1)
 
-    await rollupAdmin.forceCreateNode(
+    await forceCreateNode(
+      rollupAdmin,
       await newNodeHash(),
-      assertion.bytes32Fields(),
-      assertion.intFields(),
+      assertion,
       '0x',
-      prevNode.afterState.proposedBlock,
-      prevNode.afterState.inboxMaxCount,
+      prevNode,
       prevLatestConfirmed
     )
 
@@ -914,7 +887,7 @@ describe('ArbRollup', () => {
       .connect(accounts[1])
       .newStake({ value: await rollup.currentRequiredStake() })
 
-    const { node } = await makeSimpleNode(rollup.connect(accounts[1]), prevNode)
+    await makeSimpleNode(rollup.connect(accounts[1]), prevNode)
   })
 
   it('should not allow node to be re initialized', async function () {
@@ -972,10 +945,10 @@ describe('ArbRollup', () => {
     prevNode = node
   })
 
-  it('should confirm node with sends and it should take under 3 million gas', async function () {
+  it('should confirm node with sends and it should take under 3 million gas [ @skip-on-coverage ]', async function () {
     await tryAdvanceChain(confirmationPeriodBlocks * 2)
-    const { execState: prevExecState } = prevNode.beforeState
-    const { execState: postExecState } = prevNode.afterState
+    const { beforeState: prevExecState, afterState: postExecState } =
+      prevNode.assertion
 
     const res = await rollup.confirmNextNode(
       prevExecState.sendAcc,

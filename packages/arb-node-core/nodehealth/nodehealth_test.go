@@ -84,7 +84,7 @@ func startTestingServerFail(testConfig *testConfigStruct) {
 	httpMux := http.NewServeMux()
 
 	//Readiness check that always fails
-	health.AddReadinessCheck("failing-check", func() error {
+	health.AddReadinessCheck("failing_check", func() error {
 		return fmt.Errorf("example failure")
 	})
 
@@ -99,7 +99,7 @@ func startTestingServerPass(testConfig *testConfigStruct) {
 	httpMux := http.NewServeMux()
 
 	//Readiness check that always fails
-	health.AddReadinessCheck("pass-check", func() error {
+	health.AddReadinessCheck("pass_check", func() error {
 		return nil
 	})
 
@@ -343,11 +343,11 @@ func disablePrimaryCheckTest(testConfig *testConfigStruct, healthChan chan Log) 
 	if testConfig.verbose {
 		fmt.Println("Check if the response contains the primary healthcheck")
 	}
-	_, ok := respMap["primary-status"]
+	_, ok := respMap["primary_status"]
 	if ok {
 		return errors.New("Primary healthcheck still present after being disabled")
 	}
-	_, ok = respMap["openethereum-api-status"]
+	_, ok = respMap["openethereum_api_status"]
 	if !ok {
 		return errors.New("OpenEthereum healthcheck improperly disabled")
 	}
@@ -368,11 +368,11 @@ func retrieveVerifyOpenEthereumDisabled(testConfig *testConfigStruct, healthChan
 	if testConfig.verbose {
 		fmt.Println("Check if the response contains the OpenEthereum healthcheck")
 	}
-	_, ok := respMap["openethereum-api-status"]
+	_, ok := respMap["openethereum_api_status"]
 	if ok {
 		return errors.New("OpenEthereum healthcheck still present after being disabled")
 	}
-	_, ok = respMap["primary-status"]
+	_, ok = respMap["primary_status"]
 	if !ok {
 		return errors.New("Primary healthcheck improperly disabled")
 	}
@@ -433,11 +433,11 @@ func disableOpenEthereumPrimaryCheckTest(testConfig *testConfigStruct, healthCha
 	if testConfig.verbose {
 		fmt.Println("Check if the response contains the primary healthcheck")
 	}
-	_, ok := respMap["primary-status"]
+	_, ok := respMap["primary_status"]
 	if ok {
 		return errors.New("Primary healthcheck still present after being disabled")
 	}
-	_, ok = respMap["openethereum-api-status"]
+	_, ok = respMap["openethereum_api_status"]
 	if ok {
 		return errors.New("OpenEthereum healthcheck improperly disabled")
 	}

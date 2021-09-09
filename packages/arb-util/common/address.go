@@ -83,6 +83,10 @@ func (a Address) Hex() string {
 	return hexutil.Encode(a[:])
 }
 
+func (a Address) MarshalText() ([]byte, error) {
+	return []byte(a.Hex()), nil
+}
+
 func HexToAddress(hex string) Address {
 	return NewAddressFromEth(ethcommon.HexToAddress(hex))
 }
