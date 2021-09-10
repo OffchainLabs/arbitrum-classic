@@ -33,8 +33,8 @@ contract OneStepProofTester {
         bytes calldata bproof
     ) external {
         address[2] memory bridges = [address(sequencerBridge), address(bridge)];
-        (uint64 gas, uint256 totalMessagesRead, bytes32[4] memory fields) =
-            IOneStepProof(executor).executeStep(bridges, initialMessagesRead, accs, proof, bproof);
+        (uint64 gas, uint256 totalMessagesRead, bytes32[4] memory fields) = IOneStepProof(executor)
+            .executeStep(bridges, initialMessagesRead, accs, proof, bproof);
         emit OneStepProofResult(gas, totalMessagesRead, fields);
     }
 }

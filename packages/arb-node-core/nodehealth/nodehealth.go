@@ -760,12 +760,12 @@ func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpM
 	//Add primary healthcheck if it is not disabled
 	if !config.disablePrimaryCheck {
 		health.AddReadinessCheck(
-			"primary-status",
+			"primary_status",
 			asyncData.healthchecks["checkPrimary"])
 	}
 
 	health.AddReadinessCheck(
-		"inbox-reader-status",
+		"inbox_reader_status",
 		asyncData.healthchecks["inboxReaderStatus"])
 
 	//OpenEthereum healthchecks
@@ -773,30 +773,30 @@ func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpM
 	if !config.disableOpenEthereumCheck {
 		if config.openethereumAPI != "" {
 			health.AddReadinessCheck(
-				"openethereum-api-status",
+				"openethereum_api_status",
 				asyncData.healthchecks["tcpDialCheck"])
 			health.AddReadinessCheck(
-				"openethereum-sync-response-status",
+				"openethereum_sync_response_status",
 				asyncData.healthchecks["ethSyncCheck"])
 
 			health.AddReadinessCheck(
-				"openethereum-netpeers-response-status",
+				"openethereum_netpeers_response_status",
 				asyncData.healthchecks["parityNetPeersCheck"])
 
 			health.AddReadinessCheck(
-				"openethereum-sync-status",
+				"openethereum_sync_status",
 				asyncData.healthchecks["blockSyncCheck"])
 
 			health.AddReadinessCheck(
-				"openethereum-peer-status",
+				"openethereum_peer_status",
 				asyncData.healthchecks["minimumPeersCheck"])
 
 			health.AddReadinessCheck(
-				"openethereum-block-refresh-status",
+				"openethereum_block_refresh_status",
 				asyncData.healthchecks["blockRefreshCheck"])
 		} else {
 			health.AddReadinessCheck(
-				"openethereum-status",
+				"openethereum_status",
 				asyncData.healthchecks["checkOpenethereum"])
 		}
 	}

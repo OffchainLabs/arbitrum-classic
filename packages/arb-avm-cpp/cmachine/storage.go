@@ -55,16 +55,20 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
 	saveRocksdbIntervalSeconds := int(coreConfig.SaveRocksdbInterval.Seconds())
 	cConfig := C.CArbCoreConfig{
-		message_process_count:        C.int(coreConfig.MessageProcessCount),
-		checkpoint_load_gas_cost:     C.int(coreConfig.CheckpointLoadGasCost),
-		min_gas_checkpoint_frequency: C.int(coreConfig.GasCheckpointFrequency),
-		cache_expiration_seconds:     C.int(cacheExpirationSeconds),
-		lru_cache_size:               C.int(coreConfig.Cache.LRUSize),
-		debug:                        boolToCInt(coreConfig.Debug),
-		save_rocksdb_interval:        C.int(saveRocksdbIntervalSeconds),
-		save_rocksdb_path:            cSaveRocksdbPath,
-		lazy_load_core_machine:       boolToCInt(coreConfig.LazyLoadCoreMachine),
-		lazy_load_archive_queries:    boolToCInt(coreConfig.LazyLoadArchiveQueries),
+		message_process_count:         C.int(coreConfig.MessageProcessCount),
+		checkpoint_load_gas_cost:      C.int(coreConfig.CheckpointLoadGasCost),
+		min_gas_checkpoint_frequency:  C.int(coreConfig.GasCheckpointFrequency),
+		cache_expiration_seconds:      C.int(cacheExpirationSeconds),
+		lru_cache_size:                C.int(coreConfig.Cache.LRUSize),
+		debug:                         boolToCInt(coreConfig.Debug),
+		save_rocksdb_interval:         C.int(saveRocksdbIntervalSeconds),
+		save_rocksdb_path:             cSaveRocksdbPath,
+		lazy_load_core_machine:        boolToCInt(coreConfig.LazyLoadCoreMachine),
+		lazy_load_archive_queries:     boolToCInt(coreConfig.LazyLoadArchiveQueries),
+		profile_reorg_to:              C.int(coreConfig.Profile.ReorgTo),
+		profile_run_until:             C.int(coreConfig.Profile.RunUntil),
+		profile_load_count:            C.int(coreConfig.Profile.LoadCount),
+		profile_reset_db_except_inbox: boolToCInt(coreConfig.Profile.ResetAllExceptInbox),
 	}
 
 	cArbStorage := C.createArbStorage(cDbPath, cConfig)

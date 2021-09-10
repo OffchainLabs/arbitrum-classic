@@ -89,11 +89,11 @@ func delayedMessagesToByteSliceArray(delayedMessages []inbox.DelayedMessage) C.s
 }
 
 func u256ArrayToByteSliceArray(nums []*big.Int) C.struct_ByteSliceArrayStruct {
-	var bytes [][]byte
+	var data [][]byte
 	for _, num := range nums {
-		bytes = append(bytes, math.U256Bytes(num))
+		data = append(data, math.U256Bytes(num))
 	}
-	return bytesArrayToByteSliceArray(bytes)
+	return bytesArrayToByteSliceArray(data)
 }
 
 func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool {
@@ -331,12 +331,12 @@ func (ac *ArbCore) CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.
 	if len(lastSeqNums) != len(accs) {
 		return -1, errors.New("mismatching lengths when counting matching batches")
 	}
-	bytes := make([]byte, 0, len(lastSeqNums)*64)
+	data := make([]byte, 0, len(lastSeqNums)*64)
 	for i := 0; i < len(lastSeqNums); i++ {
-		bytes = append(bytes, math.U256Bytes(lastSeqNums[i])...)
-		bytes = append(bytes, accs[i].Bytes()...)
+		data = append(data, math.U256Bytes(lastSeqNums[i])...)
+		data = append(data, accs[i].Bytes()...)
 	}
-	ret = int(C.arbCoreCountMatchingBatchAccs(ac.c, toByteSliceView(bytes)))
+	ret = int(C.arbCoreCountMatchingBatchAccs(ac.c, toByteSliceView(data)))
 	if ret < 0 {
 		err = errors.New("failed to get matching batch accs")
 	}

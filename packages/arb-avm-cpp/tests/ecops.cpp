@@ -21,8 +21,7 @@
 using namespace libff;
 
 std::vector<PairingTestCase> preparePairingCases() {
-    
-    //fixes the SIGINT Exception: Illegal
+    // fixes the SIGINT Exception: Illegal
     alt_bn128_pp::init_public_params();
 
     G1<alt_bn128_pp> P =

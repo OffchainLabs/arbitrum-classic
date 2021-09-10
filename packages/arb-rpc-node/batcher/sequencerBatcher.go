@@ -249,12 +249,8 @@ func shouldIncludeTxResult(txRes *evm.TxResult) bool {
 	if txRes.ResultCode == evm.ReturnCode {
 		return true
 	}
-	if txRes.ResultCode == evm.RevertCode {
-		// Still include computations taking up a lot of gas to avoid DoS
-		return txRes.FeeStats.Paid.L2Computation.Cmp(big.NewInt(maxExcludeComputation)) > 0
-	}
-	// Other failure (probably not enough ETH balance)
-	return false
+	// Still include computations taking up a lot of gas to avoid DoS
+	return txRes.FeeStats.Paid.L2Computation.Cmp(big.NewInt(maxExcludeComputation)) > 0
 }
 
 func txLogsToResults(logs []core.ValueAndInbox) (map[common.Hash]*evm.TxResult, error) {

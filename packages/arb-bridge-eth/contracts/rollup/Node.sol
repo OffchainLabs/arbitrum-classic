@@ -58,7 +58,7 @@ contract Node is Cloneable, INode {
     /// @notice The number of the latest child of this node to be created
     uint256 public override latestChildNumber;
 
-    modifier onlyRollup {
+    modifier onlyRollup() {
         require(msg.sender == rollup, "ROLLUP_ONLY");
         _;
     }

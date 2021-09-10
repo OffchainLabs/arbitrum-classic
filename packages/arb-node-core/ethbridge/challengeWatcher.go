@@ -165,9 +165,9 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	cuts := make([]core.Cut, 0, len(parsedLog.ChainHashes))
+	cuts := make([]common.Hash, 0, len(parsedLog.ChainHashes))
 	for _, ch := range parsedLog.ChainHashes {
-		cuts = append(cuts, core.NewSimpleCut(ch))
+		cuts = append(cuts, ch)
 	}
 	challengeSegment := &core.ChallengeSegment{
 		Start:  parsedLog.ChallengedSegmentStart,

@@ -144,16 +144,15 @@ contract OldOutbox is IOutbox, Cloneable {
         uint256 amount,
         bytes calldata calldataForL1
     ) external virtual {
-        bytes32 userTx =
-            calculateItemHash(
-                l2Sender,
-                destAddr,
-                l2Block,
-                l1Block,
-                l2Timestamp,
-                amount,
-                calldataForL1
-            );
+        bytes32 userTx = calculateItemHash(
+            l2Sender,
+            destAddr,
+            l2Block,
+            l1Block,
+            l2Timestamp,
+            amount,
+            calldataForL1
+        );
 
         spendOutput(outboxIndex, proof, index, userTx);
         emit OutBoxTransactionExecuted(destAddr, l2Sender, outboxIndex, index);

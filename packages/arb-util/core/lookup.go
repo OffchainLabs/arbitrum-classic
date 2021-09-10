@@ -204,14 +204,14 @@ func GetZeroOrOneLog(lookup ArbOutputLookup, index *big.Int) (ValueAndInbox, err
 }
 
 type ExecutionState struct {
-	MachineHash       common.Hash
-	InboxAcc          common.Hash
-	TotalMessagesRead *big.Int
-	TotalGasConsumed  *big.Int
-	TotalSendCount    *big.Int
-	TotalLogCount     *big.Int
-	SendAcc           common.Hash
-	LogAcc            common.Hash
+	MachineHash       common.Hash `json:"machineHash"`
+	InboxAcc          common.Hash `json:"inboxAcc"`
+	TotalMessagesRead *big.Int    `json:"inboxCount"`
+	TotalGasConsumed  *big.Int    `json:"gasUsed"`
+	TotalSendCount    *big.Int    `json:"sendCount"`
+	TotalLogCount     *big.Int    `json:"logCount"`
+	SendAcc           common.Hash `json:"sendAcc"`
+	LogAcc            common.Hash `json:"logAcc"`
 }
 
 func NewExecutionState(c ExecutionCursor) (*ExecutionState, error) {
@@ -234,10 +234,6 @@ func (e *ExecutionState) IsPermanentlyBlocked() bool {
 	return e.MachineHash == haltedHash || e.MachineHash == erroredHash
 }
 
-func (e *ExecutionState) Equals(other Cut) bool {
-	return e.CutHash() == other.CutHash()
-}
-
 func (e *ExecutionState) RestHash() [32]byte {
 	return hashing.SoliditySHA3(
 		hashing.Uint256(e.TotalMessagesRead),
@@ -249,7 +245,7 @@ func (e *ExecutionState) RestHash() [32]byte {
 	)
 }
 
-func (e *ExecutionState) CutHash() [32]byte {
+func (e *ExecutionState) CutHash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Uint256(e.TotalGasConsumed),
 		hashing.Bytes32(e.RestHash()),

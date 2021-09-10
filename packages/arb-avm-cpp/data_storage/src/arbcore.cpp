@@ -181,12 +181,40 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         }
     }
 
-    auto status = reorgToTimestampOrBefore(
-        timed_sideload_cache.expiredTimestamp(), true, cache);
+    if (coreConfig.profile_reset_db_except_inbox) {
+        {
+            ReadWriteTransaction tx(data_storage);
+            saveNextSegmentID(tx, 0);
+            auto s = tx.commit();
+            if (!s.ok()) {
+                std::cerr << "Error resetting segment: " << s.ToString()
+                          << std::endl;
+                return s;
+            }
+        }
+        {
+            auto s = data_storage->clearDBExceptInbox();
+            if (!s.ok()) {
+                std::cerr << "Error deleting columns: " << s.ToString()
+                          << std::endl;
+                return s;
+            }
+        }
+    }
+
+    rocksdb::Status status;
+    if (coreConfig.profile_reorg_to != 0) {
+        status = reorgToMessageCountOrBefore(coreConfig.profile_reorg_to, false,
+                                             cache);
+    } else {
+        status = reorgToTimestampOrBefore(
+            timed_sideload_cache.expiredTimestamp(), true, cache);
+    }
     if (status.ok()) {
         // Database already initialized
         return status;
     }
+
     if (!status.IsNotFound()) {
         std::cerr << "Error with initial reorg: " << status.ToString()
                   << std::endl;
@@ -220,17 +248,23 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
 
     status = updateLogInsertedCount(tx, 0);
     if (!status.ok()) {
-        throw std::runtime_error("failed to initialize log inserted count");
+        std::cerr << "failed to initialize log inserted count: "
+                  << status.ToString() << std::endl;
+        return status;
     }
     status = updateSendInsertedCount(tx, 0);
     if (!status.ok()) {
-        throw std::runtime_error("failed to initialize log inserted count");
+        std::cerr << "failed to initialize send inserted count: "
+                  << status.ToString() << std::endl;
+        return status;
     }
 
     for (size_t i = 0; i < logs_cursors.size(); i++) {
         status = logsCursorSaveCurrentTotalCount(tx, i, 0);
         if (!status.ok()) {
-            throw std::runtime_error("failed to initialize logscursor counts");
+            std::cerr << "failed to initialize logscursor counts: "
+                      << status.ToString() << std::endl;
+            return status;
         }
     }
 
@@ -833,6 +867,9 @@ void ArbCore::operator()() {
     execConfig.stop_on_sideload = true;
     uint64_t next_rocksdb_save_timestamp = 0;
     std::filesystem::path save_rocksdb_path(coreConfig.save_rocksdb_path);
+    auto begin_time = std::chrono::steady_clock::now();
+    auto begin_message =
+        last_machine->machine_state.output.fully_processed_inbox.count;
 
     if (coreConfig.save_rocksdb_interval > 0) {
         next_rocksdb_save_timestamp =
@@ -1024,6 +1061,57 @@ void ArbCore::operator()() {
                 machine_error = true;
                 std::cerr << "ArbCore database update failed: "
                           << core_error_string << "\n";
+                break;
+            }
+
+            if (coreConfig.profile_run_until != 0 &&
+                last_machine->machine_state.output.fully_processed_inbox
+                        .count >= coreConfig.profile_run_until) {
+                // Reached stopping point for profiling
+                auto end_time = std::chrono::steady_clock::now();
+                auto duration =
+                    std::chrono::duration_cast<std::chrono::seconds>(end_time -
+                                                                     begin_time)
+                        .count();
+                std::cerr << "Done processing " << begin_message << " to "
+                          << last_machine->machine_state.output
+                                 .fully_processed_inbox.count
+                          << ", profiling took " << duration << " seconds"
+                          << std::endl;
+
+                if (coreConfig.profile_load_count > 0) {
+                    auto load_begin_time = std::chrono::steady_clock::now();
+                    auto target_gas =
+                        last_machine->machine_state.output.arb_gas_used;
+                    for (uint64_t i = 0; i < coreConfig.profile_load_count;
+                         i++) {
+                        std::cerr << "Loading machine " << i << std::endl;
+                        auto current_execution =
+                            getClosestExecutionMachine(tx, target_gas);
+                        if (std::holds_alternative<rocksdb::Status>(
+                                current_execution)) {
+                            std::cerr
+                                << "Error loading profile machine number " << i
+                                << ": "
+                                << std::get<rocksdb::Status>(current_execution)
+                                       .ToString()
+                                << std::endl;
+                            break;
+                        }
+                    }
+
+                    auto load_end_time = std::chrono::steady_clock::now();
+                    auto load_duration =
+                        std::chrono::duration_cast<std::chrono::seconds>(
+                            load_end_time - load_begin_time)
+                            .count();
+                    std::cerr << "Done loading "
+                              << coreConfig.profile_load_count
+                              << " machines, profiling took " << load_duration
+                              << " seconds" << std::endl;
+                }
+
+                // Exit now that profiling is complete
                 break;
             }
         }

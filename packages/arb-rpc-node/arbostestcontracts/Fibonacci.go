@@ -4,6 +4,7 @@
 package arbostestcontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,20 +28,31 @@ var (
 	_ = event.NewSubscription
 )
 
+// FibonacciMetaData contains all meta data concerning the Fibonacci contract.
+var FibonacciMetaData = &bind.MetaData{
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"generateFib\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"getFib\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b506101b8806100206000396000f3fe6080604052600436106100295760003560e01c80632ddec39b1461002e57806390a3e3de1461004d575b600080fd5b61004b6004803603602081101561004457600080fd5b5035610089565b005b34801561005957600080fd5b506100776004803603602081101561007057600080fd5b5035610162565b60408051918252519081900360200190f35b60008054600181810183558280527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563918201819055825480820190935591015560025b8181101561012b5760008060028303815481106100e557fe5b90600052602060002001546000600184038154811061010057fe5b60009182526020808320909101548454600181810187559584529190922092909101910155016100cc565b506040805182815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150565b600080828154811061017057fe5b9060005260206000200154905091905056fea2646970667358221220969aba9ca2a55008daac1dce8266cb0759b2e3a14b5b08f7c634b4bf5192918964736f6c634300060c0033",
+}
+
 // FibonacciABI is the input ABI used to generate the binding from.
-const FibonacciABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"number\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"generateFib\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"n\",\"type\":\"uint256\"}],\"name\":\"getFib\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+// Deprecated: Use FibonacciMetaData.ABI instead.
+var FibonacciABI = FibonacciMetaData.ABI
 
 // FibonacciBin is the compiled bytecode used for deploying new contracts.
-var FibonacciBin = "0x608060405234801561001057600080fd5b506101b8806100206000396000f3fe6080604052600436106100295760003560e01c80632ddec39b1461002e57806390a3e3de1461004d575b600080fd5b61004b6004803603602081101561004457600080fd5b5035610089565b005b34801561005957600080fd5b506100776004803603602081101561007057600080fd5b5035610162565b60408051918252519081900360200190f35b60008054600181810183558280527f290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563918201819055825480820190935591015560025b8181101561012b5760008060028303815481106100e557fe5b90600052602060002001546000600184038154811061010057fe5b60009182526020808320909101548454600181810187559584529190922092909101910155016100cc565b506040805182815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150565b600080828154811061017057fe5b9060005260206000200154905091905056fea2646970667358221220969aba9ca2a55008daac1dce8266cb0759b2e3a14b5b08f7c634b4bf5192918964736f6c634300060c0033"
+// Deprecated: Use FibonacciMetaData.Bin instead.
+var FibonacciBin = FibonacciMetaData.Bin
 
 // DeployFibonacci deploys a new Ethereum contract, binding an instance of Fibonacci to it.
 func DeployFibonacci(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Fibonacci, error) {
-	parsed, err := abi.JSON(strings.NewReader(FibonacciABI))
+	parsed, err := FibonacciMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(FibonacciBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(FibonacciBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}

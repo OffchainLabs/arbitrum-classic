@@ -83,7 +83,25 @@ struct ArbCoreConfig {
     uint64_t save_rocksdb_interval{0};
 
     // Rocksdb checkpoints will be saved in save_rocksdb_path/timestamp/
-    std::string save_rocksdb_path;
+    std::string save_rocksdb_path{};
+
+    // If any profile_* parameters are non-zero, program will exit after
+    // all profile conditions are satisfied.
+
+    // Reorg database to message
+    uint64_t profile_reorg_to{0};
+
+    // Run until message reached
+    uint64_t profile_run_until{0};
+
+    // Load specified number of machines backwards from profile_run_until
+    uint64_t profile_load_count{0};
+
+    // Delete all database entries except for inbox
+    bool profile_reset_db_except_inbox{false};
+
+    // Exit after printing out metadata from database
+    bool profile_just_metadata;
 
     // Whether to lazy load the core machine
     bool lazy_load_core_machine;

@@ -163,8 +163,13 @@ abstract contract OneStepProofCommon is IOneStepProof {
             bytes32[4] memory fields
         )
     {
-        AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridges);
+        AssertionContext memory context = initializeExecutionContext(
+            initialMessagesRead,
+            accs,
+            proof,
+            bproof,
+            bridges
+        );
 
         executeOp(context);
 
@@ -178,8 +183,13 @@ abstract contract OneStepProofCommon is IOneStepProof {
         bytes calldata proof,
         bytes calldata bproof
     ) external view override returns (string memory startMachine, string memory afterMachine) {
-        AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridges);
+        AssertionContext memory context = initializeExecutionContext(
+            initialMessagesRead,
+            accs,
+            proof,
+            bproof,
+            bridges
+        );
 
         executeOp(context);
         startMachine = Machine.toString(context.startMachine);

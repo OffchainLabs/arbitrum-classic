@@ -15,22 +15,27 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, providers, constants, utils } from 'ethers'
+
+import { defaultAbiCoder } from '@ethersproject/abi'
+import { Provider } from '@ethersproject/abstract-provider'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumber } from '@ethersproject/bignumber'
+import { ContractTransaction, PayableOverrides } from '@ethersproject/contracts'
+import { MaxUint256, AddressZero } from '@ethersproject/constants'
+
 import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
 import { L1GatewayRouter } from './abi/L1GatewayRouter'
-import { L1ERC20Gateway } from './abi/L1ERC20Gateway'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
-
-import { Inbox } from './abi/Inbox'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
-import { ERC20 } from './abi/ERC20'
-import networks from './networks'
-
+import { Inbox } from './abi/Inbox'
 import { ERC20__factory } from './abi/factories/ERC20__factory'
-import { addressToSymbol } from './bridge_helpers'
-import { PayableOverrides } from '@ethersproject/contracts'
+import { ERC20 } from './abi/ERC20'
+import { L1ERC20Gateway } from './abi'
 
-const MIN_APPROVAL = constants.MaxUint256
+import networks from './networks'
+import { addressToSymbol } from './bridge_helpers'
+
+const MIN_APPROVAL = MaxUint256
 //TODO handle address update / lowercase
 
 export interface L1TokenData {
@@ -63,7 +68,7 @@ export class L1Bridge {
   walletAddressCache?: string
   inboxCached?: Inbox
   l1Tokens: Tokens
-  l1Provider: providers.Provider
+  l1Provider: Provider
   chainIdCache?: number
 
   constructor(l1GatewayRouterAddress: string, l1Signer: Signer) {
@@ -82,20 +87,22 @@ export class L1Bridge {
     )
   }
 
-  public async updateAllL1Tokens() {
+  public async updateAllL1Tokens(): Promise<Tokens> {
     for (const l1Address in this.l1Tokens) {
       await this.getAndUpdateL1TokenData(l1Address)
     }
     return this.l1Tokens
   }
 
-  public getERC20L2Address(erc20L1Address: string) {
+  public getERC20L2Address(erc20L1Address: string): Promise<string> {
     return this.l1GatewayRouter.functions
       .calculateL2TokenAddress(erc20L1Address)
       .then(([res]) => res)
   }
 
-  public async getAndUpdateL1TokenData(erc20L1Address: string) {
+  public async getAndUpdateL1TokenData(
+    erc20L1Address: string
+  ): Promise<L1TokenData> {
     const tokenData = this.l1Tokens[erc20L1Address] || {
       ERC20: undefined,
       CUSTOM: undefined,
@@ -123,17 +130,17 @@ export class L1Bridge {
         const symbol = await ethERC20TokenContract.functions
           .symbol()
           .then(([res]) => res)
-          .catch(_ => addressToSymbol(erc20L1Address))
+          .catch(() => addressToSymbol(erc20L1Address))
 
         const decimals = await ethERC20TokenContract.functions
           .decimals()
           .then(([res]) => res)
-          .catch(_ => 18)
+          .catch(() => 18)
 
         const name = await ethERC20TokenContract.functions
           .name()
           .then(([res]) => res)
-          .catch(_ => symbol + '_Token')
+          .catch(() => symbol + '_Token')
 
         const allowed = await allowance.gte(MIN_APPROVAL.div(2))
         tokenData.ERC20 = {
@@ -173,7 +180,7 @@ export class L1Bridge {
     value: BigNumber,
     maxSubmissionPrice: BigNumber,
     overrides: PayableOverrides = {}
-  ) {
+  ): Promise<ContractTransaction> {
     const inbox = await this.getInbox()
     return inbox.functions.depositEth(maxSubmissionPrice, {
       value,
@@ -181,15 +188,15 @@ export class L1Bridge {
     })
   }
 
-  public async getGatewayAddress(erc20L1Address: string) {
+  public async getGatewayAddress(erc20L1Address: string): Promise<string> {
     return (await this.l1GatewayRouter.functions.getGateway(erc20L1Address))
       .gateway
   }
-  public async getDefaultL1Gateway() {
+  public async getDefaultL1Gateway(): Promise<L1ERC20Gateway> {
     const chainId = await this.getChainId()
     const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
 
-    if (defaultGatewayAddress === constants.AddressZero) {
+    if (defaultGatewayAddress === AddressZero) {
       const network = networks[chainId]
 
       if (!network)
@@ -215,7 +222,7 @@ export class L1Bridge {
     erc20L1Address: string,
     amount?: BigNumber,
     overrides: PayableOverrides = {}
-  ) {
+  ): Promise<ContractTransaction> {
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
     if (!tokenData.ERC20) {
       throw new Error(`Can't approve; token ${erc20L1Address} not found`)
@@ -237,13 +244,13 @@ export class L1Bridge {
     gasPriceBid: BigNumber,
     destinationAddress?: string,
     overrides: PayableOverrides = {}
-  ) {
+  ): Promise<ContractTransaction> {
     const destination = destinationAddress || (await this.getWalletAddress())
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
     if (!tokenData.ERC20) {
       throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
     }
-    const data = utils.defaultAbiCoder.encode(
+    const data = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
     )
@@ -258,7 +265,7 @@ export class L1Bridge {
     )
   }
 
-  public async getWalletAddress() {
+  public async getWalletAddress(): Promise<string> {
     if (this.walletAddressCache) {
       return this.walletAddressCache
     }
@@ -266,7 +273,7 @@ export class L1Bridge {
     return this.walletAddressCache
   }
 
-  public async getInbox() {
+  public async getInbox(): Promise<Inbox> {
     if (this.inboxCached) {
       return this.inboxCached
     }
@@ -281,7 +288,7 @@ export class L1Bridge {
     return this.l1Signer.getBalance()
   }
 
-  public async getChainId() {
+  public async getChainId(): Promise<number> {
     if (this.chainIdCache) {
       return this.chainIdCache
     }
