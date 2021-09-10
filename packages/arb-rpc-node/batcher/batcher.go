@@ -252,7 +252,7 @@ func (m *Batcher) maybeSubmitBatch(ctx context.Context, maxBatchTime time.Durati
 	}
 
 	for _, l2tx := range txes {
-		monitor.GlobalMonitor.IncludedInBatch(common.NewHashFromEth(l2tx.Hash()), common.NewHashFromEth(l2tx.Hash()))
+		monitor.GlobalMonitor.IncludedInBatch(common.NewHashFromEth(l2tx.Hash()), common.NewHashFromEth(tx.Hash()))
 	}
 	monitor.GlobalMonitor.SubmittedBatch(common.NewHashFromEth(tx.Hash()))
 
