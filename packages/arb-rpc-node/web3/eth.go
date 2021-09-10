@@ -199,10 +199,6 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash) (hexu
 	from, msg := buildCallMsg(callArgs, s.maxCallGas)
 
 	res, _, err := snap.Call(msg, from)
-	res, err = handleCallResult(res, err)
-	if err != nil {
-		return nil, err
-	}
 
 	if res.ResultCode != evm.ReturnCode {
 		return nil, evm.HandleCallError(res, s.ganacheMode)
@@ -228,7 +224,9 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		agg = *s.aggregator
 	}
 	res, _, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
-	res, err = handleCallResult(res, err)
+	if err == nil && res.ResultCode != evm.ReturnCode {
+		err = evm.HandleCallError(res, s.ganacheMode)
+	}
 	if err != nil {
 		logging := log.Warn()
 		if args.Gas != nil {
@@ -251,9 +249,6 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		}
 		logging.Err(err).Msg("error estimating gas")
 		return 0, err
-	}
-	if res.ResultCode != evm.ReturnCode {
-		return 0, evm.HandleCallError(res, s.ganacheMode)
 	}
 
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
@@ -583,23 +578,6 @@ func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.Co
 			Data:        tx.Data(),
 		},
 	}
-}
-
-func handleCallResult(res *evm.TxResult, err error) (*evm.TxResult, error) {
-	if err != nil {
-		logger.Warn().Err(err).Msg("error executing call")
-		return nil, err
-	}
-	log.Debug().
-		Uint64("gasused", res.GasUsed.Uint64()).
-		Hex("returndata", res.ReturnData).
-		Int("resultcode", int(res.ResultCode)).
-		Msg("executed call")
-
-	if res.ResultCode != evm.ReturnCode && res.ResultCode != evm.RevertCode {
-		return nil, errors.Errorf("failed to execute call with revert code %v", res.ResultCode)
-	}
-	return res, err
 }
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
