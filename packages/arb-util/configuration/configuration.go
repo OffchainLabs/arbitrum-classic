@@ -207,6 +207,7 @@ type Validator struct {
 	StakerDelay          time.Duration     `koanf:"staker-delay"`
 	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
 	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
+	DontChallenge        bool              `koanf:"dont-challenge"`
 }
 
 type Wallet struct {
@@ -355,6 +356,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	f.String("validator.utils-address", "", "strategy for validator to use")
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
+	f.Bool("validator.dont-challenge", false, "don't challenge any other validators' assertions")
 
 	return ParseNonRelay(ctx, f, "validator-wallet")
 }

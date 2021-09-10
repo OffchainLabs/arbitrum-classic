@@ -330,7 +330,7 @@ func (s *Staker) newStake(ctx context.Context) error {
 
 func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiveStrategy Strategy) error {
 	active := effectiveStrategy > WatchtowerStrategy
-	action, _, err := s.generateNodeAction(ctx, info, effectiveStrategy, s.fromBlock)
+	action, wrongNodesExist, err := s.generateNodeAction(ctx, info, effectiveStrategy, s.fromBlock)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,11 @@ func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiv
 
 	switch action := action.(type) {
 	case createNodeAction:
-		// Already logged with more details in generateNodeAction
+		if wrongNodesExist && s.config.DontChallenge {
+			logger.Error().Msg("refusing to challenge assertion as config disables challenges")
+			return nil
+		}
+		// Details are already logged with more details in generateNodeAction
 		info.CanProgress = false
 		info.LatestStakedNode = nil
 		info.LatestStakedNodeHash = action.hash
