@@ -21,7 +21,7 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ContractTransaction, PayableOverrides } from '@ethersproject/contracts'
-import constants from '@ethersproject/constants'
+import { MaxUint256, AddressZero } from '@ethersproject/constants'
 
 import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
 import { L1GatewayRouter } from './abi/L1GatewayRouter'
@@ -35,7 +35,7 @@ import { L1ERC20Gateway } from './abi'
 import networks from './networks'
 import { addressToSymbol } from './bridge_helpers'
 
-const MIN_APPROVAL = constants.MaxUint256
+const MIN_APPROVAL = MaxUint256
 //TODO handle address update / lowercase
 
 export interface L1TokenData {
@@ -196,7 +196,7 @@ export class L1Bridge {
     const chainId = await this.getChainId()
     const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
 
-    if (defaultGatewayAddress === constants.AddressZero) {
+    if (defaultGatewayAddress === AddressZero) {
       const network = networks[chainId]
 
       if (!network)

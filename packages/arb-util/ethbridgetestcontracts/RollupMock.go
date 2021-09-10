@@ -4,6 +4,7 @@
 package ethbridgetestcontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,20 +28,31 @@ var (
 	_ = event.NewSubscription
 )
 
+// RollupMockMetaData contains all meta data concerning the RollupMock contract.
+var RollupMockMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"sequencerInboxMaxDelayBlocks\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sequencerInboxMaxDelaySeconds\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_sequencerInboxMaxDelayBlocks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_sequencerInboxMaxDelaySeconds\",\"type\":\"uint256\"}],\"name\":\"setMock\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b5060ce8061001f6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c806314828f9214604157806327ce1def146059578063addd678414607b575b600080fd5b60476081565b60408051918252519081900360200190f35b607960048036036040811015606d57600080fd5b50803590602001356087565b005b60476092565b60005481565b600091909155600155565b6001548156fea26469706673582212200ecc187ffc470598e9b940c7c05f6e051c104c4157b2317394a65ea645bd3f7e64736f6c634300060b0033",
+}
+
 // RollupMockABI is the input ABI used to generate the binding from.
-const RollupMockABI = "[{\"inputs\":[],\"name\":\"sequencerInboxMaxDelayBlocks\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sequencerInboxMaxDelaySeconds\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_sequencerInboxMaxDelayBlocks\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_sequencerInboxMaxDelaySeconds\",\"type\":\"uint256\"}],\"name\":\"setMock\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// Deprecated: Use RollupMockMetaData.ABI instead.
+var RollupMockABI = RollupMockMetaData.ABI
 
 // RollupMockBin is the compiled bytecode used for deploying new contracts.
-var RollupMockBin = "0x608060405234801561001057600080fd5b5060ce8061001f6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c806314828f9214604157806327ce1def146059578063addd678414607b575b600080fd5b60476081565b60408051918252519081900360200190f35b607960048036036040811015606d57600080fd5b50803590602001356087565b005b60476092565b60005481565b600091909155600155565b6001548156fea26469706673582212200ecc187ffc470598e9b940c7c05f6e051c104c4157b2317394a65ea645bd3f7e64736f6c634300060b0033"
+// Deprecated: Use RollupMockMetaData.Bin instead.
+var RollupMockBin = RollupMockMetaData.Bin
 
 // DeployRollupMock deploys a new Ethereum contract, binding an instance of RollupMock to it.
 func DeployRollupMock(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *RollupMock, error) {
-	parsed, err := abi.JSON(strings.NewReader(RollupMockABI))
+	parsed, err := RollupMockMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(RollupMockBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(RollupMockBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}

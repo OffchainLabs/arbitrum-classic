@@ -43,8 +43,11 @@ type Conf struct {
 type Core struct {
 	Cache                  CoreCache     `koanf:"cache"`
 	CheckpointLoadGasCost  int           `koanf:"checkpoint-load-gas-cost"`
+	Profile                CoreProfile   `koanf:"profile"`
 	Debug                  bool          `koanf:"debug"`
 	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
+	LazyLoadCoreMachine    bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries bool          `koanf:"lazy-load-archive-queries"`
 	MessageProcessCount    int           `koanf:"message-process-count"`
 	SaveRocksdbInterval    time.Duration `koanf:"save-rocksdb-interval"`
 	SaveRocksdbPath        string        `koanf:"save-rocksdb-path"`
@@ -53,6 +56,14 @@ type Core struct {
 type CoreCache struct {
 	LRUSize     int           `koanf:"lru-size"`
 	TimedExpire time.Duration `koanf:"timed-expire"`
+}
+
+type CoreProfile struct {
+	JustMetadata        bool  `koanf:"just-metadata"`
+	LoadCount           int64 `koanf:"load-count"`
+	ReorgTo             int64 `koanf:"reorg-to"`
+	ResetAllExceptInbox bool  `koanf:"reset-all-except-inbox"`
+	RunUntil            int64 `koanf:"run-until"`
 }
 
 // DefaultCoreSettings is useful in unit tests
@@ -351,25 +362,31 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
+	f.Bool("core.profile.just-metadata", false, "just print database metadata and exit")
+	f.Int("core.profile.load-count", 0, "number of snapshots to load from database for profile test, zero to disable")
+	f.Int("core.profile.reorg-to", 0, "reorg to snapshot with given gas, zero to disable")
+	f.Bool("core.profile.reset-all-except-inbox", false, "remove all database info except for inbox")
+	f.Int("core.profile.run-until", 0, "run until gas is reacheck for profile test, zero to disable")
+
 	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
 	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
+
+	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 
 	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
 	f.Int("node.cache.lru-size", 1000, "number of recently used L2 block snapshots to hold in lru memory cache")
 	f.Int("node.cache.block-info-lru-size", 100_000, "number of recently used L2 block info to hold in lru memory cache")
 	//f.Duration("node.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in timed memory cache")
 
-	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
-
 	f.Uint64("node.chain-id", 42161, "chain id of the arbitrum chain")
-
-	f.String("rollup.address", "", "layer 2 rollup contract address")
-	f.String("rollup.machine.filename", "", "file to load machine from")
 
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 
 	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 	f.String("persistent.chain", "", "path that chain specific state is located")
+
+	f.String("rollup.address", "", "layer 2 rollup contract address")
+	f.String("rollup.machine.filename", "", "file to load machine from")
 
 	f.String("wallet.local.pathname", defaultWalletPathname, "path to store wallet in")
 	f.String("wallet.local.password", PASSWORD_NOT_SET, "password for wallet")

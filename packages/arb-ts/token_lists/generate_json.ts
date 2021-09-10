@@ -20,7 +20,7 @@ import { writeFileSync } from 'fs'
 import axios from 'axios'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
-import constants from '@ethersproject/constants'
+import { AddressZero } from '@ethersproject/constants'
 import { TokenInfo, TokenList, schema } from '@uniswap/token-lists'
 
 import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
@@ -91,7 +91,7 @@ const gen = async () => {
       continue
     }
 
-    if (l1GatewayAddress === constants.AddressZero) {
+    if (l1GatewayAddress === AddressZero) {
       throw new Error(`Token ${l1Address} not registered in L1 router`)
     }
     if (l1Address === '0x0CE51000d5244F1EAac0B313a792D5a5f96931BF') {
