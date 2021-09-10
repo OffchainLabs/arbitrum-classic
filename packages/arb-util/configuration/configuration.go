@@ -1016,9 +1016,17 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 		fmt.Printf("Database:         %s\n", out.Persistent.DatabasePath)
 		fmt.Printf("Database Backup:  %s\n", out.Core.SaveRocksdbPath)
 		fmt.Printf("Machine:          %s\n", out.Rollup.Machine.Filename)
-		fmt.Printf("Wallet DIrectory: %s\n", wallet.Local.Pathname)
+		fmt.Printf("Wallet Directory: %s\n", wallet.Local.Pathname)
 
 		os.Exit(0)
+	} else {
+		logger.
+			Info().
+			Str("Database", out.Persistent.DatabasePath).
+			Str("Database Backup", out.Core.SaveRocksdbPath).
+			Str("Machine", out.Rollup.Machine.Filename).
+			Str("Wallet Directory", wallet.Local.Pathname).
+			Msg("downloading machine")
 	}
 
 	return &out, &wallet, nil
