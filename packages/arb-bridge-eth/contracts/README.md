@@ -2,7 +2,7 @@
 
 ## Rollup:
 
-This folder contains the contracts implemtnation the Arbitrum Optimistic Rollup. The core purpose of the Rollup is to advance the execution of the machine in order to eventually confirm assertions which will lead to withdrawals being processed.
+This folder contains the contracts implementation of the Arbitrum Optimistic Rollup. The core purpose of the Rollup is to advance the execution of the machine in order to eventually confirm assertions which will lead to withdrawals being processed.
 
 Each Rollup chain has an associated `Bridge` which provides an interface for input and output between the Rollup chain and the L1.
 
