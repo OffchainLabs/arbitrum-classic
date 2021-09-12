@@ -171,7 +171,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							select {
 							case <-ctx.Done():
 								return
-							case <-time.After(5 * time.Second):
+							case <-time.After(1 * time.Second):
 							}
 						}
 						if currentSeqNum.Cmp(targetSeqNum) >= 0 {
@@ -192,7 +192,11 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							fatalError = errors.New(msg)
 							break
 						}
-						time.Sleep(100 * time.Millisecond)
+						select {
+						case <-ctx.Done():
+							return
+						case <-time.After(100 * time.Millisecond):
+						}
 					}
 					if fatalError == nil && b.hasSequencerLockout() {
 						err := b.sequencerBatcher.SequenceDelayedMessages(ctx, true)
