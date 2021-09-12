@@ -172,7 +172,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							select {
 							case <-ctx.Done():
 								return
-							case <-time.After(5 * time.Second):
+							case <-time.After(1 * time.Second):
 							}
 						}
 						if currentSeqNum.Cmp(targetSeqNum) >= 0 {
@@ -183,7 +183,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 								Msg("caught up to previous sequencer position")
 							break
 						}
-						if attemptCatchupUntil.After(time.Now()) {
+						if time.Now().After(attemptCatchupUntil) {
 							msg := "failed to catch up to previous sequencer position"
 							logger.
 								Warn().
@@ -193,7 +193,11 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							fatalError = errors.New(msg)
 							break
 						}
-						time.Sleep(500 * time.Millisecond)
+						select {
+						case <-ctx.Done():
+							return
+						case <-time.After(100 * time.Millisecond):
+						}
 					}
 					if fatalError == nil && b.hasSequencerLockout() {
 						err := b.sequencerBatcher.SequenceDelayedMessages(ctx, true)
