@@ -164,7 +164,6 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 					logger.Info().Str("rpc", b.config.SelfRPCURL).Msg("acquired sequencer lockout")
 					targetSeqNum := b.redis.getLatestSeqNum(ctx)
 					b.lastLockedSeqNum = targetSeqNum
-					attemptCatchupUntil := b.lockoutExpiresAt.Add(-b.config.MaxLatency)
 					for {
 						currentSeqNum, err := b.core.GetMessageCount()
 						if err != nil {
@@ -183,7 +182,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 								Msg("caught up to previous sequencer position")
 							break
 						}
-						if attemptCatchupUntil.After(time.Now()) {
+						if !b.hasSequencerLockout() {
 							msg := "failed to catch up to previous sequencer position"
 							logger.
 								Warn().
@@ -193,7 +192,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							fatalError = errors.New(msg)
 							break
 						}
-						time.Sleep(500 * time.Millisecond)
+						time.Sleep(100 * time.Millisecond)
 					}
 					if fatalError == nil && b.hasSequencerLockout() {
 						err := b.sequencerBatcher.SequenceDelayedMessages(ctx, true)
