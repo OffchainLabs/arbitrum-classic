@@ -55,7 +55,12 @@ import { Tokens as L1Tokens } from './l1Bridge'
 import { Tokens as L2Tokens } from './l2Bridge'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks from './networks'
-import { L1ERC20Gateway, L1GatewayRouter } from './abi'
+import {
+  L1ERC20Gateway,
+  L1GatewayRouter,
+  L1ArbitrumGateway,
+  L1ArbitrumGateway__factory,
+} from './abi'
 
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
@@ -267,8 +272,11 @@ export class Bridge {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction> {
     const l1ChainId = await this.l1Signer.getChainId()
-    const { l1WethGateway: l1WethGatewayAddress } =
-      networks[l1ChainId].tokenBridge
+    const {
+      l1WethGateway: l1WethGatewayAddress,
+      l1ERC20Gateway: l1ERC20GatewayAddress,
+      l1CustomGateway: l1ERC20CustomGatewayAddress,
+    } = networks[l1ChainId].tokenBridge
 
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
@@ -290,7 +298,12 @@ export class Bridge {
       estimateGasCallValue = amount
     }
 
-    const l1Gateway = L1ERC20Gateway__factory.connect(
+    // L1ERC20Gateway has its own overridden getOutboundCalldata method
+    const l1GatewayFactory =
+      expectedL1GatewayAddress === l1ERC20GatewayAddress
+        ? L1ERC20Gateway__factory
+        : L1ArbitrumGateway__factory
+    const l1Gateway = l1GatewayFactory.connect(
       expectedL1GatewayAddress,
       this.l1Provider
     )
