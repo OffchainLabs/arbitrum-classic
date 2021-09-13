@@ -32,6 +32,35 @@ const ajv = new Ajv()
 addFormats(ajv)
 const validate = ajv.compile(schema)
 
+const getLogoUri = async (l1TokenAddress: string, zapperLogoUris: any) => {
+  const l1TokenAddressLCase = l1TokenAddress.toLowerCase()
+  const zapperUri = zapperLogoUris[l1TokenAddressLCase]
+
+  if (zapperUri) {
+    try {
+      const res = await axios.get(zapperUri)
+      if (res.status === 200) {
+        return zapperUri
+      }
+    } catch (e) {
+      // zapper uri not found
+    }
+  }
+  const trustWalletUri = `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/${l1TokenAddress}/logo.png`
+
+  try {
+    const res = await axios.get(trustWalletUri)
+    if (res.status === 200) {
+      return trustWalletUri
+    }
+  } catch (e) {
+    // trustwallet uri not found
+  }
+  console.log('Could not get icon for', l1TokenAddress)
+
+  return
+}
+
 const gen = async () => {
   const tokens: TokenInfo[] = []
 
@@ -39,7 +68,7 @@ const gen = async () => {
   const path = `./token_lists/lists/token-list-${l2Network.chainID}.json`
   const previousJSON = (
     await axios.get('https://bridge.arbitrum.io/token-list-42161.json')
-  ).data
+  ).data as TokenList
 
   // alt: use your  local copy:
   // const previousJSON:TokenList = JSON.parse(readFileSync(path).toString())
@@ -68,7 +97,7 @@ const gen = async () => {
   const tokenAddresses = [
     ...new Set(gatewaySetData.map(data => data.l1Token)),
   ].filter((address: string) => !excludeList.includes(address))
-  const logoUris = (
+  const zapperLogoUris = (
     await axios.get('https://zapper.fi/api/token-list')
   ).data.tokens.reduce((acc: any, currentToken: any) => {
     return {
@@ -164,7 +193,7 @@ const gen = async () => {
         l1GatewayAddress,
       },
     }
-    const logoURI = logoUris[l1Address.toLowerCase()]
+    const logoURI = await getLogoUri(l1Address, zapperLogoUris)
     if (logoURI) {
       arbTokenInfo = { ...{ logoURI }, ...arbTokenInfo }
     }
