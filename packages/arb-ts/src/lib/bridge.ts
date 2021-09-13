@@ -334,7 +334,7 @@ export class Bridge {
             sender,
             sender,
             0,
-            0,
+            gasPriceBid,
             depositCalldata
           )
         )[0],
