@@ -123,13 +123,6 @@ func NewTestDevNode(
 	test.FailIfError(t, err)
 	initMsg, err := message.NewInitMessage(params, owner, config)
 
-<<<<<<< HEAD
-=======
-	if oldStyleInit {
-		initMsg.OldStyle = true
-	}
-
->>>>>>> master
 	test.FailIfError(t, err)
 	_, err = backend.AddInboxMessage(initMsg, common.Address{})
 	test.FailIfError(t, err)

@@ -117,7 +117,7 @@ func TestTransfer(t *testing.T) {
 
 	ethBackend, ethAuths := test.SimulatedBackend(t)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil, false)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil)
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
