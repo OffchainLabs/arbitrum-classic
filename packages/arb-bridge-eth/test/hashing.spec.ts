@@ -17,8 +17,8 @@
 /* eslint-env node, mocha */
 
 import { ethers } from 'hardhat'
-import { use, expect } from 'chai'
-import { HashingTester } from '../build/types/HashingTester'
+import { expect } from 'chai'
+import { HashingTester } from '../build/types'
 
 const { utils } = ethers
 
@@ -69,42 +69,72 @@ describe('Hashing', function () {
 
   describe('#merkleRoot', function () {
     it('should work with empty buffer', async () => {
-      expect(await hashTester.testMerkleHash("0x")).to.equal("0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
+      expect(await hashTester.testMerkleHash('0x')).to.equal(
+        '0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563'
+      )
     })
     it('should work with small buffer', async () => {
-      expect(await hashTester.testMerkleHash("0x00000000")).to.equal("0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
+      expect(await hashTester.testMerkleHash('0x00000000')).to.equal(
+        '0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563'
+      )
     })
     it('should work with 40 byte buffer', async () => {
-      expect(await hashTester.testMerkleHash("0x00000000000000000000000000000000000000000000000000000000000000000000000000000000")).to.equal("0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
+      expect(
+        await hashTester.testMerkleHash(
+          '0x00000000000000000000000000000000000000000000000000000000000000000000000000000000'
+        )
+      ).to.equal(
+        '0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563'
+      )
     })
     it('should work with 80 byte buffer', async () => {
-      expect(await hashTester.testMerkleHash("0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")).to.equal("0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
+      expect(
+        await hashTester.testMerkleHash(
+          '0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+        )
+      ).to.equal(
+        '0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563'
+      )
     })
 
     it('should work with 128 byte buffer', async () => {
-      expect(await hashTester.testMerkleHash(bufferToBytes(emptyBuffer(4)))).to.equal("0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
+      expect(
+        await hashTester.testMerkleHash(bufferToBytes(emptyBuffer(4)))
+      ).to.equal(
+        '0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563'
+      )
     })
 
     it('should work with 65 byte buffer', async () => {
-      let buf = [elem(0), elem(0), "0x0100000000000000000000000000000000000000000000000000000000000000", elem(0)]
-      expect(await hashTester.testMerkleHash("0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001")).to.equal(merkleHash(buf, 0, 4))
+      const buf = [
+        elem(0),
+        elem(0),
+        '0x0100000000000000000000000000000000000000000000000000000000000000',
+        elem(0),
+      ]
+      expect(
+        await hashTester.testMerkleHash(
+          '0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001'
+        )
+      ).to.equal(merkleHash(buf, 0, 4))
     })
 
     it('should work with buffers with single word', async () => {
       for (let i = 16; i < 32; i++) {
-        let buf = emptyBuffer(32)
+        const buf = emptyBuffer(32)
         buf[i] = elem(1)
-        expect(await hashTester.testMerkleHash(bufferToBytes(buf))).to.equal(merkleHash(buf, 0, 32))
+        expect(await hashTester.testMerkleHash(bufferToBytes(buf))).to.equal(
+          merkleHash(buf, 0, 32)
+        )
       }
 
       for (let i = 2; i < 4; i++) {
-        let buf = emptyBuffer(4)
+        const buf = emptyBuffer(4)
         buf[i] = elem(1)
-        expect(await hashTester.testMerkleHash(bufferToBytes(buf))).to.equal(merkleHash(buf, 0, 4))
+        expect(await hashTester.testMerkleHash(bufferToBytes(buf))).to.equal(
+          merkleHash(buf, 0, 4)
+        )
       }
-
     })
-
   })
-
 })

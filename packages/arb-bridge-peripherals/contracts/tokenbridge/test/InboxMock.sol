@@ -28,24 +28,24 @@ contract InboxMock {
     event TicketData(uint256 maxSubmissionCost);
 
     function createRetryableTicket(
-        address destAddr,
-        uint256 l2CallValue,
+        address, /* destAddr */
+        uint256, /* l2CallValue */
         uint256 maxSubmissionCost,
-        address excessFeeRefundAddress,
-        address callValueRefundAddress,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata data
+        address, /* excessFeeRefundAddress */
+        address, /* callValueRefundAddress */
+        uint256, /* maxGas */
+        uint256, /* gasPriceBid */
+        bytes calldata /* data */
     ) external payable returns (uint256) {
         emit TicketData(maxSubmissionCost);
         return 0;
     }
 
-    function bridge() external returns (IBridge) {
+    function bridge() external view returns (IBridge) {
         return IBridge(address(this));
     }
 
-    function activeOutbox() external returns (address) {
+    function activeOutbox() external view returns (address) {
         return address(this);
     }
 
@@ -53,7 +53,7 @@ contract InboxMock {
         l2ToL1SenderMock = sender;
     }
 
-    function l2ToL1Sender() external returns (address) {
+    function l2ToL1Sender() external view returns (address) {
         return l2ToL1SenderMock;
     }
 }

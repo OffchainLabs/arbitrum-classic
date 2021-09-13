@@ -26,9 +26,7 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     'counterpartGateway()': FunctionFragment
     'exitNum()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
-    'gasReserveIfCallRevert()': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
-    'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'initialize(address,address)': FunctionFragment
     'l1ToL2Token(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
@@ -51,16 +49,8 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
-    functionFragment: 'gasReserveIfCallRevert',
-    values?: undefined
-  ): string
-  encodeFunctionData(
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'inboundEscrowAndCall',
-    values: [string, BigNumberish, string, string, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'initialize',
@@ -95,15 +85,7 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'gasReserveIfCallRevert',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
     functionFragment: 'getOutboundCalldata',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'inboundEscrowAndCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
@@ -125,14 +107,12 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
   events: {
     'DepositFinalized(address,address,address,uint256)': EventFragment
     'TokenSet(address,address)': EventFragment
-    'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL1(address,address,uint256,bytes)': EventFragment
     'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DepositFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TokenSet'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL1'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
@@ -199,8 +179,6 @@ export class L2CustomGatewayTester extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<[BigNumber]>
-
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -209,15 +187,6 @@ export class L2CustomGatewayTester extends BaseContract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
 
     initialize(
       _l1Counterpart: string,
@@ -239,8 +208,8 @@ export class L2CustomGatewayTester extends BaseContract {
       _l1Token: string,
       _to: string,
       _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
@@ -276,8 +245,6 @@ export class L2CustomGatewayTester extends BaseContract {
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
-
   getOutboundCalldata(
     _token: string,
     _from: string,
@@ -286,15 +253,6 @@ export class L2CustomGatewayTester extends BaseContract {
     _data: BytesLike,
     overrides?: CallOverrides
   ): Promise<string>
-
-  inboundEscrowAndCall(
-    _l2Address: string,
-    _amount: BigNumberish,
-    _from: string,
-    _to: string,
-    _data: BytesLike,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
 
   initialize(
     _l1Counterpart: string,
@@ -316,8 +274,8 @@ export class L2CustomGatewayTester extends BaseContract {
     _l1Token: string,
     _to: string,
     _amount: BigNumberish,
-    _maxGas: BigNumberish,
-    _gasPriceBid: BigNumberish,
+    arg3: BigNumberish,
+    arg4: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
@@ -351,9 +309,7 @@ export class L2CustomGatewayTester extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
-
-    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+    ): Promise<void>
 
     getOutboundCalldata(
       _token: string,
@@ -363,15 +319,6 @@ export class L2CustomGatewayTester extends BaseContract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     initialize(
       _l1Counterpart: string,
@@ -393,8 +340,8 @@ export class L2CustomGatewayTester extends BaseContract {
       _l1Token: string,
       _to: string,
       _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
@@ -427,23 +374,6 @@ export class L2CustomGatewayTester extends BaseContract {
     ): TypedEventFilter<
       [string, string],
       { l1Address: string; l2Address: string }
-    >
-
-    TransferAndCallTriggered(
-      success?: null,
-      _from?: string | null,
-      _to?: string | null,
-      _amount?: null,
-      callHookData?: null
-    ): TypedEventFilter<
-      [boolean, string, string, BigNumber, string],
-      {
-        success: boolean
-        _from: string
-        _to: string
-        _amount: BigNumber
-        callHookData: string
-      }
     >
 
     TxToL1(
@@ -495,8 +425,6 @@ export class L2CustomGatewayTester extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
-
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -504,15 +432,6 @@ export class L2CustomGatewayTester extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     initialize(
@@ -535,8 +454,8 @@ export class L2CustomGatewayTester extends BaseContract {
       _l1Token: string,
       _to: string,
       _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
@@ -573,10 +492,6 @@ export class L2CustomGatewayTester extends BaseContract {
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    gasReserveIfCallRevert(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -584,15 +499,6 @@ export class L2CustomGatewayTester extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    inboundEscrowAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _from: string,
-      _to: string,
-      _data: BytesLike,
-      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     initialize(
@@ -618,8 +524,8 @@ export class L2CustomGatewayTester extends BaseContract {
       _l1Token: string,
       _to: string,
       _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
+      arg3: BigNumberish,
+      arg4: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>

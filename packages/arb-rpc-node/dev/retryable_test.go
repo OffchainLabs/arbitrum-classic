@@ -42,6 +42,20 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
+func makeDepositMessage(dest common.Address) message.EthDepositTx {
+	return message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1000000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: dest,
+				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(20), nil),
+				Data:        nil,
+			},
+		}),
+	}
+}
+
 func setupTest(t *testing.T) (
 	common.Address,
 	*bind.TransactOpts,
@@ -69,17 +83,7 @@ func setupTest(t *testing.T) (
 
 	sender := common.RandAddress()
 
-	deposit := message.EthDepositTx{
-		L2Message: message.NewSafeL2Message(message.ContractTransaction{
-			BasicTx: message.BasicTx{
-				MaxGas:      big.NewInt(1000000),
-				GasPriceBid: big.NewInt(0),
-				DestAddress: common.NewAddressFromEth(otherAuth.From),
-				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(20), nil),
-				Data:        nil,
-			},
-		}),
-	}
+	deposit := makeDepositMessage(common.NewAddressFromEth(otherAuth.From))
 	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
 	test.FailIfError(t, err)
 

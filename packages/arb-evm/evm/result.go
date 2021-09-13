@@ -190,6 +190,8 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 	} else if res.ResultCode == SequenceNumberTooHigh {
 		// Maintain error message backwards compatibility
 		return errors.New("invalid transaction nonce")
+	} else if res.ResultCode == ExecutionRanOutOfGas {
+		return errors.New("execution ran out of gas")
 	} else {
 		return errors.Errorf("execution reverted: error code %v", res.ResultCode)
 	}

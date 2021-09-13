@@ -60,7 +60,7 @@ export enum UpgradeableType {
   RollupAdminFacet = 'RollupAdminFacet',
 }
 
-export const proxyType = (contractName: ContractNames) => {
+export const proxyType = (contractName: ContractNames): UpgradeableType => {
   switch (contractName) {
     case ContractNames.StandardArbERC20:
       return UpgradeableType.BeaconOwnedByEOA
@@ -77,21 +77,21 @@ export const proxyType = (contractName: ContractNames) => {
   }
 }
 
-export const isBeacon = (contractName: ContractNames) =>
+export const isBeacon = (contractName: ContractNames): boolean =>
   isBeaconOwnedByEOA(contractName) || isBeaconOwnedByRollup(contractName)
 
-export const isBeaconOwnedByEOA = (contractName: ContractNames) =>
+export const isBeaconOwnedByEOA = (contractName: ContractNames): boolean =>
   proxyType(contractName) === UpgradeableType.BeaconOwnedByEOA
 
-export const isBeaconOwnedByRollup = (contractName: ContractNames) =>
+export const isBeaconOwnedByRollup = (contractName: ContractNames): boolean =>
   proxyType(contractName) === UpgradeableType.BeaconOwnedByRollup
 
-export const isRollupUserFacet = (contractName: ContractNames) =>
+export const isRollupUserFacet = (contractName: ContractNames): boolean =>
   proxyType(contractName) === UpgradeableType.RollupUserFacet
 
-export const isRollupAdminFacet = (contractName: ContractNames) =>
+export const isRollupAdminFacet = (contractName: ContractNames): boolean =>
   proxyType(contractName) === UpgradeableType.RollupAdminFacet
-export const getLayer = (contractName: ContractNames) => {
+export const getLayer = (contractName: ContractNames): 2 | 1 => {
   switch (contractName) {
     case 'L2ERC20Gateway':
     case 'L2GatewayRouter':
@@ -104,7 +104,7 @@ export const getLayer = (contractName: ContractNames) => {
   }
 }
 
-export const hasPostInitHook = (contractName: ContractNames) => {
+export const hasPostInitHook = (contractName: ContractNames): boolean => {
   switch (contractName) {
     case ContractNames.L1GatewayRouter:
     case ContractNames.L1ERC20Gateway:

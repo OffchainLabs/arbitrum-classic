@@ -176,11 +176,11 @@ export class GatewayRouter extends BaseContract {
     defaultGateway(overrides?: CallOverrides): Promise<[string]>
 
     finalizeInboundTransfer(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
+      arg0: string,
+      arg1: string,
+      arg2: string,
+      arg3: BigNumberish,
+      arg4: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -227,11 +227,11 @@ export class GatewayRouter extends BaseContract {
   defaultGateway(overrides?: CallOverrides): Promise<string>
 
   finalizeInboundTransfer(
-    _token: string,
-    _from: string,
-    _to: string,
-    _amount: BigNumberish,
-    _data: BytesLike,
+    arg0: string,
+    arg1: string,
+    arg2: string,
+    arg3: BigNumberish,
+    arg4: BytesLike,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -275,13 +275,13 @@ export class GatewayRouter extends BaseContract {
     defaultGateway(overrides?: CallOverrides): Promise<string>
 
     finalizeInboundTransfer(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
+      arg0: string,
+      arg1: string,
+      arg2: string,
+      arg3: BigNumberish,
+      arg4: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
+    ): Promise<void>
 
     getGateway(_token: string, overrides?: CallOverrides): Promise<string>
 
@@ -343,11 +343,11 @@ export class GatewayRouter extends BaseContract {
     defaultGateway(overrides?: CallOverrides): Promise<BigNumber>
 
     finalizeInboundTransfer(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
+      arg0: string,
+      arg1: string,
+      arg2: string,
+      arg3: BigNumberish,
+      arg4: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -395,11 +395,11 @@ export class GatewayRouter extends BaseContract {
     defaultGateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     finalizeInboundTransfer(
-      _token: string,
-      _from: string,
-      _to: string,
-      _amount: BigNumberish,
-      _data: BytesLike,
+      arg0: string,
+      arg1: string,
+      arg2: string,
+      arg3: BigNumberish,
+      arg4: BytesLike,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 

@@ -59,9 +59,8 @@ const main = async () => {
   // l1 validation
   const ProxyAdmin__factory = await ethers.getContractFactory('ProxyAdmin')
 
-  const l1ProxyAdmin = ProxyAdmin__factory.attach(l1ProxyAdminAddr).connect(
-    l1Signer
-  )
+  const l1ProxyAdmin =
+    ProxyAdmin__factory.attach(l1ProxyAdminAddr).connect(l1Signer)
 
   const l1Admin = await l1ProxyAdmin.owner()
 
@@ -70,9 +69,8 @@ const main = async () => {
   }
 
   // l2 validation
-  const l2ProxyAdmin = ProxyAdmin__factory.attach(l2ProxyAdminAddr).connect(
-    l2Signer
-  )
+  const l2ProxyAdmin =
+    ProxyAdmin__factory.attach(l2ProxyAdminAddr).connect(l2Signer)
 
   const l2Admin = await l2ProxyAdmin.owner()
 

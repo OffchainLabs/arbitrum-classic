@@ -1,8 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
 import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs'
 import childProcess from 'child_process'
-// @ts-ignore (module doesn't have types declared)
-import prompt from 'prompt-promise'
+import prompts from 'prompts'
 import {
   QueuedUpdates,
   CurrentDeployments,
@@ -22,8 +21,6 @@ const ADMIN_SLOT =
   '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103'
 const IMPLEMENTATION_SLOT =
   '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
-const BEACON_SLOT =
-  '0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50'
 
 const ROLLUP_CONSTRUCTOR_VAL = 42161
 const getAdminFromProxyStorage = async (
@@ -57,7 +54,23 @@ const ensureCleanGitTree = () => {
 export const initUpgrades = (
   hre: HardhatRuntimeEnvironment,
   rootDir: string
-) => {
+): {
+  updateImplementations: () => Promise<boolean>
+  verifyCurrentImplementations: () => Promise<boolean>
+  deployLogic: (contractNames: ContractNames[] | ContractNames) => Promise<void>
+  deployLogicAll: () => Promise<void>
+  transferAdmin: (proxyAddress: string, newAdmin: string) => Promise<void>
+  transferBeaconOwner: (
+    upgradableBeaconAddress: string,
+    newOwner: string
+  ) => Promise<void>
+  removeBuildInfoFiles: () => Promise<void>
+  getDeployments: () => Promise<{
+    path: string
+    data: CurrentDeployments
+  }>
+  verifyDeployments: () => Promise<void>
+} => {
   const compileTask = hre.run('compile')
 
   const getQueuedUpdates = async (): Promise<{
@@ -66,18 +79,13 @@ export const initUpgrades = (
   }> => {
     const network = await hre.ethers.provider.getNetwork()
     const path = `${rootDir}/_deployments/${network.chainId}_queued-updates.json`
-    try {
-      const jsonBuff = readFileSync(path)
-      return { path, data: JSON.parse(jsonBuff.toString()) as QueuedUpdates }
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        console.log('New network; creating queued updates file')
-        writeFileSync(path, JSON.stringify({}))
-        return { path, data: {} }
-      } else {
-        throw err
-      }
+    if (!existsSync(path)) {
+      console.log('New network; creating queued updates file')
+      writeFileSync(path, JSON.stringify({}))
+      return { path, data: {} }
     }
+    const jsonBuff = readFileSync(path)
+    return { path, data: JSON.parse(jsonBuff.toString()) as QueuedUpdates }
   }
 
   const getDeployments = async (): Promise<{
@@ -86,19 +94,14 @@ export const initUpgrades = (
   }> => {
     const network = await hre.ethers.provider.getNetwork()
     const path = `${rootDir}/_deployments/${network.chainId}_current_deployment.json`
-    try {
-      const jsonBuff = readFileSync(path)
-      return {
-        path,
-        data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
-      }
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        console.log(
-          'New network; need to set up _current_deployments.json file'
-        )
-      }
-      throw err
+    if (!existsSync(path)) {
+      console.log('New network; need to set up _current_deployments.json file')
+      throw Error('No current deployments')
+    }
+    const jsonBuff = readFileSync(path)
+    return {
+      path,
+      data: JSON.parse(jsonBuff.toString()) as CurrentDeployments,
     }
   }
 
@@ -132,11 +135,16 @@ export const initUpgrades = (
   > => {
     const path = await tmpDeploymentsPath()
     if (existsSync(path)) {
-      console.log(
-        `tmp deployments file found; do you want to resume deployments with it? ('Yes' to continue)`
-      )
-      const res = await prompt('')
-      if (res !== 'Yes') {
+      console.log(``)
+
+      const res = await prompts({
+        type: 'confirm',
+        name: 'value',
+        message:
+          'tmp deployments file found; do you want to resume deployments with it?',
+        initial: true,
+      })
+      if (res.value !== 'Yes') {
         console.log('exiting')
         process.exit(0)
       }
@@ -147,17 +155,17 @@ export const initUpgrades = (
       }
     }
   }
-  const getBuildInfoString = async (contractName: string) => {
-    const names = await hre.artifacts.getAllFullyQualifiedNames()
-    const contracts = names.filter(curr => curr.endsWith(`:${contractName}`))
-    if (contracts.length !== 1) throw new Error('Contract not found')
-    const info = await hre.artifacts.getBuildInfo(contracts[0])
-    return JSON.stringify(info)
-  }
+  // const getBuildInfoString = async (contractName: string) => {
+  //   const names = await hre.artifacts.getAllFullyQualifiedNames()
+  //   const contracts = names.filter(curr => curr.endsWith(`:${contractName}`))
+  //   if (contracts.length !== 1) throw new Error('Contract not found')
+  //   const info = await hre.artifacts.getBuildInfo(contracts[0])
+  //   return JSON.stringify(info)
+  // }
 
   const deployLogic = async (
     contractNames: ContractNames[] | ContractNames
-  ) => {
+  ): Promise<void> => {
     await compileTask
     ensureCleanGitTree()
 
@@ -179,11 +187,14 @@ export const initUpgrades = (
 
     for (const contractName of contractNames) {
       if (queuedUpdatesData[contractName]) {
-        console.log(
-          `Update already queued up for ${contractName}; would you redeploy it? ('Yes' to redeploy, otherwise we'll skip and used the queued update)`
-        )
-        const res = await prompt('')
-        if (res.trim().toLowerCase() !== 'yes') {
+        console.log()
+        const res = await prompts({
+          type: 'confirm',
+          name: 'value',
+          message: `Update already queued up for ${contractName}; would you redeploy it? ('Yes' to redeploy, otherwise we'll skip and used the queued update)`,
+          initial: true,
+        })
+        if (res.value.trim().toLowerCase() !== 'yes') {
           console.log('Skipping redeploy and using the queued update')
           continue
         } else {
@@ -303,9 +314,7 @@ export const initUpgrades = (
     console.log(`Updating ${contractsToUpdate.length} contracts`)
     // TODO: explicitly check for storage layout clashes
 
-    contractsToUpdate.sort((a, b) =>
-      a === ContractNames.SequencerInbox ? -1 : 1
-    )
+    contractsToUpdate.sort(a => (a === ContractNames.SequencerInbox ? -1 : 1))
 
     for (const contractName of contractsToUpdate) {
       const queuedUpdateData = queuedUpdatesData[contractName] as QueuedUpdate
@@ -502,10 +511,15 @@ export const initUpgrades = (
         success = false
       }
       //  check implementation
-      let implementation = await hre.ethers.provider.getStorageAt(
-        deploymentData.proxyAddress,
-        IMPLEMENTATION_SLOT
+      let rawImplementation = await hre.ethers.provider.send(
+        'eth_getStorageAt',
+        [deploymentData.proxyAddress, IMPLEMENTATION_SLOT, 'latest']
       )
+      rawImplementation =
+        rawImplementation.length % 2 === 1
+          ? '0x0' + rawImplementation.substr(2)
+          : rawImplementation
+      let implementation = hre.ethers.utils.hexlify(rawImplementation)
       if (implementation.length > 42) {
         implementation =
           '0x' + implementation.substr(implementation.length - 40, 40)
@@ -529,8 +543,7 @@ export const initUpgrades = (
 
   const deployLogicAll = async () => {
     await compileTask
-    const { path: deploymentsPath, data: deploymentsJsonData } =
-      await getDeployments()
+    const { data: deploymentsJsonData } = await getDeployments()
     const contractsNames = Object.keys(
       deploymentsJsonData.contracts
     ) as ContractNames[]
@@ -553,7 +566,6 @@ export const initUpgrades = (
       throw new Error('User trying to update admin to current admin address')
     }
 
-    const { path: deploymentsPath, data } = await getDeployments()
     const signers = await hre.ethers.getSigners()
     if (!signers.length) {
       throw new Error(
@@ -569,7 +581,7 @@ export const initUpgrades = (
     const res = await proxyAdmin
       .connect(signer)
       .changeProxyAdmin(proxyAddress, newAdmin)
-    const rec = await res.wait()
+    await res.wait()
   }
 
   const transferBeaconOwner = async (
@@ -607,7 +619,7 @@ export const initUpgrades = (
       return
     }
     const res = await UpgradeableBeacon.transferOwnership(newOwner)
-    const rec = await res.wait()
+    await res.wait()
     console.log('ownership transfer complete')
   }
 
@@ -662,6 +674,7 @@ export const initUpgrades = (
     transferAdmin,
     transferBeaconOwner,
     removeBuildInfoFiles,
+    getDeployments,
     verifyDeployments,
   }
 }

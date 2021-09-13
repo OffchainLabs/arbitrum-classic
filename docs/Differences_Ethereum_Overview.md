@@ -17,6 +17,10 @@ Other differences are cool [Special Features](Special_Features.md) we squeezed i
 
 Every transaction submitted to Arbitrum will burn a nonce, except if the transaction is formatted incorrectly or does not have the expected nonce.
 
+### Precompiles
+
+Arbitrum does not support the blake2f and ripemd160 precompiles (yet!)
+
 ### L1 to L2 Deposits
 
 Ether can be depositted using two methods: [retryable transactions](L1_L2_Messages.md) or L2 funded by L1 transactions. For end users these behave similarly, but have subtle differences.

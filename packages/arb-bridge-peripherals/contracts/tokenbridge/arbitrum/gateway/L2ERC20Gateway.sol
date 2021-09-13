@@ -79,7 +79,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         address l1ERC20,
         address expectedL2Address,
         address _from,
-        address _to,
+        address, /* _to */
         uint256 _amount,
         bytes memory deployData
     ) internal override returns (bool shouldHalt) {
@@ -92,11 +92,9 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
             return false;
         } else {
             // trigger withdrawal then halt
-            createOutboundTx(
-                address(this),
-                _amount,
-                getOutboundCalldata(l1ERC20, address(this), _from, _amount, "")
-            );
+            // this codepath should only be hit if the system is setup incorrectly
+            // this withdrawal is for error recovery, not composing with L2 dapps, so we ignore the return value
+            triggerWithdrawal(l1ERC20, address(this), _from, _amount, "");
             return true;
         }
     }

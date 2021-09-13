@@ -168,7 +168,7 @@ export class ITokenGateway extends BaseContract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
+    ): Promise<void>
 
     outboundTransfer(
       _token: string,

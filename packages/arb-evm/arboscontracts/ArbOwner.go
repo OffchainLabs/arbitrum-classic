@@ -4,6 +4,7 @@
 package arboscontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,8 +28,14 @@ var (
 	_ = event.NewSubscription
 )
 
+// ArbOwnerMetaData contains all meta data concerning the ArbOwner contract.
+var ArbOwnerMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addAllowedSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"addChainOwner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"from\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"to\",\"type\":\"uint256\"}],\"name\":\"addMappingException\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"addToReserveFunds\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allowAllSenders\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allowOnlyOwnerToSend\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"which\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"createChainParameter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"constructorData\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"deemedSender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deemedNonce\",\"type\":\"uint256\"}],\"name\":\"deployContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"newCodeHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"oldCodeHash\",\"type\":\"bytes32\"}],\"name\":\"finishCodeUploadAsArbosUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllAllowedSenders\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllChainOwners\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllFairGasPriceSenders\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllMappingExceptions\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"which\",\"type\":\"bytes32\"}],\"name\":\"getChainParameter\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getLastUpgradeHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTotalOfEthBalances\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getUploadedCodeHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isAllowedSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isChainOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isFairGasPriceSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"from\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"to\",\"type\":\"uint256\"}],\"name\":\"isMappingException\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"removeAllowedSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"ownerToRemove\",\"type\":\"address\"}],\"name\":\"removeChainOwner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"from\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"to\",\"type\":\"uint256\"}],\"name\":\"removeMappingException\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"serializeAllParameters\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"which\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"setChainParameter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isFairGasPriceSender\",\"type\":\"bool\"}],\"name\":\"setFairGasPriceSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"priceInGwei\",\"type\":\"uint256\"}],\"name\":\"setL1GasPriceEstimate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"startCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"oldCodeHash\",\"type\":\"bytes32\"}],\"name\":\"startCodeUploadWithCheck\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+}
+
 // ArbOwnerABI is the input ABI used to generate the binding from.
-const ArbOwnerABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addAllowedSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"addChainOwner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"from\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"to\",\"type\":\"uint256\"}],\"name\":\"addMappingException\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"addToReserveFunds\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allowAllSenders\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allowOnlyOwnerToSend\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"pluggableId\",\"type\":\"uint256\"}],\"name\":\"bindAddressToPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"which\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"createChainParameter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"constructorData\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"deemedSender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deemedNonce\",\"type\":\"uint256\"}],\"name\":\"deployContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"newCodeHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"oldCodeHash\",\"type\":\"bytes32\"}],\"name\":\"finishCodeUploadAsArbosUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"keepState\",\"type\":\"bool\"}],\"name\":\"finishCodeUploadAsPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllAllowedSenders\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllChainOwners\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllFairGasPriceSenders\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllMappingExceptions\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"which\",\"type\":\"bytes32\"}],\"name\":\"getChainParameter\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTotalOfEthBalances\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getUploadedCodeHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isAllowedSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isChainOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isFairGasPriceSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"from\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"to\",\"type\":\"uint256\"}],\"name\":\"isMappingException\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"removeAllowedSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"ownerToRemove\",\"type\":\"address\"}],\"name\":\"removeChainOwner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"from\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"to\",\"type\":\"uint256\"}],\"name\":\"removeMappingException\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"serializeAllParameters\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"which\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"setChainParameter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isFairGasPriceSender\",\"type\":\"bool\"}],\"name\":\"setFairGasPriceSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"priceInGwei\",\"type\":\"uint256\"}],\"name\":\"setL1GasPriceEstimate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"startCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// Deprecated: Use ArbOwnerMetaData.ABI instead.
+var ArbOwnerABI = ArbOwnerMetaData.ABI
 
 // ArbOwner is an auto generated Go binding around an Ethereum contract.
 type ArbOwner struct {
@@ -324,6 +332,37 @@ func (_ArbOwner *ArbOwnerSession) GetChainParameter(which [32]byte) (*big.Int, e
 // Solidity: function getChainParameter(bytes32 which) view returns(uint256)
 func (_ArbOwner *ArbOwnerCallerSession) GetChainParameter(which [32]byte) (*big.Int, error) {
 	return _ArbOwner.Contract.GetChainParameter(&_ArbOwner.CallOpts, which)
+}
+
+// GetLastUpgradeHash is a free data retrieval call binding the contract method 0x10c2e0b9.
+//
+// Solidity: function getLastUpgradeHash() view returns(bytes32)
+func (_ArbOwner *ArbOwnerCaller) GetLastUpgradeHash(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _ArbOwner.contract.Call(opts, &out, "getLastUpgradeHash")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// GetLastUpgradeHash is a free data retrieval call binding the contract method 0x10c2e0b9.
+//
+// Solidity: function getLastUpgradeHash() view returns(bytes32)
+func (_ArbOwner *ArbOwnerSession) GetLastUpgradeHash() ([32]byte, error) {
+	return _ArbOwner.Contract.GetLastUpgradeHash(&_ArbOwner.CallOpts)
+}
+
+// GetLastUpgradeHash is a free data retrieval call binding the contract method 0x10c2e0b9.
+//
+// Solidity: function getLastUpgradeHash() view returns(bytes32)
+func (_ArbOwner *ArbOwnerCallerSession) GetLastUpgradeHash() ([32]byte, error) {
+	return _ArbOwner.Contract.GetLastUpgradeHash(&_ArbOwner.CallOpts)
 }
 
 // GetTotalOfEthBalances is a free data retrieval call binding the contract method 0x2816aba5.
@@ -669,27 +708,6 @@ func (_ArbOwner *ArbOwnerTransactorSession) AllowOnlyOwnerToSend() (*types.Trans
 	return _ArbOwner.Contract.AllowOnlyOwnerToSend(&_ArbOwner.TransactOpts)
 }
 
-// BindAddressToPluggable is a paid mutator transaction binding the contract method 0xf589445c.
-//
-// Solidity: function bindAddressToPluggable(address addr, uint256 pluggableId) returns()
-func (_ArbOwner *ArbOwnerTransactor) BindAddressToPluggable(opts *bind.TransactOpts, addr common.Address, pluggableId *big.Int) (*types.Transaction, error) {
-	return _ArbOwner.contract.Transact(opts, "bindAddressToPluggable", addr, pluggableId)
-}
-
-// BindAddressToPluggable is a paid mutator transaction binding the contract method 0xf589445c.
-//
-// Solidity: function bindAddressToPluggable(address addr, uint256 pluggableId) returns()
-func (_ArbOwner *ArbOwnerSession) BindAddressToPluggable(addr common.Address, pluggableId *big.Int) (*types.Transaction, error) {
-	return _ArbOwner.Contract.BindAddressToPluggable(&_ArbOwner.TransactOpts, addr, pluggableId)
-}
-
-// BindAddressToPluggable is a paid mutator transaction binding the contract method 0xf589445c.
-//
-// Solidity: function bindAddressToPluggable(address addr, uint256 pluggableId) returns()
-func (_ArbOwner *ArbOwnerTransactorSession) BindAddressToPluggable(addr common.Address, pluggableId *big.Int) (*types.Transaction, error) {
-	return _ArbOwner.Contract.BindAddressToPluggable(&_ArbOwner.TransactOpts, addr, pluggableId)
-}
-
 // ContinueCodeUpload is a paid mutator transaction binding the contract method 0x56331f75.
 //
 // Solidity: function continueCodeUpload(bytes marshalledCode) returns()
@@ -772,27 +790,6 @@ func (_ArbOwner *ArbOwnerSession) FinishCodeUploadAsArbosUpgrade(newCodeHash [32
 // Solidity: function finishCodeUploadAsArbosUpgrade(bytes32 newCodeHash, bytes32 oldCodeHash) returns()
 func (_ArbOwner *ArbOwnerTransactorSession) FinishCodeUploadAsArbosUpgrade(newCodeHash [32]byte, oldCodeHash [32]byte) (*types.Transaction, error) {
 	return _ArbOwner.Contract.FinishCodeUploadAsArbosUpgrade(&_ArbOwner.TransactOpts, newCodeHash, oldCodeHash)
-}
-
-// FinishCodeUploadAsPluggable is a paid mutator transaction binding the contract method 0xf4f4e136.
-//
-// Solidity: function finishCodeUploadAsPluggable(uint256 id, bool keepState) returns()
-func (_ArbOwner *ArbOwnerTransactor) FinishCodeUploadAsPluggable(opts *bind.TransactOpts, id *big.Int, keepState bool) (*types.Transaction, error) {
-	return _ArbOwner.contract.Transact(opts, "finishCodeUploadAsPluggable", id, keepState)
-}
-
-// FinishCodeUploadAsPluggable is a paid mutator transaction binding the contract method 0xf4f4e136.
-//
-// Solidity: function finishCodeUploadAsPluggable(uint256 id, bool keepState) returns()
-func (_ArbOwner *ArbOwnerSession) FinishCodeUploadAsPluggable(id *big.Int, keepState bool) (*types.Transaction, error) {
-	return _ArbOwner.Contract.FinishCodeUploadAsPluggable(&_ArbOwner.TransactOpts, id, keepState)
-}
-
-// FinishCodeUploadAsPluggable is a paid mutator transaction binding the contract method 0xf4f4e136.
-//
-// Solidity: function finishCodeUploadAsPluggable(uint256 id, bool keepState) returns()
-func (_ArbOwner *ArbOwnerTransactorSession) FinishCodeUploadAsPluggable(id *big.Int, keepState bool) (*types.Transaction, error) {
-	return _ArbOwner.Contract.FinishCodeUploadAsPluggable(&_ArbOwner.TransactOpts, id, keepState)
 }
 
 // RemoveAllowedSender is a paid mutator transaction binding the contract method 0x471eab5c.
@@ -940,4 +937,25 @@ func (_ArbOwner *ArbOwnerSession) StartCodeUpload() (*types.Transaction, error) 
 // Solidity: function startCodeUpload() returns()
 func (_ArbOwner *ArbOwnerTransactorSession) StartCodeUpload() (*types.Transaction, error) {
 	return _ArbOwner.Contract.StartCodeUpload(&_ArbOwner.TransactOpts)
+}
+
+// StartCodeUploadWithCheck is a paid mutator transaction binding the contract method 0xda47668c.
+//
+// Solidity: function startCodeUploadWithCheck(bytes32 oldCodeHash) returns()
+func (_ArbOwner *ArbOwnerTransactor) StartCodeUploadWithCheck(opts *bind.TransactOpts, oldCodeHash [32]byte) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "startCodeUploadWithCheck", oldCodeHash)
+}
+
+// StartCodeUploadWithCheck is a paid mutator transaction binding the contract method 0xda47668c.
+//
+// Solidity: function startCodeUploadWithCheck(bytes32 oldCodeHash) returns()
+func (_ArbOwner *ArbOwnerSession) StartCodeUploadWithCheck(oldCodeHash [32]byte) (*types.Transaction, error) {
+	return _ArbOwner.Contract.StartCodeUploadWithCheck(&_ArbOwner.TransactOpts, oldCodeHash)
+}
+
+// StartCodeUploadWithCheck is a paid mutator transaction binding the contract method 0xda47668c.
+//
+// Solidity: function startCodeUploadWithCheck(bytes32 oldCodeHash) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) StartCodeUploadWithCheck(oldCodeHash [32]byte) (*types.Transaction, error) {
+	return _ArbOwner.Contract.StartCodeUploadWithCheck(&_ArbOwner.TransactOpts, oldCodeHash)
 }

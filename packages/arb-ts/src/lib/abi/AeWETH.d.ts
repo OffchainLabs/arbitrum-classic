@@ -242,8 +242,8 @@ export class AeWETH extends BaseContract {
     ): Promise<ContractTransaction>
 
     bridgeMint(
-      account: string,
-      amount: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -357,8 +357,8 @@ export class AeWETH extends BaseContract {
   ): Promise<ContractTransaction>
 
   bridgeMint(
-    account: string,
-    amount: BigNumberish,
+    arg0: string,
+    arg1: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -472,8 +472,8 @@ export class AeWETH extends BaseContract {
     ): Promise<void>
 
     bridgeMint(
-      account: string,
-      amount: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -601,8 +601,8 @@ export class AeWETH extends BaseContract {
     ): Promise<BigNumber>
 
     bridgeMint(
-      account: string,
-      amount: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -720,8 +720,8 @@ export class AeWETH extends BaseContract {
     ): Promise<PopulatedTransaction>
 
     bridgeMint(
-      account: string,
-      amount: BigNumberish,
+      arg0: string,
+      arg1: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 

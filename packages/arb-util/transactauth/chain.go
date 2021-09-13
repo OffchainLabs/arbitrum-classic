@@ -74,6 +74,7 @@ type attemptRbfInfo struct {
 
 func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher ArbReceiptFetcher, tx *arbtransaction.ArbTransaction, rbfInfo *attemptRbfInfo) (*types.Receipt, error) {
 	lastRbf := time.Now()
+	origTxHash := tx.Hash()
 	for {
 		select {
 		case <-time.After(time.Second):
@@ -89,7 +90,7 @@ func waitForReceiptWithResultsSimpleInternal(ctx context.Context, receiptFetcher
 			receipt, err := receiptFetcher.TransactionReceipt(ctx, tx)
 			if receipt == nil {
 				_, isFireblocks := receiptFetcher.(*FireblocksTransactAuth)
-				if rbfInfo != nil && !isFireblocks {
+				if rbfInfo != nil && !isFireblocks && tx.Hash() != origTxHash {
 					// an alternative tx might've gotten confirmed
 					nonce, err := receiptFetcher.NonceAt(ctx, rbfInfo.account, nil)
 					if err == nil {
@@ -144,7 +145,7 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 	if transactAuth != nil {
 		attemptRbf := func() (*arbtransaction.ArbTransaction, error) {
 			auth := transactAuth.GetAuth(ctx)
-			if auth.GasPrice.Cmp(arbTx.GasPrice()) <= 0 {
+			if auth.GasPrice != nil && auth.GasPrice.Cmp(arbTx.GasPrice()) <= 0 {
 				return arbTx, nil
 			}
 			var rawTx *types.Transaction

@@ -177,12 +177,16 @@ func TestSequencerBatcher(t *testing.T) {
 		extraConfig,
 	)
 
+	gasRefunderAddr, _, _, err := ethbridgecontracts.DeployGasRefunder(auth, clnt)
+	test.FailIfError(t, err)
+
 	config := configuration.Config{
 		Node: configuration.Node{
 			Sequencer: configuration.Sequencer{
 				CreateBatchBlockInterval:   40,
 				DelayedMessagesTargetDelay: 1,
 				MaxBatchGasCost:            2_000_000,
+				GasRefunderAddress:         gasRefunderAddr.String(),
 			},
 		},
 	}

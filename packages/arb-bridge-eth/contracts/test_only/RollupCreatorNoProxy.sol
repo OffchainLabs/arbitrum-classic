@@ -61,20 +61,19 @@ contract RollupCreatorNoProxy {
         uint256 _sequencerDelaySeconds,
         bytes memory _extraConfig
     ) public {
-        RollupLib.Config memory config =
-            RollupLib.Config(
-                _machineHash,
-                _confirmPeriodBlocks,
-                _extraChallengeTimeBlocks,
-                _avmGasSpeedLimitPerBlock,
-                _baseStake,
-                _stakeToken,
-                _owner,
-                _sequencer,
-                _sequencerDelayBlocks,
-                _sequencerDelaySeconds,
-                _extraConfig
-            );
+        RollupLib.Config memory config = RollupLib.Config(
+            _machineHash,
+            _confirmPeriodBlocks,
+            _extraChallengeTimeBlocks,
+            _avmGasSpeedLimitPerBlock,
+            _baseStake,
+            _stakeToken,
+            _owner,
+            _sequencer,
+            _sequencerDelayBlocks,
+            _sequencerDelaySeconds,
+            _extraConfig
+        );
 
         createRollupNoProxy(config, _challengeFactory);
         selfdestruct(msg.sender);

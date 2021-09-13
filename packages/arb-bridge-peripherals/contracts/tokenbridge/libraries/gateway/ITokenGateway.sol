@@ -54,7 +54,7 @@ interface ITokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable returns (bytes memory);
+    ) external payable;
 
     /**
      * @notice Calculate the address used when bridging an ERC20 token

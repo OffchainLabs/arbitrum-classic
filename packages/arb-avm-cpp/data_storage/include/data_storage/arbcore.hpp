@@ -81,7 +81,25 @@ struct ArbCoreConfig {
     uint64_t save_rocksdb_interval{0};
 
     // Rocksdb checkpoints will be saved in save_rocksdb_path/timestamp/
-    std::string save_rocksdb_path;
+    std::string save_rocksdb_path{};
+
+    // If any profile_* parameters are non-zero, program will exit after
+    // all profile conditions are satisfied.
+
+    // Reorg database to message
+    uint64_t profile_reorg_to{0};
+
+    // Run until message reached
+    uint64_t profile_run_until{0};
+
+    // Load specified number of machines backwards from profile_run_until
+    uint64_t profile_load_count{0};
+
+    // Delete all database entries except for inbox
+    bool profile_reset_db_except_inbox{false};
+
+    // Exit after printing out metadata from database
+    bool profile_just_metadata;
 
     ArbCoreConfig() = default;
 };
@@ -201,9 +219,6 @@ class ArbCore {
     rocksdb::Status saveAssertion(ReadWriteTransaction& tx,
                                   const Assertion& assertion,
                                   uint256_t arb_gas_used);
-    std::variant<rocksdb::Status, MachineStateKeys> getCheckpoint(
-        ReadTransaction& tx,
-        const uint256_t& arb_gas_used) const;
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas,
