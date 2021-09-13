@@ -58,7 +58,6 @@ import networks from './networks'
 import {
   L1ERC20Gateway,
   L1GatewayRouter,
-  L1ArbitrumGateway,
   L1ArbitrumGateway__factory,
 } from './abi'
 
@@ -275,7 +274,6 @@ export class Bridge {
     const {
       l1WethGateway: l1WethGatewayAddress,
       l1ERC20Gateway: l1ERC20GatewayAddress,
-      l1CustomGateway: l1ERC20CustomGatewayAddress,
     } = networks[l1ChainId].tokenBridge
 
     const gasPriceBid =
