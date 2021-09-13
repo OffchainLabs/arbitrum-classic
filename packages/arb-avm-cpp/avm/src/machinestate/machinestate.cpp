@@ -485,7 +485,7 @@ uint256_t runWasmMachine(MachineState &machine_state) {
 
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
-    // uint64_t counter = 0;
+    uint64_t counter = 0;
     while (true) {
         if (has_gas_limit) {
             if (!machine_state.context.go_over_gas) {
@@ -835,6 +835,8 @@ BlockReason MachineState::runOne() {
     // save stack size for stack cleanup in case of error
     uint64_t start_stack_size = stack.stacksize();
     uint64_t start_auxstack_size = auxstack.stacksize();
+
+    std::cerr << "Inst " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
 
     bool is_valid_instruction =
         instructionValidity()[static_cast<size_t>(instruction.op.opcode)];

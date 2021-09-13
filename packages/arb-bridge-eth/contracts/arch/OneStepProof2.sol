@@ -750,15 +750,20 @@ contract OneStepProof2 is OneStepProofCommon {
          /* Value.Data[] memory auxstackVals */,
          uint256 len,) = decodeWasmData(context.bufProof);
         // Return value must come from the final machine
-        require(stackVals.length >= 2, "Not enough wasm stack returns");
+        require(stackVals.length >= 3, "Not enough wasm stack returns");
         // Buffer, len
         require(stackVals[1].isInt(), "stack top not int");
         require(stackVals[0].isBuffer(), "stack next not buf");
+        require(stackVals[2].isInt(), "stack gas not int");
         // require(stackVals[0].hash() == 0x0b179c33f802237faf5553da8854df679313390e8155a46bc8699f6d1d1e9bd2, "wrong buffer");
         pushVal(context.stack, mkPair(stackVals[0], stackVals[1]));
+        uint64 gas = uint64(stackVals[2].intVal);
+        // require(gas == 0, "non zero gas");
+        context.gas -= gas;
+        context.afterMachine.arbGasRemaining += gas + 1000;
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
-        require(context.startState == 0xd71c80de4c79fa65f83c1149092a08a3f9793b69d15f63cd1410a81089f54e0a, "first state bad");
+        // require(context.startState == 0xd71c80de4c79fa65f83c1149092a08a3f9793b69d15f63cd1410a81089f54e0a, "first state bad");
         // require(context.endState == 0x51ed09ad2653c0c7bdde6f2ae7fbcaed24f44eed800c8ba4581ef09993f7228d, "end state bad");
         context.nextLength = len;
     }
@@ -789,9 +794,9 @@ contract OneStepProof2 is OneStepProofCommon {
         } else if (opCode == OP_WASMTEST) {
             return (2, 0, 100, executeWasmTest);
         } else if (opCode == OP_WASMCOMPILE) {
-            return (2, 0, 1000000, executeWasmCompile);
+            return (2, 0, 1001000, executeWasmCompile);
         } else if (opCode == OP_WASMRUN) {
-            return (4, 0, 1000000, executeWasmRun);
+            return (4, 0, 1001000, executeWasmRun);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
         } else {

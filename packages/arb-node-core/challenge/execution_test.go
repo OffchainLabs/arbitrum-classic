@@ -88,9 +88,9 @@ func TestWasmRunChallenge(t *testing.T) {
 func TestWasmRunReversed(t *testing.T) {
 	messages := []inbox.InboxMessage{makeInitMsg()}
 	startGas := big.NewInt(0)
-	endGas := big.NewInt(2005657)
+	endGas := big.NewInt(28980000)
 	arbCore, shutdown := test.PrepareArbCoreGen(t, messages, "/home/sami/arbitrum/wasm-run.mexe")
-	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(1900000)}
+	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(1004000)}
 	defer shutdown()
 	faultyCore := NewFaultyCore(arbCore, faultConfig)
 

@@ -1048,7 +1048,10 @@ void wasm_run(MachineState& m) {
     Buffer& md = assumeBuffer(m.stack[2]);
     WasmCodePoint& wasmcp = assumeWasm(m.stack[3]);
     auto res = wasmcp.runner->run_wasm(md, len, arg);
-    
+    m.arb_gas_remaining += res.gas_left;
+    m.output.arb_gas_used -= res.gas_left;
+    std::cerr << "Gas left: " << res.gas_left << "\n";
+
     Tuple tpl = Tuple(res.buffer, res.buffer_len);
     m.stack.popClear();
     m.stack.popClear();
