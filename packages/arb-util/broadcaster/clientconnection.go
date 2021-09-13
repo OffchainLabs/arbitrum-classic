@@ -124,12 +124,11 @@ func (cc *ClientConnection) readRequest() error {
 	atomic.StoreInt64(&cc.lastHeardUnix, time.Now().Unix())
 
 	h, r, err := wsutil.NextReader(cc.conn, ws.StateServerSide)
+	if err != nil {
+		return err
+	}
 	if h.OpCode.IsControl() {
 		return wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
-	}
-	if err != nil {
-
-		return err
 	}
 
 	return nil
