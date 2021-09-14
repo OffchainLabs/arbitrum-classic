@@ -19,7 +19,6 @@ package broadcastclient
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"strings"
@@ -29,8 +28,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
@@ -143,7 +140,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 			default:
 			}
 
-			msg, op, err := bc.readData(ctx, ws.StateClientSide)
+			msg, op, err := broadcaster.ReadData(ctx, bc.conn, bc.idleTimeout, ws.StateClientSide)
 			if err != nil {
 				if bc.shuttingDown {
 					return
@@ -186,63 +183,6 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 			}
 		}
 	}()
-}
-
-func (bc *BroadcastClient) readData(ctx context.Context, state ws.State) ([]byte, ws.OpCode, error) {
-	controlHandler := wsutil.ControlFrameHandler(bc.conn, state)
-	reader := wsutil.Reader{
-		Source:          bc.conn,
-		State:           state,
-		CheckUTF8:       true,
-		SkipHeaderCheck: false,
-		OnIntermediate:  controlHandler,
-	}
-
-	// Remove timeout when leaving this function
-	defer func(conn net.Conn) {
-		err := conn.SetReadDeadline(time.Time{})
-		if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-			logger.Error().Err(err).Msg("error removing read deadline")
-		}
-	}(bc.conn)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, 0, nil
-		default:
-		}
-
-		err := bc.conn.SetReadDeadline(time.Now().Add(bc.idleTimeout))
-		if err != nil {
-			return nil, 0, err
-		}
-
-		// Control packet may be returned even if err set
-		header, err := reader.NextFrame()
-		if header.OpCode.IsControl() {
-			// Control packet may be returned even if err set
-			if err2 := controlHandler(header, &reader); err != nil {
-				return nil, 0, err2
-			}
-			continue
-		}
-		if err != nil {
-			return nil, 0, err
-		}
-
-		if header.OpCode != ws.OpText &&
-			header.OpCode != ws.OpBinary {
-			if err := reader.Discard(); err != nil {
-				return nil, 0, err
-			}
-			continue
-		}
-
-		data, err := ioutil.ReadAll(&reader)
-
-		return data, header.OpCode, err
-	}
 }
 
 func (bc *BroadcastClient) GetRetryCount() int {
