@@ -121,7 +121,9 @@ const gen = async () => {
     }
 
     if (l1GatewayAddress === AddressZero) {
-      throw new Error(`Token ${l1Address} not registered in L1 router`)
+      console.log(`Token ${l1Address} not registered in L1 router`)
+      continue
+      // throw new Error(`Token ${l1Address} not registered in L1 router`)
     }
     if (l1Address === '0x0CE51000d5244F1EAac0B313a792D5a5f96931BF') {
       continue
@@ -185,7 +187,7 @@ const gen = async () => {
     let arbTokenInfo: TokenInfo = {
       chainId: +l2Network.chainID,
       address: l2Address,
-      name: l2Name,
+      name: l2Name.replace(/[{()}]/g, ''),
       symbol: l2Symbol,
       decimals: l2Decimals,
       extensions: {
