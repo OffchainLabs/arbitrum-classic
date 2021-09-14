@@ -306,7 +306,11 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
 				// This batch would be too large to publish with this tx added.
 				// Put the tx back in the queue so it can be included later.
-				b.txQueue <- queueItem
+				select {
+				case b.txQueue <- queueItem:
+				default:
+					queueItem.resultChan <- errors.New("sequencer overloaded")
+				}
 				emptiedQueue = false
 				break
 			}
