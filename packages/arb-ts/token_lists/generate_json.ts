@@ -137,10 +137,13 @@ const gen = async () => {
     const l2Address = await bridge.getERC20L2Address(l1Address)
     const l2AddressLowerCase = l2Address.toLowerCase()
     const code = await bridge.l2Bridge.l2Provider.getCode(l2Address)
-    if (code.length <= 2)
-      throw new Error(
+    if (code.length <= 2) {
+      console.log(
         `${l1Address} registered at (or defaults to) ${l1GatewayAddress} but not yet deployed on L2`
       )
+      continue
+    }
+
     const arbToken = await StandardArbERC20__factory.connect(
       l2Address,
       bridge.l2Bridge.l2Provider
