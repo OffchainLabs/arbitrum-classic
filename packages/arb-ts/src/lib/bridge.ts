@@ -71,6 +71,7 @@ function isError(error: Error): error is NodeJS.ErrnoException {
 
 const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
 const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
+const MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
 
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
@@ -267,8 +268,10 @@ export class Bridge {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction> {
     const l1ChainId = await this.l1Signer.getChainId()
-    const { l1WethGateway: l1WethGatewayAddress } =
-      networks[l1ChainId].tokenBridge
+    const {
+      l1WethGateway: l1WethGatewayAddress,
+      l1CustomGateway: l1CustomGatewayAddress,
+    } = networks[l1ChainId].tokenBridge
 
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
@@ -321,7 +324,7 @@ export class Bridge {
 
     const l2Dest = await l1Gateway.counterpartGateway()
 
-    const maxGas =
+    let maxGas =
       retryableGasArgs.maxGas ||
       BridgeHelper.percentIncrease(
         (
@@ -334,14 +337,19 @@ export class Bridge {
             sender,
             sender,
             0,
-            0,
+            gasPriceBid,
             depositCalldata
           )
         )[0],
         retryableGasArgs.maxGasPercentIncrease ||
           BigNumber.from(DEFAULT_MAX_GAS_PERCENT_INCREASE)
       )
-
+    if (
+      expectedL1GatewayAddress === l1CustomGatewayAddress &&
+      maxGas.lt(MIN_CUSTOM_DEPOSIT_MAXGAS)
+    ) {
+      maxGas = MIN_CUSTOM_DEPOSIT_MAXGAS
+    }
     // calculate required forwarding gas
     let ethDeposit = overrides && (await overrides.value)
     if (!ethDeposit || BigNumber.from(ethDeposit).isZero()) {
