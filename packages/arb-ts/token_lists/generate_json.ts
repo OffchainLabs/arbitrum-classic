@@ -123,12 +123,7 @@ const gen = async () => {
     if (l1GatewayAddress === AddressZero) {
       console.log(`Token ${l1Address} not registered in L1 router`)
       continue
-      // throw new Error(`Token ${l1Address} not registered in L1 router`)
     }
-    if (l1Address === '0x0CE51000d5244F1EAac0B313a792D5a5f96931BF') {
-      continue
-    }
-
     const l1TokenContract = ERC20__factory.connect(
       l1Address,
       bridge.l1Bridge.l1Provider
