@@ -25,7 +25,8 @@ import {
 } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
-import bytes from '@ethersproject/bytes'
+import { concat, zeroPad, hexZeroPad } from '@ethersproject/bytes'
+
 import { Contract, ContractTransaction } from '@ethersproject/contracts'
 import { keccak256 } from '@ethersproject/keccak256'
 
@@ -163,9 +164,9 @@ export class BridgeHelper {
       : BigNumber.from((await chainIdOrL2Provider.getNetwork()).chainId)
 
     return keccak256(
-      bytes.concat([
-        bytes.zeroPad(l2ChainId.toHexString(), 32),
-        bytes.zeroPad(
+      concat([
+        zeroPad(l2ChainId.toHexString(), 32),
+        zeroPad(
           BridgeHelper.bitFlipSeqNum(inboxSequenceNumber).toHexString(),
           32
         ),
@@ -187,9 +188,9 @@ export class BridgeHelper {
       chainIdOrL2Provider
     )
     return keccak256(
-      bytes.concat([
-        bytes.zeroPad(requestID, 32),
-        bytes.zeroPad(BigNumber.from(txnType).toHexString(), 32),
+      concat([
+        zeroPad(requestID, 32),
+        zeroPad(BigNumber.from(txnType).toHexString(), 32),
       ])
     )
   }
@@ -286,10 +287,7 @@ export class BridgeHelper {
       gatewayAddress,
       l2Provider
     )
-    const topics = [
-      null,
-      fromAddress ? bytes.hexZeroPad(fromAddress, 32) : null,
-    ]
+    const topics = [null, fromAddress ? hexZeroPad(fromAddress, 32) : null]
     const logs = await BridgeHelper.getEventLogs(
       'WithdrawalInitiated',
       gatewayContract,
@@ -321,10 +319,7 @@ export class BridgeHelper {
       gatewayAddress,
       l2Provider
     )
-    const topics = [
-      null,
-      fromAddress ? bytes.hexZeroPad(fromAddress, 32) : null,
-    ]
+    const topics = [null, fromAddress ? hexZeroPad(fromAddress, 32) : null]
     const logs = await BridgeHelper.getEventLogs(
       'WithdrawalInitiated',
       gatewayContract,
@@ -665,7 +660,7 @@ export class BridgeHelper {
     const logs = await BridgeHelper.getEventLogs(
       'L2ToL1Transaction',
       contract,
-      [bytes.hexZeroPad(fromAddress, 32)],
+      [hexZeroPad(fromAddress, 32)],
       filter
     )
 
@@ -685,7 +680,7 @@ export class BridgeHelper {
   ): Promise<boolean> => {
     const contract = Rollup__factory.connect(rollupAddress, l1Provider)
     const logs = await BridgeHelper.getEventLogs('NodeConfirmed', contract, [
-      bytes.hexZeroPad(nodeNum.toHexString(), 32),
+      hexZeroPad(nodeNum.toHexString(), 32),
     ])
     return logs.length === 1
   }
@@ -705,7 +700,7 @@ export class BridgeHelper {
   ): Promise<L2ToL1EventResult[]> => {
     const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
 
-    const topics = [null, null, bytes.hexZeroPad(batchNumber.toHexString(), 32)]
+    const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
 
     const logs = await BridgeHelper.getEventLogs(
       'L2ToL1Transaction',
@@ -742,7 +737,7 @@ export class BridgeHelper {
     l1Provider: Provider
   ): Promise<boolean> => {
     const contract = Outbox__factory.connect(outboxAddress, l1Provider)
-    const topics = [null, null, bytes.hexZeroPad(batchNumber.toHexString(), 32)]
+    const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
     const logs = await BridgeHelper.getEventLogs(
       'OutBoxTransactionExecuted',
       contract,

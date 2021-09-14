@@ -71,9 +71,10 @@ describe('WETH', async () => {
       withdrawEventData.batchNumber,
       withdrawEventData.indexInBatch
     )
-    expect(outgoingMessageState).to.equal(
-      OutgoingMessageState.UNCONFIRMED,
-      `weth withdraw getOutGoingMessageState returned ${OutgoingMessageState.UNCONFIRMED}`
+    expect(
+      outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
+        outgoingMessageState === OutgoingMessageState.NOT_FOUND,
+      `weth withdraw getOutGoingMessageState returned ${outgoingMessageState}`
     )
 
     const _l2WethBalance = await bridge.getAndUpdateL2TokenData(

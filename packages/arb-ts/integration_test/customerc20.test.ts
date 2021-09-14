@@ -79,10 +79,11 @@ describe('Custom ERC20', () => {
       withdrawEventData.batchNumber,
       withdrawEventData.indexInBatch
     )
-    expect(outgoingMessageState).to.equal(
-      OutgoingMessageState.UNCONFIRMED,
-      `custom token withdraw getOutGoingMessageState returned ${OutgoingMessageState.UNCONFIRMED}`
-    )
+    expect(
+      outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
+        outgoingMessageState === OutgoingMessageState.NOT_FOUND,
+      `custom token withdraw getOutGoingMessageState returned ${outgoingMessageState}`
+    ).to.be.true
 
     const l2Data = await bridge.getAndUpdateL2TokenData(existentTestCustomToken)
     const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance

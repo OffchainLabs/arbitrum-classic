@@ -155,10 +155,11 @@ describe('Ether', async () => {
       withdrawEventData.batchNumber,
       withdrawEventData.indexInBatch
     )
-    expect(outgoingMessageState).to.equal(
-      OutgoingMessageState.UNCONFIRMED,
-      `eth withdraw getOutGoingMessageState returned ${OutgoingMessageState.UNCONFIRMED}`
-    )
+    expect(
+      outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
+        outgoingMessageState === OutgoingMessageState.NOT_FOUND,
+      `eth withdraw getOutGoingMessageState returned ${outgoingMessageState}`
+    ).to.be.true
 
     const etherBalance = await bridge.getL2EthBalance()
 
