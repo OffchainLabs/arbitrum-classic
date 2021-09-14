@@ -19,6 +19,7 @@ package broadcaster
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"math/rand"
 	"net"
 	"strconv"
@@ -38,7 +39,7 @@ const MaxSendQueue = 1000
 // ClientConnection represents client connection.
 type ClientConnection struct {
 	ioMutex sync.Mutex
-	conn    net.Conn
+	conn    io.ReadWriteCloser
 
 	desc          *netpoll.Desc
 	name          string
@@ -105,24 +106,33 @@ func (cc *ClientConnection) GetLastHeard() time.Time {
 
 // Receive reads next message from client's underlying connection.
 // It blocks until full message received.
-func (cc *ClientConnection) Receive(ctx context.Context, timeout time.Duration) ([]byte, ws.OpCode, error) {
-	msg, op, err := cc.readRequest(ctx, timeout)
+func (cc *ClientConnection) Receive() error {
+	err := cc.readRequest()
 	if err != nil {
 		_ = cc.conn.Close()
-		return nil, op, err
+		return err
 	}
 
-	return msg, op, err
+	return nil
 }
 
 // readRequests reads json-rpc request from connection.
-func (cc *ClientConnection) readRequest(ctx context.Context, timeout time.Duration) ([]byte, ws.OpCode, error) {
+func (cc *ClientConnection) readRequest() error {
 	cc.ioMutex.Lock()
 	defer cc.ioMutex.Unlock()
 
 	atomic.StoreInt64(&cc.lastHeardUnix, time.Now().Unix())
 
-	return ReadData(ctx, cc.conn, timeout, ws.StateServerSide)
+	h, r, err := wsutil.NextReader(cc.conn, ws.StateServerSide)
+	if h.OpCode.IsControl() {
+		return wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
+	}
+	if err != nil {
+
+		return err
+	}
+
+	return nil
 }
 
 func (cc *ClientConnection) write(x interface{}) error {
