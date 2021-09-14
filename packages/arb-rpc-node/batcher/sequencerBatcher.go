@@ -318,6 +318,9 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				case b.txQueue <- queueItem:
 				default:
 					queueItem.resultChan <- errors.New("sequencer overloaded")
+					if queueItem.tx == startTx {
+						seenOwnTx = true
+					}
 				}
 				emptiedQueue = false
 				break
