@@ -386,6 +386,18 @@ func swapValidatorOwner(walletAddress, newOwner ethcommon.Address) error {
 	return waitForTx(tx, "TransferOwnership")
 }
 
+func setRollupOwner(rollupAddress, newOwner ethcommon.Address) error {
+	rollup, err := ethbridgecontracts.NewRollupAdminFacet(rollupAddress, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := rollup.SetOwner(config.auth, newOwner)
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "SetOwner")
+}
+
 func getWhitelist(inboxAddr ethcommon.Address) error {
 	inbox, err := ethbridgecontracts.NewInbox(inboxAddr, config.client)
 	if err != nil {
@@ -1181,6 +1193,13 @@ func handleCommand(fields []string) error {
 			validators = append(validators, ethcommon.HexToAddress(val))
 		}
 		return enableValidators(rollup, validators)
+	case "set-rollup-owner":
+		if len(fields) < 3 {
+			return errors.New("Expected [rollup] [owner] arguments")
+		}
+		rollup := ethcommon.HexToAddress(fields[1])
+		owner := ethcommon.HexToAddress(fields[2])
+		return setRollupOwner(rollup, owner)
 	case "whitelist":
 		if len(fields) != 2 {
 			return errors.New("Expected [inbox] arguments")
