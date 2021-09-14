@@ -466,7 +466,7 @@ export class Bridge {
   public async redeemRetryableTicket(
     l1Transaction: string | ContractReceipt,
     waitTimeForL2Receipt = 900000, // 15 minutes
-    overrides?: PayableOverrides
+    overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     if (typeof l1Transaction == 'string') {
       l1Transaction = await this.getL1Transaction(l1Transaction)
@@ -801,7 +801,7 @@ export class Bridge {
     const maxSubmissionPrice = (
       await this.l2Bridge.getTxnSubmissionPrice(
         // 20 per address, 100 as buffer/ estimate for any additional calldata
-        300 + 20 * (tokenAddresses.length + gatewayAddresses.length)
+        300 + 64 * (tokenAddresses.length + gatewayAddresses.length)
       )
     )[0]
     return this.l1GatewayRouter.functions.setGateways(
