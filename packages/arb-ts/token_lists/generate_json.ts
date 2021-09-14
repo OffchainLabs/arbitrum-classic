@@ -25,6 +25,7 @@ import { TokenInfo, TokenList, schema } from '@uniswap/token-lists'
 
 import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { ERC20 } from '../src/lib/abi//ERC20'
 
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 
@@ -61,6 +62,27 @@ const getLogoUri = async (l1TokenAddress: string, zapperLogoUris: any) => {
   return
 }
 
+const getL1Name = (ERC20: ERC20) => {
+  switch (ERC20.address) {
+    case '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2':
+      return 'Maker'
+    case '0x431ad2ff6a9C365805eBaD47Ee021148d6f7DBe0':
+      return 'dForce'
+    default:
+      return ERC20.name()
+  }
+}
+
+const getL1Symbol = (ERC20: ERC20) => {
+  switch (ERC20.address) {
+    case '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2':
+      return 'MKR'
+    case '0x431ad2ff6a9C365805eBaD47Ee021148d6f7DBe0':
+      return 'dForce'
+    default:
+      return ERC20.symbol()
+  }
+}
 const gen = async () => {
   const tokens: TokenInfo[] = []
 
@@ -144,20 +166,13 @@ const gen = async () => {
       bridge.l2Bridge.l2Provider
     )
 
-    const l1Name =
-      l1Address === '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2'
-        ? 'Maker'
-        : await l1TokenContract.name()
-    const l1Symbol =
-      l1Address === '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2'
-        ? 'MKR'
-        : await l1TokenContract.symbol()
+    const l1Name = await getL1Name(l1TokenContract)
+    const l1Symbol = await getL1Symbol(l1TokenContract)
     const l1Decimals = await l1TokenContract.decimals()
-
     const l2Symbol =
       l1Address === '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2'
         ? 'MKR'
-        : await l1TokenContract.symbol()
+        : await arbToken.symbol()
     const l2Decimals = await arbToken.decimals()
     const l2Name =
       l1Address === '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2'
@@ -167,7 +182,6 @@ const gen = async () => {
       console.warn(
         `******* Warning! Symbols don't match for deployment of ${l1Address}: L1 symbol ${l1Symbol}. L2 symbol ${l2Symbol}`
       )
-      continue
     }
     if (l2Decimals !== l1Decimals) {
       console.warn(
