@@ -338,6 +338,11 @@ func startup() error {
 		}
 	}()
 
+	seqBatcher, ok := batch.(*batcher.SequencerBatcher)
+	if ok {
+		rpc.AutoAdjustBaseFee(ctx, seqBatcher, srv)
+	}
+
 	select {
 	case err := <-txDBErrChan:
 		return err

@@ -150,15 +150,16 @@ func TestSequencerBatcher(t *testing.T) {
 
 	l2ChainId := common.RandBigInt()
 
-	chainIdConfig := message.ChainIDConfig{ChainId: l2ChainId}
-	init, err := message.NewInitMessage(protocol.ChainParams{}, owner, []message.ChainConfigOption{chainIdConfig})
-	test.FailIfError(t, err)
-	extraConfig := init.ExtraConfig
-
 	clnt, auths := test.SimulatedBackend(t)
 	auth := auths[0]
 	sequencer := common.NewAddressFromEth(auth.From)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
+
+	chainIdConfig := message.ChainIDConfig{ChainId: l2ChainId}
+	defaultAggConfig := message.DefaultAggConfig{Aggregator: sequencer}
+	init, err := message.NewInitMessage(protocol.ChainParams{}, owner, []message.ChainConfigOption{chainIdConfig, defaultAggConfig})
+	test.FailIfError(t, err)
+	extraConfig := init.ExtraConfig
 
 	rollupAddr, delayedInboxAddr, rollupBlock := deployRollup(
 		t,
@@ -369,5 +370,13 @@ func TestSequencerBatcher(t *testing.T) {
 	test.FailIfError(t, err)
 	if seqMonAcc != otherMonAcc {
 		t.Fatal("accumulators differ between monitors")
+	}
+
+	estBaseFee, baseFeeSampleSize := batcher.RecommendedBaseFee()
+	if baseFeeSampleSize < 1 {
+		t.Error("baseFeeSample size should be at least 1")
+	}
+	if estBaseFee < gasCostBase/15+gasCostPerMessage || estBaseFee > gasCostBase/4+gasCostPerMessage {
+		t.Error("estBaseFee out of bounds", estBaseFee)
 	}
 }
