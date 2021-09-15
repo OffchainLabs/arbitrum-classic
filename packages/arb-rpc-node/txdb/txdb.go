@@ -56,6 +56,7 @@ type TxDB struct {
 	as              machine.NodeStore
 	logReader       *core.LogReader
 
+	newTxsFeed      event.Feed
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
 	chainSideFeed   event.Feed
@@ -259,6 +260,12 @@ func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
 		return db.as.SaveMessageBatch(res.BatchNumber, logIndex)
 	case *evm.TxResult:
 		monitor.GlobalMonitor.GotLog(res.IncomingRequest.MessageID)
+		tx, err := evm.GetTransaction(res)
+		if err != nil {
+			logger.Warn().Err(err).Msg("error pulling transaction from receipt")
+		} else {
+			db.newTxsFeed.Send(ethcore.NewTxsEvent{Txs: []*types.Transaction{tx.Tx}})
+		}
 	}
 	return nil
 }
@@ -553,6 +560,10 @@ func (db *TxDB) LatestSnapshot() (*snapshot.Snapshot, error) {
 	}
 
 	return snap, nil
+}
+
+func (db *TxDB) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
+	return db.newTxsFeed.Subscribe(ch)
 }
 
 func (db *TxDB) SubscribeChainEvent(ch chan<- ethcore.ChainEvent) event.Subscription {
