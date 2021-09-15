@@ -326,12 +326,12 @@ type Config struct {
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
-	FileInfo           bool        `koanf:"file-info"`
 	L1                 struct {
 		ChainID int    `koanf:"chain-id"`
 		URL     string `koanf:"url"`
 	} `koanf:"l1"`
 	Log           Log        `koanf:"log"`
+	Metadata      bool       `koanf:"metadata"`
 	Node          Node       `koanf:"node"`
 	Persistent    Persistent `koanf:"persistent"`
 	PProfEnable   bool       `koanf:"pprof-enable"`
@@ -1011,23 +1011,6 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	// Don't pass around wallet contents with normal configuration
 	wallet := out.Wallet
 	out.Wallet = Wallet{}
-
-	if out.FileInfo {
-		fmt.Printf("Database:         %s\n", out.Persistent.DatabasePath)
-		fmt.Printf("Database Backup:  %s\n", out.Core.SaveRocksdbPath)
-		fmt.Printf("Machine:          %s\n", out.Rollup.Machine.Filename)
-		fmt.Printf("Wallet Directory: %s\n", wallet.Local.Pathname)
-
-		os.Exit(0)
-	} else {
-		logger.
-			Info().
-			Str("Database", out.Persistent.DatabasePath).
-			Str("Database Backup", out.Core.SaveRocksdbPath).
-			Str("Machine", out.Rollup.Machine.Filename).
-			Str("Wallet Directory", wallet.Local.Pathname).
-			Msg("downloading machine")
-	}
 
 	return &out, &wallet, nil
 }

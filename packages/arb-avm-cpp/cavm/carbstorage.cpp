@@ -89,6 +89,11 @@ CArbStorage* createArbStorage(const char* db_path,
     }
 }
 
+void printDatabaseMetadata(CArbStorage* storage_ptr) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
+    storage->printDatabaseMetadata();
+}
+
 int initializeArbStorage(CArbStorage* storage_ptr,
                          const char* executable_path) {
     auto storage = static_cast<ArbStorage*>(storage_ptr);

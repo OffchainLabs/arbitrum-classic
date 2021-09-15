@@ -153,6 +153,7 @@ class ArbCore {
             ArbCoreConfig coreConfig);
 
     ~ArbCore() { abortThread(); }
+    void printDatabaseMetadata();
     InitializeResult initialize(const LoadedExecutable& executable);
     [[nodiscard]] bool initialized() const;
     void operator()();
@@ -392,6 +393,7 @@ class ArbCore {
     ValueResult<uint256_t> sendProcessedCount(ReadTransaction& tx) const;
     rocksdb::Status updateSendProcessedCount(ReadWriteTransaction& tx,
                                              rocksdb::Slice value_slice);
+    ValueResult<uint256_t> schemaVersion(ReadTransaction& tx) const;
     [[nodiscard]] ValueResult<uint256_t> messageEntryInsertedCountImpl(
         const ReadTransaction& tx) const;
     [[nodiscard]] ValueResult<uint256_t> delayedMessageEntryInsertedCountImpl(

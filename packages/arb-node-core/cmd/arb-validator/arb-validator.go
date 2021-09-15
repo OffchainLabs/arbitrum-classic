@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"io/ioutil"
 	golog "log"
 	"net/http"
@@ -91,6 +92,17 @@ func startup() error {
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			fmt.Printf("%s\n", err.Error())
 		}
+
+		return nil
+	}
+
+	if config.Metadata {
+		storage, err := cmachine.NewArbStorage(config.Persistent.DatabasePath, &config.Core)
+		if err != nil {
+			return err
+		}
+		storage.PrintDatabaseMetadata()
+		storage.CloseArbStorage()
 
 		return nil
 	}
