@@ -129,7 +129,7 @@ func TestArbOSFees(t *testing.T) {
 
 	conDataFailure := hexutil.MustDecode(arbostestcontracts.GasUsedBin)
 	conDataFailure = append(conDataFailure, math.U256Bytes(big.NewInt(1))...)
-
+	
 	rawTxes := []txTemplate{
 		// Successful call to constructor
 		{
@@ -213,6 +213,12 @@ func TestArbOSFees(t *testing.T) {
 			correctStorageUsed: 0,
 		},
 	}
+
+	if arbosVersion >= 43 {
+		// We now charge for storage even when reverting
+		rawTxes[5].correctStorageUsed = 1;
+	}
+	
 	valueTransfered := big.NewInt(0)
 	for _, tx := range rawTxes {
 		valueTransfered = valueTransfered.Add(valueTransfered, tx.Value)
