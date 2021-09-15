@@ -133,7 +133,6 @@ export class L2Bridge {
       ERC20: undefined,
       CUSTOM: undefined,
     }
-    this.l2Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
 
     // check if standard arb erc20:
@@ -167,6 +166,7 @@ export class L2Bridge {
     }
 
     if (tokenData.ERC20 || tokenData.CUSTOM) {
+      this.l2Tokens[erc20L1Address] = tokenData
       return tokenData
     } else {
       console.warn(`No L2 token for ${erc20L1Address} found`)
