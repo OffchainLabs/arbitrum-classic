@@ -27,9 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
@@ -82,9 +80,8 @@ type SequencerBatcher struct {
 	gasRefunderAddress              ethcommon.Address
 	gasRefunder                     *ethbridgecontracts.GasRefunder
 
-	signer    types.Signer
-	txQueue   chan txQueueItem
-	newTxFeed event.Feed
+	signer  types.Signer
+	txQueue chan txQueueItem
 
 	latestChainTime        inbox.ChainTime
 	lastCreatedBatchAt     *big.Int
@@ -219,7 +216,6 @@ func NewSequencerBatcher(
 
 		signer:                        types.NewEIP155Signer(chainId),
 		txQueue:                       make(chan txQueueItem, 10),
-		newTxFeed:                     event.Feed{},
 		latestChainTime:               chainTime,
 		lastSequencedDelayedAt:        chainTime.BlockNum.AsInt(),
 		lastCreatedBatchAt:            chainTime.BlockNum.AsInt(),
@@ -233,10 +229,6 @@ func NewSequencerBatcher(
 
 func (b *SequencerBatcher) PendingTransactionCount(_ context.Context, _ common.Address) (*uint64, error) {
 	return nil, nil
-}
-
-func (b *SequencerBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return b.newTxFeed.Subscribe(ch)
 }
 
 const maxExcludeComputation int64 = 10_000
@@ -502,8 +494,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		}
 
 		core.WaitForMachineIdle(b.db)
-
-		b.newTxFeed.Send(ethcore.NewTxsEvent{Txs: sequencedTxs})
 
 		if seenOwnTx {
 			break

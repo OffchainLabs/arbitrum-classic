@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	core2 "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/pkg/errors"
@@ -376,12 +375,6 @@ func (b *Backend) AddInboxMessage(msg message.Message, sender common.Address) (c
 	b.Lock()
 	defer b.Unlock()
 	return b.addInboxMessage(msg, sender, big.NewInt(0), b.l1Emulator.GenerateBlock())
-}
-
-func (b *Backend) SubscribeNewTxsEvent(ch chan<- core2.NewTxsEvent) event.Subscription {
-	b.Lock()
-	defer b.Unlock()
-	return b.newTxFeed.Subscribe(ch)
 }
 
 func (b *Backend) PendingSnapshot() (*snapshot.Snapshot, error) {
