@@ -44,10 +44,16 @@ func ReadData(ctx context.Context, conn net.Conn, idleTimeout time.Duration, sta
 		header, err := reader.NextFrame()
 		if header.OpCode.IsControl() {
 			// Control packet may be returned even if err set
-			if err2 := controlHandler(header, &reader); err != nil {
+			if err2 := controlHandler(header, &reader); err2 != nil {
 				return nil, 0, err2
 			}
-			continue
+
+			// Discard any data after control packet
+			if err2 := reader.Discard(); err2 != nil {
+				return nil, 0, err2
+			}
+
+			return nil, 0, nil
 		}
 		if err != nil {
 			return nil, 0, err

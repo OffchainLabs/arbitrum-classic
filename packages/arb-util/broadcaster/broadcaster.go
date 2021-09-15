@@ -135,7 +135,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 			// receive client messages, close on error
 			pool.Schedule(func() {
 				// Ignore any messages sent from client
-				if _, _, err := client.Receive(ctx, b.settings.IOTimeout); err != nil {
+				if _, _, err := client.Receive(ctx, b.settings.ClientTimeout); err != nil {
 					logger.Warn().Err(err).Str("connection_name", nameConn(safeConn)).Msg("receive error")
 					clientManager.Remove(client)
 					return
