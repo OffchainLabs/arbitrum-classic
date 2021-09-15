@@ -119,6 +119,10 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	return returnVal, nil
 }
 
+func (s *ArbStorage) PrintDatabaseMetadata() {
+	C.printDatabaseMetadata(s.c)
+}
+
 func (s *ArbStorage) Initialize(contractPath string) error {
 	defer runtime.KeepAlive(s)
 	cContractPath := C.CString(contractPath)
