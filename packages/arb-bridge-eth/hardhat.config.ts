@@ -364,6 +364,11 @@ const config = {
             enabled: true,
             runs: 100,
           },
+          outputSelection: {
+            '*': {
+              '*': ['storageLayout'],
+            },
+          },
         },
       },
       {

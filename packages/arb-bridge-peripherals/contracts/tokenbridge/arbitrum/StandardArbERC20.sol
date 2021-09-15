@@ -48,4 +48,59 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
             _l1Address // _l1Counterpart
         );
     }
+
+    // values generated with https://hardhat.org/plugins/hardhat-storage-layout.html
+    // by running `yarn hardhat storage-slots`
+    uint256 constant NAME_STORAGE_SLOT = 54;
+    uint256 constant SYMBOL_STORAGE_SLOT = 55;
+
+    function getNameAndSymbol() internal returns (string memory _name_, string memory _symbol_) {
+        assembly {
+            _name_ := sload(NAME_STORAGE_SLOT)
+            _symbol_ := sload(SYMBOL_STORAGE_SLOT)
+        }
+    }
+
+    function setNameAndSymbol(string memory _name_, string memory _symbol_) internal {
+        assembly {
+            sstore(NAME_STORAGE_SLOT, _name_)
+            sstore(SYMBOL_STORAGE_SLOT, _symbol_)
+        }
+    }
+
+    function isEqualString(string memory a, string memory b) internal returns (bool) {
+        return keccak256(abi.encode(a)) == keccak256(abi.encode(b));
+    }
+
+    /// @notice this is a one time use function intended to fix the name/symbol of the maker token
+    function updateInfo() external {
+        // this can only be triggered for the maker token at 0x2e9a6Df78E42a30712c10a9Dc4b1C8656f8F2879
+        require(address(this) == 0x2e9a6Df78E42a30712c10a9Dc4b1C8656f8F2879, "NOT_MKR_TOKEN");
+
+        string
+            memory expectedOldName = "0x4d616b6572000000000000000000000000000000000000000000000000000000";
+        string
+            memory expectedOldSymbol = "0x4d4b520000000000000000000000000000000000000000000000000000000000";
+
+        // values are private so we need to access the specific storage slot
+        // this is safe because we check against oldName and oldSymbol
+        // https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/efde58409783cccc7fd47c7ad9e095101ffb2faa/contracts/token/ERC20/ERC20Upgradeable.sol#L43-L44
+
+        string memory currName;
+        string memory currSymbol;
+        (currName, currSymbol) = getNameAndSymbol();
+
+        // validate info wasn't already updated
+        require(isEqualString(expectedOldName, currName), "NAME_ALREADY_UPDATE");
+        require(isEqualString(expectedOldSymbol, currSymbol), "SYMBOL_ALREADY_UPDATE");
+
+        string memory newExpectedName = "Maker";
+        string memory newExpectedSymbol = "MKR";
+        setNameAndSymbol(newExpectedName, newExpectedSymbol);
+
+        // verify new values were correctly set
+        (currName, currSymbol) = getNameAndSymbol();
+        require(isEqualString(newExpectedName, currName), "NAME_NOT_UPDATED");
+        require(isEqualString(newExpectedSymbol, currSymbol), "SYMBOL_NOT_UPDATED");
+    }
 }

@@ -2,6 +2,11 @@ import * as config from 'arb-bridge-eth/hardhat.config'
 import { task } from 'hardhat/config'
 import { initUpgrades } from 'arb-upgrades'
 import '@nomiclabs/hardhat-ethers'
+import 'hardhat-storage-layout'
+
+task('storage-slots', 'gets storage slots for contracts').setAction((_, hre) =>
+  hre.storageLayout.export()
+)
 
 task('deploy-logic-one', 'deploy one logic')
   .addParam('contract', 'contract to deploy')
