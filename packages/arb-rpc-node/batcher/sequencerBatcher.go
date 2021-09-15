@@ -372,6 +372,8 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		if err != nil {
 			return err
 		}
+		// Add an end of block
+		batch.Transactions = append(batch.Transactions, []byte{})
 		l2Message := message.NewSafeL2Message(batch)
 		seqMsg := message.NewInboxMessage(l2Message, b.fromAddress, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
 
@@ -488,23 +490,24 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				logCount = newLogCount
 				resultChans[i] <- nil
 			}
-		}
 
-		newBlockMessage := message.NewInboxMessage(
-			message.EndBlockMessage{},
-			b.fromAddress,
-			new(big.Int).Set(msgCount),
-			big.NewInt(0),
-			b.latestChainTime.Clone(),
-		)
+			newBlockMessage := message.NewInboxMessage(
+				message.EndBlockMessage{},
+				b.fromAddress,
+				new(big.Int).Set(msgCount),
+				big.NewInt(0),
+				b.latestChainTime.Clone(),
+			)
 
-		newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
-		sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
-		err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
-		if err != nil {
-			return err
+			newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
+			sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
+
+			err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
+			if err != nil {
+				return err
+			}
+			atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostPerMessage))
 		}
-		atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostPerMessage))
 
 		if b.feedBroadcaster != nil {
 			err = b.feedBroadcaster.Broadcast(originalAcc, sequencedBatchItems, b.dataSigner)
@@ -762,7 +765,13 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 				if err == nil {
 					batch, ok := abstract.(message.TransactionBatch)
 					if ok {
-						userTxsInSeqMsg = len(batch.Transactions)
+						userTxsInSeqMsg = 0
+						for _, tx := range batch.Transactions {
+							// Make sure this isn't an end of block message
+							if len(tx) > 0 {
+								userTxsInSeqMsg += 1
+							}
+						}
 					}
 				}
 				userTxsIncluded += userTxsInSeqMsg
