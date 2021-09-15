@@ -61,15 +61,13 @@
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-mocha": "^9.0.0",
-    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-prettier": "^4.0.0",
     "prettier": "^2.3.2",
     "prettier-plugin-solidity": "^1.0.0-beta.17",
     "solidity-docgen": "^0.5.11"
   },
   "resolutions": {
     "eth-sig-util/ethereumjs-abi": "^0.6.8-1",
-    "typechain/truffle-v4/truffle": "^4.0.0",
-    "typechain/truffle-v5/truffle": "^5.0.0",
     "typechain/web3-v1/web3": "^1.0.0"
   }
 }

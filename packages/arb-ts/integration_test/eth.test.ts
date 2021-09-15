@@ -1,15 +1,34 @@
-import { utils, Wallet, constants } from 'ethers'
-import { expect } from 'chai'
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict'
 
-import { prettyLog } from './testHelpers'
-const { Zero, AddressZero } = constants
+import { expect } from 'chai'
 import dotenv from 'dotenv'
+
+import { Wallet } from '@ethersproject/wallet'
+import { Zero } from '@ethersproject/constants'
+import { parseEther } from '@ethersproject/units'
+
 import {
   instantiateBridgeWithRandomWallet,
   fundL1,
   wait,
   fundL2,
-  preFundAmount,
+  prettyLog,
   skipIfMainnet,
 } from './testHelpers'
 import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
@@ -26,7 +45,7 @@ describe('Ether', async () => {
     const { bridge } = await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
     const randomAddress = Wallet.createRandom().address
-    const amountToSend = utils.parseEther('0.000005')
+    const amountToSend = parseEther('0.000005')
     const res = await bridge.l2Signer.sendTransaction({
       to: randomAddress,
       value: amountToSend,
@@ -47,7 +66,7 @@ describe('Ether', async () => {
     const initialInboxBalance = await bridge.l1Bridge.l1Provider.getBalance(
       inbox.address
     )
-    const ethToDeposit = utils.parseEther('0.0002')
+    const ethToDeposit = parseEther('0.0002')
     const res = await bridge.depositETH(ethToDeposit)
     const rec = await res.wait()
 
@@ -82,7 +101,7 @@ describe('Ether', async () => {
       prettyLog('balance check attempt ' + (i + 1))
       await wait(5000)
       const testWalletL2EthBalance = await bridge.getL2EthBalance()
-      if (testWalletL2EthBalance.gt(constants.Zero)) {
+      if (testWalletL2EthBalance.gt(Zero)) {
         prettyLog(`balance updated!  ${testWalletL2EthBalance.toString()}`)
         expect(true).to.be.true
         return
@@ -95,7 +114,7 @@ describe('Ether', async () => {
   it('withdraw Ether transaction succeeds', async () => {
     const { bridge } = await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
-    const ethToWithdraw = utils.parseEther('0.00002')
+    const ethToWithdraw = parseEther('0.00002')
 
     const initialBalance = await bridge.l2Bridge.getL2EthBalance()
 
@@ -136,10 +155,11 @@ describe('Ether', async () => {
       withdrawEventData.batchNumber,
       withdrawEventData.indexInBatch
     )
-    expect(outgoingMessageState).to.equal(
-      OutgoingMessageState.UNCONFIRMED,
-      `eth withdraw getOutGoingMessageState returned ${OutgoingMessageState.UNCONFIRMED}`
-    )
+    expect(
+      outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
+        outgoingMessageState === OutgoingMessageState.NOT_FOUND,
+      `eth withdraw getOutGoingMessageState returned ${outgoingMessageState}`
+    ).to.be.true
 
     const etherBalance = await bridge.getL2EthBalance()
 

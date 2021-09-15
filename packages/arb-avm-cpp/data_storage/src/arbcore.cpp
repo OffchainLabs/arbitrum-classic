@@ -161,10 +161,38 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         }
     }
 
-    auto status = reorgToMessageCountOrBefore(0, true, cache);
+    if (coreConfig.profile_reset_db_except_inbox) {
+        {
+            ReadWriteTransaction tx(data_storage);
+            saveNextSegmentID(tx, 0);
+            auto s = tx.commit();
+            if (!s.ok()) {
+                std::cerr << "Error resetting segment: " << s.ToString()
+                          << std::endl;
+                return s;
+            }
+        }
+        {
+            auto s = data_storage->clearDBExceptInbox();
+            if (!s.ok()) {
+                std::cerr << "Error deleting columns: " << s.ToString()
+                          << std::endl;
+                return s;
+            }
+        }
+    }
+
+    rocksdb::Status status;
+    if (coreConfig.profile_reorg_to != 0) {
+        status = reorgToMessageCountOrBefore(coreConfig.profile_reorg_to, false,
+                                             cache);
+    } else {
+        status = reorgToMessageCountOrBefore(0, true, cache);
+    }
     if (status.ok()) {
         return status;
     }
+
     if (!status.IsNotFound()) {
         std::cerr << "Error with initial reorg: " << status.ToString()
                   << std::endl;
@@ -180,34 +208,40 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     ReadWriteTransaction tx(data_storage);
     // Need to initialize database from scratch
 
-    auto s = saveCheckpoint(tx);
-    if (!s.ok()) {
+    status = saveCheckpoint(tx);
+    if (!status.ok()) {
         std::cerr << "failed to save initial checkpoint into db: "
-                  << s.ToString() << std::endl;
-        return s;
+                  << status.ToString() << std::endl;
+        return status;
     }
 
     status = updateLogInsertedCount(tx, 0);
     if (!status.ok()) {
-        throw std::runtime_error("failed to initialize log inserted count");
+        std::cerr << "failed to initialize log inserted count: "
+                  << status.ToString() << std::endl;
+        return status;
     }
     status = updateSendInsertedCount(tx, 0);
     if (!status.ok()) {
-        throw std::runtime_error("failed to initialize log inserted count");
+        std::cerr << "failed to initialize send inserted count: "
+                  << status.ToString() << std::endl;
+        return status;
     }
 
     for (size_t i = 0; i < logs_cursors.size(); i++) {
         status = logsCursorSaveCurrentTotalCount(tx, i, 0);
         if (!status.ok()) {
-            throw std::runtime_error("failed to initialize logscursor counts");
+            std::cerr << "failed to initialize logscursor counts: "
+                      << status.ToString() << std::endl;
+            return status;
         }
     }
 
-    s = tx.commit();
-    if (!s.ok()) {
-        std::cerr << "failed to commit initial state into db: " << s.ToString()
-                  << std::endl;
-        return s;
+    status = tx.commit();
+    if (!status.ok()) {
+        std::cerr << "failed to commit initial state into db: "
+                  << status.ToString() << std::endl;
+        return status;
     }
 
     return rocksdb::Status::OK();
@@ -509,19 +543,6 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     return tx.commit();
 }
 
-std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
-    ReadTransaction& tx,
-    const uint256_t& arb_gas_used) const {
-    std::vector<unsigned char> key;
-    marshal_uint256_t(arb_gas_used, key);
-
-    auto result = tx.checkpointGetVector(vecToSlice(key));
-    if (!result.status.ok()) {
-        return result.status;
-    }
-    return extractMachineStateKeys(result.data.begin());
-}
-
 bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
     auto it = std::unique_ptr<rocksdb::Iterator>(tx.checkpointGetIterator());
     it->SeekToLast();
@@ -685,6 +706,9 @@ void ArbCore::operator()() {
     size_t max_message_batch_size = 10;
     uint64_t next_rocksdb_save_timestamp = 0;
     std::filesystem::path save_rocksdb_path(coreConfig.save_rocksdb_path);
+    auto begin_time = std::chrono::steady_clock::now();
+    auto begin_message =
+        last_machine->machine_state.output.fully_processed_inbox.count;
 
     if (coreConfig.save_rocksdb_interval > 0) {
         next_rocksdb_save_timestamp =
@@ -856,6 +880,57 @@ void ArbCore::operator()() {
                 machine_error = true;
                 std::cerr << "ArbCore database update failed: "
                           << core_error_string << "\n";
+                break;
+            }
+
+            if (coreConfig.profile_run_until != 0 &&
+                last_machine->machine_state.output.fully_processed_inbox
+                        .count >= coreConfig.profile_run_until) {
+                // Reached stopping point for profiling
+                auto end_time = std::chrono::steady_clock::now();
+                auto duration =
+                    std::chrono::duration_cast<std::chrono::seconds>(end_time -
+                                                                     begin_time)
+                        .count();
+                std::cerr << "Done processing " << begin_message << " to "
+                          << last_machine->machine_state.output
+                                 .fully_processed_inbox.count
+                          << ", profiling took " << duration << " seconds"
+                          << std::endl;
+
+                if (coreConfig.profile_load_count > 0) {
+                    auto load_begin_time = std::chrono::steady_clock::now();
+                    auto target_gas =
+                        last_machine->machine_state.output.arb_gas_used;
+                    for (uint64_t i = 0; i < coreConfig.profile_load_count;
+                         i++) {
+                        std::cerr << "Loading machine " << i << std::endl;
+                        auto current_execution =
+                            getClosestExecutionMachine(tx, target_gas);
+                        if (std::holds_alternative<rocksdb::Status>(
+                                current_execution)) {
+                            std::cerr
+                                << "Error loading profile machine number " << i
+                                << ": "
+                                << std::get<rocksdb::Status>(current_execution)
+                                       .ToString()
+                                << std::endl;
+                            break;
+                        }
+                    }
+
+                    auto load_end_time = std::chrono::steady_clock::now();
+                    auto load_duration =
+                        std::chrono::duration_cast<std::chrono::seconds>(
+                            load_end_time - load_begin_time)
+                            .count();
+                    std::cerr << "Done loading "
+                              << coreConfig.profile_load_count
+                              << " machines, profiling took " << load_duration
+                              << " seconds" << std::endl;
+                }
+
+                // Exit now that profiling is complete
                 break;
             }
         }

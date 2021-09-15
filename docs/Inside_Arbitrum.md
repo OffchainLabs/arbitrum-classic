@@ -6,7 +6,7 @@ sidebar_label: Inside Arbitrum
 
 This document is a deep-dive explanation of Arbitrum’s design and the rationale for it. This isn’t API documentation, nor is it a guided tour of the code--look elsewhere for those. “Inside Arbitrum” is for people who want to understand Arbitrum’s design.
 
-## Why use Arbitrum? 
+## Why use Arbitrum?
 
 Arbitrum is an L2 scaling solution for Ethereum, offering a unique combination of benefits:
 
@@ -31,28 +31,28 @@ Execution is deterministic -- which means that the chain’s behavior is uniquel
 
 All of the technical detail in this document is connected to this diagram. To get from this diagram to a full description of Arbitrum, we’ll need to answer questions like these:
 
-* Who keeps track of the inbox, chain state, and outputs?
-* How does Arbitrum make sure that the chain state and outputs are correct?
-* How can Ethereum users and contracts interact with Arbitrum?
-* How does Arbitrum support Ethereum-compatible contracts and transactions?
-* How are ETH and tokens transferred into and out of Arbitrum chains, and how are they managed while on the chain?
-* How can I run my own Arbitrum node or validator?
+- Who keeps track of the inbox, chain state, and outputs?
+- How does Arbitrum make sure that the chain state and outputs are correct?
+- How can Ethereum users and contracts interact with Arbitrum?
+- How does Arbitrum support Ethereum-compatible contracts and transactions?
+- How are ETH and tokens transferred into and out of Arbitrum chains, and how are they managed while on the chain?
+- How can I run my own Arbitrum node or validator?
 
 ## Optimistic Rollup
 
 Arbitrum is an optimistic rollup. Let’s unpack that term.
 
-*Rollup*
+_Rollup_
 
-Arbitrum is a rollup, which means that the inputs to the chain -- the messages that are put into the inbox -- are all recorded on the Ethereum chain as calldata. Because of this, everyone has the information they would need to determine the current correct state of the chain -- they have the full history of the inbox, and the results are uniquely determined by the inbox history, so they can reconstruct the state of the chain based only on public information, if needed. 
+Arbitrum is a rollup, which means that the inputs to the chain -- the messages that are put into the inbox -- are all recorded on the Ethereum chain as calldata. Because of this, everyone has the information they would need to determine the current correct state of the chain -- they have the full history of the inbox, and the results are uniquely determined by the inbox history, so they can reconstruct the state of the chain based only on public information, if needed.
 
 This also allows anyone to be a full participant in the Arbitrum protocol, to run an Arbitrum node or participate as a validator. Nothing about the history or state of the chain is a secret.
 
-*Optimistic*
+_Optimistic_
 
 Arbitrum is optimistic, which means that Arbitrum advances the state of its chain by letting any party (a “validator”) post a rollup block that that party claims is correct, and then giving everyone else a chance to challenge that claim. If the challenge period (roughly a week) passes and nobody has challenged the claimed rollup block, Arbitrum confirms the rollup block as correct. If somebody challenges the claim during the challenge period, then Arbitrum uses an efficient dispute resolution protocol (detailed below) to identify which party is lying. The liar will forfeit a deposit, and the truth-teller will take part of that deposit as a reward for their efforts (some of the deposit is burned, guaranteeing that the liar is punished even if there's some collusion going on).
 
-Because a party who tries to cheat will lose a deposit, attempts to cheat should be very rare, and the normal case will be a single party posting a correct rollup block, and nobody challenging it. 
+Because a party who tries to cheat will lose a deposit, attempts to cheat should be very rare, and the normal case will be a single party posting a correct rollup block, and nobody challenging it.
 
 ## Interactive Proving
 
@@ -64,7 +64,7 @@ There are basically two choices: interactive proving, or re-executing transactio
 
 The idea of interactive proving is that Alice and Bob will engage in a back-and-forth protocol, refereed by an L1 contract, to resolve their dispute with minimal work required from any L1 contract.
 
-Arbitrum's approach is based on dissection of the dispute. If Alice's claim covers N steps of execution, she posts two claims of size N/2 which combine to yield her initial N-step claim, then Bob picks one of Alice's N/2-step claims to challenge. Now the size of the dispute has been cut in half. This process continues, cutting the dispute in half at each stage, until they are disagreeing about a single step of execution. Note that so far the L1 referee hasn't had to think about execution "on the merits".  It is only once the dispute is narrowed down to a single step that the L1 referee needs to resolve the dispute by looking at what the instruction actually does and whether Alice's claim about it is correct.
+Arbitrum's approach is based on dissection of the dispute. If Alice's claim covers N steps of execution, she posts two claims of size N/2 which combine to yield her initial N-step claim, then Bob picks one of Alice's N/2-step claims to challenge. Now the size of the dispute has been cut in half. This process continues, cutting the dispute in half at each stage, until they are disagreeing about a single step of execution. Note that so far the L1 referee hasn't had to think about execution "on the merits". It is only once the dispute is narrowed down to a single step that the L1 referee needs to resolve the dispute by looking at what the instruction actually does and whether Alice's claim about it is correct.
 
 The key principle behind interactive proving is that if Alice and Bob are in a dispute, Alice and Bob should do as much off-chain work as possible needed to resolve their dispute, rather than putting that work onto an L1 contract.
 
@@ -78,11 +78,11 @@ We believe strongly that interactive proving is the superior approach, for the f
 
 **More efficient in the optimistic case**: Because interactive proving can resolve disputes that are larger than one transaction, it can allow a rollup block to contain only a single claim about the end state of the chain after all of the execution covered by the block. By contrast, reexecution requires posting a state claim for each transaction within the rollup block. With hundred or thousands of transactions per rollup block, this is a substantial difference in L1 footprint -- and L1 footprint is the main component of cost.
 
-**More efficient in the pessimistic case**: In case of a dispute, interactive proving requires the L1 referee contract only to check that Alice and Bob's actions "have the right shape", for example, that Alice has divided her N-step claim into two claims half as large. (The referee doesn't need to evaluate the correctness of Alice's claims--Bob does that, off-chain.)  Only one instruction needs to be reexecuted. By contrast, reexecution requires the L1 referee to emulate the execution of an entire transaction.
+**More efficient in the pessimistic case**: In case of a dispute, interactive proving requires the L1 referee contract only to check that Alice and Bob's actions "have the right shape", for example, that Alice has divided her N-step claim into two claims half as large. (The referee doesn't need to evaluate the correctness of Alice's claims--Bob does that, off-chain.) Only one instruction needs to be reexecuted. By contrast, reexecution requires the L1 referee to emulate the execution of an entire transaction.
 
-**Much higher per-tx gas limit:**  Interactive proving can escape from Ethereum's tight per-transaction gas limit; a transaction that requries so much gas it couldn't even fit into an Ethereum block is possible on Arbitrum.  The gas limit isn't infinite, for obvious reasons, but it can be much larger than on Ethereum. As far as Ethereum is concerned, the only downside of a gas-heavy Arbitrum transaction is that it may require an interacrtive fraud proof with slightly more steps (and only if indeed it is fraudulent). By contrast, reexecution must impose a *lower* gas limit than Ethereum, because it must be possible to emulate execution of the transaction (which is more expensive than executing it directly) within a single Ethereum transaction.
+**Much higher per-tx gas limit:** Interactive proving can escape from Ethereum's tight per-transaction gas limit; a transaction that requries so much gas it couldn't even fit into an Ethereum block is possible on Arbitrum. The gas limit isn't infinite, for obvious reasons, but it can be much larger than on Ethereum. As far as Ethereum is concerned, the only downside of a gas-heavy Arbitrum transaction is that it may require an interacrtive fraud proof with slightly more steps (and only if indeed it is fraudulent). By contrast, reexecution must impose a _lower_ gas limit than Ethereum, because it must be possible to emulate execution of the transaction (which is more expensive than executing it directly) within a single Ethereum transaction.
 
-**No limit on contract size**: Interactive proving does not need to create an Ethereum contract for each L2 contract, so it does not need contracts to fit within Ethereum's contract size limit. As far as Arbitrum's dispute contracts are concerned, deploying a contract on L2 is just another bit of computation like any other. By contrast, reexecution approaches must impose a *lower* contract size limit than Ethereum, because they need to be able to instrument a contract in order to emulate its execution, and the resulting instrumented code must fit into a single Ethereum contract.
+**No limit on contract size**: Interactive proving does not need to create an Ethereum contract for each L2 contract, so it does not need contracts to fit within Ethereum's contract size limit. As far as Arbitrum's dispute contracts are concerned, deploying a contract on L2 is just another bit of computation like any other. By contrast, reexecution approaches must impose a _lower_ contract size limit than Ethereum, because they need to be able to instrument a contract in order to emulate its execution, and the resulting instrumented code must fit into a single Ethereum contract.
 
 **More implementation flexibility:** Interactive proving allows more flexibility in implementation, for example the ability to add instructions that don't exist in EVM. All that is necessary is the ability to verify a one-step proof on Ethereum. By contrast, reexecution approaches are tethered to limitations of the EVM.
 
@@ -96,13 +96,13 @@ This diagram shows the basic architecture of Arbitrum.
 
 ![img](https://lh5.googleusercontent.com/1qwGMCrLQjJMv9zhWIUYkQXoDR2IksU5IzcSUPNJ5pWkY81pCvr7WkTf4-sb41cVohcnL-i6y8M1LU8v-4RXT_fdOsaMuLXnjwerSuKTQdHE-Hrvf4qBhRQ2r7qjxuAi3mk3hgkh)
 
-On the left we have users and the service providers who help them connect to the chain(s) of their choice. On the right we have the Arbitrum system itself, built in layers on top of Ethereum. 
+On the left we have users and the service providers who help them connect to the chain(s) of their choice. On the right we have the Arbitrum system itself, built in layers on top of Ethereum.
 
 We’ll work our way up on the right side to describe how the Arbitrum stack works, then we’ll talk about what happens on the left side to connect users to it.
 
 On the bottom right is good old **Ethereum**. Arbitrum builds on Ethereum and inherits its security from Ethereum.
 
-On top of Ethereum is the **EthBridge**, a set of Ethereum contracts that manage an Arbitrum chain. The EthBridge referees the Arbitrum rollup protocol, which ensures that the layers above it operate correctly. (More on the rollup protocol below in the [Rollup Protocol](#arbitrum-rollup-protocol) section.) The EthBridge also maintains the chain’s inbox and outbox, allowing people and contracts to send transaction messages to the chain, and to observe and use the outputs of those transactions. Users, L1 Ethereum contracts, and Arbitrum nodes make calls to the EthBridge contracts to interact with the Arbitrum chain. 
+On top of Ethereum is the **EthBridge**, a set of Ethereum contracts that manage an Arbitrum chain. The EthBridge referees the Arbitrum rollup protocol, which ensures that the layers above it operate correctly. (More on the rollup protocol below in the [Rollup Protocol](#arbitrum-rollup-protocol) section.) The EthBridge also maintains the chain’s inbox and outbox, allowing people and contracts to send transaction messages to the chain, and to observe and use the outputs of those transactions. Users, L1 Ethereum contracts, and Arbitrum nodes make calls to the EthBridge contracts to interact with the Arbitrum chain.
 
 The horizontal layer boundary above the EthBridge is labeled **AVM Architecture**, because what the EthBridge provides to the layer above it is an Arbitrum Virtual Machine, which can execute a computer program that reads inputs and produces outputs. This is the most important interface in Arbitrum, because it divides Layer 1 from Layer 2--it divides the Layer 1 components that provide the inbox/execution/outbox abstraction from the Layer 2 components that use that abstraction.
 
@@ -135,19 +135,19 @@ As an example, Arbitrum validators operate below the line, because they particip
 
 On the other hand, Arbitrum full nodes operate above the line, because they run a copy of the AVM locally, and assume that below-the-line mechanisms will ensure that the same result that they compute locally will eventually be confirmed by below-the-line mechanisms that they don’t monitor.
 
-Most users, most of the time, will be thinking in above the line terms. They will be interacting with an Arbitrum chain as just another chain, without worrying about the below-the-line details that ensure that the chain won’t go wrong. 
+Most users, most of the time, will be thinking in above the line terms. They will be interacting with an Arbitrum chain as just another chain, without worrying about the below-the-line details that ensure that the chain won’t go wrong.
 
 ## The EthBridge
 
-The EthBridge is a set of Ethereum contracts that manage an Arbitrum chain. The EthBridge keeps track of the chain’s inbox contents, the hash of the chain’s state, and information about the outputs. The EthBridge is the ultimate source of authority about what is going on in the Arbitrum chain. 
+The EthBridge is a set of Ethereum contracts that manage an Arbitrum chain. The EthBridge keeps track of the chain’s inbox contents, the hash of the chain’s state, and information about the outputs. The EthBridge is the ultimate source of authority about what is going on in the Arbitrum chain.
 
-The EthBridge is the foundation that Arbitrum’s security is built on. The EthBridge runs on Ethereum, so it is transparent and executes trustlessly. 
+The EthBridge is the foundation that Arbitrum’s security is built on. The EthBridge runs on Ethereum, so it is transparent and executes trustlessly.
 
-The *Inbox* contract manages the chain’s inbox. Inbox keeps track of the (hash of) every message in the inbox. Calling one of the send* methods of Inbox will insert a message into the Arbitrum chain’s inbox. 
+The _Inbox_ contract manages the chain’s inbox. Inbox keeps track of the (hash of) every message in the inbox. Calling one of the send\* methods of Inbox will insert a message into the Arbitrum chain’s inbox.
 
 The Inbox contract makes sure that certain information in incoming messages is accurate: that the sender is correctly recorded, and that the Ethereum block number and timestamp are correctly recorded in the message.
 
-Unsurprisingly, there is also an *Outbox* contract, which manages outputs of the chain; i.e., messages originating from Arbitrum about something that should (eventually) happen back on Ethereum (notably, withdrawals). When a rollup block is confirmed, the outputs produced in that rollup block are put into the outbox. How outputs end up being reflected on Ethereum is detailed in the [Bridging](#bridging) section.
+Unsurprisingly, there is also an _Outbox_ contract, which manages outputs of the chain; i.e., messages originating from Arbitrum about something that should (eventually) happen back on Ethereum (notably, withdrawals). When a rollup block is confirmed, the outputs produced in that rollup block are put into the outbox. How outputs end up being reflected on Ethereum is detailed in the [Bridging](#bridging) section.
 
 The Rollup contract and its friends are responsible for managing the rollup protocol. They track the state of the Arbitrum chain: the rollup blocks that have been proposed, accepted, and/or rejected, and who has staked on which rollup nodes. The Challenge contract and its friends are responsible for tracking and resolving any disputes between validators about which rollup blocks are correct. The functionality of Rollup, Challenge, and their friends will be detailed below in the Rollup Protocol section.
 
@@ -155,25 +155,25 @@ The Rollup contract and its friends are responsible for managing the rollup prot
 
 Before diving into the rollup protocol, there are two things we need to cover.
 
-First, *if you’re an Arbitrum user or developer, you don’t need to understand the rollup protocol*. You don’t ever need to think about it, unless you want to. Your relationship with it can be like a train passenger’s relationship with the train’s engine: you know it exists, you rely on it to keep working, but you don’t spend your time monitoring it or studying its internals. 
+First, _if you’re an Arbitrum user or developer, you don’t need to understand the rollup protocol_. You don’t ever need to think about it, unless you want to. Your relationship with it can be like a train passenger’s relationship with the train’s engine: you know it exists, you rely on it to keep working, but you don’t spend your time monitoring it or studying its internals.
 
 You’re welcome to study, observe, and even participate in the rollup protocol, but you don’t need to, and most people won’t. So if you’re a typical train passenger who just wants to read or talk to your neighbor, you can skip right to the [next section](#validators) of this document. If not, read on!
 
-The second thing to understand about the rollup protocol is *that the protocol doesn’t decide the results of transactions, it only confirms the results*. The results are uniquely determined by the sequence of messages in the chain’s inbox. So once your transaction message is in the chain’s inbox, its result is knowable--and Arbitrum nodes will report your transaction to be done. The role of the rollup protocol is to confirm transaction results that, as far as Arbitrum users are concerned, have already occurred. (This is why Arbitrum users can effectively ignore the rollup protocol.)
+The second thing to understand about the rollup protocol is _that the protocol doesn’t decide the results of transactions, it only confirms the results_. The results are uniquely determined by the sequence of messages in the chain’s inbox. So once your transaction message is in the chain’s inbox, its result is knowable--and Arbitrum nodes will report your transaction to be done. The role of the rollup protocol is to confirm transaction results that, as far as Arbitrum users are concerned, have already occurred. (This is why Arbitrum users can effectively ignore the rollup protocol.)
 
 You might wonder why we need the rollup protocol. If everyone knows the results of transactions already, why bother confirming them? The protocol exists for two reasons. First, somebody might lie about a result, and we need a definitive, trustless way to tell who is lying. Second, Ethereum doesn’t know the results. The whole point of a Layer 2 scaling system is to run transactions without Ethereum needing to do all of the work--and indeed Arbitrum can go fast enough that Ethereum couldn’t hope to monitor every Arbitrum transaction. But once a result is confirmed, Ethereum knows about it and can rely on it.
 
 With those preliminaries behind us, let’s jump into the details of the rollup protocol.
 
-The parties who participate in the protocol are called *validators*. Anyone can be a validator. Some validators will choose to be stakers--they will place an ETH deposit which they’ll be able to recover if they’re not caught cheating. These roles are permissionless: anyone can be a validator or a staker.
+The parties who participate in the protocol are called _validators_. Anyone can be a validator. Some validators will choose to be stakers--they will place an ETH deposit which they’ll be able to recover if they’re not caught cheating. These roles are permissionless: anyone can be a validator or a staker.
 
-The key security property of the rollup protocol is the *AnyTrust Guarantee*, which says that any one honest validator can force the correct execution of the chain to be confirmed. This means that execution of an Arbitrum chain is as trustless as Ethereum. You, and you alone (or someone you hire) can force your transactions to be processed correctly. And that is true no matter how many malicious people are trying to stop you.
+The key security property of the rollup protocol is the _AnyTrust Guarantee_, which says that any one honest validator can force the correct execution of the chain to be confirmed. This means that execution of an Arbitrum chain is as trustless as Ethereum. You, and you alone (or someone you hire) can force your transactions to be processed correctly. And that is true no matter how many malicious people are trying to stop you.
 
 ### The Rollup Chain
 
 The rollup protocol tracks a chain of rollup blocks. These are separate from Ethereum blocks. You can think of the rollup blocks as forming a separate chain, which the Arbitrum rollup protocol manages and oversees.
 
-Validators can propose rollup blocks. New rollup blocks will be *unresolved* at first. Eventually every rollup block will be *resolved*, by being either *confirmed* or *rejected*. The confirmed blocks make up the confirmed history of the chain.
+Validators can propose rollup blocks. New rollup blocks will be _unresolved_ at first. Eventually every rollup block will be _resolved_, by being either _confirmed_ or _rejected_. The confirmed blocks make up the confirmed history of the chain.
 
 Each rollup block contains:
 
@@ -183,8 +183,6 @@ Each rollup block contains:
 - the number of inbox messages have been consumed in the chain’s history
 - a hash of the outputs produced over the chain’s history
 - a hash of the chain state.
-
-
 
 Except for the rollup block number, the contents of the block are all just claims by the block’s proposer. Arbitrum doesn’t know at first whether any of these fields are correct. If all of these fields are correct, the protocol should eventually confirm the block. If one or more of these fields are incorrect, the protocol should eventually reject the block.
 
@@ -206,38 +204,38 @@ Here’s another example of what the chain state might look like, if several val
 
 ![img](https://lh3.googleusercontent.com/IKBNeX9IVAD5Vom8vqYER4CEZhTecJJrp51ddlEGYiZrdV6y9zaG0Ip8HuKgfJ-eS9_TN_C2I0EPl-7H5ITRgSQqJONnSE7X0P62sRbGoiv_shmijBxsVDJL9RhWbyDjs2lKxU-M)
 
-There’s a lot going on here, so let’s unpack it. 
+There’s a lot going on here, so let’s unpack it.
 
-* Block 100 has been confirmed. 
-* Block 101 claimed to be a correct successor to block 100, but 101 was rejected (hence the X drawn in it). 
-* Block 102 was eventually confirmed as the correct successor to 100.
-* Block 103 was confirmed and is now the latest confirmed block.
-* Block 104 was proposed as a successor to block 103, and 105 was proposed as a successor to 104. 104 was rejected as incorrect, and as a consequence 105 was rejected because its predecessor was rejected.
-* Block 106 is unresolved. It claims to be a correct successor to block 103 but the protocol hasn’t yet decided whether to confirm or reject it. It is the first unresolved block.
-* Blocks 107 and 108 claim to chain from 106. They are also unresolved. If 106 is rejected, they will be automatically rejected too.
-* Block 109 disagrees with block 106, because they both claim the same predecessor. At least one of them will eventually be rejected, but the protocol hasn’t yet resolved them.
-* Block 110 claims to follow 109. It is unresolved. If 109 is rejected, 110 will be automatically rejected too.
-* Block 111 claims to follow 105. 111 will inevitably be rejected because its predecessor has already been rejected. But it hasn’t been rejected yet, because the protocol resolves blocks in block number order, so the protocol will have to resolve 106 through 110, in order, before it can resolve 111. After 110 has been resolved, 111 can be rejected immediately.
+- Block 100 has been confirmed.
+- Block 101 claimed to be a correct successor to block 100, but 101 was rejected (hence the X drawn in it).
+- Block 102 was eventually confirmed as the correct successor to 100.
+- Block 103 was confirmed and is now the latest confirmed block.
+- Block 104 was proposed as a successor to block 103, and 105 was proposed as a successor to 104. 104 was rejected as incorrect, and as a consequence 105 was rejected because its predecessor was rejected.
+- Block 106 is unresolved. It claims to be a correct successor to block 103 but the protocol hasn’t yet decided whether to confirm or reject it. It is the first unresolved block.
+- Blocks 107 and 108 claim to chain from 106. They are also unresolved. If 106 is rejected, they will be automatically rejected too.
+- Block 109 disagrees with block 106, because they both claim the same predecessor. At least one of them will eventually be rejected, but the protocol hasn’t yet resolved them.
+- Block 110 claims to follow 109. It is unresolved. If 109 is rejected, 110 will be automatically rejected too.
+- Block 111 claims to follow 105. 111 will inevitably be rejected because its predecessor has already been rejected. But it hasn’t been rejected yet, because the protocol resolves blocks in block number order, so the protocol will have to resolve 106 through 110, in order, before it can resolve 111. After 110 has been resolved, 111 can be rejected immediately.
 
 Again: this sort of thing is very unlikely in practice. In this diagram, at least four parties must have staked on wrong nodes, and when the dust settles at least four parties will have lost their stakes. The protocol handles these cases correctly, of course, but they’re rare corner cases. This diagram is designed to illustrate the variety of situations that are possible in principle, and how the protocol would deal with them.
 
-### Staking 
+### Staking
 
 At any given time, some validators will be stakers, and some will not. Stakers deposit funds that are held by the EthBridge and will be confiscated if the staker loses a challenge. Currently all chains accept stakes in ETH.
 
 A single stake can cover a chain of rollup blocks. Every staker is staked on the latest confirmed block; and if you’re staked on a block, you can also stake on one successor of that block. So you might be staked on a sequence of blocks that represent a single coherent claim about the correct history of the chain. A single stake suffices to commit you to that sequence of blocks.
 
-In order to create a new rollup block, you must be a staker, and you must already be staked on the predecessor of the new block you’re creating. The stake requirement for block creation ensures that anyone who creates a new block has something to lose if that block is eventually rejected. 
+In order to create a new rollup block, you must be a staker, and you must already be staked on the predecessor of the new block you’re creating. The stake requirement for block creation ensures that anyone who creates a new block has something to lose if that block is eventually rejected.
 
 The EthBridge keeps track of the current required stake amount. Normally this will equal the base stake amount, which is a parameter of the Arbitrum chain. But if the chain has been slow to make progress lately, the required stake will increase, as described in more detail below.
 
 The rules for staking are as follows:
 
-* If you’re not staked, you can stake on the latest confirmed rollup block. When doing this, you deposit with the EthBridge the current minimum stake amount.
-* If you’re staked on a rollup block, you can also add your stake to any one successor of that block. (The EthBridge tracks the maximum rollup block number you’re staked on, and lets you add your stake to any successor of that block, updating your maximum to that successor.) This doesn’t require you to place a new stake.
-  * A special case of adding your stake to a successor block is when you create a new rollup block as a successor to a block you’re already staked on.
-* If you’re staked only on the latest confirmed block (and possibly earlier blocks), you or anyone else can ask to have your stake refunded. Your staked funds will be returned to you, and you will no longer be a staker. 
-* If you lose a challenge, your stake is removed from all blocks and you forfeit your staked funds.
+- If you’re not staked, you can stake on the latest confirmed rollup block. When doing this, you deposit with the EthBridge the current minimum stake amount.
+- If you’re staked on a rollup block, you can also add your stake to any one successor of that block. (The EthBridge tracks the maximum rollup block number you’re staked on, and lets you add your stake to any successor of that block, updating your maximum to that successor.) This doesn’t require you to place a new stake.
+  - A special case of adding your stake to a successor block is when you create a new rollup block as a successor to a block you’re already staked on.
+- If you’re staked only on the latest confirmed block (and possibly earlier blocks), you or anyone else can ask to have your stake refunded. Your staked funds will be returned to you, and you will no longer be a staker.
+- If you lose a challenge, your stake is removed from all blocks and you forfeit your staked funds.
 
 Notice that once you are staked on a rollup block, there is no way to unstake. You are committed to that block. Eventually one of two things will happen: that block will be confirmed, or you will lose your stake. The only way to get your stake back is to wait until all of the rollup blocks you are staked on are confirmed.
 
@@ -251,18 +249,18 @@ The rules for resolving rollup blocks are fairly simple.
 
 The first unresolved block can be confirmed if:
 
-* the block’s predecessor is the latest confirmed block, and
-* the block’s deadline has passed, and
-* there is at least one staker, and 
-* all stakers are staked on the block.
+- the block’s predecessor is the latest confirmed block, and
+- the block’s deadline has passed, and
+- there is at least one staker, and
+- all stakers are staked on the block.
 
 The first unresolved block can be rejected if:
 
-* the block’s predecessor has been rejected, or
-* all of the following are true:
-  * the block’s deadline has passed, and
-  * there is at least one staker, and
-  * no staker is staked on the block.
+- the block’s predecessor has been rejected, or
+- all of the following are true:
+  - the block’s deadline has passed, and
+  - there is at least one staker, and
+  - no staker is staked on the block.
 
 A consequence of these rules is that once the first unresolved block’s deadline has passed (and assuming there is at least one staker staked on something other than the latest confirmed block), the only way the block can be unresolvable is if at least one staker is staked on it and at least one staker is staked on a different block with the same predecessor. If this happens, the two stakers are disagreeing about which block is correct. It’s time for a challenge, to resolve the disagreement.
 
@@ -272,9 +270,9 @@ Suppose the rollup chain looks like this:
 
 ![img](https://lh4.googleusercontent.com/kAZY9H73dqcHvboFDby9nrtbYZrbsHCYtE5X9NIZQsvcz58vV0WUWUq1xsYKzYWQSc1nPZ8W86LLX0lD3y-ctEaG2ISa2Wpz2pYxTzW09P1UvqSDuoqkHlGDYLLMTzLqX4rlP8Ca)
 
-Blocks 93 and 95 are sibling blocks (they both have 92 as predecessor). Alice is staked on 93 and Bob is staked on 95. 
+Blocks 93 and 95 are sibling blocks (they both have 92 as predecessor). Alice is staked on 93 and Bob is staked on 95.
 
-At this point we know that Alice and Bob disagree about the correctness of block 93, with Alice committed to 93 being correct and Bob committed to 93 being incorrect. (Bob is staked on 95, and 95 claims that 92 is the last correct block before it, which implies that 93 would be incorrect.) 
+At this point we know that Alice and Bob disagree about the correctness of block 93, with Alice committed to 93 being correct and Bob committed to 93 being incorrect. (Bob is staked on 95, and 95 claims that 92 is the last correct block before it, which implies that 93 would be incorrect.)
 
 Whenever two stakers are staked on sibling blocks, and neither of those stakers is already in a challenge, anyone can start a challenge between the two. The rollup protocol will record the challenge and referee it, eventually declaring a winner and confiscating the loser’s stake. The loser will be removed as a staker.
 
@@ -316,29 +314,29 @@ The real dissection protocol is conceptually similar to the simplified one descr
 
 **Deal With the Empty-Inbox Case**: The real AVM can’t always execute N ArbGas units without getting stuck. The machine might halt, or it might have to wait because its inbox is exhausted so it can’t go on until more messages arrive. So Bob must be allowed to respond to Alice’s claim of N units of execution by claiming that N steps are not possible. The real protocol thus allows any response (but not the initial claim) to claim a special end state that means essentially that the specified amount of execution is not possible under the current conditions.
 
-**Time Limits:** Each player is given a time allowance. The total time a player uses for all of their moves must be less than the time allowance, or they lose the game. Think of the time allowance as being about a week. 
+**Time Limits:** Each player is given a time allowance. The total time a player uses for all of their moves must be less than the time allowance, or they lose the game. Think of the time allowance as being about a week.
 
 It should be clear that these changes don’t affect the basic correctness of the challenge protocol. They do, however, improve its efficiency and enable it to handle all of the cases that can come up in practice.
 
 ### Efficiency
 
-The challenge protocol is designed so that the dispute can be resolved with a minimum of work required by the EthBridge in its role as referee. When it is Alice’s move, the EthBridge only needs to keep track of the time Alice uses, and ensure that her move does include 99 intermediate points as required. The EthBridge doesn’t need to pay attention to whether those claims are correct in any way; it only needs to know whether Alice’s move “has the right shape”. 
+The challenge protocol is designed so that the dispute can be resolved with a minimum of work required by the EthBridge in its role as referee. When it is Alice’s move, the EthBridge only needs to keep track of the time Alice uses, and ensure that her move does include 99 intermediate points as required. The EthBridge doesn’t need to pay attention to whether those claims are correct in any way; it only needs to know whether Alice’s move “has the right shape”.
 
 The only point where the EthBridge needs to evaluate a move “on the merits” is at the one-step proof, where it needs to look at Alice’s proof and determine whether the proof that was provided does indeed establish that the virtual machine moves from the before state to the claimed after state after one step of computation. We’ll discuss the details of one-step proofs below in the [Arbitrum Virtual Machine](#avm) section.
 
 ## Validators
 
-Some Arbitrum nodes will choose to act as *validators*. This means that they watch the progress of the rollup protocol and participate in that protocol to advance the state of the chain securely.
+Some Arbitrum nodes will choose to act as _validators_. This means that they watch the progress of the rollup protocol and participate in that protocol to advance the state of the chain securely.
 
 Not all nodes will choose to do this. Because the rollup protocol doesn’t decide what the chain will do but merely confirms the correct behavior that is fully determined by the inbox messages, a node can ignore the rollup protocol and simply compute for itself the correct behavior. For more on what such nodes might do, see the [Full Nodes](#full-nodes) section.
 
-Being a validator is permissionless--anyone can do it. Offchain Labs provides open source validator software, including a pre-built Docker image. 
+Being a validator is permissionless--anyone can do it. Offchain Labs provides open source validator software, including a pre-built Docker image.
 
-Every validator can choose their own approach, but we expect validators to follow three common strategies. 
+Every validator can choose their own approach, but we expect validators to follow three common strategies.
 
-* The *active validator* strategy tries to advance the state of the chain by proposing new rollup blocks. An active validator is always staked, because creating a rollup block requires being staked. A chain really only needs one honest active validator; any more is an inefficient use of resources. For the flagship Arbitrum chain, Offchain Labs will run an active validator.
-* The *defensive validator* strategy watches the rollup protocol operate. If only correct rollup blocks are proposed, this strategy does nothing. But if an incorrect block is proposed, this strategy intervenes by posting a correct block or staking on a correct block that another party has posted. This strategy avoids staking when things are going well, but if someone is dishonest it stakes in order to defend the correct outcome. 
-* The *watchtower validator* strategy never stakes. It simply watches the rollup protocol and if an incorrect block is proposed, it raises the alarm (by whatever means it chooses) so that others can intervene. This strategy assumes that other parties who are willing to stake will be willing to intervene in order to take some of the dishonest proposer’s stake, and that that can happen before the dishonest block’s deadline expires. (In practice this will allow several days for a response.)
+- The _active validator_ strategy tries to advance the state of the chain by proposing new rollup blocks. An active validator is always staked, because creating a rollup block requires being staked. A chain really only needs one honest active validator; any more is an inefficient use of resources. For the flagship Arbitrum chain, Offchain Labs will run an active validator.
+- The _defensive validator_ strategy watches the rollup protocol operate. If only correct rollup blocks are proposed, this strategy does nothing. But if an incorrect block is proposed, this strategy intervenes by posting a correct block or staking on a correct block that another party has posted. This strategy avoids staking when things are going well, but if someone is dishonest it stakes in order to defend the correct outcome.
+- The _watchtower validator_ strategy never stakes. It simply watches the rollup protocol and if an incorrect block is proposed, it raises the alarm (by whatever means it chooses) so that others can intervene. This strategy assumes that other parties who are willing to stake will be willing to intervene in order to take some of the dishonest proposer’s stake, and that that can happen before the dishonest block’s deadline expires. (In practice this will allow several days for a response.)
 
 Under normal conditions, validators using the defensive and watchtower strategies won’t do anything except observe. A malicious actor who is considering whether to try cheating won’t be able to tell how many defensive and watchtower validators are operating incognito. Perhaps some defensive validators will announce themselves, but others probably won’t, so a would-be attacker will always have to worry that defenders are waiting to emerge.
 
@@ -350,13 +348,13 @@ Who will be validators? Anyone can do it, but most people will choose not to. In
 
 ## AVM: The Arbitrum Virtual Machine
 
-The Arbitrum Virtual Machine (AVM) is the interface between the Layer 1 and Layer 2 parts of Arbitrum. Layer 1 *provides* the AVM interface and ensures correct execution of the virtual machine. Layer 2 *runs on* the AVM virtual machine and provides the functionality to deploy and run contracts, track balances, and all of the things a smart-contract-enabled blockchain needs to do.
+The Arbitrum Virtual Machine (AVM) is the interface between the Layer 1 and Layer 2 parts of Arbitrum. Layer 1 _provides_ the AVM interface and ensures correct execution of the virtual machine. Layer 2 _runs on_ the AVM virtual machine and provides the functionality to deploy and run contracts, track balances, and all of the things a smart-contract-enabled blockchain needs to do.
 
-**Every Arbitrum chain has a single AVM** which does all of the computation and maintains all of the storage for everything that happens on the chain. Unlike some other systems which have a separate “VM” for each contract, Arbitrum uses a single virtual machine for the whole chain, much like Ethereum. The management of multiple contracts on an Arbitrum chain is done by software that runs on top of the AVM. 
+**Every Arbitrum chain has a single AVM** which does all of the computation and maintains all of the storage for everything that happens on the chain. Unlike some other systems which have a separate “VM” for each contract, Arbitrum uses a single virtual machine for the whole chain, much like Ethereum. The management of multiple contracts on an Arbitrum chain is done by software that runs on top of the AVM.
 
 At its core, a chain’s VM executes in this simple model, consuming messages from its inbox, changing its state, and producing outputs.
 
- ![img](https://lh4.googleusercontent.com/qwf_aYyB1AfX9s-_PQysOmPNtWB164_qA6isj3NhkDnmcro6J75f6MC2_AjlN60lpSkSw6DtZwNfrt13F3E_G8jdvjeWHX8EophDA2oUM0mEpPVeTlMbsjUCMmztEM0WvDpyWZ6R)
+![img](https://lh4.googleusercontent.com/qwf_aYyB1AfX9s-_PQysOmPNtWB164_qA6isj3NhkDnmcro6J75f6MC2_AjlN60lpSkSw6DtZwNfrt13F3E_G8jdvjeWHX8EophDA2oUM0mEpPVeTlMbsjUCMmztEM0WvDpyWZ6R)
 
 The starting point for the AVM design is the Ethereum Virtual Machine (EVM). Because Arbitrum aims to efficiently execute programs written or compiled for EVM, the AVM uses many aspects of EVM unchanged. For example, AVM adopts EVM's basic integer datatype (a 256-bit big-endian unsigned integer), as well as the instructions that operate on EVM integers.
 
@@ -406,20 +404,20 @@ Second, the AVM has three instructions to create new CodePoints: one that makes 
 
 #### Getting messages from the Inbox
 
-The *inbox* instruction consumes the next message from the VM’s inbox and pushes it onto the Data Stack. If all messages in the inbox have been consumed already, the inbox instruction blocks--the VM cannot complete the inbox instruction, nor can it do anything else, until a message arrives and the inbox instruction can complete. If the inbox has been completely consumed, any purported one-step proof of executing the inbox instruction will be rejected.The *inboxpeek* instruction does not consume a message from the inbox but simply reports whether or not the first unconsumed message in the inbox is at a specified block number. If there are no unconsumed messages in the inbox, *inboxpeek* blocks until there is one.
+The _inbox_ instruction consumes the next message from the VM’s inbox and pushes it onto the Data Stack. If all messages in the inbox have been consumed already, the inbox instruction blocks--the VM cannot complete the inbox instruction, nor can it do anything else, until a message arrives and the inbox instruction can complete. If the inbox has been completely consumed, any purported one-step proof of executing the inbox instruction will be rejected.The _inboxpeek_ instruction does not consume a message from the inbox but simply reports whether or not the first unconsumed message in the inbox is at a specified block number. If there are no unconsumed messages in the inbox, _inboxpeek_ blocks until there is one.
 
 #### Producing outputs
 
-The AVM has two instructions that can produce outputs: *send* and *log*. Both are hashed into the output hash accumulator that records the (hash of) the VM’s outputs, but *send* causes its value to be recorded as calldata on the L1 chain, while *log* does not. This means that outputs produced with send will be visible to L1 contracts, while those produced with log will not. Of course, sends are more expensive than logs.
+The AVM has two instructions that can produce outputs: _send_ and _log_. Both are hashed into the output hash accumulator that records the (hash of) the VM’s outputs, but _send_ causes its value to be recorded as calldata on the L1 chain, while _log_ does not. This means that outputs produced with send will be visible to L1 contracts, while those produced with log will not. Of course, sends are more expensive than logs.
 A useful design pattern is for a sequence of values to be produced as logs, and then a Merkle hash of those values to be produced as a single send. That allows an L1 contract to see the Merkle hash of the full sequence of outputs, so that it can verify the individual values when it sees them. ArbOS uses this design pattern, as described below.
 
 #### ArbGas and gas tracking
 
-The AVM has a notion of ArbGas, which is like gas on Ethereum. ArbGas measures the cost of executing an instruction, based on how long it will take a validator to execute it. Every AVM instruction has an ArbGas cost. 
+The AVM has a notion of ArbGas, which is like gas on Ethereum. ArbGas measures the cost of executing an instruction, based on how long it will take a validator to execute it. Every AVM instruction has an ArbGas cost.
 
 Arbitrum instructions have different gas costs than their Ethereum counterparts, for two reasons. First, the relative costs of executing Instruction A versus Instruction B can be different on a Layer 2 system versus on Ethereum. For example, storage accesses can be cheaper on Arbitrum relative to add instructions. ArbGas costs are based on the relative cost on Arbitrum.
 
-The AVM architecture has a machine register called ArbGas Remaining. Before executing any instruction, the ArbGas cost of that instruction is deducted from ArbGas Remaining. If this would underflow the register (indicating that the execution is “out of ArbGas”) a hard error is generated and the ArbGasRemaining register is set to MaxUint256. 
+The AVM architecture has a machine register called ArbGas Remaining. Before executing any instruction, the ArbGas cost of that instruction is deducted from ArbGas Remaining. If this would underflow the register (indicating that the execution is “out of ArbGas”) a hard error is generated and the ArbGasRemaining register is set to MaxUint256.
 
 The AVM has instructions to get and set the ArbGasRemaining register, which ArbOS uses to limit and count the ArbGas used by user contracts.
 
@@ -427,9 +425,9 @@ For information on ArbGas prices and other fee-related matters, see the Fees sec
 
 #### Error handling
 
-Error conditions can arise in AVM execution in several ways, including stack underflows, ArbGas exhaustion, and type errors such as trying to jump to a value that is not a CodePoint. 
+Error conditions can arise in AVM execution in several ways, including stack underflows, ArbGas exhaustion, and type errors such as trying to jump to a value that is not a CodePoint.
 
-The AVM architecture has an Error CodePoint register that can be read and written by special instructions. When an error occurs, the Next CodePoint register is set equal to the Error CodePoint register, essentially jumping to the specified error handler. 
+The AVM architecture has an Error CodePoint register that can be read and written by special instructions. When an error occurs, the Next CodePoint register is set equal to the Error CodePoint register, essentially jumping to the specified error handler.
 
 ## ArbOS
 
@@ -437,7 +435,7 @@ ArbOS is a trusted "operating system” at Layer 2 that isolates untrusted contr
 
 ### Why ArbOS?
 
-In Arbitrum, much of the work that would otherwise have to be done expensively at Layer 1 is instead done by ArbOS, trustlessly performing these functions at the speed and low cost of Layer 2. 
+In Arbitrum, much of the work that would otherwise have to be done expensively at Layer 1 is instead done by ArbOS, trustlessly performing these functions at the speed and low cost of Layer 2.
 
 Supporting these functions in Layer 2 trusted software, rather than building them in to the L1-enforced rules of the architecture as Ethereum does, offers significant advantages in cost because these operations can benefit from the lower cost of computation and storage at Layer 2, instead of having to manage those resources as part of the Layer 1 EthBridge contract. Having a trusted operating system at Layer 2 also has significant advantages in flexibility, because Layer 2 code is easier to evolve, or to customize for a particular chain, than a Layer-1 enforced VM architecture would be.
 
@@ -459,7 +457,7 @@ EVM code can’t run directly on the AVM architecture, so ArbOS has to translate
 
 (Some old versions of Arbitrum used a separate compiler to translate EVM to AVM code, but that had significant disadvantages in both security and functionality, so we switched to built-in translation in ArbOS.)
 
-ArbOS takes an EVM contract’s program and translates it into an AVM code segment that has equivalent functionality. Some instructions can be translated directly; for example an EVM add instruction translates into a single AVM add instruction. Other instructions translate into a call to a library provided by ArbOS. For example, the EVM *CREATE2* instruction, which creates a new contract whose address is computed in a special way, translates into a call to an ArbOS function called *evmOp_create2*.
+ArbOS takes an EVM contract’s program and translates it into an AVM code segment that has equivalent functionality. Some instructions can be translated directly; for example an EVM add instruction translates into a single AVM add instruction. Other instructions translate into a call to a library provided by ArbOS. For example, the EVM _CREATE2_ instruction, which creates a new contract whose address is computed in a special way, translates into a call to an ArbOS function called _evmOp_create2_.
 
 To deploy a new contract, ArbOS takes the submitted EVM constructor code, translates it into AVM code for the constructor, and runs that code. If it completes successfully, ArbOS takes the return data, interprets it as EVM code, translates that into AVM code, and then installs that AVM code into the account table as the code for the now-deployed contract. Future calls to the contract will jump to the beginning of that AVM code.
 
@@ -473,23 +471,23 @@ Certain errors in executing EVM, such as stack underflows, will trigger a corres
 
 The result of these mechanisms is that EVM code can run compatibly on Arbitrum.
 
-There are three main differences between EVM execution on Arbitrum compared to Ethereum. 
+There are three main differences between EVM execution on Arbitrum compared to Ethereum.
 
-First, the two EVM instructions DIFFICULTY and COINBASE, which don’t make sense on an L2 chain, return fixed constant values. 
+First, the two EVM instructions DIFFICULTY and COINBASE, which don’t make sense on an L2 chain, return fixed constant values.
 
-Second, the EVM instruction BLOCKHASH returns a pseudorandom value that is a digest of the chain’s history, but not the same hash value that Ethereum would return at the same block number. 
+Second, the EVM instruction BLOCKHASH returns a pseudorandom value that is a digest of the chain’s history, but not the same hash value that Ethereum would return at the same block number.
 
 Third, Arbitrum uses the ArbGas system so everything related to gas is denominated in ArbGas, including the gas costs of operations, and the results of gas-related instructions like GASLIMIT and GASPRICE.
 
 ### Deploying EVM contracts
 
-On Ethereum, an EVM contract is deployed by sending a transaction to the null account, with calldata consisting of the contract’s constructor. Ethereum runs the constructor, and if the constructor succeeds, its return data is set up as the code for the new contract. 
+On Ethereum, an EVM contract is deployed by sending a transaction to the null account, with calldata consisting of the contract’s constructor. Ethereum runs the constructor, and if the constructor succeeds, its return data is set up as the code for the new contract.
 
 Arbitrum uses a similar pattern. To deploy a new EVM contract, ArbOS takes the submitted EVM constructor code, translates it into AVM code for the constructor, and runs that AVM code. If it completes successfully, ArbOS takes the return data, interprets it as EVM code, translates that into AVM code, and then installs that AVM code into the account table as the code for the now-deployed contract. Future calls to the contract will jump to the beginning of that AVM code.
 
 ### Transaction receipts
 
-When an EVM transaction finishes running, whether or not it succeeded, ArbOS issues a transaction receipt, using the AVM *log* instruction. The receipt is detected by Arbitrum nodes, which can use it to provide results to users according to the standard Ethereum RPC API.
+When an EVM transaction finishes running, whether or not it succeeded, ArbOS issues a transaction receipt, using the AVM _log_ instruction. The receipt is detected by Arbitrum nodes, which can use it to provide results to users according to the standard Ethereum RPC API.
 
 ## Full Nodes
 
@@ -505,7 +503,7 @@ One important role of a full node is serving as an aggregator, which means that 
 
 In addition to batching transactions, full nodes can also compress transactions to save on L1 calldata space. Compression is transparent to users and to contracts running on Arbitrum--they see only normal uncompressed transactions. The process works like this: the user submits a normal transaction to a full node; the full node compresses the transactions and submits it to the chain; ArbOS receives the transaction and uncompresses it to recover the original transaction; ArbOS verifies the signature on the transaction and processes the transaction.
 
-Compression can make the “header information” in a transaction much smaller. Full nodes typically use both compression and batching when submitting transactions. 
+Compression can make the “header information” in a transaction much smaller. Full nodes typically use both compression and batching when submitting transactions.
 
 ### Aggregator costs and fees
 
@@ -515,30 +513,30 @@ An aggregator that submits transactions on behalf of users will have costs due t
 
 Sequencer mode is an optional feature of Arbitrum chains, which can be turned on or off for each chain. On mainnet launch, the flagship chain will use a sequencer that is operated by Offchain Labs.
 
-The sequencer is a specially designated full node, which is given limited power to control the ordering of transactions. This allows the sequencer to guarantee the results of user transactions immediately, without needing to wait for anything to happen on Ethereum.  So no need to wait five minutes or so for block confirmations--and no need to even wait 15 seconds for Ethereum to make a block.
+The sequencer is a specially designated full node, which is given limited power to control the ordering of transactions. This allows the sequencer to guarantee the results of user transactions immediately, without needing to wait for anything to happen on Ethereum. So no need to wait five minutes or so for block confirmations--and no need to even wait 15 seconds for Ethereum to make a block.
 
 Clients interact with the sequencer in exactly the same way they would interact with any full node, for example by giving their wallet software a network URL that happens to point to the sequencer.
 
 ### Instant finality
 
-Without a sequencer, a node can predict what the results of a client transaction will be, but the node can't be sure, because it can't know or control how the transactions it submits will be ordered in the inbox, relative to transactions submitted by other nodes. 
+Without a sequencer, a node can predict what the results of a client transaction will be, but the node can't be sure, because it can't know or control how the transactions it submits will be ordered in the inbox, relative to transactions submitted by other nodes.
 
-The sequencer is given more control over ordering, so it has the power to assign its clients' transactions a position in the inbox queue, thereby ensuring that it can determine the results of client transactions immediately.  The sequencer's power to reorder has limits (see below for details) but it does have more power than anyone else to influence transaction ordering.
+The sequencer is given more control over ordering, so it has the power to assign its clients' transactions a position in the inbox queue, thereby ensuring that it can determine the results of client transactions immediately. The sequencer's power to reorder has limits (see below for details) but it does have more power than anyone else to influence transaction ordering.
 
 ### Inboxes, fast and slow
 
 When we add a sequencer, we take the chain's inbox and split it into two inboxes.
 
-* The regular inbox works as it always has. Anyone can put a message into the regular inbox at any time. Messages will be tagged with the Ethereum block number and timestamp when they were inserted into the regular inbox.
-* The sequencer inbox is "owned" by the sequencer. Only the sequencer can put messages into it. When inserting a message, the sequencer can "backdate" that message by assigning it a block number that is in the past--but no more than *delta_blocks* blocks in the past. (*delta_blocks* will typically correspond to roughly ten minutes of wall-clock time.). Similarly, the sequencer can assign the message a timestamp that is in the past, but only by up to a limit *delta_seconds*.  Additionally, when using the sequencer inbox, the sequencer must assign block numbers and timestamps in non-decreasing fashion.
+- The regular inbox works as it always has. Anyone can put a message into the regular inbox at any time. Messages will be tagged with the Ethereum block number and timestamp when they were inserted into the regular inbox.
+- The sequencer inbox is "owned" by the sequencer. Only the sequencer can put messages into it. When inserting a message, the sequencer can "backdate" that message by assigning it a block number that is in the past--but no more than _delta_blocks_ blocks in the past. (_delta_blocks_ will typically correspond to roughly ten minutes of wall-clock time.). Similarly, the sequencer can assign the message a timestamp that is in the past, but only by up to a limit _delta_seconds_. Additionally, when using the sequencer inbox, the sequencer must assign block numbers and timestamps in non-decreasing fashion.
 
-Now when ArbOS goes to get the next message, it will receive the message at the head of one inbox or the other, whichever has the lowest block number. This ensures that messages are consumed in non-decreasing block number order, which keeps everything sane.  (ArbOS also adjusts message timestamps upward, if this is necessary to make timestamps non-decreasing.)
+Now when ArbOS goes to get the next message, it will receive the message at the head of one inbox or the other, whichever has the lowest block number. This ensures that messages are consumed in non-decreasing block number order, which keeps everything sane. (ArbOS also adjusts message timestamps upward, if this is necessary to make timestamps non-decreasing.)
 
 ### If the sequencer is well-behaved...
 
-A well-behaved sequencer will accept transactions from all requesters and treat them fairly, giving each one a promised transaction result as quickly as it can. 
+A well-behaved sequencer will accept transactions from all requesters and treat them fairly, giving each one a promised transaction result as quickly as it can.
 
-It will also minimize the delay it imposes on non-sequencer transactions by minimizing how far it backdates transactions, consistent with the goal of providing strong promises of transaction results.  Specifically, if the sequencer believes that 20 confirmation blocks are needed to have finality on Ethereum, then it will backdate transactions by 20 blocks. This is enough to ensure that the sequencer knows exactly which transactions will precede its current transaction, because those preceding transactions have finality.  There is no need for a benign sequencer to backdate more than that, so it won't.
+It will also minimize the delay it imposes on non-sequencer transactions by minimizing how far it backdates transactions, consistent with the goal of providing strong promises of transaction results. Specifically, if the sequencer believes that 20 confirmation blocks are needed to have finality on Ethereum, then it will backdate transactions by 20 blocks. This is enough to ensure that the sequencer knows exactly which transactions will precede its current transaction, because those preceding transactions have finality. There is no need for a benign sequencer to backdate more than that, so it won't.
 
 This does mean that transactions that go through the regular inbox will take longer to get finality. Their time to finality will roughly double: if finality requires C confirmation blocks, then a regular-inbox tranasaction at block B be processed after sequencer transactions that are inserted at time B+C-1 (but labeled with block B-1), and those sequencer transactions won't have finality until time B+2C-1.
 
@@ -548,15 +546,15 @@ So a sequencer is generally a win, if the sequencer is well behaved.
 
 ### If the sequencer is malicious...
 
-A malicious sequencer, on the other hand, could cause some pain. If it refuses to handle your transactions, you're forced to go through the regular inbox, with longer delay. And a malicious sequencer has great power to front-run everyone's transactions, so it could profit greatly at users' expense.  
+A malicious sequencer, on the other hand, could cause some pain. If it refuses to handle your transactions, you're forced to go through the regular inbox, with longer delay. And a malicious sequencer has great power to front-run everyone's transactions, so it could profit greatly at users' expense.
 
-At mainnet launch, Offchain Labs will run a sequencer which will be well-behaved.  This will be useful but it's not decentralized. Over time, we'll switch to decentralized, fair sequencing, as described below.
+At mainnet launch, Offchain Labs will run a sequencer which will be well-behaved. This will be useful but it's not decentralized. Over time, we'll switch to decentralized, fair sequencing, as described below.
 
-Because the sequencer will be run by a trusted party at first, and will be decentralized later, we haven't built in a mechanism to directly punish a misbehaving sequencer.  We're asking users to trust the centralized sequencer at first, until we switch to decentralized fair sequencing later.
+Because the sequencer will be run by a trusted party at first, and will be decentralized later, we haven't built in a mechanism to directly punish a misbehaving sequencer. We're asking users to trust the centralized sequencer at first, until we switch to decentralized fair sequencing later.
 
 ### Decentralized fair sequencing
 
-Viewed from 30,000 feet, decentralized fair sequencing isn't too complicated. Instead of being a single centralized server, the sequencer is a committee of servers, and as long as a quorum of more than two-thirds of the committee is honest, the sequencer will establish a fair ordering over transactions. 
+Viewed from 30,000 feet, decentralized fair sequencing isn't too complicated. Instead of being a single centralized server, the sequencer is a committee of servers, and as long as a quorum of more than two-thirds of the committee is honest, the sequencer will establish a fair ordering over transactions.
 
 How to achieve this is more complicated. Research by a team at Cornell Tech, including Offchain Labs CEO and Co-founder Steven Goldfeder, developed the first-ever decentralized fair sequencing algorithm. With some improvements that are under development, these concepts will form the basis for our longer-term solution, of a fair decentralized sequencer.
 
@@ -624,10 +622,10 @@ Eventually the dispute will get down to a single AVM instruction, with a claim a
 
 The AVM architecture also does ArbGas accounting internally, using a machine register called ArbGasRemaining, which is a 256-bit unsigned integer that behaves as follows:
 
-* The register is initially set to MaxUint256.
-* Immediately before any instruction executes, that instruction's ArbGas cost is subtracted from the register. If this would make the register's value less than zero, an error is generated and the register's value is set to MaxUint256. (The error causes a control transfer as specified in the AVM specification.)
-* A special instruction can be used to read the register's value.
-* Another special instruction can be used to set the register to any desired value.
+- The register is initially set to MaxUint256.
+- Immediately before any instruction executes, that instruction's ArbGas cost is subtracted from the register. If this would make the register's value less than zero, an error is generated and the register's value is set to MaxUint256. (The error causes a control transfer as specified in the AVM specification.)
+- A special instruction can be used to read the register's value.
+- Another special instruction can be used to set the register to any desired value.
 
 This mechanism allows ArbOS to control and account for the ArbGas usage of application code. ArbOS can limit an application call's use of ArbGas to N units by setting the register to N before calling the application, then catching the out-of-ArbGas error if it is generated. At the beginning of the runtime's error-handler, ArbOS would read the ArbGasRemaining register, then set the register to MaxUint256 to ensure that the error-handler could not run out of ArbGas. If the read of the register gave a value close to MaxInt256, then it must be the case that the application generated an out-of-ArbGas error. (It could be the case that the application generates a different error while a small amount of ArbGas remains, then an out-of-ArbGas error occurs at the very beginning of the error-handler. In this case, the second error would set the ArbGasRemaining to MaxInt256 and throw control back to the beginning of the error-handler, causing the error-handler to conclude that an out-of-ArbGas error was caused by the application. This is a reasonable behavior which we will consider to be correct.)
 
@@ -651,19 +649,19 @@ User transactions pay fees, to cover the cost of operating the chain. These fees
 
 Fees are charged for four resources that a transaction can use:
 
-* *L2 tx*: a base fee for each L2 transaction, to cover the cost of servicing a transaction
-* *L1 calldata*: a fee per units of L1 calldata directly attributable to the transaction (each non-zero byte of calldata is 16 units, and each zero byte of calldata is 4 units)
-* *computation*: a fee per unit of ArbGas used by the transaction
-* *storage*: a fee per location of EVM contract storage, based on the net increase in EVM storage due to the transaction
+- _L2 tx_: a base fee for each L2 transaction, to cover the cost of servicing a transaction
+- _L1 calldata_: a fee per units of L1 calldata directly attributable to the transaction (each non-zero byte of calldata is 16 units, and each zero byte of calldata is 4 units)
+- _computation_: a fee per unit of ArbGas used by the transaction
+- _storage_: a fee per location of EVM contract storage, based on the net increase in EVM storage due to the transaction
 
 Each of these four resources has a price, which may vary over time. The resource prices, which are denominated in ETH (more precisely, in wei), are set as follows:
 
 #### Prices for L2 tx and L1 calldata
 
-The prices of the first two resources, L2 tx and L1 calldata, depend on the L1 gas price. ArbOS can’t directly see the L1 gas price, so it estimates the L1 gas prices, as a weighted average of recent gas prices actually paid by aggregators on a specific list of addresses. ArbOS also keeps a running average of (1 / batchSize) for recent transaction batches. 
+The prices of the first two resources, L2 tx and L1 calldata, depend on the L1 gas price. ArbOS can’t directly see the L1 gas price, so it estimates the L1 gas prices, as a weighted average of recent gas prices actually paid by aggregators on a specific list of addresses. ArbOS also keeps a running average of (1 / batchSize) for recent transaction batches.
 
-* The base price of an L2 tx is CP/B, where C is the L1 cost required for an aggregator to submit an empty batch, P is the estimated L1 gas price, and (1/B) is the average (1/batchSize). 
-* The base price of a unit of L1 calldata is just the estimated L1 gas price.
+- The base price of an L2 tx is CP/B, where C is the L1 cost required for an aggregator to submit an empty batch, P is the estimated L1 gas price, and (1/B) is the average (1/batchSize).
+- The base price of a unit of L1 calldata is just the estimated L1 gas price.
 
 These base prices ensure that the amount collected is equal to the aggregator’s cost of submitting the transaction in a batch, assuming a typical batch size.
 
@@ -683,7 +681,7 @@ Transactions are charged based on the net increase they cause in the total amoun
 
 #### Price for ArbGas
 
-ArbGas pricing depends on a minimum price, and a congestion pricing mechanism. 
+ArbGas pricing depends on a minimum price, and a congestion pricing mechanism.
 
 The minimum ArbGas price is set equal to the estimated L1 gas price divided by 10,000. The price of ArbGas will never go lower than this.
 
@@ -699,8 +697,8 @@ The gas pool is also used to limit the amount of gas available to transactions a
 
 ### ArbGas accounting and the second-price auction
 
-As on Ethereum, Arbitrum transactions submit a maximum gas amount (here, “maxgas” for short) and a gas price bid (here, “gasbid” for short). A transaction will use up to its maxgas amount of gas, or will revert if more gas would be needed. 
+As on Ethereum, Arbitrum transactions submit a maximum gas amount (here, “maxgas” for short) and a gas price bid (here, “gasbid” for short). A transaction will use up to its maxgas amount of gas, or will revert if more gas would be needed.
 
 On Ethereum, the gas price paid by a transaction is equal to its gasbid. Arbitrum, by contrast, treats the gasbid as the maximum amount the transaction is willing to pay for gas. The actual price paid is equal to the current Arbitrum ArbGas price, whatever that is, as long as it is less than or equal to the transaction’s gasbid. If the transaction’s gasbid is less than the current Arbitrum gas price, the transaction is dropped and a transaction receipt issued, saying that the transaction’s gasbid was too low.
 
-So Arbitrum transactions shouldn’t try to “game” their gasbid by trying to match it too closely to the current ArbGas price. Instead, transactions should set their gasbid equal to the maximum price they’re willing to pay for ArbGas, with the caveat that the sender must have at least gasbid*maxgas in its L2 ETH account.
+So Arbitrum transactions shouldn’t try to “game” their gasbid by trying to match it too closely to the current ArbGas price. Instead, transactions should set their gasbid equal to the maximum price they’re willing to pay for ArbGas, with the caveat that the sender must have at least gasbid\*maxgas in its L2 ETH account.

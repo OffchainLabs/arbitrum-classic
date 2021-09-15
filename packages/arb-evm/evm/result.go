@@ -53,6 +53,7 @@ const (
 	ForbiddenSender           ResultType = 13
 	SequenceNumberTooLow      ResultType = 14
 	SequenceNumberTooHigh     ResultType = 15
+	ExecutionRanOutOfGas      ResultType = 16
 )
 
 func (r ResultType) String() string {
@@ -87,6 +88,8 @@ func (r ResultType) String() string {
 		return "SequenceNumberTooLow"
 	case SequenceNumberTooHigh:
 		return "SequenceNumberTooHigh"
+	case ExecutionRanOutOfGas:
+		return "ExecutionRanOutOfGas"
 	default:
 		return fmt.Sprintf("%v", int(r))
 	}
@@ -187,6 +190,8 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 	} else if res.ResultCode == SequenceNumberTooHigh {
 		// Maintain error message backwards compatibility
 		return errors.New("invalid transaction nonce")
+	} else if res.ResultCode == ExecutionRanOutOfGas {
+		return errors.New("execution ran out of gas")
 	} else {
 		return errors.Errorf("execution reverted: error code %v", res.ResultCode)
 	}

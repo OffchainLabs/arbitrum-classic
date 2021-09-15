@@ -14,8 +14,8 @@ type NodeState struct {
 }
 
 type Assertion struct {
-	Before *ExecutionState
-	After  *ExecutionState
+	Before *ExecutionState `json:"beforeState"`
+	After  *ExecutionState `json:"afterState"`
 }
 
 func newExecutionStateFromFields(a [3][32]byte, b [4]*big.Int) *ExecutionState {
@@ -34,6 +34,16 @@ func NewAssertionFromFields(a [2][3][32]byte, b [2][4]*big.Int) *Assertion {
 	return &Assertion{
 		Before: newExecutionStateFromFields(a[0], b[0]),
 		After:  newExecutionStateFromFields(a[1], b[1]),
+	}
+}
+
+func (a *Assertion) InitialExecutionBisection() *Bisection {
+	return &Bisection{
+		ChallengedSegment: &ChallengeSegment{
+			Start:  a.Before.TotalGasConsumed,
+			Length: new(big.Int).Sub(a.After.TotalGasConsumed, a.Before.TotalGasConsumed),
+		},
+		Cuts: []common.Hash{a.Before.CutHash(), a.After.CutHash()},
 	}
 }
 

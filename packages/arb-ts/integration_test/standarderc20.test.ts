@@ -1,8 +1,28 @@
-import { BigNumber } from 'ethers'
-import { Bridge } from '../src/lib/bridge'
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict'
 
 import { expect } from 'chai'
+
+import { BigNumber } from '@ethersproject/bignumber'
+
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
+
+import { Bridge } from '../src/lib/bridge'
 import { OutgoingMessageState } from '../src/lib/bridge_helpers'
 
 import {
@@ -65,10 +85,12 @@ describe('standard ERC20', () => {
       withdrawEventData.batchNumber,
       withdrawEventData.indexInBatch
     )
-    expect(outgoingMessageState).to.equal(
-      OutgoingMessageState.UNCONFIRMED,
-      `standard token withdraw getOutGoingMessageState returned ${OutgoingMessageState.UNCONFIRMED}`
-    )
+
+    expect(
+      outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
+        outgoingMessageState === OutgoingMessageState.NOT_FOUND,
+      `standard token withdraw getOutGoingMessageState returned ${outgoingMessageState}`
+    ).to.be.true
 
     const l2Data = await bridge.getAndUpdateL2TokenData(existentTestERC20)
     const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance

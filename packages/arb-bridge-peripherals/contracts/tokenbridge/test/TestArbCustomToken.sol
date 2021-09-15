@@ -25,7 +25,7 @@ contract TestArbCustomToken is aeERC20, IArbToken {
     address public l2Gateway;
     address public override l1Address;
 
-    modifier onlyGateway {
+    modifier onlyGateway() {
         require(msg.sender == l2Gateway, "ONLY_l2GATEWAY");
         _;
     }

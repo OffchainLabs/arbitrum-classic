@@ -16,129 +16,221 @@
 
 /* eslint-env node, mocha */
 import { ethers } from 'hardhat'
-import { Signer, BigNumberish } from 'ethers'
-import { ContractTransaction } from '@ethersproject/contracts'
-import { assert, expect } from 'chai'
-import { ChallengeTester } from '../build/types/ChallengeTester'
-import { Challenge } from '../build/types/Challenge'
-import { Bridge } from '../build/types/Bridge'
-import { SequencerInbox } from '../build/types/SequencerInbox'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumber } from '@ethersproject/bignumber'
+import { expect } from 'chai'
+import { Challenge } from '../build/types'
 import { initializeAccounts } from './utils'
-
 import {
-  Node,
-  ExecutionState,
-  NodeState,
-  Assertion,
-  RollupContract,
-} from './rolluplib'
+  setupChallengeTest,
+  ChallengeDeployment,
+  Message,
+} from './common/challenge'
+import { Assertion, makeAssertion, challengeHash } from './common/rolluplib'
+import {
+  bisectExecution,
+  Move,
+  executeMove,
+  newDelayedItem,
+  newSequencerItem,
+} from './common/challenge'
+import * as fs from 'fs'
+
+const printGas = false
+
+interface ChallengeSpec {
+  ChallengedAssertion: Assertion
+  Messages: Message[]
+  Moves: Move[]
+  AsserterError: string | undefined
+}
 
 const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
-const zerobytes32 =
-  '0x0000000000000000000000000000000000000000000000000000000000000000'
 
 let accounts: Signer[]
-let challengeTester: ChallengeTester
-let bridge: Bridge
-let sequencerInbox: SequencerInbox
+let challengeDeployment: ChallengeDeployment
 
 describe('Challenge', () => {
   before(async () => {
     accounts = await initializeAccounts()
-
-    const OneStepProof = await ethers.getContractFactory('OneStepProof')
-    const osp = await OneStepProof.deploy()
-    await osp.deployed()
-
-    const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
-    const osp2 = await OneStepProof2.deploy()
-    await osp2.deployed()
-
-    const OneStepProof3 = await ethers.getContractFactory('OneStepProofHash')
-    const osp3 = await OneStepProof3.deploy()
-    await osp3.deployed()
-
-    const ChallengeTester = await ethers.getContractFactory('ChallengeTester')
-    challengeTester = (await ChallengeTester.deploy([
-      osp.address,
-      osp2.address,
-      osp3.address,
-    ])) as ChallengeTester
-    await challengeTester.deployed()
-
-    const Bridge = await ethers.getContractFactory('Bridge')
-    bridge = (await Bridge.deploy()) as Bridge
-    await bridge.deployed()
-    await bridge.initialize()
-
-    const RollupMock = await ethers.getContractFactory('RollupMock')
-    const rollupMock = await RollupMock.deploy()
-    await rollupMock.deployed()
-    await rollupMock.setMock(15, 900)
-
-    const SequencerInbox = await ethers.getContractFactory('SequencerInbox')
-    sequencerInbox = (await SequencerInbox.deploy()) as SequencerInbox
-    await sequencerInbox.deployed()
-    await sequencerInbox.initialize(
-      bridge.address,
-      await accounts[0].getAddress(),
-      rollupMock.address
+    challengeDeployment = await setupChallengeTest(
+      await accounts[0].getAddress()
     )
   })
 
   let challenge: Challenge
-  let challengedNode: Node
+  let challengedAssertion: Assertion
   it('should initiate challenge', async function () {
-    const block = await ethers.provider.getBlock('latest')
-
-    const prevNodeState = new NodeState(
-      new ExecutionState(0, initialVmState, 0, 0, 0, zerobytes32, zerobytes32),
-      block.number,
-      1
-    )
-
-    const assertion = new Assertion(
-      prevNodeState,
+    challengedAssertion = makeAssertion(
+      {
+        gasUsed: 0,
+        machineHash: initialVmState,
+        inboxCount: 0,
+        sendCount: 0,
+        logCount: 0,
+        sendAcc: ethers.constants.HashZero,
+        logAcc: ethers.constants.HashZero,
+      },
       10000000,
-      zerobytes32,
+      ethers.constants.HashZero,
       [],
       [],
       []
     )
-    challengedNode = new Node(assertion, 10, 0, zerobytes32)
-    await challengeTester.startChallenge(
-      challengedNode.executionHash(),
-      challengedNode.afterState.execState.inboxCount,
+
+    challenge = await challengeDeployment.startChallenge(
+      challengedAssertion,
       await accounts[0].getAddress(),
       await accounts[1].getAddress(),
       100,
-      100,
-      sequencerInbox.address,
-      bridge.address
+      100
     )
-    const challengeAddress = await challengeTester.challenge()
-    const Challenge = await ethers.getContractFactory('Challenge')
-    challenge = Challenge.attach(challengeAddress) as Challenge
   })
 
   it('should bisect execution', async function () {
     const chunks = Array(401).fill(
-      challengedNode.beforeState.execState.challengeHash()
+      challengeHash(challengedAssertion.beforeState)
     )
-    const tx = await challenge
-      .connect(accounts[1])
-      .bisectExecution(
-        [],
-        0,
-        0,
-        challengedNode.gasUsed(),
-        challengedNode.afterState.execState.challengeHash(),
-        0,
-        challengedNode.beforeState.execState.challengeRestHash(),
-        chunks
-      )
+    const tx = await bisectExecution(
+      challenge.connect(accounts[1]),
+      [],
+      0,
+      challengedAssertion,
+      chunks
+    )
     const receipt = await tx.wait()
     console.log('Bisection gas used', receipt.gasUsed.toNumber())
   })
+})
+
+describe('ReplayChallenges', () => {
+  before(async () => {
+    accounts = await initializeAccounts()
+  })
+  const files = fs.readdirSync('./test/challenges')
+  for (const filename of files) {
+    if (!filename.endsWith('json')) {
+      continue
+    }
+    const file = fs.readFileSync('./test/challenges/' + filename)
+    let challengeData: ChallengeSpec
+    try {
+      challengeData = JSON.parse(file.toString()) as ChallengeSpec
+    } catch (e) {
+      console.log(`Failed to load ${file}`)
+      throw e
+    }
+    describe(`proofs from ${filename}`, function () {
+      before(async () => {
+        challengeDeployment = await setupChallengeTest(
+          await accounts[0].getAddress()
+        )
+      })
+      it('should setup messages', async function () {
+        const bridge = challengeDeployment.bridge
+        if (challengeData.Messages.length > 1) {
+          throw Error('more than one message not supported')
+        }
+        for (const message of challengeData.Messages) {
+          await bridge.deliverMessageToInboxTest(
+            message.Kind,
+            message.Sender,
+            message.ChainTime.BlockNum,
+            message.ChainTime.Timestamp,
+            message.GasPrice,
+            ethers.utils.keccak256(message.Data)
+          )
+          const count = await bridge.messageCount()
+          const delayedAcc = await bridge.inboxAccs(count.sub(1))
+          const delayedItem = newDelayedItem(
+            0,
+            1,
+            ethers.constants.HashZero,
+            0,
+            delayedAcc
+          )
+          const endOfBlockMessage: Message = {
+            Kind: 6,
+            Sender: ethers.constants.AddressZero,
+            InboxSeqNum: 1,
+            GasPrice: 0,
+            Data: '0x',
+            ChainTime: message.ChainTime,
+          }
+          const endOfBlockItem = newSequencerItem(
+            1,
+            endOfBlockMessage,
+            delayedItem.accumulator
+          )
+          const batchMetadata = [
+            0,
+            message.ChainTime.BlockNum,
+            message.ChainTime.Timestamp,
+            1,
+            BigNumber.from(delayedAcc),
+          ]
+          await challengeDeployment.sequencerInbox.addSequencerL2Batch(
+            '0x',
+            [],
+            batchMetadata,
+            endOfBlockItem.accumulator
+          )
+        }
+      })
+
+      let challenge: Challenge
+      let challengedAssertion: Assertion
+      it('should initiate challenge', async function () {
+        challengedAssertion = challengeData.ChallengedAssertion
+        challenge = await challengeDeployment.startChallenge(
+          challengedAssertion,
+          await accounts[0].getAddress(),
+          await accounts[1].getAddress(),
+          10,
+          10
+        )
+      })
+
+      it('should make moves', async function () {
+        let player = 1
+        let i = 0
+        for (const move of challengeData.Moves) {
+          const chal = challenge.connect(accounts[player])
+          // if (move) {
+          //   console.log("Making move", move.Kind)
+          // }
+          const nextMove = executeMove(chal, move)
+          if (
+            i == challengeData.Moves.length - 1 &&
+            challengeData.AsserterError
+          ) {
+            const prefix = 'execution reverted: '
+            if (challengeData.AsserterError.startsWith(prefix)) {
+              challengeData.AsserterError = challengeData.AsserterError.substr(
+                prefix.length
+              )
+            }
+            await expect(nextMove).to.be.revertedWith(
+              challengeData.AsserterError
+            )
+          } else {
+            const maybeTx = await nextMove
+            if (maybeTx) {
+              const receipt = await maybeTx.wait()
+              if (printGas) {
+                console.log(
+                  `${move?.Kind} gas used ${receipt.gasUsed.toNumber()}`
+                )
+              }
+            }
+          }
+
+          player += 1
+          player %= 2
+          i++
+        }
+      })
+    })
+  }
 })
