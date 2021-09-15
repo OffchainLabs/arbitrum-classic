@@ -75,8 +75,6 @@ type TransactionBatcher interface {
 
 	SendTransaction(ctx context.Context, tx *types.Transaction) error
 
-	SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription
-
 	// Return nil if no pending snapshot is available
 	PendingSnapshot() (*snapshot.Snapshot, error)
 
@@ -368,10 +366,6 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	}
 	logItem.Msg("user tx")
 	return nil
-}
-
-func (m *Batcher) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
-	return m.newTxFeed.Subscribe(ch)
 }
 
 func (m *Batcher) Aggregator() *common.Address {
