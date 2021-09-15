@@ -1065,6 +1065,9 @@ func (b *SequencerBatcher) GetTransactAuth() transactauth.TransactAuth {
 
 // Returns a tuple of (baseFee, sampleSize)
 func (b *SequencerBatcher) RecommendedBaseFee() (int, int) {
+	if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
+		return 0, 0
+	}
 	average := math.Float32frombits(atomic.LoadUint32(&b.runningTxPerBatchAverageAtomic))
 	sample := atomic.LoadInt32(&b.consecutiveBatchesPublishedAtomic)
 	if average == 0 || sample == 0 {

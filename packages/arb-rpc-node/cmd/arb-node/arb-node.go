@@ -288,6 +288,7 @@ func startup() error {
 	}
 
 	var batch batcher.TransactionBatcher
+	var seqBatcher *batcher.SequencerBatcher
 	errChan := make(chan error, 1)
 	for {
 		batch, err = rpc.SetupBatcher(
@@ -304,7 +305,8 @@ func startup() error {
 		)
 		lockoutConf := config.Node.Sequencer.Lockout
 		if err == nil {
-			seqBatcher, ok := batch.(*batcher.SequencerBatcher)
+			var ok bool
+			seqBatcher, ok = batch.(*batcher.SequencerBatcher)
 			if lockoutConf.Redis != "" {
 				// Setup the lockout. This will take care of the initial delayed sequence.
 				batch, err = rpc.SetupLockout(ctx, seqBatcher, mon.Core, inboxReader, lockoutConf, errChan)
@@ -338,8 +340,7 @@ func startup() error {
 		}
 	}()
 
-	seqBatcher, ok := batch.(*batcher.SequencerBatcher)
-	if ok {
+	if seqBatcher != nil {
 		rpc.AutoAdjustBaseFee(ctx, seqBatcher, srv)
 	}
 
