@@ -249,6 +249,19 @@ func version() error {
 	return nil
 }
 
+func totalEthBalance() error {
+	con, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	bal, err := con.GetTotalOfEthBalances(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	fmt.Println("Total Balance:", bal)
+	return nil
+}
+
 func depositSubmissionCost() error {
 	con, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, config.client)
 	if err != nil {
@@ -1157,6 +1170,8 @@ func handleCommand(fields []string) error {
 		return checkUploadedArbOS(fields[1])
 	case "version":
 		return version()
+	case "total-eth-balance":
+		return totalEthBalance()
 	case "spam":
 		return spam()
 	case "create-mainnet":
