@@ -120,13 +120,13 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 		t.Error("wrong event value data")
 	}
 	// The sender check has been disabled, as right now it's incorrectly set to the ArbSys precompile address
-	/*
-		var senderInLog common.Address
-		copy(senderInLog[:], evmLog.Data[32+(32-20):])
-		if senderInLog != sender {
-			t.Error("wrong event sender data")
-		}
-	*/
+	
+	var senderInLog common.Address
+	copy(senderInLog[:], evmLog.Data[32+(32-20):])
+	if senderInLog != sender {
+		t.Error("wrong event sender data")
+	}
+	
 	ownerBalance, err := snap.GetBalance(message.L2RemapAccount(owner))
 	test.FailIfError(t, err)
 	conBalance, err := snap.GetBalance(common.NewAddressFromEth(correctConnAddress))
