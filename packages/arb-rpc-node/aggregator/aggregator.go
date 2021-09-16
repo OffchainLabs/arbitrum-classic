@@ -260,7 +260,7 @@ func (m *Server) ServiceFilter(_ context.Context, _ *bloombits.MatcherSession) {
 }
 
 func (m *Server) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return m.scope.Track(m.batch.SubscribeNewTxsEvent(ch))
+	return m.scope.Track(m.db.SubscribeNewTxsEvent(ch))
 }
 
 func (m *Server) SubscribePendingLogsEvent(ch chan<- []*types.Log) event.Subscription {
