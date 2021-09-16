@@ -48,3 +48,15 @@ The Arbitrum block number can also be retrieved within an Arbitrum contract via 
 ```sol
  ArbSys(100).arbBlockNumber() // returns Arbitrum block number
 ```
+
+## Case Study: Multicall
+
+The Multicall contract offers a great case study for the difference between L1 and L2 block numbers.
+
+The [canonical implementation](https://github.com/makerdao/multicall/) of Multicall returns the value of `block.number`. If attempting to use out-of-the-box, some applications might face unintended behaviour.
+
+You can find a deployed version of the adapted Multicall2 at [0x842eC2c7D803033Edf55E478F461FC547Bc54EB2](https://arbiscan.io/address/0x842eC2c7D803033Edf55E478F461FC547Bc54EB2#code).
+
+By default the `getBlockNumber`, `tryBlockAndAggregate`, and `aggregate` functions return the L2 block number. This allows you to use this value to compare your state against the tip of the chain.
+
+The `getL1BlockNumber` function can be queried if applications need to surface the L1 block number.
