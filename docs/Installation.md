@@ -77,7 +77,18 @@ git submodule update --init --recursive
 yarn
 yarn build
 ```
+## Setup using Docker
 
+If all dependecies are met, you can easily compile and run Arbitrum with Docker. Just run script `build_node_docker.py`:
+
+```bash
+./scripts/build_node_docker.py 
+```
+After successfully compiling Arbitrum client, you can run it as:
+```bash
+docker run arb-node:latest --help
+docker run arb-node:latest --l1.url <L1 RPC>
+```
 # Native setup instructions
 
 For most users we recommend that you run Arbitrum through our easy docker setup. However if you want to install Arbitrum natively, additionally follow this instructions:
