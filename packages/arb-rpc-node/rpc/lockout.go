@@ -25,9 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
-	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
@@ -325,10 +323,6 @@ func (b *LockoutBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
 	return b.getBatcher().PendingSnapshot()
 }
 
-func (b *LockoutBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return b.sequencerBatcher.SubscribeNewTxsEvent(ch)
-}
-
 func (b *LockoutBatcher) Aggregator() *common.Address {
 	return b.getBatcher().Aggregator()
 }
@@ -352,10 +346,6 @@ func (b *errorBatcher) SendTransaction(ctx context.Context, tx *types.Transactio
 
 func (b *errorBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
 	return nil, b.err
-}
-
-func (b *errorBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return nil
 }
 
 func (b *errorBatcher) Aggregator() *common.Address {
