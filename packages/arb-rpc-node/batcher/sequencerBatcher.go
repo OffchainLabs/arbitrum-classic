@@ -593,6 +593,8 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	postingCostEstimate := gasCostPerMessage + gasCostDelayedMessages
 	atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 
+	core.WaitForMachineIdle(b.db)
+
 	if b.feedBroadcaster != nil {
 		err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
 		if err != nil {
