@@ -30,9 +30,9 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
   let l1Weth: Contract
   let l2Weth: Contract
 
-  const maxSubmissionCost = 0
+  const maxSubmissionCost = 1
   const maxGas = 1000000000
-  const gasPrice = 0
+  const gasPrice = 1
 
   before(async function () {
     accounts = await ethers.getSigners()
@@ -162,7 +162,8 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const escrowedTokens = await l1Weth.balanceOf(l1TestBridge.address)
@@ -212,7 +213,8 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const prevUserBalance = await l1Weth.balanceOf(accounts[0].address)
@@ -260,7 +262,8 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const postUserBalance = await l1Weth.balanceOf(accounts[0].address)
