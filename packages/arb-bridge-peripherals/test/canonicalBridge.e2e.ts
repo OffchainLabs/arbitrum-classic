@@ -139,9 +139,9 @@ describe('Bridge peripherals end-to-end', () => {
         tokenAmount,
         maxGas,
         gasPrice,
-        data
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'bytes'], [0, '0x'])
       )
-    ).to.be.revertedWith('NO_ETH_FOR_GAS')
+    ).to.be.revertedWith('NO_SUBMISSION_COST')
 
     await expect(
       l1RouterTestBridge.outboundTransfer(
