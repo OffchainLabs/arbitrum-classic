@@ -53,12 +53,7 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
     // by running `yarn hardhat storage-slots`
     uint256 constant INITIALIZED_STORAGE_SLOT = 0;
 
-    function getNameAndSymbol() internal returns (string memory _name_, string memory _symbol_) {
-        _name_ = this.name();
-        _symbol_ = this.symbol();
-    }
-
-    function getInitialized() internal returns (bool initialized) {
+    function getInitialized() internal view returns (bool initialized) {
         assembly {
             initialized := sload(INITIALIZED_STORAGE_SLOT)
         }
@@ -71,7 +66,7 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
         }
     }
 
-    function isEqualString(string memory a, string memory b) internal returns (bool) {
+    function isEqualString(string memory a, string memory b) internal pure returns (bool) {
         return keccak256(abi.encode(a)) == keccak256(abi.encode(b));
     }
 
@@ -85,13 +80,9 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
         string
             memory expectedOldSymbol = "0x4d4b520000000000000000000000000000000000000000000000000000000000";
 
-        string memory currName;
-        string memory currSymbol;
-        (currName, currSymbol) = getNameAndSymbol();
-
         // validate info wasn't already updated
-        require(isEqualString(expectedOldName, currName), "NAME_ALREADY_UPDATE");
-        require(isEqualString(expectedOldSymbol, currSymbol), "SYMBOL_ALREADY_UPDATE");
+        require(isEqualString(expectedOldName, this.name()), "NAME_ALREADY_UPDATE");
+        require(isEqualString(expectedOldSymbol, this.symbol()), "SYMBOL_ALREADY_UPDATE");
 
         string memory newExpectedName = "Maker";
         string memory newExpectedSymbol = "MKR";
@@ -110,8 +101,7 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
         require(getInitialized(), "NOT_INITIALIZED_AFTER");
 
         // verify new values were correctly set
-        (currName, currSymbol) = getNameAndSymbol();
-        require(isEqualString(newExpectedName, currName), "NAME_NOT_UPDATED");
-        require(isEqualString(newExpectedSymbol, currSymbol), "SYMBOL_NOT_UPDATED");
+        require(isEqualString(newExpectedName, this.name()), "NAME_NOT_UPDATED");
+        require(isEqualString(newExpectedSymbol, this.symbol()), "SYMBOL_NOT_UPDATED");
     }
 }
