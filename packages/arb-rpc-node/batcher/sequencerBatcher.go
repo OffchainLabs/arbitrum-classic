@@ -130,13 +130,6 @@ func NewSequencerBatcher(
 	config *configuration.Config,
 	walletConfig *configuration.Wallet,
 ) (*SequencerBatcher, error) {
-	if config.Node.Sequencer.Dangerous != (configuration.SequencerDangerous{}) {
-		logger.
-			Error().
-			Interface("dangerousSequencerConfig", config.Node.Sequencer.Dangerous).
-			Msg("sequencer starting up with dangerous options enabled!")
-	}
-
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
 		return nil, err

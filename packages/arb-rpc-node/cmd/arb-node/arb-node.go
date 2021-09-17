@@ -157,6 +157,13 @@ func startup() error {
 		return nil
 	}
 
+	if config.Node.Sequencer.Dangerous != (configuration.SequencerDangerous{}) {
+		logger.
+			Error().
+			Interface("dangerousSequencerConfig", config.Node.Sequencer.Dangerous).
+			Msg("sequencer starting up with dangerous options enabled!")
+	}
+
 	defer logger.Log().Msg("Cleanly shutting down node")
 
 	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
