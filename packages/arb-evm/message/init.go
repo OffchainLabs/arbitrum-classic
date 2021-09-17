@@ -32,7 +32,6 @@ type Init struct {
 	protocol.ChainParams
 	Owner       common.Address
 	ExtraConfig []byte
-	OldStyle    bool
 }
 
 func NewInitMessage(params protocol.ChainParams, owner common.Address, config []ChainConfigOption) (Init, error) {
@@ -78,9 +77,6 @@ func NewInitFromData(data []byte) (Init, error) {
 }
 
 func (m Init) Type() inbox.Type {
-	if m.OldStyle {
-		return OldInitType // remove after upgrade 5
-	}
 	return InitType
 }
 
@@ -121,7 +117,7 @@ func (c FeeConfig) AsData() []byte {
 	data = append(data, math.U256Bytes(c.L1GasPerL2Calldata)...)
 	data = append(data, hashing.SoliditySHA3([]byte("L1GasPerStorage")).Bytes()...)
 	data = append(data, math.U256Bytes(c.L1GasPerStorage)...)
-	data = append(data, hashing.SoliditySHA3([]byte("ArbGasDivisor")).Bytes()...)
+	data = append(data, hashing.SoliditySHA3([]byte("AvmGasPerArbGas")).Bytes()...)
 	data = append(data, math.U256Bytes(c.ArbGasDivisor)...)
 	data = append(data, hashing.SoliditySHA3([]byte("NetworkFeeRecipient")).Bytes()...)
 	data = append(data, AddressData(c.NetFeeRecipient)...)
