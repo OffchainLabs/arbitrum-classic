@@ -130,6 +130,13 @@ func NewSequencerBatcher(
 	config *configuration.Config,
 	walletConfig *configuration.Wallet,
 ) (*SequencerBatcher, error) {
+	if config.Node.Sequencer.Dangerous != (configuration.SequencerDangerous{}) {
+		logger.
+			Error().
+			Interface("dangerousSequencerConfig", config.Node.Sequencer.Dangerous).
+			Msg("sequencer starting up with dangerous options enabled!")
+	}
+
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
 		return nil, err
@@ -521,6 +528,10 @@ func (b *SequencerBatcher) Aggregator() *common.Address {
 }
 
 func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime inbox.ChainTime, bypassLockout bool) (bool, error) {
+	if b.config.Node.Sequencer.Dangerous.DisableDelayedMessageSequencing {
+		return false, nil
+	}
+
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 	if !bypassLockout && b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
@@ -614,6 +625,10 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 
 // Warning: bypassLockout should only be used if the lockout manager itself is calling this
 func (b *SequencerBatcher) SequenceDelayedMessages(ctx context.Context, bypassLockout bool) error {
+	if b.config.Node.Sequencer.Dangerous.DisableDelayedMessageSequencing {
+		return nil
+	}
+
 	chainTime, err := getChainTime(ctx, b.client)
 	if err != nil {
 		return err
@@ -633,6 +648,10 @@ const maxL1BackwardsReorg int64 = 12
 
 // Updates both prevMsgCount and nonce on success
 func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum *big.Int, prevMsgCount *big.Int, nonce *big.Int) (bool, error) {
+	if b.config.Node.Sequencer.Dangerous.DisableBatchPosting {
+		return true, nil
+	}
+
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	batchItems, err := b.db.GetSequencerBatchItems(prevMsgCount)
 	origEstimate := atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic)
@@ -646,7 +665,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	if len(batchItems[0].SequencerMessage) >= 128*1024 {
 		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big!")
-		if b.config.Node.Sequencer.ReorgOutHugeMessages {
+		if b.config.Node.Sequencer.Dangerous.ReorgOutHugeMessages {
 			err = b.reorgOutHugeMsg(ctx, prevMsgCount)
 			if err != nil {
 				return false, err
@@ -678,7 +697,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 			// We also allow the empty address as it's used for the delayed messages end of block
 			if seqMsg.Sender != (common.Address{}) && seqMsg.Sender != b.fromAddress {
 				msg := "sequencer message in database contains messages from another sequencer"
-				if b.config.Node.Sequencer.RewriteSequencerAddress {
+				if b.config.Node.Sequencer.Dangerous.RewriteSequencerAddress {
 					msg += "! Reorganizing to compensate..."
 				}
 
@@ -689,7 +708,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 					Str("sequenceNumber", seqMsg.InboxSeqNum.String()).
 					Msg(msg)
 
-				if b.config.Node.Sequencer.RewriteSequencerAddress {
+				if b.config.Node.Sequencer.Dangerous.RewriteSequencerAddress {
 					err := b.reorgToNewSequencerAddress(ctx, prevMsgCount)
 					if err != nil {
 						return false, errors.Wrap(err, "error during reorg to rewrite sequencer address")
@@ -1103,7 +1122,10 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
 			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= b.config.Node.Sequencer.MaxBatchGasCost*9/10 ||
 			firstBatchCreation
-		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.PublishBatchesWithoutLockout {
+		if creatingBatch && b.config.Node.Sequencer.Dangerous.DisableBatchPosting {
+			creatingBatch = false
+		}
+		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.Dangerous.PublishBatchesWithoutLockout {
 			// We don't have the lockout and publishing batches without the lockout is disabled
 			creatingBatch = false
 		}
@@ -1130,7 +1152,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		var dontPublishBlockNum *big.Int
 		if shouldSequence {
 			targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
-			if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
+			if (blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch) && !b.config.Node.Sequencer.Dangerous.DisableDelayedMessageSequencing {
 				sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime, false)
 				if err != nil {
 					logger.Error().Err(err).Msg("Error delivering delayed messages")
