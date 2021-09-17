@@ -1462,6 +1462,11 @@
   resolved "https://registry.yarnpkg.com/@types/prettier/-/prettier-2.3.2.tgz#fc8c2825e4ed2142473b4a81064e6e081463d1b3"
   integrity sha512-eI5Yrz3Qv4KPUa/nSIAi0h+qX0XyewOliug5F2QAtuRg6Kjg6jfmxe1GIwoIRhZspD1A0RP8ANrPwvEXXtRFog==
 
+"@types/promise-poller@^1.7.0":
+  version "1.7.1"
+  resolved "https://registry.yarnpkg.com/@types/promise-poller/-/promise-poller-1.7.1.tgz#197716c260babbe2f47257ebc2cc04136fa4f618"
+  integrity sha512-RkrbNb89A/ew6HJ1UnF0c7/UATCaYpcpz43SGvIrb3uOQw/SVOkAw6h4A59ooIQF+eaKoiMat+EFRoVHk79qfw==
+
 "@types/prompts@^2.0.14":
   version "2.0.14"
   resolved "https://registry.yarnpkg.com/@types/prompts/-/prompts-2.0.14.tgz#10cb8899844bb0771cabe57c1becaaaca9a3b521"
@@ -1963,6 +1968,19 @@ aproba@^1.0.3:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/aproba/-/aproba-1.2.0.tgz#6802e6264efd18c790a1b0d517f0f2627bf2c94a"
   integrity sha512-Y9J6ZjXtoYh8RnXVCMOU/ttDmk1aBjunq9vO0ta5x85WDQiQfUF9sIPBITdbiiIVcBo03Hi3jMxigBtsddlXRw==
+
+arb-ts@^0.0.36:
+  version "0.0.36"
+  resolved "https://registry.yarnpkg.com/arb-ts/-/arb-ts-0.0.36.tgz#23a5687148ca8552d43391bda57833a137739a52"
+  integrity sha512-wbZ7dOPqFCxtZgLqxoeFbVBNT8Jd93xEvv7C8eQ/7jmLobvFLJ7e0hyMIWad2Bcj3UlQyJPWyW7rxwiCWET0PA==
+  dependencies:
+    "@ethersproject/address" "^5.0.8"
+    "@ethersproject/bignumber" "^5.1.1"
+    "@ethersproject/bytes" "^5.0.8"
+    "@nomiclabs/hardhat-ethers" "^2.0.2"
+    "@types/promise-poller" "^1.7.0"
+    dotenv "^10.0.0"
+    ethers "^5.1.0"
 
 archy@^1.0.0:
   version "1.0.0"

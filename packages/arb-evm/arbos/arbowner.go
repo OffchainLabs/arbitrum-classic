@@ -37,12 +37,15 @@ var (
 	setFairGasPriceSenderABI abi.Method
 	deployContractABI        abi.Method
 	getTotalOfEthBalancesABI abi.Method
+	addChainOwnerABI         abi.Method
+	removeChainOwnerABI      abi.Method
 )
 
-var FeesEnabledParamId [32]byte = hashing.SoliditySHA3([]byte("FeesEnabled"))
-var ChainOwnerParamId [32]byte = hashing.SoliditySHA3([]byte("ChainOwner"))
-var NetworkFeeRecipientParamId [32]byte = hashing.SoliditySHA3([]byte("NetworkFeeRecipient"))
-var CongestionFeeRecipientParamId [32]byte = hashing.SoliditySHA3([]byte("CongestionFeeRecipient"))
+var FeesEnabledParamId = hashing.SoliditySHA3([]byte("FeesEnabled"))
+var ChainOwnerParamId = hashing.SoliditySHA3([]byte("ChainOwner"))
+var NetworkFeeRecipientParamId = hashing.SoliditySHA3([]byte("NetworkFeeRecipient"))
+var CongestionFeeRecipientParamId = hashing.SoliditySHA3([]byte("CongestionFeeRecipient"))
+var DefaultAggregatorParamId = hashing.SoliditySHA3([]byte("DefaultAggregator"))
 var EnableL1ContractAddressAliasingParamId = hashing.SoliditySHA3([]byte("EnableL1ContractAddressAliasing"))
 
 func init() {
@@ -60,6 +63,8 @@ func init() {
 	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
 	deployContractABI = arbowner.Methods["deployContract"]
 	getTotalOfEthBalancesABI = arbowner.Methods["getTotalOfEthBalances"]
+	addChainOwnerABI = arbowner.Methods["addChainOwner"]
+	removeChainOwnerABI = arbowner.Methods["removeChainOwner"]
 }
 
 func GetTotalOfEthBalances() []byte {
@@ -72,6 +77,14 @@ func GetChainParameterData(paramId [32]byte) []byte {
 
 func SetChainParameterData(paramId [32]byte, val *big.Int) []byte {
 	return makeFuncData(setChainParameterABI, paramId, val)
+}
+
+func AddChainOwnerData(address common.Address) []byte {
+	return makeFuncData(addChainOwnerABI, address)
+}
+
+func RemoveChainOwnerData(address common.Address) []byte {
+	return makeFuncData(removeChainOwnerABI, address)
 }
 
 func StartArbOSUpgradeData() []byte {
