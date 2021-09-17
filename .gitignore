@@ -304,4 +304,4 @@ packages/arb-bridge-eth/password.txt
 
 # GitHub CI
 packages/issues
-packages/*/issues
+packages/**/issues
