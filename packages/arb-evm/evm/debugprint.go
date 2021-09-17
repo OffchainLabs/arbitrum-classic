@@ -18,7 +18,6 @@ package evm
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -208,28 +207,6 @@ func (e *EVMCallError) MarshalZerologObject(event *zerolog.Event) {
 		Uint64("error_code", e.errorCode)
 }
 
-type EVMTrace struct {
-	Items []TraceItem
-}
-
-func (e *EVMTrace) String() string {
-	builder := &strings.Builder{}
-	builder.WriteString("Tx trace:")
-	for _, item := range e.Items {
-		builder.WriteString("\n")
-		builder.WriteString(item.String())
-	}
-	return builder.String()
-}
-
-func (e *EVMTrace) MarshalZerologObject(event *zerolog.Event) {
-	array := zerolog.Arr()
-	for _, item := range e.Items {
-		array = array.Object(item)
-	}
-	event.Array("items", array)
-}
-
 type ErrorHandlerError struct {
 }
 
@@ -359,4 +336,42 @@ func NewLogLineFromValue(d value.Value) (EVMLogLine, error) {
 	} else {
 		return &RawDebugPrint{Val: d}, nil
 	}
+}
+
+func GetTrace(debugPrints []value.Value) (*EVMTrace, error) {
+	var trace *EVMTrace
+	for _, debugPrint := range debugPrints {
+		parsedLog, err := NewLogLineFromValue(debugPrint)
+		if err != nil {
+			return nil, err
+		}
+		foundTrace, ok := parsedLog.(*EVMTrace)
+		if ok {
+			if trace != nil {
+				return nil, errors.New("found multiple traces")
+			}
+			trace = foundTrace
+		}
+	}
+	if trace == nil {
+		return nil, errors.New("found no trace")
+	}
+	return trace, nil
+}
+
+func GetTraceFromLogLines(logLines []EVMLogLine) (*EVMTrace, error) {
+	var trace *EVMTrace
+	for _, parsedLog := range logLines {
+		foundTrace, ok := parsedLog.(*EVMTrace)
+		if ok {
+			if trace != nil {
+				return nil, errors.New("found multiple traces")
+			}
+			trace = foundTrace
+		}
+	}
+	if trace == nil {
+		return nil, errors.New("found no trace")
+	}
+	return trace, nil
 }
