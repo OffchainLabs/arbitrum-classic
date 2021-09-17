@@ -51,20 +51,23 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
 
     // values generated with https://hardhat.org/plugins/hardhat-storage-layout.html
     // by running `yarn hardhat storage-slots`
-    uint256 constant NAME_STORAGE_SLOT = 54;
-    uint256 constant SYMBOL_STORAGE_SLOT = 55;
+    uint256 constant INITIALIZED_STORAGE_SLOT = 0;
 
     function getNameAndSymbol() internal returns (string memory _name_, string memory _symbol_) {
+        _name_ = this.name();
+        _symbol_ = this.symbol();
+    }
+
+    function getInitialized() internal returns (bool initialized) {
         assembly {
-            _name_ := sload(NAME_STORAGE_SLOT)
-            _symbol_ := sload(SYMBOL_STORAGE_SLOT)
+            initialized := sload(INITIALIZED_STORAGE_SLOT)
         }
     }
 
-    function setNameAndSymbol(string memory _name_, string memory _symbol_) internal {
+    function resetInitialized() internal {
+        bool FALSE = false;
         assembly {
-            sstore(NAME_STORAGE_SLOT, _name_)
-            sstore(SYMBOL_STORAGE_SLOT, _symbol_)
+            sstore(INITIALIZED_STORAGE_SLOT, FALSE)
         }
     }
 
@@ -82,10 +85,6 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
         string
             memory expectedOldSymbol = "0x4d4b520000000000000000000000000000000000000000000000000000000000";
 
-        // values are private so we need to access the specific storage slot
-        // this is safe because we check against oldName and oldSymbol
-        // https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/efde58409783cccc7fd47c7ad9e095101ffb2faa/contracts/token/ERC20/ERC20Upgradeable.sol#L43-L44
-
         string memory currName;
         string memory currSymbol;
         (currName, currSymbol) = getNameAndSymbol();
@@ -96,7 +95,19 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
 
         string memory newExpectedName = "Maker";
         string memory newExpectedSymbol = "MKR";
-        setNameAndSymbol(newExpectedName, newExpectedSymbol);
+
+        require(getInitialized(), "NOT_INITIALIZED");
+        resetInitialized();
+        require(!getInitialized(), "RESET_INITIALIZED_FAIL");
+
+        L2GatewayToken._initialize(
+            newExpectedName,
+            newExpectedSymbol,
+            this.decimals(),
+            l2Gateway, // _l2Gateway,
+            l1Address // _l1Counterpart
+        );
+        require(getInitialized(), "NOT_INITIALIZED_AFTER");
 
         // verify new values were correctly set
         (currName, currSymbol) = getNameAndSymbol();
