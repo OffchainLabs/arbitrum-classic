@@ -1,1 +1,6 @@
-{}
+{
+  "address": "0x594393b6a6a46190df3e479304bbc63572c6830a",
+  "deployTxn": "0x042c8712d83ded4b9660ea462899b7e8f0276d570389130301a939c2dbb0bc9e",
+  "arbitrumCommitHash": "9ec6d4ffef4ca972e6c695bd78771bc78278ec11",
+  "buildInfo": ""
+}
