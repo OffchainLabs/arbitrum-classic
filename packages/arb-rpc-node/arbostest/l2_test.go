@@ -282,9 +282,9 @@ func TestUnsignedTx(t *testing.T) {
 
 		var correctHash common.Hash
 		if i == 0 {
-			correctHash = tx1.MessageID(sender, chainId)
+			correctHash = tx1.MessageID(message.L1RemapAccount(sender), chainId)
 		} else {
-			correctHash = tx2.MessageID(sender, chainId)
+			correctHash = tx2.MessageID(message.L1RemapAccount(sender), chainId)
 		}
 		if result.IncomingRequest.MessageID != correctHash {
 			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, correctHash)
@@ -321,7 +321,7 @@ func TestBatch(t *testing.T) {
 		}
 		senders = append(senders, sender)
 		txes = append(txes, tx)
-		hashes = append(hashes, tx.MessageID(sender, chainId))
+		hashes = append(hashes, tx.MessageID(message.L1RemapAccount(sender), chainId))
 		batchSenderSeq++
 	}
 	for _, pk := range pks[1:] {

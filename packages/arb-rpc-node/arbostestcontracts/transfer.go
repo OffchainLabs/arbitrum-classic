@@ -4,6 +4,7 @@
 package arbostestcontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,20 +28,31 @@ var (
 	_ = event.NewSubscription
 )
 
+// TransferMetaData contains all meta data concerning the Transfer contract.
+var TransferMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"send\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"wrapped\",\"type\":\"address\"}],\"name\":\"send2\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"send3\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"}],\"name\":\"send4\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
+	Bin: "0x608060405261023b806100136000396000f3fe6080604052600436106100435760003560e01c80633386b1a214610082578063540d7a2f146100b75780636b2e1f1a146100e1578063b46300ec146100f65761007d565b3661007d576040805134815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a1005b600080fd5b34801561008e57600080fd5b506100b5600480360360208110156100a557600080fd5b50356001600160a01b031661010b565b005b3480156100c357600080fd5b506100b5600480360360208110156100da57600080fd5b5035610161565b3480156100ed57600080fd5b506100b56101b0565b34801561010257600080fd5b506100b56101dc565b806001600160a01b031663b46300ec6040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561014657600080fd5b505af115801561015a573d6000803e3d6000fd5b5050505050565b604051309082906001906000818181858888f193505050503d80600081146101a5576040519150601f19603f3d011682016040523d82523d6000602084013e6101aa565b606091505b50505050565b604051309060009060019082818181858883f193505050501580156101d9573d6000803e3d6000fd5b50565b604051339060009060019082818181858883f193505050501580156101d9573d6000803e3d6000fdfea2646970667358221220c9157f14331e6d3610def92788c663aa59baee48c850d26b9645e23b8bef6c4164736f6c634300060c0033",
+}
+
 // TransferABI is the input ABI used to generate the binding from.
-const TransferABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"send\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"wrapped\",\"type\":\"address\"}],\"name\":\"send2\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
+// Deprecated: Use TransferMetaData.ABI instead.
+var TransferABI = TransferMetaData.ABI
 
 // TransferBin is the compiled bytecode used for deploying new contracts.
-var TransferBin = "0x608060405261016e806100136000396000f3fe60806040526004361061002d5760003560e01c80633386b1a21461006c578063b46300ec146100a157610067565b36610067576040805134815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a1005b600080fd5b34801561007857600080fd5b5061009f6004803603602081101561008f57600080fd5b50356001600160a01b03166100b6565b005b3480156100ad57600080fd5b5061009f61010c565b806001600160a01b031663b46300ec6040518163ffffffff1660e01b8152600401600060405180830381600087803b1580156100f157600080fd5b505af1158015610105573d6000803e3d6000fd5b5050505050565b604051339060009060019082818181858883f19350505050158015610135573d6000803e3d6000fd5b5056fea2646970667358221220d1d89f13d469eedecf3ef86fa714d40ba2b1498fcfeeba68c66d2f31dee63e0064736f6c634300060c0033"
+// Deprecated: Use TransferMetaData.Bin instead.
+var TransferBin = TransferMetaData.Bin
 
 // DeployTransfer deploys a new Ethereum contract, binding an instance of Transfer to it.
 func DeployTransfer(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Transfer, error) {
-	parsed, err := abi.JSON(strings.NewReader(TransferABI))
+	parsed, err := TransferMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(TransferBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(TransferBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -228,6 +241,48 @@ func (_Transfer *TransferSession) Send2(wrapped common.Address) (*types.Transact
 // Solidity: function send2(address wrapped) returns()
 func (_Transfer *TransferTransactorSession) Send2(wrapped common.Address) (*types.Transaction, error) {
 	return _Transfer.Contract.Send2(&_Transfer.TransactOpts, wrapped)
+}
+
+// Send3 is a paid mutator transaction binding the contract method 0x6b2e1f1a.
+//
+// Solidity: function send3() returns()
+func (_Transfer *TransferTransactor) Send3(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Transfer.contract.Transact(opts, "send3")
+}
+
+// Send3 is a paid mutator transaction binding the contract method 0x6b2e1f1a.
+//
+// Solidity: function send3() returns()
+func (_Transfer *TransferSession) Send3() (*types.Transaction, error) {
+	return _Transfer.Contract.Send3(&_Transfer.TransactOpts)
+}
+
+// Send3 is a paid mutator transaction binding the contract method 0x6b2e1f1a.
+//
+// Solidity: function send3() returns()
+func (_Transfer *TransferTransactorSession) Send3() (*types.Transaction, error) {
+	return _Transfer.Contract.Send3(&_Transfer.TransactOpts)
+}
+
+// Send4 is a paid mutator transaction binding the contract method 0x540d7a2f.
+//
+// Solidity: function send4(uint256 gas) returns()
+func (_Transfer *TransferTransactor) Send4(opts *bind.TransactOpts, gas *big.Int) (*types.Transaction, error) {
+	return _Transfer.contract.Transact(opts, "send4", gas)
+}
+
+// Send4 is a paid mutator transaction binding the contract method 0x540d7a2f.
+//
+// Solidity: function send4(uint256 gas) returns()
+func (_Transfer *TransferSession) Send4(gas *big.Int) (*types.Transaction, error) {
+	return _Transfer.Contract.Send4(&_Transfer.TransactOpts, gas)
+}
+
+// Send4 is a paid mutator transaction binding the contract method 0x540d7a2f.
+//
+// Solidity: function send4(uint256 gas) returns()
+func (_Transfer *TransferTransactorSession) Send4(gas *big.Int) (*types.Transaction, error) {
+	return _Transfer.Contract.Send4(&_Transfer.TransactOpts, gas)
 }
 
 // Receive is a paid mutator transaction binding the contract receive function.

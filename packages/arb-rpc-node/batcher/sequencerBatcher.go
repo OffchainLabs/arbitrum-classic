@@ -27,9 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
@@ -83,9 +81,8 @@ type SequencerBatcher struct {
 	gasRefunderAddress              ethcommon.Address
 	gasRefunder                     *ethbridgecontracts.GasRefunder
 
-	signer    types.Signer
-	txQueue   chan txQueueItem
-	newTxFeed event.Feed
+	signer  types.Signer
+	txQueue chan txQueueItem
 
 	latestChainTime        inbox.ChainTime
 	lastCreatedBatchAt     *big.Int
@@ -220,7 +217,6 @@ func NewSequencerBatcher(
 
 		signer:                        types.NewEIP155Signer(chainId),
 		txQueue:                       make(chan txQueueItem, 10),
-		newTxFeed:                     event.Feed{},
 		latestChainTime:               chainTime,
 		lastSequencedDelayedAt:        chainTime.BlockNum.AsInt(),
 		lastCreatedBatchAt:            chainTime.BlockNum.AsInt(),
@@ -236,10 +232,6 @@ func (b *SequencerBatcher) PendingTransactionCount(_ context.Context, _ common.A
 	return nil, nil
 }
 
-func (b *SequencerBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return b.newTxFeed.Subscribe(ch)
-}
-
 const maxExcludeComputation int64 = 10_000
 
 func shouldIncludeTxResult(txRes *evm.TxResult) bool {
@@ -250,12 +242,8 @@ func shouldIncludeTxResult(txRes *evm.TxResult) bool {
 	if txRes.ResultCode == evm.ReturnCode {
 		return true
 	}
-	if txRes.ResultCode == evm.RevertCode {
-		// Still include computations taking up a lot of gas to avoid DoS
-		return txRes.FeeStats.Paid.L2Computation.Cmp(big.NewInt(maxExcludeComputation)) > 0
-	}
-	// Other failure (probably not enough ETH balance)
-	return false
+	// Still include computations taking up a lot of gas to avoid DoS
+	return txRes.FeeStats.Paid.L2Computation.Cmp(big.NewInt(maxExcludeComputation)) > 0
 }
 
 func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) {
@@ -507,8 +495,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		}
 
 		core.WaitForMachineIdle(b.db)
-
-		b.newTxFeed.Send(ethcore.NewTxsEvent{Txs: sequencedTxs})
 
 		if seenOwnTx {
 			break

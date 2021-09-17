@@ -20,13 +20,17 @@ var ARB_RETRYABLE_ADDRESS = ethcommon.HexToAddress("0x00000000000000000000000000
 
 var ARB_NODE_INTERFACE_ADDRESS = ethcommon.HexToAddress("0x00000000000000000000000000000000000000C8")
 
-func Path() (string, error) {
+func Path(before bool) (string, error) {
 	dir, err := Dir()
 	if err != nil {
 		return "", err
 	}
 
-	return filepath.Join(dir, "arbos.mexe"), nil
+	if before {
+		return filepath.Join(dir, "arbos_before.mexe"), nil
+	} else {
+		return filepath.Join(dir, "arbos.mexe"), nil
+	}
 }
 
 func Dir() (string, error) {

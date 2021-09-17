@@ -42,7 +42,7 @@ func TestWhitelist(t *testing.T) {
 	test.FailIfError(t, err)
 	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil, false)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil)
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
@@ -75,6 +75,16 @@ func TestWhitelist(t *testing.T) {
 	_, err = arbOwner.AllowOnlyOwnerToSend(ownerAuth)
 	test.FailIfError(t, err)
 
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+	}
+
+	allowed, err := arbOwner.IsAllowedSender(&bind.CallOpts{}, common.RandAddress().ToEthAddress())
+	test.FailIfError(t, err)
+	if allowed {
+		t.Error("disallowed sender listed as allowed")
+	}
+
 	_, err = simple.Exists(senderAuth)
 	if err == nil {
 		t.Error("tx should fail")
@@ -94,7 +104,7 @@ func TestWhitelist(t *testing.T) {
 	_, err = simple.Exists(senderAuth)
 	test.FailIfError(t, err)
 
-	allowed, err := arbOwner.IsAllowedSender(&bind.CallOpts{From: owner}, senderAuth.From)
+	allowed, err = arbOwner.IsAllowedSender(&bind.CallOpts{From: owner}, senderAuth.From)
 	test.FailIfError(t, err)
 	if !allowed {
 		t.Error("ArbOwner IsAllowedSender says sender isn't allowed, but they are")
