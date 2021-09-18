@@ -283,7 +283,7 @@ func createChain(rollupCreator, owner, sequencer ethcommon.Address, blockTime fl
 		return err
 	}
 
-	arbosMexe, err := arbos.Path()
+	arbosMexe, err := arbos.Path(false)
 	if err != nil {
 		return err
 	}
