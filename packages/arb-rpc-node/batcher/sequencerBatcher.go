@@ -618,10 +618,6 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 
 // Warning: bypassLockout should only be used if the lockout manager itself is calling this
 func (b *SequencerBatcher) SequenceDelayedMessages(ctx context.Context, bypassLockout bool) error {
-	if b.config.Node.Sequencer.Dangerous.DisableDelayedMessageSequencing {
-		return nil
-	}
-
 	chainTime, err := getChainTime(ctx, b.client)
 	if err != nil {
 		return err
@@ -1115,9 +1111,6 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
 			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= b.config.Node.Sequencer.MaxBatchGasCost*9/10 ||
 			firstBatchCreation
-		if creatingBatch && b.config.Node.Sequencer.Dangerous.DisableBatchPosting {
-			creatingBatch = false
-		}
 		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.Dangerous.PublishBatchesWithoutLockout {
 			// We don't have the lockout and publishing batches without the lockout is disabled
 			creatingBatch = false
@@ -1145,7 +1138,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		var dontPublishBlockNum *big.Int
 		if shouldSequence {
 			targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
-			if (blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch) && !b.config.Node.Sequencer.Dangerous.DisableDelayedMessageSequencing {
+			if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
 				sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime, false)
 				if err != nil {
 					logger.Error().Err(err).Msg("Error delivering delayed messages")
