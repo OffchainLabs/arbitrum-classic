@@ -306,7 +306,14 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
 				// This batch would be too large to publish with this tx added.
 				// Put the tx back in the queue so it can be included later.
-				b.txQueue <- queueItem
+				select {
+				case b.txQueue <- queueItem:
+				default:
+					queueItem.resultChan <- errors.New("sequencer overloaded")
+					if queueItem.tx == startTx {
+						seenOwnTx = true
+					}
+				}
 				emptiedQueue = false
 				break
 			}
@@ -596,6 +603,8 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	}
 	postingCostEstimate := gasCostPerMessage + gasCostDelayedMessages
 	atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
+
+	core.WaitForMachineIdle(b.db)
 
 	if b.feedBroadcaster != nil {
 		err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)

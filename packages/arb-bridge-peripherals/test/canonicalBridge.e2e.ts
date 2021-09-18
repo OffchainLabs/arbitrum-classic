@@ -28,9 +28,9 @@ describe('Bridge peripherals end-to-end', () => {
   let l1TestBridge: Contract
   let l2TestBridge: Contract
 
-  const maxSubmissionCost = 0
+  const maxSubmissionCost = 1
   const maxGas = 1000000000
-  const gasPrice = 0
+  const gasPrice = 1
 
   before(async function () {
     accounts = await ethers.getSigners()
@@ -132,13 +132,37 @@ describe('Bridge peripherals end-to-end', () => {
       )
     ).to.be.revertedWith('NOT_FROM_ROUTER')
 
+    await expect(
+      l1RouterTestBridge.outboundTransfer(
+        token.address,
+        accounts[0].address,
+        tokenAmount,
+        maxGas,
+        gasPrice,
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'bytes'], [0, '0x'])
+      )
+    ).to.be.revertedWith('NO_SUBMISSION_COST')
+
+    await expect(
+      l1RouterTestBridge.outboundTransfer(
+        token.address,
+        accounts[0].address,
+        tokenAmount,
+        maxGas,
+        gasPrice,
+        data,
+        { value: maxSubmissionCost }
+      )
+    ).to.be.revertedWith('WRONG_ETH_VALUE')
+
     await l1RouterTestBridge.outboundTransfer(
       token.address,
       accounts[0].address,
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const escrowedTokens = await token.balanceOf(l1TestBridge.address)
@@ -179,7 +203,8 @@ describe('Bridge peripherals end-to-end', () => {
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const prevUserBalance = await token.balanceOf(accounts[0].address)
@@ -216,7 +241,8 @@ describe('Bridge peripherals end-to-end', () => {
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const prevUserBalance = await token.balanceOf(accounts[0].address)
@@ -262,7 +288,8 @@ describe('Bridge peripherals end-to-end', () => {
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
