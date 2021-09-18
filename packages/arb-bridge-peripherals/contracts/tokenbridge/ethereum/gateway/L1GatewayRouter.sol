@@ -229,6 +229,17 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override onlyWhitelisted returns (bytes memory) {
+        // when sending a L1 to L2 transaction, we expect the user to send
+        // eth in flight in order to pay for L2 gas costs
+        // this check prevents users from misconfiguring the msg.value
+        (uint256 _maxSubmissionCost, ) = abi.decode(_data, (uint256, bytes));
+
+        // here we don't use SafeMath since this validation is to prevent users
+        // from shooting themselves on the foot.
+        uint256 expectedEth = _maxSubmissionCost + (_maxGas * _gasPriceBid);
+        require(_maxSubmissionCost > 0, "NO_SUBMISSION_COST");
+        require(msg.value == expectedEth, "WRONG_ETH_VALUE");
+
         // will revert if msg.sender is not whitelisted
         return super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
