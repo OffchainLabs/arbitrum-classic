@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 package main
@@ -18,7 +19,7 @@ func main() {
 }
 
 func run() error {
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	if err != nil {
 		return err
 	}

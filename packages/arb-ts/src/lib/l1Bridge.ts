@@ -107,7 +107,6 @@ export class L1Bridge {
       ERC20: undefined,
       CUSTOM: undefined,
     }
-    this.l1Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
     const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
 
@@ -172,6 +171,7 @@ export class L1Bridge {
         tokenData.ERC20.allowed = allowance.gte(MIN_APPROVAL.div(2))
       }
     }
+    this.l1Tokens[erc20L1Address] = tokenData
 
     return tokenData
   }

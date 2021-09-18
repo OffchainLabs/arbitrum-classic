@@ -134,7 +134,7 @@ func requireChallengeLogs(ctx context.Context, t *testing.T, client ethutils.Eth
 func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int, expectedEnd ExpectedChallengeEnd) {
 	ctx := context.Background()
 
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	test.FailIfError(t, err)
 
 	mach, err := cmachine.New(arbosPath)
@@ -428,7 +428,7 @@ func TestChallengeToOSP(t *testing.T) {
 
 func TestChallengeToInboxOSP(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(1190), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(7*400 - 10), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {
