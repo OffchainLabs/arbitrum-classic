@@ -30,8 +30,8 @@ var (
 
 // TransferMetaData contains all meta data concerning the Transfer contract.
 var TransferMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"send\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"wrapped\",\"type\":\"address\"}],\"name\":\"send2\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"send3\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"}],\"name\":\"send4\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
-	Bin: "0x608060405261023b806100136000396000f3fe6080604052600436106100435760003560e01c80633386b1a214610082578063540d7a2f146100b75780636b2e1f1a146100e1578063b46300ec146100f65761007d565b3661007d576040805134815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a1005b600080fd5b34801561008e57600080fd5b506100b5600480360360208110156100a557600080fd5b50356001600160a01b031661010b565b005b3480156100c357600080fd5b506100b5600480360360208110156100da57600080fd5b5035610161565b3480156100ed57600080fd5b506100b56101b0565b34801561010257600080fd5b506100b56101dc565b806001600160a01b031663b46300ec6040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561014657600080fd5b505af115801561015a573d6000803e3d6000fd5b5050505050565b604051309082906001906000818181858888f193505050503d80600081146101a5576040519150601f19603f3d011682016040523d82523d6000602084013e6101aa565b606091505b50505050565b604051309060009060019082818181858883f193505050501580156101d9573d6000803e3d6000fd5b50565b604051339060009060019082818181858883f193505050501580156101d9573d6000803e3d6000fdfea2646970667358221220c9157f14331e6d3610def92788c663aa59baee48c850d26b9645e23b8bef6c4164736f6c634300060c0033",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"send\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"wrapped\",\"type\":\"address\"}],\"name\":\"send2\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"send3\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"}],\"name\":\"send4\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"spin\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
+	Bin: "0x60806040526102a0806100136000396000f3fe60806040526004361061004e5760003560e01c80633386b1a21461008d578063540d7a2f146100c25780636b2e1f1a146100ec578063b46300ec14610101578063f0acd7d51461011657610088565b36610088576040805134815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a1005b600080fd5b34801561009957600080fd5b506100c0600480360360208110156100b057600080fd5b50356001600160a01b031661012b565b005b3480156100ce57600080fd5b506100c0600480360360208110156100e557600080fd5b5035610181565b3480156100f857600080fd5b506100c06101d0565b34801561010d57600080fd5b506100c06101fc565b34801561012257600080fd5b506100c0610225565b806001600160a01b031663b46300ec6040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561016657600080fd5b505af115801561017a573d6000803e3d6000fd5b5050505050565b604051309082906001906000818181858888f193505050503d80600081146101c5576040519150601f19603f3d011682016040523d82523d6000602084013e6101ca565b606091505b50505050565b604051309060009060019082818181858883f193505050501580156101f9573d6000803e3d6000fd5b50565b604051339060009060019082818181858883f193505050501580156101f9573d6000803e3d6000fd5b5b60005a111561023457610226565b604080516000815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a156fea2646970667358221220b754637d2782deb4f62a9bd8c493363cf333968620cd207439540683e86c9b7964736f6c634300060c0033",
 }
 
 // TransferABI is the input ABI used to generate the binding from.
@@ -283,6 +283,27 @@ func (_Transfer *TransferSession) Send4(gas *big.Int) (*types.Transaction, error
 // Solidity: function send4(uint256 gas) returns()
 func (_Transfer *TransferTransactorSession) Send4(gas *big.Int) (*types.Transaction, error) {
 	return _Transfer.Contract.Send4(&_Transfer.TransactOpts, gas)
+}
+
+// Spin is a paid mutator transaction binding the contract method 0xf0acd7d5.
+//
+// Solidity: function spin() returns()
+func (_Transfer *TransferTransactor) Spin(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Transfer.contract.Transact(opts, "spin")
+}
+
+// Spin is a paid mutator transaction binding the contract method 0xf0acd7d5.
+//
+// Solidity: function spin() returns()
+func (_Transfer *TransferSession) Spin() (*types.Transaction, error) {
+	return _Transfer.Contract.Spin(&_Transfer.TransactOpts)
+}
+
+// Spin is a paid mutator transaction binding the contract method 0xf0acd7d5.
+//
+// Solidity: function spin() returns()
+func (_Transfer *TransferTransactorSession) Spin() (*types.Transaction, error) {
+	return _Transfer.Contract.Spin(&_Transfer.TransactOpts)
 }
 
 // Receive is a paid mutator transaction binding the contract receive function.

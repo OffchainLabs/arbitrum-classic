@@ -3,9 +3,9 @@
   "contracts": {
     "L1GatewayRouter": {
       "proxyAddress": "0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380",
-      "implAddress": "0xf913BBdcF8B7afAe707a78B2Fc52E883cF234D9E",
-      "implDeploymentTxn": "0xd1e767cd496f943907c36a808fa8cf830553bdb06d11023636cabbede9c0a2fa",
-      "implArbitrumCommitHash": "5c06d89daf8fa6088bcdba292ffa6ed0c72afab2",
+      "implAddress": "0xED2B22371Ba45c9A0e91ebeDF8504f6B271883f8",
+      "implDeploymentTxn": "0x5c43763a8294e529afb9b6cb6f2d6667dbbd1c0f9032ceb67c4f618cb04522dc",
+      "implArbitrumCommitHash": "d656ed9cb79b8ce89fccb861e4af12d0aa1ecaab",
       "implBuildInfo": ""
     },
     "L1ERC20Gateway": {
