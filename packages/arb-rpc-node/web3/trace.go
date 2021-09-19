@@ -38,7 +38,7 @@ type TraceAction struct {
 
 type TraceCallResult struct {
 	Address *common.Address `json:"address,omitempty"`
-	Code    []byte          `json:"code,omitempty"`
+	Code    hexutil.Bytes   `json:"code,omitempty"`
 	GasUsed hexutil.Uint64  `json:"gasUsed"`
 	Output  hexutil.Bytes   `json:"output,omitempty"`
 }
@@ -61,6 +61,10 @@ type TraceResult struct {
 
 type Trace struct {
 	s *Server
+}
+
+func NewTracer(s *Server) *Trace {
+	return &Trace{s: s}
 }
 
 func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.BlockNumberOrHash) (*TraceResult, error) {
@@ -91,16 +95,22 @@ func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.Bloc
 	if err != nil {
 		return nil, err
 	}
-	frames := []evm.Frame{frame}
+
+	type trackedFrame struct {
+		f            evm.Frame
+		traceAddress []int
+	}
+
+	frames := []trackedFrame{{f: frame, traceAddress: make([]int, 0)}}
 	res := &TraceResult{
 		Output: callRes.ReturnData,
 	}
-	var traceAddress []int
 	for len(frames) > 0 {
 		frame := frames[0]
+		frames = frames[1:]
 		var emptyAddress common.Address
 		var createdContractAddress *common.Address
-		switch frame := frame.(type) {
+		switch frame := frame.f.(type) {
 		case *evm.CallFrame:
 			if len(res.Trace) == 0 && receipt.ContractAddress != emptyAddress {
 				createdContractAddress = &receipt.ContractAddress
@@ -113,7 +123,7 @@ func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.Bloc
 			createdContractAddress = &tmp
 		}
 
-		callFrame := frame.GetCallFrame()
+		callFrame := frame.f.GetCallFrame()
 		action := TraceAction{
 			From:  callFrame.Call.From.ToEthAddress(),
 			Gas:   hexutil.Uint64(callFrame.Call.Gas.Uint64()),
@@ -156,9 +166,15 @@ func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.Bloc
 			Result:       result,
 			Error:        callErr,
 			Subtraces:    len(callFrame.Nested),
-			TraceAddress: traceAddress,
+			TraceAddress: frame.traceAddress,
 			Type:         frameType,
 		})
+		for i, nested := range callFrame.Nested {
+			nestedTrace := make([]int, 0)
+			nestedTrace = append(nestedTrace, frame.traceAddress...)
+			nestedTrace = append(nestedTrace, i)
+			frames = append(frames, trackedFrame{f: nested, traceAddress: nestedTrace})
+		}
 	}
 	return res, nil
 }

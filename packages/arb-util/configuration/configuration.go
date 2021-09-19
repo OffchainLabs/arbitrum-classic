@@ -175,14 +175,15 @@ type Forwarder struct {
 }
 
 type Node struct {
-	Aggregator Aggregator `koanf:"aggregator"`
-	Cache      NodeCache  `koanf:"cache"`
-	ChainID    uint64     `koanf:"chain-id"`
-	Forwarder  Forwarder  `koanf:"forwarder"`
-	RPC        RPC        `koanf:"rpc"`
-	Sequencer  Sequencer  `koanf:"sequencer"`
-	Type       string     `koanf:"type"`
-	WS         WS         `koanf:"ws"`
+	Aggregator    Aggregator `koanf:"aggregator"`
+	Cache         NodeCache  `koanf:"cache"`
+	ChainID       uint64     `koanf:"chain-id"`
+	Forwarder     Forwarder  `koanf:"forwarder"`
+	RPC           RPC        `koanf:"rpc"`
+	Sequencer     Sequencer  `koanf:"sequencer"`
+	Type          string     `koanf:"type"`
+	WS            WS         `koanf:"ws"`
+	EnableTracing bool       `koanf:"enable-tracing"`
 }
 
 type NodeCache struct {
@@ -333,6 +334,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
+	f.Bool("node.enable-tracing", false, "enable tracing api")
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.continue-batch-posting-block-interval", 2, "block interval to post the next batch after posting a partial one")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")

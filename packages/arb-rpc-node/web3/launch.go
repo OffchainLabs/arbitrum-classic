@@ -41,6 +41,11 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 	ethServer := NewServer(server, mode == GanacheMode)
 	forwarderServer := NewForwarderServer(server, ethServer, mode)
 
+	tracer := &Trace{s: ethServer}
+	if err := s.RegisterName("trace", tracer); err != nil {
+		return nil, err
+	}
+
 	if err := s.RegisterName("eth", forwarderServer); err != nil {
 		return nil, err
 	}
@@ -62,8 +67,10 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 			return nil, err
 		}
 
-		if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys)); err != nil {
-			return nil, err
+		if len(privateKeys) > 0 {
+			if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys)); err != nil {
+				return nil, err
+			}
 		}
 	}
 
