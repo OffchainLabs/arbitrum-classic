@@ -334,7 +334,7 @@ func startup() error {
 	}
 
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.ServerConfig{Mode: rpcMode, Tracing: config.Node.EnableTracing}, nil)
 	if err != nil {
 		return err
 	}

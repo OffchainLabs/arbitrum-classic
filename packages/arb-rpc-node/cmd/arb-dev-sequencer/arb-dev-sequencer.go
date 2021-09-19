@@ -362,7 +362,7 @@ func startup() error {
 		return err
 	}
 
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.NormalMode, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.ServerConfig{Mode: web3.NormalMode}, nil)
 	if err != nil {
 		return err
 	}
