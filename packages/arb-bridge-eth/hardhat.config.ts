@@ -69,9 +69,7 @@ task('create-chain', 'Creates a rollup chain')
     const ev = rollupCreator.interface.parseLog(
       receipt.logs[receipt.logs.length - 1]
     )
-    console.log(ev)
 
-    // const path = `rollup-${hre.network.name}.json`
     const path = `rollup-${hre.network.name}.json`
     const output = JSON.stringify({
       rollupAddress: ev.args[0],
