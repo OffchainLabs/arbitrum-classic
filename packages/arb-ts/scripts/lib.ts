@@ -17,8 +17,11 @@
 'use strict'
 
 import { ContractReceipt } from '@ethersproject/contracts'
+import { Provider } from '@ethersproject/abstract-provider'
+import { AddressZero } from '@ethersproject/constants'
 
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { ITokenGateway__factory } from '../src/lib/abi/factories/ITokenGateway__factory'
 
 import { instantiateBridge } from './instantiate_bridge'
 
@@ -31,6 +34,58 @@ export const setArbCustomGateways = async (
   tokens: string[]
 ): Promise<ContractReceipt> => {
   return setGateWays(tokens, 'arbCustom')
+}
+
+export const validateToken = async (
+  provider: Provider,
+  tokenAddress: string
+): Promise<void> => {
+  try {
+    console.log(`Validating ${tokenAddress}`)
+    const token = await ERC20__factory.connect(tokenAddress, provider)
+
+    const symbol = await token.symbol()
+    const name = await token.name()
+    const decimals = await token.decimals()
+    console.log(symbol, name, decimals)
+
+    const looksGood =
+      typeof symbol === 'string' &&
+      typeof decimals === 'number' &&
+      typeof name === 'string' &&
+      decimals > 0 &&
+      symbol.length > 0 &&
+      name.length > 0
+
+    if (!looksGood) {
+      throw new Error(`${tokenAddress} doesn't look like an L1 erc20...`)
+    }
+  } catch (err) {
+    console.warn('err', err)
+
+    throw new Error(`${tokenAddress} failed looking up fields...`)
+  }
+}
+
+export const validateGateway = async (
+  provider: Provider,
+  tokenAddress: string,
+  gatewayAddress: string
+): Promise<void> => {
+  try {
+    const gateway = await ITokenGateway__factory.connect(
+      gatewayAddress,
+      provider
+    )
+    const l2Address = await gateway.calculateL2TokenAddress(tokenAddress)
+    if (l2Address == AddressZero) {
+      throw new Error('Gateway not configured with token')
+    }
+  } catch (err) {
+    console.warn('err', err)
+
+    throw new Error(`${gatewayAddress} doesn't look like a gateway...`)
+  }
 }
 
 export const setGateWays = async (
@@ -51,34 +106,10 @@ export const setGateWays = async (
   console.log('Setting', tokens.length, 'tokens')
 
   for (const tokenAddress of tokens) {
-    try {
-      const token = await ERC20__factory.connect(
-        tokenAddress,
-        bridge.l1Bridge.l1Provider
-      )
-      console.warn('calling name for ', tokenAddress)
-
-      const symbol = await token.symbol()
-      const name = await token.name()
-      const decimals = await token.decimals()
-      console.log(symbol, name, decimals)
-
-      const looksGood =
-        typeof symbol === 'string' &&
-        typeof decimals === 'number' &&
-        typeof name === 'string' &&
-        decimals > 0 &&
-        symbol.length > 0 &&
-        name.length > 0
-
-      if (!looksGood) {
-        throw new Error(`${tokenAddress} doesn't look like an L1 erc20...`)
-      }
-    } catch (err) {
-      console.warn('err', err)
-
-      throw new Error(`${tokenAddress} doesn't look like an L1 erc20...`)
+    if (typeof tokenAddress != 'string') {
+      throw new Error('expected token to be string')
     }
+    await validateToken(bridge.l1Bridge.l1Provider, tokenAddress)
   }
   console.log('L1 sanity checks passed...')
   const gateways = (() => {
