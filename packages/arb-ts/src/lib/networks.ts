@@ -30,6 +30,7 @@ export interface Network {
   confirmPeriodBlocks?: number
   blockTime?: number //seconds
   rpcURL: string
+  inbox: string
 }
 
 export interface TokenBridge {
@@ -125,6 +126,7 @@ export const networks: Networks = {
     confirmPeriodBlocks: 6545, // TODO
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
+    inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
   },
   '421611': {
     chainID: '421611',
