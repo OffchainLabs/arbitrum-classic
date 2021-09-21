@@ -32,7 +32,7 @@ import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { ERC20 } from './abi/ERC20'
 import { L1ERC20Gateway } from './abi'
 
-import networks from './networks'
+import { Network } from './networks'
 import { addressToSymbol } from './bridge_helpers'
 
 const MIN_APPROVAL = MaxUint256
@@ -70,10 +70,12 @@ export class L1Bridge {
   l1Tokens: Tokens
   l1Provider: Provider
   chainIdCache?: number
+  network: Network
 
-  constructor(l1GatewayRouterAddress: string, l1Signer: Signer) {
+  constructor(network: Network, l1Signer: Signer) {
     this.l1Signer = l1Signer
     this.l1Tokens = {}
+    this.network = network
 
     const l1Provider = l1Signer.provider
 
@@ -82,7 +84,7 @@ export class L1Bridge {
     }
     this.l1Provider = l1Provider
     this.l1GatewayRouter = L1GatewayRouter__factory.connect(
-      l1GatewayRouterAddress,
+      network.tokenBridge.l1GatewayRouter,
       l1Signer
     )
   }
@@ -197,17 +199,12 @@ export class L1Bridge {
     const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
 
     if (defaultGatewayAddress === AddressZero) {
-      const network = networks[chainId]
-
-      if (!network)
-        throw new Error('No default network, and no fallback provided')
-
       console.log(
         'No default network assigned in contract, using standard l1ERC20Gateway:'
       )
 
       return L1ERC20Gateway__factory.connect(
-        network.tokenBridge.l1ERC20Gateway,
+        this.network.tokenBridge.l1ERC20Gateway,
         this.l1Provider
       )
     }

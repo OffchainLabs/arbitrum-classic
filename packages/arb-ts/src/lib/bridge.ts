@@ -54,7 +54,7 @@ import {
 import { Tokens as L1Tokens } from './l1Bridge'
 import { Tokens as L2Tokens } from './l2Bridge'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
-import networks from './networks'
+import networks, { Network } from './networks'
 import { L1ERC20Gateway, L1GatewayRouter } from './abi'
 
 interface RetryableGasArgs {
@@ -63,6 +63,13 @@ interface RetryableGasArgs {
   gasPriceBid?: BigNumber
   maxSubmissionPricePercentIncrease?: BigNumber
   maxGasPercentIncrease?: BigNumber
+}
+
+interface InitOptions {
+  customNetwork?: {
+    l1Network: Network
+    l2Network: Network
+  }
 }
 
 function isError(error: Error): error is NodeJS.ErrnoException {
@@ -102,8 +109,7 @@ export class Bridge {
   static async init(
     ethSigner: Signer,
     arbSigner: Signer,
-    l1GatewayRouterAddress?: string,
-    l2GatewayRouterAddress?: string
+    options?: InitOptions
   ): Promise<Bridge> {
     if (!ethSigner.provider || !arbSigner.provider) {
       throw new Error('Signer needs a provider')
@@ -111,10 +117,15 @@ export class Bridge {
 
     const l1ChainId = await ethSigner.getChainId()
     const l2ChainId = await arbSigner.getChainId()
+    const isCustomNetwork = options?.customNetwork !== undefined
 
-    const l1Network = networks[l1ChainId]
-    const l2Network = networks[l2ChainId]
-    let isCustomNetwork = false
+    const l1Network = isCustomNetwork
+      ? options.customNetwork!.l1Network
+      : networks[l1ChainId]
+    const l2Network = isCustomNetwork
+      ? options.customNetwork!.l2Network
+      : networks[l2ChainId]
+
     if (l1Network && l2Network) {
       if (l1Network.partnerChainID !== l2Network.chainID)
         throw new Error('L1 and L2 networks are not connected')
@@ -122,40 +133,33 @@ export class Bridge {
         throw new Error('Connected to an Arbitrum networks as the L1...')
       if (!l2Network.isArbitrum)
         throw new Error('Connected to an L1 network as the L2...')
-
-      l1GatewayRouterAddress = l1Network.tokenBridge.l1GatewayRouter
-
-      l2GatewayRouterAddress = l2Network.tokenBridge.l2GatewayRouter
     } else {
-      isCustomNetwork = true
+      throw new Error('Current network configuration not supported.')
     }
-    if (!l2GatewayRouterAddress)
-      throw new Error(
-        'Network not in config, and no l2GatewayRouter address provided'
+
+    if (isCustomNetwork) {
+      // check routers are deployed when using a custom network configuration
+      const l1RouterCode = await ethSigner.provider.getCode(
+        l1Network.tokenBridge.l1GatewayRouter
       )
+      if (l1RouterCode === '0x') {
+        throw new Error(
+          `No code deployed to ${l1Network.tokenBridge.l1GatewayRouter} in the L1`
+        )
+      }
 
-    if (!l1GatewayRouterAddress)
-      throw new Error(
-        'Network not in config, and no l1GatewayRouter Address provided'
+      const l2RouterCode = await arbSigner.provider.getCode(
+        l2Network.tokenBridge.l2GatewayRouter
       )
-
-    // check routers are deployed
-    const l1RouterCode = await ethSigner.provider.getCode(
-      l1GatewayRouterAddress
-    )
-    if (l1RouterCode === '0x') {
-      throw new Error(`No code deployed to ${l1GatewayRouterAddress} in the L1`)
+      if (l2RouterCode === '0x') {
+        throw new Error(
+          `No code deployed to ${l2Network.tokenBridge.l2GatewayRouter} in the L2`
+        )
+      }
     }
 
-    const l2RouterCode = await arbSigner.provider.getCode(
-      l2GatewayRouterAddress
-    )
-    if (l2RouterCode === '0x') {
-      throw new Error(`No code deployed to ${l2GatewayRouterAddress} in the L2`)
-    }
-
-    const l1BridgeObj = new L1Bridge(l1GatewayRouterAddress, ethSigner)
-    const l2BridgeObj = new L2Bridge(l2GatewayRouterAddress, arbSigner)
+    const l1BridgeObj = new L1Bridge(l1Network, ethSigner)
+    const l2BridgeObj = new L2Bridge(l2Network, arbSigner)
 
     return new Bridge(l1BridgeObj, l2BridgeObj, isCustomNetwork)
   }
@@ -267,11 +271,10 @@ export class Bridge {
     destinationAddress?: string,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction> {
-    const l1ChainId = await this.l1Signer.getChainId()
     const {
       l1WethGateway: l1WethGatewayAddress,
       l1CustomGateway: l1CustomGatewayAddress,
-    } = networks[l1ChainId].tokenBridge
+    } = this.l1Bridge.network.tokenBridge
 
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
@@ -821,9 +824,9 @@ export class Bridge {
     if (this.isCustomNetwork && !_l1GatewayRouterAddress)
       throw new Error('Must supply _l1GatewayRouterAddress for custom network ')
 
-    const l1ChainId = await this.l1Signer.getChainId()
     const l1GatewayRouterAddress =
-      _l1GatewayRouterAddress || networks[l1ChainId].tokenBridge.l1GatewayRouter
+      _l1GatewayRouterAddress ||
+      this.l1Bridge.network.tokenBridge.l1GatewayRouter
     if (!l1GatewayRouterAddress)
       throw new Error('No l2GatewayRouterAddress provided')
 
@@ -839,9 +842,9 @@ export class Bridge {
     if (this.isCustomNetwork && !_l2GatewayRouterAddress)
       throw new Error('Must supply _l2GatewayRouterAddress for custom network ')
 
-    const l1ChainId = await this.l1Signer.getChainId()
     const l2GatewayRouterAddress =
-      _l2GatewayRouterAddress || networks[l1ChainId].tokenBridge.l2GatewayRouter
+      _l2GatewayRouterAddress ||
+      this.l1Bridge.network.tokenBridge.l2GatewayRouter
     if (!l2GatewayRouterAddress)
       throw new Error('No l2GatewayRouterAddress provided')
 
