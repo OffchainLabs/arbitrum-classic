@@ -114,6 +114,7 @@ const gen = async () => {
     '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
     '0xEDA6eFE5556e134Ef52f2F858aa1e81c84CDA84b',
     '0xe54942077Df7b8EEf8D4e6bCe2f7B58B0082b0cd',
+    '0x99D8a9C45b2ecA8864373A26D1459e3Dff1e17F3',
   ]
   // flatten in case they were set more than once
   const tokenAddresses = [
