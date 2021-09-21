@@ -31,7 +31,6 @@ export interface Network {
   confirmPeriodBlocks?: number
   blockTime?: number //seconds
   rpcURL: string
-  inbox: string
 }
 
 export interface TokenBridge {
@@ -78,7 +77,7 @@ const mainnetBridge: TokenBridge = {
   l2ProxyAdmin: '0xd570aCE65C43af47101fC6250FD6fC63D1c22a86',
 }
 
-const RinkebyBridge: TokenBridge = {
+const rinkebyBridge: TokenBridge = {
   l1GatewayRouter: '0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380',
   l2GatewayRouter: '0x9413AD42910c1eA60c737dB5f58d1C504498a3cD',
   l1ERC20Gateway: '0x91169Dbb45e6804743F94609De50D511C437572E',
@@ -93,7 +92,7 @@ const RinkebyBridge: TokenBridge = {
   l2ProxyAdmin: '0x58816566EB91815Cc07f3Ad5230eE0820fe1A19a',
 }
 
-const RinkebyETHBridge: EthBridge = {
+const rinkebyETHBridge: EthBridge = {
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
   sequencerInbox: '0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8',
   outbox: '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3',
@@ -137,7 +136,7 @@ export const networks: Networks = {
     partnerChainID: '1',
     isArbitrum: true,
     tokenBridge: mainnetBridge,
-    ethBridge: mainnetETHBridge,
+    ethBridge: undefined,
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
   },
@@ -147,12 +146,11 @@ export const networks: Networks = {
     explorerUrl: 'https://rinkeby.etherscan.io',
     partnerChainID: '421611',
     isArbitrum: false,
-    tokenBridge: RinkebyBridge,
-    ethBridge: RinkebyETHBridge,
+    tokenBridge: rinkebyBridge,
+    ethBridge: rinkebyETHBridge,
     confirmPeriodBlocks: 6545, // TODO
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
-    inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
   },
   '421611': {
     chainID: '421611',
@@ -160,7 +158,7 @@ export const networks: Networks = {
     explorerUrl: 'https://rinkeby-explorer.arbitrum.io',
     partnerChainID: '4',
     isArbitrum: true,
-    tokenBridge: RinkebyBridge,
+    tokenBridge: rinkebyBridge,
     ethBridge: undefined,
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
