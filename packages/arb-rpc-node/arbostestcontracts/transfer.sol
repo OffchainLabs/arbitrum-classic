@@ -42,4 +42,9 @@ contract Transfer {
     function send4(uint256 gas) external {
         address(this).call{ value: 1 }{ gas: gas }("");
     }
+
+    function spin() external {
+        while (gasleft() > 0) {}
+        emit TestEvent(0);
+    }
 }
