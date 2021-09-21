@@ -26,6 +26,7 @@ export interface Network {
   explorerUrl: string
   partnerChainID: string
   tokenBridge: TokenBridge
+  ethBridge: EthBridge | undefined
   gif?: string
   confirmPeriodBlocks?: number
   blockTime?: number //seconds
@@ -47,6 +48,13 @@ export interface TokenBridge {
   l2ProxyAdmin: string
   l1DaiGateway: string
   l2DaiGateway: string
+}
+
+export interface EthBridge {
+  inbox: string
+  sequencerInbox: string
+  outbox: string
+  rollup: string
 }
 
 export interface Networks {
@@ -73,7 +81,7 @@ const mainnetBridge: TokenBridge = {
   l2DaiGateway: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65',
 }
 
-const RinkebyBridge: TokenBridge = {
+const rinkebyBridge: TokenBridge = {
   l1GatewayRouter: '0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380',
   l2GatewayRouter: '0x9413AD42910c1eA60c737dB5f58d1C504498a3cD',
   l1ERC20Gateway: '0x91169Dbb45e6804743F94609De50D511C437572E',
@@ -90,6 +98,20 @@ const RinkebyBridge: TokenBridge = {
   l2DaiGateway: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65',
 }
 
+const rinkebyETHBridge: EthBridge = {
+  inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
+  sequencerInbox: '0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8',
+  outbox: '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3',
+  rollup: '0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c',
+}
+
+const mainnetETHBridge: EthBridge = {
+  inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
+  sequencerInbox: '0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef',
+  outbox: '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40',
+  rollup: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
+}
+
 export const networks: Networks = {
   '1': {
     chainID: '1',
@@ -98,6 +120,7 @@ export const networks: Networks = {
     isArbitrum: false,
     partnerChainID: '42161',
     tokenBridge: mainnetBridge,
+    ethBridge: mainnetETHBridge,
     blockTime: 15,
     rpcURL: process.env['MAINNET_RPC'] as string,
   },
@@ -108,6 +131,7 @@ export const networks: Networks = {
     isArbitrum: false,
     partnerChainID: '42161', // TODO: use sequencer fork ID
     tokenBridge: mainnetBridge,
+    ethBridge: mainnetETHBridge,
     blockTime: 15,
     rpcURL: process.env['HARDHAT_RPC'] || 'http://127.0.0.1:8545/',
   },
@@ -118,6 +142,7 @@ export const networks: Networks = {
     partnerChainID: '1',
     isArbitrum: true,
     tokenBridge: mainnetBridge,
+    ethBridge: undefined,
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
   },
@@ -127,7 +152,8 @@ export const networks: Networks = {
     explorerUrl: 'https://rinkeby.etherscan.io',
     partnerChainID: '421611',
     isArbitrum: false,
-    tokenBridge: RinkebyBridge,
+    tokenBridge: rinkebyBridge,
+    ethBridge: rinkebyETHBridge,
     confirmPeriodBlocks: 6545, // TODO
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
@@ -138,7 +164,8 @@ export const networks: Networks = {
     explorerUrl: 'https://rinkeby-explorer.arbitrum.io',
     partnerChainID: '4',
     isArbitrum: true,
-    tokenBridge: RinkebyBridge,
+    tokenBridge: rinkebyBridge,
+    ethBridge: undefined,
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
   },
