@@ -55,8 +55,13 @@ import { Tokens as L1Tokens } from './l1Bridge'
 import { Tokens as L2Tokens } from './l2Bridge'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks, { Network } from './networks'
-import { L1ERC20Gateway, L1GatewayRouter } from './abi'
-
+import {
+  L1ERC20Gateway,
+  L1GatewayRouter,
+  Multicall2__factory,
+  ArbMulticall2__factory,
+  ERC20__factory,
+} from './abi'
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
   maxGas?: BigNumber
@@ -852,5 +857,41 @@ export class Bridge {
       l2GatewayRouterAddress,
       this.l2Provider
     )
+  }
+
+  public async getTokenBalanceBatch(
+    userAddr: string,
+    tokenAddrs: Array<string>,
+    targetNetwork: 'L1' | 'L2'
+  ) {
+    const balance = ERC20__factory.createInterface().encodeFunctionData(
+      'balanceOf',
+      [userAddr]
+    )
+    const calls = tokenAddrs.map(token => ({
+      target: token,
+      callData: balance,
+    }))
+
+    const getMulticall = () => {
+      if (targetNetwork === 'L1')
+        return Multicall2__factory.connect(
+          this.l1Bridge.network.tokenBridge.l1MultiCall,
+          this.l1Provider
+        )
+      else
+        return ArbMulticall2__factory.connect(
+          this.l2Bridge.network.tokenBridge.l2Multicall,
+          this.l2Provider
+        )
+    }
+    const multicall = getMulticall()
+    const [, /* blockNums */ balances] = await multicall.callStatic.aggregate(
+      calls
+    )
+    return balances.map((val, index) => ({
+      token: tokenAddrs[index],
+      balance: BigNumber.from(val),
+    }))
   }
 }
