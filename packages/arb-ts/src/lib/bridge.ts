@@ -114,7 +114,7 @@ export class Bridge {
   static async init(
     ethSigner: Signer,
     arbSigner: Signer,
-    options?: InitOptions
+    { customNetwork }: InitOptions = {}
   ): Promise<Bridge> {
     if (!ethSigner.provider || !arbSigner.provider) {
       throw new Error('Signer needs a provider')
@@ -122,13 +122,13 @@ export class Bridge {
 
     const l1ChainId = await ethSigner.getChainId()
     const l2ChainId = await arbSigner.getChainId()
-    const isCustomNetwork = options?.customNetwork !== undefined
+    const isCustomNetwork = customNetwork !== undefined
 
     const l1Network = isCustomNetwork
-      ? options.customNetwork!.l1Network
+      ? customNetwork.l1Network
       : networks[l1ChainId]
     const l2Network = isCustomNetwork
-      ? options.customNetwork!.l2Network
+      ? customNetwork.l2Network
       : networks[l2ChainId]
 
     if (l1Network && l2Network) {
