@@ -66,7 +66,7 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     auto assertion = mach.run();
     REQUIRE(assertion.gas_count <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
-    REQUIRE(val == value{uint256_t{4}});
+    REQUIRE(values_equal(val, value{uint256_t{4}}));
     REQUIRE(mach.machine_state.stack.stacksize() == 0);
 }
 

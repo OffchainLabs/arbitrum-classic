@@ -48,6 +48,7 @@ using DeserializedValue = std::variant<TuplePlaceholder, value>;
 
 std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash_value(const value& value);
+bool values_equal(const value& a, const value& b);
 
 uint64_t deserialize_uint64_t(const char*& bufptr);
 CodePointRef deserializeCodePointRef(const char*& bufptr);

@@ -251,6 +251,10 @@ uint256_t hash_value(const value& value) {
     return std::visit([](const auto& val) { return hash(val); }, value);
 }
 
+bool values_equal(const value& a, const value& b) {
+    return hash_value(a) == hash_value(b);
+}
+
 struct GetSize {
     uint256_t operator()(const std::shared_ptr<HashPreImage>& val) const {
         return val->getSize();

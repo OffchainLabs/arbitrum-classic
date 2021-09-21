@@ -307,7 +307,7 @@ void eq(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aVal = m.stack[0];
     auto& bVal = m.stack[1];
-    m.stack[1] = aVal == bVal ? 1 : 0;
+    m.stack[1] = values_equal(aVal, bVal) ? 1 : 0;
     m.stack.popClear();
     ++m.pc;
 }

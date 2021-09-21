@@ -25,14 +25,6 @@ struct UnloadedValue {
     uint256_t value_size;
 };
 
-inline bool operator==(const UnloadedValue& val1, const UnloadedValue& val2) {
-    return val1.hash == val2.hash;
-}
-
-inline bool operator!=(const UnloadedValue& val1, const UnloadedValue& val2) {
-    return val1.hash != val2.hash;
-}
-
 inline uint256_t hash(const UnloadedValue& uv) {
     return uv.hash;
 }

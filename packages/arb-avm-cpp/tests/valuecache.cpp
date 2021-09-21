@@ -72,7 +72,7 @@ TEST_CASE("ValueCache reset") {
     // Cache 1
     cache.maybeSave(val1);
     REQUIRE(cache.loadIfExists(hash_value(val1)) != std::nullopt);
-    REQUIRE(*cache.loadIfExists(hash_value(val1)) == val1);
+    REQUIRE(values_equal(*cache.loadIfExists(hash_value(val1)), val1));
 
     // Cache 2
     // Leave cache empty
