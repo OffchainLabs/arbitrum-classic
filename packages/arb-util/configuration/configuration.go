@@ -159,18 +159,24 @@ type L1PostingStrategy struct {
 	HighGasDelayBlocks int64   `koanf:"high-gas-delay-blocks"`
 }
 
+type SequencerDangerous struct {
+	ReorgOutHugeMessages            bool `koanf:"reorg-out-huge-messages" json:"reorg-out-huge-messages"`
+	PublishBatchesWithoutLockout    bool `koanf:"publish-batches-without-lockout" json:"publish-batches-without-lockout"`
+	RewriteSequencerAddress         bool `koanf:"rewrite-sequencer-address" json:"rewrite-sequencer-address"`
+	DisableBatchPosting             bool `koanf:"disable-batch-posting" json:"disable-batch-posting"`
+	DisableDelayedMessageSequencing bool `koanf:"disable-delayed-message-sequencing" json:"disable-delayed-message-sequencing"`
+}
+
 type Sequencer struct {
-	CreateBatchBlockInterval          int64             `koanf:"create-batch-block-interval"`
-	ContinueBatchPostingBlockInterval int64             `koanf:"continue-batch-posting-block-interval"`
-	DelayedMessagesTargetDelay        int64             `koanf:"delayed-messages-target-delay"`
-	ReorgOutHugeMessages              bool              `koanf:"reorg-out-huge-messages"`
-	Lockout                           Lockout           `koanf:"lockout"`
-	L1PostingStrategy                 L1PostingStrategy `koanf:"l1-posting-strategy"`
-	PublishBatchesWithoutLockout      bool              `koanf:"publish-batches-without-lockout"`
-	RewriteSequencerAddress           bool              `koanf:"rewrite-sequencer-address"`
-	MaxBatchGasCost                   int64             `koanf:"max-batch-gas-cost"`
-	GasRefunderAddress                string            `koanf:"gas-refunder-address"`
-	GasRefunderExtraGas               uint64            `koanf:"gas-refunder-extra-gas"`
+	CreateBatchBlockInterval          int64              `koanf:"create-batch-block-interval"`
+	ContinueBatchPostingBlockInterval int64              `koanf:"continue-batch-posting-block-interval"`
+	DelayedMessagesTargetDelay        int64              `koanf:"delayed-messages-target-delay"`
+	Lockout                           Lockout            `koanf:"lockout"`
+	L1PostingStrategy                 L1PostingStrategy  `koanf:"l1-posting-strategy"`
+	MaxBatchGasCost                   int64              `koanf:"max-batch-gas-cost"`
+	GasRefunderAddress                string             `koanf:"gas-refunder-address"`
+	GasRefunderExtraGas               uint64             `koanf:"gas-refunder-extra-gas"`
+	Dangerous                         SequencerDangerous `koanf:"dangerous"`
 }
 
 type WS struct {
@@ -348,14 +354,16 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.continue-batch-posting-block-interval", 2, "block interval to post the next batch after posting a partial one")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
-	f.Bool("node.sequencer.reorg-out-huge-messages", false, "erase any huge messages in database that cannot be published (DANGEROUS)")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
 	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
-	f.Bool("node.sequencer.publish-batches-without-lockout", false, "continue publishing batches (but not sequencing) without the lockout")
-	f.Bool("node.sequencer.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
 	f.Int64("node.sequencer.max-batch-gas-cost", 2_000_000, "max L1 batch gas cost to post before splitting it up into multiple batches")
 	f.String("node.sequencer.gas-refunder-address", "", "address of the L1 gas refunder contract (optional)")
 	f.Uint64("node.sequencer.gas-refunder-extra-gas", 50_000, "amount of extra gas to supply for the gas refunder operation")
+	f.Bool("node.sequencer.dangerous.reorg-out-huge-messages", false, "erase any huge messages in database that cannot be published (DANGEROUS)")
+	f.Bool("node.sequencer.dangerous.publish-batches-without-lockout", false, "continue publishing batches (but not sequencing) without the lockout (DANGEROUS)")
+	f.Bool("node.sequencer.dangerous.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
+	f.Bool("node.sequencer.dangerous.disable-batch-posting", false, "disable posting batches to L1 (DANGEROUS)")
+	f.Bool("node.sequencer.dangerous.disable-delayed-message-sequencing", false, "disable sequencing delayed messages (DANGEROUS)")
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")

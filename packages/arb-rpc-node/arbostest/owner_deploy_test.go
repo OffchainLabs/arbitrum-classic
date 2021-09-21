@@ -93,7 +93,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	nonce := uint64(342)
 	ownerTx := message.Transaction{
 		MaxGas:      big.NewInt(100000000),
-		GasPriceBid: big.NewInt(0),
+		GasPriceBid: big.NewInt(0), // fees are off
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(100),
@@ -102,7 +102,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 
 	ib := &InboxBuilder{}
 	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), chainTime)
-	ib.AddMessage(makeEthDeposit(owner, big.NewInt(1000)), sender, big.NewInt(0), chainTime)
+	ib.AddMessage(makeEthDeposit(message.L2RemapAccount(owner), big.NewInt(1000)), sender, big.NewInt(0), chainTime)
 	ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
 	results, snap := runTxAssertion(t, ib.Messages)
 	correctConnAddress := crypto.CreateAddress(sender.ToEthAddress(), nonce)
@@ -116,10 +116,18 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	if evmLog.Topics[0].ToEthHash() != simple.Events["TestEvent"].ID {
 		t.Fatal("wrong topic")
 	}
-	if new(big.Int).SetBytes(evmLog.Data).Cmp(ownerTx.Payment) != 0 {
-		t.Error("wrong event data/payment")
+	if new(big.Int).SetBytes(evmLog.Data[:32]).Cmp(ownerTx.Payment) != 0 {
+		t.Error("wrong event value data")
 	}
-	ownerBalance, err := snap.GetBalance(owner)
+	// The sender check has been disabled, as right now it's incorrectly set to the ArbSys precompile address
+	
+	var senderInLog common.Address
+	copy(senderInLog[:], evmLog.Data[32+(32-20):])
+	if senderInLog != sender {
+		t.Error("wrong event sender data")
+	}
+	
+	ownerBalance, err := snap.GetBalance(message.L2RemapAccount(owner))
 	test.FailIfError(t, err)
 	conBalance, err := snap.GetBalance(common.NewAddressFromEth(correctConnAddress))
 	test.FailIfError(t, err)

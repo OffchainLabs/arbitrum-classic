@@ -257,6 +257,7 @@ jobs:
   backend-rpc:
     docker:
       - image: offchainlabs/backend-base:0.3.4
+    resource_class: large
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:

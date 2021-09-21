@@ -88,7 +88,7 @@ func TestCreate2(t *testing.T) {
 		Data:        existsABI.ID,
 	}
 
-	sender := common.NewAddressFromEth(auth.From)
+	sender := message.L1RemapAccount(common.NewAddressFromEth(auth.From))
 	inboxMessages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(factoryConstructorTx), sender, big.NewInt(1), big.NewInt(0), chainTime),

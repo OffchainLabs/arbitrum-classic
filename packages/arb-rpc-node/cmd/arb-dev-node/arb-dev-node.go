@@ -142,7 +142,7 @@ func startup() error {
 	}
 
 	if *arbosPath == "" {
-		arbosPathStr, err := arbos.Path()
+		arbosPathStr, err := arbos.Path(false)
 		if err != nil {
 			return err
 		}

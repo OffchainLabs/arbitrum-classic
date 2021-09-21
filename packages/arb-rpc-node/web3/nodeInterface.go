@@ -108,6 +108,14 @@ func handleEstimateRetryableTicket(srv *Server, calldata []byte, blockNum rpc.Bl
 	gasPriceBid := inputs[8].(*big.Int)
 	data := inputs[9].([]byte)
 
+	snap, err := srv.getSnapshotForNumberOrHash(blockNum)
+	if err != nil {
+		return nil, err
+	}
+	if gasPriceBid == nil || gasPriceBid.Sign() <= 0 {
+		gasPriceBid = snap.MaxGasPriceBid()
+	}
+
 	createTicket := message.RetryableTx{
 		Destination:       common.NewAddressFromEth(destAddr),
 		Value:             l2CallValue,
@@ -118,11 +126,6 @@ func handleEstimateRetryableTicket(srv *Server, calldata []byte, blockNum rpc.Bl
 		MaxGas:            maxGas,
 		GasPriceBid:       gasPriceBid,
 		Data:              data,
-	}
-
-	snap, err := srv.getSnapshotForNumberOrHash(blockNum)
-	if err != nil {
-		return nil, err
 	}
 
 	res, _, err := snap.EstimateRetryableGas(createTicket, common.NewAddressFromEth(sender), srv.maxAVMGas)

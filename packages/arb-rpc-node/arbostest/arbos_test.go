@@ -132,7 +132,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), startTime)
-	ib.AddMessage(makeEthDeposit(sender, big.NewInt(1000)), chain, big.NewInt(0), startTime)
+	ib.AddMessage(makeEthDeposit(message.L2RemapAccount(sender), big.NewInt(1000)), chain, big.NewInt(0), startTime)
 
 	halfSendCount := int64(5)
 
