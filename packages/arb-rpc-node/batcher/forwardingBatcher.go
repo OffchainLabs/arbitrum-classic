@@ -22,10 +22,8 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 
@@ -36,7 +34,6 @@ import (
 
 type Forwarder struct {
 	client     *ethclient.Client
-	newTxFeed  event.Feed
 	aggregator *common.Address
 }
 
@@ -90,17 +87,11 @@ func (b *Forwarder) PendingTransactionCount(ctx context.Context, account common.
 
 func (b *Forwarder) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	logger.Info().Str("hash", tx.Hash().String()).Msg("got user tx")
-	txes := []*types.Transaction{tx}
-	b.newTxFeed.Send(core.NewTxsEvent{Txs: txes})
 	return b.client.SendTransaction(ctx, tx)
 }
 
 func (b *Forwarder) PendingSnapshot() (*snapshot.Snapshot, error) {
 	return nil, nil
-}
-
-func (b *Forwarder) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
-	return b.newTxFeed.Subscribe(ch)
 }
 
 func (b *Forwarder) Aggregator() *common.Address {

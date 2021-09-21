@@ -105,12 +105,12 @@ func (s *Server) GetBalance(address *common.Address, blockNum rpc.BlockNumberOrH
 	return (*hexutil.Big)(balance), nil
 }
 
-func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (s *Server) GetStorageAt(address *common.Address, key string, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return nil, err
 	}
-	index := new(big.Int).SetBytes(key)
+	index := new(big.Int).SetBytes(common.FromHex(key))
 	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), index)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting storage")

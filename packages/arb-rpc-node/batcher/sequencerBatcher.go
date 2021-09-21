@@ -27,9 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
@@ -83,9 +81,8 @@ type SequencerBatcher struct {
 	gasRefunderAddress              ethcommon.Address
 	gasRefunder                     *ethbridgecontracts.GasRefunder
 
-	signer    types.Signer
-	txQueue   chan txQueueItem
-	newTxFeed event.Feed
+	signer  types.Signer
+	txQueue chan txQueueItem
 
 	latestChainTime        inbox.ChainTime
 	lastCreatedBatchAt     *big.Int
@@ -220,7 +217,6 @@ func NewSequencerBatcher(
 
 		signer:                        types.NewEIP155Signer(chainId),
 		txQueue:                       make(chan txQueueItem, 10),
-		newTxFeed:                     event.Feed{},
 		latestChainTime:               chainTime,
 		lastSequencedDelayedAt:        chainTime.BlockNum.AsInt(),
 		lastCreatedBatchAt:            chainTime.BlockNum.AsInt(),
@@ -234,10 +230,6 @@ func NewSequencerBatcher(
 
 func (b *SequencerBatcher) PendingTransactionCount(_ context.Context, _ common.Address) (*uint64, error) {
 	return nil, nil
-}
-
-func (b *SequencerBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return b.newTxFeed.Subscribe(ch)
 }
 
 const maxExcludeComputation int64 = 10_000
@@ -314,7 +306,14 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
 				// This batch would be too large to publish with this tx added.
 				// Put the tx back in the queue so it can be included later.
-				b.txQueue <- queueItem
+				select {
+				case b.txQueue <- queueItem:
+				default:
+					queueItem.resultChan <- errors.New("sequencer overloaded")
+					if queueItem.tx == startTx {
+						seenOwnTx = true
+					}
+				}
 				emptiedQueue = false
 				break
 			}
@@ -504,8 +503,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 
 		core.WaitForMachineIdle(b.db)
 
-		b.newTxFeed.Send(ethcore.NewTxsEvent{Txs: sequencedTxs})
-
 		if seenOwnTx {
 			break
 		}
@@ -524,6 +521,10 @@ func (b *SequencerBatcher) Aggregator() *common.Address {
 }
 
 func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime inbox.ChainTime, bypassLockout bool) (bool, error) {
+	if b.config.Node.Sequencer.Dangerous.DisableDelayedMessageSequencing {
+		return false, nil
+	}
+
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 	if !bypassLockout && b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
@@ -603,6 +604,8 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	postingCostEstimate := gasCostPerMessage + gasCostDelayedMessages
 	atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 
+	core.WaitForMachineIdle(b.db)
+
 	if b.feedBroadcaster != nil {
 		err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
 		if err != nil {
@@ -634,6 +637,10 @@ const maxL1BackwardsReorg int64 = 12
 
 // Updates both prevMsgCount and nonce on success
 func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum *big.Int, prevMsgCount *big.Int, nonce *big.Int) (bool, error) {
+	if b.config.Node.Sequencer.Dangerous.DisableBatchPosting {
+		return true, nil
+	}
+
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	batchItems, err := b.db.GetSequencerBatchItems(prevMsgCount)
 	origEstimate := atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic)
@@ -647,7 +654,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	if len(batchItems[0].SequencerMessage) >= 128*1024 {
 		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big!")
-		if b.config.Node.Sequencer.ReorgOutHugeMessages {
+		if b.config.Node.Sequencer.Dangerous.ReorgOutHugeMessages {
 			err = b.reorgOutHugeMsg(ctx, prevMsgCount)
 			if err != nil {
 				return false, err
@@ -679,7 +686,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 			// We also allow the empty address as it's used for the delayed messages end of block
 			if seqMsg.Sender != (common.Address{}) && seqMsg.Sender != b.fromAddress {
 				msg := "sequencer message in database contains messages from another sequencer"
-				if b.config.Node.Sequencer.RewriteSequencerAddress {
+				if b.config.Node.Sequencer.Dangerous.RewriteSequencerAddress {
 					msg += "! Reorganizing to compensate..."
 				}
 
@@ -690,7 +697,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 					Str("sequenceNumber", seqMsg.InboxSeqNum.String()).
 					Msg(msg)
 
-				if b.config.Node.Sequencer.RewriteSequencerAddress {
+				if b.config.Node.Sequencer.Dangerous.RewriteSequencerAddress {
 					err := b.reorgToNewSequencerAddress(ctx, prevMsgCount)
 					if err != nil {
 						return false, errors.Wrap(err, "error during reorg to rewrite sequencer address")
@@ -1104,7 +1111,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
 			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= b.config.Node.Sequencer.MaxBatchGasCost*9/10 ||
 			firstBatchCreation
-		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.PublishBatchesWithoutLockout {
+		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.Dangerous.PublishBatchesWithoutLockout {
 			// We don't have the lockout and publishing batches without the lockout is disabled
 			creatingBatch = false
 		}

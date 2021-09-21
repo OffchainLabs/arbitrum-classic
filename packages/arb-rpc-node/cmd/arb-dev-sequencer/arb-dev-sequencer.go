@@ -135,7 +135,7 @@ func startup() error {
 		return errors.Wrap(err, "error running NewRPcEthClient")
 	}
 
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	if err != nil {
 		return err
 	}
