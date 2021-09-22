@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "0.0.40",
+  "version": "0.0.41",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
