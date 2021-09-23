@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -214,7 +215,7 @@ func TestArbOSFees(t *testing.T) {
 		},
 	}
 
-	if arbosVersion >= 43 {
+	if arbosVersion == 43 || arbosVersion == 44 {
 		// We now charge for storage even when reverting
 		rawTxes[5].correctStorageUsed = 1;
 	}
@@ -406,7 +407,8 @@ func TestArbOSFees(t *testing.T) {
 	checkAllUnits := func(results []*evm.TxResult, index int, calldataExact bool) {
 		t.Helper()
 		for i, res := range results {
-			checkUnits(t, res, rawTxes[i], index, rawTxes[i].calldata, calldataExact)
+			debugMessage := fmt.Sprint(i)
+			checkUnits(t, res, rawTxes[i], index, rawTxes[i].calldata, calldataExact, debugMessage)
 		}
 	}
 
@@ -435,7 +437,8 @@ func TestArbOSFees(t *testing.T) {
 	checkAllUnits(feeResults, 1, true)
 	checkAllUnits(feeWithAggResults, 2, true)
 	for i, res := range feeWithContractResults {
-		checkUnits(t, res, rawTxes[i], 1, contractTxData[i], true)
+		debugMessage := fmt.Sprint(i)
+		checkUnits(t, res, rawTxes[i], 1, contractTxData[i], true, debugMessage)
 	}
 	checkAllUnits(estimateFeeResults, 3, false)
 
@@ -722,7 +725,7 @@ func checkL2UnitsEqual(t *testing.T, unitsUsed1 *evm.FeeSet, unitsUsed2 *evm.Fee
 		t.Error("different storage count used", unitsUsed1.L2Storage, unitsUsed2.L2Storage)
 	}
 }
-func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, calldataUnits int, calldataExact bool) {
+func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, calldataUnits int, calldataExact bool, debugMessage string) {
 	t.Helper()
 	unitsUsed := res.FeeStats.UnitsUsed
 	t.Log("UnitsUsed", res.FeeStats.UnitsUsed)
@@ -763,7 +766,7 @@ func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, call
 		}
 	}
 	if unitsUsed.L2Storage.Cmp(big.NewInt(int64(correct.correctStorageUsed))) != 0 {
-		t.Error("wrong storage count used got", unitsUsed.L2Storage, "but expected", correct.correctStorageUsed)
+		t.Error("wrong storage count used got", unitsUsed.L2Storage, "but expected", correct.correctStorageUsed, "for test", debugMessage)
 	}
 }
 
