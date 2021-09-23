@@ -90,7 +90,7 @@ export class L2Bridge {
   public async withdrawETH(
     value: BigNumber,
     destinationAddress?: string,
-    overrides?: PayableOverrides
+    overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     const address = destinationAddress || (await this.getWalletAddress())
     return this.arbSys.functions.withdrawEth(address, {

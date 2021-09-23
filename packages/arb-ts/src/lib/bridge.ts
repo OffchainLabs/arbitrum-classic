@@ -221,7 +221,7 @@ export class Bridge {
   public async approveToken(
     erc20L1Address: string,
     amount?: BigNumber,
-    overrides?: PayableOverrides
+    overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     return this.l1Bridge.approveToken(erc20L1Address, amount, overrides)
   }
@@ -232,7 +232,7 @@ export class Bridge {
   public async depositETH(
     value: BigNumber,
     _maxSubmissionPricePercentIncrease?: BigNumber,
-    overrides?: PayableOverrides
+    overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     const maxSubmissionPricePercentIncrease =
       _maxSubmissionPricePercentIncrease || DEFAULT_SUBMISSION_PERCENT_INCREASE
@@ -274,7 +274,7 @@ export class Bridge {
     amount: BigNumber,
     retryableGasArgs: RetryableGasArgs = {},
     destinationAddress?: string,
-    overrides?: PayableOverrides
+    overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     const {
       l1WethGateway: l1WethGatewayAddress,
@@ -474,7 +474,7 @@ export class Bridge {
   public async redeemRetryableTicket(
     l1Transaction: string | ContractReceipt,
     waitTimeForL2Receipt = 900000, // 15 minutes
-    overrides?: PayableOverrides
+    overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     if (typeof l1Transaction == 'string') {
       l1Transaction = await this.getL1Transaction(l1Transaction)
@@ -509,7 +509,7 @@ export class Bridge {
   public async cancelRetryableTicket(
     l1Transaction: string | ContractReceipt,
     waitTimeForL2Receipt = 900000, // 15 minutes
-    overrides?: PayableOverrides
+    overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     if (typeof l1Transaction == 'string') {
       l1Transaction = await this.getL1Transaction(l1Transaction)
@@ -770,7 +770,7 @@ export class Bridge {
   public async withdrawETH(
     value: BigNumber,
     destinationAddress?: string,
-    overrides?: PayableOverrides
+    overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     return this.l2Bridge.withdrawETH(value, destinationAddress, overrides)
   }
