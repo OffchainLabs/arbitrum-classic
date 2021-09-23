@@ -81,6 +81,7 @@ type txTemplate struct {
 	resultType         []evm.ResultType
 	nonzeroComputation []bool
 	correctStorageUsed int
+	correctStorageEstimate int
 	calldata           int
 	ranOutOfFunds      bool
 }
@@ -130,7 +131,7 @@ func TestArbOSFees(t *testing.T) {
 
 	conDataFailure := hexutil.MustDecode(arbostestcontracts.GasUsedBin)
 	conDataFailure = append(conDataFailure, math.U256Bytes(big.NewInt(1))...)
-	
+
 	rawTxes := []txTemplate{
 		// Successful call to constructor
 		{
@@ -142,6 +143,7 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.ReturnCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: (conDeployedLength + 31) / 32,
+			correctStorageEstimate: (conDeployedLength + 31) / 32,
 		},
 		// Successful call to method without storage
 		{
@@ -154,6 +156,7 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.ReturnCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 0,
 		},
 		// Successful call to storage allocating method
 		{
@@ -166,6 +169,7 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.ReturnCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 1,
+			correctStorageEstimate: 1,
 		},
 		// Successful eth transfer to EOA
 		{
@@ -177,6 +181,7 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.ReturnCode},
 			nonzeroComputation: []bool{false},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 0,
 		},
 		// Reverted constructor
 		{
@@ -188,6 +193,7 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.RevertCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 0,
 		},
 		// Reverted storage allocating function call
 		{
@@ -200,6 +206,7 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.RevertCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 1,
 		},
 		// Reverted since insufficient funds
 		{
@@ -212,11 +219,12 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode},
 			nonzeroComputation: []bool{true, false, false, false},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 0,
 		},
 	}
 
 	if arbosVersion == 43 || arbosVersion == 44 {
-		// We now charge for storage even when reverting
+		// We charge for storage even when reverting in these versions
 		rawTxes[5].correctStorageUsed = 1;
 	}
 	
@@ -408,7 +416,7 @@ func TestArbOSFees(t *testing.T) {
 		t.Helper()
 		for i, res := range results {
 			debugMessage := fmt.Sprint(i)
-			checkUnits(t, res, rawTxes[i], index, rawTxes[i].calldata, calldataExact, debugMessage)
+			checkUnits(t, res, rawTxes[i], index, rawTxes[i].calldata, calldataExact, false, debugMessage)
 		}
 	}
 
@@ -438,9 +446,12 @@ func TestArbOSFees(t *testing.T) {
 	checkAllUnits(feeWithAggResults, 2, true)
 	for i, res := range feeWithContractResults {
 		debugMessage := fmt.Sprint(i)
-		checkUnits(t, res, rawTxes[i], 1, contractTxData[i], true, debugMessage)
+		checkUnits(t, res, rawTxes[i], 1, contractTxData[i], true, false, debugMessage)
 	}
-	checkAllUnits(estimateFeeResults, 3, false)
+	for i, res := range estimateFeeResults {
+		debugMessage := fmt.Sprint(i, " estimation")
+		checkUnits(t, res, rawTxes[i], 3, rawTxes[i].calldata, false, true, debugMessage)
+	}
 
 	checkSameL2ComputationUnits(t, noFeeResults, feeResults)
 	checkSameL2ComputationUnits(t, noFeeResults, feeWithAggResults)
@@ -725,7 +736,7 @@ func checkL2UnitsEqual(t *testing.T, unitsUsed1 *evm.FeeSet, unitsUsed2 *evm.Fee
 		t.Error("different storage count used", unitsUsed1.L2Storage, unitsUsed2.L2Storage)
 	}
 }
-func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, calldataUnits int, calldataExact bool, debugMessage string) {
+func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, calldataUnits int, calldataExact bool, estimationCase bool, debugMessage string) {
 	t.Helper()
 	unitsUsed := res.FeeStats.UnitsUsed
 	t.Log("UnitsUsed", res.FeeStats.UnitsUsed)
@@ -765,7 +776,15 @@ func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, call
 			t.Error("should have zero computation used")
 		}
 	}
-	if unitsUsed.L2Storage.Cmp(big.NewInt(int64(correct.correctStorageUsed))) != 0 {
+
+	var correctStorage int64;
+	if estimationCase {
+		correctStorage = int64(correct.correctStorageEstimate);
+	} else {
+		correctStorage = int64(correct.correctStorageUsed);
+	}
+	
+	if unitsUsed.L2Storage.Cmp(big.NewInt(correctStorage)) != 0 {
 		t.Error("wrong storage count used got", unitsUsed.L2Storage, "but expected", correct.correctStorageUsed, "for test", debugMessage)
 	}
 }
