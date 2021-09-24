@@ -30,10 +30,15 @@ import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { Inbox } from './abi/Inbox'
 import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { ERC20 } from './abi/ERC20'
-import { L1ERC20Gateway } from './abi'
+import { Multicall2__factory } from './abi/factories/Multicall2__factory'
+import { L1ERC20Gateway } from './abi/L1ERC20Gateway'
 
 import { Network } from './networks'
-import { addressToSymbol } from './bridge_helpers'
+import {
+  addressToSymbol,
+  MulticallFunctionInput,
+  BridgeHelper,
+} from './bridge_helpers'
 
 const MIN_APPROVAL = MaxUint256
 //TODO handle address update / lowercase
@@ -262,5 +267,14 @@ export class L1Bridge {
 
   public getL1EthBalance(): Promise<BigNumber> {
     return this.l1Signer.getBalance()
+  }
+
+  public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
+    const multicall = Multicall2__factory.connect(
+      this.network.tokenBridge.l1MultiCall,
+      this.l1Provider
+    )
+
+    return BridgeHelper.getMulticallAggregate(functionCalls, multicall)
   }
 }

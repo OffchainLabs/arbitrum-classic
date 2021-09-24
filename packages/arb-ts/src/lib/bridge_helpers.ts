@@ -41,7 +41,8 @@ import { L2ArbitrumGateway__factory } from './abi/factories/L2ArbitrumGateway__f
 import { Whitelist__factory } from './abi/factories/Whitelist__factory'
 
 import { NODE_INTERFACE_ADDRESS, ARB_SYS_ADDRESS } from './precompile_addresses'
-import { NodeInterface__factory } from './abi'
+import { ArbMulticall2, Multicall2, NodeInterface__factory } from './abi'
+import { FunctionFragment } from 'ethers/lib/utils'
 
 export const addressToSymbol = (erc20L1Address: string): string => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
@@ -150,6 +151,12 @@ export interface MessageBatchProofInfo {
   amount: BigNumber
   calldataForL1: string
 }
+
+export type MulticallFunctionInput = Array<{
+  target: string
+  funcFragment: FunctionFragment
+  values?: Array<any>
+}>
 
 /**
  * Stateless helper methods; most wrapped / accessible (and documented) via {@link Bridge}
@@ -816,5 +823,27 @@ export class BridgeHelper {
 
   static percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
     return num.add(num.mul(increase).div(100))
+  }
+
+  static async getMulticallAggregate(
+    functionCalls: MulticallFunctionInput,
+    multicall: Multicall2 | ArbMulticall2
+  ) {
+    const iface = new Interface(functionCalls.map(curr => curr.funcFragment))
+
+    const encodedCalls = functionCalls.map(
+      ({ target, funcFragment, values }) => ({
+        target: target,
+        callData: iface.encodeFunctionData(funcFragment, values),
+      })
+    )
+
+    // we ignore the blocknumber returned as first parameter
+    const [_, outputs] = await multicall.callStatic.aggregate(encodedCalls)
+
+    // we parse the data
+    return outputs.map((output, index) =>
+      iface.decodeFunctionResult(functionCalls[index].funcFragment, output)
+    )
   }
 }

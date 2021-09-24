@@ -59,6 +59,7 @@ import {
   Multicall2__factory,
   ArbMulticall2__factory,
   ERC20__factory,
+  ERC20,
 } from './abi'
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
@@ -822,34 +823,17 @@ export class Bridge {
     tokenAddrs: Array<string>,
     targetNetwork: 'L1' | 'L2'
   ) {
-    const balance = ERC20__factory.createInterface().encodeFunctionData(
-      'balanceOf',
-      [userAddr]
-    )
-    const calls = tokenAddrs.map(token => ({
+    const iface = ERC20__factory.createInterface()
+    const funcFragment = iface.functions['balanceOf(address)']
+
+    const balanceCalls = tokenAddrs.map(token => ({
       target: token,
-      callData: balance,
+      funcFragment: funcFragment,
+      values: [userAddr],
     }))
 
-    const getMulticall = () => {
-      if (targetNetwork === 'L1')
-        return Multicall2__factory.connect(
-          this.l1Bridge.network.tokenBridge.l1MultiCall,
-          this.l1Provider
-        )
-      else
-        return ArbMulticall2__factory.connect(
-          this.l2Bridge.network.tokenBridge.l2Multicall,
-          this.l2Provider
-        )
-    }
-    const multicall = getMulticall()
-    const [, /* blockNums */ balances] = await multicall.callStatic.aggregate(
-      calls
-    )
-    return balances.map((val, index) => ({
-      token: tokenAddrs[index],
-      balance: BigNumber.from(val),
-    }))
+    const bridge = targetNetwork === 'L1' ? this.l1Bridge : this.l2Bridge
+    // can we return a better type than Result?
+    return bridge.getMulticallAggregate(balanceCalls)
   }
 }

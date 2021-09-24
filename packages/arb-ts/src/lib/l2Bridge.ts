@@ -36,6 +36,8 @@ import {
   ARB_RETRYABLE_TX_ADDRESS,
 } from './precompile_addresses'
 import { Network } from './networks'
+import { ArbMulticall2__factory } from './abi/factories/ArbMulticall2__factory'
+import { MulticallFunctionInput, BridgeHelper } from './bridge_helpers'
 
 export interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
@@ -209,5 +211,14 @@ export class L2Bridge {
 
   public getL2EthBalance(): Promise<BigNumber> {
     return this.l2Signer.getBalance()
+  }
+
+  public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
+    const multicall = ArbMulticall2__factory.connect(
+      this.network.tokenBridge.l2Multicall,
+      this.l2Provider
+    )
+
+    return BridgeHelper.getMulticallAggregate(functionCalls, multicall)
   }
 }
