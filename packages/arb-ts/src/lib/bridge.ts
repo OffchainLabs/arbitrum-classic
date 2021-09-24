@@ -39,7 +39,7 @@ import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
 
-import { L1Bridge, L1TokenData } from './l1Bridge'
+import { Await, L1Bridge, L1TokenData } from './l1Bridge'
 import { L2Bridge, L2TokenData } from './l2Bridge'
 import {
   BridgeHelper,
@@ -833,12 +833,6 @@ export class Bridge {
       values: [userAddr],
     }))
 
-    // typing magic from https://stackoverflow.com/a/57364353
-    type Await<T> = T extends {
-      then(onfulfilled?: (value: infer U) => unknown): unknown
-    }
-      ? U
-      : T
     type ExpectedReturnType = Await<ReturnType<ERC20['functions']['balanceOf']>>
 
     const bridge = targetNetwork === 'L1' ? this.l1Bridge : this.l2Bridge

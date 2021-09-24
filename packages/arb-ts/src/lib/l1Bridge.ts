@@ -43,6 +43,13 @@ import {
 const MIN_APPROVAL = MaxUint256
 //TODO handle address update / lowercase
 
+// typing magic from https://stackoverflow.com/a/57364353
+export type Await<T> = T extends {
+  then(onfulfilled?: (value: infer U) => unknown): unknown
+}
+  ? U
+  : T
+
 export interface L1TokenData {
   ERC20?: {
     contract: ERC20
@@ -166,19 +173,28 @@ export class L1Bridge {
     if (balanceResult === undefined || allowanceResult === undefined)
       throw new Error('ERC20 Token does not support balance/allowance')
 
-    const balance = balanceResult[0] as BigNumber
-    const allowance = allowanceResult[0] as BigNumber
+    type ERC20_FUNCTIONS = ERC20['functions']
+    const balance = (
+      balanceResult as Await<ReturnType<ERC20_FUNCTIONS['balanceOf']>>
+    )[0]
+    const allowance = (
+      allowanceResult as Await<ReturnType<ERC20_FUNCTIONS['allowance']>>
+    )[0]
 
     const symbol =
       symbolResult === undefined
         ? addressToSymbol(erc20L1Address)
-        : (symbolResult[0] as string)
+        : (symbolResult as Await<ReturnType<ERC20_FUNCTIONS['symbol']>>)[0]
 
     const decimals =
-      decimalsResult === undefined ? 18 : (decimalsResult[0] as number)
+      decimalsResult === undefined
+        ? 18
+        : (decimalsResult as Await<ReturnType<ERC20_FUNCTIONS['decimals']>>)[0]
 
     const name =
-      nameResult === undefined ? symbol + '_Token' : (nameResult[0] as string)
+      nameResult === undefined
+        ? symbol + '_Token'
+        : (nameResult as Await<ReturnType<ERC20_FUNCTIONS['name']>>)[0]
 
     const allowanceLimit = BigNumber.from(
       '0xffffffffffffffffffffffff'
