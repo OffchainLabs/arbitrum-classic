@@ -35,6 +35,7 @@ import {
   ARB_SYS_ADDRESS,
   ARB_RETRYABLE_TX_ADDRESS,
 } from './precompile_addresses'
+import { Network } from './networks'
 
 export interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
@@ -55,11 +56,13 @@ export class L2Bridge {
   l2Provider: Provider
   arbRetryableTx: ArbRetryableTx
   walletAddressCache?: string
+  network: Network
 
-  constructor(l2GatewayRouterAddress: string, l2Signer: Signer) {
+  constructor(network: Network, l2Signer: Signer) {
     this.l2Tokens = {}
 
     this.l2Signer = l2Signer
+    this.network = network
 
     const l2Provider = l2Signer.provider
 
@@ -71,7 +74,7 @@ export class L2Bridge {
     this.arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Signer)
 
     this.l2GatewayRouter = L2GatewayRouter__factory.connect(
-      l2GatewayRouterAddress,
+      network.tokenBridge.l2GatewayRouter,
       l2Signer
     )
 

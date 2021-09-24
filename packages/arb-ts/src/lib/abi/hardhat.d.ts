@@ -105,6 +105,14 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ArbSys__factory>
     getContractFactory(
+      name: 'ArbMulticall2',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ArbMulticall2__factory>
+    getContractFactory(
+      name: 'Multicall2',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Multicall2__factory>
+    getContractFactory(
       name: 'NodeInterface',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.NodeInterface__factory>
