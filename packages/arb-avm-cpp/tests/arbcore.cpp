@@ -222,12 +222,12 @@ TEST_CASE("ArbCore tests") {
         }
         REQUIRE(logs_count == logs.size());
 
-        auto cursor = arbCore->getExecutionCursor(0);
+        auto cursor = arbCore->getExecutionCursor(0, true);
         REQUIRE(cursor.status.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used == 0);
 
         auto advanceStatus =
-            arbCore->advanceExecutionCursor(*cursor.data, 100, false);
+            arbCore->advanceExecutionCursor(*cursor.data, 100, false, true);
         REQUIRE(advanceStatus.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
 
@@ -322,7 +322,7 @@ TEST_CASE("ArbCore inbox") {
     auto position = arbCore->getSideloadPosition(*tx, 1);
     REQUIRE(position.status.ok());
 
-    auto cursor = arbCore->getExecutionCursor(position.data);
+    auto cursor = arbCore->getExecutionCursor(position.data, true);
     REQUIRE(cursor.status.ok());
     REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
     REQUIRE(cursor.data->getOutput().arb_gas_used <= position.data);
@@ -354,7 +354,7 @@ TEST_CASE("ArbCore backwards reorg") {
     REQUIRE(arbCore->messageEntryInsertedCount().data == 0);
 
     auto maxGas = std::numeric_limits<uint256_t>::max();
-    auto initialState = arbCore->getExecutionCursor(maxGas);
+    auto initialState = arbCore->getExecutionCursor(maxGas, true);
     REQUIRE(initialState.status.ok());
     REQUIRE(initialState.data->getTotalMessagesRead() == 0);
 
@@ -370,7 +370,7 @@ TEST_CASE("ArbCore backwards reorg") {
                                      std::nullopt));
     waitForDelivery(arbCore);
 
-    auto newState = arbCore->getExecutionCursor(maxGas);
+    auto newState = arbCore->getExecutionCursor(maxGas, true);
     REQUIRE(newState.status.ok());
     REQUIRE(newState.data->getTotalMessagesRead() == 1);
 
@@ -379,7 +379,7 @@ TEST_CASE("ArbCore backwards reorg") {
         std::vector<std::vector<unsigned char>>(), 0));
     waitForDelivery(arbCore);
 
-    auto reorgState = arbCore->getExecutionCursor(maxGas);
+    auto reorgState = arbCore->getExecutionCursor(maxGas, true);
     REQUIRE(reorgState.status.ok());
     REQUIRE(reorgState.data->getTotalMessagesRead() == 0);
     REQUIRE(reorgState.data->machineHash() == initialState.data->machineHash());
@@ -442,7 +442,7 @@ TEST_CASE("ArbCore duplicate code segments") {
     }
 
     auto cursor =
-        arbCore->getExecutionCursor(std::numeric_limits<uint256_t>::max());
+        arbCore->getExecutionCursor(std::numeric_limits<uint256_t>::max(), true);
     REQUIRE(cursor.status.ok());
     REQUIRE(std::get<std::unique_ptr<Machine>>(cursor.data->machine)
                 ->currentStatus() == Status::Halted);

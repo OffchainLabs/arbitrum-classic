@@ -23,14 +23,17 @@ set(LIB_HEADERS
   include/data_storage/aggregator.hpp
   include/data_storage/arbcore.hpp
   include/data_storage/arbstorage.hpp
+  include/data_storage/basicsideloadcache.hpp
+  include/data_storage/combinedsideloadcache.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/datacursor.hpp
   include/data_storage/executioncursor.hpp
+  include/data_storage/lrusideloadcache.hpp
   include/data_storage/messageentry.hpp
   include/data_storage/readtransaction.hpp
   include/data_storage/readsnapshottransaction.hpp
   include/data_storage/readwritetransaction.hpp
-  include/data_storage/sideloadcache.hpp
+  include/data_storage/timedsideloadcache.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
   include/data_storage/value/code.hpp
@@ -49,13 +52,16 @@ set(LIB_SOURCES
   src/aggregator.cpp
   src/arbcore.cpp
   src/arbstorage.cpp
+  src/basicsideloadcache.cpp
+  src/combinedsideloadcache.cpp
   src/datastorage.cpp
   src/datacursor.cpp
   src/executioncursor.cpp
+  src/lrusideloadcache.cpp
   src/messageentry.cpp
   src/readtransaction.cpp
   src/readwritetransaction.cpp
-  src/sideloadcache.cpp
+  src/timedsideloadcache.cpp
   src/value/code.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp

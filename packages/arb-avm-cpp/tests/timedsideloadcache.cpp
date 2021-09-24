@@ -19,13 +19,13 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/sideloadcache.hpp>
+#include <data_storage/timedsideloadcache.hpp>
 
 #include <catch2/catch.hpp>
 
-TEST_CASE("SideloadCache add") {
+TEST_CASE("TimedSideloadCache add") {
     auto expiration_seconds = 3;
-    SideloadCache cache(expiration_seconds);
+    TimedSideloadCache cache(expiration_seconds);
 
     // Test that expired block is not added
     auto expired_machine = std::make_unique<Machine>(getComplexMachine());
@@ -41,61 +41,62 @@ TEST_CASE("SideloadCache add") {
     cache.add(std::move(valid_machine));
     REQUIRE(cache.size() == 1);
 }
-TEST_CASE("SideloadCache get") {
+TEST_CASE("TimedSideloadCache get") {
     auto expiration_seconds = 3;
-    SideloadCache cache(expiration_seconds);
+    TimedSideloadCache cache(expiration_seconds);
 
     auto orig_machine = Machine::loadFromFile(
         std::string(machine_test_cases_path) + "/sideloadtest.mexe");
 
-    auto machine1 = std::make_unique<Machine>(orig_machine);
-    auto gas1 = machine1->machine_state.arb_gas_remaining;
+    auto machine1a = std::make_unique<Machine>(orig_machine);
+    auto gas1a = machine1a->machine_state.output.arb_gas_used;
 
-    auto machine2 = std::make_unique<Machine>(*machine1);
-    machine2->machine_state.runOne();
-    auto gas2 = machine2->machine_state.arb_gas_remaining;
-    REQUIRE(gas1 != gas2);
+    auto machine2a = std::make_unique<Machine>(*machine1a);
+    machine2a->machine_state.runOne();
+    auto gas2a = machine2a->machine_state.output.arb_gas_used;
+    REQUIRE(gas1a != gas2a);
 
-    machine1->machine_state.output.l2_block_number = 42;
-    machine2->machine_state.output.l2_block_number = 43;
-    machine1->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine2->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    cache.add(std::move(machine1));
-    cache.add(std::move(machine2));
+    machine1a->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine2a->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    cache.add(std::move(machine1a));
+    cache.add(std::move(machine2a));
     REQUIRE(cache.size() == 2);
 
-    auto machine3 = cache.get(42);
-    REQUIRE(machine3);
-    REQUIRE(gas1 == machine3->machine_state.arb_gas_remaining);
+    auto machine1b = cache.atOrBeforeGas(gas1a);
+    REQUIRE(machine1b.has_value());
+    REQUIRE(gas1a == machine1b.value()->second.machine->machine_state.output.arb_gas_used);
 
-    // Check nothing returned when invalid height provided
-    auto machine4 = cache.get(44);
-    REQUIRE(!machine4);
+    auto machine2b = cache.atOrBeforeGas(50);
+    REQUIRE(machine2b.has_value());
+    REQUIRE(gas2a == machine2b.value()->second.machine->machine_state.output.arb_gas_used);
+
+    auto peek_gas = cache.peekAtOrBeforeGas(50);
+    REQUIRE(gas2a == peek_gas);
 }
 
-TEST_CASE("SideloadCache reorg") {
+TEST_CASE("TimedSideloadCache reorg") {
     auto expiration_seconds = 30;
-    SideloadCache cache(expiration_seconds);
+    TimedSideloadCache cache(expiration_seconds);
 
     auto orig_machine = Machine::loadFromFile(
         std::string(machine_test_cases_path) + "/sideloadtest.mexe");
 
     auto machine0 = std::make_unique<Machine>(orig_machine);
-    auto gas0 = machine0->machine_state.arb_gas_remaining;
+    auto gas0 = machine0->machine_state.output.arb_gas_used;
 
     auto machine1 = std::make_unique<Machine>(*machine0);
     machine1->machine_state.runOne();
-    auto gas1 = machine1->machine_state.arb_gas_remaining;
+    auto gas1 = machine1->machine_state.output.arb_gas_used;
     REQUIRE(gas0 != gas1);
 
     auto machine2 = std::make_unique<Machine>(*machine1);
     machine2->machine_state.runOne();
-    auto gas2 = machine2->machine_state.arb_gas_remaining;
+    auto gas2 = machine2->machine_state.output.arb_gas_used;
     REQUIRE(gas1 != gas2);
 
     auto machine3 = std::make_unique<Machine>(*machine2);
     machine3->machine_state.runOne();
-    auto gas3 = machine3->machine_state.arb_gas_remaining;
+    auto gas3 = machine3->machine_state.output.arb_gas_used;
     REQUIRE(gas2 != gas3);
 
     auto machine4 = std::make_unique<Machine>(*machine3);
@@ -105,10 +106,10 @@ TEST_CASE("SideloadCache reorg") {
     auto machine8 = std::make_unique<Machine>(*machine7);
     auto machine9 = std::make_unique<Machine>(*machine8);
 
-    machine0->machine_state.output.l2_block_number = 0;
-    machine1->machine_state.output.l2_block_number = 1;
-    machine2->machine_state.output.l2_block_number = 2;
-    machine3->machine_state.output.l2_block_number = 3;
+    machine0->machine_state.output.arb_gas_used = 0;
+    machine1->machine_state.output.arb_gas_used = 1;
+    machine2->machine_state.output.arb_gas_used = 2;
+    machine3->machine_state.output.arb_gas_used = 3;
     machine0->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     machine1->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     machine2->machine_state.output.last_inbox_timestamp = std::time(nullptr);
@@ -131,9 +132,9 @@ TEST_CASE("SideloadCache reorg") {
     cache.reorg(0);
     REQUIRE(cache.size() == 0);
 
-    machine4->machine_state.output.l2_block_number = 40;
-    machine5->machine_state.output.l2_block_number = 42;
-    machine6->machine_state.output.l2_block_number = 43;
+    machine4->machine_state.output.arb_gas_used = 40;
+    machine5->machine_state.output.arb_gas_used = 42;
+    machine6->machine_state.output.arb_gas_used = 43;
     machine4->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     machine5->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     machine6->machine_state.output.last_inbox_timestamp = std::time(nullptr);
@@ -154,49 +155,49 @@ TEST_CASE("SideloadCache reorg") {
     cache.reorg(0);
     REQUIRE(cache.size() == 0);
 
-    machine7->machine_state.output.l2_block_number = 39;
-    machine8->machine_state.output.l2_block_number = 40;
+    machine7->machine_state.output.arb_gas_used = 39;
+    machine8->machine_state.output.arb_gas_used = 40;
     machine7->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     machine8->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine7));
     cache.add(std::move(machine8));
 
     // Test implicit reorg to value below current oldest
-    machine9->machine_state.output.l2_block_number = 30;
+    machine9->machine_state.output.arb_gas_used = 30;
     machine9->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine9));
 
     REQUIRE(cache.size() == 1);
 }
 
-TEST_CASE("SideloadCache expire") {
+TEST_CASE("TimedSideloadCache expire") {
     auto expiration_seconds = 2;
-    SideloadCache cache(expiration_seconds);
+    TimedSideloadCache cache(expiration_seconds);
 
     auto orig_machine = Machine::loadFromFile(
         std::string(machine_test_cases_path) + "/sideloadtest.mexe");
 
     auto machine0 = std::make_unique<Machine>(orig_machine);
-    auto gas0 = machine0->machine_state.arb_gas_remaining;
+    auto gas0 = machine0->machine_state.output.arb_gas_used;
 
     auto machine1 = std::make_unique<Machine>(*machine0);
     machine1->machine_state.runOne();
-    auto gas1 = machine1->machine_state.arb_gas_remaining;
+    auto gas1 = machine1->machine_state.output.arb_gas_used;
     REQUIRE(gas0 != gas1);
 
     auto machine2 = std::make_unique<Machine>(*machine1);
     machine2->machine_state.runOne();
-    auto gas2 = machine2->machine_state.arb_gas_remaining;
+    auto gas2 = machine2->machine_state.output.arb_gas_used;
     REQUIRE(gas1 != gas2);
 
     auto machine3 = std::make_unique<Machine>(*machine2);
     machine3->machine_state.runOne();
-    auto gas3 = machine3->machine_state.arb_gas_remaining;
+    auto gas3 = machine3->machine_state.output.arb_gas_used;
     REQUIRE(gas2 != gas3);
 
-    machine0->machine_state.output.l2_block_number = 0;
-    machine1->machine_state.output.l2_block_number = 1;
-    machine2->machine_state.output.l2_block_number = 2;
+    machine0->machine_state.output.arb_gas_used = 0;
+    machine1->machine_state.output.arb_gas_used = 1;
+    machine2->machine_state.output.arb_gas_used = 2;
     machine0->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     machine1->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     machine2->machine_state.output.last_inbox_timestamp = std::time(nullptr);
@@ -209,8 +210,20 @@ TEST_CASE("SideloadCache expire") {
     sleep(expiration_seconds);
 
     // Add one more record
-    machine3->machine_state.output.l2_block_number = 3;
+    machine3->machine_state.output.arb_gas_used = 3;
     machine3->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine3));
     REQUIRE(cache.size() == 1);
+}
+
+TEST_CASE("TimedSideloadCache expiredTimestamp") {
+    auto basic_size = 2;
+    auto lru_size = 2;
+    auto timed_expire = 20;
+    auto expiration_fudge_factor = 10;
+    TimedSideloadCache cache(timed_expire);
+
+    auto expired = cache.expiredTimestamp();
+    REQUIRE(expired > std::time(nullptr) - timed_expire - expiration_fudge_factor);
+    REQUIRE(expired < std::time(nullptr) - timed_expire + expiration_fudge_factor);
 }

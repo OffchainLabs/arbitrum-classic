@@ -35,19 +35,22 @@ add_executable(
 		aggregator.cpp
 		arbos.cpp
 		arbcore.cpp
+		basicsideloadcache.cpp
 		buffer.cpp
 		checkpoint.cpp
 		checkpointedmachine.cpp
 		code.cpp
+		combinedsideloadcache.cpp
 		datastack.cpp
 		ecops.cpp
 		ecops.hpp
 		helper.cpp
-        machine.cpp
+		lrusideloadcache.cpp
+		machine.cpp
 		main.cpp
         messagestore.cpp
 		opcodes.cpp
-		sideloadcache.cpp
+        timedsideloadcache.cpp
 		value.cpp
         valuecache.cpp)
 

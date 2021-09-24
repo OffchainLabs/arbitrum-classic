@@ -14,40 +14,38 @@
  * limitations under the License.
  */
 
-#ifndef ARB_AVM_CPP_SIDELOADCACHE_H
-#define ARB_AVM_CPP_SIDELOADCACHE_H
+#ifndef ARB_AVM_CPP_LRUSIDELOADCACHE_HPP
+#define ARB_AVM_CPP_LRUSIDELOADCACHE_HPP
 
 #include <avm/machine.hpp>
 #include <avm_values/bigint.hpp>
 
+#include <boost/compute/detail/lru_cache.hpp>
+
 #include <shared_mutex>
+#include <map>
+#include <list>
+#include <utility>
 
-struct Record {
-    uint256_t timestamp;
-
-    std::unique_ptr<Machine> machine;
-};
-
-class SideloadCache {
+class LRUSideloadCache {
+   public:
+    typedef std::map<uint256_t, std::pair<std::unique_ptr<Machine>, std::list<uint256_t>::iterator>> map_type;
    private:
-    std::shared_mutex mutex;
-    std::map<uint256_t, Record> cache;
+    map_type cache;
+    std::list<uint256_t> lru_list;
 
-    const uint32_t expiration_seconds;
+    const size_t max_size;
 
    public:
-    explicit SideloadCache(uint32_t expiration_seconds)
-        : expiration_seconds{expiration_seconds} {}
+    explicit LRUSideloadCache(size_t max_size)
+        : max_size{max_size} {}
 
     size_t size();
     void add(std::unique_ptr<Machine> machine);
-    std::unique_ptr<Machine> get(uint256_t block_number);
-    void reorg(uint256_t next_block_number);
-    [[nodiscard]] uint256_t expiredTimestamp() const;
+    std::optional<map_type::iterator>  atOrBeforeGas(uint256_t gas_used);
+    void reorg(uint256_t next_gas_used);
 
-   private:
-    void reorgNoLock(uint256_t next_block_number);
-    void deleteExpiredNoLock();
+    void evict();
 };
 
-#endif  // ARB_AVM_CPP_SIDELOADCACHE_H
+#endif  // ARB_AVM_CPP_LRUSIDELOADCACHE_HPP
