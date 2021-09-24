@@ -1,5 +1,5 @@
 ---
-id: tanks
+id: talks
 title: ArbOS: Public Talks & Appearances
 sidebar_label: Talks & Appearances
 ---
