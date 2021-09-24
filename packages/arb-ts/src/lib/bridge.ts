@@ -61,6 +61,7 @@ import {
   ERC20__factory,
   ERC20,
 } from './abi'
+import { Result } from '@ethersproject/abi'
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
   maxGas?: BigNumber
@@ -823,7 +824,7 @@ export class Bridge {
     userAddr: string,
     tokenAddrs: Array<string>,
     targetNetwork: 'L1' | 'L2'
-  ) {
+  ): Promise<Array<{ tokenAddr: string; balance: BigNumber | undefined }>> {
     const iface = ERC20__factory.createInterface()
 
     const balanceCalls = tokenAddrs.map(token => ({
@@ -832,8 +833,19 @@ export class Bridge {
       values: [userAddr],
     }))
 
+    // typing magic from https://stackoverflow.com/a/57364353
+    type Await<T> = T extends {
+      then(onfulfilled?: (value: infer U) => unknown): unknown
+    }
+      ? U
+      : T
+    type ExpectedReturnType = Await<ReturnType<ERC20['functions']['balanceOf']>>
+
     const bridge = targetNetwork === 'L1' ? this.l1Bridge : this.l2Bridge
-    // can we return a better type than Result?
-    return bridge.getMulticallAggregate(balanceCalls)
+    const res = await bridge.getMulticallAggregate(balanceCalls)
+    return res.map((bal, index) => ({
+      tokenAddr: tokenAddrs[index],
+      balance: bal ? (bal as ExpectedReturnType)[0] : undefined,
+    }))
   }
 }
