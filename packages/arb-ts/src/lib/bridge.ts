@@ -111,8 +111,10 @@ export class Bridge {
       throw new Error('Signer needs a provider')
     }
 
-    const l1ChainId = await ethSigner.getChainId()
-    const l2ChainId = await arbSigner.getChainId()
+    const [l1ChainId, l2ChainId] = await Promise.all([
+      ethSigner.getChainId(),
+      arbSigner.getChainId(),
+    ])
     const isCustomNetwork = customNetwork !== undefined
 
     const l1Network = isCustomNetwork
@@ -135,18 +137,17 @@ export class Bridge {
 
     if (isCustomNetwork) {
       // check routers are deployed when using a custom network configuration
-      const l1RouterCode = await ethSigner.provider.getCode(
-        l1Network.tokenBridge.l1GatewayRouter
-      )
+      const [l1RouterCode, l2RouterCode] = await Promise.all([
+        ethSigner.provider.getCode(l1Network.tokenBridge.l1GatewayRouter),
+        arbSigner.provider.getCode(l2Network.tokenBridge.l2GatewayRouter),
+      ])
+
       if (l1RouterCode === '0x') {
         throw new Error(
           `No code deployed to ${l1Network.tokenBridge.l1GatewayRouter} in the L1`
         )
       }
 
-      const l2RouterCode = await arbSigner.provider.getCode(
-        l2Network.tokenBridge.l2GatewayRouter
-      )
       if (l2RouterCode === '0x') {
         throw new Error(
           `No code deployed to ${l2Network.tokenBridge.l2GatewayRouter} in the L2`

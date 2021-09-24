@@ -86,8 +86,10 @@ export class L2Bridge {
       throw new Error('Signer must be connected to an (Arbitrum) provider')
     }
     // check chainId to ensure its still in the same network.
-    const prevNetwork = await this.l2Provider.getNetwork()
-    const newNetwork = await newL2Provider.getNetwork()
+    const [prevNetwork, newNetwork] = await Promise.all([
+      this.l2Provider.getNetwork(),
+      newL2Provider.getNetwork(),
+    ])
     if (prevNetwork.chainId !== newNetwork.chainId)
       throw new Error('Error. New signer in L2 is a different network.')
 

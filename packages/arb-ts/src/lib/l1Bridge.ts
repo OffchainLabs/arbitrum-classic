@@ -93,8 +93,10 @@ export class L1Bridge {
       throw new Error('Signer must be connected to an Ethereum provider')
     }
     // check chainId to ensure its still in the same network.
-    const prevNetwork = await this.l1Provider.getNetwork()
-    const newNetwork = await newL1Provider.getNetwork()
+    const [prevNetwork, newNetwork] = await Promise.all([
+      this.l1Provider.getNetwork(),
+      newL1Provider.getNetwork(),
+    ])
     if (prevNetwork.chainId !== newNetwork.chainId)
       throw new Error('Error. New signer in L1 is a different network.')
 
