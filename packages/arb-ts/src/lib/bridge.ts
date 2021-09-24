@@ -238,46 +238,32 @@ export class Bridge {
     }
   }
 
-  /**
-   * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
-   */
-  public async deposit(
+  public async getDepositInputs(
     erc20L1Address: string,
     amount: BigNumber,
     retryableGasArgs: RetryableGasArgs = {},
     destinationAddress?: string,
     overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
+  ) {
     const {
       l1WethGateway: l1WethGatewayAddress,
       l1CustomGateway: l1CustomGatewayAddress,
     } = this.l1Bridge.network.tokenBridge
 
+    // 1. Get gas price
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
 
-    const sender = await this.l1Bridge.getWalletAddress()
-
-    const expectedL1GatewayAddress = await this.l1Bridge.getGatewayAddress(
+    const l1GatewayAddress = await this.l1Bridge.getGatewayAddress(
       erc20L1Address
     )
 
-    let estimateGasCallValue = Zero
-
-    // if it's a weth deposit, include callvalue for the gas estimate for the retryable
-    if (this.isCustomNetwork) {
-      if (await this.looksLikeWethGateway(expectedL1GatewayAddress)) {
-        estimateGasCallValue = amount
-      }
-    } else if (l1WethGatewayAddress === expectedL1GatewayAddress) {
-      estimateGasCallValue = amount
-    }
-
+    // 2. Get submission price (this depends on size of calldata used in deposit)
     const l1Gateway = L1ERC20Gateway__factory.connect(
-      expectedL1GatewayAddress,
+      l1GatewayAddress,
       this.l1Provider
     )
-
+    const sender = await this.l1Bridge.getWalletAddress()
     const depositCalldata = await l1Gateway.getOutboundCalldata(
       erc20L1Address,
       sender,
@@ -297,20 +283,39 @@ export class Bridge {
       maxSubmissionPricePercentIncrease
     )
 
+    // 3. Estimate gas
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
       this.l2Provider
     )
-
     const l2Dest = await l1Gateway.counterpartGateway()
+
+    /** The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+     * Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
+     */
+    const estimateGasCallValue = await (async () => {
+      if (this.isCustomNetwork) {
+        // For custom network, we do an ad-hoc check to see if it's a WETH gatewat
+        if (await this.looksLikeWethGateway(l1GatewayAddress)) {
+          return amount
+        }
+        // ...otherwise we directly check it against the config file
+      } else if (l1WethGatewayAddress === l1GatewayAddress) {
+        return amount
+      }
+
+      return Zero
+    })()
 
     let maxGas =
       retryableGasArgs.maxGas ||
       BridgeHelper.percentIncrease(
         (
           await nodeInterface.estimateRetryableTicket(
-            expectedL1GatewayAddress,
-            parseEther('0.05').add(estimateGasCallValue),
+            l1GatewayAddress,
+            parseEther('0.05').add(
+              estimateGasCallValue
+            ) /** we add a 0.05 "deposit" buffer to pay for execution in the gas estimation  */,
             l2Dest,
             estimateGasCallValue,
             maxSubmissionPrice,
@@ -325,17 +330,43 @@ export class Bridge {
           BigNumber.from(DEFAULT_MAX_GAS_PERCENT_INCREASE)
       )
     if (
-      expectedL1GatewayAddress === l1CustomGatewayAddress &&
+      l1GatewayAddress === l1CustomGatewayAddress &&
       maxGas.lt(MIN_CUSTOM_DEPOSIT_MAXGAS)
     ) {
+      // For insurance, we set a sane minimum max gas for the custom gateway
       maxGas = MIN_CUSTOM_DEPOSIT_MAXGAS
     }
-    // calculate required forwarding gas
-    let ethDeposit = overrides && (await overrides.value)
-    if (!ethDeposit || BigNumber.from(ethDeposit).isZero()) {
-      ethDeposit = await maxSubmissionPrice.add(gasPriceBid.mul(maxGas))
+    // 4. Calculate total required callvalue
+    let totalEthCallvalueToSend = overrides && (await overrides.value)
+    if (
+      !totalEthCallvalueToSend ||
+      BigNumber.from(totalEthCallvalueToSend).isZero()
+    ) {
+      totalEthCallvalueToSend = await maxSubmissionPrice.add(
+        gasPriceBid.mul(maxGas)
+      )
     }
 
+    return {
+      maxGas,
+      gasPriceBid,
+      totalEthCallvalueToSend,
+      maxSubmissionPrice,
+    }
+  }
+
+  /**
+   * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
+   */
+  public async deposit(
+    erc20L1Address: string,
+    amount: BigNumber,
+    retryableGasArgs: RetryableGasArgs = {},
+    destinationAddress?: string,
+    overrides: PayableOverrides = {}
+  ): Promise<ContractTransaction> {
+    const { maxSubmissionPrice, maxGas, gasPriceBid, totalEthCallvalueToSend } =
+      await this.getDepositInputs(erc20L1Address, amount, retryableGasArgs)
     return this.l1Bridge.deposit(
       erc20L1Address,
       amount,
@@ -343,7 +374,7 @@ export class Bridge {
       maxGas,
       gasPriceBid,
       destinationAddress,
-      { ...overrides, value: ethDeposit }
+      { ...overrides, value: totalEthCallvalueToSend }
     )
   }
 
