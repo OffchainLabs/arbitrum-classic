@@ -827,7 +827,8 @@ export class BridgeHelper {
 
   static async getMulticallTryAggregate(
     functionCalls: MulticallFunctionInput,
-    multicall: Multicall2 | ArbMulticall2
+    multicall: Multicall2 | ArbMulticall2,
+    requireSuccess = false
   ) {
     const iface = new Interface(functionCalls.map(curr => curr.funcFragment))
 
@@ -838,7 +839,10 @@ export class BridgeHelper {
       })
     )
 
-    const outputs = await multicall.callStatic.tryAggregate(false, encodedCalls)
+    const outputs = await multicall.callStatic.tryAggregate(
+      requireSuccess,
+      encodedCalls
+    )
 
     return outputs.map(([success, returnData], index) =>
       success

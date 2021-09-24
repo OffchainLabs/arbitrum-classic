@@ -825,11 +825,10 @@ export class Bridge {
     targetNetwork: 'L1' | 'L2'
   ) {
     const iface = ERC20__factory.createInterface()
-    const funcFragment = iface.functions['balanceOf(address)']
 
     const balanceCalls = tokenAddrs.map(token => ({
       target: token,
-      funcFragment: funcFragment,
+      funcFragment: iface.functions['balanceOf(address)'],
       values: [userAddr],
     }))
 
