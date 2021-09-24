@@ -125,14 +125,12 @@ export class L1Bridge {
     const walletAddress = await this.getWalletAddress()
     const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
 
-    if (!this.contractExists(erc20L1Address))
-      throw new Error(`No ERC20 at ${erc20L1Address} `)
-
-    // If this will throw if not an ERC20, which is what we *want*.
     const ethERC20TokenContract = await ERC20__factory.connect(
       erc20L1Address,
       this.l1Signer
     )
+    // If this will throw if not a contract / ERC20, which is what we *want*.
+    // TODO: batch these in a multicall
     const [balance] = await ethERC20TokenContract.functions.balanceOf(
       walletAddress
     )

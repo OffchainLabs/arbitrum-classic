@@ -139,26 +139,17 @@ export class L2Bridge {
     ](erc20l1Address, to, amount, '0x', overrides)
   }
 
-  public async contractExists(contractAddress: string): Promise<boolean> {
-    const contractCode = await this.l2Provider.getCode(contractAddress)
-    return !(contractCode.length > 2)
-  }
-
   public async getL2TokenData(
     erc20L1Address: string,
     l2ERC20Address: string
   ): Promise<L2TokenData> {
     const walletAddress = await this.getWalletAddress()
-    // check if standard arb erc20:
-    if (!this.contractExists(l2ERC20Address))
-      throw new Error(
-        `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed (would be at ${l2ERC20Address})`
-      )
 
     const arbERC20TokenContract = await StandardArbERC20__factory.connect(
       l2ERC20Address,
       this.l2Signer
     )
+    // this will throw if not a contract / ERC20
     const [balance] = await arbERC20TokenContract.functions.balanceOf(
       walletAddress
     )
