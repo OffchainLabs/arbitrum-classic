@@ -130,34 +130,60 @@ export class L1Bridge {
       this.l1Signer
     )
     // If this will throw if not a contract / ERC20, which is what we *want*.
-    // TODO: batch these in a multicall
-    const [balance] = await ethERC20TokenContract.functions.balanceOf(
-      walletAddress
-    )
+    const iface = ERC20__factory.createInterface()
+    const functionCalls: MulticallFunctionInput = [
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['balanceOf(address)'],
+        values: [walletAddress],
+      },
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['allowance(address,address)'],
+        values: [walletAddress, gatewayAddress],
+      },
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['symbol()'],
+      },
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['decimals()'],
+      },
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['name()'],
+      },
+    ]
+    const [
+      balanceResult,
+      allowanceResult,
+      symbolResult,
+      decimalsResult,
+      nameResult,
+    ] = await this.getMulticallAggregate(functionCalls)
 
-    const [allowance] = await ethERC20TokenContract.functions.allowance(
-      walletAddress,
-      gatewayAddress
-    )
-    // non-standard
-    const symbol = await ethERC20TokenContract.functions
-      .symbol()
-      .then(([res]) => res)
-      .catch(() => addressToSymbol(erc20L1Address))
+    if (balanceResult === undefined || allowanceResult === undefined)
+      throw new Error('ERC20 Token does not support balance/allowance')
 
-    const decimals = await ethERC20TokenContract.functions
-      .decimals()
-      .then(([res]) => res)
-      .catch(() => 18)
+    const balance = balanceResult[0] as BigNumber
+    const allowance = allowanceResult[0] as BigNumber
 
-    const name = await ethERC20TokenContract.functions
-      .name()
-      .then(([res]) => res)
-      .catch(() => symbol + '_Token')
+    const symbol =
+      symbolResult === undefined
+        ? addressToSymbol(erc20L1Address)
+        : (symbolResult[0] as string)
+
+    const decimals =
+      decimalsResult === undefined ? 18 : (decimalsResult[0] as number)
+
+    const name =
+      nameResult === undefined ? symbol + '_Token' : (nameResult[0] as string)
+
     const allowanceLimit = BigNumber.from(
       '0xffffffffffffffffffffffff'
     ) /** for ERC20s that cap approve at 96 bits  */
-    const allowed = await allowance.gte(allowanceLimit.div(2))
+    const allowed = allowance.gte(allowanceLimit.div(2))
     return {
       ERC20: {
         contract: ethERC20TokenContract,
@@ -275,6 +301,6 @@ export class L1Bridge {
       this.l1Provider
     )
 
-    return BridgeHelper.getMulticallAggregate(functionCalls, multicall)
+    return BridgeHelper.getMulticallTryAggregate(functionCalls, multicall)
   }
 }

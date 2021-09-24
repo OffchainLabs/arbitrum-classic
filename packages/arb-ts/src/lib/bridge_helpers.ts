@@ -825,7 +825,7 @@ export class BridgeHelper {
     return num.add(num.mul(increase).div(100))
   }
 
-  static async getMulticallAggregate(
+  static async getMulticallTryAggregate(
     functionCalls: MulticallFunctionInput,
     multicall: Multicall2 | ArbMulticall2
   ) {
@@ -838,12 +838,15 @@ export class BridgeHelper {
       })
     )
 
-    // we ignore the blocknumber returned as first parameter
-    const [_, outputs] = await multicall.callStatic.aggregate(encodedCalls)
+    const outputs = await multicall.callStatic.tryAggregate(false, encodedCalls)
 
-    // we parse the data
-    return outputs.map((output, index) =>
-      iface.decodeFunctionResult(functionCalls[index].funcFragment, output)
+    return outputs.map(([success, returnData], index) =>
+      success
+        ? iface.decodeFunctionResult(
+            functionCalls[index].funcFragment,
+            returnData
+          )
+        : undefined
     )
   }
 }

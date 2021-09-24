@@ -145,7 +145,7 @@ export class L2Bridge {
   ): Promise<L2TokenData> {
     const walletAddress = await this.getWalletAddress()
 
-    const arbERC20TokenContract = await StandardArbERC20__factory.connect(
+    const arbERC20TokenContract = StandardArbERC20__factory.connect(
       l2ERC20Address,
       this.l2Signer
     )
@@ -212,6 +212,6 @@ export class L2Bridge {
       this.l2Provider
     )
 
-    return BridgeHelper.getMulticallAggregate(functionCalls, multicall)
+    return BridgeHelper.getMulticallTryAggregate(functionCalls, multicall)
   }
 }
