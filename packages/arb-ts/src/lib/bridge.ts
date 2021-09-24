@@ -89,8 +89,6 @@ const MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
 export class Bridge {
   l1Bridge: L1Bridge
   l2Bridge: L2Bridge
-  walletAddressCache?: string
-  outboxAddressCache?: string
   isCustomNetwork: boolean
 
   private constructor(
