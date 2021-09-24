@@ -77,8 +77,9 @@ describe('WETH', async () => {
       `weth withdraw getOutGoingMessageState returned ${outgoingMessageState}`
     )
 
-    const _l2WethBalance = await bridge.getAndUpdateL2TokenData(
-      l2Network.tokenBridge.l1Weth
+    const _l2WethBalance = await bridge.l2Bridge.getL2TokenData(
+      l2Network.tokenBridge.l1Weth,
+      l2Network.tokenBridge.l2Weth
     )
     const l2WethBalance =
       _l2WethBalance && _l2WethBalance.ERC20 && _l2WethBalance.ERC20.balance
@@ -132,7 +133,7 @@ describe('WETH', async () => {
     const approveRec = await approveRes.wait()
     expect(approveRec.status).to.equal(1, 'allowance txn failed')
 
-    const data = await bridge.getAndUpdateL1TokenData(l1WethAddress)
+    const data = await bridge.l1Bridge.getL1TokenData(l1WethAddress)
     const allowed = data.ERC20 && data.ERC20.allowed
     expect(allowed, 'failed to set allowance').to.be.true
 
@@ -140,7 +141,10 @@ describe('WETH', async () => {
     const depositRec = await depositRes.wait()
     await testRetryableTicket(bridge, depositRec)
 
-    const l2Data = await bridge.getAndUpdateL2TokenData(l1WethAddress)
+    const l2Data = await bridge.l2Bridge.getL2TokenData(
+      l1WethAddress,
+      l1Network.tokenBridge.l2Weth
+    )
 
     const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
 

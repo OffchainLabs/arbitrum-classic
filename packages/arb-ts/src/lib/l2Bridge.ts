@@ -42,9 +42,6 @@ export interface L2TokenData {
   CUSTOM?: { contract: ICustomToken; balance: BigNumber } // Here we don't use the particlar custom token's interface; for the sake of this sdk that's fine
 }
 
-export interface Tokens {
-  [contractAddress: string]: L2TokenData | undefined
-}
 /**
  * L2 side only of {@link Bridge}
  */
@@ -52,15 +49,12 @@ export class L2Bridge {
   l2Signer: Signer
   arbSys: ArbSys
   l2GatewayRouter: L2GatewayRouter
-  l2Tokens: Tokens
   l2Provider: Provider
   arbRetryableTx: ArbRetryableTx
   walletAddressCache?: string
   network: Network
 
   constructor(network: Network, l2Signer: Signer) {
-    this.l2Tokens = {}
-
     this.l2Signer = l2Signer
     this.network = network
 
@@ -118,74 +112,42 @@ export class L2Bridge {
     ](erc20l1Address, to, amount, '0x', overrides)
   }
 
-  public async updateAllL2Tokens(): Promise<Tokens> {
-    for (const l1Address in this.l2Tokens) {
-      const l2Address = this.l2Tokens[l1Address]?.ERC20?.contract.address
-      if (l2Address) {
-        await this.getAndUpdateL2TokenData(l1Address, l2Address)
-      }
-    }
-    return this.l2Tokens
+  public async contractExists(contractAddress: string): Promise<boolean> {
+    const contractCode = await this.l2Provider.getCode(contractAddress)
+    return !(contractCode.length > 2)
   }
 
-  public async getAndUpdateL2TokenData(
+  public async getL2TokenData(
     erc20L1Address: string,
     l2ERC20Address: string
-  ): Promise<L2TokenData | undefined> {
-    const tokenData = this.l2Tokens[erc20L1Address] || {
-      ERC20: undefined,
-      CUSTOM: undefined,
-    }
+  ): Promise<L2TokenData> {
     const walletAddress = await this.getWalletAddress()
-
     // check if standard arb erc20:
-    if (!tokenData.ERC20) {
-      if ((await this.l2Provider.getCode(l2ERC20Address)).length > 2) {
-        const arbERC20TokenContract = await StandardArbERC20__factory.connect(
-          l2ERC20Address,
-          this.l2Signer
-        )
-        const [balance] = await arbERC20TokenContract.functions.balanceOf(
-          walletAddress
-        )
-        tokenData.ERC20 = {
-          contract: arbERC20TokenContract,
-          balance,
-        }
-      } else {
-        console.info(
-          `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed (would be at ${l2ERC20Address})`
-        )
-      }
-    } else {
-      const arbERC20TokenContract = await StandardArbERC20__factory.connect(
-        l2ERC20Address,
-        this.l2Signer
+    if (!this.contractExists(l2ERC20Address))
+      throw new Error(
+        `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed (would be at ${l2ERC20Address})`
       )
-      const [balance] = await arbERC20TokenContract.functions.balanceOf(
-        walletAddress
-      )
-      tokenData.ERC20.balance = balance
-    }
 
-    if (tokenData.ERC20 || tokenData.CUSTOM) {
-      this.l2Tokens[erc20L1Address] = tokenData
-      return tokenData
-    } else {
-      console.warn(`No L2 token for ${erc20L1Address} found`)
-      return
+    const arbERC20TokenContract = await StandardArbERC20__factory.connect(
+      l2ERC20Address,
+      this.l2Signer
+    )
+    const [balance] = await arbERC20TokenContract.functions.balanceOf(
+      walletAddress
+    )
+    // TODO: should we validate if any other data is correct?
+    // we can check if `l2ERC20Address.l1Address()` returns the expected address
+    // we can also check if `l2GatewayRouter.getGateway(erc20L1Address)` returns non zero
+    // Would that fail if its a token that is only deployed on the L2?
+
+    // TODO: we don't know if its erc20 or custom.
+    return {
+      ERC20: {
+        contract: arbERC20TokenContract,
+        balance,
+      },
     }
   }
-
-  // public getERC20L2Address(erc20L1Address: string) {
-  //   let address: string | undefined
-  //   if ((address = this.l2Tokens[erc20L1Address]?.ERC20?.contract.address)) {
-  //     return address
-  //   }
-  //   return this.l2GatewayRouter.functions
-  //     .calculateL2TokenAddress(erc20L1Address)
-  //     .then(([res]) => res)
-  // }
 
   public async getGatewayAddress(erc20L1Address: string): Promise<string> {
     return (await this.l2GatewayRouter.functions.getGateway(erc20L1Address))

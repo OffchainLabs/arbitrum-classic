@@ -51,8 +51,6 @@ import {
   OutgoingMessageState,
   WithdrawalInitiated,
 } from './bridge_helpers'
-import { Tokens as L1Tokens } from './l1Bridge'
-import { Tokens as L2Tokens } from './l2Bridge'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks, { Network } from './networks'
 import {
@@ -103,12 +101,6 @@ export class Bridge {
     this.l1Bridge = l1BridgeObj
     this.l2Bridge = l2BridgeObj
     this.isCustomNetwork = isCustomNetwork
-  }
-
-  public updateAllBalances(): void {
-    this.updateAllTokens()
-    this.getL1EthBalance()
-    this.getL2EthBalance()
   }
 
   static async init(
@@ -167,32 +159,6 @@ export class Bridge {
     const l2BridgeObj = new L2Bridge(l2Network, arbSigner)
 
     return new Bridge(l1BridgeObj, l2BridgeObj, isCustomNetwork)
-  }
-
-  /**
-   * Update state of all tracked tokens (balance, allowance), etc. and returns state
-   */
-  public async updateAllTokens(): Promise<{
-    l1Tokens: L1Tokens
-    l2Tokens: L2Tokens
-  }> {
-    const l1Tokens = await this.l1Bridge.updateAllL1Tokens()
-    const l2Tokens = await this.l2Bridge.updateAllL2Tokens()
-    return { l1Tokens, l2Tokens }
-  }
-  /**
-   * Update target token (balance, allowance), etc. and state
-   */
-  public async updateTokenData(
-    erc20l1Address: string
-  ): Promise<{ l1Data: L1TokenData; l2Data: L2TokenData | undefined }> {
-    const l1Data = await this.getAndUpdateL1TokenData(erc20l1Address)
-    const l2Data = await this.getAndUpdateL2TokenData(erc20l1Address)
-    return { l1Data, l2Data }
-  }
-
-  get l1Tokens(): L1Tokens {
-    return this.l1Bridge.l1Tokens
   }
 
   get l1GatewayRouter(): L1GatewayRouter {
@@ -284,7 +250,7 @@ export class Bridge {
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
 
-    const sender = await this.l1Signer.getAddress()
+    const sender = await this.l1Bridge.getWalletAddress()
 
     const expectedL1GatewayAddress = await this.l1Bridge.getGatewayAddress(
       erc20L1Address
@@ -373,17 +339,6 @@ export class Bridge {
       destinationAddress,
       { ...overrides, value: ethDeposit }
     )
-  }
-
-  public getAndUpdateL1TokenData(erc20l1Address: string): Promise<L1TokenData> {
-    return this.l1Bridge.getAndUpdateL1TokenData(erc20l1Address)
-  }
-
-  public async getAndUpdateL2TokenData(
-    erc20l1Address: string
-  ): Promise<L2TokenData | undefined> {
-    const l2TokenAddress = await this.l1Bridge.getERC20L2Address(erc20l1Address)
-    return this.l2Bridge.getAndUpdateL2TokenData(erc20l1Address, l2TokenAddress)
   }
 
   public async getL1EthBalance(): Promise<BigNumber> {

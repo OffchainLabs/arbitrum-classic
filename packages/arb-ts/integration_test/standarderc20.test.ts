@@ -92,7 +92,10 @@ describe('standard ERC20', () => {
       `standard token withdraw getOutGoingMessageState returned ${outgoingMessageState}`
     ).to.be.true
 
-    const l2Data = await bridge.getAndUpdateL2TokenData(existentTestERC20)
+    const l2Data = await bridge.l2Bridge.getL2TokenData(
+      existentTestERC20,
+      await bridge.getERC20L2Address(existentTestERC20)
+    )
     const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
     expect(
       testWalletL2Balance &&
@@ -136,7 +139,7 @@ const depositTokenTest = async (bridge: Bridge) => {
   const approveRes = await bridge.approveToken(existentTestERC20)
   await approveRes.wait()
 
-  const data = await bridge.getAndUpdateL1TokenData(existentTestERC20)
+  const data = await bridge.l1Bridge.getL1TokenData(existentTestERC20)
   const allowed = data.ERC20 && data.ERC20.allowed
   expect(allowed, 'set token allowance failed').to.be.true
 
@@ -163,7 +166,10 @@ const depositTokenTest = async (bridge: Bridge) => {
   ).to.be.true
   await testRetryableTicket(bridge, depositRec)
 
-  const l2Data = await bridge.getAndUpdateL2TokenData(existentTestERC20)
+  const l2Data = await bridge.l2Bridge.getL2TokenData(
+    existentTestERC20,
+    await bridge.getERC20L2Address(existentTestERC20)
+  )
 
   const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
 
