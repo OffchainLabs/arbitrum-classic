@@ -64,7 +64,6 @@ export class L1Bridge {
   walletAddressCache?: string
   inboxCached?: Inbox
   l1Provider: Provider
-  chainIdCache?: number
   network: Network
 
   constructor(network: Network, l1Signer: Signer) {
@@ -81,6 +80,27 @@ export class L1Bridge {
       network.tokenBridge.l1GatewayRouter,
       l1Signer
     )
+  }
+
+  public async setSigner(newSigner: Signer) {
+    const newL1Provider = newSigner.provider
+    if (newL1Provider === undefined) {
+      throw new Error('Signer must be connected to an Ethereum provider')
+    }
+    // check chainId to ensure its still in the same network.
+    const prevNetwork = await this.l1Provider.getNetwork()
+    const newNetwork = await newL1Provider.getNetwork()
+    if (prevNetwork.chainId !== newNetwork.chainId)
+      throw new Error('Error. New signer in L1 is a different network.')
+
+    this.l1Provider = newL1Provider
+    this.l1Signer = newSigner
+    // we need to update the cache
+    // TODO: remove this cache. can we memoize based on the signer? useCallback style
+    this.walletAddressCache = await this.l1Signer.getAddress()
+    // TODO: is it worth keeping contracts instantiated?
+    this.inboxCached = this.inboxCached?.connect(newSigner)
+    this.l1GatewayRouter = this.l1GatewayRouter.connect(newSigner)
   }
 
   public getERC20L2Address(erc20L1Address: string): Promise<string> {
@@ -162,7 +182,6 @@ export class L1Bridge {
       .gateway
   }
   public async getDefaultL1Gateway(): Promise<L1ERC20Gateway> {
-    const chainId = await this.getChainId()
     const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
 
     if (defaultGatewayAddress === AddressZero) {
@@ -243,13 +262,5 @@ export class L1Bridge {
 
   public getL1EthBalance(): Promise<BigNumber> {
     return this.l1Signer.getBalance()
-  }
-
-  public async getChainId(): Promise<number> {
-    if (this.chainIdCache) {
-      return this.chainIdCache
-    }
-    this.chainIdCache = await this.l1Signer.getChainId()
-    return this.chainIdCache
   }
 }

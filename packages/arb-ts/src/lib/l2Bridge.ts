@@ -78,6 +78,29 @@ export class L2Bridge {
     )
   }
 
+  public async setSigner(newSigner: Signer) {
+    const newL2Provider = newSigner.provider
+    if (newL2Provider === undefined) {
+      throw new Error('Signer must be connected to an (Arbitrum) provider')
+    }
+    // check chainId to ensure its still in the same network.
+    const prevNetwork = await this.l2Provider.getNetwork()
+    const newNetwork = await newL2Provider.getNetwork()
+    if (prevNetwork.chainId !== newNetwork.chainId)
+      throw new Error('Error. New signer in L2 is a different network.')
+
+    this.l2Provider = newL2Provider
+    this.l2Signer = newSigner
+    // we need to update the cache
+    // TODO: remove this cache. can we memoize based on the signer? useCallback style
+    this.walletAddressCache = await this.l2Signer.getAddress()
+
+    // TODO: is it worth keeping contracts instantiated? we can instead have a util function
+    this.arbSys = this.arbSys.connect(newSigner)
+    this.l2GatewayRouter = this.l2GatewayRouter.connect(newSigner)
+    this.arbRetryableTx = this.arbRetryableTx.connect(newSigner)
+  }
+
   /**
    * Initiate Ether withdrawal (via ArbSys)
    */

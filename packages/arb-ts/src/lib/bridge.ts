@@ -161,6 +161,11 @@ export class Bridge {
     return new Bridge(l1BridgeObj, l2BridgeObj, isCustomNetwork)
   }
 
+  public async setSigner(newEthSigner: Signer, newArbSigner: Signer) {
+    await this.l1Bridge.setSigner(newEthSigner)
+    await this.l2Bridge.setSigner(newArbSigner)
+  }
+
   get l1GatewayRouter(): L1GatewayRouter {
     return this.l1Bridge.l1GatewayRouter
   }
