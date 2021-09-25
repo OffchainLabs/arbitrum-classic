@@ -35,12 +35,13 @@ void LRUSideloadCache::add(std::unique_ptr<Machine> machine) {
     cache[gas_used] = std::make_pair(std::move(machine), lru_list.begin());
 }
 
-std::optional<LRUSideloadCache::map_type::iterator> LRUSideloadCache::atOrBeforeGas(uint256_t gas_used) {
+std::optional<LRUSideloadCache::map_type::iterator>
+LRUSideloadCache::atOrBeforeGas(uint256_t gas_used) {
     // Lookup value in the cache
     auto cache_it = cache.upper_bound(gas_used);
     if (cache_it == cache.begin()) {
         // Nothing in cache
-        return cache.end();
+        return std::nullopt;
     }
 
     // Upper_bound returns the element after the one desired

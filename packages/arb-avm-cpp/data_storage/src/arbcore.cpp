@@ -208,6 +208,8 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     } else if (coreConfig.seed_cache_on_startup) {
         status = reorgToTimestampOrBefore(
             combined_sideload_cache.expiredTimestamp(), true, cache);
+    } else {
+        status = reorgToLastMessage(cache);
     }
 
     if (status.ok()) {
@@ -274,6 +276,9 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
                   << status.ToString() << std::endl;
         return status;
     }
+
+    // Save initial state to cache
+    combined_sideload_cache.basic_add(std::make_unique<Machine>(*core_machine));
 
     return rocksdb::Status::OK();
 }
@@ -402,6 +407,14 @@ rocksdb::Status ArbCore::saveAssertion(ReadWriteTransaction& tx,
     }
 
     return rocksdb::Status::OK();
+}
+
+rocksdb::Status ArbCore::reorgToLastMessage(ValueCache& cache) {
+    std::cerr << "Reloading chain to the last message saved"
+              << "\n";
+
+    return reorgCheckpoints([&](const MachineOutput&) { return true; }, true,
+                            cache);
 }
 
 rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
@@ -618,8 +631,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
             }
 
             while (core_machine->nextAssertion().sideload_block_number) {
-                combined_sideload_cache.basic_add(
-                    std::make_unique<Machine>(*core_machine));
                 combined_sideload_cache.timed_add(
                     std::make_unique<Machine>(*core_machine));
 
@@ -863,7 +874,7 @@ void ArbCore::operator()() {
     std::filesystem::path save_rocksdb_path(coreConfig.save_rocksdb_path);
     auto begin_time = std::chrono::steady_clock::now();
     auto begin_message =
-        last_machine->machine_state.output.fully_processed_inbox.count;
+        core_machine->machine_state.output.fully_processed_inbox.count;
 
     if (coreConfig.save_rocksdb_interval > 0) {
         next_rocksdb_save_timestamp =

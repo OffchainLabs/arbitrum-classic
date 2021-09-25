@@ -39,10 +39,11 @@ TEST_CASE("LRUSideloadCache add") {
     cache.add(std::move(machine_one));
     REQUIRE(cache.size() == 1);
     auto retrieved_machine = cache.atOrBeforeGas(0);
-    REQUIRE(retrieved_machine.has_value());
+    REQUIRE(!retrieved_machine.has_value());
     auto retrieved_machine2 = cache.atOrBeforeGas(1);
     REQUIRE(retrieved_machine2.has_value());
-    REQUIRE(retrieved_machine2.value()->second.first->machine_state.output.arb_gas_used == 1);
+    REQUIRE(retrieved_machine2.value()
+                ->second.first->machine_state.output.arb_gas_used == 1);
 }
 TEST_CASE("LRUSideloadCache get") {
     auto cache_size = 3;
@@ -71,15 +72,18 @@ TEST_CASE("LRUSideloadCache get") {
 
     auto machine1b = cache.atOrBeforeGas(gas1a);
     REQUIRE(machine1b.has_value());
-    REQUIRE(gas1a == machine1b.value()->second.first->machine_state.output.arb_gas_used);
+    REQUIRE(gas1a ==
+            machine1b.value()->second.first->machine_state.output.arb_gas_used);
 
     auto machine2b = cache.atOrBeforeGas(gas2a);
     REQUIRE(machine2b.has_value());
-    REQUIRE(gas2a == machine2b.value()->second.first->machine_state.output.arb_gas_used);
+    REQUIRE(gas2a ==
+            machine2b.value()->second.first->machine_state.output.arb_gas_used);
 
     auto machine3b = cache.atOrBeforeGas(gas3a + 100);
     REQUIRE(machine3b.has_value());
-    REQUIRE(gas3a == machine3b.value()->second.first->machine_state.output.arb_gas_used);
+    REQUIRE(gas3a ==
+            machine3b.value()->second.first->machine_state.output.arb_gas_used);
 }
 
 TEST_CASE("LRUSideloadCache reorg") {

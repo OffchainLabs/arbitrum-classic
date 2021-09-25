@@ -61,26 +61,26 @@ struct RawMessageInfo {
 
 struct ArbCoreConfig {
     // Maximum number of messages to process at a time
-    uint32_t message_process_count{0};
+    uint32_t message_process_count{10};
 
     // Checkpoint loaded from disk if difference greater than cost,
     // otherwise just run machine until gas reached
-    uint256_t checkpoint_load_gas_cost{0};
+    uint256_t checkpoint_load_gas_cost{1'000'000};
 
     // Frequency to save checkpoint to database
-    uint256_t min_gas_checkpoint_frequency{0};
+    uint256_t min_gas_checkpoint_frequency{1'000'000};
 
     // Amount of gas beween basic cache entries
-    uint32_t basic_sideload_cache_interval{0};
+    uint32_t basic_sideload_cache_interval{1'000'000};
 
     // Number of machines to keep in basic cache
-    uint32_t basic_sideload_cache_size{0};
+    uint32_t basic_sideload_cache_size{100};
 
     // Number of machines to keep in LRU cache
-    uint32_t lru_sideload_cache_size{0};
+    uint32_t lru_sideload_cache_size{20};
 
     // How long to keep machines in memory cache
-    uint32_t timed_cache_expiration_seconds{0};
+    uint32_t timed_cache_expiration_seconds{20 * 60};
 
     // Seed cache on startup by forcing re-execution from timed_cache_expiration
     bool seed_cache_on_startup{false};
@@ -232,6 +232,7 @@ class ArbCore {
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas);
+    rocksdb::Status reorgToLastMessage(ValueCache& cache);
     rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
                                                 bool initial_start,
                                                 ValueCache& cache);
@@ -313,7 +314,8 @@ class ArbCore {
    public:
     // Execution Cursor interaction
     ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
-        uint256_t total_gas_used, bool allow_slow_lookup);
+        uint256_t total_gas_used,
+        bool allow_slow_lookup);
     rocksdb::Status advanceExecutionCursor(ExecutionCursor& execution_cursor,
                                            uint256_t max_gas,
                                            bool go_over_gas,
@@ -429,12 +431,13 @@ class ArbCore {
 
     [[nodiscard]] bool isValid(const ReadTransaction& tx,
                                const InboxState& fully_processed_inbox) const;
-    std::variant<rocksdb::Status, ExecutionCursor>
-    getExecutionCursorAtBlock(const uint256_t& block_number, bool allow_slow_lookup);
-    std::variant<rocksdb::Status, ExecutionCursor>
-    getClosestExecutionCursor(ReadTransaction& tx,
-                              const uint256_t& total_gas_used,
-                              bool allow_slow_lookup);
+    std::variant<rocksdb::Status, ExecutionCursor> getExecutionCursorAtBlock(
+        const uint256_t& block_number,
+        bool allow_slow_lookup);
+    std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionCursor(
+        ReadTransaction& tx,
+        const uint256_t& total_gas_used,
+        bool allow_slow_lookup);
 
     rocksdb::Status updateLogInsertedCount(ReadWriteTransaction& tx,
                                            const uint256_t& log_index);
@@ -444,7 +447,8 @@ class ArbCore {
                                 size_t max_message_batch_size);
     uint256_t peekClosestCachedMachine(const uint256_t& total_gas_used);
     uint256_t peekOldMachineCache(const uint256_t& total_gas_used);
-    uint256_t peekCheckpointUsingGas(ReadTransaction& tx, const uint256_t& total_gas_used);
+    uint256_t peekCheckpointUsingGas(ReadTransaction& tx,
+                                     const uint256_t& total_gas_used);
 
    public:
     // Public sideload interaction

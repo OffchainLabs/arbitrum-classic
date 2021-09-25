@@ -52,13 +52,16 @@ size_t CombinedSideloadCache::timed_size() {
     return timed.size();
 }
 
-std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(uint256_t gas_used, uint256_t database_gas, uint256_t database_load_gas_cost) {
+std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
+    uint256_t gas_used,
+    uint256_t database_gas,
+    uint256_t database_load_gas_cost) {
     // Unique lock required to update LRU cache
     std::unique_lock lock(mutex);
 
-    uint256_t basic_gas = 0;
-    uint256_t lru_gas = 0;
-    uint256_t timed_gas = 0;
+    uint256_t basic_gas;
+    uint256_t lru_gas;
+    uint256_t timed_gas;
 
     auto basic_it = basic.atOrBeforeGas(gas_used);
     auto lru_it = lru.atOrBeforeGas(gas_used);
@@ -66,12 +69,20 @@ std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(uint256_t gas_used
 
     if (basic_it.has_value()) {
         basic_gas = basic_it.value()->second->machine_state.output.arb_gas_used;
+    } else {
+        basic_gas = 0;
     }
     if (lru_it.has_value()) {
-        lru_gas = lru_it.value()->second.first->machine_state.output.arb_gas_used;
+        lru_gas =
+            lru_it.value()->second.first->machine_state.output.arb_gas_used;
+    } else {
+        lru_gas = 0;
     }
     if (timed_it.has_value()) {
-        timed_gas = timed_it.value()->second.machine->machine_state.output.arb_gas_used;
+        timed_gas =
+            timed_it.value()->second.machine->machine_state.output.arb_gas_used;
+    } else {
+        timed_gas = 0;
     }
 
     uint256_t best_non_db_gas;
