@@ -61,23 +61,26 @@ struct RawMessageInfo {
 
 struct ArbCoreConfig {
     // Maximum number of messages to process at a time
-    uint32_t message_process_count{10};
+    uint32_t message_process_count{0};
 
     // Checkpoint loaded from disk if difference greater than cost,
     // otherwise just run machine until gas reached
-    uint256_t checkpoint_load_gas_cost{1'000'000};
+    uint256_t checkpoint_load_gas_cost{0};
 
     // Frequency to save checkpoint to database
-    uint256_t min_gas_checkpoint_frequency{1'000'000};
+    uint256_t min_gas_checkpoint_frequency{0};
+
+    // Amount of gas beween basic cache entries
+    uint32_t basic_sideload_cache_interval{0};
 
     // Number of machines to keep in basic cache
-    uint32_t basic_sideload_cache_size{100};
+    uint32_t basic_sideload_cache_size{0};
 
     // Number of machines to keep in LRU cache
-    uint32_t lru_sideload_cache_size{20};
+    uint32_t lru_sideload_cache_size{0};
 
     // How long to keep machines in memory cache
-    uint32_t timed_cache_expiration_seconds{60 * 20};
+    uint32_t timed_cache_expiration_seconds{0};
 
     // Seed cache on startup by forcing re-execution from timed_cache_expiration
     bool seed_cache_on_startup{false};
@@ -107,13 +110,13 @@ struct ArbCoreConfig {
     bool profile_reset_db_except_inbox{false};
 
     // Exit after printing out metadata from database
-    bool profile_just_metadata;
+    bool profile_just_metadata{false};
 
     // Whether to lazy load the core machine
-    bool lazy_load_core_machine;
+    bool lazy_load_core_machine{false};
 
     // Whether to lazy load archive queries
-    bool lazy_load_archive_queries;
+    bool lazy_load_archive_queries{false};
 
     ArbCoreConfig() = default;
 };

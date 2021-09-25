@@ -232,7 +232,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 			return nil, false, err
 		}
 	} else {
-		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false)
+		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false, true)
 		if err != nil {
 			return nil, false, err
 		}

@@ -502,10 +502,15 @@ CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
     auto total_gas_used = receiveUint256(total_gas_used_ptr);
 
     try {
-        auto executionCursor = arbcore->getExecutionCursor(total_gas_used, false);
+        auto executionCursor =
+            arbcore->getExecutionCursor(total_gas_used, false);
         if (!executionCursor.status.ok()) {
             std::cerr << "Failed to load execution cursor "
                       << executionCursor.status.ToString() << std::endl;
+            return nullptr;
+        }
+        if (executionCursor.data == nullptr) {
+            // Not in cache and database lookup disabled
             return nullptr;
         }
         return static_cast<void*>(executionCursor.data.release());
@@ -519,14 +524,14 @@ CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
 int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   CExecutionCursor* execution_cursor_ptr,
                                   const void* max_gas_ptr,
-                                  int go_over_gas, bool allow_slow_lookup) {
+                                  int go_over_gas,
+                                  int allow_slow_lookup) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     auto max_gas = receiveUint256(max_gas_ptr);
     try {
-        auto status = arbCore->advanceExecutionCursor(*executionCursor, max_gas,
-                                                      go_over_gas,
-                                                      allow_slow_lookup);
+        auto status = arbCore->advanceExecutionCursor(
+            *executionCursor, max_gas, go_over_gas, allow_slow_lookup);
         if (!status.ok()) {
             return false;
         }

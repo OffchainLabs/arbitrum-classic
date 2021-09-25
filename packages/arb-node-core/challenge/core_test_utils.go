@@ -86,7 +86,7 @@ func (c FaultyCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCur
 	}, nil
 }
 
-func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
+func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
 	faultyCursor := executionCursor.(FaultyExecutionCursor)
 	targetGas := new(big.Int).Add(executionCursor.TotalGasConsumed(), maxGas)
 	if c.config.StallMachineAt != nil && targetGas.Cmp(c.config.StallMachineAt) > 0 {
@@ -97,7 +97,7 @@ func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor,
 			return nil
 		}
 	}
-	return c.ArbCore.AdvanceExecutionCursor(faultyCursor.ExecutionCursor, maxGas, goOverGas)
+	return c.ArbCore.AdvanceExecutionCursor(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
 func (c FaultyCore) GetLastMachine() (machine.Machine, error) {

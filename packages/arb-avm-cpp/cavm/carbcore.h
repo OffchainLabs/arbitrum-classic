@@ -102,7 +102,8 @@ CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
 int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   CExecutionCursor* execution_cursor_ptr,
                                   const void* max_gas_ptr,
-                                  int go_over_gas);
+                                  int go_over_gas,
+                                  int allow_slow_lookup);
 CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr);
 Uint256Result arbCoreGetLastMachineTotalGas(CArbCore* arbcore_ptr);
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,

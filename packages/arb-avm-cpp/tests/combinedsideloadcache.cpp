@@ -75,12 +75,17 @@ TEST_CASE("CombinedSideloadCache add and get") {
 
     // Test only lru
     cache.reorg(0);
+    machine42 = std::make_unique<Machine>(getComplexMachine());
+    machine42->machine_state.output.arb_gas_used = 42;
     cache.lru_add(std::move(machine42));
     machine42a = cache.atOrBeforeGas(50, 0, 10000);
     REQUIRE(machine42a != nullptr);
 
     // Test only timed
     cache.reorg(0);
+    machine43 = std::make_unique<Machine>(getComplexMachine());
+    machine43->machine_state.output.arb_gas_used = 42;
+    machine43->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.timed_add(std::move(machine43));
     machine43a = cache.atOrBeforeGas(50, 0, 10000);
     REQUIRE(machine43a != nullptr);
@@ -94,6 +99,8 @@ TEST_CASE("CombinedSideloadCache expiredTimestamp") {
     CombinedSideloadCache cache(basic_size, lru_size, timed_expire);
 
     auto expired = cache.expiredTimestamp();
-    REQUIRE(expired > std::time(nullptr) - timed_expire - expiration_fudge_factor);
-    REQUIRE(expired < std::time(nullptr) - timed_expire + expiration_fudge_factor);
+    REQUIRE(expired >
+            std::time(nullptr) - timed_expire - expiration_fudge_factor);
+    REQUIRE(expired <
+            std::time(nullptr) - timed_expire + expiration_fudge_factor);
 }

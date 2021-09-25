@@ -175,7 +175,7 @@ func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *
 		ExecutionState: prevExecState,
 	}
 
-	err = lookup.AdvanceExecutionCursor(cursor, endGas, true)
+	err = lookup.AdvanceExecutionCursor(cursor, endGas, true, true)
 	test.FailIfError(t, err)
 	after, err := core.NewExecutionState(cursor)
 	test.FailIfError(t, err)

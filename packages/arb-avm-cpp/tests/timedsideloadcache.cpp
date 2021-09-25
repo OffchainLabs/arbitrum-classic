@@ -64,11 +64,15 @@ TEST_CASE("TimedSideloadCache get") {
 
     auto machine1b = cache.atOrBeforeGas(gas1a);
     REQUIRE(machine1b.has_value());
-    REQUIRE(gas1a == machine1b.value()->second.machine->machine_state.output.arb_gas_used);
+    REQUIRE(
+        gas1a ==
+        machine1b.value()->second.machine->machine_state.output.arb_gas_used);
 
     auto machine2b = cache.atOrBeforeGas(50);
     REQUIRE(machine2b.has_value());
-    REQUIRE(gas2a == machine2b.value()->second.machine->machine_state.output.arb_gas_used);
+    REQUIRE(
+        gas2a ==
+        machine2b.value()->second.machine->machine_state.output.arb_gas_used);
 
     auto peek_gas = cache.peekAtOrBeforeGas(50);
     REQUIRE(gas2a == peek_gas);
@@ -217,13 +221,13 @@ TEST_CASE("TimedSideloadCache expire") {
 }
 
 TEST_CASE("TimedSideloadCache expiredTimestamp") {
-    auto basic_size = 2;
-    auto lru_size = 2;
     auto timed_expire = 20;
     auto expiration_fudge_factor = 10;
     TimedSideloadCache cache(timed_expire);
 
     auto expired = cache.expiredTimestamp();
-    REQUIRE(expired > std::time(nullptr) - timed_expire - expiration_fudge_factor);
-    REQUIRE(expired < std::time(nullptr) - timed_expire + expiration_fudge_factor);
+    REQUIRE(expired >
+            std::time(nullptr) - timed_expire - expiration_fudge_factor);
+    REQUIRE(expired <
+            std::time(nullptr) - timed_expire + expiration_fudge_factor);
 }

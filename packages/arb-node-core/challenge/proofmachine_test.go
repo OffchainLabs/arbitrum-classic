@@ -39,7 +39,7 @@ func generateProofCases(t *testing.T, arbCore *monitor.Monitor) ([]*proofmachine
 	test.FailIfError(t, err)
 	cursors = append(cursors, cursor.Clone())
 	for {
-		err = arbCore.Core.AdvanceExecutionCursor(cursor, big.NewInt(1), true)
+		err = arbCore.Core.AdvanceExecutionCursor(cursor, big.NewInt(1), true, true)
 		test.FailIfError(t, err)
 		if cursor.TotalGasConsumed().Cmp(cursors[len(cursors)-1].TotalGasConsumed()) == 0 {
 			break
