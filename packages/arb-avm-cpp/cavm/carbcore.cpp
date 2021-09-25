@@ -497,13 +497,14 @@ char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
 }
 
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
-                                            const void* total_gas_used_ptr) {
+                                            const void* total_gas_used_ptr,
+                                            int allow_slow_lookups) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto total_gas_used = receiveUint256(total_gas_used_ptr);
 
     try {
         auto executionCursor =
-            arbcore->getExecutionCursor(total_gas_used, false);
+            arbcore->getExecutionCursor(total_gas_used, allow_slow_lookups);
         if (!executionCursor.status.ok()) {
             std::cerr << "Failed to load execution cursor "
                       << executionCursor.status.ToString() << std::endl;

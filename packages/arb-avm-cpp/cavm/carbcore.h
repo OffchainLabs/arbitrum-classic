@@ -98,7 +98,8 @@ char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
                                   const void* cursor_index);
 
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
-                                            const void* total_gas_used_ptr);
+                                            const void* total_gas_used_ptr,
+                                            int allow_slow_lookups);
 int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   CExecutionCursor* execution_cursor_ptr,
                                   const void* max_gas_ptr,

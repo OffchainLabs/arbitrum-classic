@@ -344,10 +344,10 @@ func (ac *ArbCore) CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.
 	return
 }
 
-func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {
+func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (core.ExecutionCursor, error) {
 	totalGasUsedData := math.U256Bytes(totalGasUsed)
 
-	cExecutionCursor := C.arbCoreGetExecutionCursor(ac.c, unsafeDataPointer(totalGasUsedData))
+	cExecutionCursor := C.arbCoreGetExecutionCursor(ac.c, unsafeDataPointer(totalGasUsedData), boolToCInt(allowSlowLookup))
 
 	if cExecutionCursor == nil {
 		return nil, errors.Errorf("error creating execution cursor")

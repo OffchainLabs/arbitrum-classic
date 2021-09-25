@@ -72,7 +72,7 @@ type ArbCoreLookup interface {
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
-	GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
+	GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (ExecutionCursor, error)
 
 	// AdvanceExecutionCursor executes as much as it can without going over maxGas or
 	// optionally until it reaches or goes over maxGas

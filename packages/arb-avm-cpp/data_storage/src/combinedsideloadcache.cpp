@@ -124,6 +124,12 @@ void CombinedSideloadCache::reorg(uint256_t next_gas_used) {
     timed.reorg(next_gas_used);
 }
 
-uint256_t CombinedSideloadCache::expiredTimestamp() const {
+uint256_t CombinedSideloadCache::expiredTimestamp() {
+    std::shared_lock lock(mutex);
+
+    return expiredTimestampNoLock();
+}
+
+uint256_t CombinedSideloadCache::expiredTimestampNoLock() {
     return timed.expiredTimestamp();
 }

@@ -74,8 +74,8 @@ func NewFaultyCore(core core.ArbCore, config FaultConfig) FaultyCore {
 	}
 }
 
-func (c FaultyCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {
-	cursor, err := c.ArbCore.GetExecutionCursor(totalGasUsed)
+func (c FaultyCore) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (core.ExecutionCursor, error) {
+	cursor, err := c.ArbCore.GetExecutionCursor(totalGasUsed, allowSlowLookup)
 	if err != nil {
 		return nil, err
 	}

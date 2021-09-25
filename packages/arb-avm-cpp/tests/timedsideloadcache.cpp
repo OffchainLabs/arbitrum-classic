@@ -202,16 +202,19 @@ TEST_CASE("TimedSideloadCache expire") {
     machine0->machine_state.output.arb_gas_used = 0;
     machine1->machine_state.output.arb_gas_used = 1;
     machine2->machine_state.output.arb_gas_used = 2;
-    machine0->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine1->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine2->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine0->machine_state.output.last_inbox_timestamp =
+        std::time(nullptr) - 1;
+    machine1->machine_state.output.last_inbox_timestamp =
+        std::time(nullptr) - 1;
+    machine2->machine_state.output.last_inbox_timestamp =
+        std::time(nullptr) - 1;
     cache.add(std::move(machine0));
     cache.add(std::move(machine1));
     cache.add(std::move(machine2));
     REQUIRE(cache.size() == 3);
 
     // Let cache expire
-    sleep(expiration_seconds);
+    sleep(expiration_seconds - 1);
 
     // Add one more record
     machine3->machine_state.output.arb_gas_used = 3;

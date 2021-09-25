@@ -20,7 +20,6 @@
 #include <avm/machine.hpp>
 #include <avm_values/bigint.hpp>
 
-
 class TimedSideloadCache {
    public:
     struct Record {
@@ -45,8 +44,8 @@ class TimedSideloadCache {
     uint256_t peekAtOrBeforeGas(uint256_t gas_used);
     std::optional<map_type::iterator> atOrBeforeGas(uint256_t gas_used);
     void reorg(uint256_t next_gas_used);
-    void deleteExpired();
-    [[nodiscard]] uint256_t expiredTimestamp() const;
+    void deleteExpired(uint256_t latest_timestamp);
+    [[nodiscard]] uint256_t expiredTimestamp();
 };
 
 #endif  // ARB_AVM_CPP_TIMEDSIDELOADCACHE_H

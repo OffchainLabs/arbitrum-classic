@@ -35,7 +35,7 @@ import (
 
 func generateProofCases(t *testing.T, arbCore *monitor.Monitor) ([]*proofmachine.ProofData, []string) {
 	var cursors []core.ExecutionCursor
-	cursor, err := arbCore.Core.GetExecutionCursor(big.NewInt(0))
+	cursor, err := arbCore.Core.GetExecutionCursor(big.NewInt(0), true)
 	test.FailIfError(t, err)
 	cursors = append(cursors, cursor.Clone())
 	for {

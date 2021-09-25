@@ -23,10 +23,10 @@
 #include <data_storage/lrusideloadcache.hpp>
 #include <data_storage/timedsideloadcache.hpp>
 
-
 class CombinedSideloadCache {
    public:
     typedef std::map<uint256_t, std::unique_ptr<Machine>> map_type;
+
    private:
     std::shared_mutex mutex;
     BasicSideloadCache basic;
@@ -34,11 +34,10 @@ class CombinedSideloadCache {
     TimedSideloadCache timed;
 
    public:
-    explicit CombinedSideloadCache(size_t basic_size, size_t lru_size, uint32_t timed_expiration_seconds)
-        : basic{basic_size},
-          lru{lru_size},
-          timed{timed_expiration_seconds}
-    {}
+    explicit CombinedSideloadCache(size_t basic_size,
+                                   size_t lru_size,
+                                   uint32_t timed_expiration_seconds)
+        : basic{basic_size}, lru{lru_size}, timed{timed_expiration_seconds} {}
 
     void basic_add(std::unique_ptr<Machine> machine);
     void lru_add(std::unique_ptr<Machine> machine);
@@ -46,9 +45,14 @@ class CombinedSideloadCache {
     size_t basic_size();
     size_t lru_size();
     size_t timed_size();
-    std::unique_ptr<Machine> atOrBeforeGas(uint256_t gas_used, uint256_t database_gas, uint256_t database_load_gas_cost);
+    std::unique_ptr<Machine> atOrBeforeGas(uint256_t gas_used,
+                                           uint256_t database_gas,
+                                           uint256_t database_load_gas_cost);
     void reorg(uint256_t next_gas_used);
-    [[nodiscard]] uint256_t expiredTimestamp() const;
+    [[nodiscard]] uint256_t expiredTimestamp();
+
+   private:
+    [[nodiscard]] uint256_t expiredTimestampNoLock();
 };
 
 #endif  // ARB_AVM_CPP_COMBINEDSIDELOADCACHE_HPP
