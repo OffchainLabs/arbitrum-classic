@@ -1135,7 +1135,8 @@ void ArbCore::operator()() {
         if (!machineIdle() || message_data_status != MESSAGES_READY) {
             // Machine is already running or no new messages, so sleep for a
             // short while
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(coreConfig.idle_sleep_milliseconds));
         }
     }
 

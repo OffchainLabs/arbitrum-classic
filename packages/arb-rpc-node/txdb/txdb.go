@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -71,7 +70,6 @@ func New(
 	ctx context.Context,
 	arbCore core.ArbCore,
 	as machine.NodeStore,
-	updateFrequency time.Duration,
 	nodeConfig *configuration.Node,
 ) (*TxDB, <-chan error, error) {
 	var snapshotLRUCache *lru.Cache
@@ -102,7 +100,7 @@ func New(
 		snapshotTimedCache: snapshotTimedCache,
 		allowSlowLookup:    nodeConfig.Cache.AllowSlowLookup,
 	}
-	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(int64(nodeConfig.LogProcessCount)), updateFrequency)
+	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(int64(nodeConfig.LogProcessCount)), nodeConfig.LogIdleSleep)
 	errChan := logReader.Start(ctx)
 	db.logReader = logReader
 	return db, errChan, nil

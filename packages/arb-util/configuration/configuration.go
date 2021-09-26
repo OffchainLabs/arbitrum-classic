@@ -62,6 +62,7 @@ type Core struct {
 	Test                   CoreTest      `koanf:"test"`
 	Debug                  bool          `koanf:"debug"`
 	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
+	IdleSleep              time.Duration `koanf:"idle-sleep"`
 	LazyLoadCoreMachine    bool          `koanf:"lazy-load-core-machine"`
 	LazyLoadArchiveQueries bool          `koanf:"lazy-load-archive-queries"`
 	MessageProcessCount    int           `koanf:"message-process-count"`
@@ -183,15 +184,16 @@ type Forwarder struct {
 }
 
 type Node struct {
-	Aggregator      Aggregator `koanf:"aggregator"`
-	Cache           NodeCache  `koanf:"cache"`
-	ChainID         uint64     `koanf:"chain-id"`
-	Forwarder       Forwarder  `koanf:"forwarder"`
-	LogProcessCount int        `koanf:"log-process-count"`
-	RPC             RPC        `koanf:"rpc"`
-	Sequencer       Sequencer  `koanf:"sequencer"`
-	Type            string     `koanf:"type"`
-	WS              WS         `koanf:"ws"`
+	Aggregator      Aggregator    `koanf:"aggregator"`
+	Cache           NodeCache     `koanf:"cache"`
+	ChainID         uint64        `koanf:"chain-id"`
+	Forwarder       Forwarder     `koanf:"forwarder"`
+	LogProcessCount int           `koanf:"log-process-count"`
+	LogIdleSleep    time.Duration `koanf:"log-idle-sleep"`
+	RPC             RPC           `koanf:"rpc"`
+	Sequencer       Sequencer     `koanf:"sequencer"`
+	Type            string        `koanf:"type"`
+	WS              WS            `koanf:"ws"`
 }
 
 type NodeCache struct {
@@ -318,6 +320,7 @@ func DefaultCoreSettings() *Core {
 		},
 		CheckpointLoadGasCost:  1_000_000,
 		GasCheckpointFrequency: 1_000_000,
+		IdleSleep:              5 * time.Millisecond,
 		MessageProcessCount:    100,
 	}
 }
@@ -331,6 +334,7 @@ func DefaultNodeSettings() *Node {
 			TimedExpire:     20 * time.Minute,
 		},
 		LogProcessCount: 100,
+		LogIdleSleep:    10 * time.Millisecond, // 10 for dev, 100 for server
 	}
 
 }
@@ -377,6 +381,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
 	f.String("node.forwarder.rpc-mode", "full", "RPC mode: either full, non-mutating (no eth_sendRawTransaction), or forwarding-only (only requests forwarded upstream are permitted)")
 
+	f.Duration("node.log-idle-sleep", 100*time.Millisecond, "milliseconds for log reader to sleep between reading logs")
 	f.Int("node.log-process-count", 100, "maximum number of logs to process at a time")
 
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
@@ -432,6 +437,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
+
+	f.Duration("core.idle-sleep", 5*time.Millisecond, "how long core thread should sleep when idle")
 
 	f.Bool("core.lazy-load-core-machine", false, "if the core machine should be loaded as it's run")
 	f.Bool("core.lazy-load-archive-queries", true, "if the archive queries should be loaded as they're run")

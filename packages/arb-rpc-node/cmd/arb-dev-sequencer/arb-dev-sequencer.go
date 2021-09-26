@@ -303,7 +303,7 @@ func startup() error {
 		InboxReader: inboxReader,
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond, &config.Node)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), &config.Node)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}

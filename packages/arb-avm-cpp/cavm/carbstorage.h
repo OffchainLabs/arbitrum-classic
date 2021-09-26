@@ -32,6 +32,7 @@ typedef struct {
     int32_t basic_cache_size;
     int32_t lru_cache_size;
     int32_t cache_expiration_seconds;
+    int32_t idle_sleep_milliseconds;
     int32_t seed_cache_on_startup;
     int32_t debug;
     int32_t save_rocksdb_interval;

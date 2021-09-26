@@ -53,6 +53,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	defer C.free(unsafe.Pointer(cSaveRocksdbPath))
 
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
+	sleepMilliseconds := int(coreConfig.IdleSleep.Milliseconds())
 	saveRocksdbIntervalSeconds := int(coreConfig.SaveRocksdbInterval.Seconds())
 	cConfig := C.CArbCoreConfig{
 		message_process_count:         C.int(coreConfig.MessageProcessCount),
@@ -62,6 +63,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		basic_cache_size:              C.int(coreConfig.Cache.BasicSize),
 		lru_cache_size:                C.int(coreConfig.Cache.LRUSize),
 		cache_expiration_seconds:      C.int(cacheExpirationSeconds),
+		idle_sleep_milliseconds:       C.int(sleepMilliseconds),
 		seed_cache_on_startup:         boolToCInt(coreConfig.Cache.SeedOnStartup),
 		debug:                         boolToCInt(coreConfig.Debug),
 		save_rocksdb_interval:         C.int(saveRocksdbIntervalSeconds),
