@@ -37,17 +37,6 @@ void TimedSideloadCache::add(std::unique_ptr<Machine> machine) {
     cache[gas_used].machine = std::move(machine);
 }
 
-uint256_t TimedSideloadCache::peekAtOrBeforeGas(uint256_t gas_used) {
-    auto it = cache.upper_bound(gas_used);
-    if (it == cache.begin()) {
-        return 0;
-    }
-
-    // Upper_bound returns the element after the one desired
-    it--;
-    return it->second.machine->machine_state.output.arb_gas_used;
-}
-
 std::optional<TimedSideloadCache::map_type::iterator>
 TimedSideloadCache::atOrBeforeGas(uint256_t gas_used) {
     auto it = cache.upper_bound(gas_used);

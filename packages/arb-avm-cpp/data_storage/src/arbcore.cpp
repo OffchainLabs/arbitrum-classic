@@ -480,7 +480,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
 
         auto checkpoint_it = tx.checkpointGetIterator();
 
-        // Find first checkpoint to delete
+        // Find last checkpoint saved
         checkpoint_it->SeekToLast();
         if (!checkpoint_it->status().ok()) {
             std::cerr << "Error: SeekToLast failed during reorg: "
@@ -517,8 +517,8 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     }
 
                     if (!selected_machine_output.has_value()) {
-                        // Save selected output to know how much machine needs
-                        // to be executed if it behind
+                        // Save first selected output to know how much machine
+                        // needs to be executed if it behind
                         selected_machine_output = machine_output;
                     }
 
@@ -566,6 +566,10 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     }
                 }
 
+                if (initial_start) {
+                    // Don't actually delete checkpoints on initial start
+                    continue;
+                }
                 // Obsolete checkpoint, need to delete referenced machine
                 deleteMachineState(tx, checkpoint);
             }
@@ -600,17 +604,17 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     auto& output = core_machine->machine_state.output;
 
     if (!selected_machine_output.has_value()) {
-        // No intermediate value, so just reorg to core_machine state
+        // No intermediate value, so just remove invalid cache entries
         combined_sideload_cache.reorg(
             core_machine->machine_state.arb_gas_remaining);
     } else {
-        // Reorg to selected_machine_output and advance core_machine to match
+        // Remove invalid cache entries after selected_machine_output
+        // and advance core_machine to same place as selected_machine_output.
         combined_sideload_cache.reorg(selected_machine_output->arb_gas_used);
 
         while (core_machine->machine_state.output.arb_gas_used <
                selected_machine_output->arb_gas_used) {
-            // Need to run machine until caught up with current
-            // checkpoint
+            // Need to run machine until caught up with current checkpoint
             MachineExecutionConfig execConfig;
             execConfig.stop_on_sideload = initial_start;
 

@@ -73,9 +73,6 @@ TEST_CASE("TimedSideloadCache get") {
     REQUIRE(
         gas2a ==
         machine2b.value()->second.machine->machine_state.output.arb_gas_used);
-
-    auto peek_gas = cache.peekAtOrBeforeGas(50);
-    REQUIRE(gas2a == peek_gas);
 }
 
 TEST_CASE("TimedSideloadCache reorg") {

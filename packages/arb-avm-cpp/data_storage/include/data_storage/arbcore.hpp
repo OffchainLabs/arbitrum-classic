@@ -70,7 +70,7 @@ struct ArbCoreConfig {
     // Frequency to save checkpoint to database
     uint256_t min_gas_checkpoint_frequency{1'000'000};
 
-    // Amount of gas beween basic cache entries
+    // Amount of gas between basic cache entries
     uint32_t basic_sideload_cache_interval{1'000'000};
 
     // Number of machines to keep in basic cache
@@ -445,8 +445,6 @@ class ArbCore {
                                             const uint256_t& send_index);
     bool runMachineWithMessages(MachineExecutionConfig& execConfig,
                                 size_t max_message_batch_size);
-    uint256_t peekClosestCachedMachine(const uint256_t& total_gas_used);
-    uint256_t peekOldMachineCache(const uint256_t& total_gas_used);
     uint256_t peekCheckpointUsingGas(ReadTransaction& tx,
                                      const uint256_t& total_gas_used);
 
