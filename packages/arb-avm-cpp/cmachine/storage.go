@@ -68,10 +68,10 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		save_rocksdb_path:             cSaveRocksdbPath,
 		lazy_load_core_machine:        boolToCInt(coreConfig.LazyLoadCoreMachine),
 		lazy_load_archive_queries:     boolToCInt(coreConfig.LazyLoadArchiveQueries),
-		profile_reorg_to:              C.int(coreConfig.Profile.ReorgTo),
-		profile_run_until:             C.int(coreConfig.Profile.RunUntil),
-		profile_load_count:            C.int(coreConfig.Profile.LoadCount),
-		profile_reset_db_except_inbox: boolToCInt(coreConfig.Profile.ResetAllExceptInbox),
+		profile_reorg_to:              C.int(coreConfig.Test.ReorgTo),
+		profile_run_until:             C.int(coreConfig.Test.RunUntil),
+		profile_load_count:            C.int(coreConfig.Test.LoadCount),
+		profile_reset_db_except_inbox: boolToCInt(coreConfig.Test.ResetAllExceptInbox),
 	}
 
 	cArbStorage := C.createArbStorage(cDbPath, cConfig)

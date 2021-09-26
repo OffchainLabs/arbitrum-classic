@@ -59,45 +59,31 @@ type Conf struct {
 type Core struct {
 	Cache                  CoreCache     `koanf:"cache"`
 	CheckpointLoadGasCost  int           `koanf:"checkpoint-load-gas-cost"`
-	Profile                CoreProfile   `koanf:"profile"`
+	Test                   CoreTest      `koanf:"test"`
 	Debug                  bool          `koanf:"debug"`
 	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
+	LazyLoadCoreMachine    bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries bool          `koanf:"lazy-load-archive-queries"`
 	MessageProcessCount    int           `koanf:"message-process-count"`
 	SaveRocksdbInterval    time.Duration `koanf:"save-rocksdb-interval"`
 	SaveRocksdbPath        string        `koanf:"save-rocksdb-path"`
-	LazyLoadCoreMachine    bool          `koanf:"lazy-load-core-machine"`
-	LazyLoadArchiveQueries bool          `koanf:"lazy-load-archive-queries"`
 }
 
 type CoreCache struct {
 	BasicInterval int           `koanf:"basic-interval"`
 	BasicSize     int           `koanf:"basic-size"`
+	Disable       bool          `koanf:"disable"`
 	LRUSize       int           `koanf:"lru-size"`
 	SeedOnStartup bool          `koanf:"seed-on-startup"`
 	TimedExpire   time.Duration `koanf:"timed-expire"`
 }
 
-type CoreProfile struct {
+type CoreTest struct {
 	JustMetadata        bool  `koanf:"just-metadata"`
 	LoadCount           int64 `koanf:"load-count"`
 	ReorgTo             int64 `koanf:"reorg-to"`
 	ResetAllExceptInbox bool  `koanf:"reset-all-except-inbox"`
 	RunUntil            int64 `koanf:"run-until"`
-}
-
-// DefaultCoreSettings is useful in unit tests
-func DefaultCoreSettings() *Core {
-	return &Core{
-		Cache: CoreCache{
-			BasicInterval: 100,
-			BasicSize:     1000,
-			LRUSize:       1000,
-			TimedExpire:   20 * time.Minute,
-		},
-		CheckpointLoadGasCost:  1_000_000,
-		GasCheckpointFrequency: 1_000_000,
-		MessageProcessCount:    10,
-	}
 }
 
 type FeedInput struct {
@@ -197,14 +183,15 @@ type Forwarder struct {
 }
 
 type Node struct {
-	Aggregator Aggregator `koanf:"aggregator"`
-	Cache      NodeCache  `koanf:"cache"`
-	ChainID    uint64     `koanf:"chain-id"`
-	Forwarder  Forwarder  `koanf:"forwarder"`
-	RPC        RPC        `koanf:"rpc"`
-	Sequencer  Sequencer  `koanf:"sequencer"`
-	Type       string     `koanf:"type"`
-	WS         WS         `koanf:"ws"`
+	Aggregator      Aggregator `koanf:"aggregator"`
+	Cache           NodeCache  `koanf:"cache"`
+	ChainID         uint64     `koanf:"chain-id"`
+	Forwarder       Forwarder  `koanf:"forwarder"`
+	LogProcessCount int        `koanf:"log-process-count"`
+	RPC             RPC        `koanf:"rpc"`
+	Sequencer       Sequencer  `koanf:"sequencer"`
+	Type            string     `koanf:"type"`
+	WS              WS         `koanf:"ws"`
 }
 
 type NodeCache struct {
@@ -303,7 +290,8 @@ type Config struct {
 	GasPrice           float64     `koanf:"gas-price"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
 	L1                 struct {
-		URL string `koanf:"url"`
+		ChainID int    `koanf:"chain-id"`
+		URL     string `koanf:"url"`
 	} `koanf:"l1"`
 	Log           Log        `koanf:"log"`
 	Node          Node       `koanf:"node"`
@@ -317,6 +305,34 @@ type Config struct {
 	// The following field needs to be top level for compatibility with the underlying go-ethereum lib
 	Metrics       bool    `koanf:"metrics"`
 	MetricsServer Metrics `koanf:"metrics-server"`
+}
+
+// DefaultCoreSettings is useful in unit tests
+func DefaultCoreSettings() *Core {
+	return &Core{
+		Cache: CoreCache{
+			BasicInterval: 100,
+			BasicSize:     1000,
+			LRUSize:       1000,
+			TimedExpire:   20 * time.Minute,
+		},
+		CheckpointLoadGasCost:  1_000_000,
+		GasCheckpointFrequency: 1_000_000,
+		MessageProcessCount:    100,
+	}
+}
+
+// DefaultNodeSettings is useful in unit tests
+func DefaultNodeSettings() *Node {
+	return &Node{
+		Cache: NodeCache{
+			AllowSlowLookup: true,
+			LRUSize:         1000,
+			TimedExpire:     20 * time.Minute,
+		},
+		LogProcessCount: 100,
+	}
+
 }
 
 func (c *Config) GetNodeDatabasePath() string {
@@ -350,12 +366,24 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
+
+	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
+	f.Int("node.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
+	f.Int("node.cache.block-info-lru-size", 100_000, "number of recently used L2 block info to hold in lru memory cache")
+	f.Duration("node.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in timed memory cache")
+
+	f.Uint64("node.chain-id", 42161, "chain id of the arbitrum chain")
+
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
 	f.String("node.forwarder.rpc-mode", "full", "RPC mode: either full, non-mutating (no eth_sendRawTransaction), or forwarding-only (only requests forwarded upstream are permitted)")
+
+	f.Int("node.log-process-count", 100, "maximum number of logs to process at a time")
+
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
 	f.Bool("node.rpc.enable-l1-calls", false, "If RPC calls which query the L1 node indirectly should be allowed")
+
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.continue-batch-posting-block-interval", 2, "block interval to post the next batch after posting a partial one")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
@@ -369,7 +397,9 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.dangerous.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-batch-posting", false, "disable posting batches to L1 (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-delayed-message-sequencing", false, "disable sequencing delayed messages (DANGEROUS)")
+
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
+
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
@@ -397,32 +427,30 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 	f.Int("core.cache.basic-interval", 1_000_000, "amount of gas to wait between saving to basic cache")
 	f.Int("core.cache.basic-size", 100, "number of recently used L2 blocks to hold in basic memory cache")
+	f.Bool("core.cache.disable", false, "disable saving to cache while in core thread")
 	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
 	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
 
-	f.Bool("core.profile.just-metadata", false, "just print database metadata and exit")
-	f.Int("core.profile.load-count", 0, "number of snapshots to load from database for profile test, zero to disable")
-	f.Int("core.profile.reorg-to", 0, "reorg to snapshot with given gas, zero to disable")
-	f.Bool("core.profile.reset-all-except-inbox", false, "remove all database info except for inbox")
-	f.Int("core.profile.run-until", 0, "run until gas is reacheck for profile test, zero to disable")
-
-	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
-	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
 	f.Bool("core.lazy-load-core-machine", false, "if the core machine should be loaded as it's run")
 	f.Bool("core.lazy-load-archive-queries", true, "if the archive queries should be loaded as they're run")
 
+	f.Int("core.message-process-count", 100, "maximum number of messages to process at a time")
+
+	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
+	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
+
+	f.Bool("core.test.just-metadata", false, "just print database metadata and exit")
+	f.Int("core.test.load-count", 0, "number of snapshots to load from database for profile test, zero to disable")
+	f.Int("core.test.reorg-to", 0, "reorg to snapshot with given gas, zero to disable")
+	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
+	f.Int("core.test.run-until", 0, "run until gas is reacheck for profile test, zero to disable")
+
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 
-	f.Bool("node.cache.allow-slow-lookup", false, "load L2 block from disk if not in memory cache")
-	f.Int("node.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
-	f.Int("node.cache.block-info-lru-size", 100_000, "number of recently used L2 block info to hold in lru memory cache")
-	f.Duration("node.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in timed memory cache")
-
-	f.Uint64("node.chain-id", 42161, "chain id of the arbitrum chain")
-
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
+	f.Uint64("l1.chain-id", 0, "if set other than 0, will be used to validate database and L1 connection")
 
 	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 	f.String("persistent.chain", "", "path that chain specific state is located")
@@ -598,6 +626,15 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		}
 	}
 
+	if out.L1.ChainID != 0 && l1ChainId.Int64() != int64(out.L1.ChainID) {
+		logger.
+			Error().
+			Int("expected-chainid", out.L1.ChainID).
+			Int64("l1-chainid", l1ChainId.Int64()).
+			Msg("unexpected chain id")
+		return nil, nil, nil, nil, fmt.Errorf("expected chain id %v but l1 node has chain id %v", out.L1.ChainID, l1ChainId)
+	}
+
 	return out, wallet, l1Client, l1ChainId, nil
 }
 
@@ -679,7 +716,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	// Load defaults that are not specified on command line
 	err = k.Load(confmap.Provider(map[string]interface{}{
-		"core.message-process-count":             10,
 		"core.checkpoint-load-gas-cost":          1_000_000_000,
 		"core.gas-checkpoint-frequency":          1_000_000_000,
 		"feed.output.queue":                      100,

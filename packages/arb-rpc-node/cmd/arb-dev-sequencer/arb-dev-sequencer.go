@@ -95,12 +95,23 @@ func startup() error {
 	//fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 
-	nodeCacheConfig := configuration.NodeCache{
-		AllowSlowLookup: true,
-		LRUSize:         1000,
-		TimedExpire:     20 * time.Minute,
+	config := configuration.Config{
+		Core: *configuration.DefaultCoreSettings(),
+		Feed: configuration.Feed{
+			Output: configuration.FeedOutput{
+				Addr:          "127.0.0.1",
+				IOTimeout:     2 * time.Second,
+				Port:          "9642",
+				Ping:          5 * time.Second,
+				ClientTimeout: 15 * time.Second,
+				Queue:         1,
+				Workers:       2,
+			},
+		},
+		Node: *configuration.DefaultNodeSettings(),
 	}
-	coreConfig := configuration.DefaultCoreSettings()
+	config.Node.Sequencer.CreateBatchBlockInterval = *createBatchBlockInterval
+	config.Node.Sequencer.DelayedMessagesTargetDelay = *delayedMessagesTargetDelay
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -230,7 +241,7 @@ func startup() error {
 		}
 	}()
 
-	mon, err := monitor.NewMonitor(dbPath, arbosPath, coreConfig)
+	mon, err := monitor.NewMonitor(dbPath, arbosPath, &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
@@ -291,27 +302,8 @@ func startup() error {
 		Core:        mon.Core,
 		InboxReader: inboxReader,
 	}
-	config := configuration.Config{
-		Feed: configuration.Feed{
-			Output: configuration.FeedOutput{
-				Addr:          "127.0.0.1",
-				IOTimeout:     2 * time.Second,
-				Port:          "9642",
-				Ping:          5 * time.Second,
-				ClientTimeout: 15 * time.Second,
-				Queue:         1,
-				Workers:       2,
-			},
-		},
-		Node: configuration.Node{
-			Sequencer: configuration.Sequencer{
-				CreateBatchBlockInterval:   *createBatchBlockInterval,
-				DelayedMessagesTargetDelay: *delayedMessagesTargetDelay,
-			},
-		},
-	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond, &nodeCacheConfig)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond, &config.Node)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
