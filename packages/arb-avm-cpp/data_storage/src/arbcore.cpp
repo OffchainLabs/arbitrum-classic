@@ -503,6 +503,16 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                 // Checkpoint without machine
                 auto machine_output =
                     std::get<MachineOutput>(checkpoint_variant);
+                if (initial_start && !selected_machine_output.has_value()) {
+                    // Initial start needs to seed cache through last entry
+                    // in database
+                    if (coreConfig.debug) {
+                        std::cerr
+                            << "Last L2 block saved to database (no machine): "
+                            << machine_output.l2_block_number << std::endl;
+                    }
+                    selected_machine_output = machine_output;
+                }
                 if (check_output(machine_output)) {
                     // All outdated checkpoints have been removed
                     // TODO: Do not check cache every checkpoint without machine
@@ -529,11 +539,30 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                 // Checkpoint with machine
                 auto checkpoint =
                     std::get<MachineStateKeys>(checkpoint_variant);
+                if (initial_start && !selected_machine_output.has_value()) {
+                    // Initial start needs to seed cache through last entry
+                    // in database
+                    if (coreConfig.debug) {
+                        std::cerr << "Last L2 block saved to database: "
+                                  << checkpoint.output.l2_block_number
+                                  << std::endl;
+                    }
+                    selected_machine_output = checkpoint.output;
+                }
                 if (check_output(checkpoint.output)) {
                     // All outdated checkpoints have been removed
                     if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
                         // Good checkpoint
                         try {
+                            if (coreConfig.debug) {
+                                if (initial_start) {
+                                    std::cerr
+                                        << "Loading L2 block saved to "
+                                           "database: "
+                                        << checkpoint.output.l2_block_number
+                                        << std::endl;
+                                }
+                            }
                             auto mach = combined_sideload_cache.atOrBeforeGas(
                                 checkpoint.output.arb_gas_used,
                                 checkpoint.output.arb_gas_used,
@@ -566,16 +595,16 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     }
                 }
 
-                if (initial_start) {
-                    // Don't actually delete checkpoints on initial start
-                    continue;
+                if (!initial_start) {
+                    // Obsolete checkpoint, need to delete referenced machine
+                    deleteMachineState(tx, checkpoint);
                 }
-                // Obsolete checkpoint, need to delete referenced machine
-                deleteMachineState(tx, checkpoint);
             }
 
-            // Delete checkpoint to make sure it isn't used later
-            tx.checkpointDelete(checkpoint_it->key());
+            if (!initial_start) {
+                // Delete checkpoint to make sure it isn't used later
+                tx.checkpointDelete(checkpoint_it->key());
+            }
 
             checkpoint_it->Prev();
         }
@@ -604,16 +633,25 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     auto& output = core_machine->machine_state.output;
 
     if (!selected_machine_output.has_value()) {
-        // No intermediate value, so just remove invalid cache entries
+        // No intermediate value to fast forward to, so just remove
+        // invalid cache entries
         combined_sideload_cache.reorg(
             core_machine->machine_state.arb_gas_remaining);
     } else {
         // Remove invalid cache entries after selected_machine_output
         // and advance core_machine to same place as selected_machine_output.
-        combined_sideload_cache.reorg(selected_machine_output->arb_gas_used);
+        combined_sideload_cache.reorg(
+            selected_machine_output.value().arb_gas_used);
 
+        if (initial_start) {
+            std::cerr << "Seeding cache between L2 blocks: "
+                      << core_machine->machine_state.output.l2_block_number
+                      << " - "
+                      << selected_machine_output.value().l2_block_number
+                      << std::endl;
+        }
         while (core_machine->machine_state.output.arb_gas_used <
-               selected_machine_output->arb_gas_used) {
+               selected_machine_output.value().arb_gas_used) {
             // Need to run machine until caught up with current checkpoint
             MachineExecutionConfig execConfig;
             execConfig.stop_on_sideload = initial_start;
@@ -639,7 +677,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     std::make_unique<Machine>(*core_machine));
 
                 if (core_machine->machine_state.output.arb_gas_used >=
-                    selected_machine_output->arb_gas_used) {
+                    selected_machine_output.value().arb_gas_used) {
                     break;
                 }
 
@@ -656,7 +694,8 @@ rocksdb::Status ArbCore::reorgCheckpoints(
             }
         }
 
-        if (core_machine->machine_state.output != selected_machine_output) {
+        if (core_machine->machine_state.output.arb_gas_used !=
+            selected_machine_output.value().arb_gas_used) {
             // Machine in unexpected state, data corruption might have occurred
             std::cerr << "Error catching up: machine in unexpected state"
                       << "\n";
