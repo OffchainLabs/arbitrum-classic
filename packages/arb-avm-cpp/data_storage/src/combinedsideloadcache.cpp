@@ -56,7 +56,8 @@ std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
     uint256_t gas_used,
     uint256_t existing_gas_used,
     uint256_t database_gas,
-    uint256_t database_load_gas_cost) {
+    uint256_t database_load_gas_cost,
+    uint256_t max_execution_gas) {
     // Unique lock required to update LRU cache
     std::unique_lock lock(mutex);
 
@@ -108,7 +109,7 @@ std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
         return nullptr;
     }
 
-    if (gas_used - best_non_db_gas > database_load_gas_cost) {
+    if (gas_used - best_non_db_gas > max_execution_gas) {
         // Distance from last cache entry too far to execute
         return nullptr;
     }

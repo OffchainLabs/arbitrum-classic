@@ -57,17 +57,19 @@ type Conf struct {
 }
 
 type Core struct {
-	Cache                  CoreCache     `koanf:"cache"`
-	CheckpointLoadGasCost  int           `koanf:"checkpoint-load-gas-cost"`
-	Test                   CoreTest      `koanf:"test"`
-	Debug                  bool          `koanf:"debug"`
-	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
-	IdleSleep              time.Duration `koanf:"idle-sleep"`
-	LazyLoadCoreMachine    bool          `koanf:"lazy-load-core-machine"`
-	LazyLoadArchiveQueries bool          `koanf:"lazy-load-archive-queries"`
-	MessageProcessCount    int           `koanf:"message-process-count"`
-	SaveRocksdbInterval    time.Duration `koanf:"save-rocksdb-interval"`
-	SaveRocksdbPath        string        `koanf:"save-rocksdb-path"`
+	Cache                     CoreCache     `koanf:"cache"`
+	CheckpointLoadGasCost     int           `koanf:"checkpoint-load-gas-cost"`
+	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution"`
+	Profile                   CoreTest      `koanf:"profile"`
+	Test                      CoreTest      `koanf:"test"`
+	Debug                     bool          `koanf:"debug"`
+	GasCheckpointFrequency    int           `koanf:"gas-checkpoint-frequency"`
+	IdleSleep                 time.Duration `koanf:"idle-sleep"`
+	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
+	MessageProcessCount       int           `koanf:"message-process-count"`
+	SaveRocksdbInterval       time.Duration `koanf:"save-rocksdb-interval"`
+	SaveRocksdbPath           string        `koanf:"save-rocksdb-path"`
 }
 
 type CoreCache struct {
@@ -320,8 +322,7 @@ func DefaultCoreSettings() *Core {
 		},
 		CheckpointLoadGasCost:  1_000_000,
 		GasCheckpointFrequency: 1_000_000,
-		IdleSleep:              5 * time.Millisecond,
-		MessageProcessCount:    100,
+		MessageProcessCount:    10,
 	}
 }
 
@@ -724,6 +725,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	// Load defaults that are not specified on command line
 	err = k.Load(confmap.Provider(map[string]interface{}{
 		"core.checkpoint-load-gas-cost":          1_000_000_000,
+		"core.checkpoint-max-execution":          1_000_000_000,
 		"core.gas-checkpoint-frequency":          1_000_000_000,
 		"feed.output.queue":                      100,
 		"node.sequencer.lockout.timeout":         30 * time.Second,

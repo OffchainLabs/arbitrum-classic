@@ -67,6 +67,9 @@ struct ArbCoreConfig {
     // otherwise just run machine until gas reached
     uint256_t checkpoint_load_gas_cost{1'000'000};
 
+    // Maximum amount of gas to spend executing machine forward
+    uint256_t checkpoint_max_execution_gas{1'000'000};
+
     // Frequency to save checkpoint to database
     uint256_t min_gas_checkpoint_frequency{1'000'000};
 

@@ -518,7 +518,8 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     // TODO: Do not check cache every checkpoint without machine
                     auto mach = combined_sideload_cache.atOrBeforeGas(
                         machine_output.arb_gas_used, 0, 0,
-                        coreConfig.checkpoint_load_gas_cost);
+                        coreConfig.checkpoint_load_gas_cost,
+                        coreConfig.checkpoint_max_execution_gas);
                     if (mach != nullptr) {
                         // Found machine in cache
                         setup = std::make_unique<MachineThread>(
@@ -565,7 +566,8 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                         auto mach = combined_sideload_cache.atOrBeforeGas(
                             checkpoint.output.arb_gas_used, existing_gas_used,
                             checkpoint.output.arb_gas_used,
-                            coreConfig.checkpoint_load_gas_cost);
+                            coreConfig.checkpoint_load_gas_cost,
+                            coreConfig.checkpoint_max_execution_gas);
                         if (mach != nullptr) {
                             // Found machine in cache
                             setup = std::make_unique<MachineThread>(
@@ -1958,7 +1960,8 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
 
         auto mach = combined_sideload_cache.atOrBeforeGas(
             max_gas, current_gas, database_gas,
-            coreConfig.checkpoint_load_gas_cost);
+            coreConfig.checkpoint_load_gas_cost,
+            coreConfig.checkpoint_max_execution_gas);
         if (mach == nullptr && allow_slow_lookup &&
             database_gas > current_gas &&
             database_gas <= coreConfig.checkpoint_load_gas_cost) {
@@ -1975,10 +1978,6 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
         }
     }
 
-    if (gas_target - current_gas > coreConfig.checkpoint_load_gas_cost) {
-        // Execution will take too long
-        return rocksdb::Status::NotFound();
-    }
     return advanceExecutionCursorImpl(execution_cursor, gas_target, go_over_gas,
                                       coreConfig.message_process_count,
                                       allow_slow_lookup);
@@ -2060,14 +2059,18 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                     resolveExecutionCursorMachine(tx, execution_cursor);
 
                 uint256_t gas_used = execution_cursor.getOutput().arb_gas_used;
-                if (gas_used == total_gas_used) {
+                if ((gas_used == total_gas_used) ||
+                    (go_over_gas && gas_used > total_gas_used) ||
+                    (!go_over_gas &&
+                     gas_used + mach->machine_state.nextGasCost() >
+                         total_gas_used)) {
                     break;
-                } else if (go_over_gas && gas_used > total_gas_used) {
-                    break;
-                } else if (!go_over_gas &&
-                           gas_used + mach->machine_state.nextGasCost() >
-                               total_gas_used) {
-                    break;
+                }
+
+                if (total_gas_used - gas_used >
+                    coreConfig.checkpoint_max_execution_gas) {
+                    // Execution will take too long
+                    return rocksdb::Status::NotFound();
                 }
 
                 auto get_messages_result = readNextMessages(
@@ -2139,7 +2142,8 @@ ArbCore::getClosestExecutionCursor(ReadTransaction& tx,
     }
 
     auto mach = combined_sideload_cache.atOrBeforeGas(
-        total_gas_used, 0, database_gas, coreConfig.checkpoint_load_gas_cost);
+        total_gas_used, 0, database_gas, coreConfig.checkpoint_load_gas_cost,
+        coreConfig.checkpoint_max_execution_gas);
 
     if (mach != nullptr) {
         return ExecutionCursor(std::move(mach));
