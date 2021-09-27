@@ -353,7 +353,7 @@ TEST_CASE("ArbCore backwards reorg") {
     waitForDelivery(arbCore);
     REQUIRE(arbCore->messageEntryInsertedCount().data == 0);
 
-    auto maxGas = std::numeric_limits<uint256_t>::max();
+    auto maxGas = 1'000'000'000;
     auto initialState = arbCore->getExecutionCursor(maxGas, true);
     REQUIRE(initialState.status.ok());
     REQUIRE(initialState.data->getTotalMessagesRead() == 0);
@@ -441,8 +441,7 @@ TEST_CASE("ArbCore duplicate code segments") {
         }
     }
 
-    auto cursor =
-        arbCore->getExecutionCursor(std::numeric_limits<uint256_t>::max(), true);
+    auto cursor = arbCore->getExecutionCursor(1'000'000'000, true);
     REQUIRE(cursor.status.ok());
     REQUIRE(std::get<std::unique_ptr<Machine>>(cursor.data->machine)
                 ->currentStatus() == Status::Halted);
