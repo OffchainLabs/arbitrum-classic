@@ -48,7 +48,8 @@ class CombinedSideloadCache {
     std::unique_ptr<Machine> atOrBeforeGas(uint256_t gas_used,
                                            uint256_t existing_gas_used,
                                            uint256_t database_gas,
-                                           uint256_t database_load_gas_cost);
+                                           uint256_t database_load_gas_cost,
+                                           uint256_t max_execution_gas);
     void reorg(uint256_t next_gas_used);
     [[nodiscard]] uint256_t currentTimeExpired();
 };

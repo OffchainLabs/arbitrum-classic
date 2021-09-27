@@ -57,16 +57,17 @@ type Conf struct {
 }
 
 type Core struct {
-	Cache                  CoreCache     `koanf:"cache"`
-	CheckpointLoadGasCost  int           `koanf:"checkpoint-load-gas-cost"`
-	Profile                CoreProfile   `koanf:"profile"`
-	Debug                  bool          `koanf:"debug"`
-	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
-	MessageProcessCount    int           `koanf:"message-process-count"`
-	SaveRocksdbInterval    time.Duration `koanf:"save-rocksdb-interval"`
-	SaveRocksdbPath        string        `koanf:"save-rocksdb-path"`
-	LazyLoadCoreMachine    bool          `koanf:"lazy-load-core-machine"`
-	LazyLoadArchiveQueries bool          `koanf:"lazy-load-archive-queries"`
+	Cache                     CoreCache     `koanf:"cache"`
+	CheckpointLoadGasCost     int           `koanf:"checkpoint-load-gas-cost"`
+	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution"`
+	Profile                   CoreProfile   `koanf:"profile"`
+	Debug                     bool          `koanf:"debug"`
+	GasCheckpointFrequency    int           `koanf:"gas-checkpoint-frequency"`
+	MessageProcessCount       int           `koanf:"message-process-count"`
+	SaveRocksdbInterval       time.Duration `koanf:"save-rocksdb-interval"`
+	SaveRocksdbPath           string        `koanf:"save-rocksdb-path"`
+	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
 }
 
 type CoreCache struct {
@@ -94,9 +95,10 @@ func DefaultCoreSettings() *Core {
 			LRUSize:       1000,
 			TimedExpire:   20 * time.Minute,
 		},
-		CheckpointLoadGasCost:  1_000_000,
-		GasCheckpointFrequency: 1_000_000,
-		MessageProcessCount:    10,
+		CheckpointLoadGasCost:     1_000_000,
+		CheckpointMaxExecutionGas: 1_000_000_000,
+		GasCheckpointFrequency:    1_000_000,
+		MessageProcessCount:       10,
 	}
 }
 
@@ -681,6 +683,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	err = k.Load(confmap.Provider(map[string]interface{}{
 		"core.message-process-count":             10,
 		"core.checkpoint-load-gas-cost":          1_000_000_000,
+		"core.checkpoint-max-execution":          1_000_000_000,
 		"core.gas-checkpoint-frequency":          1_000_000_000,
 		"feed.output.queue":                      100,
 		"node.sequencer.lockout.timeout":         30 * time.Second,
