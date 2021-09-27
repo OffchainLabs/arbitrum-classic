@@ -436,7 +436,7 @@ class ArbCore {
         bool allow_slow_lookup);
     std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionCursor(
         ReadTransaction& tx,
-        const uint256_t& total_gas_used,
+        uint256_t& total_gas_used,
         bool allow_slow_lookup);
 
     rocksdb::Status updateLogInsertedCount(ReadWriteTransaction& tx,

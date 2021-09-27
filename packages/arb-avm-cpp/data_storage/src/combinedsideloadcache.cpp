@@ -54,6 +54,7 @@ size_t CombinedSideloadCache::timed_size() {
 
 std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
     uint256_t gas_used,
+    uint256_t existing_gas_used,
     uint256_t database_gas,
     uint256_t database_load_gas_cost) {
     // Unique lock required to update LRU cache
@@ -98,6 +99,17 @@ std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
         (database_gas > best_non_db_gas) &&
         ((database_gas - best_non_db_gas) > database_load_gas_cost);
     if (load_from_database) {
+        // Loading from database is quicker than executing last cache entry
+        return nullptr;
+    }
+
+    if (existing_gas_used != 0 && existing_gas_used > best_non_db_gas) {
+        // Use existing
+        return nullptr;
+    }
+
+    if (gas_used - best_non_db_gas > database_load_gas_cost) {
+        // Distance from last cache entry too far to execute
         return nullptr;
     }
 

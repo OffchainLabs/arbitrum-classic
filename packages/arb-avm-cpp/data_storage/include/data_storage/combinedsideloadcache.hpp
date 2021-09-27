@@ -46,6 +46,7 @@ class CombinedSideloadCache {
     size_t lru_size();
     size_t timed_size();
     std::unique_ptr<Machine> atOrBeforeGas(uint256_t gas_used,
+                                           uint256_t existing_gas_used,
                                            uint256_t database_gas,
                                            uint256_t database_load_gas_cost);
     void reorg(uint256_t next_gas_used);
