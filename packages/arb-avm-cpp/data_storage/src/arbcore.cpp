@@ -207,7 +207,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
                                              cache);
     } else if (coreConfig.seed_cache_on_startup) {
         status = reorgToTimestampOrBefore(
-            combined_sideload_cache.expiredTimestamp(), true, cache);
+            combined_sideload_cache.currentTimeExpired(), true, cache);
     } else {
         status = reorgToLastMessage(cache);
     }

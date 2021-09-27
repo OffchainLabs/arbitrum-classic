@@ -31,20 +31,23 @@ TEST_CASE("BasicSideloadCache add") {
     REQUIRE_FALSE(cache.atOrBeforeGas(50).has_value());
 
     // Test that block is added
-    auto machine41 = std::make_unique<Machine>(getComplexMachine());
-    machine41->machine_state.output.arb_gas_used = 41;
-    cache.add(std::move(machine41));
-    REQUIRE(cache.size() == 1);
-    auto machine41a = cache.atOrBeforeGas(50);
-    REQUIRE(machine41a.has_value());
-    REQUIRE(machine41a.value()->first == 41);
-
-    // Test that block is added
     auto machine42 = std::make_unique<Machine>(getComplexMachine());
     machine42->machine_state.output.arb_gas_used = 42;
     cache.add(std::move(machine42));
-    REQUIRE(cache.size() == 2);
+    REQUIRE(cache.size() == 1);
     auto machine42a = cache.atOrBeforeGas(50);
+    REQUIRE(machine42a.has_value());
+    REQUIRE(machine42a.value()->first == 42);
+
+    // Test that block is added
+    auto machine41 = std::make_unique<Machine>(getComplexMachine());
+    machine41->machine_state.output.arb_gas_used = 41;
+    cache.add(std::move(machine41));
+    REQUIRE(cache.size() == 2);
+    auto machine41a = cache.atOrBeforeGas(41);
+    REQUIRE(machine41a.has_value());
+    REQUIRE(machine41a.value()->first == 41);
+    machine42a = cache.atOrBeforeGas(50);
     REQUIRE(machine42a.has_value());
     REQUIRE(machine42a.value()->first == 42);
 
@@ -60,14 +63,17 @@ TEST_CASE("BasicSideloadCache add") {
     REQUIRE(machine42a.has_value());
     REQUIRE(machine42a.value()->first == 42);
 
-    // Test implicit reorg
+    // Adding block older than oldest when cache full should change nothing
     auto machine30 = std::make_unique<Machine>(getComplexMachine());
     machine30->machine_state.output.arb_gas_used = 30;
     cache.add(std::move(machine30));
-    REQUIRE(cache.size() == 1);
-    auto machine30a = cache.atOrBeforeGas(50);
-    REQUIRE(machine30a.has_value());
-    REQUIRE(machine30a.value()->first == 30);
+    REQUIRE(cache.size() == 2);
+    machine43a = cache.atOrBeforeGas(50);
+    REQUIRE(machine43a.has_value());
+    REQUIRE(machine43a.value()->first == 43);
+    machine42a = cache.atOrBeforeGas(42);
+    REQUIRE(machine42a.has_value());
+    REQUIRE(machine42a.value()->first == 42);
 }
 
 TEST_CASE("BasicSideloadCache reorg") {
@@ -148,10 +154,10 @@ TEST_CASE("BasicSideloadCache reorg") {
     machine8->machine_state.output.arb_gas_used = 40;
     cache.add(std::move(machine7));
     cache.add(std::move(machine8));
+    REQUIRE(cache.size() == 2);
 
-    // Test implicit reorg to value below current oldest
-    machine9->machine_state.output.arb_gas_used = 0;
+    // Older blocks are fine
+    machine9->machine_state.output.arb_gas_used = 1;
     cache.add(std::move(machine9));
-
-    REQUIRE(cache.size() == 1);
+    REQUIRE(cache.size() == 3);
 }

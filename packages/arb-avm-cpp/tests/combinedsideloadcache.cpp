@@ -91,14 +91,14 @@ TEST_CASE("CombinedSideloadCache add and get") {
     REQUIRE(machine43a != nullptr);
 }
 
-TEST_CASE("CombinedSideloadCache expiredTimestamp") {
+TEST_CASE("CombinedSideloadCache currentTimeExpired") {
     auto basic_size = 2;
     auto lru_size = 2;
     auto timed_expire = 20;
     auto expiration_fudge_factor = 10;
     CombinedSideloadCache cache(basic_size, lru_size, timed_expire);
 
-    auto expired = cache.expiredTimestamp();
+    auto expired = cache.currentTimeExpired();
     REQUIRE(expired >
             std::time(nullptr) - timed_expire - expiration_fudge_factor);
     REQUIRE(expired <

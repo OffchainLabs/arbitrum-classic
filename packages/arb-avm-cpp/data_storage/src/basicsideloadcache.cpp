@@ -23,10 +23,13 @@ size_t BasicSideloadCache::size() {
 void BasicSideloadCache::add(std::unique_ptr<Machine> machine) {
     auto gas_used = machine->machine_state.output.arb_gas_used;
 
-    reorg(gas_used);
-
     if (cache.size() >= max_size) {
-        // Cache is full, evict the oldest item
+        if (gas_used < cache.begin()->first) {
+            // New machine older than oldest, so just don't add
+            return;
+        }
+
+        // Cache is full, evict the item with the least gas used
         cache.erase(cache.begin());
     }
 
@@ -34,7 +37,8 @@ void BasicSideloadCache::add(std::unique_ptr<Machine> machine) {
     cache[gas_used] = std::move(machine);
 }
 
-std::optional<BasicSideloadCache::map_type::iterator> BasicSideloadCache::atOrBeforeGas(uint256_t gas_used) {
+std::optional<BasicSideloadCache::map_type::iterator>
+BasicSideloadCache::atOrBeforeGas(uint256_t gas_used) {
     auto it = cache.upper_bound(gas_used);
     if (it == cache.begin()) {
         return std::nullopt;
@@ -49,4 +53,3 @@ void BasicSideloadCache::reorg(uint256_t next_gas_used) {
     auto it = cache.lower_bound(next_gas_used);
     cache.erase(it, cache.end());
 }
-

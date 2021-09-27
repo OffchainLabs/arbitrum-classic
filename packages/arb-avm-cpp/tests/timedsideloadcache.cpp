@@ -25,21 +25,44 @@
 
 TEST_CASE("TimedSideloadCache add") {
     auto expiration_seconds = 3;
+    auto fake_time = 3600;
     TimedSideloadCache cache(expiration_seconds);
+
+    // Test that initial block with any time is added
+    auto initial_machine = std::make_unique<Machine>(getComplexMachine());
+    initial_machine->machine_state.output.last_inbox_timestamp = fake_time;
+    initial_machine->machine_state.output.arb_gas_used = 1;
+    cache.add(std::move(initial_machine));
+    REQUIRE(cache.size() == 1);
+    auto initial_machine2 = std::make_unique<Machine>(getComplexMachine());
+    initial_machine2->machine_state.output.last_inbox_timestamp = fake_time + 1;
+    initial_machine2->machine_state.output.arb_gas_used = 2;
+    cache.add(std::move(initial_machine2));
+    REQUIRE(cache.size() == 2);
+
+    // Test that non-expired block is added and expires blocks that are too old
+    auto valid_machine = std::make_unique<Machine>(getComplexMachine());
+    valid_machine->machine_state.output.last_inbox_timestamp =
+        std::time(nullptr);
+    valid_machine->machine_state.output.arb_gas_used = 3;
+    cache.add(std::move(valid_machine));
+    REQUIRE(cache.size() == 1);
+    auto valid_machine_b = cache.atOrBeforeGas(4);
+    REQUIRE(valid_machine_b.has_value());
+    REQUIRE(valid_machine_b.value()
+                ->second.machine->machine_state.output.arb_gas_used == 3);
 
     // Test that expired block is not added
     auto expired_machine = std::make_unique<Machine>(getComplexMachine());
     expired_machine->machine_state.output.last_inbox_timestamp =
         std::time(nullptr) - expiration_seconds;
+    expired_machine->machine_state.output.arb_gas_used = 4;
     cache.add(std::move(expired_machine));
-    REQUIRE(cache.size() == 0);
-
-    // Test that non-expired block is added
-    auto valid_machine = std::make_unique<Machine>(getComplexMachine());
-    valid_machine->machine_state.output.last_inbox_timestamp =
-        std::time(nullptr);
-    cache.add(std::move(valid_machine));
     REQUIRE(cache.size() == 1);
+    auto expired_machine_b = cache.atOrBeforeGas(4);
+    REQUIRE(expired_machine_b.has_value());
+    REQUIRE(expired_machine_b.value()
+                ->second.machine->machine_state.output.arb_gas_used == 3);
 }
 TEST_CASE("TimedSideloadCache get") {
     auto expiration_seconds = 3;
@@ -162,13 +185,14 @@ TEST_CASE("TimedSideloadCache reorg") {
     machine8->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.add(std::move(machine7));
     cache.add(std::move(machine8));
+    REQUIRE(cache.size() == 2);
 
-    // Test implicit reorg to value below current oldest
+    // Older blocks are fine as long as the timestamp isn't too old
     machine9->machine_state.output.arb_gas_used = 30;
-    machine9->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine9->machine_state.output.last_inbox_timestamp =
+        std::time(nullptr) - 20;
     cache.add(std::move(machine9));
-
-    REQUIRE(cache.size() == 1);
+    REQUIRE(cache.size() == 3);
 }
 
 TEST_CASE("TimedSideloadCache expire") {
@@ -222,12 +246,32 @@ TEST_CASE("TimedSideloadCache expire") {
 
 TEST_CASE("TimedSideloadCache expiredTimestamp") {
     auto timed_expire = 20;
-    auto expiration_fudge_factor = 10;
+    auto fake_time = 1000000;
     TimedSideloadCache cache(timed_expire);
 
     auto expired = cache.expiredTimestamp();
-    REQUIRE(expired >
+    REQUIRE(expired == 0);
+
+    auto orig_machine = Machine::loadFromFile(
+        std::string(machine_test_cases_path) + "/sideloadtest.mexe");
+
+    auto machine0 = std::make_unique<Machine>(orig_machine);
+    machine0->machine_state.output.last_inbox_timestamp = fake_time;
+    cache.add(std::move(machine0));
+    REQUIRE(cache.size() == 1);
+
+    auto expired2 = cache.expiredTimestamp();
+    REQUIRE(expired2 == fake_time - timed_expire);
+}
+
+TEST_CASE("TimedSideloadCache currentTimeExpired") {
+    auto timed_expire = 20;
+    auto expiration_fudge_factor = 10;
+    TimedSideloadCache cache(timed_expire);
+
+    auto expired = cache.currentTimeExpired();
+    REQUIRE(expired >=
             std::time(nullptr) - timed_expire - expiration_fudge_factor);
-    REQUIRE(expired <
+    REQUIRE(expired <=
             std::time(nullptr) - timed_expire + expiration_fudge_factor);
 }
