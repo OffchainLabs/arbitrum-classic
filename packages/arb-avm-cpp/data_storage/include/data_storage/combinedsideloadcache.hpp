@@ -49,10 +49,7 @@ class CombinedSideloadCache {
                                            uint256_t database_gas,
                                            uint256_t database_load_gas_cost);
     void reorg(uint256_t next_gas_used);
-    [[nodiscard]] uint256_t expiredTimestamp();
-
-   private:
-    [[nodiscard]] uint256_t expiredTimestampNoLock();
+    [[nodiscard]] uint256_t currentTimeExpired();
 };
 
 #endif  // ARB_AVM_CPP_COMBINEDSIDELOADCACHE_HPP

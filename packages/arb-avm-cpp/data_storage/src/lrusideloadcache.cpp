@@ -23,8 +23,6 @@ size_t LRUSideloadCache::size() {
 void LRUSideloadCache::add(std::unique_ptr<Machine> machine) {
     auto gas_used = machine->machine_state.output.arb_gas_used;
 
-    reorg(gas_used);
-
     if (cache.size() >= max_size) {
         // Cache is full, evict the least recently used item
         evict();

@@ -24,9 +24,6 @@ void TimedSideloadCache::add(std::unique_ptr<Machine> machine) {
     auto gas_used = machine->machine_state.output.arb_gas_used;
     auto timestamp = machine->machine_state.output.last_inbox_timestamp;
 
-    reorg(gas_used);
-    deleteExpired(timestamp);
-
     if (timestamp <= expiredTimestamp()) {
         // Don't save expired machine to cache
         return;
@@ -35,6 +32,8 @@ void TimedSideloadCache::add(std::unique_ptr<Machine> machine) {
     // Add new entry
     cache[gas_used].timestamp = timestamp;
     cache[gas_used].machine = std::move(machine);
+
+    deleteExpired();
 }
 
 std::optional<TimedSideloadCache::map_type::iterator>
@@ -62,12 +61,8 @@ void TimedSideloadCache::reorg(uint256_t next_gas_used) {
     cache.erase(it, cache.end());
 }
 
-void TimedSideloadCache::deleteExpired(uint256_t latest_timestamp) {
+void TimedSideloadCache::deleteExpired() {
     auto expired = expiredTimestamp();
-    auto latest_expired = latest_timestamp - expiration_seconds;
-    if (latest_expired > expired) {
-        expired = latest_expired;
-    }
 
     for (auto it = cache.cbegin();
          it != cache.cend() && it->second.timestamp <= expired;) {
@@ -77,8 +72,12 @@ void TimedSideloadCache::deleteExpired(uint256_t latest_timestamp) {
 
 uint256_t TimedSideloadCache::expiredTimestamp() {
     if (cache.empty()) {
-        return std::time(nullptr) - expiration_seconds;
+        return 0;
     }
 
     return cache.crbegin()->second.timestamp - expiration_seconds;
+}
+
+uint256_t TimedSideloadCache::currentTimeExpired() const {
+    return std::time(nullptr) - expiration_seconds;
 }

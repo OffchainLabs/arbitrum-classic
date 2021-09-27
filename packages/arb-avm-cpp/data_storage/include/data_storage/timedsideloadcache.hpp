@@ -43,8 +43,9 @@ class TimedSideloadCache {
     void add(std::unique_ptr<Machine> machine);
     std::optional<map_type::iterator> atOrBeforeGas(uint256_t gas_used);
     void reorg(uint256_t next_gas_used);
-    void deleteExpired(uint256_t latest_timestamp);
+    void deleteExpired();
     [[nodiscard]] uint256_t expiredTimestamp();
+    [[nodiscard]] uint256_t currentTimeExpired() const;
 };
 
 #endif  // ARB_AVM_CPP_TIMEDSIDELOADCACHE_H

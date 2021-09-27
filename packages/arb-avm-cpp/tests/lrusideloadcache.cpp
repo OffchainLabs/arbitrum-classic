@@ -24,26 +24,30 @@
 #include <catch2/catch.hpp>
 
 TEST_CASE("LRUSideloadCache add") {
-    auto cache_size = 1;
+    auto cache_size = 2;
     LRUSideloadCache cache(cache_size);
 
     // Basic add
     auto machine_zero = std::make_unique<Machine>(getComplexMachine());
-    machine_zero->machine_state.output.arb_gas_used = 0;
+    machine_zero->machine_state.output.arb_gas_used = 10;
     cache.add(std::move(machine_zero));
     REQUIRE(cache.size() == 1);
 
-    // Test that cache_size limit is not breached
+    // Adding machines with less gas is okay
     auto machine_one = std::make_unique<Machine>(getComplexMachine());
-    machine_one->machine_state.output.arb_gas_used = 1;
+    machine_one->machine_state.output.arb_gas_used = 5;
     cache.add(std::move(machine_one));
-    REQUIRE(cache.size() == 1);
-    auto retrieved_machine = cache.atOrBeforeGas(0);
-    REQUIRE(!retrieved_machine.has_value());
-    auto retrieved_machine2 = cache.atOrBeforeGas(1);
+    REQUIRE(cache.size() == 2);
+
+    // Test that cache_size limit is not breached
+    auto machine_two = std::make_unique<Machine>(getComplexMachine());
+    machine_two->machine_state.output.arb_gas_used = 20;
+    cache.add(std::move(machine_two));
+    REQUIRE(cache.size() == 2);
+    auto retrieved_machine2 = cache.atOrBeforeGas(10);
     REQUIRE(retrieved_machine2.has_value());
     REQUIRE(retrieved_machine2.value()
-                ->second.first->machine_state.output.arb_gas_used == 1);
+                ->second.first->machine_state.output.arb_gas_used == 5);
 }
 TEST_CASE("LRUSideloadCache get") {
     auto cache_size = 3;
@@ -160,10 +164,10 @@ TEST_CASE("LRUSideloadCache reorg") {
     machine8->machine_state.output.arb_gas_used = 40;
     cache.add(std::move(machine7));
     cache.add(std::move(machine8));
+    REQUIRE(cache.size() == 2);
 
-    // Test implicit reorg to value below current oldest
+    // Older values are fine
     machine9->machine_state.output.arb_gas_used = 30;
     cache.add(std::move(machine9));
-
-    REQUIRE(cache.size() == 1);
+    REQUIRE(cache.size() == 3);
 }
