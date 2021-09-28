@@ -248,7 +248,7 @@ export class Bridge {
     }
   }
 
-  public async getDepositInputs(
+  public async getDepositTxParams(
     {
       erc20L1Address,
       amount,
@@ -378,7 +378,7 @@ export class Bridge {
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     const depositInput: DepositParams = isDepositInputParams(params)
-      ? await this.getDepositInputs(params)
+      ? await this.getDepositTxParams(params)
       : params
 
     return this.l1Bridge.deposit(depositInput, overrides)
