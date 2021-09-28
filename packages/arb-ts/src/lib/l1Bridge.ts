@@ -67,6 +67,16 @@ export interface L1TokenData {
   }
 }
 
+export interface DepositParams {
+  erc20L1Address: string
+  amount: BigNumber
+  l1CallValue: BigNumber
+  maxSubmissionCost: BigNumber
+  maxGas: BigNumber
+  gasPriceBid: BigNumber
+  destinationAddress?: string
+}
+
 /**
  * L1 side only of {@link Bridge}
  */
@@ -264,12 +274,15 @@ export class L1Bridge {
   }
 
   public async deposit(
-    erc20L1Address: string,
-    amount: BigNumber,
-    maxSubmissionCost: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
-    destinationAddress?: string,
+    {
+      erc20L1Address,
+      amount,
+      maxSubmissionCost,
+      maxGas,
+      gasPriceBid,
+      destinationAddress,
+      l1CallValue,
+    }: DepositParams,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     const destination = destinationAddress || (await this.getWalletAddress())
@@ -277,6 +290,11 @@ export class L1Bridge {
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
     )
+
+    if (overrides.value)
+      throw new Error('L1 call value should be set through l1CallValue param')
+    if (l1CallValue.eq(0)) throw new Error('L1 call value should not be zero')
+
     return this.l1GatewayRouter.functions.outboundTransfer(
       erc20L1Address,
       destination,
@@ -284,7 +302,7 @@ export class L1Bridge {
       maxGas,
       gasPriceBid,
       data,
-      overrides
+      { ...overrides, value: l1CallValue }
     )
   }
 
