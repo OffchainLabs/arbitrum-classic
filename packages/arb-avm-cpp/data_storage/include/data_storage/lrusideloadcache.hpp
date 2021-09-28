@@ -22,14 +22,18 @@
 
 #include <boost/compute/detail/lru_cache.hpp>
 
-#include <shared_mutex>
-#include <map>
 #include <list>
+#include <map>
+#include <shared_mutex>
 #include <utility>
 
 class LRUSideloadCache {
    public:
-    typedef std::map<uint256_t, std::pair<std::unique_ptr<Machine>, std::list<uint256_t>::iterator>> map_type;
+    typedef std::map<
+        uint256_t,
+        std::pair<std::unique_ptr<Machine>, std::list<uint256_t>::iterator>>
+        map_type;
+
    private:
     map_type cache;
     std::list<uint256_t> lru_list;
@@ -37,12 +41,12 @@ class LRUSideloadCache {
     const size_t max_size;
 
    public:
-    explicit LRUSideloadCache(size_t max_size)
-        : max_size{max_size} {}
+    explicit LRUSideloadCache(size_t max_size) : max_size{max_size} {}
 
     size_t size();
     void add(std::unique_ptr<Machine> machine);
-    std::optional<map_type::iterator>  atOrBeforeGas(uint256_t gas_used);
+    std::optional<map_type::iterator> atOrBeforeGas(uint256_t gas_used);
+    void updateUsed(LRUSideloadCache::map_type::iterator& cache_it);
     void reorg(uint256_t next_gas_used);
 
     void evict();

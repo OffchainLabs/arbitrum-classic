@@ -119,6 +119,8 @@ std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
     }
 
     if (best_non_db_gas == lru_gas && lru_it.has_value()) {
+        // Update LRU order since we are actually using LRU value
+        lru.updateUsed(*lru_it);
         return std::make_unique<Machine>(*lru_it.value()->second.first);
     }
 

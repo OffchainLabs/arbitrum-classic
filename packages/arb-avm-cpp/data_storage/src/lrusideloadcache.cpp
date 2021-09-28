@@ -45,24 +45,25 @@ LRUSideloadCache::atOrBeforeGas(uint256_t gas_used) {
     // Upper_bound returns the element after the one desired
     cache_it--;
 
-    // Return the value, but first update its place in the most
-    // recently used list
+    // Return the value, but don't update LRU list yet
+    return cache_it;
+}
+
+void LRUSideloadCache::updateUsed(
+    LRUSideloadCache::map_type::iterator& cache_it) {
     auto list_it = cache_it->second.second;
     if (list_it == lru_list.begin()) {
         // The item is already at the front of the most recently
-        // used list so just return iterator
-        return cache_it;
+        // used list so nothing needs to be done
+        return;
     }
 
     // Move item to the front of the most recently used list
     lru_list.erase(list_it);
-    lru_list.push_front(gas_used);
+    lru_list.push_front(cache_it->first);
 
     // Update iterator in map
     cache_it->second.second = lru_list.begin();
-
-    // Return the value
-    return cache_it;
 }
 
 void LRUSideloadCache::reorg(uint256_t next_gas_used) {
