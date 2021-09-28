@@ -307,7 +307,7 @@ export class Bridge {
      */
     const estimateGasCallValue = await (async () => {
       if (this.isCustomNetwork) {
-        // For custom network, we do an ad-hoc check to see if it's a WETH gatewat
+        // For custom network, we do an ad-hoc check to see if it's a WETH gateway
         if (await this.looksLikeWethGateway(l1GatewayAddress)) {
           return amount
         }
