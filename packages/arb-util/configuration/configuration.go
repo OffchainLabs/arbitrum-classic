@@ -58,12 +58,13 @@ type Conf struct {
 
 type Core struct {
 	Cache                     CoreCache     `koanf:"cache"`
+	CheckpointGasFrequency    int           `koanf:"checkpoint-gas-frequency"`
 	CheckpointLoadGasCost     int           `koanf:"checkpoint-load-gas-cost"`
-	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution"`
+	CheckpointLoadGasFactor   int           `koanf:"checkpoint-load-gas-factor"`
+	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution-gas"`
 	Profile                   CoreTest      `koanf:"profile"`
 	Test                      CoreTest      `koanf:"test"`
 	Debug                     bool          `koanf:"debug"`
-	GasCheckpointFrequency    int           `koanf:"gas-checkpoint-frequency"`
 	IdleSleep                 time.Duration `koanf:"idle-sleep"`
 	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
 	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
@@ -320,9 +321,10 @@ func DefaultCoreSettings() *Core {
 			LRUSize:       1000,
 			TimedExpire:   20 * time.Minute,
 		},
-		CheckpointLoadGasCost:  1_000_000,
-		GasCheckpointFrequency: 1_000_000,
-		MessageProcessCount:    10,
+		CheckpointGasFrequency:    1_000_000,
+		CheckpointLoadGasCost:     1_000_000,
+		CheckpointMaxExecutionGas: 1_000_000_000,
+		MessageProcessCount:       10,
 	}
 }
 
@@ -345,7 +347,7 @@ func (c *Config) GetNodeDatabasePath() string {
 }
 
 func (c *Config) GetValidatorDatabasePath() string {
-	return path.Join(c.Persistent.Chain, "validator_db")
+	return path.Join(c.Persistent.Chain, "validator-db")
 }
 
 func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -437,6 +439,12 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
 	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
+
+	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
+	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
+	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")
+	f.Int("core.checkpoint-max-execution-gas", 250_000_000, "maximum amount of gas any given checkpoint is allowed to execute")
+
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
 
 	f.Duration("core.idle-sleep", 5*time.Millisecond, "how long core thread should sleep when idle")
@@ -724,9 +732,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	// Load defaults that are not specified on command line
 	err = k.Load(confmap.Provider(map[string]interface{}{
-		"core.checkpoint-load-gas-cost":          1_000_000_000,
-		"core.checkpoint-max-execution":          1_000_000_000,
-		"core.gas-checkpoint-frequency":          1_000_000_000,
 		"feed.output.queue":                      100,
 		"node.sequencer.lockout.timeout":         30 * time.Second,
 		"node.sequencer.lockout.max-latency":     10 * time.Second,

@@ -71,7 +71,7 @@ struct ArbCoreConfig {
     uint256_t checkpoint_max_execution_gas{1'000'000'000};
 
     // Frequency to save checkpoint to database
-    uint256_t min_gas_checkpoint_frequency{1'000'000};
+    uint256_t checkpoint_gas_frequency{1'000'000};
 
     // Amount of gas between basic cache entries
     uint32_t basic_sideload_cache_interval{1'000'000};

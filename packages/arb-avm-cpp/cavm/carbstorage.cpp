@@ -39,8 +39,8 @@ CArbStorage* createArbStorage(const char* db_path,
         arb_core_config.checkpoint_load_gas_cost;
     coreConfig.checkpoint_max_execution_gas =
         arb_core_config.checkpoint_max_execution_gas;
-    coreConfig.min_gas_checkpoint_frequency =
-        arb_core_config.min_gas_checkpoint_frequency;
+    coreConfig.checkpoint_gas_frequency =
+        arb_core_config.checkpoint_gas_frequency;
     coreConfig.basic_sideload_cache_interval =
         arb_core_config.basic_cache_interval;
     coreConfig.basic_sideload_cache_size = arb_core_config.basic_cache_size;

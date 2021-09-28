@@ -928,7 +928,7 @@ void ArbCore::operator()() {
     }
 
     uint256_t next_checkpoint_gas =
-        maxCheckpointGas() + coreConfig.min_gas_checkpoint_frequency;
+        maxCheckpointGas() + coreConfig.checkpoint_gas_frequency;
     uint256_t next_basic_cache_gas =
         maxCheckpointGas() + coreConfig.basic_sideload_cache_interval;
     while (!arbcore_abort) {
@@ -948,7 +948,7 @@ void ArbCore::operator()() {
                              "reorgCheckpoints: "
                           << status.ToString() << std::endl;
             }
-            next_checkpoint_gas = coreConfig.min_gas_checkpoint_frequency;
+            next_checkpoint_gas = coreConfig.checkpoint_gas_frequency;
         }
         if (message_data_status == MESSAGES_READY) {
             // Reorg might occur while adding messages
@@ -966,7 +966,7 @@ void ArbCore::operator()() {
                     if (add_status.data.has_value()) {
                         next_checkpoint_gas =
                             add_status.data.value() +
-                            coreConfig.min_gas_checkpoint_frequency;
+                            coreConfig.checkpoint_gas_frequency;
                     }
                 }
             } catch (const std::exception& e) {
@@ -1024,7 +1024,7 @@ void ArbCore::operator()() {
 
                 if (core_machine->machine_state.output.arb_gas_used >=
                     next_checkpoint_gas) {
-                    // Save checkpoint after min_gas_checkpoint_frequency gas
+                    // Save checkpoint after checkpoint_gas_frequency gas
                     // used
                     status = saveCheckpoint(tx);
                     if (!status.ok()) {
@@ -1035,7 +1035,7 @@ void ArbCore::operator()() {
                     }
                     next_checkpoint_gas =
                         core_machine->machine_state.output.arb_gas_used +
-                        coreConfig.min_gas_checkpoint_frequency;
+                        coreConfig.checkpoint_gas_frequency;
                     // Clear oldest cache and start populating next cache
                     std::cout
                         << "Last checkpoint gas used: "
@@ -2028,6 +2028,7 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
     bool allow_slow_lookup) {
     auto handle_reorg = true;
     size_t reorg_attempts = 0;
+    auto first_time = true;
     while (handle_reorg) {
         handle_reorg = false;
         if (reorg_attempts > 0) {
@@ -2059,7 +2060,14 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                     resolveExecutionCursorMachine(tx, execution_cursor);
 
                 uint256_t gas_used = execution_cursor.getOutput().arb_gas_used;
-                if ((gas_used == total_gas_used) ||
+                if (first_time) {
+                    first_time = false;
+                    if (gas_used >= total_gas_used) {
+                        // Nothing to do
+                        return rocksdb::Status::OK();
+                    }
+                }
+                if ((gas_used >= total_gas_used) ||
                     (go_over_gas && gas_used > total_gas_used) ||
                     (!go_over_gas &&
                      gas_used + mach->machine_state.nextGasCost() >
