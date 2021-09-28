@@ -80,13 +80,12 @@ interface InitOptions {
 interface DepositInputParams {
   erc20L1Address: string
   amount: BigNumber
-  retryableGasArgs: RetryableGasArgs
+  retryableGasArgs?: RetryableGasArgs
   destinationAddress?: string
-  discriminator: 'DepositInputParams'
 }
 
 const isDepositInputParams = (obj: any): obj is DepositInputParams =>
-  obj['discriminator'] === 'DepositInputParams'
+  !obj['l1CallValue']
 
 function isError(error: Error): error is NodeJS.ErrnoException {
   return error instanceof Error
@@ -368,7 +367,6 @@ export class Bridge {
       destinationAddress,
       amount,
       erc20L1Address,
-      discriminator: 'DepositParams',
     }
   }
 
@@ -379,10 +377,11 @@ export class Bridge {
     params: DepositParams | DepositInputParams,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
-    if (isDepositInputParams(params)) {
-      params = await this.getDepositInputs(params)
-    }
-    return this.l1Bridge.deposit(params, overrides)
+    const depositInput: DepositParams = isDepositInputParams(params)
+      ? await this.getDepositInputs(params)
+      : params
+
+    return this.l1Bridge.deposit(depositInput, overrides)
   }
 
   public async getL1EthBalance(): Promise<BigNumber> {

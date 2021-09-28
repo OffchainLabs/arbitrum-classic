@@ -75,7 +75,6 @@ export interface DepositParams {
   maxGas: BigNumber
   gasPriceBid: BigNumber
   destinationAddress?: string
-  discriminator: 'DepositParams'
 }
 
 /**
