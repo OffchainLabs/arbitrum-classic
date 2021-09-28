@@ -52,15 +52,8 @@ size_t CombinedSideloadCache::timed_size() {
     return timed.size();
 }
 
-std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
-    uint256_t gas_used,
-    uint256_t existing_gas_used,
-    uint256_t database_gas,
-    uint256_t database_load_gas_cost,
-    uint256_t max_execution_gas) {
-    // Unique lock required to update LRU cache
-    std::unique_lock lock(mutex);
-
+std::optional<std::reference_wrapper<const Machine>>
+CombinedSideloadCache::atOrBeforeGasImpl(uint256_t& gas_used) {
     uint256_t basic_gas;
     uint256_t lru_gas;
     uint256_t timed_gas;
@@ -87,45 +80,59 @@ std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
         timed_gas = 0;
     }
 
-    uint256_t best_non_db_gas;
-    if (basic_gas > lru_gas && basic_gas > timed_gas) {
-        best_non_db_gas = basic_gas;
-    } else if (lru_gas > basic_gas && lru_gas > timed_gas) {
-        best_non_db_gas = lru_gas;
+    if (basic_gas > lru_gas && basic_gas > timed_gas && basic_it.has_value()) {
+        return std::cref(*basic_it.value()->second);
+    }
+
+    if (lru_gas > basic_gas && lru_gas > timed_gas && lru_it.has_value()) {
+        return std::cref(*lru_it.value()->second.first);
+    }
+
+    if (timed_it.has_value()) {
+        return std::cref(*timed_it.value()->second.machine);
+    }
+
+    return std::nullopt;
+}
+
+std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
+    uint256_t gas_used,
+    uint256_t existing_gas_used,
+    uint256_t database_gas,
+    uint256_t database_load_gas_cost,
+    uint256_t max_execution_gas) {
+    // Unique lock required to update LRU cache
+    std::unique_lock lock(mutex);
+
+    auto cache_machine = atOrBeforeGasImpl(gas_used);
+    uint256_t cache_gas;
+    if (cache_machine.has_value()) {
+        cache_gas =
+            cache_machine.value().get().machine_state.output.arb_gas_used;
     } else {
-        best_non_db_gas = timed_gas;
+        cache_gas = 0;
     }
 
     auto load_from_database =
-        (database_gas > best_non_db_gas) &&
-        ((database_gas - best_non_db_gas) > database_load_gas_cost);
+        (database_gas > cache_gas) &&
+        ((database_gas - cache_gas) > database_load_gas_cost);
     if (load_from_database) {
         // Loading from database is quicker than executing last cache entry
         return nullptr;
     }
 
-    if (existing_gas_used != 0 && existing_gas_used > best_non_db_gas) {
+    if (existing_gas_used != 0 && existing_gas_used > cache_gas) {
         // Use existing
         return nullptr;
     }
 
-    if (gas_used - best_non_db_gas > max_execution_gas) {
+    if (gas_used - cache_gas > max_execution_gas) {
         // Distance from last cache entry too far to execute
         return nullptr;
     }
 
-    if (best_non_db_gas == basic_gas && basic_it.has_value()) {
-        return std::make_unique<Machine>(*basic_it.value()->second);
-    }
-
-    if (best_non_db_gas == lru_gas && lru_it.has_value()) {
-        // Update LRU order since we are actually using LRU value
-        lru.updateUsed(*lru_it);
-        return std::make_unique<Machine>(*lru_it.value()->second.first);
-    }
-
-    if (timed_it.has_value()) {
-        return std::make_unique<Machine>(*timed_it.value()->second.machine);
+    if (cache_machine.has_value()) {
+        return std::make_unique<Machine>(cache_machine.value().get());
     }
 
     return nullptr;
