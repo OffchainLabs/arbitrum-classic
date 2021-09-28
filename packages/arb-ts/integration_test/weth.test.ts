@@ -135,7 +135,10 @@ describe('WETH', async () => {
     const allowed = data.allowed
     expect(allowed, 'failed to set allowance').to.be.true
 
-    const depositRes = await bridge.deposit(l1WethAddress, wethToDeposit)
+    const depositRes = await bridge.deposit({
+      erc20L1Address: l1WethAddress,
+      amount: wethToDeposit,
+    })
     const depositRec = await depositRes.wait()
     await testRetryableTicket(bridge, depositRec)
 

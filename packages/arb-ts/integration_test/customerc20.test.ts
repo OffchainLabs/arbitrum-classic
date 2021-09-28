@@ -141,10 +141,10 @@ const depositTokenTest = async (bridge: Bridge) => {
     expectedL1GatewayAddress
   )
 
-  const depositRes = await bridge.deposit(
-    existentTestCustomToken,
-    tokenDepositAmount
-  )
+  const depositRes = await bridge.deposit({
+    erc20L1Address: existentTestCustomToken,
+    amount: tokenDepositAmount,
+  })
 
   const depositRec = await depositRes.wait()
 
