@@ -40,8 +40,8 @@ import { ArbMulticall2__factory } from './abi/factories/ArbMulticall2__factory'
 import { MulticallFunctionInput, BridgeHelper } from './bridge_helpers'
 
 export interface L2TokenData {
-  ERC20?: { contract: StandardArbERC20; balance: BigNumber }
-  CUSTOM?: { contract: ICustomToken; balance: BigNumber } // Here we don't use the particlar custom token's interface; for the sake of this sdk that's fine
+  contract: StandardArbERC20
+  balance: BigNumber
 }
 
 /**
@@ -139,10 +139,7 @@ export class L2Bridge {
     ](erc20l1Address, to, amount, '0x', overrides)
   }
 
-  public async getL2TokenData(
-    erc20L1Address: string,
-    l2ERC20Address: string
-  ): Promise<L2TokenData> {
+  public async getL2TokenData(l2ERC20Address: string): Promise<L2TokenData> {
     const walletAddress = await this.getWalletAddress()
 
     const arbERC20TokenContract = StandardArbERC20__factory.connect(
@@ -153,17 +150,10 @@ export class L2Bridge {
     const [balance] = await arbERC20TokenContract.functions.balanceOf(
       walletAddress
     )
-    // TODO: should we validate if any other data is correct?
-    // we can check if `l2ERC20Address.l1Address()` returns the expected address
-    // we can also check if `l2GatewayRouter.getGateway(erc20L1Address)` returns non zero
-    // Would that fail if its a token that is only deployed on the L2?
-
-    // TODO: we don't know if its erc20 or custom.
+    // TODO: should we include extra data? ie: `l2ERC20Address.l1Address()` and `l2GatewayRouter.getGateway(erc20L1Address)`
     return {
-      ERC20: {
-        contract: arbERC20TokenContract,
-        balance,
-      },
+      contract: arbERC20TokenContract,
+      balance,
     }
   }
 

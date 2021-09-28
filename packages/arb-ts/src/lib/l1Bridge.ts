@@ -51,20 +51,12 @@ export type Await<T> = T extends {
   : T
 
 export interface L1TokenData {
-  ERC20?: {
-    contract: ERC20
-    balance: BigNumber
-    allowed: boolean
-    symbol: string
-    decimals: number
-    name: string
-  }
-  CUSTOM?: {
-    contract: ERC20
-    balance: BigNumber
-    allowed: boolean
-    symbol: string
-  }
+  contract: ERC20
+  balance: BigNumber
+  allowed: boolean
+  symbol: string
+  decimals: number
+  name: string
 }
 
 /**
@@ -201,14 +193,12 @@ export class L1Bridge {
     ) /** for ERC20s that cap approve at 96 bits  */
     const allowed = allowance.gte(allowanceLimit.div(2))
     return {
-      ERC20: {
-        contract: ethERC20TokenContract,
-        balance,
-        allowed,
-        symbol,
-        decimals,
-        name,
-      },
+      contract: ethERC20TokenContract,
+      balance,
+      allowed,
+      symbol,
+      decimals,
+      name,
     }
   }
 
