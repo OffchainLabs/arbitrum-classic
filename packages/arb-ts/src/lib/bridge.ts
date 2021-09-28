@@ -39,7 +39,7 @@ import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
 
-import { Await, L1Bridge, L1TokenData } from './l1Bridge'
+import { Await, DepositParams, L1Bridge, L1TokenData } from './l1Bridge'
 import { L2Bridge, L2TokenData } from './l2Bridge'
 import {
   BridgeHelper,
@@ -76,6 +76,17 @@ interface InitOptions {
     l2Network: Network
   }
 }
+
+interface DepositInputParams {
+  erc20L1Address: string
+  amount: BigNumber
+  retryableGasArgs: RetryableGasArgs
+  destinationAddress?: string
+  discriminator: 'DepositInputParams'
+}
+
+const isDepositInputParams = (obj: any): obj is DepositInputParams =>
+  obj['discriminator'] === 'DepositInputParams'
 
 function isError(error: Error): error is NodeJS.ErrnoException {
   return error instanceof Error
@@ -239,12 +250,14 @@ export class Bridge {
   }
 
   public async getDepositInputs(
-    erc20L1Address: string,
-    amount: BigNumber,
-    retryableGasArgs: RetryableGasArgs = {},
-    destinationAddress?: string,
+    {
+      erc20L1Address,
+      amount,
+      retryableGasArgs = {},
+      destinationAddress,
+    }: DepositInputParams,
     overrides: PayableOverrides = {}
-  ) {
+  ): Promise<DepositParams> {
     const {
       l1WethGateway: l1WethGatewayAddress,
       l1CustomGateway: l1CustomGatewayAddress,
@@ -350,8 +363,12 @@ export class Bridge {
     return {
       maxGas,
       gasPriceBid,
-      totalEthCallvalueToSend,
-      maxSubmissionPrice,
+      l1CallValue: BigNumber.from(totalEthCallvalueToSend),
+      maxSubmissionCost: maxSubmissionPrice,
+      destinationAddress,
+      amount,
+      erc20L1Address,
+      discriminator: 'DepositParams',
     }
   }
 
@@ -359,23 +376,13 @@ export class Bridge {
    * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
    */
   public async deposit(
-    erc20L1Address: string,
-    amount: BigNumber,
-    retryableGasArgs: RetryableGasArgs = {},
-    destinationAddress?: string,
+    params: DepositParams | DepositInputParams,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
-    const { maxSubmissionPrice, maxGas, gasPriceBid, totalEthCallvalueToSend } =
-      await this.getDepositInputs(erc20L1Address, amount, retryableGasArgs)
-    return this.l1Bridge.deposit(
-      erc20L1Address,
-      amount,
-      maxSubmissionPrice,
-      maxGas,
-      gasPriceBid,
-      destinationAddress,
-      { ...overrides, value: totalEthCallvalueToSend }
-    )
+    if (isDepositInputParams(params)) {
+      params = await this.getDepositInputs(params)
+    }
+    return this.l1Bridge.deposit(params, overrides)
   }
 
   public async getL1EthBalance(): Promise<BigNumber> {
