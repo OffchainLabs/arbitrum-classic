@@ -1,6 +1,6 @@
 ### Arb-TS
 
-Typescript library for doing Arbitrum stuff, particular stuff like interacting between L1 and L2. Uses [ethers-js](https://docs.ethers.io/v5/single-page/).
+Typescript library for doing Arbitrum stuff, particular stuff like interacting between L1 and L2. Uses [ethers](https://docs.ethers.io/v5/single-page/).
 
 ### Quickstart
 
