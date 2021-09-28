@@ -30,33 +30,43 @@ import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { Inbox } from './abi/Inbox'
 import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { ERC20 } from './abi/ERC20'
-import { L1ERC20Gateway } from './abi'
+import { Multicall2__factory } from './abi/factories/Multicall2__factory'
+import { L1ERC20Gateway } from './abi/L1ERC20Gateway'
 
 import { Network } from './networks'
-import { addressToSymbol } from './bridge_helpers'
+import {
+  addressToSymbol,
+  MulticallFunctionInput,
+  BridgeHelper,
+} from './bridge_helpers'
 
 const MIN_APPROVAL = MaxUint256
 //TODO handle address update / lowercase
 
+// typing magic from https://stackoverflow.com/a/57364353
+export type Await<T> = T extends {
+  then(onfulfilled?: (value: infer U) => unknown): unknown
+}
+  ? U
+  : T
+
 export interface L1TokenData {
-  ERC20?: {
-    contract: ERC20
-    balance: BigNumber
-    allowed: boolean
-    symbol: string
-    decimals: number
-    name: string
-  }
-  CUSTOM?: {
-    contract: ERC20
-    balance: BigNumber
-    allowed: boolean
-    symbol: string
-  }
+  contract: ERC20
+  balance: BigNumber
+  allowed: boolean
+  symbol: string
+  decimals: number
+  name: string
 }
 
-export interface Tokens {
-  [contractAddress: string]: L1TokenData | undefined
+export interface DepositParams {
+  erc20L1Address: string
+  amount: BigNumber
+  l1CallValue: BigNumber
+  maxSubmissionCost: BigNumber
+  maxGas: BigNumber
+  gasPriceBid: BigNumber
+  destinationAddress?: string
 }
 
 /**
@@ -67,14 +77,11 @@ export class L1Bridge {
   l1GatewayRouter: L1GatewayRouter
   walletAddressCache?: string
   inboxCached?: Inbox
-  l1Tokens: Tokens
   l1Provider: Provider
-  chainIdCache?: number
   network: Network
 
   constructor(network: Network, l1Signer: Signer) {
     this.l1Signer = l1Signer
-    this.l1Tokens = {}
     this.network = network
 
     const l1Provider = l1Signer.provider
@@ -89,11 +96,27 @@ export class L1Bridge {
     )
   }
 
-  public async updateAllL1Tokens(): Promise<Tokens> {
-    for (const l1Address in this.l1Tokens) {
-      await this.getAndUpdateL1TokenData(l1Address)
+  public async setSigner(newSigner: Signer) {
+    const newL1Provider = newSigner.provider
+    if (newL1Provider === undefined) {
+      throw new Error('Signer must be connected to an Ethereum provider')
     }
-    return this.l1Tokens
+    // check chainId to ensure its still in the same network.
+    const [prevNetwork, newNetwork] = await Promise.all([
+      this.l1Provider.getNetwork(),
+      newL1Provider.getNetwork(),
+    ])
+    if (prevNetwork.chainId !== newNetwork.chainId)
+      throw new Error('Error. New signer in L1 is a different network.')
+
+    this.l1Provider = newL1Provider
+    this.l1Signer = newSigner
+    // we need to update the cache
+    // TODO: remove this cache. can we memoize based on the signer? useCallback style
+    this.walletAddressCache = await this.l1Signer.getAddress()
+    // TODO: is it worth keeping contracts instantiated?
+    this.inboxCached = this.inboxCached?.connect(newSigner)
+    this.l1GatewayRouter = this.l1GatewayRouter.connect(newSigner)
   }
 
   public getERC20L2Address(erc20L1Address: string): Promise<string> {
@@ -102,82 +125,91 @@ export class L1Bridge {
       .then(([res]) => res)
   }
 
-  public async getAndUpdateL1TokenData(
-    erc20L1Address: string
-  ): Promise<L1TokenData> {
-    const tokenData = this.l1Tokens[erc20L1Address] || {
-      ERC20: undefined,
-      CUSTOM: undefined,
-    }
+  public async contractExists(contractAddress: string): Promise<boolean> {
+    const contractCode = await this.l1Provider.getCode(contractAddress)
+    return !(contractCode.length > 2)
+  }
+
+  public async getL1TokenData(erc20L1Address: string): Promise<L1TokenData> {
     const walletAddress = await this.getWalletAddress()
     const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
 
-    if (!tokenData.ERC20) {
-      if ((await this.l1Provider.getCode(erc20L1Address)).length > 2) {
-        // If this will throw if not an ERC20, which is what we *want*.
-        const ethERC20TokenContract = await ERC20__factory.connect(
-          erc20L1Address,
-          this.l1Signer
-        )
-        const [balance] = await ethERC20TokenContract.functions.balanceOf(
-          walletAddress
-        )
+    const ethERC20TokenContract = await ERC20__factory.connect(
+      erc20L1Address,
+      this.l1Signer
+    )
+    // If this will throw if not a contract / ERC20, which is what we *want*.
+    const iface = ERC20__factory.createInterface()
+    const functionCalls: MulticallFunctionInput = [
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['balanceOf(address)'],
+        values: [walletAddress],
+      },
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['allowance(address,address)'],
+        values: [walletAddress, gatewayAddress],
+      },
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['symbol()'],
+      },
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['decimals()'],
+      },
+      {
+        target: erc20L1Address,
+        funcFragment: iface.functions['name()'],
+      },
+    ]
+    const [
+      balanceResult,
+      allowanceResult,
+      symbolResult,
+      decimalsResult,
+      nameResult,
+    ] = await this.getMulticallAggregate(functionCalls)
 
-        const [allowance] = await ethERC20TokenContract.functions.allowance(
-          walletAddress,
-          gatewayAddress
-        )
-        // non-standard
-        const symbol = await ethERC20TokenContract.functions
-          .symbol()
-          .then(([res]) => res)
-          .catch(() => addressToSymbol(erc20L1Address))
+    if (balanceResult === undefined || allowanceResult === undefined)
+      throw new Error('ERC20 Token does not support balance/allowance')
 
-        const decimals = await ethERC20TokenContract.functions
-          .decimals()
-          .then(([res]) => res)
-          .catch(() => 18)
+    type ERC20_FUNCTIONS = ERC20['functions']
+    const balance = (
+      balanceResult as Await<ReturnType<ERC20_FUNCTIONS['balanceOf']>>
+    )[0]
+    const allowance = (
+      allowanceResult as Await<ReturnType<ERC20_FUNCTIONS['allowance']>>
+    )[0]
 
-        const name = await ethERC20TokenContract.functions
-          .name()
-          .then(([res]) => res)
-          .catch(() => symbol + '_Token')
-        const allowanceLimit = BigNumber.from(
-          '0xffffffffffffffffffffffff'
-        ) /** for ERC20s that cap approve at 96 bits  */
-        const allowed = await allowance.gte(allowanceLimit.div(2))
-        tokenData.ERC20 = {
-          contract: ethERC20TokenContract,
-          balance,
-          allowed,
-          symbol,
-          decimals,
-          name,
-        }
-      } else {
-        throw new Error(`No ERC20 at ${erc20L1Address} `)
-      }
-    } else {
-      const ethERC20TokenContract = await ERC20__factory.connect(
-        erc20L1Address,
-        this.l1Signer
-      )
-      const [balance] = await ethERC20TokenContract.functions.balanceOf(
-        walletAddress
-      )
-      tokenData.ERC20.balance = balance
+    const symbol =
+      symbolResult === undefined
+        ? addressToSymbol(erc20L1Address)
+        : (symbolResult as Await<ReturnType<ERC20_FUNCTIONS['symbol']>>)[0]
 
-      if (!tokenData.ERC20.allowed) {
-        const [allowance] = await ethERC20TokenContract.functions.allowance(
-          walletAddress,
-          gatewayAddress
-        )
-        tokenData.ERC20.allowed = allowance.gte(MIN_APPROVAL.div(2))
-      }
+    const decimals =
+      decimalsResult === undefined
+        ? 18
+        : (decimalsResult as Await<ReturnType<ERC20_FUNCTIONS['decimals']>>)[0]
+
+    const name =
+      nameResult === undefined
+        ? symbol + '_Token'
+        : (nameResult as Await<ReturnType<ERC20_FUNCTIONS['name']>>)[0]
+
+    const allowanceLimit = BigNumber.from(
+      '0xffffffffffffffffffffffff'
+    ) /** for ERC20s that cap approve at 96 bits  */
+    const allowed = allowance.gte(allowanceLimit.div(2))
+    return {
+      contract: ethERC20TokenContract,
+      balance,
+      allowed,
+      symbol,
+      decimals,
+      name,
     }
-    this.l1Tokens[erc20L1Address] = tokenData
-
-    return tokenData
   }
 
   public async depositETH(
@@ -197,7 +229,6 @@ export class L1Bridge {
       .gateway
   }
   public async getDefaultL1Gateway(): Promise<L1ERC20Gateway> {
-    const chainId = await this.getChainId()
     const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
 
     if (defaultGatewayAddress === AddressZero) {
@@ -222,13 +253,10 @@ export class L1Bridge {
     amount?: BigNumber,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
-    const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
-    if (!tokenData.ERC20) {
-      throw new Error(`Can't approve; token ${erc20L1Address} not found`)
-    }
     // you approve tokens to the gateway that the router will use
     const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
-    return tokenData.ERC20.contract.functions.approve(
+    const contract = await ERC20__factory.connect(erc20L1Address, this.l1Signer)
+    return contract.functions.approve(
       gatewayAddress,
       amount || MIN_APPROVAL,
       overrides
@@ -236,23 +264,27 @@ export class L1Bridge {
   }
 
   public async deposit(
-    erc20L1Address: string,
-    amount: BigNumber,
-    maxSubmissionCost: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
-    destinationAddress?: string,
+    {
+      erc20L1Address,
+      amount,
+      maxSubmissionCost,
+      maxGas,
+      gasPriceBid,
+      destinationAddress,
+      l1CallValue,
+    }: DepositParams,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
     const destination = destinationAddress || (await this.getWalletAddress())
-    const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
-    if (!tokenData.ERC20) {
-      throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
-    }
     const data = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
     )
+
+    if (overrides.value)
+      throw new Error('L1 call value should be set through l1CallValue param')
+    if (l1CallValue.eq(0)) throw new Error('L1 call value should not be zero')
+
     return this.l1GatewayRouter.functions.outboundTransfer(
       erc20L1Address,
       destination,
@@ -260,7 +292,7 @@ export class L1Bridge {
       maxGas,
       gasPriceBid,
       data,
-      overrides
+      { ...overrides, value: l1CallValue }
     )
   }
 
@@ -287,11 +319,12 @@ export class L1Bridge {
     return this.l1Signer.getBalance()
   }
 
-  public async getChainId(): Promise<number> {
-    if (this.chainIdCache) {
-      return this.chainIdCache
-    }
-    this.chainIdCache = await this.l1Signer.getChainId()
-    return this.chainIdCache
+  public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
+    const multicall = Multicall2__factory.connect(
+      this.network.tokenBridge.l1MultiCall,
+      this.l1Provider
+    )
+
+    return BridgeHelper.getMulticallTryAggregate(functionCalls, multicall)
   }
 }

@@ -39,7 +39,7 @@ import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
 
-import { L1Bridge, L1TokenData } from './l1Bridge'
+import { Await, DepositParams, L1Bridge, L1TokenData } from './l1Bridge'
 import { L2Bridge, L2TokenData } from './l2Bridge'
 import {
   BridgeHelper,
@@ -51,8 +51,6 @@ import {
   OutgoingMessageState,
   WithdrawalInitiated,
 } from './bridge_helpers'
-import { Tokens as L1Tokens } from './l1Bridge'
-import { Tokens as L2Tokens } from './l2Bridge'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks, { Network } from './networks'
 import {
@@ -61,7 +59,9 @@ import {
   Multicall2__factory,
   ArbMulticall2__factory,
   ERC20__factory,
+  ERC20,
 } from './abi'
+import { Result } from '@ethersproject/abi'
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
   maxGas?: BigNumber
@@ -77,6 +77,16 @@ interface InitOptions {
   }
 }
 
+interface DepositInputParams {
+  erc20L1Address: string
+  amount: BigNumber
+  retryableGasArgs?: RetryableGasArgs
+  destinationAddress?: string
+}
+
+const isDepositInputParams = (obj: any): obj is DepositInputParams =>
+  !obj['l1CallValue']
+
 function isError(error: Error): error is NodeJS.ErrnoException {
   return error instanceof Error
 }
@@ -91,8 +101,6 @@ const MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
 export class Bridge {
   l1Bridge: L1Bridge
   l2Bridge: L2Bridge
-  walletAddressCache?: string
-  outboxAddressCache?: string
   isCustomNetwork: boolean
 
   private constructor(
@@ -105,12 +113,6 @@ export class Bridge {
     this.isCustomNetwork = isCustomNetwork
   }
 
-  public updateAllBalances(): void {
-    this.updateAllTokens()
-    this.getL1EthBalance()
-    this.getL2EthBalance()
-  }
-
   static async init(
     ethSigner: Signer,
     arbSigner: Signer,
@@ -120,8 +122,10 @@ export class Bridge {
       throw new Error('Signer needs a provider')
     }
 
-    const l1ChainId = await ethSigner.getChainId()
-    const l2ChainId = await arbSigner.getChainId()
+    const [l1ChainId, l2ChainId] = await Promise.all([
+      ethSigner.getChainId(),
+      arbSigner.getChainId(),
+    ])
     const isCustomNetwork = customNetwork !== undefined
 
     const l1Network = isCustomNetwork
@@ -144,18 +148,17 @@ export class Bridge {
 
     if (isCustomNetwork) {
       // check routers are deployed when using a custom network configuration
-      const l1RouterCode = await ethSigner.provider.getCode(
-        l1Network.tokenBridge.l1GatewayRouter
-      )
+      const [l1RouterCode, l2RouterCode] = await Promise.all([
+        ethSigner.provider.getCode(l1Network.tokenBridge.l1GatewayRouter),
+        arbSigner.provider.getCode(l2Network.tokenBridge.l2GatewayRouter),
+      ])
+
       if (l1RouterCode === '0x') {
         throw new Error(
           `No code deployed to ${l1Network.tokenBridge.l1GatewayRouter} in the L1`
         )
       }
 
-      const l2RouterCode = await arbSigner.provider.getCode(
-        l2Network.tokenBridge.l2GatewayRouter
-      )
       if (l2RouterCode === '0x') {
         throw new Error(
           `No code deployed to ${l2Network.tokenBridge.l2GatewayRouter} in the L2`
@@ -169,30 +172,9 @@ export class Bridge {
     return new Bridge(l1BridgeObj, l2BridgeObj, isCustomNetwork)
   }
 
-  /**
-   * Update state of all tracked tokens (balance, allowance), etc. and returns state
-   */
-  public async updateAllTokens(): Promise<{
-    l1Tokens: L1Tokens
-    l2Tokens: L2Tokens
-  }> {
-    const l1Tokens = await this.l1Bridge.updateAllL1Tokens()
-    const l2Tokens = await this.l2Bridge.updateAllL2Tokens()
-    return { l1Tokens, l2Tokens }
-  }
-  /**
-   * Update target token (balance, allowance), etc. and state
-   */
-  public async updateTokenData(
-    erc20l1Address: string
-  ): Promise<{ l1Data: L1TokenData; l2Data: L2TokenData | undefined }> {
-    const l1Data = await this.getAndUpdateL1TokenData(erc20l1Address)
-    const l2Data = await this.getAndUpdateL2TokenData(erc20l1Address)
-    return { l1Data, l2Data }
-  }
-
-  get l1Tokens(): L1Tokens {
-    return this.l1Bridge.l1Tokens
+  public async setSigner(newEthSigner: Signer, newArbSigner: Signer) {
+    await this.l1Bridge.setSigner(newEthSigner)
+    await this.l2Bridge.setSigner(newArbSigner)
   }
 
   get l1GatewayRouter(): L1GatewayRouter {
@@ -266,46 +248,34 @@ export class Bridge {
     }
   }
 
-  /**
-   * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
-   */
-  public async deposit(
-    erc20L1Address: string,
-    amount: BigNumber,
-    retryableGasArgs: RetryableGasArgs = {},
-    destinationAddress?: string,
+  public async getDepositTxParams(
+    {
+      erc20L1Address,
+      amount,
+      retryableGasArgs = {},
+      destinationAddress,
+    }: DepositInputParams,
     overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
+  ): Promise<DepositParams> {
     const {
       l1WethGateway: l1WethGatewayAddress,
       l1CustomGateway: l1CustomGatewayAddress,
     } = this.l1Bridge.network.tokenBridge
 
+    // 1. Get gas price
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
 
-    const sender = await this.l1Signer.getAddress()
-
-    const expectedL1GatewayAddress = await this.l1Bridge.getGatewayAddress(
+    const l1GatewayAddress = await this.l1Bridge.getGatewayAddress(
       erc20L1Address
     )
 
-    let estimateGasCallValue = Zero
-
-    // if it's a weth deposit, include callvalue for the gas estimate for the retryable
-    if (this.isCustomNetwork) {
-      if (await this.looksLikeWethGateway(expectedL1GatewayAddress)) {
-        estimateGasCallValue = amount
-      }
-    } else if (l1WethGatewayAddress === expectedL1GatewayAddress) {
-      estimateGasCallValue = amount
-    }
-
+    // 2. Get submission price (this depends on size of calldata used in deposit)
     const l1Gateway = L1ERC20Gateway__factory.connect(
-      expectedL1GatewayAddress,
+      l1GatewayAddress,
       this.l1Provider
     )
-
+    const sender = await this.l1Bridge.getWalletAddress()
     const depositCalldata = await l1Gateway.getOutboundCalldata(
       erc20L1Address,
       sender,
@@ -325,20 +295,39 @@ export class Bridge {
       maxSubmissionPricePercentIncrease
     )
 
+    // 3. Estimate gas
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
       this.l2Provider
     )
-
     const l2Dest = await l1Gateway.counterpartGateway()
+
+    /** The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+     * Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
+     */
+    const estimateGasCallValue = await (async () => {
+      if (this.isCustomNetwork) {
+        // For custom network, we do an ad-hoc check to see if it's a WETH gateway
+        if (await this.looksLikeWethGateway(l1GatewayAddress)) {
+          return amount
+        }
+        // ...otherwise we directly check it against the config file
+      } else if (l1WethGatewayAddress === l1GatewayAddress) {
+        return amount
+      }
+
+      return Zero
+    })()
 
     let maxGas =
       retryableGasArgs.maxGas ||
       BridgeHelper.percentIncrease(
         (
           await nodeInterface.estimateRetryableTicket(
-            expectedL1GatewayAddress,
-            parseEther('0.05').add(estimateGasCallValue),
+            l1GatewayAddress,
+            parseEther('0.05').add(
+              estimateGasCallValue
+            ) /** we add a 0.05 "deposit" buffer to pay for execution in the gas estimation  */,
             l2Dest,
             estimateGasCallValue,
             maxSubmissionPrice,
@@ -353,37 +342,46 @@ export class Bridge {
           BigNumber.from(DEFAULT_MAX_GAS_PERCENT_INCREASE)
       )
     if (
-      expectedL1GatewayAddress === l1CustomGatewayAddress &&
+      l1GatewayAddress === l1CustomGatewayAddress &&
       maxGas.lt(MIN_CUSTOM_DEPOSIT_MAXGAS)
     ) {
+      // For insurance, we set a sane minimum max gas for the custom gateway
       maxGas = MIN_CUSTOM_DEPOSIT_MAXGAS
     }
-    // calculate required forwarding gas
-    let ethDeposit = overrides && (await overrides.value)
-    if (!ethDeposit || BigNumber.from(ethDeposit).isZero()) {
-      ethDeposit = await maxSubmissionPrice.add(gasPriceBid.mul(maxGas))
+    // 4. Calculate total required callvalue
+    let totalEthCallvalueToSend = overrides && (await overrides.value)
+    if (
+      !totalEthCallvalueToSend ||
+      BigNumber.from(totalEthCallvalueToSend).isZero()
+    ) {
+      totalEthCallvalueToSend = await maxSubmissionPrice.add(
+        gasPriceBid.mul(maxGas)
+      )
     }
 
-    return this.l1Bridge.deposit(
-      erc20L1Address,
-      amount,
-      maxSubmissionPrice,
+    return {
       maxGas,
       gasPriceBid,
+      l1CallValue: BigNumber.from(totalEthCallvalueToSend),
+      maxSubmissionCost: maxSubmissionPrice,
       destinationAddress,
-      { ...overrides, value: ethDeposit }
-    )
+      amount,
+      erc20L1Address,
+    }
   }
 
-  public getAndUpdateL1TokenData(erc20l1Address: string): Promise<L1TokenData> {
-    return this.l1Bridge.getAndUpdateL1TokenData(erc20l1Address)
-  }
+  /**
+   * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
+   */
+  public async deposit(
+    params: DepositParams | DepositInputParams,
+    overrides: PayableOverrides = {}
+  ): Promise<ContractTransaction> {
+    const depositInput: DepositParams = isDepositInputParams(params)
+      ? await this.getDepositTxParams(params)
+      : params
 
-  public async getAndUpdateL2TokenData(
-    erc20l1Address: string
-  ): Promise<L2TokenData | undefined> {
-    const l2TokenAddress = await this.l1Bridge.getERC20L2Address(erc20l1Address)
-    return this.l2Bridge.getAndUpdateL2TokenData(erc20l1Address, l2TokenAddress)
+    return this.l1Bridge.deposit(depositInput, overrides)
   }
 
   public async getL1EthBalance(): Promise<BigNumber> {
@@ -863,35 +861,22 @@ export class Bridge {
     userAddr: string,
     tokenAddrs: Array<string>,
     targetNetwork: 'L1' | 'L2'
-  ) {
-    const balance = ERC20__factory.createInterface().encodeFunctionData(
-      'balanceOf',
-      [userAddr]
-    )
-    const calls = tokenAddrs.map(token => ({
+  ): Promise<Array<{ tokenAddr: string; balance: BigNumber | undefined }>> {
+    const iface = ERC20__factory.createInterface()
+
+    const balanceCalls = tokenAddrs.map(token => ({
       target: token,
-      callData: balance,
+      funcFragment: iface.functions['balanceOf(address)'],
+      values: [userAddr],
     }))
 
-    const getMulticall = () => {
-      if (targetNetwork === 'L1')
-        return Multicall2__factory.connect(
-          this.l1Bridge.network.tokenBridge.l1MultiCall,
-          this.l1Provider
-        )
-      else
-        return ArbMulticall2__factory.connect(
-          this.l2Bridge.network.tokenBridge.l2Multicall,
-          this.l2Provider
-        )
-    }
-    const multicall = getMulticall()
-    const [, /* blockNums */ balances] = await multicall.callStatic.aggregate(
-      calls
-    )
-    return balances.map((val, index) => ({
-      token: tokenAddrs[index],
-      balance: BigNumber.from(val),
+    type ExpectedReturnType = Await<ReturnType<ERC20['functions']['balanceOf']>>
+
+    const bridge = targetNetwork === 'L1' ? this.l1Bridge : this.l2Bridge
+    const res = await bridge.getMulticallAggregate(balanceCalls)
+    return res.map((bal, index) => ({
+      tokenAddr: tokenAddrs[index],
+      balance: bal ? (bal as ExpectedReturnType)[0] : undefined,
     }))
   }
 }
