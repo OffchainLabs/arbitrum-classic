@@ -52,6 +52,10 @@ class CombinedSideloadCache {
                                            uint256_t max_execution_gas);
     void reorg(uint256_t next_gas_used);
     [[nodiscard]] uint256_t currentTimeExpired();
+
+   private:
+    std::optional<std::reference_wrapper<const Machine>> atOrBeforeGasImpl(
+        uint256_t& gas_used);
 };
 
 #endif  // ARB_AVM_CPP_COMBINEDSIDELOADCACHE_HPP
