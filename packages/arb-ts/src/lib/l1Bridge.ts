@@ -284,6 +284,8 @@ export class L1Bridge {
     if (overrides.value)
       throw new Error('L1 call value should be set through l1CallValue param')
     if (l1CallValue.eq(0)) throw new Error('L1 call value should not be zero')
+    if (maxSubmissionCost.eq(0))
+      throw new Error('Max submission cost should not be zero')
 
     return this.l1GatewayRouter.functions.outboundTransfer(
       erc20L1Address,
