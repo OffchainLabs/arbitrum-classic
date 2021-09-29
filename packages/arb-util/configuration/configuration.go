@@ -323,6 +323,7 @@ func DefaultCoreSettings() *Core {
 		},
 		CheckpointGasFrequency:    1_000_000,
 		CheckpointLoadGasCost:     1_000_000,
+		CheckpointLoadGasFactor:   4,
 		CheckpointMaxExecutionGas: 1_000_000_000,
 		MessageProcessCount:       10,
 	}

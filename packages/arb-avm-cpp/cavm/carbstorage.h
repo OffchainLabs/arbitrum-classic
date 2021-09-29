@@ -27,6 +27,7 @@ extern "C" {
 typedef struct {
     int32_t message_process_count;
     int32_t checkpoint_load_gas_cost;
+    int32_t checkpoint_load_gas_factor;
     int32_t checkpoint_max_execution_gas;
     int32_t checkpoint_gas_frequency;
     int32_t basic_cache_interval;

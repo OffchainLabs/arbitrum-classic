@@ -63,9 +63,14 @@ struct ArbCoreConfig {
     // Maximum number of messages to process at a time
     uint32_t message_process_count{10};
 
-    // Checkpoint loaded from disk if difference greater than cost,
-    // otherwise just run machine until gas reached
+    // Time it takes to run checkpoint for given gas
+    // is equivalent to the time it takes to load checkpoing from database
     uint256_t checkpoint_load_gas_cost{1'000'000};
+
+    // When checkpoint is loaded from database with lazy loading,
+    // the remaining gas needed to execute is more expensive
+    // because it requires additional loads from database.
+    uint256_t checkpoint_load_gas_factor{4};
 
     // Maximum amount of gas to spend executing machine forward
     uint256_t checkpoint_max_execution_gas{1'000'000'000};

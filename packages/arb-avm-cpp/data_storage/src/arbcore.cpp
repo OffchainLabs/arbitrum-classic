@@ -519,11 +519,12 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     auto mach = combined_sideload_cache.atOrBeforeGas(
                         machine_output.arb_gas_used, 0, 0,
                         coreConfig.checkpoint_load_gas_cost,
-                        coreConfig.checkpoint_max_execution_gas);
-                    if (mach != nullptr) {
+                        coreConfig.checkpoint_load_gas_factor, true,
+                        std::numeric_limits<uint256_t>::max());
+                    if (mach.machine != nullptr) {
                         // Found machine in cache
                         setup = std::make_unique<MachineThread>(
-                            mach->machine_state);
+                            mach.machine->machine_state);
                         break;
                     }
 
@@ -554,24 +555,23 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     // All outdated checkpoints have been removed
                     if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
                         // Good checkpoint
-                        if (coreConfig.debug) {
-                            if (initial_start) {
-                                std::cerr << "Loading L2 block saved to "
-                                             "database: "
-                                          << checkpoint.output.l2_block_number
-                                          << std::endl;
-                            }
+                        if (initial_start && coreConfig.debug) {
+                            std::cerr << "Loading L2 block saved to "
+                                         "database: "
+                                      << checkpoint.output.l2_block_number
+                                      << std::endl;
                         }
                         uint256_t existing_gas_used = 0;
                         auto mach = combined_sideload_cache.atOrBeforeGas(
                             checkpoint.output.arb_gas_used, existing_gas_used,
                             checkpoint.output.arb_gas_used,
                             coreConfig.checkpoint_load_gas_cost,
-                            coreConfig.checkpoint_max_execution_gas);
-                        if (mach != nullptr) {
+                            coreConfig.checkpoint_load_gas_factor, true,
+                            std::numeric_limits<uint256_t>::max());
+                        if (mach.machine != nullptr) {
                             // Found machine in cache
                             setup = std::make_unique<MachineThread>(
-                                mach->machine_state);
+                                mach.machine->machine_state);
                             break;
                         }
 
@@ -1961,12 +1961,14 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
         auto mach = combined_sideload_cache.atOrBeforeGas(
             max_gas, current_gas, database_gas,
             coreConfig.checkpoint_load_gas_cost,
+            coreConfig.checkpoint_load_gas_factor, allow_slow_lookup,
             coreConfig.checkpoint_max_execution_gas);
-        if (mach == nullptr && allow_slow_lookup &&
-            database_gas > current_gas &&
-            database_gas <= coreConfig.checkpoint_load_gas_cost) {
-            // Load from database
 
+        if (mach.machine != nullptr) {
+            // Use checkpoint from cache
+            execution_cursor = ExecutionCursor(std::move(mach.machine));
+        } else if (mach.status == CombinedSideloadCache::UseDatabase) {
+            // Load closer checkpoint from database
             const std::lock_guard<std::mutex> lock(core_reorg_mutex);
             auto checkpoint_result = getCheckpointUsingGas(tx, database_gas);
             if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
@@ -1975,6 +1977,9 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
 
             execution_cursor =
                 ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
+        } else if (mach.status == CombinedSideloadCache::TooMuchExecution) {
+            // Too much execution required to get to requested gas amount
+            return rocksdb::Status::NotFound();
         }
     }
 
@@ -2151,24 +2156,27 @@ ArbCore::getClosestExecutionCursor(ReadTransaction& tx,
 
     auto mach = combined_sideload_cache.atOrBeforeGas(
         total_gas_used, 0, database_gas, coreConfig.checkpoint_load_gas_cost,
+        coreConfig.checkpoint_load_gas_factor, allow_slow_lookup,
         coreConfig.checkpoint_max_execution_gas);
 
-    if (mach != nullptr) {
-        return ExecutionCursor(std::move(mach));
+    if (mach.machine != nullptr) {
+        // Use checkpoint from cache
+        return ExecutionCursor(std::move(mach.machine));
     }
 
-    if (!allow_slow_lookup) {
-        // Don't try to query database
-        return rocksdb::Status::NotFound();
+    if (mach.status == CombinedSideloadCache::UseDatabase) {
+        // Use checkpoint from database
+        const std::lock_guard<std::mutex> lock(core_reorg_mutex);
+        auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used);
+        if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
+            return std::get<rocksdb::Status>(checkpoint_result);
+        }
+
+        return ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
     }
 
-    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-    auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used);
-    if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
-        return std::get<rocksdb::Status>(checkpoint_result);
-    }
-
-    return ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
+    // Nothing within execution range in cache or database
+    return rocksdb::Status::NotFound();
 }
 
 std::variant<rocksdb::Status, ExecutionCursor>

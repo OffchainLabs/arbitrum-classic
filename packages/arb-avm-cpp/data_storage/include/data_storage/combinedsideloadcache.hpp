@@ -26,6 +26,17 @@
 class CombinedSideloadCache {
    public:
     typedef std::map<uint256_t, std::unique_ptr<Machine>> map_type;
+    enum cache_result_status_enum {
+        Success,
+        UseExisting,
+        UseDatabase,
+        NotFound,
+        TooMuchExecution
+    };
+    typedef struct CacheResultStruct {
+        std::unique_ptr<Machine> machine;
+        enum cache_result_status_enum status;
+    } CacheResult;
 
    private:
     std::shared_mutex mutex;
@@ -45,11 +56,14 @@ class CombinedSideloadCache {
     size_t basic_size();
     size_t lru_size();
     size_t timed_size();
-    std::unique_ptr<Machine> atOrBeforeGas(uint256_t gas_used,
-                                           uint256_t existing_gas_used,
-                                           uint256_t database_gas,
-                                           uint256_t database_load_gas_cost,
-                                           uint256_t max_execution_gas);
+    CombinedSideloadCache::CacheResultStruct atOrBeforeGas(
+        uint256_t gas_used,
+        uint256_t existing_gas_used,
+        uint256_t database_gas,
+        uint256_t database_load_gas_cost,
+        uint256_t database_load_gas_factor,
+        bool allow_slow_lookup,
+        uint256_t max_execution_gas);
     void reorg(uint256_t next_gas_used);
     [[nodiscard]] uint256_t currentTimeExpired();
 
