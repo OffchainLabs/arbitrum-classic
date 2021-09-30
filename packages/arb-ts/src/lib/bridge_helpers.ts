@@ -844,13 +844,22 @@ export class BridgeHelper {
       encodedCalls
     )
 
-    return outputs.map(([success, returnData], index) =>
-      success
-        ? iface.decodeFunctionResult(
+    return outputs.map(([success, returnData], index) => {
+      if (success) {
+        try {
+          return iface.decodeFunctionResult(
             functionCalls[index].funcFragment,
             returnData
           )
-        : undefined
-    )
+        } catch (e) {
+          // the interface has wrong expected return type
+          console.warn(
+            'interface to decode output does not have matching signature to decode'
+          )
+          return returnData
+        }
+      }
+      return undefined
+    })
   }
 }
