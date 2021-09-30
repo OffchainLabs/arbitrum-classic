@@ -27,7 +27,7 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import { concat, zeroPad, hexZeroPad } from '@ethersproject/bytes'
 
-import { Contract, ContractTransaction } from '@ethersproject/contracts'
+import { ContractTransaction } from '@ethersproject/contracts'
 import { keccak256 } from '@ethersproject/keccak256'
 
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
@@ -251,27 +251,10 @@ export class BridgeHelper {
     return txReceipt
   }
 
-  static getBuddyDeployInL2Transaction = async (
-    l2Transaction: TransactionReceipt
-  ): Promise<BuddyDeployEventResult[]> => {
-    const iface = new Interface([
-      `event Deployed(address indexed _sender, address indexed _contract, uint256 indexed withdrawalId, bool _success)`,
-    ])
-    const DeployedEvent = iface.getEvent('Deployed')
-    const eventTopic = iface.getEventTopic(DeployedEvent)
-    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(
-      log => iface.parseLog(log).args as unknown as BuddyDeployEventResult
-    )
-  }
-
   static getDepositTokenEventData = async (
-    l1Transaction: TransactionReceipt,
-    l1GatewayAddress: string
+    l1Transaction: TransactionReceipt
   ): Promise<Array<DepositInitiated>> => {
-    const factory = new L1ERC20Gateway__factory()
-    const contract = factory.attach(l1GatewayAddress)
-    const iface = contract.interface
+    const iface = L1ERC20Gateway__factory.createInterface()
     const event = iface.getEvent('DepositInitiated')
     const eventTopic = iface.getEventTopic(event)
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
@@ -286,75 +269,54 @@ export class BridgeHelper {
   static async getTokenWithdrawEventData(
     l2Provider: Provider,
     gatewayAddress: string,
-    l1TokenAddress: string,
+    l1TokenAddress?: string,
     fromAddress?: string,
     filter?: Filter
   ): Promise<WithdrawalInitiated[]> {
-    const gatewayContract = L2ArbitrumGateway__factory.connect(
-      gatewayAddress,
-      l2Provider
-    )
+    const iface = L2ArbitrumGateway__factory.createInterface()
+
     const topics = [null, fromAddress ? hexZeroPad(fromAddress, 32) : null]
     const logs = await BridgeHelper.getEventLogs(
       'WithdrawalInitiated',
-      gatewayContract,
-      topics,
-      filter
-    )
-
-    return logs
-      .map(log => {
-        const data = {
-          ...gatewayContract.interface.parseLog(log).args,
-          txHash: log.transactionHash,
-        }
-        return data as unknown as WithdrawalInitiated
-      })
-      .filter(
-        (log: WithdrawalInitiated) =>
-          log.l1Token.toLocaleLowerCase() === l1TokenAddress.toLocaleLowerCase()
-      )
-  }
-
-  static async getGatewayWithdrawEventData(
-    l2Provider: Provider,
-    gatewayAddress: string,
-    fromAddress?: string,
-    filter?: Filter
-  ): Promise<WithdrawalInitiated[]> {
-    const gatewayContract = L2ArbitrumGateway__factory.connect(
+      l2Provider,
+      iface,
       gatewayAddress,
-      l2Provider
-    )
-    const topics = [null, fromAddress ? hexZeroPad(fromAddress, 32) : null]
-    const logs = await BridgeHelper.getEventLogs(
-      'WithdrawalInitiated',
-      gatewayContract,
       topics,
       filter
     )
-
-    return logs.map(log => {
+    const parsedLogs = logs.map(log => {
       const data = {
-        ...gatewayContract.interface.parseLog(log).args,
+        ...iface.parseLog(log).args,
         txHash: log.transactionHash,
       }
       return data as unknown as WithdrawalInitiated
     })
+    // TODO: use l1TokenAddress as filter in topics instead of here
+    return l1TokenAddress
+      ? parsedLogs.filter(
+          (log: WithdrawalInitiated) =>
+            log.l1Token.toLocaleLowerCase() ===
+            l1TokenAddress.toLocaleLowerCase()
+        )
+      : parsedLogs
   }
 
-  public static getEventLogs = (
+  public static getEventLogs = <T extends Interface>(
     eventName: string,
-    connectedContract: Contract,
+    provider: Provider,
+    iface: T,
+    contractAddress: string,
     topics: (string | string[] | null)[] = [],
     filter: Filter = {}
   ): Promise<Log[]> => {
-    const iface = connectedContract.interface
+    // TODO: can we make eventName typesafe?
     const event = iface.getEvent(eventName)
     const eventTopic = iface.getEventTopic(event)
 
-    return connectedContract.provider.getLogs({
-      address: connectedContract.address,
+    if (!filter.fromBlock && !filter.toBlock)
+      console.warn('Attempting to query from 0 to block latest')
+    return provider.getLogs({
+      address: contractAddress,
       topics: [eventTopic, ...topics],
       fromBlock: filter.fromBlock || 0,
       toBlock: filter.toBlock || 'latest',
@@ -365,22 +327,20 @@ export class BridgeHelper {
     gatewayRouterAddress: string,
     provider: Provider
   ): Promise<GatewaySet[]> => {
-    const contract = L1GatewayRouter__factory.connect(
-      gatewayRouterAddress,
-      provider
+    const iface = L1GatewayRouter__factory.createInterface()
+    const logs = await BridgeHelper.getEventLogs(
+      'GatewaySet',
+      provider,
+      iface,
+      gatewayRouterAddress
     )
-    const logs = await BridgeHelper.getEventLogs('GatewaySet', contract)
-    return logs.map(
-      log => contract.interface.parseLog(log).args as unknown as GatewaySet
-    )
+    return logs.map(log => iface.parseLog(log).args as unknown as GatewaySet)
   }
 
   static getWithdrawalsInL2Transaction = (
-    l2Transaction: TransactionReceipt,
-    l2Provider: Provider
+    l2Transaction: TransactionReceipt
   ): Array<L2ToL1EventResult> => {
-    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
-    const iface = contract.interface
+    const iface = ArbSys__factory.createInterface()
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
 
@@ -400,12 +360,9 @@ export class BridgeHelper {
   }
 
   static getInboxSeqNumFromContractTransaction = async (
-    l1Transaction: TransactionReceipt,
-    inboxAddress: string
+    l1Transaction: TransactionReceipt
   ): Promise<BigNumber[] | undefined> => {
-    const factory = new Inbox__factory()
-    const contract = factory.attach(inboxAddress)
-    const iface = contract.interface
+    const iface = Inbox__factory.createInterface()
     const messageDelivered = iface.getEvent('InboxMessageDelivered')
     const messageDeliveredFromOrigin = iface.getEvent(
       'InboxMessageDeliveredFromOrigin'
@@ -662,18 +619,18 @@ export class BridgeHelper {
     l2Provider: Provider,
     filter?: Filter
   ): Promise<L2ToL1EventResult[]> => {
-    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
-
+    const iface = ArbSys__factory.createInterface()
     const logs = await BridgeHelper.getEventLogs(
       'L2ToL1Transaction',
-      contract,
+      l2Provider,
+      iface,
+      ARB_SYS_ADDRESS,
       [hexZeroPad(fromAddress, 32)],
       filter
     )
 
     return logs.map(
-      log =>
-        contract.interface.parseLog(log).args as unknown as L2ToL1EventResult
+      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
     )
   }
 
@@ -685,10 +642,14 @@ export class BridgeHelper {
     rollupAddress: string,
     l1Provider: Provider
   ): Promise<boolean> => {
-    const contract = Rollup__factory.connect(rollupAddress, l1Provider)
-    const logs = await BridgeHelper.getEventLogs('NodeConfirmed', contract, [
-      hexZeroPad(nodeNum.toHexString(), 32),
-    ])
+    const iface = Rollup__factory.createInterface()
+    const logs = await BridgeHelper.getEventLogs(
+      'NodeConfirmed',
+      l1Provider,
+      iface,
+      rollupAddress,
+      [hexZeroPad(nodeNum.toHexString(), 32)]
+    )
     return logs.length === 1
   }
 
@@ -696,8 +657,13 @@ export class BridgeHelper {
     rollupAddress: string,
     l1Provider: Provider
   ): Promise<Log[]> => {
-    const contract = Rollup__factory.connect(rollupAddress, l1Provider)
-    return BridgeHelper.getEventLogs('NodeCreated', contract)
+    const iface = Rollup__factory.createInterface()
+    return BridgeHelper.getEventLogs(
+      'NodeCreated',
+      l1Provider,
+      iface,
+      rollupAddress
+    )
   }
 
   static getOutgoingMessage = async (
@@ -705,19 +671,20 @@ export class BridgeHelper {
     indexInBatch: BigNumber,
     l2Provider: Provider
   ): Promise<L2ToL1EventResult[]> => {
-    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
+    const iface = ArbSys__factory.createInterface()
 
     const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
 
     const logs = await BridgeHelper.getEventLogs(
       'L2ToL1Transaction',
-      contract,
+      l2Provider,
+      iface,
+      ARB_SYS_ADDRESS,
       topics
     )
 
     const parsedData = logs.map(
-      log =>
-        contract.interface.parseLog(log).args as unknown as L2ToL1EventResult
+      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
     )
 
     return parsedData.filter(log => log.indexInBatch.eq(indexInBatch))
@@ -743,17 +710,17 @@ export class BridgeHelper {
     outboxAddress: string,
     l1Provider: Provider
   ): Promise<boolean> => {
-    const contract = Outbox__factory.connect(outboxAddress, l1Provider)
+    const iface = Outbox__factory.createInterface()
     const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
     const logs = await BridgeHelper.getEventLogs(
       'OutBoxTransactionExecuted',
-      contract,
+      l1Provider,
+      iface,
+      outboxAddress,
       topics
     )
     const parsedData = logs.map(
-      log =>
-        contract.interface.parseLog(log)
-          .args as unknown as OutBoxTransactionExecuted
+      log => iface.parseLog(log).args as unknown as OutBoxTransactionExecuted
     )
     return (
       parsedData.filter(executedEvent =>
