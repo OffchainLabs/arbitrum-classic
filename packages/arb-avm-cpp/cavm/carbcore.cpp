@@ -584,3 +584,8 @@ CMachineResult arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
         return {nullptr, 0};
     }
 }
+
+void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    arb_core->printCoreThreadBacktrace();
+}

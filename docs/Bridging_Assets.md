@@ -32,6 +32,8 @@ Upon withdrawing, the Ether balance is burnt on the Arbitrum side, and will late
 
 The Arbitrum protocol itself technically has no native notion of any token standards, and gives no built-in advantage or special recognition to any particular token bridge. Described here is the "Canonical Bridge," which we at Offchain Labs implemented, and which should be the primary bridge most users and applications use; it is (effectively) a DApp with contracts on both Ethereum and Arbitrum that leverages Arbitrum's cross-chain message passing system to achieve basic desired token-bridging functionality. We recommend that you use it!
 
+Currently, we maintain a whitelist of the tokens bridge-able through the canonical bridge; it will be removed soon. See [here](https://offchain.medium.com/continued-path-to-decentralization-bridging-tokens-into-arbitrum-42a94b054560) for more.
+
 ### Design Rationale
 
 In our token bridge design, we use the term "Gateway" as per [this proposal](https://ethereum-magicians.org/t/outlining-a-standard-interface-for-cross-domain-erc20-transfers/6151); i.e., one of a pair of contracts on two different domains (i.e., Ethereum and an Arbitrum chain), used to facilitate cross-domain asset transfers.
@@ -142,3 +144,7 @@ No matter the complexity of a particular token's bridging needs, a gateway can i
 ### Demos
 
 See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-withdraw) for demos of interacting with the bridge architecture via [arb-ts](https://arb-ts-docs.netlify.app/).
+
+#### A Word of Caution on Bridges (aka, "I've Got a Bridge To Sell You")
+
+Cross chain bridging is an exciting design space; alternative bridge designs can potentially offer faster withdrawals, interoperability with other chains, different trust assumptions with their own potentially valuable UX tradeoffs, etc. They can also potentially be completely insecure and/or outright scams. Users should treat other, non-canonical bridge applications the same way they treat any application running on Arbitrum, and exercise caution and due diligence before entrusting them with their value.

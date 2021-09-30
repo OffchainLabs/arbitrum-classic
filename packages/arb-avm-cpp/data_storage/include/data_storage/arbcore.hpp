@@ -38,6 +38,9 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#ifdef __linux__
+#include <pthread.h>
+#endif
 
 namespace rocksdb {
 class TransactionDB;
@@ -204,6 +207,10 @@ class ArbCore {
     // Not protected by mutex! Must only be used by the main ArbCore thread.
     uint256_t last_old_machine_cache_gas;
 
+#ifdef __linux__
+    std::atomic<std::optional<pthread_t>> core_pthread;
+#endif
+
    public:
     ArbCore() = delete;
     ArbCore(std::shared_ptr<DataStorage> data_storage_,
@@ -213,6 +220,8 @@ class ArbCore {
     rocksdb::Status initialize(const LoadedExecutable& executable);
     [[nodiscard]] bool initialized() const;
     void operator()();
+
+    void printCoreThreadBacktrace();
 
    public:
     // Public Thread interaction

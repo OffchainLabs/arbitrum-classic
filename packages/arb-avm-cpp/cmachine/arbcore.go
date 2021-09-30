@@ -80,6 +80,10 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
+func (ac *ArbCore) PrintCoreThreadBacktrace() {
+	C.arbCorePrintCoreThreadBacktrace(ac.c)
+}
+
 func sequencerBatchItemsToByteSliceArray(batchItems []inbox.SequencerBatchItem) C.struct_ByteSliceArrayStruct {
 	return bytesArrayToByteSliceArray(encodeSequencerBatchItems(batchItems))
 }
