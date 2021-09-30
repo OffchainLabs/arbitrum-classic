@@ -36,6 +36,9 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#ifdef __linux__
+#include <pthread.h>
+#endif
 
 namespace rocksdb {
 class TransactionDB;
@@ -199,6 +202,10 @@ class ArbCore {
     ValueCache execution_cursor_value_cache;
     std::mutex execution_cursor_value_cache_mutex;
 
+#ifdef __linux__
+    std::optional<pthread_t> core_pthread;
+#endif
+
    public:
     ArbCore() = delete;
     ArbCore(std::shared_ptr<DataStorage> data_storage_,
@@ -208,6 +215,8 @@ class ArbCore {
     rocksdb::Status initialize(const LoadedExecutable& executable);
     [[nodiscard]] bool initialized() const;
     void operator()();
+
+    void printCoreThreadBacktrace();
 
    public:
     // Public Thread interaction

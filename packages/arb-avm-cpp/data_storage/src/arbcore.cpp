@@ -36,6 +36,8 @@
 #include <vector>
 
 #ifdef __linux__
+#include <execinfo.h>
+#include <signal.h>
 #include <sys/prctl.h>
 #endif
 
@@ -119,6 +121,9 @@ bool ArbCore::startThread() {
 void ArbCore::abortThread() {
     std::cerr << "Aborting main ArbCore thread" << std::endl;
     if (core_thread) {
+#ifdef __linux__
+        core_pthread = std::nullopt;
+#endif
         arbcore_abort = true;
         core_thread->join();
         core_thread = nullptr;
@@ -688,6 +693,27 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const;
 
+#ifdef __linux__
+static void* backtrace_buffer[1024];
+void sigUsr2Handler(int signal) {
+    if (signal != SIGUSR2)
+        return;
+    int addrs =
+        backtrace(backtrace_buffer, sizeof(backtrace_buffer) / sizeof(void*));
+    backtrace_symbols_fd(backtrace_buffer, addrs, 2);
+}
+#endif
+
+void ArbCore::printCoreThreadBacktrace() {
+#ifdef __linux__
+    if (core_pthread) {
+        pthread_kill(*core_pthread, SIGUSR2);
+        return;
+    }
+#endif
+    std::cerr << "Core thread backtrace not available" << std::endl;
+}
+
 constexpr uint256_t old_machine_cache_interval = 1'000'000;
 constexpr size_t old_machine_cache_max_size = 20;
 
@@ -699,6 +725,8 @@ constexpr size_t old_machine_cache_max_size = 20;
 void ArbCore::operator()() {
 #ifdef __linux__
     prctl(PR_SET_NAME, "ArbCore", 0, 0, 0);
+    signal(SIGUSR2, sigUsr2Handler);
+    core_pthread = pthread_self();
 #endif
     ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
@@ -1010,6 +1038,10 @@ void ArbCore::operator()() {
         logs_cursor.error_string = "arbcore thread aborted";
         logs_cursor.status = DataCursor::ERROR;
     }
+
+#ifdef __linux__
+    core_pthread = std::nullopt;
+#endif
 }
 
 rocksdb::Status ArbCore::saveLogs(ReadWriteTransaction& tx,
