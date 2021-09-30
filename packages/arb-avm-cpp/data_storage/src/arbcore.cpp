@@ -706,8 +706,9 @@ void sigUsr2Handler(int signal) {
 
 void ArbCore::printCoreThreadBacktrace() {
 #ifdef __linux__
-    if (core_pthread) {
-        pthread_kill(*core_pthread, SIGUSR2);
+    auto pthread = core_pthread.load();
+    if (pthread) {
+        pthread_kill(*pthread, SIGUSR2);
         return;
     }
 #endif

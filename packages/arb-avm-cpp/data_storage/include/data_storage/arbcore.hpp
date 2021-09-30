@@ -203,7 +203,7 @@ class ArbCore {
     std::mutex execution_cursor_value_cache_mutex;
 
 #ifdef __linux__
-    std::optional<pthread_t> core_pthread;
+    std::atomic<std::optional<pthread_t>> core_pthread;
 #endif
 
    public:
