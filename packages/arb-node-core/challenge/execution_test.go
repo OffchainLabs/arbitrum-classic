@@ -121,7 +121,7 @@ func TestChallengeToUnreachableSmall(t *testing.T) {
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge, messages := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
-	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(1_000_000_000), true)
+	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(1<<30), true)
 	test.FailIfError(t, err)
 	startGas := cursor.TotalGasConsumed()
 	endGas := new(big.Int).Add(startGas, big.NewInt(1))

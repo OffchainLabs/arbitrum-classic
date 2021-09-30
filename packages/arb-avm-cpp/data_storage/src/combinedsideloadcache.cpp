@@ -80,11 +80,12 @@ CombinedSideloadCache::atOrBeforeGasImpl(uint256_t& gas_used) {
         timed_gas = 0;
     }
 
-    if (basic_gas > lru_gas && basic_gas > timed_gas && basic_it.has_value()) {
+    if (basic_gas >= lru_gas && basic_gas >= timed_gas &&
+        basic_it.has_value()) {
         return std::cref(*basic_it.value()->second);
     }
 
-    if (lru_gas > basic_gas && lru_gas > timed_gas && lru_it.has_value()) {
+    if (lru_gas >= basic_gas && lru_gas >= timed_gas && lru_it.has_value()) {
         return std::cref(*lru_it.value()->second.first);
     }
 
@@ -95,47 +96,49 @@ CombinedSideloadCache::atOrBeforeGasImpl(uint256_t& gas_used) {
     return std::nullopt;
 }
 
-std::unique_ptr<Machine> CombinedSideloadCache::atOrBeforeGas(
+CombinedSideloadCache::CacheResultStruct CombinedSideloadCache::atOrBeforeGas(
     uint256_t gas_used,
-    uint256_t existing_gas_used,
-    uint256_t database_gas,
+    std::optional<uint256_t> existing_gas_used,
+    std::optional<uint256_t> database_gas,
     uint256_t database_load_gas_cost,
     uint256_t max_execution_gas) {
     // Unique lock required to update LRU cache
     std::unique_lock lock(mutex);
 
     auto cache_machine = atOrBeforeGasImpl(gas_used);
-    uint256_t cache_gas;
+    std::optional<uint256_t> cache_gas;
     if (cache_machine.has_value()) {
         cache_gas =
             cache_machine.value().get().machine_state.output.arb_gas_used;
-    } else {
-        cache_gas = 0;
     }
 
-    auto load_from_database =
-        (database_gas > cache_gas) &&
-        ((database_gas - cache_gas) > database_load_gas_cost);
+    auto load_from_database = (database_gas.has_value() &&
+                               (!cache_gas.has_value() ||
+                                ((database_gas.value() > cache_gas.value()) &&
+                                 ((database_gas.value() - cache_gas.value()) >
+                                  database_load_gas_cost))));
     if (load_from_database) {
         // Loading from database is quicker than executing last cache entry
-        return nullptr;
+        return {nullptr, UseDatabase};
     }
 
-    if (existing_gas_used != 0 && existing_gas_used > cache_gas) {
+    if (existing_gas_used.has_value() && existing_gas_used > cache_gas) {
         // Use existing
-        return nullptr;
-    }
-
-    if (gas_used - cache_gas > max_execution_gas) {
-        // Distance from last cache entry too far to execute
-        return nullptr;
+        return {nullptr, UseExisting};
     }
 
     if (cache_machine.has_value()) {
-        return std::make_unique<Machine>(cache_machine.value().get());
+        if ((max_execution_gas != 0) &&
+            (gas_used - cache_gas.value() > max_execution_gas)) {
+            // Distance from last cache entry too far to execute
+            return {nullptr, TooMuchExecution};
+        }
+
+        return {std::make_unique<Machine>(cache_machine.value().get()),
+                Success};
     }
 
-    return nullptr;
+    return {nullptr, NotFound};
 }
 
 void CombinedSideloadCache::reorg(uint256_t next_gas_used) {

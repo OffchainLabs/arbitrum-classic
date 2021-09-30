@@ -96,7 +96,7 @@ func DefaultCoreSettings() *Core {
 			TimedExpire:   20 * time.Minute,
 		},
 		CheckpointLoadGasCost:     1_000_000,
-		CheckpointMaxExecutionGas: 1_000_000_000,
+		CheckpointMaxExecutionGas: 0,
 		GasCheckpointFrequency:    1_000_000,
 		MessageProcessCount:       10,
 	}
@@ -683,7 +683,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	err = k.Load(confmap.Provider(map[string]interface{}{
 		"core.message-process-count":             10,
 		"core.checkpoint-load-gas-cost":          1_000_000_000,
-		"core.checkpoint-max-execution":          1_000_000_000,
+		"core.checkpoint-max-execution":          0,
 		"core.gas-checkpoint-frequency":          1_000_000_000,
 		"feed.output.queue":                      100,
 		"node.sequencer.lockout.timeout":         30 * time.Second,

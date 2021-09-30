@@ -63,12 +63,12 @@ struct ArbCoreConfig {
     // Maximum number of messages to process at a time
     uint32_t message_process_count{10};
 
-    // Checkpoint loaded from disk if difference greater than cost,
-    // otherwise just run machine until gas reached
+    // Time it takes to run checkpoint for given gas
+    // is equivalent to the time it takes to load checkpoing from database
     uint256_t checkpoint_load_gas_cost{1'000'000};
 
     // Maximum amount of gas to spend executing machine forward
-    uint256_t checkpoint_max_execution_gas{1'000'000'000};
+    uint256_t checkpoint_max_execution_gas{0};
 
     // Frequency to save checkpoint to database
     uint256_t min_gas_checkpoint_frequency{1'000'000};
@@ -448,8 +448,9 @@ class ArbCore {
                                             const uint256_t& send_index);
     bool runMachineWithMessages(MachineExecutionConfig& execConfig,
                                 size_t max_message_batch_size);
-    uint256_t peekCheckpointUsingGas(ReadTransaction& tx,
-                                     const uint256_t& total_gas_used);
+    std::optional<uint256_t> peekCheckpointUsingGas(
+        ReadTransaction& tx,
+        const uint256_t& total_gas_used);
 
    public:
     // Public sideload interaction

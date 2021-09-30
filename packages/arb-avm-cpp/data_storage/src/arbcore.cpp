@@ -214,6 +214,8 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
 
     if (status.ok()) {
         // Database already initialized
+        combined_sideload_cache.basic_add(
+            std::make_unique<Machine>(*core_machine));
         return status;
     }
 
@@ -513,17 +515,18 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     }
                     selected_machine_output = machine_output;
                 }
-                if (check_output(machine_output)) {
+                if (machine_output.arb_gas_used == 0 ||
+                    check_output(machine_output)) {
                     // All outdated checkpoints have been removed
                     // TODO: Do not check cache every checkpoint without machine
                     auto mach = combined_sideload_cache.atOrBeforeGas(
-                        machine_output.arb_gas_used, 0, 0,
+                        machine_output.arb_gas_used, std::nullopt, std::nullopt,
                         coreConfig.checkpoint_load_gas_cost,
-                        coreConfig.checkpoint_max_execution_gas);
-                    if (mach != nullptr) {
+                        std::numeric_limits<uint256_t>::max());
+                    if (mach.machine != nullptr) {
                         // Found machine in cache
                         setup = std::make_unique<MachineThread>(
-                            mach->machine_state);
+                            mach.machine->machine_state);
                         break;
                     }
 
@@ -550,28 +553,25 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                     }
                     selected_machine_output = checkpoint.output;
                 }
-                if (check_output(checkpoint.output)) {
+                if (checkpoint.output.arb_gas_used == 0 ||
+                    check_output(checkpoint.output)) {
                     // All outdated checkpoints have been removed
                     if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
                         // Good checkpoint
-                        if (coreConfig.debug) {
-                            if (initial_start) {
-                                std::cerr << "Loading L2 block saved to "
-                                             "database: "
-                                          << checkpoint.output.l2_block_number
-                                          << std::endl;
-                            }
+                        if (initial_start && coreConfig.debug) {
+                            std::cerr << "Loading L2 block saved to "
+                                         "database: "
+                                      << checkpoint.output.l2_block_number
+                                      << std::endl;
                         }
-                        uint256_t existing_gas_used = 0;
                         auto mach = combined_sideload_cache.atOrBeforeGas(
-                            checkpoint.output.arb_gas_used, existing_gas_used,
-                            checkpoint.output.arb_gas_used,
-                            coreConfig.checkpoint_load_gas_cost,
-                            coreConfig.checkpoint_max_execution_gas);
-                        if (mach != nullptr) {
+                            checkpoint.output.arb_gas_used, std::nullopt,
+                            std::nullopt, coreConfig.checkpoint_load_gas_cost,
+                            std::numeric_limits<uint256_t>::max());
+                        if (mach.machine != nullptr) {
                             // Found machine in cache
                             setup = std::make_unique<MachineThread>(
-                                mach->machine_state);
+                                mach.machine->machine_state);
                             break;
                         }
 
@@ -638,12 +638,12 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         // No intermediate value to fast forward to, so just remove
         // invalid cache entries
         combined_sideload_cache.reorg(
-            core_machine->machine_state.arb_gas_remaining);
+            core_machine->machine_state.output.arb_gas_used + 1);
     } else {
         // Remove invalid cache entries after selected_machine_output
         // and advance core_machine to same place as selected_machine_output.
         combined_sideload_cache.reorg(
-            selected_machine_output.value().arb_gas_used);
+            selected_machine_output.value().arb_gas_used + 1);
 
         if (initial_start) {
             std::cerr << "Seeding cache between L2 blocks: "
@@ -722,19 +722,19 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         }
     }
 
+    ReadWriteTransaction tx(data_storage);
     uint256_t next_sideload_block_number = 0;
-    if (output.last_sideload) {
+    if (output.last_sideload.has_value()) {
         next_sideload_block_number = *output.last_sideload + 1;
     }
 
-    ReadWriteTransaction tx(data_storage);
     auto status = deleteSideloadsStartingAt(tx, next_sideload_block_number);
     if (!status.ok()) {
         return status;
     }
 
     // Delete logs individually to handle reference counts
-    auto optional_status = deleteLogsStartingAt(tx, output.log_count);
+    auto optional_status = deleteLogsStartingAt(tx, output.log_count + 1);
     if (optional_status && !optional_status->ok()) {
         return *optional_status;
     }
@@ -1950,30 +1950,33 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     auto gas_target = current_gas + max_gas;
     {
         ReadSnapshotTransaction tx(data_storage);
-        uint256_t database_gas;
+        std::optional<uint256_t> database_gas;
         if (allow_slow_lookup) {
             database_gas = peekCheckpointUsingGas(tx, gas_target);
-        } else {
-            database_gas = 0;
         }
 
         auto mach = combined_sideload_cache.atOrBeforeGas(
             max_gas, current_gas, database_gas,
             coreConfig.checkpoint_load_gas_cost,
             coreConfig.checkpoint_max_execution_gas);
-        if (mach == nullptr && allow_slow_lookup &&
-            database_gas > current_gas &&
-            database_gas <= coreConfig.checkpoint_load_gas_cost) {
-            // Load from database
 
+        if (mach.machine != nullptr) {
+            // Use checkpoint from cache
+            execution_cursor = ExecutionCursor(std::move(mach.machine));
+        } else if (mach.status == CombinedSideloadCache::UseDatabase) {
+            // Load closer checkpoint from database
             const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-            auto checkpoint_result = getCheckpointUsingGas(tx, database_gas);
+            auto checkpoint_result =
+                getCheckpointUsingGas(tx, database_gas.value());
             if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
                 return std::get<rocksdb::Status>(checkpoint_result);
             }
 
             execution_cursor =
                 ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
+        } else if (mach.status == CombinedSideloadCache::TooMuchExecution) {
+            // Too much execution required to get to requested gas amount
+            return rocksdb::Status::NotFound();
         }
     }
 
@@ -2058,16 +2061,16 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                     resolveExecutionCursorMachine(tx, execution_cursor);
 
                 uint256_t gas_used = execution_cursor.getOutput().arb_gas_used;
-                if ((gas_used == total_gas_used) ||
-                    (go_over_gas && gas_used > total_gas_used) ||
+                if ((gas_used >= total_gas_used) ||
                     (!go_over_gas &&
                      gas_used + mach->machine_state.nextGasCost() >
                          total_gas_used)) {
                     break;
                 }
 
-                if (total_gas_used - gas_used >
-                    coreConfig.checkpoint_max_execution_gas) {
+                if ((coreConfig.checkpoint_max_execution_gas != 0) &&
+                    (total_gas_used - gas_used >
+                     coreConfig.checkpoint_max_execution_gas)) {
                     // Execution will take too long
                     return rocksdb::Status::NotFound();
                 }
@@ -2111,18 +2114,23 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
         }
     }
 
-    auto& mach = std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
-    combined_sideload_cache.lru_add(std::make_unique<Machine>(*mach));
+    if (std::holds_alternative<std::unique_ptr<Machine>>(
+            execution_cursor.machine)) {
+        auto& mach =
+            std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
+        combined_sideload_cache.lru_add(std::make_unique<Machine>(*mach));
+    }
 
     return rocksdb::Status::OK();
 }
 
-uint256_t ArbCore::peekCheckpointUsingGas(ReadTransaction& tx,
-                                          const uint256_t& total_gas_used) {
+std::optional<uint256_t> ArbCore::peekCheckpointUsingGas(
+    ReadTransaction& tx,
+    const uint256_t& total_gas_used) {
     const std::lock_guard<std::mutex> lock(core_reorg_mutex);
     auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used);
     if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
-        return 0;
+        return std::nullopt;
     }
 
     auto keys = std::get<MachineStateKeys>(checkpoint_result);
@@ -2133,33 +2141,34 @@ std::variant<rocksdb::Status, ExecutionCursor>
 ArbCore::getClosestExecutionCursor(ReadTransaction& tx,
                                    uint256_t& total_gas_used,
                                    bool allow_slow_lookup) {
-    uint256_t database_gas;
+    std::optional<uint256_t> database_gas;
     if (allow_slow_lookup) {
         database_gas = peekCheckpointUsingGas(tx, total_gas_used);
-    } else {
-        database_gas = 0;
     }
 
     auto mach = combined_sideload_cache.atOrBeforeGas(
-        total_gas_used, 0, database_gas, coreConfig.checkpoint_load_gas_cost,
+        total_gas_used, std::nullopt, database_gas,
+        coreConfig.checkpoint_load_gas_cost,
         coreConfig.checkpoint_max_execution_gas);
 
-    if (mach != nullptr) {
-        return ExecutionCursor(std::move(mach));
+    if (mach.machine != nullptr) {
+        // Use checkpoint from cache
+        return ExecutionCursor(std::move(mach.machine));
     }
 
-    if (!allow_slow_lookup) {
-        // Don't try to query database
-        return rocksdb::Status::NotFound();
+    if (mach.status == CombinedSideloadCache::UseDatabase) {
+        // Use checkpoint from database
+        const std::lock_guard<std::mutex> lock(core_reorg_mutex);
+        auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used);
+        if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
+            return std::get<rocksdb::Status>(checkpoint_result);
+        }
+
+        return ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
     }
 
-    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-    auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used);
-    if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
-        return std::get<rocksdb::Status>(checkpoint_result);
-    }
-
-    return ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
+    // Nothing within execution range in cache or database
+    return rocksdb::Status::NotFound();
 }
 
 std::variant<rocksdb::Status, ExecutionCursor>
@@ -2672,7 +2681,7 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
             return {status, std::nullopt};
         }
     }
-    if (reorging_to_count) {
+    if (reorging_to_count.has_value()) {
         auto status =
             reorgToMessageCountOrBefore(*reorging_to_count, false, cache);
         if (!status.ok()) {
@@ -3087,9 +3096,6 @@ ValueResult<uint256_t> ArbCore::getSideloadPosition(
 rocksdb::Status ArbCore::deleteSideloadsStartingAt(
     ReadWriteTransaction& tx,
     const uint256_t& block_number) {
-    // Clear the cache
-    combined_sideload_cache.reorg(block_number);
-
     // Clear the DB
     std::vector<unsigned char> key;
     marshal_uint256_t(block_number, key);

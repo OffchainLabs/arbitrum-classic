@@ -32,27 +32,31 @@ TEST_CASE("CombinedSideloadCache add and get") {
     CombinedSideloadCache cache(basic_size, lru_size, timed_expire);
 
     // Test empty cache case
-    REQUIRE(cache.atOrBeforeGas(50, 0, 0, database_load_cost,
-                                max_execution_gas) == nullptr);
+    REQUIRE(cache
+                .atOrBeforeGas(50, std::nullopt, std::nullopt,
+                               database_load_cost, max_execution_gas)
+                .machine == nullptr);
 
     // Test that basic entry is added
     auto machine41 = std::make_unique<Machine>(getComplexMachine());
     machine41->machine_state.output.arb_gas_used = 41;
     cache.basic_add(std::move(machine41));
     REQUIRE(cache.basic_size() == 1);
-    auto machine41a = cache.atOrBeforeGas(50, 0, 0, 10000, max_execution_gas);
-    REQUIRE(machine41a != nullptr);
-    REQUIRE(machine41a->machine_state.output.arb_gas_used == 41);
+    auto machine41a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, 10000,
+                                          max_execution_gas);
+    REQUIRE(machine41a.machine != nullptr);
+    REQUIRE(machine41a.machine->machine_state.output.arb_gas_used == 41);
 
     // Test that lru entry is added
     auto machine42 = std::make_unique<Machine>(getComplexMachine());
     machine42->machine_state.output.arb_gas_used = 42;
     cache.lru_add(std::move(machine42));
     REQUIRE(cache.lru_size() == 1);
-    auto machine42a = cache.atOrBeforeGas(50, 0, 0, 10000, max_execution_gas);
-    REQUIRE(machine42a != nullptr);
-    REQUIRE(machine41a->machine_state.output.arb_gas_used == 41);
-    REQUIRE(machine42a->machine_state.output.arb_gas_used == 42);
+    auto machine42a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, 10000,
+                                          max_execution_gas);
+    REQUIRE(machine42a.machine != nullptr);
+    REQUIRE(machine41a.machine->machine_state.output.arb_gas_used == 41);
+    REQUIRE(machine42a.machine->machine_state.output.arb_gas_used == 42);
 
     // Test that timed entry is added
     auto machine43 = std::make_unique<Machine>(getComplexMachine());
@@ -60,32 +64,36 @@ TEST_CASE("CombinedSideloadCache add and get") {
     machine43->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.timed_add(std::move(machine43));
     REQUIRE(cache.timed_size() == 1);
-    auto machine43a = cache.atOrBeforeGas(50, 0, 0, 10000, max_execution_gas);
-    REQUIRE(machine43a != nullptr);
-    REQUIRE(machine41a->machine_state.output.arb_gas_used == 41);
-    REQUIRE(machine42a->machine_state.output.arb_gas_used == 42);
-    REQUIRE(machine43a->machine_state.output.arb_gas_used == 43);
+    auto machine43a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, 10000,
+                                          max_execution_gas);
+    REQUIRE(machine43a.machine != nullptr);
+    REQUIRE(machine41a.machine->machine_state.output.arb_gas_used == 41);
+    REQUIRE(machine42a.machine->machine_state.output.arb_gas_used == 42);
+    REQUIRE(machine43a.machine->machine_state.output.arb_gas_used == 43);
 
     // Test execution cheaper than database load
-    auto machineDBa = cache.atOrBeforeGas(50, 0, 53, 10, max_execution_gas);
-    REQUIRE(machineDBa != nullptr);
-    REQUIRE(machineDBa->machine_state.output.arb_gas_used == 43);
+    auto machineDBa =
+        cache.atOrBeforeGas(50, std::nullopt, 53, 10, max_execution_gas);
+    REQUIRE(machineDBa.machine != nullptr);
+    REQUIRE(machineDBa.machine->machine_state.output.arb_gas_used == 43);
 
     // Test database load cheaper than execution
-    auto machineDBb = cache.atOrBeforeGas(50, 0, 54, 10, max_execution_gas);
-    REQUIRE(machineDBb == nullptr);
+    auto machineDBb =
+        cache.atOrBeforeGas(50, std::nullopt, 54, 10, max_execution_gas);
+    REQUIRE(machineDBb.machine == nullptr);
 
     // Test current machine closer than database load
     auto machineDBc = cache.atOrBeforeGas(50, 53, 53, 10, max_execution_gas);
-    REQUIRE(machineDBc == nullptr);
+    REQUIRE(machineDBc.machine == nullptr);
 
     // Test only lru
     cache.reorg(0);
     machine42 = std::make_unique<Machine>(getComplexMachine());
     machine42->machine_state.output.arb_gas_used = 42;
     cache.lru_add(std::move(machine42));
-    machine42a = cache.atOrBeforeGas(50, 0, 0, 10000, max_execution_gas);
-    REQUIRE(machine42a != nullptr);
+    machine42a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, 10000,
+                                     max_execution_gas);
+    REQUIRE(machine42a.machine != nullptr);
 
     // Test only timed
     cache.reorg(0);
@@ -93,8 +101,9 @@ TEST_CASE("CombinedSideloadCache add and get") {
     machine43->machine_state.output.arb_gas_used = 42;
     machine43->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.timed_add(std::move(machine43));
-    machine43a = cache.atOrBeforeGas(50, 0, 0, 10000, max_execution_gas);
-    REQUIRE(machine43a != nullptr);
+    machine43a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, 10000,
+                                     max_execution_gas);
+    REQUIRE(machine43a.machine != nullptr);
 }
 
 TEST_CASE("CombinedSideloadCache currentTimeExpired") {
