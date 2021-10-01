@@ -172,31 +172,54 @@ export class L1Bridge {
       nameResult,
     ] = await this.getMulticallAggregate(functionCalls)
 
-    if (balanceResult === undefined || allowanceResult === undefined)
-      throw new Error('ERC20 Token does not support balance/allowance')
+    const isString = (x: any): x is string => typeof x === 'string'
+    const balance = (() => {
+      if (!balanceResult) throw new Error('No balance method available')
+      if (isString(balanceResult)) throw new Error('Not able to decode balance')
+      return (
+        balanceResult as Await<ReturnType<ERC20['functions']['balanceOf']>>
+      )[0]
+    })()
 
-    type ERC20_FUNCTIONS = ERC20['functions']
-    const balance = (
-      balanceResult as Await<ReturnType<ERC20_FUNCTIONS['balanceOf']>>
-    )[0]
-    const allowance = (
-      allowanceResult as Await<ReturnType<ERC20_FUNCTIONS['allowance']>>
-    )[0]
+    const allowance = (() => {
+      if (!allowanceResult) throw new Error('No allowance method available')
+      if (isString(allowanceResult))
+        throw new Error('Not able to decode allowance')
+      return (
+        allowanceResult as Await<ReturnType<ERC20['functions']['allowance']>>
+      )[0]
+    })()
 
-    const symbol =
-      symbolResult === undefined
-        ? addressToSymbol(erc20L1Address)
-        : (symbolResult as Await<ReturnType<ERC20_FUNCTIONS['symbol']>>)[0]
+    const symbol = (() => {
+      if (!symbolResult) return addressToSymbol(erc20L1Address)
+      if (isString(symbolResult)) {
+        return symbolResult
+      } else {
+        return (
+          symbolResult as Await<ReturnType<ERC20['functions']['symbol']>>
+        )[0]
+      }
+    })()
 
-    const decimals =
-      decimalsResult === undefined
-        ? 18
-        : (decimalsResult as Await<ReturnType<ERC20_FUNCTIONS['decimals']>>)[0]
+    const decimals = (() => {
+      if (!decimalsResult) return 18
+      if (isString(decimalsResult)) {
+        return BigNumber.from(decimalsResult).toNumber()
+      } else {
+        return (
+          decimalsResult as Await<ReturnType<ERC20['functions']['decimals']>>
+        )[0]
+      }
+    })()
 
-    const name =
-      nameResult === undefined
-        ? symbol + '_Token'
-        : (nameResult as Await<ReturnType<ERC20_FUNCTIONS['name']>>)[0]
+    const name = (() => {
+      if (!nameResult) return symbol + '_Token'
+      if (isString(nameResult)) {
+        return nameResult
+      } else {
+        return (nameResult as Await<ReturnType<ERC20['functions']['name']>>)[0]
+      }
+    })()
 
     const allowanceLimit = BigNumber.from(
       '0xffffffffffffffffffffffff'
