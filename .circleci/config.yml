@@ -207,7 +207,7 @@ jobs:
           name: build with address sanitizer
           command: |
             mkdir -p packages/arb-avm-cpp/debug-asan
-            cd packages/arb-avm-cpp/debug
+            cd packages/arb-avm-cpp/debug-asan
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address ..
             cmake --build . -j 2
       - run:
