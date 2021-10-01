@@ -263,7 +263,14 @@ export class L1Bridge {
     )
   }
 
-  public async deposit(
+  public async estimateGasDeposit(
+    depositParams: DepositParams,
+    overrides: PayableOverrides = {}
+  ): Promise<BigNumber> {
+    return this._deposit(depositParams, true, overrides) as Promise<BigNumber>
+  }
+
+  private async _deposit(
     {
       erc20L1Address,
       amount,
@@ -273,8 +280,9 @@ export class L1Bridge {
       destinationAddress,
       l1CallValue,
     }: DepositParams,
+    estimateGas = false,
     overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
+  ): Promise<ContractTransaction | BigNumber> {
     const destination = destinationAddress || (await this.getWalletAddress())
     const data = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
@@ -287,7 +295,10 @@ export class L1Bridge {
     if (maxSubmissionCost.eq(0))
       throw new Error('Max submission cost should not be zero')
 
-    return this.l1GatewayRouter.functions.outboundTransfer(
+    const method = estimateGas
+      ? this.l1GatewayRouter.estimateGas.outboundTransfer
+      : this.l1GatewayRouter.functions.outboundTransfer
+    return method(
       erc20L1Address,
       destination,
       amount,
@@ -296,6 +307,17 @@ export class L1Bridge {
       data,
       { ...overrides, value: l1CallValue }
     )
+  }
+
+  public async deposit(
+    depositParams: DepositParams,
+    overrides: PayableOverrides = {}
+  ): Promise<ContractTransaction> {
+    return this._deposit(
+      depositParams,
+      false,
+      overrides
+    ) as Promise<ContractTransaction>
   }
 
   public async getWalletAddress(): Promise<string> {
