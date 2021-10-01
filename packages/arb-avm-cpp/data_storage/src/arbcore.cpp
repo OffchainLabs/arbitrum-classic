@@ -1976,6 +1976,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
         std::optional<MachineStateKeys> database_machine_state_keys;
         std::optional<uint256_t> database_gas;
         if (allow_slow_lookup) {
+            const std::lock_guard<std::mutex> lock(core_reorg_mutex);
             auto checkpoint_result = getCheckpointUsingGas(tx, gas_target);
             if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
                 return std::get<rocksdb::Status>(checkpoint_result);
@@ -1995,7 +1996,6 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
             execution_cursor = ExecutionCursor(std::move(mach.machine));
         } else if (mach.status == CombinedMachineCache::UseDatabase) {
             // Load closer checkpoint from database
-            const std::lock_guard<std::mutex> lock(core_reorg_mutex);
             execution_cursor =
                 ExecutionCursor(database_machine_state_keys.value());
         } else if (mach.status == CombinedMachineCache::TooMuchExecution) {
