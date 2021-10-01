@@ -113,6 +113,8 @@ CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
                                         uint64_t block_number,
                                         int allow_slow_lookup);
 
+void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr);
+
 #ifdef __cplusplus
 }
 #endif

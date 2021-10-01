@@ -308,7 +308,7 @@ SaveResults saveTestMachine(ReadWriteTransaction& transaction,
     auto core_code = dynamic_cast<CoreCode*>(parent_code.get());
     assert(core_code != nullptr);
 
-    core_code->commitChanges(*machine_code, machine_save_res.second);
+    machine_code->commitCodeToParent(machine_save_res.second);
     machine.machine_state.code = std::make_shared<RunningCode>(parent_code);
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),

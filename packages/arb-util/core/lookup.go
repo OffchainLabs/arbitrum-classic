@@ -86,6 +86,7 @@ type ArbCoreLookup interface {
 type ArbCoreInbox interface {
 	DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool
 	MessagesStatus() (MessageStatus, error)
+	PrintCoreThreadBacktrace()
 }
 
 func DeliverMessagesAndWait(db ArbCoreInbox, previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
@@ -128,6 +129,7 @@ func WaitForMachineIdle(db ArbCore) {
 
 func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 	start := time.Now()
+	nextLog := time.Second * 30
 	var status MessageStatus
 	var err error
 	for {
@@ -143,9 +145,10 @@ func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 			break
 		}
 		duration := time.Since(start)
-		if duration > time.Second*30 {
+		if duration > nextLog {
 			logger.Warn().Dur("elapsed", duration).Msg("Message delivery taking too long")
-			start = time.Now()
+			db.PrintCoreThreadBacktrace()
+			nextLog += time.Second * 30
 		}
 		<-time.After(time.Millisecond * 50)
 	}

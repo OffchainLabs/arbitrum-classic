@@ -38,6 +38,8 @@
 #include <vector>
 
 #ifdef __linux__
+#include <execinfo.h>
+#include <signal.h>
 #include <sys/prctl.h>
 #endif
 
@@ -122,6 +124,9 @@ bool ArbCore::startThread() {
 void ArbCore::abortThread() {
     std::cerr << "Aborting main ArbCore thread" << std::endl;
     if (core_thread) {
+#ifdef __linux__
+        core_pthread = std::nullopt;
+#endif
         arbcore_abort = true;
         core_thread->join();
         core_thread = nullptr;
@@ -366,7 +371,7 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     auto machine_code =
         dynamic_cast<RunningCode*>(core_machine->machine_state.code.get());
     assert(machine_code != nullptr);
-    core_code->commitChanges(*machine_code, save_res.second);
+    machine_code->commitCodeToParent(save_res.second);
     core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
 
     std::vector<unsigned char> key;
@@ -890,6 +895,31 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
     ValueCache& value_cache,
     bool lazy_load) const;
 
+#ifdef __linux__
+static void* backtrace_buffer[1024];
+void sigUsr2Handler(int signal) {
+    if (signal != SIGUSR2)
+        return;
+    int addrs =
+        backtrace(backtrace_buffer, sizeof(backtrace_buffer) / sizeof(void*));
+    backtrace_symbols_fd(backtrace_buffer, addrs, 2);
+}
+#endif
+
+void ArbCore::printCoreThreadBacktrace() {
+#ifdef __linux__
+    auto pthread = core_pthread.load();
+    if (pthread) {
+        pthread_kill(*pthread, SIGUSR2);
+        return;
+    }
+#endif
+    std::cerr << "Core thread backtrace not available" << std::endl;
+}
+
+constexpr uint256_t old_machine_cache_interval = 1'000'000;
+constexpr size_t old_machine_cache_max_size = 20;
+
 // operator() runs the main thread for ArbCore.  It is responsible for adding
 // messages to the queue, starting machine thread when needed and collecting
 // results of machine thread.
@@ -898,6 +928,8 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
 void ArbCore::operator()() {
 #ifdef __linux__
     prctl(PR_SET_NAME, "ArbCore", 0, 0, 0);
+    signal(SIGUSR2, sigUsr2Handler);
+    core_pthread = pthread_self();
 #endif
     ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
@@ -1175,6 +1207,10 @@ void ArbCore::operator()() {
         logs_cursor.error_string = "arbcore thread aborted";
         logs_cursor.status = DataCursor::ERROR;
     }
+
+#ifdef __linux__
+    core_pthread = std::nullopt;
+#endif
 }
 
 bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
