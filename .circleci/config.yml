@@ -178,7 +178,7 @@ jobs:
           command: |
             mkdir -p packages/arb-avm-cpp/build
             cd packages/arb-avm-cpp/build
-            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
       # COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
       - persist_to_workspace: # store the built files into the workspace for other jobs.
