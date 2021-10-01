@@ -192,33 +192,25 @@ export class L1Bridge {
 
     const symbol = (() => {
       if (!symbolResult) return addressToSymbol(erc20L1Address)
-      if (isString(symbolResult)) {
-        return symbolResult
-      } else {
-        return (
-          symbolResult as Await<ReturnType<ERC20['functions']['symbol']>>
-        )[0]
-      }
+      if (isString(symbolResult)) return symbolResult
+      return (
+        symbolResult as Await<ReturnType<ERC20['functions']['symbol']>>
+      )[0]
     })()
 
     const decimals = (() => {
       if (!decimalsResult) return 18
-      if (isString(decimalsResult)) {
-        return BigNumber.from(decimalsResult).toNumber()
-      } else {
-        return (
-          decimalsResult as Await<ReturnType<ERC20['functions']['decimals']>>
-        )[0]
-      }
+      if (isString(decimalsResult))
+        throw new Error('Not able to decode decimals')
+      return (
+        decimalsResult as Await<ReturnType<ERC20['functions']['decimals']>>
+      )[0]
     })()
 
     const name = (() => {
       if (!nameResult) return symbol + '_Token'
-      if (isString(nameResult)) {
-        return nameResult
-      } else {
-        return (nameResult as Await<ReturnType<ERC20['functions']['name']>>)[0]
-      }
+      if (isString(nameResult)) return nameResult
+      return (nameResult as Await<ReturnType<ERC20['functions']['name']>>)[0]
     })()
 
     const allowanceLimit = BigNumber.from(
