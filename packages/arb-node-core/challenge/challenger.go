@@ -11,6 +11,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
 
@@ -95,7 +96,8 @@ func (c *Challenger) HandleConflict(ctx context.Context) (Move, error) {
 		if opcode == 241 || opcode == 167 || opcode == 168 {
 			// Get new lookup
 			fmt.Printf("Found wasm test, making new lookup\n")
-			storage, err := cmachine.NewArbStorage("/tmp/arbStorage2")
+			coreConfig := configuration.DefaultCoreSettings()
+			storage, err := cmachine.NewArbStorage("/tmp/arbStorage2", coreConfig)
 			fmt.Printf("Found wasm test, making new lookup ??? %v\n", err)
 			storage.InitializeForWasm((machine).(cmachine.ExtendedMachine))
 			arbCore := storage.GetArbCore()
@@ -107,7 +109,7 @@ func (c *Challenger) HandleConflict(ctx context.Context) (Move, error) {
 	if prevBisection == nil {
 		prevBisection = c.challengedAssertion.InitialExecutionBisection()
 	}
-	move, err := handleChallenge(ctx, c.challengedAssertion, c.lookup, c.sequencerInbox, prevBisection)
+	move, err := c.handleChallenge(ctx, c.challengedAssertion, c.lookup, c.sequencerInbox, prevBisection)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +188,8 @@ func (c *Challenger) handleChallenge(
 		if opcode == 241 || opcode == 167 || opcode == 168 {
 			// Get new lookup
 			fmt.Printf("Found wasm test, making new lookup\n")
-			storage, err := cmachine.NewArbStorage("/tmp/arbStorage")
+			coreConfig := configuration.DefaultCoreSettings()
+			storage, err := cmachine.NewArbStorage("/tmp/arbStorage", coreConfig)
 			storage.InitializeForWasm((*machine).(cmachine.ExtendedMachine))
 			arbCore := storage.GetArbCore()
 			arbCore.StartThread()
