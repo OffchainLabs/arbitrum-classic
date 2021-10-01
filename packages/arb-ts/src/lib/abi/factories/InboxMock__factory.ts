@@ -2,48 +2,60 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Signer } from 'ethers'
+import { Signer, utils, Contract, ContractFactory, Overrides } from 'ethers'
 import { Provider, TransactionRequest } from '@ethersproject/providers'
-import { Contract, ContractFactory, Overrides } from '@ethersproject/contracts'
-
-import type { InboxMock } from '../InboxMock'
-
-export class InboxMock__factory extends ContractFactory {
-  constructor(signer?: Signer) {
-    super(_abi, _bytecode, signer)
-  }
-
-  deploy(overrides?: Overrides): Promise<InboxMock> {
-    return super.deploy(overrides || {}) as Promise<InboxMock>
-  }
-  getDeployTransaction(overrides?: Overrides): TransactionRequest {
-    return super.getDeployTransaction(overrides || {})
-  }
-  attach(address: string): InboxMock {
-    return super.attach(address) as InboxMock
-  }
-  connect(signer: Signer): InboxMock__factory {
-    return super.connect(signer) as InboxMock__factory
-  }
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): InboxMock {
-    return new Contract(address, _abi, signerOrProvider) as InboxMock
-  }
-}
+import type { InboxMock, InboxMockInterface } from '../InboxMock'
 
 const _abi = [
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'maxSubmissionCost',
+        type: 'uint256',
+      },
+    ],
+    name: 'TicketData',
+    type: 'event',
+  },
+  {
+    inputs: [],
+    name: 'activeOutbox',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'bridge',
+    outputs: [
+      {
+        internalType: 'contract IBridge',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
   {
     inputs: [
       {
         internalType: 'address',
-        name: 'destAddr',
+        name: '',
         type: 'address',
       },
       {
         internalType: 'uint256',
-        name: 'l2CallValue',
+        name: '',
         type: 'uint256',
       },
       {
@@ -53,27 +65,27 @@ const _abi = [
       },
       {
         internalType: 'address',
-        name: 'excessFeeRefundAddress',
+        name: '',
         type: 'address',
       },
       {
         internalType: 'address',
-        name: 'callValueRefundAddress',
+        name: '',
         type: 'address',
       },
       {
         internalType: 'uint256',
-        name: 'maxGas',
+        name: '',
         type: 'uint256',
       },
       {
         internalType: 'uint256',
-        name: 'gasPriceBid',
+        name: '',
         type: 'uint256',
       },
       {
         internalType: 'bytes',
-        name: 'data',
+        name: '',
         type: 'bytes',
       },
     ],
@@ -88,7 +100,67 @@ const _abi = [
     stateMutability: 'payable',
     type: 'function',
   },
+  {
+    inputs: [],
+    name: 'l2ToL1Sender',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'sender',
+        type: 'address',
+      },
+    ],
+    name: 'setL2ToL1Sender',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
 ]
 
 const _bytecode =
-  '0x608060405234801561001057600080fd5b5061011d806100206000396000f3fe608060405260043610601c5760003560e01c8063679b6ded146021575b600080fd5b60c66004803603610100811015603657600080fd5b6001600160a01b038235811692602081013592604082013592606083013581169260808101359091169160a08201359160c081013591810190610100810160e0820135640100000000811115608a57600080fd5b820183602082011115609b57600080fd5b8035906020019184600183028401116401000000008311171560bc57600080fd5b50909250905060d8565b60408051918252519081900360200190f35b6000999850505050505050505056fea26469706673582212203050ca899d778c85ce912f6a28bff85d3d0f903961cd9425f80ff655a3120ad664736f6c634300060b0033'
+  '0x6080604052600080546001600160a01b031916905534801561002057600080fd5b50610239806100306000396000f3fe60806040526004361061004a5760003560e01c806311b383ac1461004f578063679b6ded1461008457806380648b0214610141578063ab5d894314610172578063e78cea9214610172575b600080fd5b34801561005b57600080fd5b506100826004803603602081101561007257600080fd5b50356001600160a01b0316610187565b005b61012f600480360361010081101561009b57600080fd5b6001600160a01b038235811692602081013592604082013592606083013581169260808101359091169160a08201359160c081013591810190610100810160e08201356401000000008111156100f057600080fd5b82018360208201111561010257600080fd5b8035906020019184600183028401116401000000008311171561012457600080fd5b5090925090506101a9565b60408051918252519081900360200190f35b34801561014d57600080fd5b506101566101f0565b604080516001600160a01b039092168252519081900360200190f35b34801561017e57600080fd5b506101566101ff565b600080546001600160a01b0319166001600160a01b0392909216919091179055565b6040805188815290516000917f7efacbad201ebbc50ec0ce4b474c54b735a31b1bac996acff50df7de0314e8f9919081900360200190a15060009998505050505050505050565b6000546001600160a01b031690565b309056fea26469706673582212203c8b3c7ec6b7ef74f39e6a4b19e580fb893677c71e82fd65556281367e3ede6764736f6c634300060b0033'
+
+export class InboxMock__factory extends ContractFactory {
+  constructor(signer?: Signer) {
+    super(_abi, _bytecode, signer)
+  }
+
+  deploy(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<InboxMock> {
+    return super.deploy(overrides || {}) as Promise<InboxMock>
+  }
+  getDeployTransaction(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): TransactionRequest {
+    return super.getDeployTransaction(overrides || {})
+  }
+  attach(address: string): InboxMock {
+    return super.attach(address) as InboxMock
+  }
+  connect(signer: Signer): InboxMock__factory {
+    return super.connect(signer) as InboxMock__factory
+  }
+  static readonly bytecode = _bytecode
+  static readonly abi = _abi
+  static createInterface(): InboxMockInterface {
+    return new utils.Interface(_abi) as InboxMockInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): InboxMock {
+    return new Contract(address, _abi, signerOrProvider) as InboxMock
+  }
+}

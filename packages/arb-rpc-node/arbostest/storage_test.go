@@ -58,14 +58,13 @@ func TestGetStorageAt(t *testing.T) {
 	}
 
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(constructorTx), sender, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(constructorTx), message.L1RemapAccount(sender), big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(getStorageAtTx), common.Address{}, big.NewInt(2), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), sender, big.NewInt(3), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), common.RandAddress(), big.NewInt(3), big.NewInt(0), chainTime),
 	}
 
-	logs, _, _ := runAssertion(t, inboxMessages, 3, 0)
-	results := processTxResults(t, logs)
+	results, _ := runTxAssertion(t, inboxMessages)
 
 	constructorRes := results[0]
 	getStorageAtRes := results[1]

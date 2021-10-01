@@ -18,14 +18,45 @@
 
 pragma solidity >=0.4.21 <0.7.0;
 
+contract ComplexConstructorCon {
+    constructor(bytes32 salt) public payable {
+        Simple(msg.sender).exists();
+        new ComplexConstructorCon2{ salt: salt, value: msg.value / 2 }(654);
+        Simple(msg.sender).nestedCall(54);
+    }
+
+    receive() external payable {}
+
+    function getVal() external returns (uint256) {
+        return 20;
+    }
+}
+
+contract ComplexConstructorCon2 {
+    constructor(uint256 val) public payable {
+        msg.sender.transfer(msg.value / 2);
+    }
+
+    function getVal() external returns (uint256) {
+        return 20;
+    }
+}
+
+contract Reverter {
+    constructor() public {
+        require(false, "Intentional revert");
+    }
+}
+
 contract Simple {
     uint256 x;
     uint256 public y;
-    event TestEvent(uint256 value);
+
+    event TestEvent(uint256 value, address sender);
 
     constructor() public payable {
         y = msg.value;
-        emit TestEvent(msg.value);
+        emit TestEvent(msg.value, msg.sender);
     }
 
     receive() external payable {
@@ -34,7 +65,7 @@ contract Simple {
 
     function exists() external payable returns (uint256) {
         x = 5;
-        emit TestEvent(msg.value);
+        emit TestEvent(msg.value, msg.sender);
         return 10;
     }
 
@@ -48,5 +79,29 @@ contract Simple {
 
     function nestedCall(uint256 value) external {
         address(this).call{ value: value }("");
+    }
+
+    function nestedCall2(uint256 value, address dest) external returns (bytes memory) {
+        Simple(this).exists();
+        (, bytes memory data) = address(dest).call{ value: value }("");
+        return data;
+    }
+
+    function crossCall(Simple con) external returns (uint256) {
+        return con.exists() + 1;
+    }
+
+    function trace(uint256 arg) external payable returns (uint256) {
+        ComplexConstructorCon con = new ComplexConstructorCon{ value: msg.value / 2 }("0x43254");
+        try new Reverter() {} catch {}
+        return con.getVal();
+    }
+
+    event Variable(bool[10] _variable);
+
+    function debug() external {
+        bool[10] memory seen;
+
+        emit Variable(seen);
     }
 }

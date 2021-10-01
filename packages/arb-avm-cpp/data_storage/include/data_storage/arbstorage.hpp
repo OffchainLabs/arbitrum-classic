@@ -39,7 +39,7 @@ class ArbStorage {
     std::shared_ptr<ArbCore> arb_core;
 
    public:
-    explicit ArbStorage(const std::string& db_path);
+    ArbStorage(const std::string& db_path, const ArbCoreConfig& coreConfig);
     bool closeArbStorage();
     rocksdb::Status initialize(const LoadedExecutable& executable);
     rocksdb::Status initialize(const std::string& executable_path);
@@ -49,8 +49,7 @@ class ArbStorage {
     [[nodiscard]] std::unique_ptr<AggregatorStore> getAggregatorStore() const;
     [[nodiscard]] std::shared_ptr<ArbCore> getArbCore();
 
-    [[nodiscard]] std::unique_ptr<Machine> getInitialMachine(
-        ValueCache& value_cache) const;
+    [[nodiscard]] std::unique_ptr<Machine> getInitialMachine();
     [[nodiscard]] std::unique_ptr<Machine> getMachine(
         uint256_t machineHash,
         ValueCache& value_cache) const;

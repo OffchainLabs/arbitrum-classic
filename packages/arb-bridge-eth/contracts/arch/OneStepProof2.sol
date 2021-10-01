@@ -289,7 +289,7 @@ contract OneStepProof2 is OneStepProofCommon {
     ) internal pure returns (uint256) {
         bytes memory res = new bytes(8);
         bytes32 word = get(buf, offset / 32, proof.proof1);
-        if ((offset % 32) + 8 >= 32) {
+        if ((offset % 32) + 8 > 32) {
             bytes32 word2 = get(buf, offset / 32 + 1, proof.proof2);
             for (uint256 i = 0; i < 8 - ((offset % 32) + 8 - 32); i++) {
                 res[i] = bytes1(uint8(getByte(word, (offset % 32) + i)));
@@ -312,12 +312,12 @@ contract OneStepProof2 is OneStepProofCommon {
     ) internal pure returns (uint256) {
         bytes memory res = new bytes(32);
         bytes32 word = get(buf, offset / 32, proof.proof1);
-        if ((offset % 32) + 32 >= 32) {
+        if ((offset % 32) + 32 > 32) {
             bytes32 word2 = get(buf, offset / 32 + 1, proof.proof2);
             for (uint256 i = 0; i < 32 - ((offset % 32) + 32 - 32); i++) {
                 res[i] = bytes1(uint8(getByte(word, (offset % 32) + i)));
             }
-            for (uint256 i = 8 - ((offset % 32) + 32 - 32); i < 32; i++) {
+            for (uint256 i = 32 - ((offset % 32) + 32 - 32); i < 32; i++) {
                 res[i] = bytes1(uint8(getByte(word2, (offset + i) % 32)));
             }
         } else {
@@ -513,8 +513,12 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        bytes32 res =
-            setBuffer8(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
+        bytes32 res = setBuffer8(
+            val1.bufferHash,
+            val2.intVal,
+            val3.intVal,
+            decodeProof(context.bufProof)
+        );
         pushVal(context.stack, Value.newBuffer(res));
     }
 
@@ -530,8 +534,12 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        bytes32 res =
-            setBuffer64(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
+        bytes32 res = setBuffer64(
+            val1.bufferHash,
+            val2.intVal,
+            val3.intVal,
+            decodeProof(context.bufProof)
+        );
         pushVal(context.stack, Value.newBuffer(res));
     }
 
@@ -547,8 +555,12 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        bytes32 res =
-            setBuffer256(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
+        bytes32 res = setBuffer256(
+            val1.bufferHash,
+            val2.intVal,
+            val3.intVal,
+            decodeProof(context.bufProof)
+        );
         pushVal(context.stack, Value.newBuffer(res));
     }
 
@@ -638,7 +650,6 @@ contract OneStepProof2 is OneStepProofCommon {
             Value.newInt(0), //    machine.staticVal,
             1000000, //    machine.arbGasRemaining,
             errHandlerHash, //    machine.errHandlerHash,
-            Value.newEmptyTuple(), //    machine.pendingMessage,
             Machine.MACHINE_EXTENSIVE //    machine.status
         );
         // Final machine is given
@@ -683,7 +694,6 @@ contract OneStepProof2 is OneStepProofCommon {
             Value.newInt(0), //    machine.staticVal,
             1000000000000, //    machine.arbGasRemaining,
             errHandlerHash, //    machine.errHandlerHash,
-            Value.newEmptyTuple(), //    machine.pendingMessage,
             Machine.MACHINE_EXTENSIVE //    machine.status
         );
         // Final machine is given
@@ -741,7 +751,6 @@ contract OneStepProof2 is OneStepProofCommon {
             Value.newInt(0), //    machine.staticVal,
             1000000000000, //    machine.arbGasRemaining,
             errHandlerHash, //    machine.errHandlerHash,
-            Value.newEmptyTuple(), //    machine.pendingMessage,
             Machine.MACHINE_EXTENSIVE //    machine.status
         );
         // Final machine is given
@@ -760,7 +769,7 @@ contract OneStepProof2 is OneStepProofCommon {
         uint64 gas = uint64(stackVals[2].intVal);
         // require(gas == 0, "non zero gas");
         context.gas -= gas;
-        context.afterMachine.arbGasRemaining += gas + 1000;
+        context.afterMachine.avmGasRemaining += gas + 1000;
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
         // require(context.startState == 0xd71c80de4c79fa65f83c1149092a08a3f9793b69d15f63cd1410a81089f54e0a, "first state bad");

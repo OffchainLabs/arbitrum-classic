@@ -24,19 +24,29 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 var (
-	giveOwnershipABI         abi.Method
 	startArbOSUpgradeABI     abi.Method
 	continueArbOSUpgradeABI  abi.Method
 	finishArbOSUpgradeABI    abi.Method
 	getUploadedCodeHashABI   abi.Method
-	setFeesEnabledABI        abi.Method
+	getChainParameterABI     abi.Method
+	setChainParameterABI     abi.Method
 	setFairGasPriceSenderABI abi.Method
 	deployContractABI        abi.Method
 	getTotalOfEthBalancesABI abi.Method
+	addChainOwnerABI         abi.Method
+	removeChainOwnerABI      abi.Method
 )
+
+var FeesEnabledParamId = hashing.SoliditySHA3([]byte("FeesEnabled"))
+var ChainOwnerParamId = hashing.SoliditySHA3([]byte("ChainOwner"))
+var NetworkFeeRecipientParamId = hashing.SoliditySHA3([]byte("NetworkFeeRecipient"))
+var CongestionFeeRecipientParamId = hashing.SoliditySHA3([]byte("CongestionFeeRecipient"))
+var DefaultAggregatorParamId = hashing.SoliditySHA3([]byte("DefaultAggregator"))
+var EnableL1ContractAddressAliasingParamId = hashing.SoliditySHA3([]byte("EnableL1ContractAddressAliasing"))
 
 func init() {
 	arbowner, err := abi.JSON(strings.NewReader(arboscontracts.ArbOwnerABI))
@@ -44,23 +54,37 @@ func init() {
 		panic(err)
 	}
 
-	giveOwnershipABI = arbowner.Methods["giveOwnership"]
 	startArbOSUpgradeABI = arbowner.Methods["startCodeUpload"]
 	continueArbOSUpgradeABI = arbowner.Methods["continueCodeUpload"]
 	finishArbOSUpgradeABI = arbowner.Methods["finishCodeUploadAsArbosUpgrade"]
 	getUploadedCodeHashABI = arbowner.Methods["getUploadedCodeHash"]
-	setFeesEnabledABI = arbowner.Methods["setFeesEnabled"]
+	getChainParameterABI = arbowner.Methods["getChainParameter"]
+	setChainParameterABI = arbowner.Methods["setChainParameter"]
 	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
 	deployContractABI = arbowner.Methods["deployContract"]
 	getTotalOfEthBalancesABI = arbowner.Methods["getTotalOfEthBalances"]
+	addChainOwnerABI = arbowner.Methods["addChainOwner"]
+	removeChainOwnerABI = arbowner.Methods["removeChainOwner"]
 }
 
 func GetTotalOfEthBalances() []byte {
 	return makeFuncData(getTotalOfEthBalancesABI)
 }
 
-func GiveOwnershipData(newOwnerAddr common.Address) []byte {
-	return makeFuncData(giveOwnershipABI, newOwnerAddr.ToEthAddress())
+func GetChainParameterData(paramId [32]byte) []byte {
+	return makeFuncData(getChainParameterABI, paramId)
+}
+
+func SetChainParameterData(paramId [32]byte, val *big.Int) []byte {
+	return makeFuncData(setChainParameterABI, paramId, val)
+}
+
+func AddChainOwnerData(address common.Address) []byte {
+	return makeFuncData(addChainOwnerABI, address)
+}
+
+func RemoveChainOwnerData(address common.Address) []byte {
+	return makeFuncData(removeChainOwnerABI, address)
 }
 
 func StartArbOSUpgradeData() []byte {
@@ -79,12 +103,16 @@ func GetUploadedCodeHash() []byte {
 	return makeFuncData(getUploadedCodeHashABI)
 }
 
-func SetFairGasPriceSender(sender common.Address) []byte {
-	return makeFuncData(setFairGasPriceSenderABI, sender)
+func SetFairGasPriceSender(sender common.Address, enable bool) []byte {
+	return makeFuncData(setFairGasPriceSenderABI, sender, enable)
 }
 
 func SetFeesEnabled(enabled bool) []byte {
-	return makeFuncData(setFeesEnabledABI, enabled)
+	enabledInt := big.NewInt(0)
+	if enabled {
+		enabledInt.SetInt64(1)
+	}
+	return makeFuncData(setChainParameterABI, FeesEnabledParamId, enabledInt)
 }
 
 func DeployContract(constructor []byte, sender common.Address, nonce *big.Int) []byte {

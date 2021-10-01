@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 func getInsnMultiplier(b *testing.B, filePath string) uint64 {
@@ -48,7 +49,8 @@ func getInsnMultiplier(b *testing.B, filePath string) uint64 {
 
 func runExecutableFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(b, filePath)
-	ckp, err := cmachine.NewArbStorage(b.TempDir())
+	coreConfig := configuration.DefaultCoreSettings()
+	ckp, err := cmachine.NewArbStorage(b.TempDir(), coreConfig)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -67,7 +69,8 @@ func runExecutableFile(b *testing.B, filePath string) {
 
 	b.ResetTimer()
 
-	_, _, _, err = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, true, nil, true)
+	// Last parameter returned is number of steps executed
+	_, _, _, err = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, true, nil)
 	if err != nil {
 		b.Fatal(err)
 	}

@@ -10,11 +10,9 @@ set -e
 if [[ "$*" == *--debug* ]]; then
     BUILD=debug
     CMAKE_BUILD_TYPE=Debug
-    CMACHINE_INSTALL_SCRIPT=./scripts/install-cmachine-{$BUILD}
 else
     BUILD=build
     CMAKE_BUILD_TYPE=Release
-    CMACHINE_INSTALL_SCRIPT=./scripts/install-cmachine-release
 fi
 
 mkdir -p packages/arb-avm-cpp/${BUILD}
@@ -30,9 +28,7 @@ else
 fi
 
 cmake --build . -- -j "${NPROC}"
-cd ../
-"./scripts/install-cmachine-$BUILD"
-cd ../..
+cd ../../
 
 # install arb-validator
 # cd packages/arb-validator

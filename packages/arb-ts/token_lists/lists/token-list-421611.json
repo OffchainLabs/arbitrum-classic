@@ -1,0 +1,23 @@
+{
+  "name": "ArbRinkeby",
+  "timestamp": "1623880643951",
+  "version": {
+    "major": 0,
+    "minor": 1,
+    "patch": 0
+  },
+  "tokens": [
+    {
+      "chainId": 421611,
+      "address": "0x049251A7175071316e089D0616d8B6aaCD2c93b8",
+      "name": "Uniswap",
+      "symbol": "UNI",
+      "decimals": 18,
+      "logoURI": "ipfs://QmXttGpZrECX5qCyXbBQiqgQNytVGeZW5Anewvh2jc4psg",
+      "extensions": {
+        "l1Address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "l2TokenType": "standard"
+      }
+    }
+  ]
+}

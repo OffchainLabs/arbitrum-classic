@@ -4,17 +4,18 @@ pragma solidity ^0.6.11;
 
 import "../libraries/aeERC20.sol";
 import "../ethereum/ICustomToken.sol";
-import "../ethereum/EthERC20Bridge.sol";
+import "../ethereum/gateway/L1CustomGateway.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract TestCustomTokenL1 is aeERC20, ICustomToken {
-    EthERC20Bridge public bridge;
+    address public bridge;
+    bool private shouldRegisterGateway;
 
     constructor(address _bridge) public {
-        bridge = EthERC20Bridge(_bridge);
-        aeERC20.initialize("TestCustomToken", "CARB", uint8(18));
+        bridge = _bridge;
+        aeERC20._initialize("TestCustomToken", "CARB", uint8(18));
     }
 
     function mint() external {
@@ -38,19 +39,31 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
         return ERC20Upgradeable.balanceOf(account);
     }
 
+    /// @dev we only set shouldRegisterGateway to true when in `registerTokenOnL2`
+    function isArbitrumEnabled() external view override returns (uint8) {
+        require(shouldRegisterGateway, "NOT_EXPECTED_CALL");
+        return uint8(0xa4b1);
+    }
+
     function registerTokenOnL2(
         address l2CustomTokenAddress,
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid,
-        address refundAddress
+        address creditBackAddress
     ) public override {
-        bridge.registerCustomL2Token(
+        // we temporarily set `shouldRegisterGateway` to true for the callback in registerTokenToL2 to succeed
+        bool prev = shouldRegisterGateway;
+        shouldRegisterGateway = true;
+
+        L1CustomGateway(bridge).registerTokenToL2(
             l2CustomTokenAddress,
-            maxSubmissionCost,
             maxGas,
             gasPriceBid,
-            refundAddress
+            maxSubmissionCost,
+            creditBackAddress
         );
+
+        shouldRegisterGateway = prev;
     }
 }

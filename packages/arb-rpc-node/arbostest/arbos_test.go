@@ -75,8 +75,7 @@ func TestFib(t *testing.T) {
 		message.NewSafeL2Message(getFibTx),
 	}
 
-	logs, _, snap := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, snap := runSimpleTxAssertion(t, messages)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[1], connAddress1)
 
@@ -111,30 +110,42 @@ func TestDeposit(t *testing.T) {
 		makeEthDeposit(sender, amount),
 	}
 
-	_, _, snap := runSimpleAssertion(t, messages)
+	_, snap := runSimpleTxAssertion(t, messages)
 	checkBalance(t, snap, sender, amount)
 }
 
+type TargetBlockInfo struct {
+	otherTxCount  int
+	withdrawCount int
+	includesBatch bool
+}
+
+func (t TargetBlockInfo) txCount() int {
+	return t.otherTxCount + t.withdrawCount
+}
+
 func TestBlocks(t *testing.T) {
-	messages := make([]inbox.InboxMessage, 0)
+	ib := &InboxBuilder{}
 	startTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(1),
 		Timestamp: big.NewInt(1),
 	}
 
-	messages = append(
-		messages,
-		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), startTime),
-	)
-
-	messages = append(
-		messages,
-		message.NewInboxMessage(makeEthDeposit(sender, big.NewInt(1000)), chain, big.NewInt(0), big.NewInt(0), startTime),
-	)
+	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), startTime)
+	ib.AddMessage(makeEthDeposit(message.L2RemapAccount(sender), big.NewInt(1000)), chain, big.NewInt(0), startTime)
 
 	halfSendCount := int64(5)
 
 	blockTimes := make([]inbox.ChainTime, 0)
+	blocksToSkip := int64(1)
+	if arbosVersion >= 14 {
+		blockTimes = append(blockTimes, inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(0),
+			Timestamp: big.NewInt(0),
+		})
+		blocksToSkip++
+	}
+
 	blockTimes = append(blockTimes, inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(1),
 		Timestamp: big.NewInt(1),
@@ -164,31 +175,8 @@ func TestBlocks(t *testing.T) {
 			Payment:     big.NewInt(i*2 + 1),
 			Data:        arbos.WithdrawEthData(common.RandAddress()),
 		}
-		messages = append(
-			messages,
-			message.NewInboxMessage(
-				message.NewSafeL2Message(tx),
-				sender,
-				big.NewInt(i*2+2),
-				big.NewInt(0),
-				blockTimes[i+1],
-			),
-		)
-		messages = append(
-			messages,
-			message.NewInboxMessage(
-				message.NewSafeL2Message(tx2),
-				sender,
-				big.NewInt(i*2+2),
-				big.NewInt(0),
-				blockTimes[i+1],
-			),
-		)
-	}
-
-	type TargetBlockInfo struct {
-		txCount       int
-		includesBatch bool
+		ib.AddMessage(message.NewSafeL2Message(tx), sender, big.NewInt(0), blockTimes[i+blocksToSkip])
+		ib.AddMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(0), blockTimes[i+blocksToSkip])
 	}
 
 	type resType int
@@ -199,44 +187,47 @@ func TestBlocks(t *testing.T) {
 		blockRes
 	)
 
-	targetBlocks := []TargetBlockInfo{
-		{
-			txCount:       1,
-			includesBatch: false,
-		},
-		{
-			txCount:       2,
-			includesBatch: true,
-		},
-		{
-			txCount:       2,
-			includesBatch: false,
-		},
-		{
-			txCount:       2,
-			includesBatch: true,
-		},
-		{
-			txCount:       2,
-			includesBatch: false,
-		},
-		{
-			txCount:       2,
-			includesBatch: false,
-		},
+	var targetBlocks []TargetBlockInfo
+	if arbosVersion >= 14 {
+		targetBlocks = append(targetBlocks, TargetBlockInfo{})
 	}
+
+	targetBlocks = append(targetBlocks, []TargetBlockInfo{
+		{
+			otherTxCount:  1,
+			includesBatch: false,
+		},
+		{
+			withdrawCount: 2,
+			includesBatch: true,
+		},
+		{
+			withdrawCount: 2,
+			includesBatch: false,
+		},
+		{
+			withdrawCount: 2,
+			includesBatch: false,
+		},
+		{
+			withdrawCount: 2,
+			includesBatch: false,
+		},
+		{
+			withdrawCount: 2,
+			includesBatch: false,
+		},
+	}...)
 
 	resultTypes := make([]resType, 0)
 	sendCount := 0
 	for i, targetBlock := range targetBlocks {
-		for i := 0; i < targetBlock.txCount; i++ {
+		for i := 0; i < targetBlock.txCount(); i++ {
 			resultTypes = append(resultTypes, txRes)
 		}
 		if i != len(targetBlocks)-1 {
-			if i != 0 {
-				for i := 0; i < targetBlock.txCount; i++ {
-					resultTypes = append(resultTypes, sendRes)
-				}
+			for i := 0; i < targetBlock.withdrawCount; i++ {
+				resultTypes = append(resultTypes, sendRes)
 			}
 			if targetBlock.includesBatch {
 				resultTypes = append(resultTypes, merkleRes)
@@ -246,15 +237,10 @@ func TestBlocks(t *testing.T) {
 		}
 	}
 
-	// Last value returned is not an error type
-	avmLogs, sends, _ := runAssertion(t, messages, len(resultTypes), sendCount)
-	results := make([]evm.Result, 0)
-	for _, avmLog := range avmLogs {
-		res, err := evm.NewResultFromValue(avmLog)
-		failIfError(t, err)
-		results = append(results, res)
-	}
+	t.Log("results", resultTypes)
 
+	// Last value returned is not an error type
+	results, sends, _, _ := runBasicAssertion(t, ib.Messages)
 	for i, res := range results {
 		switch res := res.(type) {
 		case *evm.TxResult:
@@ -264,6 +250,14 @@ func TestBlocks(t *testing.T) {
 		default:
 			t.Logf("%v %T\n", i, res)
 		}
+	}
+
+	if len(results) != len(resultTypes) {
+		t.Fatal("unexpected log count ", len(resultTypes), "instead of", len(results))
+	}
+
+	if len(sends) != sendCount {
+		t.Fatal("unxpected send count ", len(sends), "instead of", sendCount)
 	}
 
 	arbSendsAccumulated := big.NewInt(0)
@@ -424,8 +418,8 @@ func TestBlocks(t *testing.T) {
 		target := targetBlocks[i]
 		txCount := block.BlockStats.TxCount.Uint64()
 
-		if uint64(target.txCount) != txCount {
-			t.Fatal("wrong tx count in block, got", txCount, "but expected", target.txCount, "in block", i)
+		if uint64(target.txCount()) != txCount {
+			t.Fatal("wrong tx count in block, got", txCount, "but expected", target.txCount(), "in block", i)
 		}
 
 		startLog := block.FirstAVMLog().Uint64()

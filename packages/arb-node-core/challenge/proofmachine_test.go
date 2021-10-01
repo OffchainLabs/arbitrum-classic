@@ -17,249 +17,105 @@
 package challenge
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"testing"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/proofmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
-type ExecutionCutJSON struct {
-	GasUsed           uint64
-	TotalMessagesRead *hexutil.Big
-	MachineState      ethcommon.Hash
-	SendAcc           ethcommon.Hash
-	SendCount         *hexutil.Big
-	LogAcc            ethcommon.Hash
-	LogCount          *hexutil.Big
-}
-
-type proofData struct {
-	BeforeCut   ExecutionCutJSON
-	AfterCut    ExecutionCutJSON
-	Proof       hexutil.Bytes
-	BufferProof hexutil.Bytes
-}
-
-func generateProofCases(contract string) ([]*proofData, []string, error) {
-	mach, err := cmachine.New(contract)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	maxSteps := uint64(100000)
-	messages := make([]inbox.InboxMessage, 0)
-	for i := 0; i < 100; i++ {
-		messages = append(messages, inbox.NewRandomInboxMessage())
-	}
-
-	hash, err := mach.Hash()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	beforeCut := ExecutionCutJSON{
-		GasUsed:           0,
-		TotalMessagesRead: (*hexutil.Big)(big.NewInt(0)),
-		MachineState:      hash.ToEthHash(),
-		SendAcc:           ethcommon.Hash{},
-		SendCount:         (*hexutil.Big)(big.NewInt(0)),
-		LogAcc:            ethcommon.Hash{},
-		LogCount:          (*hexutil.Big)(big.NewInt(0)),
-	}
-
-	nextMessageIndex := big.NewInt(0)
-
-	proofs := make([]*proofData, 0)
-	machineStates := make([]string, 0)
-	machineStates = append(machineStates, mach.String())
-	for i := uint64(0); i < maxSteps; i++ {
-		proof, bproof, err := mach.MarshalForProof()
-		if err != nil {
-			return nil, nil, err
-		}
-
-		messages := messages[:1]
-
-		a, _, ranSteps, err := mach.ExecuteAssertionAdvanced(
-			1,
-			true,
-			messages,
-			false,
-			nil,
-			false,
-			common.NewHashFromEth(beforeCut.SendAcc),
-			common.NewHashFromEth(beforeCut.LogAcc),
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		if ranSteps == 0 {
+func generateProofCases(t *testing.T, arbCore *monitor.Monitor) ([]*proofmachine.ProofData, []string) {
+	var cursors []core.ExecutionCursor
+	cursor, err := arbCore.Core.GetExecutionCursor(big.NewInt(0))
+	test.FailIfError(t, err)
+	cursors = append(cursors, cursor.Clone())
+	for {
+		err = arbCore.Core.AdvanceExecutionCursor(cursor, big.NewInt(1), true)
+		test.FailIfError(t, err)
+		if cursor.TotalGasConsumed().Cmp(cursors[len(cursors)-1].TotalGasConsumed()) == 0 {
 			break
 		}
-		if ranSteps != 1 {
-			return nil, nil, errors.New("executed incorrect step count")
-		}
+		cursors = append(cursors, cursor.Clone())
+	}
+
+	proofs := make([]*proofmachine.ProofData, 0)
+	machineStates := make([]string, 0)
+
+	for i := 0; i < len(cursors)-1; i++ {
+		mach, err := arbCore.Core.TakeMachine(cursors[i].Clone())
+		test.FailIfError(t, err)
 		machineStates = append(machineStates, mach.String())
-		if mach.CurrentStatus() == machine.ErrorStop {
-			fmt.Println("Machine stopped in error state")
-			return proofs, nil, nil
-		}
 
-		hash, err := mach.Hash()
-		if err != nil {
-			return nil, nil, err
-		}
+		proof, bproof, err := mach.MarshalForProof()
+		test.FailIfError(t, err)
 
-		afterCut := ExecutionCutJSON{
-			GasUsed:           beforeCut.GasUsed + a.NumGas,
-			TotalMessagesRead: (*hexutil.Big)(new(big.Int).Add(beforeCut.TotalMessagesRead.ToInt(), new(big.Int).SetUint64(a.InboxMessagesConsumed))),
-			MachineState:      hash.ToEthHash(),
-			SendAcc:           a.SendAcc.ToEthHash(),
-			SendCount:         (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
-			LogAcc:            a.LogAcc.ToEthHash(),
-			LogCount:          (*hexutil.Big)(new(big.Int).Add(beforeCut.LogCount.ToInt(), big.NewInt(int64(len(a.Logs))))),
-		}
-
-		proofs = append(proofs, &proofData{
-			BeforeCut:   beforeCut,
-			AfterCut:    afterCut,
+		beforeState, err := core.NewExecutionState(cursors[i])
+		test.FailIfError(t, err)
+		afterState, err := core.NewExecutionState(cursors[i+1])
+		test.FailIfError(t, err)
+		proofs = append(proofs, &proofmachine.ProofData{
+			Assertion: &core.Assertion{
+				Before: beforeState,
+				After:  afterState,
+			},
 			Proof:       proof,
 			BufferProof: bproof,
 		})
-		beforeCut = afterCut
-		nextMessageIndex = nextMessageIndex.Add(nextMessageIndex, new(big.Int).SetUint64(a.InboxMessagesConsumed))
 	}
-	return proofs, machineStates, nil
-}
-
-func getProverNum(op uint8) uint8 {
-	if (op >= 0xa1 && op <= 0xa6) || op == 0x70 {
-		return 1
-	} else if op >= 0x20 && op <= 0x24 {
-		return 2
-	} else {
-		return 0
-	}
-}
-
-func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestcontracts.IOneStepProof, bridge ethcommon.Address) {
-	t.Log("proof test contact: ", contract)
-	ctx := context.Background()
-
-	proofs, _, err := generateProofCases(contract)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data, err := json.Marshal(proofs)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		err := errors.New("failed to get filename")
-		t.Fatal(err)
-	}
-
-	file := filepath.Join(filepath.Dir(filename), "../../arb-bridge-eth/test/proofs", filepath.Base(contract)+"-proofs.json")
-	if err := ioutil.WriteFile(file, data, 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	for _, proof := range proofs {
-		op := proof.Proof[0]
-		t.Run(strconv.FormatUint(uint64(op), 10), func(t *testing.T) {
-			prover := getProverNum(op)
-			t.Logf("Opcode 0x%x with prover %v", op, prover)
-			machineData, err := osps[prover].ExecuteStep(
-				&bind.CallOpts{Context: ctx},
-				bridge,
-				proof.BeforeCut.TotalMessagesRead.ToInt(),
-				[2][32]byte{
-					proof.BeforeCut.SendAcc,
-					proof.BeforeCut.LogAcc,
-				},
-				proof.Proof,
-				proof.BufferProof,
-			)
-			test.FailIfError(t, err)
-			correctGasUsed := proof.AfterCut.GasUsed - proof.BeforeCut.GasUsed
-			if machineData.Gas != correctGasUsed {
-				t.Fatalf("wrong gas %v instead of %v", machineData.Gas, correctGasUsed)
-			}
-			if machineData.TotalMessagesRead.Cmp(proof.AfterCut.TotalMessagesRead.ToInt()) != 0 {
-				t.Fatal("wrong total messages read")
-			}
-			if machineData.Fields[0] != proof.BeforeCut.MachineState {
-				t.Fatal("wrong before machine")
-			}
-			if machineData.Fields[2] != proof.AfterCut.SendAcc {
-				t.Fatal("wrong log")
-			}
-			if machineData.Fields[3] != proof.AfterCut.LogAcc {
-				t.Fatal("wrong message")
-			}
-			if machineData.Fields[1] != proof.AfterCut.MachineState {
-				t.Fatalf("wrong after machine 0x%x 0x%x", machineData.Fields[1][:], proof.AfterCut.MachineState[:])
-			}
-		})
-	}
+	mach, err := arbCore.Core.TakeMachine(cursors[len(cursors)-1].Clone())
+	test.FailIfError(t, err)
+	machineStates = append(machineStates, mach.String())
+	return proofs, machineStates
 }
 
 func TestValidateProof(t *testing.T) {
 	testMachines, err := gotest.OpCodeTestFiles()
 	test.FailIfError(t, err)
-	backend, pks := test.SimulatedBackend(t)
+	backend, auths := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth := bind.NewKeyedTransactor(pks[0])
-
-	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
+	auth := auths[0]
+	proofChecker, err := proofmachine.NewProofChecker(auth, client)
 	test.FailIfError(t, err)
-	osp2Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof2(auth, client)
-	test.FailIfError(t, err)
-	osp3Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProofHash(auth, client)
-	test.FailIfError(t, err)
-	bridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(auth, client)
-	test.FailIfError(t, err)
-	client.Commit()
-
-	osp1, err := ethbridgetestcontracts.NewIOneStepProof(osp1Addr, client)
-	test.FailIfError(t, err)
-	osp2, err := ethbridgetestcontracts.NewIOneStepProof(osp2Addr, client)
-	test.FailIfError(t, err)
-	osp3, err := ethbridgetestcontracts.NewIOneStepProof(osp3Addr, client)
-	test.FailIfError(t, err)
-	provers := []*ethbridgetestcontracts.IOneStepProof{osp1, osp2, osp3}
 	t.Log(testMachines)
 
 	for _, machName := range testMachines {
 		machName := machName // capture range variable
 		t.Run(machName, func(t *testing.T) {
 			//t.Parallel()
-			runTestValidateProof(t, machName, provers, bridgeAddr)
+			arbCore, cancel := monitor.PrepareArbCoreWithMexe(t, machName)
+			proofs, _ := generateProofCases(t, arbCore)
+			cancel()
+
+			data, err := json.Marshal(proofs)
+			test.FailIfError(t, err)
+
+			_, filename, _, ok := runtime.Caller(0)
+			if !ok {
+				t.Fatal("failed to get filename")
+			}
+
+			file := filepath.Join(filepath.Dir(filename), "../../arb-bridge-eth/test/proofs", filepath.Base(machName)+"-proofs.json")
+			err = ioutil.WriteFile(file, data, 0644)
+			test.FailIfError(t, err)
+
+			for _, proof := range proofs {
+				errors := proofChecker.CheckProof(proof)
+				if len(errors) > 0 {
+					t.Logf("error checking proof for opcode 0x%x", proof.Proof[0])
+				}
+				for _, err := range proofChecker.CheckProof(proof) {
+					t.Error(err)
+				}
+			}
 		})
 	}
 }

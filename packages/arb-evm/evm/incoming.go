@@ -39,7 +39,7 @@ func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 		}, nil
 	}
 
-	if msg.Kind != message.L2Type && msg.Kind != message.RetryableType {
+	if msg.Kind != message.L2Type && msg.Kind != message.EthDepositTxType {
 		return nil, errors.Errorf("result is not a transaction %v", msg.Kind)
 	}
 	l2msg, err := message.L2Message{Data: msg.Data}.AbstractMessage()
@@ -51,9 +51,18 @@ func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 		return nil, errors.New("message not convertible to receipt")
 	}
 	l2Type := l2msg.L2Type()
+
+	tx := ethMsg.AsEthTx()
+	if res.ResultCode == ReturnCode && tx.To() == nil && len(res.ReturnData) == 0 {
+		ethMsg, ok := ethMsg.(message.ContractTransaction)
+		if ok {
+			// If we're in a successful retryable send to the 0 address, it wasn't treated as contract construction
+			tx = ethMsg.AsNonConstructorTx()
+		}
+	}
 	return &ProcessedTx{
 		Result:    res,
-		Tx:        ethMsg.AsEthTx(),
+		Tx:        tx,
 		Kind:      msg.Kind,
 		L2Subtype: &l2Type,
 	}, nil
@@ -62,11 +71,6 @@ func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 func FilterEthTxResults(results []*TxResult) []*ProcessedTx {
 	filteredResults := make([]*ProcessedTx, 0, len(results))
 	for _, res := range results {
-		kind := res.IncomingRequest.Kind
-		// Ignore other message types
-		if kind != message.L2Type && kind != message.RetryableType {
-			continue
-		}
 		processed, err := GetTransaction(res)
 		if err != nil {
 			logger.Info().

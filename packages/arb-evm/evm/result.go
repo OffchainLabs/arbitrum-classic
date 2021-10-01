@@ -21,9 +21,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -46,8 +48,52 @@ const (
 	ExceededTxGasLimit        ResultType = 8
 	InsufficientGasForBaseFee ResultType = 9
 	MinArbGasForContractTx    ResultType = 10
-	UnknownErrorCode          ResultType = 255
+	GasPriceTooLow            ResultType = 11
+	NoGasForAutoRedeem        ResultType = 12
+	ForbiddenSender           ResultType = 13
+	SequenceNumberTooLow      ResultType = 14
+	SequenceNumberTooHigh     ResultType = 15
+	ExecutionRanOutOfGas      ResultType = 16
 )
+
+func (r ResultType) String() string {
+	switch r {
+	case ReturnCode:
+		return "Return"
+	case RevertCode:
+		return "Revert"
+	case CongestionCode:
+		return "Congestion"
+	case InsufficientGasFundsCode:
+		return "InsufficientGasFunds"
+	case InsufficientTxFundsCode:
+		return "InsufficientTxFunds"
+	case BadSequenceCode:
+		return "BadSequence"
+	case InvalidMessageFormatCode:
+		return "InvalidMessageFormat"
+	case ContractAlreadyExists:
+		return "ContractAlreadyExists"
+	case ExceededTxGasLimit:
+		return "ExceededTxGasLimit"
+	case InsufficientGasForBaseFee:
+		return "InsufficientGasForBaseFee"
+	case MinArbGasForContractTx:
+		return "MinArbGasForContractTx"
+	case GasPriceTooLow:
+		return "GasPriceTooLow"
+	case NoGasForAutoRedeem:
+		return "NoGasForAutoRedeem"
+	case SequenceNumberTooLow:
+		return "SequenceNumberTooLow"
+	case SequenceNumberTooHigh:
+		return "SequenceNumberTooHigh"
+	case ExecutionRanOutOfGas:
+		return "ExecutionRanOutOfGas"
+	default:
+		return fmt.Sprintf("%v", int(r))
+	}
+}
 
 type Result interface {
 }
@@ -63,6 +109,92 @@ type TxResult struct {
 	TxIndex         *big.Int
 	StartLogIndex   *big.Int
 	FeeStats        *FeeStats
+}
+
+type revertError struct {
+	error
+	reason interface{}
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e revertError) ErrorData() interface{} {
+	return e.reason
+}
+
+type ganacheErrorData struct {
+	Error  string `json:"error"`
+	Return string `json:"return"`
+	Reason string `json:"reason"`
+}
+
+func HandleCallError(res *TxResult, ganacheMode bool) error {
+	if res == nil {
+		logger.Warn().Msg("missing tx error result")
+		return vm.ErrExecutionReverted
+	}
+	if len(res.ReturnData) > 0 {
+		err := vm.ErrExecutionReverted
+		reason := ""
+		revertReason, unpackError := abi.UnpackRevert(res.ReturnData)
+		if unpackError == nil {
+			if ganacheMode {
+				err = errors.Errorf("VM Exception while processing transaction: revert %v", revertReason)
+			} else {
+				err = errors.Errorf("execution reverted: %v", revertReason)
+			}
+			reason = revertReason
+		}
+
+		var errorReason interface{}
+		if ganacheMode {
+			errMap := make(map[string]ganacheErrorData)
+			errMap[res.IncomingRequest.MessageID.String()] = ganacheErrorData{
+				Error:  err.Error(),
+				Return: hexutil.Encode(res.ReturnData),
+				Reason: reason,
+			}
+			errorReason = errMap
+		} else {
+			errorReason = hexutil.Encode(res.ReturnData)
+		}
+
+		return revertError{
+			error:  err,
+			reason: errorReason,
+		}
+	} else if res.ResultCode == CongestionCode {
+		return errors.New("tx dropped due to L2 congestion")
+	} else if res.ResultCode == InsufficientTxFundsCode {
+		return vm.ErrInsufficientBalance
+	} else if res.ResultCode == InsufficientGasFundsCode {
+		return errors.New("not enough funds for gas")
+	} else if res.ResultCode == BadSequenceCode {
+		return errors.New("invalid transaction nonce")
+	} else if res.ResultCode == InvalidMessageFormatCode {
+		return errors.New("invalid message format")
+	} else if res.ResultCode == RevertCode {
+		return vm.ErrExecutionReverted
+	} else if res.ResultCode == GasPriceTooLow {
+		return errors.New("gas price too low")
+	} else if res.ResultCode == ForbiddenSender {
+		return errors.New("forbidden sender address")
+	} else if res.ResultCode == SequenceNumberTooLow {
+		// Maintain error message backwards compatibility
+		return errors.New("invalid transaction nonce")
+	} else if res.ResultCode == SequenceNumberTooHigh {
+		// Maintain error message backwards compatibility
+		return errors.New("invalid transaction nonce")
+	} else if res.ResultCode == ExecutionRanOutOfGas {
+		return errors.New("execution ran out of gas")
+	} else {
+		return errors.Errorf("execution reverted: error code %v", res.ResultCode)
+	}
 }
 
 func CompareResults(res1 *TxResult, res2 *TxResult) []string {
@@ -136,7 +268,7 @@ func (r *TxResult) CalcGasUsed() *big.Int {
 	if r.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return r.GasUsed
 	} else {
-		return new(big.Int).Div(r.FeeStats.PayTarget().Total(), r.FeeStats.Price.L2Computation)
+		return r.FeeStats.GasUsed()
 	}
 }
 
@@ -148,7 +280,11 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 			if msg, ok := msg.(message.AbstractTransaction); ok {
 				emptyAddress := common.Address{}
 				if msg.Destination() == emptyAddress {
-					copy(contractAddress[:], r.ReturnData[12:])
+					if len(r.ReturnData) == 32 {
+						copy(contractAddress[:], r.ReturnData[12:])
+					} else {
+						logger.Warn().Str("txresult", r.String()).Msg("incorrect returndata size in ToEthReceipt")
+					}
 				}
 			}
 		}
@@ -243,6 +379,14 @@ func (fs *FeeStats) PayTarget() *FeeSet {
 		L2Storage:     new(big.Int).Mul(fs.Price.L2Storage, fs.UnitsUsed.L2Storage),
 		L2Computation: new(big.Int).Mul(fs.Price.L2Computation, fs.UnitsUsed.L2Computation),
 	}
+}
+
+func (fs *FeeStats) GasUsed() *big.Int {
+	return new(big.Int).Div(fs.Paid.Total(), fs.Price.L2Computation)
+}
+
+func (fs *FeeStats) TargetGasUsed() *big.Int {
+	return new(big.Int).Div(fs.PayTarget().Total(), fs.Price.L2Computation)
 }
 
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
@@ -394,8 +538,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 	}
 
 	if kindInt.BigInt().Uint64() == 0 {
-		if tup.Len() != 6 {
-			return nil, errors.Errorf("tx result expected tuple of length 6, but recieved len %v: %v", tup.Len(), tup)
+		if tup.Len() != 6 && tup.Len() != 7 {
+			return nil, errors.Errorf("tx result expected tuple of length 6 or 7, but recieved len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored

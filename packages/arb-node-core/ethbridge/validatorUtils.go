@@ -18,15 +18,17 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 type ConfirmType uint8
@@ -51,9 +53,10 @@ type ValidatorUtils struct {
 	client        ethutils.EthClient
 	address       ethcommon.Address
 	rollupAddress ethcommon.Address
+	baseCallOpts  bind.CallOpts
 }
 
-func NewValidatorUtils(address, rollupAddress ethcommon.Address, client ethutils.EthClient) (*ValidatorUtils, error) {
+func NewValidatorUtils(address, rollupAddress ethcommon.Address, client ethutils.EthClient, callOpts bind.CallOpts) (*ValidatorUtils, error) {
 	con, err := ethbridgecontracts.NewValidatorUtils(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -64,11 +67,18 @@ func NewValidatorUtils(address, rollupAddress ethcommon.Address, client ethutils
 		client:        client,
 		address:       address,
 		rollupAddress: rollupAddress,
+		baseCallOpts:  callOpts,
 	}, nil
 }
 
+func (v *ValidatorUtils) getCallOpts(ctx context.Context) *bind.CallOpts {
+	opts := v.baseCallOpts
+	opts.Context = ctx
+	return &opts
+}
+
 func (v *ValidatorUtils) RefundableStakers(ctx context.Context) ([]common.Address, error) {
-	addresses, err := v.con.RefundableStakers(&bind.CallOpts{Context: ctx}, v.rollupAddress)
+	addresses, err := v.con.RefundableStakers(v.getCallOpts(ctx), v.rollupAddress)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -80,7 +90,7 @@ func (v *ValidatorUtils) TimedOutChallenges(ctx context.Context, max int) ([]com
 	count := big.NewInt(1024)
 	addresses := make([]ethcommon.Address, 0)
 	for {
-		newAddrs, hasMore, err := v.con.TimedOutChallenges(&bind.CallOpts{Context: ctx}, v.rollupAddress, i, count)
+		newAddrs, hasMore, err := v.con.TimedOutChallenges(v.getCallOpts(ctx), v.rollupAddress, i, count)
 		addresses = append(addresses, newAddrs...)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -108,21 +118,21 @@ type RollupConfig struct {
 }
 
 func (v *ValidatorUtils) GetConfig(ctx context.Context) (*RollupConfig, error) {
-	config, err := v.con.GetConfig(&bind.CallOpts{Context: ctx}, v.rollupAddress)
+	config, err := v.con.GetConfig(v.getCallOpts(ctx), v.rollupAddress)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &RollupConfig{
 		ConfirmPeriodBlocks:      config.ConfirmPeriodBlocks,
 		ExtraChallengeTimeBlocks: config.ExtraChallengeTimeBlocks,
-		ArbGasSpeedLimitPerBlock: config.ArbGasSpeedLimitPerBlock,
+		ArbGasSpeedLimitPerBlock: config.AvmGasSpeedLimitPerBlock,
 		BaseStake:                config.BaseStake,
-		StakeToken:               common.NewAddressFromEth(config.StakeToken),
+		StakeToken:               common.Address{},
 	}, nil
 }
 
 func (v *ValidatorUtils) GetStakers(ctx context.Context) ([]common.Address, error) {
-	addresses, _, err := v.con.GetStakers(&bind.CallOpts{Context: ctx}, v.rollupAddress, big.NewInt(0), math.MaxBig256)
+	addresses, _, err := v.con.GetStakers(v.getCallOpts(ctx), v.rollupAddress, big.NewInt(0), math.MaxBig256)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -130,23 +140,23 @@ func (v *ValidatorUtils) GetStakers(ctx context.Context) ([]common.Address, erro
 }
 
 func (v *ValidatorUtils) LatestStaked(ctx context.Context, staker common.Address) (*big.Int, [32]byte, error) {
-	amount, hash, err := v.con.LatestStaked(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
+	amount, hash, err := v.con.LatestStaked(v.getCallOpts(ctx), v.rollupAddress, staker.ToEthAddress())
 	return amount, hash, errors.WithStack(err)
 }
 
 func (v *ValidatorUtils) StakedNodes(ctx context.Context, staker common.Address) ([]*big.Int, error) {
-	nodes, err := v.con.StakedNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
+	nodes, err := v.con.StakedNodes(v.getCallOpts(ctx), v.rollupAddress, staker.ToEthAddress())
 	return nodes, errors.WithStack(err)
 }
 
 func (v *ValidatorUtils) AreUnresolvedNodesLinear(ctx context.Context) (bool, error) {
-	linear, err := v.con.AreUnresolvedNodesLinear(&bind.CallOpts{Context: ctx}, v.rollupAddress)
+	linear, err := v.con.AreUnresolvedNodesLinear(v.getCallOpts(ctx), v.rollupAddress)
 	return linear, errors.WithStack(err)
 }
 
 func (v *ValidatorUtils) CheckDecidableNextNode(ctx context.Context) (ConfirmType, error) {
 	confirmType, err := v.con.CheckDecidableNextNode(
-		&bind.CallOpts{Context: ctx},
+		v.getCallOpts(ctx),
 		v.rollupAddress,
 	)
 	if err != nil {
@@ -157,7 +167,7 @@ func (v *ValidatorUtils) CheckDecidableNextNode(ctx context.Context) (ConfirmTyp
 
 func (v *ValidatorUtils) FindStakerConflict(ctx context.Context, staker1, staker2 common.Address) (ConflictType, *big.Int, *big.Int, error) {
 	conflictType, staker1Node, staker2Node, err := v.con.FindStakerConflict(
-		&bind.CallOpts{Context: ctx},
+		v.getCallOpts(ctx),
 		v.rollupAddress,
 		staker1.ToEthAddress(),
 		staker2.ToEthAddress(),
@@ -168,7 +178,7 @@ func (v *ValidatorUtils) FindStakerConflict(ctx context.Context, staker1, staker
 	}
 	for ConflictType(conflictType) == CONFLICT_TYPE_INCOMPLETE {
 		conflictType, staker1Node, staker2Node, err = v.con.FindNodeConflict(
-			&bind.CallOpts{Context: ctx},
+			v.getCallOpts(ctx),
 			v.rollupAddress,
 			staker1Node,
 			staker2Node,

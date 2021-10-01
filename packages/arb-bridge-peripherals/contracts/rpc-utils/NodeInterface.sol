@@ -36,4 +36,31 @@ interface NodeInterface {
             uint256 amount,
             bytes memory calldataForL1
         );
+
+    /**
+     * @notice Estimate the cost of putting a message in the L2 inbox that is reexecuted
+     * @param sender sender of the L1 and L2 transaction
+     * @param deposit amount to deposit to sender in L2
+     * @param destAddr destination L2 contract address
+     * @param l2CallValue call value for retryable L2 message
+     * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+     * @param excessFeeRefundAddress maxgas x gasprice - execution cost gets credited here on L2 balance
+     * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled
+     * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param gasPriceBid price bid for L2 execution
+     * @param data ABI encoded data of L2 message
+     * @return gas used, and gas price to execute this transaction
+     */
+    function estimateRetryableTicket(
+        address sender,
+        uint256 deposit,
+        address destAddr,
+        uint256 l2CallValue,
+        uint256 maxSubmissionCost,
+        address excessFeeRefundAddress,
+        address callValueRefundAddress,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        bytes calldata data
+    ) external pure returns (uint256, uint256);
 }

@@ -46,6 +46,7 @@ TEST_CASE("Wasm") {
         std::string test_file = wasm_test_path;
 
         auto m = mkWasmMachine(res, test_file);
+        std::cerr << "Running machine " << "\n";
         auto start = std::chrono::system_clock::now();
         runWasmMachine(m);
         auto end = std::chrono::system_clock::now();

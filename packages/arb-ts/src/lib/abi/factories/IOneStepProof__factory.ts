@@ -2,27 +2,17 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IOneStepProof } from '../IOneStepProof'
-
-export class IOneStepProof__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IOneStepProof {
-    return new Contract(address, _abi, signerOrProvider) as IOneStepProof
-  }
-}
+import type { IOneStepProof, IOneStepProofInterface } from '../IOneStepProof'
 
 const _abi = [
   {
     inputs: [
       {
-        internalType: 'contract IBridge',
-        name: 'bridge',
-        type: 'address',
+        internalType: 'address[2]',
+        name: 'bridges',
+        type: 'address[2]',
       },
       {
         internalType: 'uint256',
@@ -54,7 +44,7 @@ const _abi = [
       },
       {
         internalType: 'uint256',
-        name: 'totalMessagesRead',
+        name: 'afterMessagesRead',
         type: 'uint256',
       },
       {
@@ -69,9 +59,9 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'contract IBridge',
-        name: 'bridge',
-        type: 'address',
+        internalType: 'address[2]',
+        name: 'bridges',
+        type: 'address[2]',
       },
       {
         internalType: 'uint256',
@@ -111,3 +101,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class IOneStepProof__factory {
+  static readonly abi = _abi
+  static createInterface(): IOneStepProofInterface {
+    return new utils.Interface(_abi) as IOneStepProofInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IOneStepProof {
+    return new Contract(address, _abi, signerOrProvider) as IOneStepProof
+  }
+}

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"flag"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 
@@ -28,6 +29,7 @@ import (
 )
 
 var (
+	chainId      = big.NewInt(764575)
 	owner        = common.HexToAddress("0xcd3CFd7829e7d49e1847eA37fc4057537ee5e72f")
 	chain        = common.HexToAddress("0x037c4d7bbb0407d1e2c64981855ad8681d0d86d1")
 	sender       = common.HexToAddress("0xe91e00167939cb6694d2c422acd208a007293948")
@@ -43,12 +45,11 @@ type ArbOSExec struct {
 }
 
 func TestMain(m *testing.M) {
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	if err != nil {
 		panic(err)
 	}
-
-	arbosfile = flag.String("arbos", arbosPath, "version of arbos to run tests against")
+ 	arbosfile = flag.String("arbos", arbosPath, "version of arbos to run tests against")
 	flag.Parse()
 
 	fileData, err := ioutil.ReadFile(*arbosfile)

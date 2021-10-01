@@ -17,9 +17,6 @@
 package cmachine
 
 /*
-#cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lwasmer -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak -ldl
-#cgo linux LDFLAGS: -latomic
 #include "../cavm/cmachine.h"
 #include "../cavm/carbstorage.h"
 #include <stdio.h>
@@ -28,14 +25,11 @@ package cmachine
 import "C"
 
 import (
-	"math/big"
 	"runtime"
 	"unsafe"
 
-	"github.com/ethereum/go-ethereum/common/math"
-
+	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -44,7 +38,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "cmachine").Logger()
+var (
+	GasCounter   = metrics.NewRegisteredCounter("arbitrum/nonmutating/gas_used", nil)
+	StepsCounter = metrics.NewRegisteredCounter("arbitrum/nonmutating/steps_used", nil)
+)
 
 type Machine struct {
 	c unsafe.Pointer
@@ -84,12 +81,12 @@ func (m *Machine) UnsafePointer() unsafe.Pointer {
 	return m.c
 }
 
-func (m *Machine) Hash() (ret common.Hash, err error) {
+func (m *Machine) Hash() (ret common.Hash) {
 	success := C.machineHash(m.c, unsafe.Pointer(&ret[0]))
 	if success == 0 {
-		err = errors.New("Cannot get machine hash")
+		// This should never occur
+		panic("machine hash failed")
 	}
-
 	return
 }
 
@@ -150,9 +147,7 @@ func (m *Machine) String() string {
 
 func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	sendsRaw := receiveByteSlice(assertion.sends)
-	sendAcc := receive32Bytes(assertion.sendAcc)
 	logsRaw := receiveByteSlice(assertion.logs)
-	logAcc := receive32Bytes(assertion.logAcc)
 	debugPrints, err := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
 	if err != nil {
 		return nil, nil, 0, err
@@ -162,10 +157,8 @@ func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssert
 		uint64(assertion.inbox_messages_consumed),
 		sendsRaw,
 		uint64(assertion.sendCount),
-		sendAcc,
 		logsRaw,
 		uint64(assertion.logCount),
-		logAcc,
 	)
 	return goAssertion, debugPrints, uint64(assertion.numSteps), err
 }
@@ -174,23 +167,18 @@ func (m *Machine) ExecuteAssertion(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
-	finalMessageOfBlock bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	return m.ExecuteAssertionAdvanced(
 		maxGas,
 		goOverGas,
 		messages,
-		finalMessageOfBlock,
 		nil,
 		false,
-		common.Hash{},
-		common.Hash{},
 	)
 }
 
-func inboxMessagesToByteSliceArray(messages []inbox.InboxMessage) C.struct_ByteSliceArrayStruct {
-	rawInboxData := encodeInboxMessages(messages)
-	byteSlices := encodeByteSliceList(rawInboxData)
+func bytesArrayToByteSliceArray(bytes [][]byte) C.struct_ByteSliceArrayStruct {
+	byteSlices := encodeByteSliceList(bytes)
 	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
 	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
 	for i, data := range byteSlices {
@@ -203,11 +191,8 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
-	finalMessageOfBlock bool,
 	sideloads []inbox.InboxMessage,
 	stopOnSideload bool,
-	beforeSendAcc common.Hash,
-	beforeLogAcc common.Hash,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	conf := C.machineExecutionConfigCreate()
 
@@ -217,18 +202,13 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	}
 	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), goOverGasInt)
 
-	msgData := inboxMessagesToByteSliceArray(messages)
+	msgData := bytesArrayToByteSliceArray(encodeMachineInboxMessages(messages))
 	defer C.free(msgData.slices)
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
 
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
-	if finalMessageOfBlock && len(messages) > 0 {
-		nextBlockHeight := new(big.Int).Add(messages[len(messages)-1].ChainTime.BlockNum.AsInt(), big.NewInt(1))
-		nextBlockHeightData := math.U256Bytes(nextBlockHeight)
-		C.machineExecutionConfigSetNextBlockHeight(conf, unsafeDataPointer(nextBlockHeightData))
-	}
 
-	sideloadsData := inboxMessagesToByteSliceArray(sideloads)
+	sideloadsData := bytesArrayToByteSliceArray(encodeInboxMessages(sideloads))
 	defer C.free(sideloadsData.slices)
 	C.machineExecutionConfigSetSideloads(conf, sideloadsData)
 
@@ -238,14 +218,12 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	}
 	C.machineExecutionConfigSetStopOnSideload(conf, stopOnSideloadInt)
 
-	assertion := C.executeAssertion(
-		m.c,
-		conf,
-		unsafeDataPointer(beforeSendAcc.Bytes()),
-		unsafeDataPointer(beforeLogAcc.Bytes()),
-	)
+	assertion := C.executeAssertion(m.c, conf)
 
-	return makeExecutionAssertion(assertion)
+	executionAssertion, values, steps, err := makeExecutionAssertion(assertion)
+	GasCounter.Inc(int64(executionAssertion.NumGas))
+	StepsCounter.Inc(int64(steps))
+	return executionAssertion, values, steps, err
 }
 
 func (m *Machine) MarshalForProof() ([]byte, []byte, error) {

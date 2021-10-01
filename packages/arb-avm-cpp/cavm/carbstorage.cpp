@@ -15,7 +15,6 @@
  */
 
 #include "carbstorage.h"
-#include "utils.hpp"
 
 #include <data_storage/aggregator.hpp>
 #include <data_storage/arbstorage.hpp>
@@ -29,13 +28,35 @@
 #include <iostream>
 #include <string>
 
-CArbStorage* createArbStorage(const char* db_path) {
+CArbStorage* createArbStorage(const char* db_path,
+                              CArbCoreConfig arb_core_config) {
     auto string_filename = std::string(db_path);
+    auto string_save_rocksdb_path =
+        std::string(arb_core_config.save_rocksdb_path);
+    ArbCoreConfig coreConfig{};
+    coreConfig.message_process_count = arb_core_config.message_process_count;
+    coreConfig.checkpoint_load_gas_cost =
+        arb_core_config.checkpoint_load_gas_cost;
+    coreConfig.min_gas_checkpoint_frequency =
+        arb_core_config.min_gas_checkpoint_frequency;
+    coreConfig.timed_cache_expiration_seconds =
+        arb_core_config.cache_expiration_seconds;
+    coreConfig.lru_sideload_cache_size = arb_core_config.lru_cache_size;
+    coreConfig.debug = arb_core_config.debug;
+    coreConfig.save_rocksdb_interval = arb_core_config.save_rocksdb_interval;
+    coreConfig.save_rocksdb_path = string_save_rocksdb_path;
+    coreConfig.profile_reorg_to = arb_core_config.profile_reorg_to;
+    coreConfig.profile_run_until = arb_core_config.profile_run_until;
+    coreConfig.profile_load_count = arb_core_config.profile_load_count;
+    coreConfig.profile_reset_db_except_inbox =
+        arb_core_config.profile_reset_db_except_inbox;
+    coreConfig.profile_just_metadata = arb_core_config.profile_just_metadata;
+
     try {
-        auto storage = new ArbStorage(string_filename);
+        auto storage = new ArbStorage(string_filename, coreConfig);
         return static_cast<void*>(storage);
     } catch (const std::exception& e) {
-        std::cerr << "Error creating storage " << e.what() << std::endl;
+        std::cerr << "Error creating storage: " << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -46,14 +67,14 @@ int initializeArbStorage(CArbStorage* storage_ptr,
     try {
         auto status = storage->initialize(executable_path);
         if (!status.ok()) {
-            std::cerr << "Error initializing storage" << status.ToString()
+            std::cerr << "Error initializing storage: " << status.ToString()
                       << std::endl;
             return false;
         }
 
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception initializing storage" << e.what() << std::endl;
+        std::cerr << "Exception initializing storage:" << e.what() << std::endl;
         return false;
     }
 }
@@ -92,9 +113,9 @@ void destroyArbStorage(CArbStorage* storage_ptr) {
     if (storage == nullptr) {
         return;
     }
-    std::cerr << "closing ArbStorage" << std::endl;
+    std::cerr << "closing ArbStorage:" << std::endl;
     storage->closeArbStorage();
-    std::cerr << "closed ArbStorage" << std::endl;
+    std::cerr << "closed ArbStorage:" << std::endl;
     delete static_cast<ArbStorage*>(storage);
 }
 

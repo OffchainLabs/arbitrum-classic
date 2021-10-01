@@ -19,7 +19,7 @@
 #include <utility>
 
 ReadWriteTransaction::ReadWriteTransaction(std::shared_ptr<DataStorage> store)
-    : ReadTransaction(std::move(store)) {}
+    : ReadConsistentTransaction(std::move(store)) {}
 
 rocksdb::Status ReadWriteTransaction::defaultPut(const rocksdb::Slice& key,
                                                  const rocksdb::Slice& value) {
@@ -41,15 +41,6 @@ rocksdb::Status ReadWriteTransaction::checkpointPut(
     return transaction->transaction->Put(
         transaction->datastorage
             ->column_handles[DataStorage::CHECKPOINT_COLUMN],
-        key, value);
-}
-
-rocksdb::Status ReadWriteTransaction::messageEntryPut(
-    const rocksdb::Slice& key,
-    const rocksdb::Slice& value) {
-    return transaction->transaction->Put(
-        transaction->datastorage
-            ->column_handles[DataStorage::MESSAGEENTRY_COLUMN],
         key, value);
 }
 
@@ -92,6 +83,24 @@ rocksdb::Status ReadWriteTransaction::refCountedPut(
         key, value);
 }
 
+rocksdb::Status ReadWriteTransaction::sequencerBatchItemPut(
+    const rocksdb::Slice& key,
+    const rocksdb::Slice& value) {
+    return transaction->transaction->Put(
+        transaction->datastorage
+            ->column_handles[DataStorage::SEQUENCERBATCHITEM_COLUMN],
+        key, value);
+}
+
+rocksdb::Status ReadWriteTransaction::delayedMessagePut(
+    const rocksdb::Slice& key,
+    const rocksdb::Slice& value) {
+    return transaction->transaction->Put(
+        transaction->datastorage
+            ->column_handles[DataStorage::DELAYEDMESSAGE_COLUMN],
+        key, value);
+}
+
 rocksdb::Status ReadWriteTransaction::defaultDelete(const rocksdb::Slice& key) {
     return transaction->transaction->Delete(
         transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN],
@@ -108,13 +117,6 @@ rocksdb::Status ReadWriteTransaction::checkpointDelete(
     return transaction->transaction->Delete(
         transaction->datastorage
             ->column_handles[DataStorage::CHECKPOINT_COLUMN],
-        key);
-}
-rocksdb::Status ReadWriteTransaction::messageEntryDelete(
-    const rocksdb::Slice& key) {
-    return transaction->transaction->Delete(
-        transaction->datastorage
-            ->column_handles[DataStorage::MESSAGEENTRY_COLUMN],
         key);
 }
 rocksdb::Status ReadWriteTransaction::logDelete(const rocksdb::Slice& key) {
@@ -144,5 +146,19 @@ rocksdb::Status ReadWriteTransaction::refCountedDelete(
     return transaction->transaction->Delete(
         transaction->datastorage
             ->column_handles[DataStorage::REFCOUNTED_COLUMN],
+        key);
+}
+rocksdb::Status ReadWriteTransaction::sequencerBatchItemDelete(
+    const rocksdb::Slice& key) {
+    return transaction->transaction->Delete(
+        transaction->datastorage
+            ->column_handles[DataStorage::SEQUENCERBATCHITEM_COLUMN],
+        key);
+}
+rocksdb::Status ReadWriteTransaction::delayedMessageDelete(
+    const rocksdb::Slice& key) {
+    return transaction->transaction->Delete(
+        transaction->datastorage
+            ->column_handles[DataStorage::DELAYEDMESSAGE_COLUMN],
         key);
 }

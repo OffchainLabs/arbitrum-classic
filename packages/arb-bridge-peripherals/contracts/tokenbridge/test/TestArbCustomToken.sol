@@ -20,34 +20,29 @@ pragma solidity ^0.6.11;
 
 import "../arbitrum/IArbToken.sol";
 import "../libraries/aeERC20.sol";
-import "../arbitrum/ArbTokenBridge.sol";
 
 contract TestArbCustomToken is aeERC20, IArbToken {
-    ArbTokenBridge public bridge;
+    address public l2Gateway;
     address public override l1Address;
 
-    modifier onlyBridge {
-        require(msg.sender == address(bridge), "ONLY_BRIDGE");
+    modifier onlyGateway() {
+        require(msg.sender == l2Gateway, "ONLY_l2GATEWAY");
         _;
     }
 
-    constructor(address _bridge, address _l1Address) public {
-        bridge = ArbTokenBridge(_bridge);
+    constructor(address _l2Gateway, address _l1Address) public {
+        l2Gateway = _l2Gateway;
         l1Address = _l1Address;
-        aeERC20.initialize("TestCustomToken", "CARB", uint8(18));
+        aeERC20._initialize("TestCustomToken", "CARB", uint8(18));
     }
 
     function someWackyCustomStuff() public {}
 
-    function bridgeMint(address account, uint256 amount) external override onlyBridge {
+    function bridgeMint(address account, uint256 amount) external override onlyGateway {
         _mint(account, amount);
     }
 
-    function bridgeBurn(address account, uint256 amount) external override onlyBridge {
+    function bridgeBurn(address account, uint256 amount) external override onlyGateway {
         _burn(account, amount);
-    }
-
-    function withdraw(address destination, uint256 amount) external override {
-        bridge.withdraw(l1Address, msg.sender, destination, amount);
     }
 }

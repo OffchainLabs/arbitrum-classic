@@ -20,19 +20,15 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/rpc"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
@@ -42,11 +38,14 @@ import (
 )
 
 var logger = log.With().Caller().Stack().Str("component", "web3").Logger()
+var gasPriceFactor = big.NewInt(2)
+var gasEstimationCushion = 10
 
 type Server struct {
 	srv         *aggregator.Server
 	ganacheMode bool
 	maxCallGas  uint64
+	maxAVMGas   uint64
 	aggregator  *arbcommon.Address
 }
 
@@ -58,18 +57,25 @@ func NewServer(
 		srv:         srv,
 		ganacheMode: ganacheMode,
 		maxCallGas:  1<<31 - 1,
+		maxAVMGas:   500000000,
 		aggregator:  srv.Aggregator(),
 	}
 }
 
 func (s *Server) ChainId() hexutil.Uint64 {
-	return hexutil.Uint64(message.ChainAddressToID(
-		arbcommon.NewAddressFromEth(s.srv.GetChainAddress()),
-	).Uint64())
+	return hexutil.Uint64(s.srv.ChainId().Uint64())
 }
 
-func (s *Server) GasPrice() *hexutil.Big {
-	return (*hexutil.Big)(big.NewInt(0))
+func (s *Server) GasPrice() (*hexutil.Big, error) {
+	snap, err := s.srv.PendingSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	prices, err := snap.GetPricesInWei()
+	if err != nil {
+		return nil, err
+	}
+	return (*hexutil.Big)(new(big.Int).Mul(prices[5], gasPriceFactor)), nil
 }
 
 func (s *Server) Accounts() []common.Address {
@@ -87,8 +93,8 @@ func (s *Server) BlockNumber() (hexutil.Uint64, error) {
 	return hexutil.Uint64(blockCount - 1), nil
 }
 
-func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
-	snap, err := s.getSnapshot(blockNum)
+func (s *Server) GetBalance(address *common.Address, blockNum rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -99,21 +105,37 @@ func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) 
 	return (*hexutil.Big)(balance), nil
 }
 
-func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
-	snap, err := s.getSnapshot(blockNum)
+func (s *Server) GetStorageAt(address *common.Address, key string, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return nil, err
 	}
-	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), (*big.Int)(index))
+	index := new(big.Int).SetBytes(common.FromHex(key))
+	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), index)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting storage")
 	}
-	return (*hexutil.Big)(storageVal), nil
+	return math.U256Bytes(storageVal), nil
 }
 
-func (s *Server) GetTransactionCount(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Uint64, error) {
+func (s *Server) getTransactionCountInner(ctx context.Context, address *common.Address, blockNum rpc.BlockNumberOrHash, forwardingOnlyMode bool) (hexutil.Uint64, error) {
 	account := arbcommon.NewAddressFromEth(*address)
-	snap, err := s.getSnapshot(blockNum)
+
+	if blockNum.BlockNumber != nil && *blockNum.BlockNumber == rpc.PendingBlockNumber {
+		pending, err := s.srv.PendingTransactionCount(ctx, account)
+		if err != nil {
+			return 0, err
+		}
+		if pending != nil {
+			return hexutil.Uint64(*pending), nil
+		}
+	}
+
+	if forwardingOnlyMode {
+		return 0, errors.New("only pending transaction count supported in forwarder only mode")
+	}
+
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return 0, err
 	}
@@ -122,17 +144,7 @@ func (s *Server) GetTransactionCount(ctx context.Context, address *common.Addres
 		return 0, errors.Wrap(err, "error getting transaction count")
 	}
 
-	count := txCount.Uint64()
-	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		pending := s.srv.PendingTransactionCount(ctx, account)
-		if pending != nil {
-			if *pending > count {
-				count = *pending
-			}
-		}
-	}
-
-	return hexutil.Uint64(count), nil
+	return hexutil.Uint64(txCount.Uint64()), nil
 }
 
 func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil.Big, error) {
@@ -155,12 +167,12 @@ func (s *Server) GetBlockTransactionCountByNumber(blockNum *rpc.BlockNumber) (*h
 	return s.getBlockTransactionCount(info)
 }
 
-func (s *Server) GetCode(address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+func (s *Server) GetCode(address *common.Address, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	if *address == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		// Fake code to make the contract appear real
 		return hexutil.Bytes{1}, nil
 	}
-	snap, err := s.getSnapshot(blockNum)
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -171,95 +183,29 @@ func (s *Server) GetCode(address *common.Address, blockNum *rpc.BlockNumber) (he
 	return code, nil
 }
 
-func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (hexutil.Bytes, error) {
-	tx := new(types.Transaction)
-	if err := rlp.DecodeBytes(data, tx); err != nil {
-		return nil, err
-	}
-	err := s.srv.SendTransaction(ctx, tx)
-	if err != nil {
-		return nil, err
-	}
-	return tx.Hash().Bytes(), nil
-}
-
-type revertError struct {
-	error
-	reason interface{}
-}
-
-// ErrorCode returns the JSON error code for a revertal.
-// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
-func (e revertError) ErrorCode() int {
-	return 3
-}
-
-// ErrorData returns the hex encoded revert reason.
-func (e revertError) ErrorData() interface{} {
-	return e.reason
-}
-
-type ganacheErrorData struct {
-	Error  string `json:"error"`
-	Return string `json:"return"`
-	Reason string `json:"reason"`
-}
-
-func HandleCallError(res *evm.TxResult, ganacheMode bool) error {
-	if len(res.ReturnData) > 0 {
-		err := vm.ErrExecutionReverted
-		reason := ""
-		revertReason, unpackError := abi.UnpackRevert(res.ReturnData)
-		if unpackError == nil {
-			err = errors.Errorf("execution reverted: %v", revertReason)
-			reason = revertReason
-		}
-
-		var errorReason interface{}
-		if ganacheMode {
-			errMap := make(map[string]ganacheErrorData)
-			errMap[res.IncomingRequest.MessageID.String()] = ganacheErrorData{
-				Error:  err.Error(),
-				Return: hexutil.Encode(res.ReturnData),
-				Reason: reason,
-			}
-			errorReason = errMap
-		} else {
-			errorReason = hexutil.Encode(res.ReturnData)
-		}
-
-		return revertError{
-			error:  err,
-			reason: errorReason,
-		}
-	} else {
-		return vm.ErrExecutionReverted
-	}
-}
-
-func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	if callArgs.To != nil && *callArgs.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		var data []byte
 		if callArgs.Data != nil {
 			data = *callArgs.Data
 		}
-		return HandleNodeInterfaceCall(s.srv, data)
+		return HandleNodeInterfaceCall(s, data, blockNum)
 	}
 
-	snap, err := s.getSnapshot(blockNum)
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return nil, err
 	}
+	if snap.ArbosVersion() >= 42 && (callArgs.GasPrice == nil || callArgs.GasPrice.ToInt().Sign() <= 0) {
+		callArgs.GasPrice = (*hexutil.Big)(big.NewInt(1 << 60))
+	}
+
 	from, msg := buildCallMsg(callArgs, s.maxCallGas)
 
-	res, err := snap.Call(msg, from)
-	res, err = handleCallResult(res, err, blockNum)
-	if err != nil {
-		return nil, err
-	}
+	res, _, err := snap.Call(msg, from)
 
 	if res.ResultCode != evm.ReturnCode {
-		return nil, HandleCallError(res, s.ganacheMode)
+		return nil, evm.HandleCallError(res, s.ganacheMode)
 	}
 	return res.ReturnData, nil
 }
@@ -274,15 +220,20 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	from, tx := buildTransaction(args, s.maxCallGas)
+	if snap.ArbosVersion() >= 42 && (args.GasPrice == nil || args.GasPrice.ToInt().Sign() <= 0) {
+		args.GasPrice = (*hexutil.Big)(big.NewInt(1 << 60))
+	}
+	from, tx := buildTransactionForEstimation(args)
 	var agg arbcommon.Address
 	if args.Aggregator != nil {
 		agg = arbcommon.NewAddressFromEth(*args.Aggregator)
 	} else if s.aggregator != nil {
 		agg = *s.aggregator
 	}
-	res, err := snap.EstimateGas(tx, agg, from)
-	res, err = handleCallResult(res, err, &blockNum)
+	res, _, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
+	if err == nil && res.ResultCode != evm.ReturnCode {
+		err = evm.HandleCallError(res, s.ganacheMode)
+	}
 	if err != nil {
 		logging := log.Warn()
 		if args.Gas != nil {
@@ -306,15 +257,17 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		logging.Err(err).Msg("error estimating gas")
 		return 0, err
 	}
-	if res.ResultCode != evm.ReturnCode {
-		return 0, HandleCallError(res, s.ganacheMode)
-	}
 
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
-		gasAmount := new(big.Int).Div(res.FeeStats.PayTarget().Total(), res.FeeStats.Price.L2Computation)
-		return hexutil.Uint64(gasAmount.Uint64() + 1000), nil
+		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes()) + gasEstimationCushion) * 16
+		// Adjust calldata units used for calldata from gas limit
+		res.FeeStats.UnitsUsed.L1Calldata = res.FeeStats.UnitsUsed.L1Calldata.Add(res.FeeStats.UnitsUsed.L1Calldata, big.NewInt(int64(extraCalldataUnits)))
+		used := res.FeeStats.TargetGasUsed()
+		used = used.Mul(used, big.NewInt(11))
+		used = used.Div(used, big.NewInt(10))
+		return hexutil.Uint64(used.Uint64() + 100), nil
 	}
 }
 
@@ -421,7 +374,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		From:              res.IncomingRequest.Sender.ToEthAddress(),
 		To:                tx.Tx.To(),
 		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
-		GasUsed:           hexutil.Uint64(receipt.GasUsed),
+		GasUsed:           hexutil.Uint64(res.CalcGasUsed().Uint64()),
 		ContractAddress:   contractAddress,
 		Logs:              receipt.Logs,
 		LogsBloom:         receipt.Bloom.Bytes(),
@@ -570,17 +523,29 @@ func makeTransactionResult(processedTx *evm.ProcessedTx, blockHash *common.Hash)
 	}
 }
 
-func buildTransaction(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types.Transaction) {
-	var from arbcommon.Address
-	if args.From != nil {
-		from = arbcommon.NewAddressFromEth(*args.From)
+func buildTransactionForEstimation(args CallTxArgs) (arbcommon.Address, *types.Transaction) {
+	gas := uint64(0)
+	if args.Gas != nil {
+		gas = uint64(*args.Gas)
 	}
+	return buildTransactionImpl(args, gas)
+}
+
+func buildTransactionForCall(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types.Transaction) {
 	gas := uint64(0)
 	if args.Gas != nil {
 		gas = uint64(*args.Gas)
 	}
 	if gas == 0 || gas > maxGas {
 		gas = maxGas
+	}
+	return buildTransactionImpl(args, gas)
+}
+
+func buildTransactionImpl(args CallTxArgs, gas uint64) (arbcommon.Address, *types.Transaction) {
+	var from arbcommon.Address
+	if args.From != nil {
+		from = arbcommon.NewAddressFromEth(*args.From)
 	}
 	gasPrice := big.NewInt(0)
 	if args.GasPrice != nil {
@@ -606,7 +571,7 @@ func buildTransaction(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types
 }
 
 func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.ContractTransaction) {
-	from, tx := buildTransaction(args, maxGas)
+	from, tx := buildTransactionForCall(args, maxGas)
 	var dest arbcommon.Address
 	if tx.To() != nil {
 		dest = arbcommon.NewAddressFromEth(*tx.To())
@@ -620,29 +585,6 @@ func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.Co
 			Data:        tx.Data(),
 		},
 	}
-}
-
-func handleCallResult(res *evm.TxResult, err error, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
-	if err != nil {
-		logMsg := logger.Warn().Err(err)
-		if blockNum != nil {
-			logMsg = logMsg.Int64("height", blockNum.Int64())
-		} else {
-			logMsg = logMsg.Str("height", "nil")
-		}
-		logMsg.Msg("error executing call")
-		return nil, err
-	}
-	log.Debug().
-		Uint64("gasused", res.GasUsed.Uint64()).
-		Hex("returndata", res.ReturnData).
-		Int("resultcode", int(res.ResultCode)).
-		Msg("executed call")
-
-	if res.ResultCode != evm.ReturnCode && res.ResultCode != evm.RevertCode {
-		return nil, errors.Errorf("failed to execute call with revert code %v", res.ResultCode)
-	}
-	return res, err
 }
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
@@ -675,7 +617,34 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 		return nil, err
 	}
 	if snap == nil {
-		return nil, errors.New("unsupported block number")
+		return nil, errors.Errorf("unsupported block number %v", uint64(*blockNum))
+	}
+	return snap, nil
+}
+
+func (s *Server) getSnapshotForNumberOrHash(blockNum rpc.BlockNumberOrHash) (*snapshot.Snapshot, error) {
+	if blockNum.BlockNumber != nil {
+		return s.getSnapshot(blockNum.BlockNumber)
+	}
+	if blockNum.BlockHash == nil {
+		return nil, errors.New("must specify block number or hash")
+	}
+	var blockHash arbcommon.Hash
+	copy(blockHash[:], blockNum.BlockHash[:])
+	info, err := s.srv.BlockInfoByHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+	if info == nil {
+		return nil, errors.New("block with hash not found")
+	}
+
+	snap, err := s.srv.GetSnapshot(info.Header.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
+	if snap == nil {
+		return nil, errors.Errorf("unsupported block number %v", info.Header.Number.Uint64())
 	}
 	return snap, nil
 }

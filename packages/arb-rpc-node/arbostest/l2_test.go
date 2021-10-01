@@ -24,8 +24,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -74,9 +74,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 		l2Message2,
 	}
 
-	logs, _, snap := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
-
+	results, snap := runSimpleTxAssertion(t, messages)
 	allResultsSucceeded(t, results)
 
 	checkConstructorResult(t, results[1], connAddress1)
@@ -98,7 +96,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 		l2Message, err := l2Msg.AbstractMessage()
 		failIfError(t, err)
 
-		targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(chain)), hashing.Uint256(big.NewInt(int64(4+i))))
+		targetHash := hashing.SoliditySHA3(hashing.Uint256(chainId), hashing.Uint256(big.NewInt(int64(4+i))))
 		if result.IncomingRequest.MessageID != targetHash {
 			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, targetHash)
 		}
@@ -142,7 +140,7 @@ func TestCallTx(t *testing.T) {
 	// After call to contract, balance should still be 0
 	checkBalance(t, snap, tx2.DestAddress, big.NewInt(0))
 
-	callRes, err := snap.Call(message.ContractTransaction{
+	callRes, _, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -156,7 +154,7 @@ func TestCallTx(t *testing.T) {
 		t.Errorf("Storage was updated %X", callRes.ReturnData)
 	}
 
-	call2Res, err := snap.Call(message.ContractTransaction{
+	call2Res, _, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -170,7 +168,7 @@ func TestCallTx(t *testing.T) {
 		t.Errorf("Storage was updated")
 	}
 
-	_, err = snap.Call(message.ContractTransaction{
+	_, _, err = snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -214,7 +212,7 @@ func TestContractTx(t *testing.T) {
 	checkBalance(t, snap, tx.DestAddress, tx.Payment)
 	checkBalance(t, snap, tx2.DestAddress, tx2.Payment)
 
-	callRes, err := snap.Call(message.ContractTransaction{
+	callRes, _, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -228,7 +226,7 @@ func TestContractTx(t *testing.T) {
 		t.Errorf("Storage wasn't updated %X", callRes.ReturnData)
 	}
 
-	callRes2, err := snap.Call(message.ContractTransaction{
+	callRes2, _, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -270,8 +268,7 @@ func TestUnsignedTx(t *testing.T) {
 		message.NewSafeL2Message(tx2),
 	}
 
-	logs, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 	allResultsSucceeded(t, results)
 	for i, result := range results[1:] {
 		if result.IncomingRequest.Sender != sender {
@@ -285,9 +282,9 @@ func TestUnsignedTx(t *testing.T) {
 
 		var correctHash common.Hash
 		if i == 0 {
-			correctHash = tx1.MessageID(sender, chain)
+			correctHash = tx1.MessageID(message.L1RemapAccount(sender), chainId)
 		} else {
-			correctHash = tx2.MessageID(sender, chain)
+			correctHash = tx2.MessageID(message.L1RemapAccount(sender), chainId)
 		}
 		if result.IncomingRequest.MessageID != correctHash {
 			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, correctHash)
@@ -324,12 +321,12 @@ func TestBatch(t *testing.T) {
 		}
 		senders = append(senders, sender)
 		txes = append(txes, tx)
-		hashes = append(hashes, tx.MessageID(sender, chain))
+		hashes = append(hashes, tx.MessageID(message.L1RemapAccount(sender), chainId))
 		batchSenderSeq++
 	}
 	for _, pk := range pks[1:] {
 		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 10000000, big.NewInt(0), []byte{})
-		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), pk)
 		failIfError(t, err)
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 		senders = append(senders, addr)
@@ -347,8 +344,7 @@ func TestBatch(t *testing.T) {
 	}
 	messages = append(messages, message.NewSafeL2Message(msg))
 
-	logs, _, _ := runAssertion(t, makeSimpleInbox(t, messages), len(messages)+len(txes)-1, 0)
-	results := processTxResults(t, logs)
+	results, _, _ := runTxAssertionWithCount(t, makeSimpleInbox(t, messages), len(messages)+len(txes)-1)
 
 	for i, result := range results[len(messages)-1:] {
 		if result.IncomingRequest.Sender != senders[i] {
@@ -382,7 +378,7 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 	failIfError(t, err)
 
 	tx := types.NewTransaction(0, common.RandAddress().ToEthAddress(), big.NewInt(1), 10000000, big.NewInt(0), []byte{})
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), pk)
 	failIfError(t, err)
 
 	tx2 := types.NewTransaction(1, common.RandAddress().ToEthAddress(), big.NewInt(0), 1000000, big.NewInt(0), []byte{})
@@ -390,13 +386,12 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 	failIfError(t, err)
 
 	tx3 := types.NewContractCreation(2, big.NewInt(0), 3000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
-	signedTx3, err := types.SignTx(tx3, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	signedTx3, err := types.SignTx(tx3, types.NewEIP155Signer(chainId), pk)
 	failIfError(t, err)
 	return []*types.Transaction{signedTx, signedTx2, signedTx3}
 }
 
-func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, logs []value.Value) {
-	results := processTxResults(t, logs)
+func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, results []*evm.TxResult) {
 	allResultsSucceeded(t, results)
 	for i, result := range results {
 		sender, err := signer.Sender(txes[i])
@@ -423,9 +418,9 @@ func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, 
 
 func TestCompressedECDSATx(t *testing.T) {
 	t.Log("Chain address:", chain)
-	t.Log("Chain ID:", message.ChainAddressToID(chain))
+	t.Log("Chain ID:", chainId)
 
-	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+	signer := types.NewEIP155Signer(chainId)
 
 	txes := generateTestTransactions(t, chain)
 
@@ -450,8 +445,8 @@ func TestCompressedECDSATx(t *testing.T) {
 		)
 	}
 
-	logs, _, _ := runSimpleAssertion(t, messages)
-	verifyTxLogs(t, signer, txes, logs[1:])
+	results, _ := runSimpleTxAssertion(t, messages)
+	verifyTxLogs(t, signer, txes, results[1:])
 }
 
 func TestCall(t *testing.T) {
@@ -473,8 +468,7 @@ func TestCall(t *testing.T) {
 		message.NewSafeL2Message(tx1),
 		message.NewSafeL2Message(tx2),
 	}
-	logs, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[0], connAddress1)
 }

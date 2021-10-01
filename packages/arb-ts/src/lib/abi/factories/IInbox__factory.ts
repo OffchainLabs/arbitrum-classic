@@ -2,16 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IInbox } from '../IInbox'
-
-export class IInbox__factory {
-  static connect(address: string, signerOrProvider: Signer | Provider): IInbox {
-    return new Contract(address, _abi, signerOrProvider) as IInbox
-  }
-}
+import type { IInbox, IInboxInterface } from '../IInbox'
 
 const _abi = [
   {
@@ -116,9 +109,9 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'address',
-        name: 'destAddr',
-        type: 'address',
+        internalType: 'uint256',
+        name: 'maxSubmissionCost',
+        type: 'uint256',
       },
     ],
     name: 'depositEth',
@@ -133,37 +126,10 @@ const _abi = [
     type: 'function',
   },
   {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'destAddr',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: 'maxSubmissionCost',
-        type: 'uint256',
-      },
-      {
-        internalType: 'uint256',
-        name: 'maxGas',
-        type: 'uint256',
-      },
-      {
-        internalType: 'uint256',
-        name: 'maxGasPrice',
-        type: 'uint256',
-      },
-    ],
-    name: 'depositEthRetryable',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'payable',
+    inputs: [],
+    name: 'pauseCreateRetryables',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -341,4 +307,35 @@ const _abi = [
     stateMutability: 'nonpayable',
     type: 'function',
   },
+  {
+    inputs: [],
+    name: 'startRewriteAddress',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'stopRewriteAddress',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'unpauseCreateRetryables',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
 ]
+
+export class IInbox__factory {
+  static readonly abi = _abi
+  static createInterface(): IInboxInterface {
+    return new utils.Interface(_abi) as IInboxInterface
+  }
+  static connect(address: string, signerOrProvider: Signer | Provider): IInbox {
+    return new Contract(address, _abi, signerOrProvider) as IInbox
+  }
+}

@@ -9,24 +9,28 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface ValidatorInterface extends ethers.utils.Interface {
   functions: {
     'executeTransaction(bytes,address,uint256)': FunctionFragment
     'executeTransactions(bytes[],address[],uint256[])': FunctionFragment
+    'initialize()': FunctionFragment
+    'isMaster()': FunctionFragment
+    'owner()': FunctionFragment
+    'renounceOwnership()': FunctionFragment
     'returnOldDeposits(address,address[])': FunctionFragment
     'timeoutChallenges(address[])': FunctionFragment
+    'transferOwnership(address)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -37,6 +41,13 @@ interface ValidatorInterface extends ethers.utils.Interface {
     functionFragment: 'executeTransactions',
     values: [BytesLike[], string[], BigNumberish[]]
   ): string
+  encodeFunctionData(functionFragment: 'initialize', values?: undefined): string
+  encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
+  encodeFunctionData(functionFragment: 'owner', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'renounceOwnership',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'returnOldDeposits',
     values: [string, string[]]
@@ -44,6 +55,10 @@ interface ValidatorInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'timeoutChallenges',
     values: [string[]]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'transferOwnership',
+    values: [string]
   ): string
 
   decodeFunctionResult(
@@ -54,6 +69,13 @@ interface ValidatorInterface extends ethers.utils.Interface {
     functionFragment: 'executeTransactions',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'renounceOwnership',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'returnOldDeposits',
     data: BytesLike
@@ -62,20 +84,58 @@ interface ValidatorInterface extends ethers.utils.Interface {
     functionFragment: 'timeoutChallenges',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'transferOwnership',
+    data: BytesLike
+  ): Result
 
-  events: {}
+  events: {
+    'OwnershipTransferred(address,address)': EventFragment
+  }
+
+  getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment
 }
 
-export class Validator extends Contract {
+export class Validator extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: ValidatorInterface
 
@@ -84,50 +144,42 @@ export class Validator extends Contract {
       data: BytesLike,
       destination: string,
       amount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'executeTransaction(bytes,address,uint256)'(
-      data: BytesLike,
-      destination: string,
-      amount: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     executeTransactions(
       data: BytesLike[],
       destination: string[],
       amount: BigNumberish[],
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'executeTransactions(bytes[],address[],uint256[])'(
-      data: BytesLike[],
-      destination: string[],
-      amount: BigNumberish[],
-      overrides?: PayableOverrides
+    initialize(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
+
+    owner(overrides?: CallOverrides): Promise<[string]>
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     returnOldDeposits(
       rollup: string,
       stakers: string[],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'returnOldDeposits(address,address[])'(
-      rollup: string,
-      stakers: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     timeoutChallenges(
       challenges: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'timeoutChallenges(address[])'(
-      challenges: string[],
-      overrides?: Overrides
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
@@ -135,50 +187,42 @@ export class Validator extends Contract {
     data: BytesLike,
     destination: string,
     amount: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'executeTransaction(bytes,address,uint256)'(
-    data: BytesLike,
-    destination: string,
-    amount: BigNumberish,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   executeTransactions(
     data: BytesLike[],
     destination: string[],
     amount: BigNumberish[],
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'executeTransactions(bytes[],address[],uint256[])'(
-    data: BytesLike[],
-    destination: string[],
-    amount: BigNumberish[],
-    overrides?: PayableOverrides
+  initialize(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
+  isMaster(overrides?: CallOverrides): Promise<boolean>
+
+  owner(overrides?: CallOverrides): Promise<string>
+
+  renounceOwnership(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   returnOldDeposits(
     rollup: string,
     stakers: string[],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'returnOldDeposits(address,address[])'(
-    rollup: string,
-    stakers: string[],
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   timeoutChallenges(
     challenges: string[],
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'timeoutChallenges(address[])'(
-    challenges: string[],
-    overrides?: Overrides
+  transferOwnership(
+    newOwner: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
@@ -189,13 +233,6 @@ export class Validator extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'executeTransaction(bytes,address,uint256)'(
-      data: BytesLike,
-      destination: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     executeTransactions(
       data: BytesLike[],
       destination: string[],
@@ -203,20 +240,15 @@ export class Validator extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'executeTransactions(bytes[],address[],uint256[])'(
-      data: BytesLike[],
-      destination: string[],
-      amount: BigNumberish[],
-      overrides?: CallOverrides
-    ): Promise<void>
+    initialize(overrides?: CallOverrides): Promise<void>
+
+    isMaster(overrides?: CallOverrides): Promise<boolean>
+
+    owner(overrides?: CallOverrides): Promise<string>
+
+    renounceOwnership(overrides?: CallOverrides): Promise<void>
 
     returnOldDeposits(
-      rollup: string,
-      stakers: string[],
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'returnOldDeposits(address,address[])'(
       rollup: string,
       stakers: string[],
       overrides?: CallOverrides
@@ -227,63 +259,63 @@ export class Validator extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'timeoutChallenges(address[])'(
-      challenges: string[],
+    transferOwnership(
+      newOwner: string,
       overrides?: CallOverrides
     ): Promise<void>
   }
 
-  filters: {}
+  filters: {
+    OwnershipTransferred(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >
+  }
 
   estimateGas: {
     executeTransaction(
       data: BytesLike,
       destination: string,
       amount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'executeTransaction(bytes,address,uint256)'(
-      data: BytesLike,
-      destination: string,
-      amount: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     executeTransactions(
       data: BytesLike[],
       destination: string[],
       amount: BigNumberish[],
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'executeTransactions(bytes[],address[],uint256[])'(
-      data: BytesLike[],
-      destination: string[],
-      amount: BigNumberish[],
-      overrides?: PayableOverrides
+    initialize(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    isMaster(overrides?: CallOverrides): Promise<BigNumber>
+
+    owner(overrides?: CallOverrides): Promise<BigNumber>
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     returnOldDeposits(
       rollup: string,
       stakers: string[],
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'returnOldDeposits(address,address[])'(
-      rollup: string,
-      stakers: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     timeoutChallenges(
       challenges: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    'timeoutChallenges(address[])'(
-      challenges: string[],
-      overrides?: Overrides
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
@@ -292,50 +324,42 @@ export class Validator extends Contract {
       data: BytesLike,
       destination: string,
       amount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'executeTransaction(bytes,address,uint256)'(
-      data: BytesLike,
-      destination: string,
-      amount: BigNumberish,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     executeTransactions(
       data: BytesLike[],
       destination: string[],
       amount: BigNumberish[],
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'executeTransactions(bytes[],address[],uint256[])'(
-      data: BytesLike[],
-      destination: string[],
-      amount: BigNumberish[],
-      overrides?: PayableOverrides
+    initialize(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     returnOldDeposits(
       rollup: string,
       stakers: string[],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'returnOldDeposits(address,address[])'(
-      rollup: string,
-      stakers: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     timeoutChallenges(
       challenges: string[],
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    'timeoutChallenges(address[])'(
-      challenges: string[],
-      overrides?: Overrides
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

@@ -19,6 +19,7 @@ package arbosmachine
 import (
 	"github.com/rs/zerolog/log"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -43,14 +44,13 @@ func (m *Machine) ExecuteAssertion(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
-	finalMessageOfBlock bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
-	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages, finalMessageOfBlock)
+	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages)
 	if err != nil {
 		return nil, nil, 0, err
 	}
 	for _, d := range debugPrints {
-		parsed, err := handleDebugPrint(d)
+		parsed, err := evm.NewLogLineFromValue(d)
 		if err != nil {
 			logger.Debug().Str("raw", d.String()).Msg("debugprint")
 		} else {

@@ -35,8 +35,7 @@ class MachineExecutionConfig;
 struct MachineState;
 
 struct AssertionContext {
-    std::vector<InboxMessage> inbox_messages;
-    std::optional<uint256_t> next_block_height;
+    std::vector<MachineMessage> inbox_messages;
 
     std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;
@@ -57,13 +56,13 @@ struct AssertionContext {
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
-    InboxMessage popInbox() {
+    MachineMessage popInbox() {
         return inbox_messages[inbox_messages_consumed++];
     }
 
     // peekInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
-    [[nodiscard]] const InboxMessage& peekInbox() const {
+    [[nodiscard]] const MachineMessage& peekInbox() const {
         return inbox_messages[inbox_messages_consumed];
     }
 
@@ -88,40 +87,9 @@ struct InboxState {
     uint256_t count;
     uint256_t accumulator;
 
-    void addMessage(const InboxMessage& message) {
-        accumulator = hash_inbox(accumulator, message.serialize());
+    void addMessage(const MachineMessage& message) {
+        accumulator = message.accumulator;
         count += 1;
-    }
-
-    uint256_t countWithStaged(const staged_variant& staged_message) const {
-        if (std::holds_alternative<std::monostate>(staged_message)) {
-            return count;
-        } else {
-            return count + 1;
-        }
-    }
-
-    std::optional<uint256_t> accWithStaged(
-        const staged_variant& staged_message) const {
-        if (std::holds_alternative<InboxMessage>(staged_message)) {
-            return hash_inbox(
-                accumulator,
-                std::get<InboxMessage>(staged_message).serialize());
-        } else if (std::holds_alternative<std::monostate>(staged_message)) {
-            return accumulator;
-        } else {
-            return std::nullopt;
-        }
-    }
-
-    std::optional<InboxState> inboxWithStaged(
-        const staged_variant& staged_message) {
-        auto acc = accWithStaged(staged_message);
-        if (acc) {
-            return InboxState{countWithStaged(staged_message), *acc};
-        } else {
-            return std::nullopt;
-        }
     }
 };
 
@@ -144,7 +112,6 @@ struct MachineStateKeys {
     uint256_t arb_gas_remaining;
     CodePointStub pc;
     CodePointStub err_pc;
-    staged_variant staged_message;
     Status status;
     MachineOutput output;
 
@@ -155,7 +122,6 @@ struct MachineStateKeys {
                      uint256_t arb_gas_remaining_,
                      CodePointStub pc_,
                      CodePointStub err_pc_,
-                     staged_variant staged_message_,
                      Status status_,
                      MachineOutput output_)
         : static_hash(static_hash_),
@@ -165,17 +131,14 @@ struct MachineStateKeys {
           arb_gas_remaining(arb_gas_remaining_),
           pc(pc_),
           err_pc(err_pc_),
-          staged_message(std::move(staged_message_)),
           status(status_),
           output(std::move(output_)) {}
 
     MachineStateKeys(const MachineState& machine);
-    bool stagedMessageUnresolved() const;
-    std::optional<Tuple> getStagedMessageTuple() const;
 
     uint256_t getTotalMessagesRead() const;
-    std::optional<uint256_t> getInboxAcc() const;
-    std::optional<uint256_t> machineHash() const;
+    uint256_t getInboxAcc() const;
+    uint256_t machineHash() const;
 };
 
 struct MachineState {
@@ -189,7 +152,6 @@ struct MachineState {
     Status state{Status::Extensive};
     CodePointRef pc{0, 0};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
-    staged_variant staged_message{std::monostate()};
 
     MachineOutput output;
 
@@ -211,7 +173,6 @@ struct MachineState {
                  Status state_,
                  CodePointRef pc_,
                  CodePointStub errpc_,
-                 staged_variant staged_message_,
                  MachineOutput output_);
 
     uint256_t getMachineSize() const;
@@ -219,21 +180,16 @@ struct MachineState {
     std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
     BlockReason runOne();
-    std::optional<uint256_t> hash() const {
-        return MachineStateKeys(*this).machineHash();
-    }
+    uint256_t hash() const { return MachineStateKeys(*this).machineHash(); }
     BlockReason isBlocked(bool newMessages) const;
 
-    const CodePoint& loadCurrentInstruction() const;
+    CodePoint loadCurrentInstruction() const;
+    const Operation& loadCurrentOperation() const;
     uint256_t nextGasCost() const;
 
-    bool stagedMessageEmpty() const;
-    bool stagedMessageUnresolved() const;
-    std::optional<uint256_t> getStagedMessageBlockHeight() const;
-    std::optional<Tuple> getStagedMessageTuple() const;
     uint256_t getTotalMessagesRead() const;
 
-    void addProcessedMessage(const InboxMessage& message);
+    void addProcessedMessage(const MachineMessage& message);
     void addProcessedSend(std::vector<uint8_t> data);
     void addProcessedLog(value log_val);
 
@@ -247,6 +203,7 @@ struct MachineState {
     void marshalBufferProof(OneStepProof& proof) const;
     value getStackOrImmed(uint64_t num, Operation op) const;
     WasmCodePoint compiledWasmCodePoint() const;
+    uint256_t gasCost(const Operation& op) const;
 };
 
 struct CodeResult {

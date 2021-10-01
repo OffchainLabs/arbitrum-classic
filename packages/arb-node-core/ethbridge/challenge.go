@@ -21,13 +21,16 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/pkg/errors"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *big.Int) *big.Int {
@@ -39,7 +42,7 @@ func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *b
 }
 
 func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *protocol.MerkleTree) {
-	cutHashes := cutsToHashes(bisection.Cuts)
+	cutHashes := common.HashSliceToRaw(bisection.Cuts)
 	segmentCount := len(cutHashes) - 1
 	chunks := make([][32]byte, 0, segmentCount)
 	segmentStart := new(big.Int).Set(bisection.ChallengedSegment.Start)
@@ -58,12 +61,12 @@ type Challenge struct {
 	builderCon *ethbridgecontracts.Challenge
 }
 
-func NewChallenge(address ethcommon.Address, client ethutils.EthClient, builder *BuilderBackend) (*Challenge, error) {
+func NewChallenge(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend, callOpts bind.CallOpts) (*Challenge, error) {
 	builderCon, err := ethbridgecontracts.NewChallenge(address, builder)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	watcher, err := NewChallengeWatcher(address, client)
+	watcher, err := NewChallengeWatcher(address, fromBlock, client, callOpts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -74,14 +77,29 @@ func NewChallenge(address ethcommon.Address, client ethutils.EthClient, builder 
 	}, nil
 }
 
+func addStackTrace(err error) error {
+	type stackTracer interface {
+		StackTrace() errors.StackTrace
+	}
+	_, ok := err.(stackTracer)
+	if ok {
+		return err
+	}
+	return errors.WithStack(err)
+}
+
 func (c *Challenge) BisectExecution(
 	ctx context.Context,
 	prevBisection *core.Bisection,
+	startState *core.ExecutionState,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-	subCuts []core.Cut,
+	subCuts []common.Hash,
 ) error {
-	subCutHashes := cutsToHashes(subCuts)
+	if startState.CutHash() != subCuts[0] {
+		return errors.New("start state doesn't match initial cut")
+	}
+	subCutHashes := common.HashSliceToRaw(subCuts)
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
 	_, err := c.builderCon.BisectExecution(
@@ -91,11 +109,12 @@ func (c *Challenge) BisectExecution(
 		challengedSegment.Start,
 		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
-		subCuts[0].(*core.ExecutionState).TotalGasConsumed,
-		subCuts[0].(*core.ExecutionState).RestHash(),
+		startState.TotalGasConsumed,
+		startState.RestHash(),
 		subCutHashes,
 	)
-	return errors.WithStack(err)
+
+	return addStackTrace(err)
 }
 
 func (c *Challenge) OneStepProveExecution(
@@ -131,8 +150,7 @@ func (c *Challenge) OneStepProveExecution(
 		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
 		beforeCut.TotalMessagesRead,
-		beforeCut.SendAcc,
-		beforeCut.LogAcc,
+		[2][32]byte{beforeCut.SendAcc, beforeCut.LogAcc},
 		[3]*big.Int{
 			beforeCut.TotalGasConsumed,
 			beforeCut.TotalSendCount,
@@ -168,10 +186,9 @@ func (c *Challenge) ProveContinuedExecution(
 	return errors.WithStack(err)
 }
 
-func cutsToHashes(cuts []core.Cut) [][32]byte {
-	cutHashes := make([][32]byte, 0, len(cuts))
-	for _, cut := range cuts {
-		cutHashes = append(cutHashes, cut.CutHash())
-	}
-	return cutHashes
+func (c *Challenge) Timeout(
+	ctx context.Context,
+) error {
+	_, err := c.builderCon.Timeout(authWithContext(ctx, c.builderAuth))
+	return errors.WithStack(err)
 }

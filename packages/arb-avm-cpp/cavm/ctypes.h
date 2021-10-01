@@ -75,15 +75,18 @@ typedef struct {
     uint64_t inbox_messages_consumed;
     ByteSlice sends;
     int sendCount;
-    void* sendAcc;
     ByteSlice logs;
     int logCount;
-    void* logAcc;
     ByteSlice debugPrints;
     int debugPrintCount;
     uint64_t numSteps;
     uint64_t numGas;
 } RawAssertion;
+
+typedef struct {
+    void* machine;
+    int slow_error;
+} CMachineResult;
 
 typedef void CAggregatorStore;
 typedef void CArbCore;

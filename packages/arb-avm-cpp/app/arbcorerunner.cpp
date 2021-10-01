@@ -20,9 +20,12 @@
 #include <string>
 
 void sleep() {
-    std::chrono::seconds dura(2000);
+    std::chrono::hours dura{20};
+    //    std::chrono::seconds dura(2000);
     std::this_thread::sleep_for(dura);  // this makes this thread sleep for 2s
 }
+
+constexpr bool clearDb = false;
 
 int main(int argc, char* argv[]) {
     using namespace std::chrono_literals;
@@ -32,8 +35,12 @@ int main(int argc, char* argv[]) {
     }
     auto dbpath = std::string(argv[1]);
     auto arbospath = std::string(argv[2]);
+    ArbCoreConfig coreConfig{};
+
+    coreConfig.profile_reset_db_except_inbox = clearDb;
+
     std::cout << "Loading db\n";
-    ArbStorage storage{dbpath};
+    ArbStorage storage{dbpath, coreConfig};
     std::cout << "Initializing arbstorage\n";
     auto status = storage.initialize(arbospath);
     if (!status.ok()) {

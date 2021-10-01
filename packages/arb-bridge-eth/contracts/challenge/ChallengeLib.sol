@@ -18,7 +18,12 @@
 
 pragma solidity ^0.6.11;
 
+import "../libraries/MerkleLib.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
 library ChallengeLib {
+    using SafeMath for uint256;
+
     function firstSegmentSize(uint256 totalCount, uint256 bisectionCount)
         internal
         pure
@@ -44,13 +49,9 @@ library ChallengeLib {
         return keccak256(abi.encodePacked(_segmentStart, _segmentLength, _startHash, _endHash));
     }
 
-    function inboxDeltaHash(bytes32 _inboxAcc, bytes32 _deltaAcc) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_inboxAcc, _deltaAcc));
-    }
-
-    function assertionHash(uint256 _arbGasUsed, bytes32 _restHash) internal pure returns (bytes32) {
+    function assertionHash(uint256 _avmGasUsed, bytes32 _restHash) internal pure returns (bytes32) {
         // Note: make sure this doesn't return Challenge.UNREACHABLE_ASSERTION (currently 0)
-        return keccak256(abi.encodePacked(_arbGasUsed, _restHash));
+        return keccak256(abi.encodePacked(_avmGasUsed, _restHash));
     }
 
     function assertionRestHash(
@@ -72,5 +73,43 @@ library ChallengeLib {
                     _logCount
                 )
             );
+    }
+
+    function updatedBisectionRoot(
+        bytes32[] memory _chainHashes,
+        uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength
+    ) internal pure returns (bytes32) {
+        uint256 bisectionCount = _chainHashes.length - 1;
+        bytes32[] memory hashes = new bytes32[](bisectionCount);
+        uint256 chunkSize = ChallengeLib.firstSegmentSize(_challengedSegmentLength, bisectionCount);
+        uint256 segmentStart = _challengedSegmentStart;
+        hashes[0] = ChallengeLib.bisectionChunkHash(
+            segmentStart,
+            chunkSize,
+            _chainHashes[0],
+            _chainHashes[1]
+        );
+        segmentStart = segmentStart.add(chunkSize);
+        chunkSize = ChallengeLib.otherSegmentSize(_challengedSegmentLength, bisectionCount);
+        for (uint256 i = 1; i < bisectionCount; i++) {
+            hashes[i] = ChallengeLib.bisectionChunkHash(
+                segmentStart,
+                chunkSize,
+                _chainHashes[i],
+                _chainHashes[i + 1]
+            );
+            segmentStart = segmentStart.add(chunkSize);
+        }
+        return MerkleLib.generateRoot(hashes);
+    }
+
+    function verifySegmentProof(
+        bytes32 challengeState,
+        bytes32 item,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute
+    ) internal pure returns (bool) {
+        return challengeState == MerkleLib.calculateRoot(_merkleNodes, _merkleRoute, item);
     }
 }

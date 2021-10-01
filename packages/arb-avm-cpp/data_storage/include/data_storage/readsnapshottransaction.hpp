@@ -19,11 +19,11 @@
 
 #include <data_storage/readtransaction.hpp>
 
-class ReadSnapshotTransaction : public ReadTransaction {
+class ReadSnapshotTransaction : public ReadConsistentTransaction {
    public:
     ReadSnapshotTransaction() = delete;
     explicit ReadSnapshotTransaction(std::shared_ptr<DataStorage> store)
-        : ReadTransaction(std::move(store)) {
+        : ReadConsistentTransaction(std::move(store)) {
         read_options.snapshot = transaction->datastorage->txn_db->GetSnapshot();
     }
     ~ReadSnapshotTransaction() {

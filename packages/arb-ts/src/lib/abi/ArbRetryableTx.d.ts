@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface ArbRetryableTxInterface extends ethers.utils.Interface {
   functions: {
@@ -79,355 +78,261 @@ interface ArbRetryableTxInterface extends ethers.utils.Interface {
     'Canceled(bytes32)': EventFragment
     'LifetimeExtended(bytes32,uint256)': EventFragment
     'Redeemed(bytes32)': EventFragment
+    'TicketCreated(bytes32)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'Canceled'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'LifetimeExtended'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Redeemed'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'TicketCreated'): EventFragment
 }
 
-export class ArbRetryableTx extends Contract {
+export class ArbRetryableTx extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: ArbRetryableTxInterface
 
   functions: {
-    cancel(txId: BytesLike, overrides?: Overrides): Promise<ContractTransaction>
-
-    'cancel(bytes32)'(
-      txId: BytesLike,
-      overrides?: Overrides
+    cancel(
+      ticketId: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     getBeneficiary(
-      txId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    'getBeneficiary(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string]>
 
     getKeepalivePrice(
-      txId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber]>
-
-    'getKeepalivePrice(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
     getLifetime(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'getLifetime()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     getSubmissionPrice(
       calldataSize: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
-    'getSubmissionPrice(uint256)'(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber]>
-
-    getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'getTimeout(bytes32)'(
-      txId: BytesLike,
+    getTimeout(
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
     keepalive(
-      txId: BytesLike,
-      overrides?: PayableOverrides
+      ticketId: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    'keepalive(bytes32)'(
+    redeem(
       txId: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    redeem(txId: BytesLike, overrides?: Overrides): Promise<ContractTransaction>
-
-    'redeem(bytes32)'(
-      txId: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
-  cancel(txId: BytesLike, overrides?: Overrides): Promise<ContractTransaction>
-
-  'cancel(bytes32)'(
-    txId: BytesLike,
-    overrides?: Overrides
+  cancel(
+    ticketId: BytesLike,
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  getBeneficiary(txId: BytesLike, overrides?: CallOverrides): Promise<string>
-
-  'getBeneficiary(bytes32)'(
-    txId: BytesLike,
+  getBeneficiary(
+    ticketId: BytesLike,
     overrides?: CallOverrides
   ): Promise<string>
 
   getKeepalivePrice(
-    txId: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<[BigNumber, BigNumber]>
-
-  'getKeepalivePrice(bytes32)'(
-    txId: BytesLike,
+    ticketId: BytesLike,
     overrides?: CallOverrides
   ): Promise<[BigNumber, BigNumber]>
 
   getLifetime(overrides?: CallOverrides): Promise<BigNumber>
-
-  'getLifetime()'(overrides?: CallOverrides): Promise<BigNumber>
 
   getSubmissionPrice(
     calldataSize: BigNumberish,
     overrides?: CallOverrides
   ): Promise<[BigNumber, BigNumber]>
 
-  'getSubmissionPrice(uint256)'(
-    calldataSize: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<[BigNumber, BigNumber]>
-
-  getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
-
-  'getTimeout(bytes32)'(
-    txId: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
+  getTimeout(ticketId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
 
   keepalive(
-    txId: BytesLike,
-    overrides?: PayableOverrides
+    ticketId: BytesLike,
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  'keepalive(bytes32)'(
+  redeem(
     txId: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  redeem(txId: BytesLike, overrides?: Overrides): Promise<ContractTransaction>
-
-  'redeem(bytes32)'(
-    txId: BytesLike,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
-    cancel(txId: BytesLike, overrides?: CallOverrides): Promise<void>
+    cancel(ticketId: BytesLike, overrides?: CallOverrides): Promise<void>
 
-    'cancel(bytes32)'(txId: BytesLike, overrides?: CallOverrides): Promise<void>
-
-    getBeneficiary(txId: BytesLike, overrides?: CallOverrides): Promise<string>
-
-    'getBeneficiary(bytes32)'(
-      txId: BytesLike,
+    getBeneficiary(
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
 
     getKeepalivePrice(
-      txId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber]>
-
-    'getKeepalivePrice(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
     getLifetime(overrides?: CallOverrides): Promise<BigNumber>
-
-    'getLifetime()'(overrides?: CallOverrides): Promise<BigNumber>
 
     getSubmissionPrice(
       calldataSize: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
-    'getSubmissionPrice(uint256)'(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber]>
-
-    getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
-
-    'getTimeout(bytes32)'(
-      txId: BytesLike,
+    getTimeout(
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    keepalive(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
-
-    'keepalive(bytes32)'(
-      txId: BytesLike,
+    keepalive(
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     redeem(txId: BytesLike, overrides?: CallOverrides): Promise<void>
-
-    'redeem(bytes32)'(txId: BytesLike, overrides?: CallOverrides): Promise<void>
   }
 
   filters: {
-    Canceled(txId: BytesLike | null): EventFilter
+    Canceled(
+      ticketId?: BytesLike | null
+    ): TypedEventFilter<[string], { ticketId: string }>
 
-    LifetimeExtended(txId: BytesLike | null, newTimeout: null): EventFilter
+    LifetimeExtended(
+      ticketId?: BytesLike | null,
+      newTimeout?: null
+    ): TypedEventFilter<
+      [string, BigNumber],
+      { ticketId: string; newTimeout: BigNumber }
+    >
 
-    Redeemed(txId: BytesLike | null): EventFilter
+    Redeemed(
+      ticketId?: BytesLike | null
+    ): TypedEventFilter<[string], { ticketId: string }>
+
+    TicketCreated(
+      ticketId?: BytesLike | null
+    ): TypedEventFilter<[string], { ticketId: string }>
   }
 
   estimateGas: {
-    cancel(txId: BytesLike, overrides?: Overrides): Promise<BigNumber>
-
-    'cancel(bytes32)'(
-      txId: BytesLike,
-      overrides?: Overrides
+    cancel(
+      ticketId: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     getBeneficiary(
-      txId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'getBeneficiary(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     getKeepalivePrice(
-      txId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'getKeepalivePrice(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     getLifetime(overrides?: CallOverrides): Promise<BigNumber>
-
-    'getLifetime()'(overrides?: CallOverrides): Promise<BigNumber>
 
     getSubmissionPrice(
       calldataSize: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'getSubmissionPrice(uint256)'(
-      calldataSize: BigNumberish,
+    getTimeout(
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
-
-    'getTimeout(bytes32)'(
-      txId: BytesLike,
-      overrides?: CallOverrides
+    keepalive(
+      ticketId: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    keepalive(txId: BytesLike, overrides?: PayableOverrides): Promise<BigNumber>
-
-    'keepalive(bytes32)'(
+    redeem(
       txId: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    redeem(txId: BytesLike, overrides?: Overrides): Promise<BigNumber>
-
-    'redeem(bytes32)'(
-      txId: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
     cancel(
-      txId: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'cancel(bytes32)'(
-      txId: BytesLike,
-      overrides?: Overrides
+      ticketId: BytesLike,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     getBeneficiary(
-      txId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getBeneficiary(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     getKeepalivePrice(
-      txId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getKeepalivePrice(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     getLifetime(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'getLifetime()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     getSubmissionPrice(
       calldataSize: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'getSubmissionPrice(uint256)'(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     getTimeout(
-      txId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getTimeout(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     keepalive(
-      txId: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'keepalive(bytes32)'(
-      txId: BytesLike,
-      overrides?: PayableOverrides
+      ticketId: BytesLike,
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     redeem(
       txId: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'redeem(bytes32)'(
-      txId: BytesLike,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

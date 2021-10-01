@@ -8,9 +8,19 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   await deploy('Rollup', {
     from: deployer,
+    args: [1],
+  })
+
+  await deploy('RollupUserFacet', {
+    from: deployer,
+    args: [],
+  })
+
+  await deploy('RollupAdminFacet', {
+    from: deployer,
     args: [],
   })
 }
 
 module.exports = func
-module.exports.tags = ['Rollup']
+module.exports.tags = ['Rollup', 'live', 'test']

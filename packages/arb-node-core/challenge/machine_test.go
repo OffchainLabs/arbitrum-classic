@@ -20,21 +20,20 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgetestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
-	backend, pks := test.SimulatedBackend(t)
+	backend, auths := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth := bind.NewKeyedTransactor(pks[0])
+	auth := auths[0]
 	_, _, machineTester, err := ethbridgetestcontracts.DeployMachineTester(auth, client)
 	test.FailIfError(t, err)
 	client.Commit()
@@ -43,7 +42,7 @@ func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 
 func TestDeserializeMachine(t *testing.T) {
 	machineTester := getTester(t)
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	test.FailIfError(t, err)
 	machine, err := cmachine.New(arbosPath)
 	test.FailIfError(t, err)
@@ -51,9 +50,7 @@ func TestDeserializeMachine(t *testing.T) {
 	stateData, err := machine.MarshalState()
 	test.FailIfError(t, err)
 
-	expectedHash, err := machine.Hash()
-	test.FailIfError(t, err)
-
+	expectedHash := machine.Hash()
 	offset, bridgeHash, err := machineTester.DeserializeMachine(nil, stateData)
 	test.FailIfError(t, err)
 

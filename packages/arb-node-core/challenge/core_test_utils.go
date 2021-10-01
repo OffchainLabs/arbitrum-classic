@@ -38,15 +38,12 @@ func (e FaultyExecutionCursor) Clone() core.ExecutionCursor {
 	}
 }
 
-func (e FaultyExecutionCursor) MachineHash() (common.Hash, error) {
-	hash, err := e.ExecutionCursor.MachineHash()
-	if err != nil {
-		return hash, err
-	}
+func (e FaultyExecutionCursor) MachineHash() common.Hash {
+	hash := e.ExecutionCursor.MachineHash()
 	if e.config.DistortMachineAtGas != nil && e.ExecutionCursor.TotalGasConsumed().Cmp(e.config.DistortMachineAtGas) >= 0 {
 		hash = distortHash(hash)
 	}
-	return hash, nil
+	return hash
 }
 
 func (e FaultyExecutionCursor) TotalMessagesRead() *big.Int {

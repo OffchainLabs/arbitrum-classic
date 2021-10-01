@@ -32,6 +32,7 @@ class DataCursor {
         EMPTY,      // Out: Ready to receive request for data
         REQUESTED,  // In: Data requested
         READY,      // Out: Data is ready to be picked up
+        DELIVERED,  // Out: Data is picked up and waiting to be confirmed
         ERROR       // Out: Error getting data
     } status_enum;
 

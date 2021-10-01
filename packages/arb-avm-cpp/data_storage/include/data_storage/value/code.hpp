@@ -31,6 +31,7 @@ class CodeSegment;
 class Code;
 
 uint64_t getNextSegmentID(std::shared_ptr<DataStorage> store);
+void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id);
 
 std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
                                             uint64_t segment_id,

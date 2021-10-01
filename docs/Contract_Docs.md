@@ -21,17 +21,16 @@ sidebar_label: Contract Docs
 
 ### Token Bridge
 
-- [EthERC20Bridge](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/EthERC20Bridge.md)
+- [GatewayRouter](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/libraries/gateway/GatewayRouter.md)
+- [L1GatewayRouter](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/gateway/L1GatewayRouter.md)
+- [L1ERC20Gateway](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/gateway/L1ERC20Gateway.md)
 
-- [ArbTokenBridge](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/ArbTokenBridge.md)
+- [L2GatewayRouter](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/gateway/L2GatewayRouter.md)
+- [L2ERC20Gateway](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/gateway/L2ERC20Gateway.md)
 
 - [StandardArbERC20](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/StandardArbERC20.md)
 
 - [aeERC20](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/libraries/aeERC20.md)
-
-- [IArbTokenBridge](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/IArbTokenBridge.md)
-
-- [IArbStandardToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/IArbStandardToken.md)
 
 - [ICustomToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/ICustomToken.md)
 

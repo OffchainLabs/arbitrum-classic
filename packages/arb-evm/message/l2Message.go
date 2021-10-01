@@ -224,17 +224,17 @@ func (t Transaction) AsDataSafe() []byte {
 	ret = append(ret, math.U256Bytes(t.MaxGas)...)
 	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
 	ret = append(ret, math.U256Bytes(t.SequenceNum)...)
-	ret = append(ret, addressData(t.DestAddress)...)
+	ret = append(ret, AddressData(t.DestAddress)...)
 	ret = append(ret, math.U256Bytes(t.Payment)...)
 	ret = append(ret, t.Data...)
 	return ret
 }
 
-func (t Transaction) MessageID(sender common.Address, chain common.Address) common.Hash {
+func (t Transaction) MessageID(sender common.Address, chainId *big.Int) common.Hash {
 	l2 := NewSafeL2Message(t)
 	dataHash := hashing.SoliditySHA3(l2.AsData())
-	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(dataHash))
-	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
+	inner := hashing.SoliditySHA3(hashing.Uint256(chainId), hashing.Bytes32(dataHash))
+	return hashing.SoliditySHA3(AddressData(sender), hashing.Bytes32(inner))
 }
 
 type BasicTx struct {
@@ -281,7 +281,7 @@ func (t BasicTx) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.MaxGas))...)
 	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.GasPriceBid))...)
-	ret = append(ret, addressData(t.DestAddress)...)
+	ret = append(ret, AddressData(t.DestAddress)...)
 	ret = append(ret, math.U256Bytes(new(big.Int).Set(t.Payment))...)
 	ret = append(ret, t.Data...)
 	return ret
@@ -310,6 +310,10 @@ func (t ContractTransaction) AsEthTx() *types.Transaction {
 	} else {
 		return types.NewTransaction(0, t.DestAddress.ToEthAddress(), t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 	}
+}
+
+func (t ContractTransaction) AsNonConstructorTx() *types.Transaction {
+	return types.NewTransaction(0, t.DestAddress.ToEthAddress(), t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 }
 
 type Call struct {
@@ -348,19 +352,15 @@ func (t SignedTransaction) Destination() common.Address {
 	return common.Address{}
 }
 
-func ChainAddressToID(chain common.Address) *big.Int {
-	return new(big.Int).SetBytes(chain[14:])
-}
-
-func NewRandomSignedEthTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) (*types.Transaction, error) {
+func NewRandomSignedEthTx(privKey *ecdsa.PrivateKey, nonce uint64, chainId *big.Int) (*types.Transaction, error) {
 	tx := NewRandomTransaction()
 	tx.SequenceNum = new(big.Int).SetUint64(nonce)
 	ethTx := tx.AsEthTx()
-	return types.SignTx(ethTx, types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
+	return types.SignTx(ethTx, types.NewEIP155Signer(chainId), privKey)
 }
 
-func NewRandomSignedTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) (SignedTransaction, error) {
-	signedTx, err := NewRandomSignedEthTx(chain, privKey, nonce)
+func NewRandomSignedTx(privKey *ecdsa.PrivateKey, nonce uint64, chainId *big.Int) (SignedTransaction, error) {
+	signedTx, err := NewRandomSignedEthTx(privKey, nonce, chainId)
 	if err != nil {
 		return SignedTransaction{}, err
 	}
@@ -580,10 +580,10 @@ func newTransactionBatchFromData(data []byte) TransactionBatch {
 	return TransactionBatch{Transactions: txes}
 }
 
-func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa.PrivateKey, initialNonce uint64) (TransactionBatch, error) {
+func NewRandomTransactionBatch(txCount int, privKey *ecdsa.PrivateKey, initialNonce uint64, chainId *big.Int) (TransactionBatch, error) {
 	messages := make([]AbstractL2Message, 0, txCount)
 	for i := 0; i < txCount; i++ {
-		tx, err := NewRandomSignedTx(chain, privKey, initialNonce)
+		tx, err := NewRandomSignedTx(privKey, initialNonce, chainId)
 		if err != nil {
 			return TransactionBatch{}, err
 		}

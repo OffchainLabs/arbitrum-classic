@@ -18,19 +18,25 @@ package rpc
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
 type BatcherMode interface {
@@ -38,7 +44,7 @@ type BatcherMode interface {
 }
 
 type ForwarderBatcherMode struct {
-	NodeURL string
+	Config configuration.Forwarder
 }
 
 func (b ForwarderBatcherMode) isBatcherMode() {}
@@ -57,20 +63,37 @@ type StatelessBatcherMode struct {
 
 func (b StatelessBatcherMode) isBatcherMode() {}
 
+type SequencerBatcherMode struct {
+	Auth        *bind.TransactOpts
+	Core        core.ArbCore
+	InboxReader *monitor.InboxReader
+}
+
+func (b SequencerBatcherMode) isBatcherMode() {}
+
 func SetupBatcher(
 	ctx context.Context,
 	client ethutils.EthClient,
 	rollupAddress common.Address,
+	l2ChainId *big.Int,
 	db *txdb.TxDB,
 	maxBatchTime time.Duration,
 	batcherMode BatcherMode,
+	dataSigner func([]byte) ([]byte, error),
+	config *configuration.Config,
+	walletConfig *configuration.Wallet,
 ) (batcher.TransactionBatcher, error) {
-	l2ChainID := message.ChainAddressToID(rollupAddress)
 	switch batcherMode := batcherMode.(type) {
 	case ForwarderBatcherMode:
-		return batcher.NewForwarder(ctx, batcherMode.NodeURL)
+		return batcher.NewForwarder(ctx, batcherMode.Config)
 	case StatelessBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
+		var auth transactauth.TransactAuth
+		var err error
+		if len(walletConfig.Fireblocks.SSLKey) > 0 {
+			auth, _, err = transactauth.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
+		} else {
+			auth, err = transactauth.NewTransactAuth(ctx, client, batcherMode.Auth)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -78,9 +101,15 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewStatelessBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime), nil
+		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, auth, inbox, maxBatchTime), nil
 	case StatefulBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
+		var auth transactauth.TransactAuth
+		var err error
+		if len(walletConfig.Fireblocks.SSLKey) > 0 {
+			auth, _, err = transactauth.NewFireblocksTransactAuth(ctx, client, batcherMode.Auth, walletConfig)
+		} else {
+			auth, err = transactauth.NewTransactAuth(ctx, client, batcherMode.Auth)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -88,22 +117,68 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewStatefulBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime)
+		return batcher.NewStatefulBatcher(ctx, db, l2ChainId, auth, inbox, maxBatchTime)
+	case SequencerBatcherMode:
+		rollup, err := ethbridgecontracts.NewRollupUserFacet(rollupAddress.ToEthAddress(), client)
+		if err != nil {
+			return nil, err
+		}
+		callOpts := &bind.CallOpts{Context: ctx}
+		seqInboxAddr, err := rollup.SequencerBridge(callOpts)
+		if err != nil {
+			return nil, err
+		}
+		seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr, client)
+		if err != nil {
+			return nil, err
+		}
+		feedBroadcaster := broadcaster.NewBroadcaster(config.Feed.Output)
+		seqBatcher, err := batcher.NewSequencerBatcher(
+			ctx,
+			batcherMode.Core,
+			l2ChainId,
+			batcherMode.InboxReader,
+			client,
+			seqInbox,
+			batcherMode.Auth,
+			dataSigner,
+			feedBroadcaster,
+			config,
+			walletConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		err = feedBroadcaster.Start(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "error starting feed broadcaster")
+		}
+		return seqBatcher, nil
 	default:
-		return nil, errors.New("unknown batcher type")
+		return nil, errors.New("unexpected batcher type")
 	}
 }
 
-func LaunchPublicServer(ctx context.Context, web3Server *rpc.Server, web3RPCPort string, web3WSPort string) error {
+func LaunchPublicServer(ctx context.Context, web3Server *rpc.Server, rpc configuration.RPC, ws configuration.WS) error {
+	if rpc.Port == ws.Port && rpc.Port != "" {
+		if rpc.Addr != ws.Addr {
+			return errors.New("if serving on same port, rpc and ws addreses must be the same")
+		}
+		if rpc.Path == ws.Path {
+			return errors.New("if serving on same port, ws and rpc path must be different")
+		}
+		return utils2.LaunchRPCAndWS(ctx, web3Server, rpc.Addr, rpc.Port, rpc.Path, ws.Path)
+	}
+
 	errChan := make(chan error, 1)
-	if web3RPCPort != "" {
+	if rpc.Port != "" {
 		go func() {
-			errChan <- utils2.LaunchRPC(ctx, web3Server, web3RPCPort)
+			errChan <- utils2.LaunchRPC(ctx, web3Server, rpc.Addr, rpc.Port, rpc.Path)
 		}()
 	}
-	if web3WSPort != "" {
+	if ws.Port != "" {
 		go func() {
-			errChan <- utils2.LaunchWS(ctx, web3Server, web3WSPort)
+			errChan <- utils2.LaunchWS(ctx, web3Server, ws.Addr, ws.Port, ws.Path)
 		}()
 	}
 	return <-errChan

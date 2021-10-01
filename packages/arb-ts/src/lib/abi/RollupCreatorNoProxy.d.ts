@@ -9,387 +9,82 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
-  Overrides,
-  CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface RollupCreatorNoProxyInterface extends ethers.utils.Interface {
-  functions: {
-    'createRollupNoProxy(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)': FunctionFragment
-    'owner()': FunctionFragment
-    'renounceOwnership()': FunctionFragment
-    'setTemplates(address,address,address)': FunctionFragment
-    'transferOwnership(address)': FunctionFragment
-  }
-
-  encodeFunctionData(
-    functionFragment: 'createRollupNoProxy',
-    values: [
-      BytesLike,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      string,
-      string,
-      BytesLike
-    ]
-  ): string
-  encodeFunctionData(functionFragment: 'owner', values?: undefined): string
-  encodeFunctionData(
-    functionFragment: 'renounceOwnership',
-    values?: undefined
-  ): string
-  encodeFunctionData(
-    functionFragment: 'setTemplates',
-    values: [string, string, string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'transferOwnership',
-    values: [string]
-  ): string
-
-  decodeFunctionResult(
-    functionFragment: 'createRollupNoProxy',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'renounceOwnership',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setTemplates',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'transferOwnership',
-    data: BytesLike
-  ): Result
+  functions: {}
 
   events: {
-    'OwnershipTransferred(address,address)': EventFragment
-    'RollupCreated(address)': EventFragment
+    'RollupCreated(address,address)': EventFragment
   }
 
-  getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
 }
 
-export class RollupCreatorNoProxy extends Contract {
+export class RollupCreatorNoProxy extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: RollupCreatorNoProxyInterface
 
-  functions: {
-    createRollupNoProxy(
-      _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
-      _stakeToken: string,
-      _owner: string,
-      _extraConfig: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+  functions: {}
 
-    'createRollupNoProxy(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
-      _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
-      _stakeToken: string,
-      _owner: string,
-      _extraConfig: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    owner(overrides?: CallOverrides): Promise<[string]>
-
-    'owner()'(overrides?: CallOverrides): Promise<[string]>
-
-    renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
-
-    setTemplates(
-      _rollupTemplate: string,
-      _challengeFactory: string,
-      _nodeFactory: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'setTemplates(address,address,address)'(
-      _rollupTemplate: string,
-      _challengeFactory: string,
-      _nodeFactory: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    transferOwnership(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-  }
-
-  createRollupNoProxy(
-    _machineHash: BytesLike,
-    _confirmPeriodBlocks: BigNumberish,
-    _extraChallengeTimeBlocks: BigNumberish,
-    _arbGasSpeedLimitPerBlock: BigNumberish,
-    _baseStake: BigNumberish,
-    _stakeToken: string,
-    _owner: string,
-    _extraConfig: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'createRollupNoProxy(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
-    _machineHash: BytesLike,
-    _confirmPeriodBlocks: BigNumberish,
-    _extraChallengeTimeBlocks: BigNumberish,
-    _arbGasSpeedLimitPerBlock: BigNumberish,
-    _baseStake: BigNumberish,
-    _stakeToken: string,
-    _owner: string,
-    _extraConfig: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  owner(overrides?: CallOverrides): Promise<string>
-
-  'owner()'(overrides?: CallOverrides): Promise<string>
-
-  renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-  'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
-
-  setTemplates(
-    _rollupTemplate: string,
-    _challengeFactory: string,
-    _nodeFactory: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'setTemplates(address,address,address)'(
-    _rollupTemplate: string,
-    _challengeFactory: string,
-    _nodeFactory: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  transferOwnership(
-    newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transferOwnership(address)'(
-    newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  callStatic: {
-    createRollupNoProxy(
-      _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
-      _stakeToken: string,
-      _owner: string,
-      _extraConfig: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'createRollupNoProxy(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
-      _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
-      _stakeToken: string,
-      _owner: string,
-      _extraConfig: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    owner(overrides?: CallOverrides): Promise<string>
-
-    'owner()'(overrides?: CallOverrides): Promise<string>
-
-    renounceOwnership(overrides?: CallOverrides): Promise<void>
-
-    'renounceOwnership()'(overrides?: CallOverrides): Promise<void>
-
-    setTemplates(
-      _rollupTemplate: string,
-      _challengeFactory: string,
-      _nodeFactory: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'setTemplates(address,address,address)'(
-      _rollupTemplate: string,
-      _challengeFactory: string,
-      _nodeFactory: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    transferOwnership(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-  }
+  callStatic: {}
 
   filters: {
-    OwnershipTransferred(
-      previousOwner: string | null,
-      newOwner: string | null
-    ): EventFilter
-
-    RollupCreated(rollupAddress: null): EventFilter
+    RollupCreated(
+      rollupAddress?: null,
+      inbox?: null
+    ): TypedEventFilter<
+      [string, string],
+      { rollupAddress: string; inbox: string }
+    >
   }
 
-  estimateGas: {
-    createRollupNoProxy(
-      _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
-      _stakeToken: string,
-      _owner: string,
-      _extraConfig: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
+  estimateGas: {}
 
-    'createRollupNoProxy(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
-      _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
-      _stakeToken: string,
-      _owner: string,
-      _extraConfig: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    owner(overrides?: CallOverrides): Promise<BigNumber>
-
-    'owner()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    renounceOwnership(overrides?: Overrides): Promise<BigNumber>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<BigNumber>
-
-    setTemplates(
-      _rollupTemplate: string,
-      _challengeFactory: string,
-      _nodeFactory: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'setTemplates(address,address,address)'(
-      _rollupTemplate: string,
-      _challengeFactory: string,
-      _nodeFactory: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    transferOwnership(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-  }
-
-  populateTransaction: {
-    createRollupNoProxy(
-      _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
-      _stakeToken: string,
-      _owner: string,
-      _extraConfig: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'createRollupNoProxy(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
-      _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
-      _stakeToken: string,
-      _owner: string,
-      _extraConfig: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    setTemplates(
-      _rollupTemplate: string,
-      _challengeFactory: string,
-      _nodeFactory: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'setTemplates(address,address,address)'(
-      _rollupTemplate: string,
-      _challengeFactory: string,
-      _nodeFactory: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    transferOwnership(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-  }
+  populateTransaction: {}
 }

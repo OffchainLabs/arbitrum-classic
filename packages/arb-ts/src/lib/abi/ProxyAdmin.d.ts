@@ -9,17 +9,16 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   Overrides,
   PayableOverrides,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface ProxyAdminInterface extends ethers.utils.Interface {
   functions: {
@@ -97,16 +96,46 @@ interface ProxyAdminInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment
 }
 
-export class ProxyAdmin extends Contract {
+export class ProxyAdmin extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: ProxyAdminInterface
 
@@ -114,148 +143,76 @@ export class ProxyAdmin extends Contract {
     changeProxyAdmin(
       proxy: string,
       newAdmin: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'changeProxyAdmin(address,address)'(
-      proxy: string,
-      newAdmin: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     getProxyAdmin(proxy: string, overrides?: CallOverrides): Promise<[string]>
-
-    'getProxyAdmin(address)'(
-      proxy: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
 
     getProxyImplementation(
       proxy: string,
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    'getProxyImplementation(address)'(
-      proxy: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
     owner(overrides?: CallOverrides): Promise<[string]>
 
-    'owner()'(overrides?: CallOverrides): Promise<[string]>
-
-    renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
 
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     upgrade(
       proxy: string,
       implementation: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'upgrade(address,address)'(
-      proxy: string,
-      implementation: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     upgradeAndCall(
       proxy: string,
       implementation: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'upgradeAndCall(address,address,bytes)'(
-      proxy: string,
-      implementation: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
   }
 
   changeProxyAdmin(
     proxy: string,
     newAdmin: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'changeProxyAdmin(address,address)'(
-    proxy: string,
-    newAdmin: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   getProxyAdmin(proxy: string, overrides?: CallOverrides): Promise<string>
-
-  'getProxyAdmin(address)'(
-    proxy: string,
-    overrides?: CallOverrides
-  ): Promise<string>
 
   getProxyImplementation(
     proxy: string,
     overrides?: CallOverrides
   ): Promise<string>
 
-  'getProxyImplementation(address)'(
-    proxy: string,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   owner(overrides?: CallOverrides): Promise<string>
 
-  'owner()'(overrides?: CallOverrides): Promise<string>
-
-  renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
-
-  'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+  renounceOwnership(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
 
   transferOwnership(
     newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transferOwnership(address)'(
-    newOwner: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   upgrade(
     proxy: string,
     implementation: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'upgrade(address,address)'(
-    proxy: string,
-    implementation: string,
-    overrides?: Overrides
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   upgradeAndCall(
     proxy: string,
     implementation: string,
     data: BytesLike,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'upgradeAndCall(address,address,bytes)'(
-    proxy: string,
-    implementation: string,
-    data: BytesLike,
-    overrides?: PayableOverrides
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   callStatic: {
@@ -265,43 +222,18 @@ export class ProxyAdmin extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'changeProxyAdmin(address,address)'(
-      proxy: string,
-      newAdmin: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     getProxyAdmin(proxy: string, overrides?: CallOverrides): Promise<string>
-
-    'getProxyAdmin(address)'(
-      proxy: string,
-      overrides?: CallOverrides
-    ): Promise<string>
 
     getProxyImplementation(
       proxy: string,
       overrides?: CallOverrides
     ): Promise<string>
 
-    'getProxyImplementation(address)'(
-      proxy: string,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     owner(overrides?: CallOverrides): Promise<string>
-
-    'owner()'(overrides?: CallOverrides): Promise<string>
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>
 
-    'renounceOwnership()'(overrides?: CallOverrides): Promise<void>
-
     transferOwnership(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'transferOwnership(address)'(
       newOwner: string,
       overrides?: CallOverrides
     ): Promise<void>
@@ -312,20 +244,7 @@ export class ProxyAdmin extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'upgrade(address,address)'(
-      proxy: string,
-      implementation: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     upgradeAndCall(
-      proxy: string,
-      implementation: string,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'upgradeAndCall(address,address,bytes)'(
       proxy: string,
       implementation: string,
       data: BytesLike,
@@ -335,83 +254,50 @@ export class ProxyAdmin extends Contract {
 
   filters: {
     OwnershipTransferred(
-      previousOwner: string | null,
-      newOwner: string | null
-    ): EventFilter
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >
   }
 
   estimateGas: {
     changeProxyAdmin(
       proxy: string,
       newAdmin: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'changeProxyAdmin(address,address)'(
-      proxy: string,
-      newAdmin: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     getProxyAdmin(proxy: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'getProxyAdmin(address)'(
-      proxy: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
 
     getProxyImplementation(
       proxy: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'getProxyImplementation(address)'(
-      proxy: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     owner(overrides?: CallOverrides): Promise<BigNumber>
 
-    'owner()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    renounceOwnership(overrides?: Overrides): Promise<BigNumber>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<BigNumber>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
 
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     upgrade(
       proxy: string,
       implementation: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'upgrade(address,address)'(
-      proxy: string,
-      implementation: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     upgradeAndCall(
       proxy: string,
       implementation: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'upgradeAndCall(address,address,bytes)'(
-      proxy: string,
-      implementation: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
 
@@ -419,21 +305,10 @@ export class ProxyAdmin extends Contract {
     changeProxyAdmin(
       proxy: string,
       newAdmin: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'changeProxyAdmin(address,address)'(
-      proxy: string,
-      newAdmin: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     getProxyAdmin(
-      proxy: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getProxyAdmin(address)'(
       proxy: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -443,53 +318,28 @@ export class ProxyAdmin extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'getProxyImplementation(address)'(
-      proxy: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'renounceOwnership()'(overrides?: Overrides): Promise<PopulatedTransaction>
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
 
     transferOwnership(
       newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transferOwnership(address)'(
-      newOwner: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     upgrade(
       proxy: string,
       implementation: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'upgrade(address,address)'(
-      proxy: string,
-      implementation: string,
-      overrides?: Overrides
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     upgradeAndCall(
       proxy: string,
       implementation: string,
       data: BytesLike,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'upgradeAndCall(address,address,bytes)'(
-      proxy: string,
-      implementation: string,
-      data: BytesLike,
-      overrides?: PayableOverrides
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }
 }

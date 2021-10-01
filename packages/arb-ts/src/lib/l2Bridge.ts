@@ -15,23 +15,26 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, providers, ethers } from 'ethers'
-import { ArbTokenBridge__factory } from './abi/factories/ArbTokenBridge__factory'
-import { ArbTokenBridge } from './abi/ArbTokenBridge'
-import { ArbSys } from './abi/ArbSys'
+
+import { Block, Provider } from '@ethersproject/abstract-provider'
+import { Signer } from '@ethersproject/abstract-signer'
+import { BigNumber } from '@ethersproject/bignumber'
+import { ContractTransaction, PayableOverrides } from '@ethersproject/contracts'
+
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
+import { ArbSys } from './abi/ArbSys'
+import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__factory'
 import { StandardArbERC20 } from './abi/StandardArbERC20'
 import { ICustomToken } from './abi/ICustomToken'
-import { ICustomToken__factory } from './abi/factories/ICustomToken__factory'
-import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__factory'
-import { IArbToken } from './abi/IArbToken'
-import { IArbToken__factory } from './abi/factories/IArbToken__factory'
+import { L2GatewayRouter__factory } from './abi/factories/L2GatewayRouter__factory'
+import { L2GatewayRouter } from './abi/L2GatewayRouter'
 import { ArbRetryableTx__factory } from './abi/factories/ArbRetryableTx__factory'
 import { ArbRetryableTx } from './abi/ArbRetryableTx'
-import { PayableOverrides } from '@ethersproject/contracts'
 
-export const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
-const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E'
+import {
+  ARB_SYS_ADDRESS,
+  ARB_RETRYABLE_TX_ADDRESS,
+} from './precompile_addresses'
 
 export interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
@@ -47,14 +50,13 @@ export interface Tokens {
 export class L2Bridge {
   l2Signer: Signer
   arbSys: ArbSys
-  arbTokenBridge: ArbTokenBridge
+  l2GatewayRouter: L2GatewayRouter
   l2Tokens: Tokens
-  l2Provider: providers.Provider
-  l2EthBalance: BigNumber
+  l2Provider: Provider
   arbRetryableTx: ArbRetryableTx
   walletAddressCache?: string
 
-  constructor(arbTokenBridgeAddress: string, l2Signer: Signer) {
+  constructor(l2GatewayRouterAddress: string, l2Signer: Signer) {
     this.l2Tokens = {}
 
     this.l2Signer = l2Signer
@@ -68,8 +70,8 @@ export class L2Bridge {
 
     this.arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Signer)
 
-    this.arbTokenBridge = ArbTokenBridge__factory.connect(
-      arbTokenBridgeAddress,
+    this.l2GatewayRouter = L2GatewayRouter__factory.connect(
+      l2GatewayRouterAddress,
       l2Signer
     )
 
@@ -77,15 +79,16 @@ export class L2Bridge {
       ARB_RETRYABLE_TX_ADDRESS,
       l2Signer
     )
-
-    this.l2EthBalance = BigNumber.from(0)
   }
 
+  /**
+   * Initiate Ether withdrawal (via ArbSys)
+   */
   public async withdrawETH(
     value: BigNumber,
     destinationAddress?: string,
-    overrides?: PayableOverrides
-  ) {
+    overrides: PayableOverrides = {}
+  ): Promise<ContractTransaction> {
     const address = destinationAddress || (await this.getWalletAddress())
     return this.arbSys.functions.withdrawEth(address, {
       value,
@@ -93,75 +96,44 @@ export class L2Bridge {
     })
   }
 
-  public getLatestBlock() {
+  public getLatestBlock(): Promise<Block> {
     return this.l2Provider.getBlock('latest')
   }
+  /**
+   * Initiate token withdrawal (via l2ERC20Gateway)
+   */
   public async withdrawERC20(
     erc20l1Address: string,
     amount: BigNumber,
     destinationAddress?: string,
     overrides: PayableOverrides = {}
-  ) {
-    const destination = destinationAddress || (await this.getWalletAddress())
+  ): Promise<ContractTransaction> {
+    const to = destinationAddress || (await this.getWalletAddress())
 
-    const tokenData = await this.getAndUpdateL2TokenData(erc20l1Address)
-    if (!tokenData) {
-      throw new Error("Can't withdraw; token not deployed")
-    }
-    const erc20TokenData = tokenData.ERC20
-
-    if (!erc20TokenData) {
-      throw new Error(
-        `Can't withdraw; ArbERC20 for ${erc20l1Address} doesn't exist`
-      )
-    }
-    return erc20TokenData.contract.functions.withdraw(
-      destination,
-      amount,
-      overrides
-    )
+    return this.l2GatewayRouter.functions[
+      'outboundTransfer(address,address,uint256,bytes)'
+    ](erc20l1Address, to, amount, '0x', overrides)
   }
 
-  public async updateAllL2Tokens() {
+  public async updateAllL2Tokens(): Promise<Tokens> {
     for (const l1Address in this.l2Tokens) {
-      await this.getAndUpdateL2TokenData(l1Address)
+      const l2Address = this.l2Tokens[l1Address]?.ERC20?.contract.address
+      if (l2Address) {
+        await this.getAndUpdateL2TokenData(l1Address, l2Address)
+      }
     }
     return this.l2Tokens
   }
 
-  public async getAndUpdateL2TokenData(erc20L1Address: string) {
+  public async getAndUpdateL2TokenData(
+    erc20L1Address: string,
+    l2ERC20Address: string
+  ): Promise<L2TokenData | undefined> {
     const tokenData = this.l2Tokens[erc20L1Address] || {
       ERC20: undefined,
-      ERC777: undefined,
       CUSTOM: undefined,
     }
-    this.l2Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
-
-    // handle custom L2 token:
-    const [
-      customTokenAddress,
-    ] = await this.arbTokenBridge.functions.customL2Token(erc20L1Address)
-    if (customTokenAddress !== ethers.constants.AddressZero) {
-      const customTokenContract = ICustomToken__factory.connect(
-        customTokenAddress,
-        this.l2Signer
-      )
-      tokenData.CUSTOM = {
-        contract: customTokenContract,
-        balance: BigNumber.from(0),
-      }
-      try {
-        const [balance] = await customTokenContract.functions.balanceOf(
-          walletAddress
-        )
-        tokenData.CUSTOM.balance = balance
-      } catch (err) {
-        console.warn("Could not get custom token's balance", err)
-      }
-    }
-
-    const l2ERC20Address = await this.getERC20L2Address(erc20L1Address)
 
     // check if standard arb erc20:
     if (!tokenData.ERC20) {
@@ -194,6 +166,7 @@ export class L2Bridge {
     }
 
     if (tokenData.ERC20 || tokenData.CUSTOM) {
+      this.l2Tokens[erc20L1Address] = tokenData
       return tokenData
     } else {
       console.warn(`No L2 token for ${erc20L1Address} found`)
@@ -201,17 +174,24 @@ export class L2Bridge {
     }
   }
 
-  public getERC20L2Address(erc20L1Address: string) {
-    let address: string | undefined
-    if ((address = this.l2Tokens[erc20L1Address]?.ERC20?.contract.address)) {
-      return address
-    }
-    return this.arbTokenBridge.functions
-      .calculateL2TokenAddress(erc20L1Address)
-      .then(([res]) => res)
+  // public getERC20L2Address(erc20L1Address: string) {
+  //   let address: string | undefined
+  //   if ((address = this.l2Tokens[erc20L1Address]?.ERC20?.contract.address)) {
+  //     return address
+  //   }
+  //   return this.l2GatewayRouter.functions
+  //     .calculateL2TokenAddress(erc20L1Address)
+  //     .then(([res]) => res)
+  // }
+
+  public async getGatewayAddress(erc20L1Address: string): Promise<string> {
+    return (await this.l2GatewayRouter.functions.getGateway(erc20L1Address))
+      .gateway
   }
 
-  public getERC20L1Address(erc20L2Address: string) {
+  public getERC20L1Address(
+    erc20L2Address: string
+  ): Promise<string> | undefined {
     try {
       const arbERC20 = StandardArbERC20__factory.connect(
         erc20L2Address,
@@ -225,11 +205,13 @@ export class L2Bridge {
     }
   }
 
-  public getTxnSubmissionPrice(dataSize: BigNumber) {
+  public getTxnSubmissionPrice(
+    dataSize: BigNumber | number
+  ): Promise<[BigNumber, BigNumber]> {
     return this.arbRetryableTx.functions.getSubmissionPrice(dataSize)
   }
 
-  public async getWalletAddress() {
+  public async getWalletAddress(): Promise<string> {
     if (this.walletAddressCache) {
       return this.walletAddressCache
     }
@@ -237,9 +219,7 @@ export class L2Bridge {
     return this.walletAddressCache
   }
 
-  public async getAndUpdateL2EthBalance(): Promise<BigNumber> {
-    const bal = await this.l2Signer.getBalance()
-    this.l2EthBalance = bal
-    return bal
+  public getL2EthBalance(): Promise<BigNumber> {
+    return this.l2Signer.getBalance()
   }
 }

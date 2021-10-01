@@ -18,6 +18,7 @@ package web3
 
 import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 )

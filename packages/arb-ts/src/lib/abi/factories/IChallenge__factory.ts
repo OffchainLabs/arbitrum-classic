@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IChallenge } from '../IChallenge'
-
-export class IChallenge__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IChallenge {
-    return new Contract(address, _abi, signerOrProvider) as IChallenge
-  }
-}
+import type { IChallenge, IChallengeInterface } from '../IChallenge'
 
 const _abi = [
   {
@@ -41,6 +31,13 @@ const _abi = [
       },
     ],
     stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'clearChallenge',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -99,8 +96,13 @@ const _abi = [
         type: 'uint256',
       },
       {
+        internalType: 'contract ISequencerInbox',
+        name: '_sequencerBridge',
+        type: 'address',
+      },
+      {
         internalType: 'contract IBridge',
-        name: '_bridge',
+        name: '_delayedBridge',
         type: 'address',
       },
     ],
@@ -130,3 +132,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class IChallenge__factory {
+  static readonly abi = _abi
+  static createInterface(): IChallengeInterface {
+    return new utils.Interface(_abi) as IChallengeInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IChallenge {
+    return new Contract(address, _abi, signerOrProvider) as IChallenge
+  }
+}

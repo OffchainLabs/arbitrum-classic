@@ -17,9 +17,6 @@
 package cmachine
 
 /*
-#cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lwasmer -lstdc++ -lm -lrocksdb -lkeccak -ldl
-#cgo linux LDFLAGS: -latomic
 #include "../cavm/carbstorage.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,9 +26,10 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
@@ -39,11 +37,41 @@ type ArbStorage struct {
 	c unsafe.Pointer
 }
 
-func NewArbStorage(dbPath string) (*ArbStorage, error) {
+func boolToCInt(b bool) C.int {
+	x := 0
+	if b {
+		x = 1
+	}
+	return C.int(x)
+}
+
+func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, error) {
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
 
-	cArbStorage := C.createArbStorage(cDbPath)
+	cSaveRocksdbPath := C.CString(coreConfig.SaveRocksdbPath)
+	defer C.free(unsafe.Pointer(cSaveRocksdbPath))
+
+	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
+	saveRocksdbIntervalSeconds := int(coreConfig.SaveRocksdbInterval.Seconds())
+	cConfig := C.CArbCoreConfig{
+		message_process_count:         C.int(coreConfig.MessageProcessCount),
+		checkpoint_load_gas_cost:      C.int(coreConfig.CheckpointLoadGasCost),
+		min_gas_checkpoint_frequency:  C.int(coreConfig.GasCheckpointFrequency),
+		cache_expiration_seconds:      C.int(cacheExpirationSeconds),
+		lru_cache_size:                C.int(coreConfig.Cache.LRUSize),
+		debug:                         boolToCInt(coreConfig.Debug),
+		save_rocksdb_interval:         C.int(saveRocksdbIntervalSeconds),
+		save_rocksdb_path:             cSaveRocksdbPath,
+		lazy_load_core_machine:        boolToCInt(coreConfig.LazyLoadCoreMachine),
+		lazy_load_archive_queries:     boolToCInt(coreConfig.LazyLoadArchiveQueries),
+		profile_reorg_to:              C.int(coreConfig.Profile.ReorgTo),
+		profile_run_until:             C.int(coreConfig.Profile.RunUntil),
+		profile_load_count:            C.int(coreConfig.Profile.LoadCount),
+		profile_reset_db_except_inbox: boolToCInt(coreConfig.Profile.ResetAllExceptInbox),
+	}
+
+	cArbStorage := C.createArbStorage(cDbPath, cConfig)
 
 	if cArbStorage == nil {
 		return nil, errors.Errorf("error creating ArbStorage %v", dbPath)
@@ -61,7 +89,7 @@ func (s *ArbStorage) Initialize(contractPath string) error {
 	success := C.initializeArbStorage(s.c, cContractPath)
 
 	if success == 0 {
-		return errors.New("failed to initialize storage")
+		return errors.Errorf("failed to initialize storage with mexe '%v', possibly corrupt database or incorrect L1 node?", contractPath)
 	}
 	return nil
 }

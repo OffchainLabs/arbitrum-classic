@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package staker
 
 import (
@@ -6,15 +22,21 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
 
 type Strategy uint8
 
@@ -27,8 +49,14 @@ const (
 
 type Staker struct {
 	*Validator
-	activeChallenge *challenge.Challenger
-	strategy        Strategy
+	activeChallenge     *challenge.Challenger
+	strategy            Strategy
+	fromBlock           int64
+	baseCallOpts        bind.CallOpts
+	auth                transactauth.TransactAuth
+	config              configuration.Validator
+	highGasBlocksBuffer *big.Int
+	lastActCalledBlock  *big.Int
 }
 
 func NewStaker(
@@ -36,20 +64,30 @@ func NewStaker(
 	lookup core.ArbCoreLookup,
 	client ethutils.EthClient,
 	wallet *ethbridge.ValidatorWallet,
+	fromBlock int64,
 	validatorUtilsAddress common.Address,
 	strategy Strategy,
-) (*Staker, *ethbridge.BridgeWatcher, error) {
-	val, err := NewValidator(ctx, lookup, client, wallet, validatorUtilsAddress)
+	callOpts bind.CallOpts,
+	auth transactauth.TransactAuth,
+	config configuration.Validator,
+) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
+	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress, callOpts)
 	if err != nil {
 		return nil, nil, err
 	}
 	return &Staker{
-		Validator: val,
-		strategy:  strategy,
-	}, val.bridge, nil
+		Validator:           val,
+		strategy:            strategy,
+		fromBlock:           fromBlock,
+		baseCallOpts:        callOpts,
+		auth:                auth,
+		config:              config,
+		highGasBlocksBuffer: big.NewInt(config.L1PostingStrategy.HighGasDelayBlocks),
+		lastActCalledBlock:  nil,
+	}, val.delayedBridge, nil
 }
 
-func (s *Staker) RunInBackground(ctx context.Context) chan bool {
+func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration) chan bool {
 	done := make(chan bool)
 	go func() {
 		defer func() {
@@ -57,18 +95,22 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 		}()
 		backoff := time.Second
 		for {
-			tx, err := s.Act(ctx)
-			if err == nil && tx != nil {
+			arbTx, err := s.Act(ctx)
+			if err == nil && arbTx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
-				_, err = ethbridge.WaitForReceiptWithResults(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking")
+				_, err = transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.auth)
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
-					logger.Info().Str("hash", tx.Hash().String()).Msg("Successfully executed transaction")
+					logger.Info().Str("hash", arbTx.Hash().String()).Msg("Successfully executed transaction")
 				}
 			}
 			if err != nil {
 				logger.Warn().Err(err).Send()
-				<-time.After(backoff)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(backoff):
+				}
 				if backoff < 60*time.Second {
 					backoff *= 2
 				}
@@ -77,15 +119,72 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 				backoff = time.Second
 			}
 			// Force a GC run to clean up any execution cursors while we wait
-			delay := time.After(time.Minute)
+			delay := time.After(stakerDelay)
 			runtime.GC()
-			<-delay
+			select {
+			case <-ctx.Done():
+				return
+			case <-delay:
+			}
 		}
 	}()
 	return done
 }
 
-func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
+func (s *Staker) shouldAct(ctx context.Context) bool {
+	var gasPriceHigh = false
+	var gasPriceFloat float64
+	gasPrice, err := s.client.SuggestGasPrice(ctx)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error getting gas price")
+	} else {
+		gasPriceFloat = float64(gasPrice.Int64()) / 1e9
+		if gasPriceFloat >= s.config.L1PostingStrategy.HighGasThreshold {
+			gasPriceHigh = true
+		}
+	}
+	latestBlockInfo, err := s.client.BlockInfoByNumber(ctx, nil)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error getting latest block")
+		return true
+	}
+	latestBlockNum := latestBlockInfo.Number.ToInt()
+	if s.lastActCalledBlock == nil {
+		s.lastActCalledBlock = latestBlockNum
+	}
+	blocksSinceActCalled := new(big.Int).Sub(latestBlockNum, s.lastActCalledBlock)
+	s.lastActCalledBlock = latestBlockNum
+	if gasPriceHigh {
+		// We're eating into the high gas buffer to delay our tx
+		s.highGasBlocksBuffer.Sub(s.highGasBlocksBuffer, blocksSinceActCalled)
+	} else {
+		// We'll make a tx if necessary, so we can add to the buffer for future high gas
+		s.highGasBlocksBuffer.Add(s.highGasBlocksBuffer, blocksSinceActCalled)
+	}
+	// Clamp `s.highGasBlocksBuffer` to between 0 and HighGasDelayBlocks
+	if s.highGasBlocksBuffer.Sign() < 0 {
+		s.highGasBlocksBuffer.SetInt64(0)
+	} else if s.highGasBlocksBuffer.Cmp(big.NewInt(s.config.L1PostingStrategy.HighGasDelayBlocks)) > 0 {
+		s.highGasBlocksBuffer.SetInt64(s.config.L1PostingStrategy.HighGasDelayBlocks)
+	}
+	if gasPriceHigh && s.highGasBlocksBuffer.Sign() > 0 {
+		logger.
+			Info().
+			Float64("gasPrice", gasPriceFloat).
+			Float64("highGasPriceConfig", s.config.L1PostingStrategy.HighGasThreshold).
+			Str("highGasBuffer", s.highGasBlocksBuffer.String()).
+			Msg("not acting yet as gas price is high")
+		return false
+	} else {
+		return true
+	}
+}
+
+func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error) {
+	if !s.shouldAct(ctx) {
+		// The fact that we're delaying acting is alreay logged in `shouldAct`
+		return nil, nil
+	}
 	s.builder.ClearTransactions()
 	rawInfo, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {
@@ -128,15 +227,16 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		}
 	}
 	if shouldResolveNodes {
-		tx, err := s.removeOldStakers(ctx)
-		if err != nil || tx != nil {
-			return tx, err
+		// Keep the stake of this validator placed if we plan on staking further
+		arbTx, err := s.removeOldStakers(ctx, effectiveStrategy >= StakeLatestStrategy)
+		if err != nil || arbTx != nil {
+			return arbTx, err
 		}
-		tx, err = s.resolveTimedOutChallenges(ctx)
-		if err != nil || tx != nil {
-			return tx, err
+		arbTx, err = s.resolveTimedOutChallenges(ctx)
+		if err != nil || arbTx != nil {
+			return arbTx, err
 		}
-		if err := s.resolveNextNode(ctx, rawInfo); err != nil {
+		if err := s.resolveNextNode(ctx, rawInfo, s.fromBlock); err != nil {
 			return nil, err
 		}
 	}
@@ -191,7 +291,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 	if s.activeChallenge == nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
 		logger.Warn().Str("challenge", info.CurrentChallenge.String()).Msg("Entered challenge")
 
-		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.builder)
+		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.fromBlock, s.client, s.builder, s.baseCallOpts)
 		if err != nil {
 			return err
 		}
@@ -206,10 +306,11 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			return err
 		}
 
-		s.activeChallenge = challenge.NewChallenger(challengeCon, s.lookup, nodeInfo, s.wallet.Address())
+		s.activeChallenge = challenge.NewChallenger(challengeCon, s.sequencerInbox, s.lookup, nodeInfo.Assertion, s.wallet.Address())
 	}
 
-	return s.activeChallenge.HandleConflict(ctx)
+	_, err := s.activeChallenge.HandleConflict(ctx)
+	return err
 }
 
 func (s *Staker) newStake(ctx context.Context) error {
@@ -229,7 +330,7 @@ func (s *Staker) newStake(ctx context.Context) error {
 
 func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiveStrategy Strategy) error {
 	active := effectiveStrategy > WatchtowerStrategy
-	action, _, err := s.generateNodeAction(ctx, info, effectiveStrategy)
+	action, wrongNodesExist, err := s.generateNodeAction(ctx, info, effectiveStrategy, s.fromBlock)
 	if err != nil {
 		return err
 	}
@@ -241,11 +342,15 @@ func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiv
 
 	switch action := action.(type) {
 	case createNodeAction:
-		// Already logged with more details in generateNodeAction
+		if wrongNodesExist && s.config.DontChallenge {
+			logger.Error().Msg("refusing to challenge assertion as config disables challenges")
+			return nil
+		}
+		// Details are already logged with more details in generateNodeAction
 		info.CanProgress = false
 		info.LatestStakedNode = nil
 		info.LatestStakedNodeHash = action.hash
-		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount)
+		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount, action.sequencerBatchProof)
 	case existingNodeAction:
 		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
 		info.LatestStakedNode = action.number

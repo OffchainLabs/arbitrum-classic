@@ -1,6 +1,5 @@
 # Arbitrum EthBridge Contract Setup
 
-
 ## Rollup:
 
 This folder contains the contracts implemtnation the Arbitrum Optimistic Rollup. The core purpose of the Rollup is to advance the execution of the machine in order to eventually confirm assertions which will lead to withdrawals being processed.
@@ -27,13 +26,15 @@ The `Challenge` contract is responsible for mediating disputes between conflicti
 
 - Inbox Consistency: The assertion claimed to read up to a given position in the inbox. This challenge assures that the end point is really a correct position in the inbox.
 - Inbox Delta: The messages between the first read message and the last read message are accumulated into a hash which is proposed as part of the assertion. This challenge assures that the inbox delta was actually calculated correctly based on the messages read from the inbox.
-- Execution Stopped Shot: The portion of the assertion which specifies execution claimed to have executed a total amount of ArbGas. If the machine should have stopped before this point, this challenge can be used to propose a shorter assertion.
+- Execution Stopped Short: The portion of the assertion which specifies execution claimed to have executed a total amount of AvmGas. If the machine should have stopped before this point, this challenge can be used to propose a shorter assertion.
 - Execution: This challenge can be used to ensure the correctness of the execution of the assertion.
 
 ## Arch
+
 This folder contains contracts and libraries implementing AVM related logic. This mainly includes the one step execution prover contracts used by the execution challenge.
 
 ## Validator:
+
 This contains two classes useful for being a validator
 
 #### Validator - This is a simple smart contract wallet so that validators can call multiple rollup functions atomically
@@ -41,9 +42,9 @@ This contains two classes useful for being a validator
 #### ValidatorUtils - This contract provides a number of helper methods that help the validator decide what actions to take
 
 ## Libraries:
+
 This folder contains a bunch of libraries implementing various general functionality used by the rest of the codebase.
 
 ## Interfaces:
+
 This folder contains interfaces to external libraries that are used by this package
-
-

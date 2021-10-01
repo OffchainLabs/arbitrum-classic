@@ -1,5 +1,6 @@
 ---
 title: MMR.sol Spec
+id: MMR
 ---
 
 Merkle Mountain Range solidity library

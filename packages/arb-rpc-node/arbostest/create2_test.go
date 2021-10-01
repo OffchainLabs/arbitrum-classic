@@ -23,22 +23,20 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 func TestCreate2(t *testing.T) {
-	backend, pks := test.SimulatedBackend(t)
+	backend, auths := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth := bind.NewKeyedTransactor(pks[0])
-
+	auth := auths[0]
 	factoryConnAddress, _, cf, err := arbostestcontracts.DeployCloneFactory(auth, client)
 	failIfError(t, err)
 
@@ -90,18 +88,16 @@ func TestCreate2(t *testing.T) {
 		Data:        existsABI.ID,
 	}
 
-	sender := common.NewAddressFromEth(auth.From)
+	sender := message.L1RemapAccount(common.NewAddressFromEth(auth.From))
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(factoryConstructorTx), sender, big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(simpleConstructorTx), sender, big.NewInt(2), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(create2Tx), sender, big.NewInt(3), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), big.NewInt(0), chainTime),
 	}
 
-	logs, _, snap := runAssertion(t, inboxMessages, 4, 0)
-	results := processTxResults(t, logs)
-
+	results, snap := runTxAssertion(t, inboxMessages)
 	allResultsSucceeded(t, results)
 
 	checkConstructorResult(t, results[0], common.NewAddressFromEth(factoryConnAddress))

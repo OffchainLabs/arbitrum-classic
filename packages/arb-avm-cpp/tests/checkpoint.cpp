@@ -88,7 +88,8 @@ void getTupleValues(const ReadTransaction& transaction,
 
 TEST_CASE("Save value") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
@@ -108,7 +109,8 @@ TEST_CASE("Save value") {
 
 TEST_CASE("Save tuple") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
@@ -133,7 +135,8 @@ TEST_CASE("Save tuple") {
 
 TEST_CASE("Save and get value") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     ValueCache value_cache{1, 0};
 
@@ -161,7 +164,8 @@ TEST_CASE("Save and get value") {
 
 TEST_CASE("Save and get tuple values") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     ValueCache value_cache{1, 0};
 
@@ -217,7 +221,8 @@ TEST_CASE("Save and get tuple values") {
 
 TEST_CASE("Save And Get Tuple") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
@@ -299,7 +304,8 @@ TEST_CASE("Save And Get Tuple") {
 
 TEST_CASE("Checkpoint Benchmark") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     uint256_t num = 1;
     value tuple = Tuple::createTuple(num);
@@ -333,9 +339,7 @@ void saveState(ReadWriteTransaction& transaction,
 void checkSavedState(const ReadWriteTransaction& transaction,
                      const Machine& expected_machine,
                      uint32_t expected_ref_count) {
-    auto expected_hash = expected_machine.hash();
-    REQUIRE(expected_hash);
-    auto results = getMachineStateKeys(transaction, *expected_hash);
+    auto results = getMachineStateKeys(transaction, expected_machine.hash());
     REQUIRE(std::holds_alternative<CountedData<MachineStateKeys>>(results));
     auto res = std::get<CountedData<MachineStateKeys>>(results);
     REQUIRE(res.reference_count == expected_ref_count);
@@ -363,9 +367,7 @@ void checkSavedState(const ReadWriteTransaction& transaction,
 
 void checkDeletedCheckpoint(ReadTransaction& transaction,
                             const Machine& deleted_machine) {
-    auto deleted_hash = deleted_machine.hash();
-    REQUIRE(deleted_hash);
-    auto results = getMachineStateKeys(transaction, *deleted_hash);
+    auto results = getMachineStateKeys(transaction, deleted_machine.hash());
     REQUIRE(std::holds_alternative<rocksdb::Status>(results));
 
     auto datastack_tup =
@@ -384,9 +386,7 @@ void checkDeletedCheckpoint(ReadTransaction& transaction,
 
 void deleteCheckpoint(ReadWriteTransaction& transaction,
                       const Machine& deleted_machine) {
-    auto deleted_hash = deleted_machine.hash();
-    REQUIRE(deleted_hash);
-    auto res = deleteMachine(transaction, *deleted_hash);
+    auto res = deleteMachine(transaction, deleted_machine.hash());
     REQUIRE(res.status.ok());
     checkDeletedCheckpoint(transaction, deleted_machine);
 }
@@ -416,12 +416,9 @@ Machine getComplexMachine() {
 
     auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65};
 
-    staged_variant staged_message;
-
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc,
-                                std::move(staged_message), output));
+                                arb_gas_remaining, state, pc, err_pc, output));
 }
 
 Machine getDefaultMachine() {
@@ -436,16 +433,15 @@ Machine getDefaultMachine() {
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
     auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34};
-    staged_variant staged_message;
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc,
-                                staged_message, output));
+                                arb_gas_remaining, state, pc, err_pc, output));
 }
 
 TEST_CASE("Save Machinestatedata") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("default") {
@@ -460,7 +456,8 @@ TEST_CASE("Save Machinestatedata") {
 
 TEST_CASE("Get Machinestate data") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("default") {
@@ -477,7 +474,8 @@ TEST_CASE("Get Machinestate data") {
 
 TEST_CASE("Delete checkpoint") {
     DBDeleter deleter;
-    ArbStorage storage(dbpath);
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("default") {
@@ -498,11 +496,9 @@ TEST_CASE("Delete checkpoint") {
             saveState(*transaction2, machine, 2);
         }
         auto transaction3 = storage.makeReadWriteTransaction();
-        auto machine_hash = machine.hash();
-        REQUIRE(machine_hash);
-        auto res = deleteMachine(*transaction3, *machine.hash());
+        auto res = deleteMachine(*transaction3, machine.hash());
         REQUIRE(res.status.ok());
-        auto res2 = deleteMachine(*transaction3, *machine.hash());
+        auto res2 = deleteMachine(*transaction3, machine.hash());
         REQUIRE(res2.status.ok());
         checkDeletedCheckpoint(*transaction3, machine);
     }
@@ -513,11 +509,9 @@ TEST_CASE("Delete checkpoint") {
         saveState(*transaction2, machine, 2);
 
         checkSavedState(*transaction, machine, 2);
-        auto machine_hash = machine.hash();
-        REQUIRE(machine_hash);
-        auto res = deleteMachine(*transaction, *machine.hash());
+        auto res = deleteMachine(*transaction, machine.hash());
         checkSavedState(*transaction, machine, 1);
-        auto res2 = deleteMachine(*transaction, *machine.hash());
+        auto res2 = deleteMachine(*transaction, machine.hash());
         checkDeletedCheckpoint(*transaction, machine);
     }
 }

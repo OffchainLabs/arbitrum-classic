@@ -13,11 +13,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 func TestOwnerDeployCorrectCode(t *testing.T) {
@@ -25,7 +25,7 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 	test.FailIfError(t, err)
 	txSender := crypto.PubkeyToAddress(privkey.PublicKey)
 	connAddress := crypto.CreateAddress(txSender, 0)
-	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+	signer := types.NewEIP155Signer(chainId)
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -46,8 +46,7 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 		l2Tx, err := message.NewL2Message(message.NewCompressedECDSAFromEth(tx))
 		test.FailIfError(t, err)
 		messages := []message.Message{l2Tx}
-		logs, _, snap := runSimpleAssertion(t, messages)
-		results := processTxResults(t, logs)
+		results, snap := runSimpleTxAssertion(t, messages)
 		allResultsSucceeded(t, results)
 		t.Log(results[0])
 		return snap
@@ -64,10 +63,10 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 		}
 
 		ib := &InboxBuilder{}
-		ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
+		config := []message.ChainConfigOption{message.ChainIDConfig{ChainId: chainId}}
+		ib.AddMessage(initMsg(t, config), common.Address{}, big.NewInt(0), chainTime)
 		ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
-		logs, _, snap := runAssertion(t, ib.Messages, len(ib.Messages)-1, 0)
-		results := processTxResults(t, logs)
+		results, snap := runTxAssertion(t, ib.Messages)
 		allResultsSucceeded(t, results)
 		t.Log(results[0])
 		return snap
@@ -94,7 +93,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	nonce := uint64(342)
 	ownerTx := message.Transaction{
 		MaxGas:      big.NewInt(100000000),
-		GasPriceBid: big.NewInt(0),
+		GasPriceBid: big.NewInt(0), // fees are off
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(100),
@@ -102,11 +101,10 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	}
 
 	ib := &InboxBuilder{}
-	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
-	ib.AddMessage(makeEthDeposit(owner, big.NewInt(1000)), sender, big.NewInt(0), chainTime)
+	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), chainTime)
+	ib.AddMessage(makeEthDeposit(message.L2RemapAccount(owner), big.NewInt(1000)), sender, big.NewInt(0), chainTime)
 	ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
-	logs, _, snap := runAssertion(t, ib.Messages, len(ib.Messages)-1, 0)
-	results := processTxResults(t, logs)
+	results, snap := runTxAssertion(t, ib.Messages)
 	correctConnAddress := crypto.CreateAddress(sender.ToEthAddress(), nonce)
 	checkConstructorResult(t, results[1], common.NewAddressFromEth(correctConnAddress))
 
@@ -118,10 +116,18 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	if evmLog.Topics[0].ToEthHash() != simple.Events["TestEvent"].ID {
 		t.Fatal("wrong topic")
 	}
-	if new(big.Int).SetBytes(evmLog.Data).Cmp(ownerTx.Payment) != 0 {
-		t.Error("wrong event data/payment")
+	if new(big.Int).SetBytes(evmLog.Data[:32]).Cmp(ownerTx.Payment) != 0 {
+		t.Error("wrong event value data")
 	}
-	ownerBalance, err := snap.GetBalance(owner)
+	// The sender check has been disabled, as right now it's incorrectly set to the ArbSys precompile address
+	
+	var senderInLog common.Address
+	copy(senderInLog[:], evmLog.Data[32+(32-20):])
+	if senderInLog != sender {
+		t.Error("wrong event sender data")
+	}
+	
+	ownerBalance, err := snap.GetBalance(message.L2RemapAccount(owner))
 	test.FailIfError(t, err)
 	conBalance, err := snap.GetBalance(common.NewAddressFromEth(correctConnAddress))
 	test.FailIfError(t, err)

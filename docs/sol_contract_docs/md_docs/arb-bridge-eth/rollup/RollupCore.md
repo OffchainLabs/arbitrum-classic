@@ -1,5 +1,6 @@
 ---
 title: RollupCore.sol Spec
+id: RollupCore
 ---
 
 ### `getNode(uint256 nodeNum) → contract INode` (public)
@@ -69,6 +70,8 @@ Get Latest node that the given zombie at the given index is staked on
 ### `zombieCount() → uint256` (public)
 
 **Returns**: Current: number of un-removed zombies
+
+### `isZombie(address staker) → bool` (public)
 
 ### `withdrawableFunds(address owner) → uint256` (public)
 

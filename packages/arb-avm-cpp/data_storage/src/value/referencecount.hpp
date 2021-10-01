@@ -29,13 +29,16 @@ class Status;
 struct Slice;
 }  // namespace rocksdb
 
+SaveResults saveValueWithRefCount(ReadWriteTransaction& tx,
+                                  uint32_t updated_ref_count,
+                                  const rocksdb::Slice& hash_key,
+                                  const std::vector<unsigned char>& value);
 GetResults getRefCountedData(const ReadTransaction& tx,
                              const rocksdb::Slice& hash_key);
-SaveResults saveRefCountedData(ReadWriteTransaction& tx,
-                               const rocksdb::Slice& hash_key,
-                               const std::vector<unsigned char>& value,
-                               uint32_t new_references = 1,
-                               bool allow_replacement = false);
+SaveResults saveRefCountedDataReplaced(ReadWriteTransaction& tx,
+                                       const rocksdb::Slice& hash_key,
+                                       const std::vector<unsigned char>& value,
+                                       uint32_t new_references = 1);
 SaveResults incrementReference(ReadWriteTransaction& tx,
                                const rocksdb::Slice& hash_key,
                                uint32_t new_references = 1);

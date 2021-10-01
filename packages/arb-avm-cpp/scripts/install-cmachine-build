@@ -1,9 +1,0 @@
-#!/bin/bash
-
-\cp build/lib/libavm_values.a cmachine/libavm_values.a
-\cp build/lib/libavm.a cmachine/libavm.a
-\cp build/lib/libcavm.a cmachine/libcavm.a
-\cp build/lib/libdata_storage.a cmachine/libdata_storage.a
-\cp build/lib/libff.a cmachine/libff.a
-\cp build/lib/libsecp256k1.a cmachine/libsecp256k1.a
-\cp build/lib/libzm.a cmachine/libzmd.a

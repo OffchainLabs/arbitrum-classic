@@ -5,7 +5,7 @@ sidebar_label: Developer Quickstart
 custom_edit_url:https://github.com/OffchainLabs/arbitrum/edit/master/docs/Developer_Quickstart.md
 ---
 
-Arbitrum is a suite of Ethereum scaling solutions that enables high-throughput, low cost smart contracts while remaining trustlessly secure. Arbitrum has three modes: AnyTrust Channels, AnyTrust Sidechains, and Arbitrum Rollup. The following documentation describes how to use Arbitrum Rollup, which is currently live on testnet. Whether you're a developer that just wants to start building or you're curious into digging deeper into the internals of Arbitrum and how it works, this site is the right place for you.
+Arbitrum is a suite of Ethereum scaling solutions that enables high-throughput, low cost smart contracts while remaining trustlessly secure. Arbitrum has three modes: AnyTrust Channels, AnyTrust Sidechains, and Arbitrum Rollup. The following documentation describes how to use Arbitrum Rollup, which is currently live on testnet and Mainnet. Whether you're a developer that just wants to start building or you're curious into digging deeper into the internals of Arbitrum and how it works, this site is the right place for you.
 
 ### How does Arbitrum work?
 
@@ -13,11 +13,11 @@ If you're looking to discover how Arbitrum works, the best place to begin is by 
 
 ### How Can I Start Building
 
-If you want to get started using Arbitrum with no setup required, check out our [public testnet](Public_Testnet.md) running on top of Kovan.
+If you want to get started using Arbitrum with no setup required, check out our [public testnet](Public_Testnet.md) running on top of Rinkeby.
 
 ### How Can I Develop Locally
 
-The very first step to start building with Arbitrum is [installing](Installation.md) Arbitrum and its dependencies. Next, you'll need to deploy an Arbitrum chain on an L1 blockchain. Arbitrum Rollup supports deployment both on a [local testnet](Local_Blockchain.md) and on the [Rinkeby Testnet](Rinkeby.md). The following quickstart walks through deployment of an Arbitrum Rollup chain on the local testnet.
+The very first step to start building with Arbitrum is [installing](Installation.md) Arbitrum and its dependencies. Next, you'll need to deploy an Arbitrum chain on an L1 blockchain. You can follow the [local testnet guide](Local_Blockchain.md) for a quickstart walkthrough deployment of an Arbitrum Rollup chain on the local testnet.
 
 Note that Arbitrum chains support dynamic launching of contracts, so you don't need to setup an Arbitrum chain for each application you build, and indeed you may deploy your contracts on a testnet chain which you did not launch. The benefits of having multiple applications on the same Arbitrum Rollup chain is that they'll be able to interact synchronously, just as they would if they were launched directly on Ethereum.
 
@@ -91,7 +91,7 @@ truffle migrate --network arbitrum
    The pet shop dApp should now be running in your browser. Choose a pet or two
    and click the adopt button to adopt your new animal friend(s).
 
-### Summary
+### Election Dapp
 
 If you want to try another dApp run, deploy the solidity contracts and launch the frontend
 
@@ -102,3 +102,7 @@ yarn
 truffle migrate --network arbitrum
 yarn start
 ```
+
+### More Demos
+
+For more demos, see our [demos](https://github.com/OffchainLabs/arbitrum-tutorials) mono-repo.

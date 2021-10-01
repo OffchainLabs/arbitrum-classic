@@ -20,13 +20,15 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 type RawTransaction struct {
@@ -38,15 +40,15 @@ type RawTransaction struct {
 type Rollup struct {
 	*RollupWatcher
 	*BuilderBackend
-	builderCon *ethbridgecontracts.Rollup
+	builderCon *ethbridgecontracts.RollupUserFacet
 }
 
-func NewRollup(address ethcommon.Address, client ethutils.EthClient, builder *BuilderBackend) (*Rollup, error) {
-	builderCon, err := ethbridgecontracts.NewRollup(address, builder)
+func NewRollup(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend, callOpts bind.CallOpts) (*Rollup, error) {
+	builderCon, err := ethbridgecontracts.NewRollupUserFacet(address, builder)
 	if err != nil {
 		return nil, err
 	}
-	watcher, err := NewRollupWatcher(address, client)
+	watcher, err := NewRollupWatcher(address, fromBlock, client, callOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -79,22 +81,13 @@ func (r *Rollup) ConfirmNextNode(ctx context.Context, assertion *core.Assertion,
 		assertion.After.LogAcc,
 		assertion.After.TotalLogCount,
 	)
-	return errors.WithStack(err)
+	// Do not use errors.WithStack so that any existing error stack is preserved
+	return err
 }
 
 func (r *Rollup) NewStake(ctx context.Context, amount *big.Int) error {
-	tokenType, err := r.StakeToken(ctx)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	emptyAddress := common.Address{}
-	if tokenType != emptyAddress {
-		_, err := r.builderCon.NewStake(authWithContext(ctx, r.builderAuth), amount)
-		return errors.WithStack(err)
-	} else {
-		_, err := r.builderCon.NewStake(authWithContextAndAmount(ctx, r.builderAuth, amount), big.NewInt(0))
-		return errors.WithStack(err)
-	}
+	_, err := r.builderCon.NewStake(authWithContextAndAmount(ctx, r.builderAuth, amount))
+	return errors.WithStack(err)
 }
 
 func (r *Rollup) StakeOnExistingNode(ctx context.Context, nodeNumber core.NodeID, nodeHash [32]byte) error {
@@ -112,6 +105,7 @@ func (r *Rollup) StakeOnNewNode(
 	assertion *core.Assertion,
 	prevProposedBlock *big.Int,
 	prevInboxMaxCount *big.Int,
+	sequencerBatchProof []byte,
 ) error {
 	_, err := r.builderCon.StakeOnNewNode(
 		authWithContext(ctx, r.builderAuth),
@@ -120,6 +114,7 @@ func (r *Rollup) StakeOnNewNode(
 		assertion.IntFields(),
 		prevProposedBlock,
 		prevInboxMaxCount,
+		sequencerBatchProof,
 	)
 	return errors.WithStack(err)
 }
@@ -130,26 +125,11 @@ func (r *Rollup) ReturnOldDeposit(ctx context.Context, staker common.Address) er
 }
 
 func (r *Rollup) AddToDeposit(ctx context.Context, address common.Address, amount *big.Int) error {
-	tokenType, err := r.StakeToken(ctx)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	emptyAddress := common.Address{}
-	if tokenType != emptyAddress {
-		_, err := r.builderCon.AddToDeposit(
-			authWithContext(ctx, r.builderAuth),
-			address.ToEthAddress(),
-			amount,
-		)
-		return errors.WithStack(err)
-	} else {
-		_, err := r.builderCon.AddToDeposit(
-			authWithContextAndAmount(ctx, r.builderAuth, amount),
-			address.ToEthAddress(),
-			big.NewInt(0),
-		)
-		return errors.WithStack(err)
-	}
+	_, err := r.builderCon.AddToDeposit(
+		authWithContextAndAmount(ctx, r.builderAuth, amount),
+		address.ToEthAddress(),
+	)
+	return err
 }
 
 func (r *Rollup) ReduceDeposit(ctx context.Context, amount *big.Int) error {

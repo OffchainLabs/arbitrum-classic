@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 package main
@@ -18,7 +19,7 @@ func main() {
 }
 
 func run() error {
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	if err != nil {
 		return err
 	}
@@ -28,10 +29,5 @@ func run() error {
 		return err
 	}
 
-	hash, err := mach.Hash()
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile("../../MACHINEHASH", []byte(hash.String()), 777)
+	return ioutil.WriteFile("../../MACHINEHASH", []byte(mach.Hash().String()), 777)
 }

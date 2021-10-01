@@ -2,21 +2,61 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { IBridge } from '../IBridge'
-
-export class IBridge__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): IBridge {
-    return new Contract(address, _abi, signerOrProvider) as IBridge
-  }
-}
+import type { IBridge, IBridgeInterface } from '../IBridge'
 
 const _abi = [
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'outbox',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'destAddr',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
+      },
+    ],
+    name: 'BridgeCallTriggered',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'inbox',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'enabled',
+        type: 'bool',
+      },
+    ],
+    name: 'InboxToggle',
+    type: 'event',
+  },
   {
     anonymous: false,
     inputs: [
@@ -58,6 +98,25 @@ const _abi = [
       },
     ],
     name: 'MessageDelivered',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'outbox',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'enabled',
+        type: 'bool',
+      },
+    ],
+    name: 'OutboxToggle',
     type: 'event',
   },
   {
@@ -243,3 +302,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class IBridge__factory {
+  static readonly abi = _abi
+  static createInterface(): IBridgeInterface {
+    return new utils.Interface(_abi) as IBridgeInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): IBridge {
+    return new Contract(address, _abi, signerOrProvider) as IBridge
+  }
+}

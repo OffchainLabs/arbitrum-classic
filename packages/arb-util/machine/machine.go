@@ -32,7 +32,8 @@ const (
 )
 
 type Machine interface {
-	Hash() (common.Hash, error)
+	String() string
+	Hash() common.Hash
 	CodePointHash() common.Hash
 
 	Clone() Machine
@@ -40,8 +41,8 @@ type Machine interface {
 	CurrentStatus() Status
 	IsBlocked(newMessages bool) BlockReason
 
-	ExecuteAssertion(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, finalMessageOfBlock bool) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
-	ExecuteAssertionAdvanced(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, finalMessageOfBlock bool, sideloads []inbox.InboxMessage, stopOnSideload bool, beforeSendAcc common.Hash, beforeLogAcc common.Hash) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
+	ExecuteAssertion(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
+	ExecuteAssertionAdvanced(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, sideloads []inbox.InboxMessage, stopOnSideload bool) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
 
 	MarshalForProof() ([]byte, []byte, error)
 

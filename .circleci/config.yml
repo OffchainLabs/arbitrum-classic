@@ -39,9 +39,9 @@ workflows:
       - cpp-avm:
           requires:
             - cpp-avm-build
-      - frontend
+      - arb-ts
       - ethbridge
-      # - ethbridge-coverage
+      - ethbridge-coverage
       - backend:
           requires:
             - go-deps
@@ -66,9 +66,9 @@ jobs:
             cd packages/arb-node-core
             go mod download
       - save_cache: *save_go_cache
-  frontend:
+  arb-ts:
     docker:
-      - image: offchainlabs/frontend-base:0.1.0
+      - image: offchainlabs/frontend-base:0.3.0
     environment:
       TEST_RESULTS: *test-path
     steps:
@@ -82,12 +82,12 @@ jobs:
       - run: yarn install --cache-folder ~/.cache/yarn
       - save_cache: *save_yarn_cache
       - run:
-          name: test arb-provider-ethers
+          name: test arb-ts
           command: |
             yarn
-            yarn test:ci --reporter-options output=${TEST_RESULTS}/arb-provider-ethers.xml
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
-          working_directory: /home/user/project/packages/arb-provider-ethers
+            yarn build --reporter-options output=${TEST_RESULTS}/arb-ts.xml
+            yarn lint --format junit -o ${TEST_RESULTS}/arb-ts-lint.xml
+          working_directory: /home/user/project/packages/arb-ts
       - run:
           name: Upload Coverage to Codecov
           command: codecovbash
@@ -96,7 +96,43 @@ jobs:
           path: *test-path
   ethbridge:
     docker:
-      - image: offchainlabs/ethbridge-base:0.2.1
+      - image: offchainlabs/frontend-base:0.3.0
+    environment: # environment variables for the build itself
+      TEST_RESULTS: *test-path # path to where test results will be saved
+    steps:
+      - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
+
+      - run: mkdir -p $TEST_RESULTS
+      - restore_cache: *restore_yarn_cache
+      - run:
+          name: install and audit
+          command: |
+            yarn install --cache-folder ~/.cache/yarn
+            if [[ ! -z $CIRCLE_PULL_REQUEST ]] ; then yarn audit ; fi
+            yarn build
+          working_directory: /home/user/project
+      - run:
+          name: test arb-bridge-eth
+          command: |
+            yarn typechain
+            yarn test:ci
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      # TODO
+      # - run:
+      #     name: slither arb-bridge-eth
+      #     command: |
+      #       yarn slither
+      #     working_directory: /home/user/project/packages/arb-bridge-eth
+      - store_test_results:
+          path: *test-path
+
+  ethbridge-coverage:
+    docker:
+      - image: offchainlabs/frontend-base:0.3.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -112,48 +148,23 @@ jobs:
           name: install
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            yarn build
           working_directory: /home/user/project
       - run:
           name: test arb-bridge-eth
           command: |
             yarn typechain
-            yarn test:ci
+            yarn test:coverage
+            yarn lint:js --format junit -o ${TEST_RESULTS}/arb-bridge-eth-lint.xml
+            yarn lint:solidity
+          environment:
+            MOCHA_FILE: *ethbridge-test-path
           working_directory: /home/user/project/packages/arb-bridge-eth
+      - run:
+          name: Upload Coverage to Codecov
+          command: codecovbash -R /home/user/project -c -F unit
+          working_directory: /home/user/project/packages
       - store_test_results:
           path: *test-path
-
-  # ethbridge-coverage:
-  #   docker:
-  #     - image: offchainlabs/ethbridge-base:0.2.1
-  #   environment: # environment variables for the build itself
-  #     TEST_RESULTS: *test-path # path to where test results will be saved
-  #   steps:
-  #     - checkout
-  #     - run: mkdir -p $TEST_RESULTS
-  #     - restore_cache: *restore_yarn_cache
-  #     - run:
-  #         name: install
-  #         command: |
-  #           yarn install --cache-folder ~/.cache/yarn
-  #           yarn build
-  #         working_directory: /home/user/project
-  #     - run:
-  #         name: test arb-bridge-eth
-  #         command: |
-  #           yarn test:coverage --network development
-  #           yarn lint:js --format junit -o ${TEST_RESULTS}/arb-bridge-eth-lint.xml
-  #           yarn lint:solidity
-  #         environment:
-  #           MOCHA_FILE: *ethbridge-test-path
-  #         working_directory: /home/user/project/packages/arb-bridge-eth
-  #     - run:
-  #         name: Upload Coverage to Codecov
-  #         command: codecovbash -R /home/user/project -c -F unit
-  #         working_directory: /home/user/project/packages
-  #     - store_test_results:
-  #         path: *test-path
-
   cpp-avm-build:
     docker:
       - image: offchainlabs/cpp-base:0.3.1
@@ -170,13 +181,13 @@ jobs:
             cd packages/arb-avm-cpp/debug
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
-            cd ../
-            ./scripts/install-cmachine-debug
+      # COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
       - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/project/packages/arb-avm-cpp/
+          root: /home/user/
           paths:
-            - ./cmachine/*.a
-            - ./debug/*
+            - ./.hunter
+            - ./project/packages/arb-avm-cpp/cmachine/flags.go
+            - ./project/packages/arb-avm-cpp/debug/*
   cpp-avm:
     docker:
       - image: offchainlabs/cpp-base:0.3.1
@@ -190,10 +201,7 @@ jobs:
             git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
-          at: /home/user/workspace
-      - run:
-          command: cp -r /home/user/workspace/debug /home/user/project/packages/arb-avm-cpp/
-          working_directory: /home/user/project
+          at: /home/user/
       - run:
           name: test arb-avm-cpp
           command: |
@@ -218,15 +226,13 @@ jobs:
             git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
-          at: /home/user/workspace
+          at: /home/user/
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - run:
-          command: cp /home/user/workspace/cmachine/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
           name: test arb-util
@@ -251,6 +257,7 @@ jobs:
   backend-rpc:
     docker:
       - image: offchainlabs/backend-base:0.3.2
+    resource_class: large
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -261,15 +268,13 @@ jobs:
             git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
-          at: /home/user/workspace
+          at: /home/user/
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - run:
-          command: cp /home/user/workspace/cmachine/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
           name: test arb-rpc-node
@@ -281,7 +286,7 @@ jobs:
 
   arb-bridge-peripherals:
     docker:
-      - image: offchainlabs/integration-base:0.3.2
+      - image: offchainlabs/integration-base:0.3.4
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -292,15 +297,13 @@ jobs:
             git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
-          at: /home/user/workspace
+          at: /home/user/
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - run:
-          command: cp /home/user/workspace/cmachine/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
           name: Run dev node
@@ -323,6 +326,11 @@ jobs:
           name: test arb-bridge-peripherals l2
           command: |
             yarn test:l2
+          working_directory: /home/user/project/packages/arb-bridge-peripherals
+      - run:
+          name: test arb-bridge-peripherals e2e
+          command: |
+            yarn test:e2e
           working_directory: /home/user/project/packages/arb-bridge-peripherals
       - store_test_results:
           path: *test-path

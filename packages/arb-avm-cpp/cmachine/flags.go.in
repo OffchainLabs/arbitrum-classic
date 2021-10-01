@@ -1,0 +1,8 @@
+package cmachine
+
+/*
+#cgo CFLAGS: ${CFLAGS}
+#cgo LDFLAGS: ${LDFLAGS} -lwasmer -lstdc++ -lm -lrocksdb -lgmp -lkeccak -ldl
+#cgo linux LDFLAGS: -latomic
+*/
+import "C"

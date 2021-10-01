@@ -52,12 +52,24 @@ struct InboxMessage {
 
     static InboxMessage fromTuple(const Tuple& tup);
 
-    [[nodiscard]] uint256_t hash(const uint256_t& previous_inbox_acc) const;
+    [[nodiscard]] uint256_t hash() const;
+    [[nodiscard]] uint256_t prefixHash() const;
 
     [[nodiscard]] Tuple toTuple() const;
     [[nodiscard]] std::vector<unsigned char> serialize() const;
     [[nodiscard]] std::vector<unsigned char> serializeForProof() const;
     void serializeHeader(std::vector<unsigned char>& state_data_vector) const;
+    void serializeImpl(std::vector<unsigned char>& state_data_vector) const;
+};
+
+struct MachineMessage {
+    InboxMessage message;
+    uint256_t accumulator;
+
+    MachineMessage() = default;
+    MachineMessage(InboxMessage message_, uint256_t accumulator_)
+        : message(message_), accumulator(accumulator_) {}
+
     void serializeImpl(std::vector<unsigned char>& state_data_vector) const;
 };
 
@@ -69,9 +81,20 @@ InboxMessage extractInboxMessage(
 InboxMessage extractInboxMessageImpl(
     std::vector<unsigned char>::const_iterator current_iter,
     const std::vector<unsigned char>::const_iterator end);
+MachineMessage extractMachineMessageImpl(
+    std::vector<unsigned char>::const_iterator current_iter,
+    const std::vector<unsigned char>::const_iterator end);
+
 // An efficient version of extractInboxMessage that ignores everything except
 // the block number
-uint256_t extractInboxMessageBlockNumber(
-    const std::vector<unsigned char>& stored_state);
+template <typename Iterator>
+uint256_t extractInboxMessageBlockNumber(Iterator& iter) {
+    iter++;      // skip kind
+    iter += 20;  // skip sender
+    auto ptr = reinterpret_cast<const char*>(&*iter);
+    auto int_val = deserializeUint256t(ptr);
+    iter += 32;
+    return int_val;
+}
 
 #endif /* data_storage_inboxmessage_hpp */

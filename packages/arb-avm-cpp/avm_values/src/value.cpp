@@ -22,6 +22,7 @@
 
 #include <boost/endian/conversion.hpp>
 
+#include <iomanip>
 #include <ostream>
 
 uint64_t deserialize_uint64_t(const char*& bufptr) {
@@ -178,7 +179,7 @@ void marshalWasmCodePoint(const WasmCodePoint& val, std::vector<unsigned char>& 
 
 namespace {
 void marshalForProof(const HashPreImage& val,
-                     MarshalLevel,
+                     size_t,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(HASH_PRE_IMAGE);
@@ -186,30 +187,30 @@ void marshalForProof(const HashPreImage& val,
 }
 
 void marshalForProof(const std::shared_ptr<HashPreImage>& val,
-                     MarshalLevel,
+                     size_t,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(HASH_PRE_IMAGE);
     val->marshal(buf);
 }
 
-MarshalLevel childNestLevel(MarshalLevel level) {
-    if (level == MarshalLevel::FULL) {
-        return MarshalLevel::FULL;
+size_t childNestLevel(size_t level) {
+    if (level > 0) {
+        return level - 1;
     } else {
-        return MarshalLevel::STUB;
+        return 0;
     }
 }
 
 void marshalForProof(const Tuple& val,
-                     MarshalLevel marshal_level,
+                     size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    if (marshal_level == MarshalLevel::STUB) {
+    if (marshal_level == 0) {
         marshalForProof(val.getHashPreImage(), marshal_level, buf, code);
     } else {
         buf.push_back(TUPLE + val.tuple_size());
-        MarshalLevel nested_level = childNestLevel(marshal_level);
+        size_t nested_level = childNestLevel(marshal_level);
         for (uint64_t i = 0; i < val.tuple_size(); i++) {
             auto itemval = val.get_element(i);
             marshalForProof(itemval, nested_level, buf, code);
@@ -218,17 +219,17 @@ void marshalForProof(const Tuple& val,
 }
 
 void marshalForProof(const CodePointStub& val,
-                     MarshalLevel marshal_level,
+                     size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    auto& cp = code.loadCodePoint(val.pc);
+    auto cp = code.loadCodePoint(val.pc);
     buf.push_back(CODEPT);
     cp.op.marshalForProof(buf, childNestLevel(marshal_level), code);
     marshal_uint256_t(cp.nextHash, buf);
 }
 
 void marshalForProof(const uint256_t& val,
-                     MarshalLevel,
+                     size_t,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(NUM);
@@ -236,7 +237,7 @@ void marshalForProof(const uint256_t& val,
 }
 
 void marshalForProof(const Buffer& val,
-                     MarshalLevel,
+                     size_t,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(BUFFER);
@@ -244,7 +245,7 @@ void marshalForProof(const Buffer& val,
 }
 
 void marshalForProof(const WasmCodePoint& val,
-                     MarshalLevel,
+                     size_t,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(WASM_CODE_POINT);
@@ -254,7 +255,7 @@ void marshalForProof(const WasmCodePoint& val,
 }  // namespace
 
 void marshalForProof(const value& val,
-                     MarshalLevel marshal_level,
+                     size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
     return std::visit(
@@ -293,7 +294,20 @@ struct ValuePrinter {
     std::ostream& os;
 
     std::ostream* operator()(const Buffer& b) const {
-        os << "Buffer(" << hash(b) << ")";
+        os << "Buffer(";
+        if (b.data_length() <= 64) {
+            os << "0x";
+            std::ios prev_flags(nullptr);
+            prev_flags.copyfmt(os);
+            for (auto b : b.toFlatVector()) {
+                os << std::hex << std::setw(2) << std::setfill('0') << (int)b;
+            }
+            os.copyfmt(prev_flags);
+        } else {
+            os << "hash ";
+            os << b.hash();
+        }
+        os << ")";
         return &os;
     }
 

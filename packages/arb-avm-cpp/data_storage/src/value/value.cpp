@@ -18,10 +18,10 @@
 #include <utility>
 
 #include "referencecount.hpp"
-#include "utils.hpp"
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/utils.hpp>
 
 #include <avm_values/tuple.hpp>
 #include <cstdint>
@@ -729,17 +729,14 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
         std::vector<unsigned char> hash_key;
         marshal_uint256_t(hash, hash_key);
         auto key = vecToSlice(hash_key);
-        auto results = getRefCountedData(tx, key);
-        SaveResults save_ret;
-        if (results.status.ok() && results.reference_count > 0) {
-            save_ret = incrementReference(tx, key);
-        } else {
+        SaveResults save_ret = incrementReference(tx, key);
+        if (save_ret.status.IsNotFound()) {
             std::vector<unsigned char> value_vector{};
             auto new_items_to_save =
                 serializeValue(next_item, value_vector, segment_counts);
             items_to_save.insert(items_to_save.end(), new_items_to_save.begin(),
                                  new_items_to_save.end());
-            save_ret = saveRefCountedData(tx, key, value_vector);
+            save_ret = saveValueWithRefCount(tx, 1, key, value_vector);
         }
         if (!save_ret.status.ok()) {
             return save_ret;

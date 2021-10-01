@@ -2,16 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ArbSys } from '../ArbSys'
-
-export class ArbSys__factory {
-  static connect(address: string, signerOrProvider: Signer | Provider): ArbSys {
-    return new Contract(address, _abi, signerOrProvider) as ArbSys
-  }
-}
+import type { ArbSys, ArbSysInterface } from '../ArbSys'
 
 const _abi = [
   {
@@ -103,6 +96,19 @@ const _abi = [
   {
     inputs: [],
     name: 'arbBlockNumber',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'arbChainID',
     outputs: [
       {
         internalType: 'uint256',
@@ -226,3 +232,13 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ArbSys__factory {
+  static readonly abi = _abi
+  static createInterface(): ArbSysInterface {
+    return new utils.Interface(_abi) as ArbSysInterface
+  }
+  static connect(address: string, signerOrProvider: Signer | Provider): ArbSys {
+    return new Contract(address, _abi, signerOrProvider) as ArbSys
+  }
+}

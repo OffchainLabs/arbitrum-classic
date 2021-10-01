@@ -1,8 +1,9 @@
 ---
 title: Outbox.sol Spec
+id: Outbox
 ---
 
-### `constructor(address _rollup, contract IBridge _bridge)` (public)
+### `initialize(address _rollup, contract IBridge _bridge)` (external)
 
 ### `l2ToL1Sender() → address` (external)
 

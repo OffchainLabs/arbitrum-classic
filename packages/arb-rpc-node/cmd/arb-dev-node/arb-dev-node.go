@@ -29,10 +29,13 @@ import (
 	"os"
 	"os/signal"
 
+	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
+	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -40,18 +43,15 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
-	accounts2 "github.com/ethereum/go-ethereum/accounts"
-	gethlog "github.com/ethereum/go-ethereum/log"
-	"github.com/miguelmota/go-ethereum-hdwallet"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 var logger zerolog.Logger
@@ -96,15 +96,25 @@ func startup() error {
 	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
 	arbosPath := fs.String("arbos", "", "ArbOS version")
 	enableFees := fs.Bool("with-fees", false, "Run arbos with fees on")
+	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use tempory if empty")
+	aggStr := fs.String("aggregator", "", "aggregator to use as the sender from this node")
+	initialL1Height := fs.Uint64("l1height", 0, "initial l1 height")
+	rollupStr := fs.String("rollup", "", "address of rollup contract")
+	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
 		"mnemonic to generate accounts from",
 	)
+	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
 		return errors.Wrap(err, "error parsing arguments")
+	}
+
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+		return err
 	}
 
 	if *enablePProf {
@@ -114,21 +124,12 @@ func startup() error {
 		}()
 	}
 
-	tmpDir, err := ioutil.TempDir(".", "arbitrum")
-	if err != nil {
-		return errors.Wrap(err, "error generating temporary directory")
-	}
+	chainId := new(big.Int).SetUint64(*chainId64)
 
 	wallet, err := hdwallet.NewFromMnemonic(*mnemonic)
 	if err != nil {
 		return err
 	}
-
-	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
-	if !ok {
-		return errors.New("invalid value for deposit amount")
-	}
-	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 
 	accounts := make([]accounts2.Account, 0)
 	for i := 0; i < *walletcount; i++ {
@@ -141,76 +142,114 @@ func startup() error {
 	}
 
 	if *arbosPath == "" {
-		arbosPathStr, err := arbos.Path()
+		arbosPathStr, err := arbos.Path(false)
 		if err != nil {
 			return err
 		}
 		arbosPath = &arbosPathStr
 	}
 
-	errChan := make(chan error, 10)
-	defer close(errChan)
+	deleteDir := false
+	if *dbDir == "" {
+		tmpDir, err := ioutil.TempDir(".", "arbitrum")
+		if err != nil {
+			return errors.Wrap(err, "error generating temporary directory")
+		}
+		*dbDir = tmpDir
+		deleteDir = true
+	}
 
 	ctx := context.Background()
 
-	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
-		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
-		ArbGasSpeedLimitPerSecond: 2000000000000,
+	rollupAddress := common.RandAddress()
+	if *rollupStr != "" {
+		rollupAddress = common.HexToAddress(*rollupStr)
 	}
 
-	var configOptions []message.ChainConfigOption
-	aggInit := message.DefaultAggConfig{Aggregator: common.NewAddressFromEth(accounts[1].Address)}
-	if *enableFees {
-		configOptions = append(configOptions, aggInit)
-
-		netFeeRecipient := common.RandAddress()
-		congestionFeeRecipient := common.RandAddress()
-		feeConfigInit := message.FeeConfig{
-			SpeedLimitPerSecond:    new(big.Int).SetUint64(config.ArbGasSpeedLimitPerSecond),
-			L1GasPerL2Tx:           big.NewInt(3700),
-			ArbGasPerL2Tx:          big.NewInt(0),
-			L1GasPerL2Calldata:     big.NewInt(1),
-			ArbGasPerL2Calldata:    big.NewInt(0),
-			L1GasPerStorage:        big.NewInt(2000),
-			ArbGasPerStorage:       big.NewInt(0),
-			ArbGasDivisor:          big.NewInt(10000),
-			NetFeeRecipient:        netFeeRecipient,
-			CongestionFeeRecipient: congestionFeeRecipient,
+	var agg common.Address
+	if *aggStr != "" {
+		agg = common.HexToAddress(*aggStr)
+	} else {
+		if len(accounts) < 2 {
+			return errors.New("must have at least 2 accounts")
 		}
-
-		configOptions = append(configOptions, feeConfigInit)
+		agg = common.NewAddressFromEth(accounts[1].Address)
 	}
-
-	backend, db, rollupAddress, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
+	backend, db, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
 		ctx,
-		tmpDir,
+		*dbDir,
 		*arbosPath,
-		config,
-		common.NewAddressFromEth(accounts[0].Address),
-		configOptions,
+		chainId,
+		agg,
+		*initialL1Height,
 	)
 	if err != nil {
 		return err
 	}
 
-	go func() {
-		errChan <- <-devNodeErrChan
-	}()
-
 	cancel := func() {
 		if !canceled {
 			cancelDevNode()
-			if err := os.RemoveAll(tmpDir); err != nil {
-				panic(err)
+			if deleteDir {
+				if err := os.RemoveAll(*dbDir); err != nil {
+					panic(err)
+				}
 			}
 			canceled = true
 		}
 	}
 	defer cancel()
 
+	if deleteDir {
+		owner := common.NewAddressFromEth(accounts[0].Address)
+		config := protocol.ChainParams{
+			GracePeriod:               common.NewTimeBlocksInt(3),
+			ArbGasSpeedLimitPerSecond: 2000000000000,
+		}
+
+		var configOptions []message.ChainConfigOption
+		configOptions = append(configOptions, message.ChainIDConfig{ChainId: new(big.Int).SetUint64(*chainId64)})
+		aggInit := message.DefaultAggConfig{Aggregator: agg}
+		if *enableFees {
+			configOptions = append(configOptions, aggInit)
+
+			netFeeRecipient := common.RandAddress()
+			congestionFeeRecipient := common.RandAddress()
+			feeConfigInit := message.FeeConfig{
+				SpeedLimitPerSecond:    new(big.Int).SetUint64(config.ArbGasSpeedLimitPerSecond),
+				L1GasPerL2Tx:           big.NewInt(3700),
+				ArbGasPerL2Tx:          big.NewInt(0),
+				L1GasPerL2Calldata:     big.NewInt(1),
+				ArbGasPerL2Calldata:    big.NewInt(0),
+				L1GasPerStorage:        big.NewInt(2000),
+				ArbGasPerStorage:       big.NewInt(0),
+				ArbGasDivisor:          big.NewInt(10000),
+				NetFeeRecipient:        netFeeRecipient,
+				CongestionFeeRecipient: congestionFeeRecipient,
+			}
+
+			configOptions = append(configOptions, feeConfigInit)
+		}
+
+		initMsg, err := message.NewInitMessage(config, owner, configOptions)
+		if err != nil {
+			return err
+		}
+		if _, err := backend.AddInboxMessage(initMsg, common.Address{}); err != nil {
+			return errors.Wrap(err, "error adding init message to inbox")
+		}
+	}
+
+	errChan := make(chan error, 10)
+	go func() {
+		errChan <- <-devNodeErrChan
+	}()
+
+	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
+	if !ok {
+		return errors.New("invalid value for deposit amount")
+	}
+	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 	for _, account := range accounts {
 		deposit := message.EthDepositTx{
 			L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -237,47 +276,42 @@ func startup() error {
 		privateKeys = append(privateKeys, privKey)
 	}
 
-	chainId := message.ChainAddressToID(rollupAddress)
 	ownerAuth, err := bind.NewKeyedTransactorWithChainID(privateKeys[0], chainId)
 	if err != nil {
 		return err
 	}
 	signer := types.NewEIP155Signer(chainId)
 
-	srv := aggregator.NewServer(backend, rollupAddress, db)
+	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
 
-	client := web3.NewEthClient(srv, true)
-	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
-	if err != nil {
-		return err
-	}
-
-	tx1820 := new(types.Transaction)
-	if err := rlp.DecodeBytes(hexutil.MustDecode(eip1820Tx), tx1820); err != nil {
-		return err
-	}
-	sender1820, err := types.Sender(signer, tx1820)
-	if err != nil {
-		return err
-	}
-
-	_, err = arbOwner.DeployContract(ownerAuth, tx1820.Data(), sender1820, new(big.Int).SetUint64(tx1820.Nonce()))
-	if err != nil {
-		return err
-	}
-
-	if *enableFees {
-		_, err = arbOwner.SetFairGasPriceSender(ownerAuth, aggInit.Aggregator.ToEthAddress())
+	if deleteDir {
+		client := web3.NewEthClient(srv, true)
+		arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 		if err != nil {
 			return err
 		}
 
-		_, err = arbOwner.SetFeesEnabled(ownerAuth, true)
+		tx1820 := new(types.Transaction)
+		if err := rlp.DecodeBytes(hexutil.MustDecode(eip1820Tx), tx1820); err != nil {
+			return err
+		}
+		sender1820, err := types.Sender(signer, tx1820)
 		if err != nil {
 			return err
 		}
-		if _, err := backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
+
+		_, err = arbOwner.DeployContract(ownerAuth, tx1820.Data(), sender1820, new(big.Int).SetUint64(tx1820.Nonce()))
+		if err != nil {
 			return err
+		}
+
+		if *enableFees {
+			if err := dev.EnableFees(srv, ownerAuth, agg.ToEthAddress()); err != nil {
+				return err
+			}
+			if _, err := backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -322,13 +356,23 @@ func startup() error {
 	plugins := make(map[string]interface{})
 	plugins["evm"] = dev.NewEVM(backend)
 
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, true, plugins)
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, web3.GanacheMode, plugins)
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+		rpcConfig := configuration.RPC{
+			Addr: "0.0.0.0",
+			Port: "8547",
+			Path: "/",
+		}
+		wsConfig := configuration.WS{
+			Addr: "0.0.0.0",
+			Port: "8548",
+			Path: "/",
+		}
+		errChan <- rpc.LaunchPublicServer(ctx, web3Server, rpcConfig, wsConfig)
 	}()
 
 	err = <-errChan

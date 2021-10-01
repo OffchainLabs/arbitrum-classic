@@ -36,7 +36,7 @@ func ByteArrayToBytes(val value.Value) ([]byte, error) {
 
 	sizeInt, ok := sizeVal.(value.IntValue)
 	if !ok {
-		return nil, errors.New("size must be an int")
+		return nil, errors.New("byte array size must be an int")
 	}
 	contentsBuffer, ok := contents.(*value.Buffer)
 	if !ok {
@@ -54,6 +54,21 @@ func BufAndLengthToBytes(sizeInt *big.Int, contents *value.Buffer) ([]byte, erro
 	data := make([]byte, size)
 	copy(data[:], contents.Data())
 	return data, nil
+}
+
+func BufOffsetAndLengthToBytes(sizeInt, offsetInt *big.Int, contents *value.Buffer) []byte {
+	size := sizeInt.Uint64()
+	offset := offsetInt.Uint64()
+	data := make([]byte, size)
+	if offset > uint64(len(contents.Data())) {
+		return data
+	}
+	max := offset + size
+	if max > uint64(len(contents.Data())) {
+		max = uint64(len(contents.Data()))
+	}
+	copy(data[:], contents.Data()[offset:max])
+	return data
 }
 
 func StackValueToList(val value.Value) ([]value.Value, error) {

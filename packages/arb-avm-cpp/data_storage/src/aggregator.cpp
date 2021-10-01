@@ -16,11 +16,10 @@
 
 #include <data_storage/aggregator.hpp>
 
-#include "value/utils.hpp"
-
 #include <data_storage/datastorage.hpp>
 #include <data_storage/readwritetransaction.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/utils.hpp>
 
 #include <rocksdb/status.h>
 

@@ -19,19 +19,22 @@
 pragma solidity ^0.6.11;
 
 import "../libraries/Cloneable.sol";
-import "../libraries/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./IChallenge.sol";
-import "../rollup/IRollup.sol";
+import "../rollup/facets/RollupUser.sol";
 import "../arch/IOneStepProof.sol";
 
 import "./ChallengeLib.sol";
-import "../libraries/MerkleLib.sol";
 
 contract Challenge is Cloneable, IChallenge {
     using SafeMath for uint256;
 
-    enum Turn { NoChallenge, Asserter, Challenger }
+    enum Turn {
+        NoChallenge,
+        Asserter,
+        Challenger
+    }
 
     event InitiatedChallenge();
     event Bisected(
@@ -52,28 +55,21 @@ contract Challenge is Cloneable, IChallenge {
 
     // Can only initialize once
     string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
-    // Can only bisect assertion in response to a challenge
-    string private constant BIS_STATE = "BIS_STATE";
     // deadline expired
     string private constant BIS_DEADLINE = "BIS_DEADLINE";
     // Only original asserter can continue bisect
     string private constant BIS_SENDER = "BIS_SENDER";
     // Incorrect previous state
     string private constant BIS_PREV = "BIS_PREV";
-    // Invalid assertion selected
-    string private constant CON_PROOF = "CON_PROOF";
     // Can't timeout before deadline
     string private constant TIMEOUT_DEADLINE = "TIMEOUT_DEADLINE";
 
-    uint256 private constant INBOX_CONSISTENCY_BISECTION_DEGREE = 400;
-    uint256 private constant INBOX_DELTA_BISECTION_DEGREE = 250;
-    uint256 private constant EXECUTION_BISECTION_DEGREE = 300;
     bytes32 private constant UNREACHABLE_ASSERTION = bytes32(uint256(0));
 
     IOneStepProof[] public executors;
-    IBridge public bridge;
+    address[2] public bridges;
 
-    IRollup internal resultReceiver;
+    RollupUserFacet internal resultReceiver;
 
     uint256 maxMessageCount;
 
@@ -89,7 +85,7 @@ contract Challenge is Cloneable, IChallenge {
     // This is the root of a merkle tree with nodes like (prev, next, steps)
     bytes32 public challengeState;
 
-    modifier onlyOnTurn {
+    modifier onlyOnTurn() {
         require(msg.sender == currentResponder(), BIS_SENDER);
         require(block.number.sub(lastMoveBlock) <= currentResponderTimeLeft(), BIS_DEADLINE);
 
@@ -114,13 +110,14 @@ contract Challenge is Cloneable, IChallenge {
         address _challenger,
         uint256 _asserterTimeLeft,
         uint256 _challengerTimeLeft,
-        IBridge _bridge
+        ISequencerInbox _sequencerBridge,
+        IBridge _delayedBridge
     ) external override {
         require(turn == Turn.NoChallenge, CHAL_INIT_STATE);
 
         executors = _executors;
 
-        resultReceiver = IRollup(_resultReceiver);
+        resultReceiver = RollupUserFacet(_resultReceiver);
 
         maxMessageCount = _maxMessageCount;
 
@@ -134,7 +131,7 @@ contract Challenge is Cloneable, IChallenge {
         challengeState = _executionHash;
 
         lastMoveBlock = block.number;
-        bridge = _bridge;
+        bridges = [address(_sequencerBridge), address(_delayedBridge)];
 
         emit InitiatedChallenge();
     }
@@ -166,9 +163,11 @@ contract Challenge is Cloneable, IChallenge {
         if (_chainHashes[_chainHashes.length - 1] != UNREACHABLE_ASSERTION) {
             require(_challengedSegmentLength > 1, "TOO_SHORT");
         }
+        uint256 challengeExecutionBisectionDegree = resultReceiver
+            .challengeExecutionBisectionDegree();
         require(
             _chainHashes.length ==
-                bisectionDegree(_challengedSegmentLength, EXECUTION_BISECTION_DEGREE) + 1,
+                bisectionDegree(_challengedSegmentLength, challengeExecutionBisectionDegree) + 1,
             "CUT_COUNT"
         );
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
@@ -184,19 +183,31 @@ contract Challenge is Cloneable, IChallenge {
             "invalid segment length"
         );
 
-        bytes32 bisectionHash =
-            ChallengeLib.bisectionChunkHash(
-                _challengedSegmentStart,
-                _challengedSegmentLength,
-                _chainHashes[0],
-                _oldEndHash
-            );
-        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
+        bytes32 bisectionHash = ChallengeLib.bisectionChunkHash(
+            _challengedSegmentStart,
+            _challengedSegmentLength,
+            _chainHashes[0],
+            _oldEndHash
+        );
+        require(
+            ChallengeLib.verifySegmentProof(
+                challengeState,
+                bisectionHash,
+                _merkleNodes,
+                _merkleRoute
+            ),
+            BIS_PREV
+        );
 
-        updateBisectionRoot(_chainHashes, _challengedSegmentStart, _challengedSegmentLength);
+        bytes32 newChallengeState = ChallengeLib.updatedBisectionRoot(
+            _chainHashes,
+            _challengedSegmentStart,
+            _challengedSegmentLength
+        );
+        challengeState = newChallengeState;
 
         emit Bisected(
-            challengeState,
+            newChallengeState,
             _challengedSegmentStart,
             _challengedSegmentLength,
             _chainHashes
@@ -214,14 +225,21 @@ contract Challenge is Cloneable, IChallenge {
     ) external onlyOnTurn {
         bytes32 beforeChainHash = ChallengeLib.assertionHash(_gasUsedBefore, _assertionRest);
 
-        bytes32 bisectionHash =
-            ChallengeLib.bisectionChunkHash(
-                _challengedSegmentStart,
-                _challengedSegmentLength,
-                beforeChainHash,
-                _oldEndHash
-            );
-        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
+        bytes32 bisectionHash = ChallengeLib.bisectionChunkHash(
+            _challengedSegmentStart,
+            _challengedSegmentLength,
+            beforeChainHash,
+            _oldEndHash
+        );
+        require(
+            ChallengeLib.verifySegmentProof(
+                challengeState,
+                bisectionHash,
+                _merkleNodes,
+                _merkleRoute
+            ),
+            BIS_PREV
+        );
 
         require(
             _gasUsedBefore >= _challengedSegmentStart.add(_challengedSegmentLength),
@@ -254,20 +272,20 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
         uint256 _initialMessagesRead,
-        bytes32 _initialSendAcc,
-        bytes32 _initialLogAcc,
+        bytes32[2] calldata _initialAccs,
         uint256[3] memory _initialState,
         bytes memory _executionProof,
         bytes memory _bufferProof,
         uint8 prover
-    ) public onlyOnTurn {
+    ) external onlyOnTurn {
         ReturnContext memory context = ReturnContext(0,0,0,0);
         {
-            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[7] memory proofFields) =
-                executors[prover].executeStep(
-                    bridge,
+            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[7] memory proofFields) = executors[
+                prover
+            ].executeStep(
+                    bridges,
                     _initialMessagesRead,
-                    [_initialSendAcc, _initialLogAcc],
+                    _initialAccs,
                     _executionProof,
                     _bufferProof
                 );
@@ -291,8 +309,8 @@ contract Challenge is Cloneable, IChallenge {
             require(
                 _oldEndHash !=
                     oneStepProofExecutionAfter(
-                        _initialSendAcc,
-                        _initialLogAcc,
+                        _initialAccs[0],
+                        _initialAccs[1],
                         _initialState,
                         gasUsed,
                         totalMessagesRead,
@@ -306,8 +324,8 @@ contract Challenge is Cloneable, IChallenge {
                 _challengedSegmentLength,
                 oneStepProofExecutionBefore(
                     _initialMessagesRead,
-                    _initialSendAcc,
-                    _initialLogAcc,
+                    _initialAccs[0],
+                    _initialAccs[1],
                     _initialState,
                     proofFields
                 ),
@@ -316,7 +334,10 @@ contract Challenge is Cloneable, IChallenge {
 
         }
 
-        verifySegmentProof(context.rootHash, _merkleNodes, _merkleRoute);
+        require(
+            ChallengeLib.verifySegmentProof(challengeState, context.rootHash, _merkleNodes, _merkleRoute),
+            BIS_PREV
+        );
 
         if (context.endState == 0 && context.startState == 0) {
             emit OneStepProofCompleted();
@@ -403,12 +424,21 @@ contract Challenge is Cloneable, IChallenge {
         challengeState = MerkleLib.generateRoot(hashes);
     }
 
+    function clearChallenge() external override {
+        require(msg.sender == address(resultReceiver), "NOT_RES_RECEIVER");
+        safeSelfDestruct(msg.sender);
+    }
+
     function _currentWin() private {
-        if (turn == Turn.Asserter) {
-            _asserterWin();
-        } else {
-            _challengerWin();
-        }
+        // As a safety measure, challenges can only be resolved by timeouts during mainnet beta.
+        // As state is 0, no move is possible. The other party will lose via timeout
+        challengeState = bytes32(0);
+
+        // if (turn == Turn.Asserter) {
+        //     _asserterWin();
+        // } else {
+        //     _challengerWin();
+        // }
     }
 
     function _asserterWin() private {
@@ -419,17 +449,6 @@ contract Challenge is Cloneable, IChallenge {
     function _challengerWin() private {
         resultReceiver.completeChallenge(challenger, asserter);
         safeSelfDestruct(msg.sender);
-    }
-
-    function verifySegmentProof(
-        bytes32 item,
-        bytes32[] calldata _merkleNodes,
-        uint256 _merkleRoute
-    ) private view {
-        require(
-            challengeState == MerkleLib.calculateRoot(_merkleNodes, _merkleRoute, item),
-            BIS_PREV
-        );
     }
 
     function bisectionDegree(uint256 _chainLength, uint256 targetDegree)
@@ -479,6 +498,8 @@ contract Challenge is Cloneable, IChallenge {
         uint256 totalMessagesRead,
         bytes32[7] memory proofFields
     ) private pure returns (bytes32) {
+        uint256 newSendCount = _initialState[1].add((_initialSendAcc == proofFields[2] ? 0 : 1));
+        uint256 newLogCount = _initialState[2].add((_initialLogAcc == proofFields[3] ? 0 : 1));
         // The one step proof already guarantees us that firstMessage and lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
@@ -490,9 +511,9 @@ contract Challenge is Cloneable, IChallenge {
                     totalMessagesRead,
                     proofFields[1],
                     proofFields[2],
-                    _initialState[1].add((_initialSendAcc == proofFields[2] ? 0 : 1)),
+                    newSendCount,
                     proofFields[3],
-                    _initialState[2].add((_initialLogAcc == proofFields[3] ? 0 : 1))
+                    newLogCount
                 )
             );
     }

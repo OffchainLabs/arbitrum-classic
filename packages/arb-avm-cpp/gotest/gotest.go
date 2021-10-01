@@ -24,12 +24,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-func OpCodeTestFiles() ([]string, error) {
+func OpCodeTestDir() (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		return nil, errors.New("failed to get filename")
+		return "", errors.New("failed to get filename")
 	}
-	testCaseDir := filepath.Join(filepath.Dir(filename), "../tests/machine-cases")
+	return filepath.Join(filepath.Dir(filename), "../tests/machine-cases"), nil
+}
+
+func OpCodeTestFiles() ([]string, error) {
+	testCaseDir, err := OpCodeTestDir()
 	files, err := ioutil.ReadDir(testCaseDir)
 	if err != nil {
 		return nil, err

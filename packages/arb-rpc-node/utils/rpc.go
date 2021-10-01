@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gorilla/handlers"
@@ -29,17 +30,64 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
 
-func LaunchRPC(ctx context.Context, handler http.Handler, port string) error {
+func setupPaths(r *mux.Router, path string) ([]*mux.Route, error) {
+	if len(path) == 0 {
+		return nil, errors.New("must have nonempty path")
+	}
+	basePath := r.Path(path)
+	if path[len(path)-1] != '/' {
+		path += "/"
+	}
+	prefixPath := r.PathPrefix(path)
+	return []*mux.Route{basePath, prefixPath}, nil
+}
+
+func LaunchRPC(ctx context.Context, handler http.Handler, addr, port, path string) error {
 	r := mux.NewRouter()
-	r.Handle("/", handler).Methods("GET", "POST", "OPTIONS")
-	return launchServer(ctx, r, port)
+	rpcRoutes, err := setupPaths(r, path)
+	if err != nil {
+		return err
+	}
+	for _, route := range rpcRoutes {
+		route.Handler(handler).Methods("GET", "POST", "OPTIONS")
+	}
+	return launchServer(ctx, r, addr, port, "rpc")
 }
 
-func LaunchWS(ctx context.Context, server *rpc.Server, port string) error {
-	return launchServer(ctx, server.WebsocketHandler([]string{"*"}), port)
+func LaunchWS(ctx context.Context, server *rpc.Server, addr, port, path string) error {
+	r := mux.NewRouter()
+	wsRoutes, err := setupPaths(r, path)
+	if err != nil {
+		return err
+	}
+	wsHandler := server.WebsocketHandler([]string{"*"})
+	for _, route := range wsRoutes {
+		route.Handler(wsHandler)
+	}
+	return launchServer(ctx, r, addr, port, "websocket")
 }
 
-func launchServer(ctx context.Context, handler http.Handler, port string) error {
+func LaunchRPCAndWS(ctx context.Context, server *rpc.Server, addr, port, rpcPath, wsPath string) error {
+	r := mux.NewRouter()
+	rpcRoutes, err := setupPaths(r, rpcPath)
+	if err != nil {
+		return err
+	}
+	wsRoutes, err := setupPaths(r, wsPath)
+	if err != nil {
+		return err
+	}
+	for _, route := range rpcRoutes {
+		route.Handler(server).Methods("GET", "POST", "OPTIONS")
+	}
+	wsHandler := server.WebsocketHandler([]string{"*"})
+	for _, route := range wsRoutes {
+		route.Handler(wsHandler)
+	}
+	return launchServer(ctx, r, addr, port, "rpc and websocket")
+}
+
+func launchServer(ctx context.Context, handler http.Handler, addr string, port string, serverType string) error {
 	headersOk := handlers.AllowedHeaders(
 		[]string{"X-Requested-With", "Content-Type", "Authorization"},
 	)
@@ -49,8 +97,8 @@ func launchServer(ctx context.Context, handler http.Handler, port string) error 
 	)
 	h := handlers.CORS(headersOk, originsOk, methodsOk)(handler)
 
-	logger.Info().Msg("Launching rpc server over http")
-	server := &http.Server{Addr: ":" + port, Handler: h}
+	logger.Info().Str("port", port).Msgf("Launching %s server over http", serverType)
+	server := &http.Server{Addr: addr + ":" + port, Handler: h}
 
 	errChan := make(chan error, 1)
 	defer close(errChan)

@@ -20,7 +20,7 @@
 
 #include <ethash/keccak.hpp>
 
-uint256_t InboxMessage::hash(const uint256_t& previous_inbox_acc) const {
+uint256_t InboxMessage::hash() const {
     std::vector<unsigned char> inbox_vector;
 
     inbox_vector.push_back(kind);
@@ -32,9 +32,17 @@ uint256_t InboxMessage::hash(const uint256_t& previous_inbox_acc) const {
     auto data_hash = ::hash(data);
     marshal_uint256_t(data_hash, inbox_vector);
 
-    auto message_hash = ::hash(inbox_vector);
+    return ::hash(inbox_vector);
+}
 
-    return ::hash(previous_inbox_acc, message_hash);
+uint256_t InboxMessage::prefixHash() const {
+    std::vector<unsigned char> prefix_data;
+
+    prefix_data.insert(prefix_data.end(), sender.begin(), sender.end());
+    marshal_uint256_t(block_number, prefix_data);
+    marshal_uint256_t(timestamp, prefix_data);
+
+    return ::hash(prefix_data);
 }
 
 uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state) {
@@ -95,14 +103,6 @@ InboxMessage extractInboxMessageImpl(
         gas_price_l1, data};
 }
 
-uint256_t extractInboxMessageBlockNumber(
-    const std::vector<unsigned char>& stored_state) {
-    auto iter = stored_state.begin();
-    iter++;      // skip kind
-    iter += 20;  // skip sender
-    return extractUint256(iter);
-}
-
 void InboxMessage::serializeHeader(
     std::vector<unsigned char>& state_data_vector) const {
     state_data_vector.push_back(kind);
@@ -129,7 +129,7 @@ std::vector<unsigned char> InboxMessage::serialize() const {
 std::vector<unsigned char> InboxMessage::serializeForProof() const {
     std::vector<unsigned char> state_data_vector;
     serializeHeader(state_data_vector);
-    uint256_t proofLength = state_data_vector.size();
+    uint256_t proofLength = data.size();
     marshal_uint256_t(proofLength, state_data_vector);
     state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
     return state_data_vector;
@@ -178,4 +178,18 @@ InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
     return InboxMessage{
         kind,         sender, block_number, timestamp, inbox_sequence_number,
         gas_price_l1, data};
+}
+
+void MachineMessage::serializeImpl(
+    std::vector<unsigned char>& state_data_vector) const {
+    marshal_uint256_t(accumulator, state_data_vector);
+    message.serializeImpl(state_data_vector);
+}
+
+MachineMessage extractMachineMessageImpl(
+    std::vector<unsigned char>::const_iterator current_iter,
+    const std::vector<unsigned char>::const_iterator end) {
+    uint256_t accumulator = extractUint256(current_iter);
+    InboxMessage message = extractInboxMessageImpl(current_iter, end);
+    return {message, accumulator};
 }

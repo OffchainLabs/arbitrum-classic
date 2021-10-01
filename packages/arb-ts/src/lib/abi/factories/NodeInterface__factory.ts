@@ -2,21 +2,80 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { NodeInterface } from '../NodeInterface'
-
-export class NodeInterface__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): NodeInterface {
-    return new Contract(address, _abi, signerOrProvider) as NodeInterface
-  }
-}
+import type { NodeInterface, NodeInterfaceInterface } from '../NodeInterface'
 
 const _abi = [
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'sender',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'deposit',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: 'destAddr',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'l2CallValue',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxSubmissionCost',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: 'excessFeeRefundAddress',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'callValueRefundAddress',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxGas',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'gasPriceBid',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
+      },
+    ],
+    name: 'estimateRetryableTicket',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'pure',
+    type: 'function',
+  },
   {
     inputs: [
       {
@@ -82,3 +141,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class NodeInterface__factory {
+  static readonly abi = _abi
+  static createInterface(): NodeInterfaceInterface {
+    return new utils.Interface(_abi) as NodeInterfaceInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): NodeInterface {
+    return new Contract(address, _abi, signerOrProvider) as NodeInterface
+  }
+}

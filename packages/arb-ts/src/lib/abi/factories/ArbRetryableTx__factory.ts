@@ -2,19 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
-import type { ArbRetryableTx } from '../ArbRetryableTx'
-
-export class ArbRetryableTx__factory {
-  static connect(
-    address: string,
-    signerOrProvider: Signer | Provider
-  ): ArbRetryableTx {
-    return new Contract(address, _abi, signerOrProvider) as ArbRetryableTx
-  }
-}
+import type { ArbRetryableTx, ArbRetryableTxInterface } from '../ArbRetryableTx'
 
 const _abi = [
   {
@@ -23,7 +13,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -36,7 +26,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
       {
@@ -55,7 +45,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -63,10 +53,23 @@ const _abi = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'ticketId',
+        type: 'bytes32',
+      },
+    ],
+    name: 'TicketCreated',
+    type: 'event',
+  },
+  {
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -79,7 +82,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -98,7 +101,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -159,7 +162,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -178,7 +181,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -207,3 +210,16 @@ const _abi = [
     type: 'function',
   },
 ]
+
+export class ArbRetryableTx__factory {
+  static readonly abi = _abi
+  static createInterface(): ArbRetryableTxInterface {
+    return new utils.Interface(_abi) as ArbRetryableTxInterface
+  }
+  static connect(
+    address: string,
+    signerOrProvider: Signer | Provider
+  ): ArbRetryableTx {
+    return new Contract(address, _abi, signerOrProvider) as ArbRetryableTx
+  }
+}

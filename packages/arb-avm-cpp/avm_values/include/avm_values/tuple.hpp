@@ -142,11 +142,14 @@ class Tuple {
         }
         std::shared_ptr<RawTuple> tmp =
             TuplePool::get_impl().getResource(tuple_size());
-        std::copy(tpl->data.begin(), tpl->data.end(),
-                  std::back_inserter(tmp->data));
+        for (uint64_t i = 0; i < tuple_size(); i++) {
+            if (i == pos) {
+                tmp->data.emplace_back(std::move(newval));
+            } else {
+                tmp->data.emplace_back(tpl->data[i]);
+            }
+        }
         tpl = std::move(tmp);
-        tpl->data[pos] = std::move(newval);
-        tpl->deferredHashing = true;
     }
 
     [[nodiscard]] value get_element(const uint64_t pos) const {
@@ -157,6 +160,11 @@ class Tuple {
     }
 
     [[nodiscard]] const value& get_element_unsafe(const uint64_t pos) const {
+        return tpl->data[pos];
+    }
+
+    [[nodiscard]] value& get_element_mutable_unsafe(const uint64_t pos) const {
+        tpl->deferredHashing = true;
         return tpl->data[pos];
     }
 

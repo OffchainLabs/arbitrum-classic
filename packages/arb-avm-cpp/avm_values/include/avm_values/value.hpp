@@ -60,7 +60,7 @@ void marshal_value(const value& val, std::vector<unsigned char>& buf);
 void marshalWasmCodePoint(const WasmCodePoint& val, std::vector<unsigned char>& buf);
 
 void marshalForProof(const value& val,
-                     MarshalLevel marshal_level,
+                     size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code);
 

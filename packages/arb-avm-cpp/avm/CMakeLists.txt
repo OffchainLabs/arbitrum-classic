@@ -77,7 +77,6 @@ target_link_libraries(
         avm
 PUBLIC
         avm_values
-        data_storage
         RocksDB::RocksDB
         Threads::Threads
         secp256k1

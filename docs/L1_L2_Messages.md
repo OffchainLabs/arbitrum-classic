@@ -20,135 +20,123 @@ The most common use-case for direct inter-chain communication is depositing and 
 
 ## Ethereum to Arbitrum: Retryable Tickets
 
-#### Explanation
+Retryable tickets are the Arbitrum protocol’s canonical method for passing generalized messages from Ethereum to Arbitrum. A retryable ticket is an L2 message encoded and delivered by L1; if gas is provided, it will be executed immediately. If no gas is provided or the execution reverts, it will be placed in the L2 retry buffer, where any user can re-execute for some fixed period (roughly one week).
 
-Arbitrum offers several ways for an Ethereum transaction to send a message to Arbitrum ([see "L2 Messages"](Data_Formats.md)); however, the generally recommended method to use for direct L1 to L2 communication is via retryable tickets.
+### Motivation
 
-The idea is the following: a layer 1 transaction is put in the Inbox with instructions to submit a transaction to L2 (including calldata, callvalue, and gas info) in such a way that if it doesn't execute successfully the first time, it gets put into an L2 "retry buffer." This means that for a period of time (likely on the scale of the chain's dispute window, so roughly one week), anybody can attempt to "redeem" the the L2 transaction ticket by re-executing it.
+Retryable tickets are designed to gracefully handle various potentially tricky aspects of cross-chain messaging:
 
-Note that the first execution of the L2 transaction happens automatically if any gas is provided, and in the happy / most-common case, it will simply succeed right then and there; thus, a user will typically have have to sign and publish a single transaction.
+- **Overpaying for L2 Gas:** An L1 contract has to supply gas for the L2 transaction’s execution; if the L1 side overpays, this begets the questions of what to do with this excess Ether.
 
-The rationale here is to account for cases like the following: say we want a transaction that lets a user deposit a token onto Arbitrum; this will entail escrowing some tokens in a contract on L1, and sending a message to mint the same amount of tokens on L2. Suppose that the L1 transaction succeeds but the L2 message reverts due to insufficient gas. In a naive implementation, this would be a serious problem — the user has simply transferred tokens a contract and received nothing on L2; those tokens are stuck in the contract indefinitely. With retryable tickets, however, the user (or anyone else) has a week to simply re-execute the L2 message with sufficient gas.
+- **L2 transaction reversion — breaking atomicity:** It is vital for many use-cases of L1 to L2 transactions that the state updates on both layers are atomic, i.e., if the L1 side succeeds, there is assurance that the L2 will eventually succeed as well. The canonical example here is a token deposit: on L1, tokens are escrowed in some contract, and a message is sent to L2 to mint some corresponding tokens. If the L1 side succeeds and the L2 reverts, the user has simply lost their tokens (i.e., donated them to the bridge contract).
 
-Additionally, the retryable ticket system safely accounts for cases where a user _overpays_ for the ArbGas required for the L2 transaction, and avoids any case in which a user would need to awkwardly pay for execution using gas in a contract address. If the user overpays ArbGas for the initial L2 execution, the excess Ether is refunded to the user at their specified address; if a user needs to re-execute the L2 transaction, they can execute it (and thus also fund it) from any EOA.
+- **L2 transaction reversion — handling L2 callvalue:** The L1 side must supply the Ether for the callvalue of the L2 transaction (by depositing it); if the L2 transaction reverts, this begets the questions of what to do with this in-limbo Ether.
 
-#### Retryable Tickets API
+Retryable tickets handle all these things (and handle them well!)
 
-A convenience method for creating retryable tickets is exposed in `Inbox.createRetryableTicket`:
+### Transaction Types / Terminology
+
+| Txn Type           | Description                                                                                                                                           | Appearance                                                                                                                     | Tx ID                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| Retryable Ticket   | Quasi-transaction that sits in the retry buffer and has a lifetime over which it can be executed, i.e., “redeemed.”                                   | Emitted when message is included; will succeed if user supplies sufficient ETH to cover base-fee + callvalue, otherwise fails. | _keccak256(zeroPad(l2ChainId), zeroPad(bitFlipedinboxSequenceNumber))_ |
+| Redemption Txn     | Transaction that results a retryable ticket being successfully redeemed; looks like a normal L2 transaction.                                          | Emitted after a retryable ticket is successfully redeemed, either user-initiated or via an auto-redeem.                        | _keccak256(zeroPad(retryable-ticket-id), 0)_                           |
+| Auto-Redeem Record | Quasi-transaction ArbOS creates automatically which attempts to redeem a retryable ticket immediately when it is submitted using the ArbGas provided. | Attempted / emitted iff gas\*gas-price > 0. If it fails, retryable ticket stays in the retry buffer.                           | \_keccak256(zeroPad(retryable-ticket-id), 1)                           |
+
+### Retryable Tickets Contract API
+
+A retryable ticket is created by calling [Inbox.createRetryableTicket](./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md). Other operations involving retryable tickets are preformed via the [ArbRetryableTicket](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) precompile interface at L2 address 0x000000000000000000000000000000000000006E. (This contract won't need to be used under normal circumstances.)
+
+### Parameters:
+
+There are a total of 10 parameters that the L1 must pass to the L2 when creating a retryable ticket.
+
+5 of them have to do with allocating ETH/Gas:
+
+- **DepositValue:** Total ETH deposited from L1 to L2.
+- **CallValue:** Call-value for L2 transaction.
+- **GasPrice:** L2 Gas price bid for immediate L2 execution attempt (queryable via standard eth\*gasPrice RPC)
+- **MaxGas:** Gas limit for immediate L2 execution attempt (can be estimated via \_NodeInterface.estimateRetryableTicket\*)
+- **MaxSubmissionCost:** Amount of ETH allocated to pay for the base submission fee. The base submission fee is a parameter unique to retryable transactions; the user is charged the base submission fee to cover the storage costs of keeping their ticket’s calldata in the retry buffer. (current base submission fee is queryable via `ArbRetryableTx.getSubmissionPrice`)
+
+Intuitively: if a user does not desire immediate redemption, they should provide a DepositValue of at least `CallValue + MaxSubmissionCost`. If they do desire immediate execution, they should provide a DepositValue of at least
+`CallValue + MaxSubmissionCost + (GasPrice x MaxGas).`
+
+### Other Parameters
+
+- **Destination Address:** Address from which transaction will be initiated on L2.
+- **Credit-Back Address:** Address to which all excess gas is credited on L2; i.e., excess ETH for base submission cost (`MaxSubmissionCost - ActualSubmissionCostPaid`) and excess ETH provided for L2 execution (` (GasPrice x MaxGas) - ActualETHSpentInExecution`).
+- **Beneficiary:** Address to which CallValue will be credited to on L2 if the retryable ticket times out or is cancelled. The Beneficiary is also the address with the right to cancel a Retryable Ticket (if the ticket hasn’t been redeemed yet).
+  `Calldata:` data encoding the L2 contract call.
+  `Calldata Size:` CallData size.
+
+### Important Note About Base Submission Fee
+
+If an L1 transaction underpays for a retryable ticket's base submission free, the retryable ticket creation on L2 simply fails. Given that this potentially breaks the atomicity of the L1 / L2 transactions, applications should avoid this scenario. The current base submission fee returned by `ArbRetryableTx.getSubmissionPrice` increases once every 24 hour period by at most 50% of its current value. Since any amount overpaid will be credited to the `credit-back-address`, it is highly recommended that applications judiciously overpay relative to the current price.
+
+In a future release, the base submission fee will be calculated using the 1559 `BASE_FEE` and collected directly at L1; underpayment will simply result in the L1 transaction reverting, thus avoiding the complications above entirely.
+
+### Retryable Transaction Lifecycle:
+
+When a retryable ticket is initiated from the L1, the following things take place:
+
+- DepositValue is credited to the sender’s account on L2.
+  - If DepositValue is less than MaxSubmissionCost + Callvalue, the Retryable Ticket fails.
+- Submission fee is collected: submission fee is deducted from the sender’s L2 account; MaxSubmissionCost - submission fee is credited to Credit-Back Address.
+
+- Callvalue is deducted from sender’s L2 account and a Retryable Ticket is successfully created.
+  - If the sender has insufficient funds to cover the callvalue (even after the DepositValue has been credited), the Retryable Ticket fails.
+- If MaxGas and MaxPrice are both > 0, an immediate redemption will be attempted:
+
+- MaxGas x MaxPrice is credited to the Credit-Back Address.
+- The retryable ticket is automatically executed —i.e., the transaction encoded in Calldata with Callvalue — with gas provided by the Credit-Back Address.
+- If it succeeds, a successful Immediate-Redeem Txn is emitted along with a successful Redemption Transaction. Any excess gas remains in the Credit-Back Address.
+- If it reverts, a failed Immediate-Redeem Txn is emitted, and the Retryable Ticket is placed in the retry-buffer.
+  ...Otherwise, the Retryable Ticket goes straight into the retry buffer, and no Immediate-Redeem Txn is ever emitted.
+
+Any user can redeem a Retryable Ticket in the retry buffer (before it expires) by calling ArbRetryableTicket.redeem(Redemption-TxID). The user provides gas the way they would a normal L2 transaction.
+
+If the Retryable Ticket is cancelled or expires before it is redeemed, Callvalue is credited to Beneficiary.
+
+### Depositing ETH via Retryables
+
+Currently, the canonical method for depositing ETH into Arbitrum is to create a retryable ticket using the [Inbox.depositEth](./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md) method. A Retryable Ticket is created with 0 Callvalue, 0 MaxGas, 0 GasPrice, and empty Calldata. The DepositValue credited to the sender’s account in step 1 simply remains there.
+
+The Retryable Ticket gets put in the retry buffer and can in theory be redeemed, but redeeming is a no-op.
+
+Beyond the superfluous ticket creation, this is suboptimal in that the base submission fee is deducted from the amount deposited, so the user will see a (slight) discrepancy between the amount sent to be deposited and ultimate amount credited in their L2 address. A special message type Taylor-made for ETH deposits that handles them more cleanly will be exposed soon.
+
+### Address Aliasing
+
+When a retryable ticket is executed on L2, the sender's address —i.e., that which is returned by `msg.sender` — will _not_ simply be the address of the contract on L1 that initiated the message; rather it will be the contract's "L2 Alias." A contract address's L2 alias is its value increased by the hex value `0x1111000000000000000000000000000000001111`:
+
+```
+L2_Alias = L1_Contract_ Address + 0x1111000000000000000000000000000000001111
+```
+
+The Arbitrum protocol's usage of L2 Aliases for L1-to-L2 messages prevents cross-chain exploits that would otherwise be possible if we simply reused L1 contact addresses.
+
+If for some reason you need to compute the L1 address from an L2 alias on chain, you can use our `AddressAliasHelper` library:
 
 ```sol
-    /**
-    @notice Put an message in the L2 inbox that can be re-executed for some fixed amount of time if it reverts
-    * @dev all msg.value will deposited to callValueRefundAddress on L2
-    * @param destAddr destination L2 contract address
-    * @param l2CallValue call value for retryable L2 message
-    * @param  maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
-    * @param excessFeeRefundAddress maxGas x gasprice - execution cost gets credited here on L2 balance
-    * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled
-    * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
-    * @param gasPriceBid price bid for L2 execution
-    * @param data ABI encoded data of L2 message
-    * @return unique id for retryable transaction (keccak256(requestID, uint(0) )
-     */
-    function createRetryableTicket(
-        address destAddr,
-        uint256 l2CallValue,
-        uint256 maxSubmissionCost,
-        address excessFeeRefundAddress,
-        address callValueRefundAddress,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata data
-    ) external payable override returns (uint256)
+    modifier onlyFromMyL1Contract() override {
+        require(AddressAliasHelper.undoL1ToL2Alias(msg.sender) === myL1ContractAddress, "ONLY_COUNTERPART_CONTRACT");
+        _;
+    }
 ```
 
-See [EthErc20Bridge.depositToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/EthERC20Bridge.md) for example usage.
+_Of note: the (highly) recommended convenience methods `Inbox.depositEth` and `Inbox.createRetryableTicket` handle subtracting the offset for the credit back address and beneficiary address, and using the these reverse-aliased values as the inputs for the create retryable tickets. This way, the beneficiary and credit back addresses as received on L2 will be equivalent to those provided as the L1 params._
 
-Additionally, a precompiled `ArbRetryableTx` contract exists in every Arbitrum chain at address `0x000000000000000000000000000000000000006E`, which exposes methods relevant to retryable transactions:
+#### Directly Redeeming / Cancelling Retryables
 
-```sol
+In the normal, happy case, a retryable ticket is automatically redeemed and executed when it arrives on L2; in this case only a single user-action (publishing the transaction on L1 that creates a retryable ticket) is required. If the transaction is not auto-redeemed (either because no L2 gas was provided or because the L2 retryable ticket reverts for whatever reason), the transaction can now either be redeemed via a signed L2 transaction (probably desireable) or cancelled.
 
-pragma solidity >=0.4.21 <0.7.0;
+To redeem the retryable, any account can call `ArbRetryableTx.redeem(redemption-txn-id)`. To cancel, the beneficiary address can call `ArbRetryableTx.cancel(redemption-txn-id)`.
 
-/**
-* @title precompiled contract in every Arbitrum chain for retryable transaction related data retrieval and interactions. Exists at 0x000000000000000000000000000000000000006E
-*/
-interface ArbRetryableTx {
+See the [ArbRetryableTx](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) interface for other related methods, and [arb-ts](https://arb-ts-docs.netlify.app/) for convenience methods around using retryables.
 
-    /**
-    * @notice Redeem a redeemable tx.
-    * Revert if called by an L2 contract, or if txId does not exist, or if txId reverts.
-    * If this returns, txId has been completed and is no longer available for redemption.
-    * If this reverts, txId is still available for redemption (until it times out or is canceled).
-    @param txId unique identifier of retryabale message: keccak256(requestID, uint(0) )
-     */
-    function redeem(bytes32 txId) external;
+### Demo
 
-    /**
-    * @notice Return the minimum lifetime of redeemable txn.
-    * @return lifetime in seconds
-    */
-    function getLifetime() external view returns(uint);
-
-    /**
-    * @notice Return the timestamp when txId will age out, or zero if txId does not exist.
-    * The timestamp could be in the past, because aged-out txs might not be discarded immediately.
-    * @param txId unique identifier of retryabale message: keccak256(requestID, uint(0) )
-    * @return timestamp for txn's deadline
-    */
-    function getTimeout(bytes32 txId) external view returns(uint);
-
-    /**
-    * @notice Return the price, in wei, of submitting a new retryable tx with a given calldata size.
-    * @param calldataSize call data size to get price of (in wei)
-    * @return (price, nextUpdateTimestamp). Price is guaranteed not to change until nextUpdateTimestamp.
-    */
-    function getSubmissionPrice(uint calldataSize) external view returns (uint, uint);
-
-    /**
-     * @notice Return the price, in wei, of extending the lifetime of txId by an additional lifetime period. Revert if txId doesn't exist.
-     * @param txId  unique identifier of retryabale message: keccak256(requestID, uint(0) )
-     * @return (price, nextUpdateTimestamp). Price is guaranteed not to change until nextUpdateTimestamp.
-    */
-    function getKeepalivePrice(bytes32 txId) external view returns(uint, uint);
-
-    /**
-    @notice Deposits callvalue into the sender's L2 account, then adds one lifetime period to the life of txId.
-    * If successful, emits LifetimeExtended event.
-    * Revert if txId does not exist, or if the timeout of txId is already at least one lifetime in the future, or if the sender has insufficient funds (after the deposit).
-    * @param txId unique identifier of retryabale message: keccak256(requestID, uint(0) )
-    * @return New timeout of txId.
-    */
-    function keepalive(bytes32 txId) external payable returns(uint);
-
-    /**
-    * @notice Return the beneficiary of txId.
-    * Revert if txId doesn't exist.
-    * @param txId unique identifier of retryabale message: keccak256(requestID, uint(0) )
-    * @return address of beneficiary for transaction
-    */
-    function getBeneficiary(bytes32 txId) external view returns (address);
-
-    /**
-    @notice Cancel txId and refund its callvalue to its beneficiary.
-    * Revert if txId doesn't exist, or if called by anyone other than txId's beneficiary.
-    @param txId unique identifier of retryabale message: keccak256(requestID, uint(0) )
-    */
-    function cancel(bytes32 txId) external;
-
-    event LifetimeExtended(bytes32 indexed txId, uint newTimeout);
-    event Redeemed(bytes32 indexed txId);
-    event Canceled(bytes32 indexed txId);
-}
-
-
-```
-
-This ArbRetryableTx interface is instantiated and exposed `bridge` class of [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts), i.e.,
-
-```ts
-myBridge.ArbRetryableTx.redeem('mytxid')
-```
+See [Greeter](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/greeter) for a simple demo illustrating the use of retryable tickets.
 
 ## Arbitrum to Ethereum
 
@@ -164,11 +152,11 @@ The lifecycle of sending a message from layer 2 to layer 1 can be broken down in
 
 **1. Publish L2 to L1 transaction (Arbitrum transaction)**
 
-A client initiates the process by publishing a message on L2 via `ArbSys.sendTxToL1` (see [ArbSys](Arbsys.md), and see [ArbTokenBridge.withdraw](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/ArbTokenBridge.md) for example usage.
+A client initiates the process by publishing a message on L2 via `ArbSys.sendTxToL1`.
 
 **2. Outbox entry gets created**
 
-After the Arbitrum chain advances some set amount of time, ArbOS gathers all outgoing messages, Merklizes them, and publishes the root as an [OutboxEntry](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-eth/contracts/bridge/OutboxEntry.sol) in the chain's outbox. Note that this happens "automatically"; i.e., it requires no additional action from the user.
+After the Arbitrum chain advances some set amount of time, ArbOS gathers all outgoing messages, Merklizes them, and publishes the root as an OutboxEntry in the chain's outbox. Note that this happens "automatically"; i.e., it requires no additional action from the user.
 
 **3. Client gets Merkle proof of outgoing message**
 
@@ -248,8 +236,8 @@ Anytime after the dispute window passes, any user can execute the L1 message by 
     )
 ```
 
-Note that convenience methods for the steps outlined here are provided in the [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts) client side library.
+### Demo
 
-For relevant example usage, see [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts.md) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
+See [outbox-execute](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/outbox-execute) for client side interactions with the outbox using the [arb-ts](https://arb-ts-docs.netlify.app/) library.
 
-TODO: execution market?
+See also [integration tests](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts/integration_test) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).

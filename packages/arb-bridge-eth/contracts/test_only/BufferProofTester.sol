@@ -62,14 +62,10 @@ contract BufferProofTester is OneStepProof2 {
         bytes calldata proof,
         bytes calldata bproof
     ) external {
-        (uint64 gas, uint256 totalMessagesRead, bytes32[7] memory fields) =
-            OneStepProof2(address(this)).executeStep(
-                IBridge(0),
-                initialMessagesRead,
-                [initialSendAcc, initialLogAcc],
-                proof,
-                bproof
-            );
+        address[2] memory bridges;
+        (uint64 gas, uint256 totalMessagesRead, bytes32[7] memory fields) = OneStepProof2(
+            address(this)
+        ).executeStep(bridges, initialMessagesRead, [initialSendAcc, initialLogAcc], proof, bproof);
         emit OneStepProofResult(gas, totalMessagesRead, fields);
     }
 }

@@ -9,26 +9,45 @@ import {
   BigNumber,
   BigNumberish,
   PopulatedTransaction,
-} from 'ethers'
-import {
-  Contract,
+  BaseContract,
   ContractTransaction,
   CallOverrides,
-} from '@ethersproject/contracts'
+} from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
+import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
 
 interface NodeInterfaceInterface extends ethers.utils.Interface {
   functions: {
+    'estimateRetryableTicket(address,uint256,address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'lookupMessageBatchProof(uint256,uint64)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'estimateRetryableTicket',
+    values: [
+      string,
+      BigNumberish,
+      string,
+      BigNumberish,
+      BigNumberish,
+      string,
+      string,
+      BigNumberish,
+      BigNumberish,
+      BytesLike
+    ]
+  ): string
   encodeFunctionData(
     functionFragment: 'lookupMessageBatchProof',
     values: [BigNumberish, BigNumberish]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'estimateRetryableTicket',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'lookupMessageBatchProof',
     data: BytesLike
@@ -37,20 +56,64 @@ interface NodeInterfaceInterface extends ethers.utils.Interface {
   events: {}
 }
 
-export class NodeInterface extends Contract {
+export class NodeInterface extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
 
-  on(event: EventFilter | string, listener: Listener): this
-  once(event: EventFilter | string, listener: Listener): this
-  addListener(eventName: EventFilter | string, listener: Listener): this
-  removeAllListeners(eventName: EventFilter | string): this
-  removeListener(eventName: any, listener: Listener): this
+  listeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter?: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): Array<TypedListener<EventArgsArray, EventArgsObject>>
+  off<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  on<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  once<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeListener<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    listener: TypedListener<EventArgsArray, EventArgsObject>
+  ): this
+  removeAllListeners<EventArgsArray extends Array<any>, EventArgsObject>(
+    eventFilter: TypedEventFilter<EventArgsArray, EventArgsObject>
+  ): this
+
+  listeners(eventName?: string): Array<Listener>
+  off(eventName: string, listener: Listener): this
+  on(eventName: string, listener: Listener): this
+  once(eventName: string, listener: Listener): this
+  removeListener(eventName: string, listener: Listener): this
+  removeAllListeners(eventName?: string): this
+
+  queryFilter<EventArgsArray extends Array<any>, EventArgsObject>(
+    event: TypedEventFilter<EventArgsArray, EventArgsObject>,
+    fromBlockOrBlockhash?: string | number | undefined,
+    toBlock?: string | number | undefined
+  ): Promise<Array<TypedEvent<EventArgsArray & EventArgsObject>>>
 
   interface: NodeInterfaceInterface
 
   functions: {
+    estimateRetryableTicket(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber]>
+
     lookupMessageBatchProof(
       batchNum: BigNumberish,
       index: BigNumberish,
@@ -78,35 +141,21 @@ export class NodeInterface extends Contract {
         calldataForL1: string
       }
     >
-
-    'lookupMessageBatchProof(uint256,uint64)'(
-      batchNum: BigNumberish,
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<
-      [
-        string[],
-        BigNumber,
-        string,
-        string,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        string
-      ] & {
-        proof: string[]
-        path: BigNumber
-        l2Sender: string
-        l1Dest: string
-        l2Block: BigNumber
-        l1Block: BigNumber
-        timestamp: BigNumber
-        amount: BigNumber
-        calldataForL1: string
-      }
-    >
   }
+
+  estimateRetryableTicket(
+    sender: string,
+    deposit: BigNumberish,
+    destAddr: string,
+    l2CallValue: BigNumberish,
+    maxSubmissionCost: BigNumberish,
+    excessFeeRefundAddress: string,
+    callValueRefundAddress: string,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    data: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, BigNumber]>
 
   lookupMessageBatchProof(
     batchNum: BigNumberish,
@@ -136,64 +185,22 @@ export class NodeInterface extends Contract {
     }
   >
 
-  'lookupMessageBatchProof(uint256,uint64)'(
-    batchNum: BigNumberish,
-    index: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<
-    [
-      string[],
-      BigNumber,
-      string,
-      string,
-      BigNumber,
-      BigNumber,
-      BigNumber,
-      BigNumber,
-      string
-    ] & {
-      proof: string[]
-      path: BigNumber
-      l2Sender: string
-      l1Dest: string
-      l2Block: BigNumber
-      l1Block: BigNumber
-      timestamp: BigNumber
-      amount: BigNumber
-      calldataForL1: string
-    }
-  >
-
   callStatic: {
-    lookupMessageBatchProof(
-      batchNum: BigNumberish,
-      index: BigNumberish,
+    estimateRetryableTicket(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<
-      [
-        string[],
-        BigNumber,
-        string,
-        string,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        string
-      ] & {
-        proof: string[]
-        path: BigNumber
-        l2Sender: string
-        l1Dest: string
-        l2Block: BigNumber
-        l1Block: BigNumber
-        timestamp: BigNumber
-        amount: BigNumber
-        calldataForL1: string
-      }
-    >
+    ): Promise<[BigNumber, BigNumber]>
 
-    'lookupMessageBatchProof(uint256,uint64)'(
+    lookupMessageBatchProof(
       batchNum: BigNumberish,
       index: BigNumberish,
       overrides?: CallOverrides
@@ -225,13 +232,21 @@ export class NodeInterface extends Contract {
   filters: {}
 
   estimateGas: {
-    lookupMessageBatchProof(
-      batchNum: BigNumberish,
-      index: BigNumberish,
+    estimateRetryableTicket(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'lookupMessageBatchProof(uint256,uint64)'(
+    lookupMessageBatchProof(
       batchNum: BigNumberish,
       index: BigNumberish,
       overrides?: CallOverrides
@@ -239,13 +254,21 @@ export class NodeInterface extends Contract {
   }
 
   populateTransaction: {
-    lookupMessageBatchProof(
-      batchNum: BigNumberish,
-      index: BigNumberish,
+    estimateRetryableTicket(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'lookupMessageBatchProof(uint256,uint64)'(
+    lookupMessageBatchProof(
       batchNum: BigNumberish,
       index: BigNumberish,
       overrides?: CallOverrides

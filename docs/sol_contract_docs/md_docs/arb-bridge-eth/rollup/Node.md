@@ -1,5 +1,6 @@
 ---
 title: Node.sol Spec
+id: Node
 ---
 
 ### `onlyRollup()`
@@ -39,6 +40,8 @@ Remove the given staker from this node
 - `staker`: Address of the staker to remove
 
 ### `childCreated(uint256 number)` (external)
+
+### `resetChildren()` (external)
 
 ### `newChildConfirmDeadline(uint256 deadline)` (external)
 

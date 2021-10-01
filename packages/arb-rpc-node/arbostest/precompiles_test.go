@@ -31,7 +31,7 @@ import (
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -63,8 +63,7 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 	}
 
 	messages := []message.Message{message.NewSafeL2Message(tx)}
-	logs, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 
 	res := results[0]
 	succeededTxCheck(t, res)

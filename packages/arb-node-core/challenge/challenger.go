@@ -6,70 +6,91 @@ import (
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/pkg/errors"
 )
 
+var logger = log.With().Caller().Stack().Str("component", "challenge").Logger()
+
 type Challenger struct {
-	challenge      *ethbridge.Challenge
-	lookup         core.ArbCoreLookup
-	challengedNode *core.NodeInfo
-	stakerAddress  common.Address
+	challenge           *ethbridge.Challenge
+	sequencerInbox      *ethbridge.SequencerInboxWatcher
+	lookup              core.ArbCoreLookup
+	challengedAssertion *core.Assertion
+	stakerAddress       common.Address
 }
 
 func (c *Challenger) ChallengeAddress() common.Address {
 	return c.challenge.Address()
 }
 
-func NewChallenger(challenge *ethbridge.Challenge, lookup core.ArbCoreLookup, challengedNode *core.NodeInfo, stakerAddress common.Address) *Challenger {
+func NewChallenger(challenge *ethbridge.Challenge, sequencerInbox *ethbridge.SequencerInboxWatcher, lookup core.ArbCoreLookup, challengedAssertion *core.Assertion, stakerAddress common.Address) *Challenger {
 	return &Challenger{
-		challenge:      challenge,
-		lookup:         lookup,
-		challengedNode: challengedNode,
-		stakerAddress:  stakerAddress,
+		challenge:           challenge,
+		sequencerInbox:      sequencerInbox,
+		lookup:              lookup,
+		challengedAssertion: challengedAssertion,
+		stakerAddress:       stakerAddress,
 	}
 }
 
-func (c *Challenger) HandleConflict(ctx context.Context) error {
+func (c *Challenger) HandleConflict(ctx context.Context) (Move, error) {
+	isTimedOut, err := c.challenge.IsTimedOut(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if isTimedOut {
+		move := &TimeoutMove{}
+		return move, move.execute(ctx, c.challenge)
+	}
+
 	responder, err := c.challenge.CurrentResponder(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if responder != c.stakerAddress {
 		// Not our turn
-		return nil
+		return nil, nil
 	}
 
 	challengeState, err := c.challenge.ChallengeState(ctx)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	emptyHash := common.Hash{}
+	if challengeState == emptyHash {
+		logger.Warn().Str("contract", c.challenge.Address().Hex()).Msg("challenge has been lost, waiting for timeout")
+		return nil, nil
 	}
 
 	prevBisection, err := c.challenge.LookupBisection(ctx, challengeState)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	fmt.Printf("Lookup bisection %v\n", prevBisection)
 
-	challengeImpl := ExecutionImpl{}
+	// challengeImpl := ExecutionImpl{}
 
 	segment, err := c.challenge.LookupContinue(ctx, challengeState)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if segment != nil {
 		fmt.Printf("Lookup subobligation start %v\n", segment)
-		opcode, machine, err := challengeImpl.OneStepProofMachine(
+		opcode, machine, err := OneStepProofMachine(
 			ctx,
 			c.challenge,
 			c.lookup,
-			c.challengedNode.Assertion,
+			c.challengedAssertion,
 			segment,
 		)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if opcode == 241 || opcode == 167 || opcode == 168 {
 			// Get new lookup
@@ -84,27 +105,30 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 	}
 
 	if prevBisection == nil {
-		prevBisection = c.challengedNode.InitialExecutionBisection()
+		prevBisection = c.challengedAssertion.InitialExecutionBisection()
 	}
-	return c.handleChallenge(ctx, c.challenge, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
+	move, err := handleChallenge(ctx, c.challengedAssertion, c.lookup, c.sequencerInbox, prevBisection)
+	if err != nil {
+		return nil, err
+	}
+	return move, move.execute(ctx, c.challenge)
 }
 
 func (c *Challenger) handleChallenge(
 	ctx context.Context,
-	challenge *ethbridge.Challenge,
 	assertion *core.Assertion,
 	lookup core.ArbCoreLookup,
-	challengeImpl ExecutionImpl,
+	sequencerInbox *ethbridge.SequencerInboxWatcher,
 	prevBisection *core.Bisection,
-) error {
+) (Move, error) {
+	logger.Debug().Str("start", prevBisection.ChallengedSegment.Start.String()).Str("end", prevBisection.ChallengedSegment.GetEnd().String()).Msg("Examining opponent's bisection")
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
-	fmt.Printf("hmm what %v %v prev cuts %v\n", prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1, prevCutOffsets)
-	divergence, err := challengeImpl.FindFirstDivergence(lookup, assertion, prevCutOffsets, prevBisection.Cuts)
+	divergence, err := FindFirstDivergence(lookup, assertion, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if divergence.DifferentIndex == 0 {
-		return errors.New("first cut was already wrong")
+		return nil, errors.New("first cut was already wrong")
 	}
 	cutToChallenge := divergence.DifferentIndex - 1
 	inconsistentSegment := &core.ChallengeSegment{
@@ -115,61 +139,62 @@ func (c *Challenger) handleChallenge(
 	cmp := divergence.SegmentSteps.Cmp(big.NewInt(1))
 	if cmp > 0 || divergence.EndIsUnreachable {
 		// Steps > 1 or the endpoint is unreachable: Dissect further
-		segmentCount := challengeImpl.SegmentTarget()
+		segmentCount := SegmentTarget()
 		if inconsistentSegment.Length.Cmp(big.NewInt(int64(segmentCount))) < 0 {
 			// Safe since this is less than 400
 			segmentCount = int(inconsistentSegment.Length.Int64())
 		}
 		subCutOffsets := generateBisectionCutOffsets(inconsistentSegment, segmentCount)
-		subCuts, err := challengeImpl.GetCuts(lookup, assertion, subCutOffsets)
+		startState, subCuts, err := GetCuts(lookup, assertion, subCutOffsets)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return challengeImpl.Bisect(
-			ctx,
-			challenge,
-			prevBisection,
-			cutToChallenge,
-			inconsistentSegment,
-			subCuts,
-		)
+		return &BisectMove{
+			prevBisection:       prevBisection,
+			startState:          startState,
+			segmentToChallenge:  cutToChallenge,
+			inconsistentSegment: inconsistentSegment,
+			subCuts:             subCuts,
+		}, nil
 	} else if cmp < 0 {
 		// Steps == 0: Prove that the previous instruction's execution continued through this gas window
 		// Also sometimes called a zero step proof, or a constraint win
 		// We specifically don't do this when we think the endpoint is unreachable,
 		// as we need to dissect unreachable endpoints to force our opponent to fail to prove them
-		return challengeImpl.ProveContinuedExecution(
-			ctx,
-			challenge,
-			lookup,
-			assertion,
-			prevBisection,
-			cutToChallenge,
-			inconsistentSegment,
-		)
+		previousCut, _, err := getSegmentStartInfo(lookup, assertion, inconsistentSegment)
+		if err != nil {
+			return nil, err
+		}
+		return &ProveContinuedMove{
+			assertion:          assertion,
+			prevBisection:      prevBisection,
+			segmentToChallenge: cutToChallenge,
+			challengedSegment:  inconsistentSegment,
+			previousCut:        previousCut,
+		}, nil
 	} else {
 		// Steps == 1: Do a one step proof, proving the execution of this step specifically
-		opcode, machine, err := challengeImpl.OneStepProof(
+		opcode, machine, move, err := NewOneStepProofMove(
 			ctx,
-			challenge,
-			lookup,
 			assertion,
 			prevBisection,
 			cutToChallenge,
 			inconsistentSegment,
+			sequencerInbox,
+			lookup,
 		)
 		if opcode == 241 || opcode == 167 || opcode == 168 {
 			// Get new lookup
 			fmt.Printf("Found wasm test, making new lookup\n")
 			storage, err := cmachine.NewArbStorage("/tmp/arbStorage")
-			storage.InitializeForWasm((machine).(cmachine.ExtendedMachine))
+			storage.InitializeForWasm((*machine).(cmachine.ExtendedMachine))
 			arbCore := storage.GetArbCore()
 			arbCore.StartThread()
 			// c.lookup = arbCore
 			c.lookup = c.lookup.SubLookup(arbCore)
-			return err
+			return move, err
 		}
-		return err
+		return move, err
 	}
 }
 
@@ -186,4 +211,36 @@ func generateBisectionCutOffsets(segment *core.ChallengeSegment, subSegmentCount
 		offset = offset.Add(offset, subSegmentLength)
 	}
 	return cutOffsets
+}
+
+func LookupBatchContaining(ctx context.Context, lookup core.ArbCoreLookup, sequencerInbox *ethbridge.SequencerInboxWatcher, seqNum *big.Int) (ethbridge.SequencerBatchRef, error) {
+	fromBlock, err := lookup.GetSequencerBlockNumberAt(seqNum)
+	if err != nil {
+		return nil, err
+	}
+	maxDelay, err := sequencerInbox.GetMaxDelayBlocks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	toBlock := new(big.Int).Add(fromBlock, maxDelay)
+	latestBlockNumber, err := sequencerInbox.CurrentBlockHeight(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if toBlock.Cmp(latestBlockNumber) > 0 {
+		toBlock = latestBlockNumber
+	}
+
+	batchRefs, err := sequencerInbox.LookupBatchesInRange(ctx, fromBlock, toBlock)
+	if err != nil {
+		return nil, err
+	}
+	var found ethbridge.SequencerBatchRef
+	for _, batchRef := range batchRefs {
+		if seqNum.Cmp(batchRef.GetBeforeCount()) >= 0 && seqNum.Cmp(batchRef.GetAfterCount()) < 0 {
+			found = batchRef
+			break
+		}
+	}
+	return found, nil
 }
