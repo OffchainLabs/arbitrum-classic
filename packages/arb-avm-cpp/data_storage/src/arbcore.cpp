@@ -216,8 +216,6 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
 
     if (status.ok()) {
         // Database already initialized
-        combined_machine_cache.basic_add(
-            std::make_unique<Machine>(*core_machine));
         return status;
     }
 
