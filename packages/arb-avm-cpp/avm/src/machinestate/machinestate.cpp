@@ -836,7 +836,7 @@ BlockReason MachineState::runOne() {
     uint64_t start_stack_size = stack.stacksize();
     uint64_t start_auxstack_size = auxstack.stacksize();
 
-    std::cerr << "Inst " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
+    // std::cerr << "Inst " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
 
     bool is_valid_instruction =
         instructionValidity()[static_cast<size_t>(instruction.op.opcode)];

@@ -275,7 +275,7 @@ TEST_CASE("OPCODE: GT opcode is correct") {
     testBinaryOp(9, 3, 1, OpCode::GT);
     testBinaryOp(3, 3, 0, OpCode::GT);
     testBinaryOp(-3, 9, 1, OpCode::GT);
-
+/*
     BENCHMARK_ADVANCED("gt 100x")(Catch::Benchmark::Chronometer meter) {
         MachineState sample_machine;
         for (int i = 0; i < 101; i++) {
@@ -290,7 +290,7 @@ TEST_CASE("OPCODE: GT opcode is correct") {
             }
             return mach;
         });
-    };
+    }; */
 }
 
 TEST_CASE("OPCODE: SLT opcode is correct") {
@@ -974,7 +974,7 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
     auto correct_address = intx::be::load<uint256_t>(hash_val);
     auto calculated_address = assumeInt(s.stack[0]);
     REQUIRE(correct_address == calculated_address);
-
+/*
     BENCHMARK_ADVANCED("ecrecover")(Catch::Benchmark::Chronometer meter) {
         MachineState sample_machine;
         sample_machine.stack.push(
@@ -990,7 +990,7 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
         meter.measure([&machines](int i) {
             return machines[i].runOp(OpCode::ECRECOVER);
         });
-    };
+    };*/
 }
 
 TEST_CASE("OPCODE: ECADD") {
