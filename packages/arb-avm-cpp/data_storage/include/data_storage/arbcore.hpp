@@ -21,7 +21,7 @@
 #include <avm/machinethread.hpp>
 #include <avm/valueloader.hpp>
 #include <avm_values/bigint.hpp>
-#include <data_storage/combinedsideloadcache.hpp>
+#include <data_storage/combinedmachinecache.hpp>
 #include <data_storage/datacursor.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/executioncursor.hpp>
@@ -74,13 +74,13 @@ struct ArbCoreConfig {
     uint256_t min_gas_checkpoint_frequency{1'000'000};
 
     // Amount of gas between basic cache entries
-    uint32_t basic_sideload_cache_interval{1'000'000};
+    uint32_t basic_machine_cache_interval{1'000'000};
 
     // Number of machines to keep in basic cache
-    uint32_t basic_sideload_cache_size{100};
+    uint32_t basic_machine_cache_size{100};
 
     // Number of machines to keep in LRU cache
-    uint32_t lru_sideload_cache_size{20};
+    uint32_t lru_machine_cache_size{20};
 
     // How long to keep machines in memory cache
     uint32_t timed_cache_expiration_seconds{20 * 60};
@@ -185,7 +185,7 @@ class ArbCore {
     std::shared_ptr<CoreCode> core_code{};
 
     // Machine caches
-    CombinedSideloadCache combined_sideload_cache;
+    CombinedMachineCache combined_machine_cache;
 
     // Core thread inbox status input/output. Core thread will update if and
     // only if set to MESSAGES_READY

@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef ARB_AVM_CPP_COMBINEDSIDELOADCACHE_HPP
-#define ARB_AVM_CPP_COMBINEDSIDELOADCACHE_HPP
+#ifndef ARB_AVM_CPP_COMBINEDMACHINECACHE_HPP
+#define ARB_AVM_CPP_COMBINEDMACHINECACHE_HPP
 
 #include <avm/machine.hpp>
 #include <avm_values/bigint.hpp>
-#include <data_storage/basicsideloadcache.hpp>
-#include <data_storage/lrusideloadcache.hpp>
-#include <data_storage/timedsideloadcache.hpp>
+#include <data_storage/basicmachinecache.hpp>
+#include <data_storage/lrumachinecache.hpp>
+#include <data_storage/timedmachinecache.hpp>
 
-class CombinedSideloadCache {
+class CombinedMachineCache {
    public:
     typedef std::map<uint256_t, std::unique_ptr<Machine>> map_type;
     enum cache_result_status_enum {
@@ -40,15 +40,23 @@ class CombinedSideloadCache {
 
    private:
     std::shared_mutex mutex;
-    BasicSideloadCache basic;
-    LRUSideloadCache lru;
-    TimedSideloadCache timed;
+    BasicMachineCache basic;
+    LRUMachineCache lru;
+    TimedMachineCache timed;
+    uint256_t database_load_gas_cost;
+    uint256_t database_max_execution_gas;
 
    public:
-    explicit CombinedSideloadCache(size_t basic_size,
-                                   size_t lru_size,
-                                   uint32_t timed_expiration_seconds)
-        : basic{basic_size}, lru{lru_size}, timed{timed_expiration_seconds} {}
+    explicit CombinedMachineCache(size_t basic_size,
+                                  size_t lru_size,
+                                  uint32_t timed_expiration_seconds,
+                                  uint256_t database_load_gas_cost,
+                                  uint256_t database_max_execution_gas)
+        : basic{basic_size},
+          lru{lru_size},
+          timed{timed_expiration_seconds},
+          database_load_gas_cost{database_load_gas_cost},
+          database_max_execution_gas{database_max_execution_gas} {}
 
     void basic_add(std::unique_ptr<Machine> machine);
     void lru_add(std::unique_ptr<Machine> machine);
@@ -59,8 +67,7 @@ class CombinedSideloadCache {
     CacheResultStruct atOrBeforeGas(uint256_t gas_used,
                                     std::optional<uint256_t> existing_gas_used,
                                     std::optional<uint256_t> database_gas,
-                                    uint256_t database_load_gas_cost,
-                                    uint256_t max_execution_gas);
+                                    bool use_max_execution);
     void reorg(uint256_t next_gas_used);
     [[nodiscard]] uint256_t currentTimeExpired();
 
@@ -69,4 +76,4 @@ class CombinedSideloadCache {
         uint256_t& gas_used);
 };
 
-#endif  // ARB_AVM_CPP_COMBINEDSIDELOADCACHE_HPP
+#endif  // ARB_AVM_CPP_COMBINEDMACHINECACHE_HPP

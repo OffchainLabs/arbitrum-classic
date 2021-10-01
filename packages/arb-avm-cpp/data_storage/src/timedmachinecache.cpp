@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include <data_storage/timedsideloadcache.hpp>
+#include <data_storage/timedmachinecache.hpp>
 
-size_t TimedSideloadCache::size() {
+size_t TimedMachineCache::size() {
     return cache.size();
 }
 
-void TimedSideloadCache::add(std::unique_ptr<Machine> machine) {
+void TimedMachineCache::add(std::unique_ptr<Machine> machine) {
     auto gas_used = machine->machine_state.output.arb_gas_used;
     auto timestamp = machine->machine_state.output.last_inbox_timestamp;
 
@@ -36,8 +36,8 @@ void TimedSideloadCache::add(std::unique_ptr<Machine> machine) {
     deleteExpired();
 }
 
-std::optional<TimedSideloadCache::map_type::iterator>
-TimedSideloadCache::atOrBeforeGas(uint256_t gas_used) {
+std::optional<TimedMachineCache::map_type::iterator>
+TimedMachineCache::atOrBeforeGas(uint256_t gas_used) {
     auto it = cache.upper_bound(gas_used);
     if (it == cache.begin()) {
         return std::nullopt;
@@ -49,7 +49,7 @@ TimedSideloadCache::atOrBeforeGas(uint256_t gas_used) {
     return it;
 }
 
-void TimedSideloadCache::reorg(uint256_t next_gas_used) {
+void TimedMachineCache::reorg(uint256_t next_gas_used) {
     if (next_gas_used <= cache.begin()->first) {
         // Remove everything
         cache.clear();
@@ -61,7 +61,7 @@ void TimedSideloadCache::reorg(uint256_t next_gas_used) {
     cache.erase(it, cache.end());
 }
 
-void TimedSideloadCache::deleteExpired() {
+void TimedMachineCache::deleteExpired() {
     auto expired = expiredTimestamp();
 
     for (auto it = cache.cbegin();
@@ -70,14 +70,16 @@ void TimedSideloadCache::deleteExpired() {
     }
 }
 
-uint256_t TimedSideloadCache::expiredTimestamp() {
+uint256_t TimedMachineCache::expiredTimestamp() {
     if (cache.empty()) {
         return 0;
     }
 
+    // Expire items based on the last timestamp added.  This is so the cache
+    // is valid relative to the last block synced, even if syncing old machines.
     return cache.crbegin()->second.timestamp - expiration_seconds;
 }
 
-uint256_t TimedSideloadCache::currentTimeExpired() const {
+uint256_t TimedMachineCache::currentTimeExpired() const {
     return std::time(nullptr) - expiration_seconds;
 }

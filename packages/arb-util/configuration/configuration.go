@@ -397,7 +397,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
-	f.Int("core.cache.basic-interval", 1_000_000, "amount of gas to wait between saving to basic cache")
+	f.Int("core.cache.basic-interval", 100_000_000, "amount of gas to wait between saving to basic cache")
 	f.Int("core.cache.basic-size", 100, "number of recently used L2 blocks to hold in basic memory cache")
 	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
 	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")

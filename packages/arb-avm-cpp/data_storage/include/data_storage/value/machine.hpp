@@ -34,12 +34,15 @@ struct DeleteResults;
 
 class Machine;
 
-DbResult<std::variant<MachineStateKeys, MachineOutput>> getMachineStateKeys(
+typedef std::variant<MachineStateKeys, MachineOutput> CheckpointVariant;
+
+DbResult<CheckpointVariant> getMachineStateKeys(
     const ReadTransaction& transaction,
     uint256_t machineHash);
 MachineOutput extractMachineOutput(
     std::vector<unsigned char>::const_iterator& iter);
-std::variant<MachineStateKeys, MachineOutput> extractMachineStateKeys(
+MachineOutput getMachineOutput(const CheckpointVariant checkpoint_variant);
+CheckpointVariant extractMachineStateKeys(
     const std::vector<unsigned char>& data);
 void serializeMachineOutput(const MachineOutput& output_data,
                             std::vector<unsigned char>& state_data_vector);
