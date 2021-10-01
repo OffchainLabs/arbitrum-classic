@@ -448,9 +448,6 @@ class ArbCore {
                                             const uint256_t& send_index);
     bool runMachineWithMessages(MachineExecutionConfig& execConfig,
                                 size_t max_message_batch_size);
-    std::optional<uint256_t> peekCheckpointUsingGas(
-        ReadTransaction& tx,
-        const uint256_t& total_gas_used);
 
    public:
     // Public sideload interaction

@@ -1937,9 +1937,18 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     auto gas_target = current_gas + max_gas;
     {
         ReadSnapshotTransaction tx(data_storage);
+        std::optional<MachineStateKeys> database_machine_state_keys;
         std::optional<uint256_t> database_gas;
         if (allow_slow_lookup) {
-            database_gas = peekCheckpointUsingGas(tx, gas_target);
+            auto checkpoint_result = getCheckpointUsingGas(tx, gas_target);
+            if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
+                return std::get<rocksdb::Status>(checkpoint_result);
+            }
+
+            database_machine_state_keys =
+                std::get<MachineStateKeys>(checkpoint_result);
+            database_gas =
+                database_machine_state_keys.value().output.arb_gas_used;
         }
 
         auto mach = combined_machine_cache.atOrBeforeGas(max_gas, current_gas,
@@ -1951,14 +1960,8 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
         } else if (mach.status == CombinedMachineCache::UseDatabase) {
             // Load closer checkpoint from database
             const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-            auto checkpoint_result =
-                getCheckpointUsingGas(tx, database_gas.value());
-            if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
-                return std::get<rocksdb::Status>(checkpoint_result);
-            }
-
             execution_cursor =
-                ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
+                ExecutionCursor(database_machine_state_keys.value());
         } else if (mach.status == CombinedMachineCache::TooMuchExecution) {
             // Too much execution required to get to requested gas amount
             return rocksdb::Status::NotFound();
@@ -2109,26 +2112,21 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
     return rocksdb::Status::OK();
 }
 
-std::optional<uint256_t> ArbCore::peekCheckpointUsingGas(
-    ReadTransaction& tx,
-    const uint256_t& total_gas_used) {
-    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-    auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used);
-    if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
-        return std::nullopt;
-    }
-
-    auto keys = std::get<MachineStateKeys>(checkpoint_result);
-    return keys.output.arb_gas_used;
-}
-
 std::variant<rocksdb::Status, ExecutionCursor>
 ArbCore::getClosestExecutionCursor(ReadTransaction& tx,
                                    uint256_t& total_gas_used,
                                    bool allow_slow_lookup) {
+    std::optional<MachineStateKeys> database_machine_state_keys;
     std::optional<uint256_t> database_gas;
     if (allow_slow_lookup) {
-        database_gas = peekCheckpointUsingGas(tx, total_gas_used);
+        auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used);
+        if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
+            return std::get<rocksdb::Status>(checkpoint_result);
+        }
+
+        database_machine_state_keys =
+            std::get<MachineStateKeys>(checkpoint_result);
+        database_gas = database_machine_state_keys.value().output.arb_gas_used;
     }
 
     auto mach = combined_machine_cache.atOrBeforeGas(
@@ -2142,12 +2140,8 @@ ArbCore::getClosestExecutionCursor(ReadTransaction& tx,
     if (mach.status == CombinedMachineCache::UseDatabase) {
         // Use checkpoint from database
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-        auto checkpoint_result = getCheckpointUsingGas(tx, total_gas_used);
-        if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
-            return std::get<rocksdb::Status>(checkpoint_result);
-        }
 
-        return ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
+        return ExecutionCursor(database_machine_state_keys.value());
     }
 
     // Nothing within execution range in cache or database
