@@ -36,7 +36,7 @@ workflows:
     jobs:
       - go-deps
       - cpp-avm-build
-      - cpp-avm:
+      - cpp-avm
       - arb-ts
       - ethbridge
       - ethbridge-coverage
