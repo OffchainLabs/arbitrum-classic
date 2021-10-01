@@ -37,8 +37,6 @@ workflows:
       - go-deps
       - cpp-avm-build
       - cpp-avm:
-          requires:
-            - cpp-avm-build
       - arb-ts
       - ethbridge
       - ethbridge-coverage
@@ -176,19 +174,19 @@ jobs:
           name: 'Pull Submodules'
           command: git submodule update --init --recommend-shallow packages/arb-avm-cpp
       - run:
-          name: build with address sanitizer
+          name: create release build
           command: |
-            mkdir -p packages/arb-avm-cpp/debug
-            cd packages/arb-avm-cpp/debug
-            cmake -DCMAKE_BUILD_TYPE=Debug ..
-            cmake --build . -j 2
+            mkdir -p packages/arb-avm-cpp/build
+            cd packages/arb-avm-cpp/build
+            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+            cmake --build . -j
       # COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
       - persist_to_workspace: # store the built files into the workspace for other jobs.
           root: /home/user/
           paths:
             - ./.hunter
             - ./project/packages/arb-avm-cpp/cmachine/flags.go
-            - ./project/packages/arb-avm-cpp/debug/*
+            - ./project/packages/arb-avm-cpp/build/*
   cpp-avm:
     docker:
       - image: offchainlabs/cpp-base:0.3.1
@@ -209,7 +207,7 @@ jobs:
             mkdir -p packages/arb-avm-cpp/debug-asan
             cd packages/arb-avm-cpp/debug-asan
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address ..
-            cmake --build . -j 2
+            cmake --build . -j
       - run:
           name: test arb-avm-cpp with address sanitizer
           command: |
@@ -225,7 +223,7 @@ jobs:
             mkdir -p packages/arb-avm-cpp/debug-tsan
             cd packages/arb-avm-cpp/debug-tsan
             cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-fsanitize=thread -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread ..
-            cmake --build . -j 2
+            cmake --build . -j
       - run:
           name: test arb-avm-cpp with thread sanitizer
           command: ./bin/avm_tests
