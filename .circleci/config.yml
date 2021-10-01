@@ -180,15 +180,7 @@ jobs:
           command: |
             mkdir -p packages/arb-avm-cpp/debug
             cd packages/arb-avm-cpp/debug
-            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address ..
-            cmake --build . -j 2
-
-      - run:
-          name: build with thread sanitizer
-          command: |
-            mkdir -p packages/arb-avm-cpp/debug-tsan
-            cd packages/arb-avm-cpp/debug-tsan
-            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-fsanitize=thread -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread ..
+            cmake -DCMAKE_BUILD_TYPE=Debug ..
             cmake --build . -j 2
       # COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
       - persist_to_workspace: # store the built files into the workspace for other jobs.
@@ -197,7 +189,6 @@ jobs:
             - ./.hunter
             - ./project/packages/arb-avm-cpp/cmachine/flags.go
             - ./project/packages/arb-avm-cpp/debug/*
-            - ./project/packages/arb-avm-cpp/debug-tsan/*
   cpp-avm:
     docker:
       - image: offchainlabs/cpp-base:0.3.1
@@ -213,13 +204,28 @@ jobs:
       - attach_workspace:
           at: /home/user/
       - run:
+          name: build with address sanitizer
+          command: |
+            mkdir -p packages/arb-avm-cpp/debug-asan
+            cd packages/arb-avm-cpp/debug
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address ..
+            cmake --build . -j 2
+      - run:
           name: test arb-avm-cpp with address sanitizer
           command: |
             ASAN_OPTIONS=detect_leaks=0 ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
-          working_directory: /home/user/project/packages/arb-avm-cpp/debug
+          working_directory: /home/user/project/packages/arb-avm-cpp/debug-asan
+
+      - run:
+          name: build with thread sanitizer
+          command: |
+            mkdir -p packages/arb-avm-cpp/debug-tsan
+            cd packages/arb-avm-cpp/debug-tsan
+            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-fsanitize=thread -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread ..
+            cmake --build . -j 2
       - run:
           name: test arb-avm-cpp with thread sanitizer
           command: ./bin/avm_tests
