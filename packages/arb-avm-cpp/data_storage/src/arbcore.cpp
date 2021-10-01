@@ -367,7 +367,7 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     auto machine_code =
         dynamic_cast<RunningCode*>(core_machine->machine_state.code.get());
     assert(machine_code != nullptr);
-    core_code->commitChanges(*machine_code, save_res.second);
+    machine_code->commitCodeToParent(save_res.second);
     core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
 
     std::vector<unsigned char> key;
