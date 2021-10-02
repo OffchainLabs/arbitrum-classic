@@ -36,7 +36,8 @@ workflows:
     jobs:
       - go-deps
       - cpp-avm-build
-      - cpp-avm
+      - cpp-avm-asan
+      - cpp-avm-tsan
       - arb-ts
       - ethbridge
       - ethbridge-coverage
@@ -187,7 +188,7 @@ jobs:
             - ./.hunter
             - ./project/packages/arb-avm-cpp/cmachine/flags.go
             - ./project/packages/arb-avm-cpp/build/*
-  cpp-avm:
+  cpp-avm-asan:
     docker:
       - image: offchainlabs/cpp-base:0.3.1
     environment: # environment variables for the build itself
@@ -199,17 +200,15 @@ jobs:
           command: |
             git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
-      - attach_workspace:
-          at: /home/user/
       - run:
-          name: build with address sanitizer
+          name: Build
           command: |
             mkdir -p packages/arb-avm-cpp/debug-asan
             cd packages/arb-avm-cpp/debug-asan
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address ..
             cmake --build . -j 2
       - run:
-          name: test arb-avm-cpp with address sanitizer
+          name: Test
           command: |
             ASAN_OPTIONS=detect_leaks=0 ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
@@ -217,15 +216,27 @@ jobs:
             lcov --list coverage.info
           working_directory: /home/user/project/packages/arb-avm-cpp/debug-asan
 
+  cpp-avm-tsan:
+    docker:
+      - image: offchainlabs/cpp-base:0.3.1
+    environment: # environment variables for the build itself
+      TEST_RESULTS: *test-path # path to where test results will be saved
+    steps:
+      - checkout
       - run:
-          name: build with thread sanitizer
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
+      - run: mkdir -p $TEST_RESULTS
+      - run:
+          name: Build
           command: |
             mkdir -p packages/arb-avm-cpp/debug-tsan
             cd packages/arb-avm-cpp/debug-tsan
             cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-fsanitize=thread -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread ..
             cmake --build . -j 2
       - run:
-          name: test arb-avm-cpp with thread sanitizer
+          name: Test
           command: ./bin/avm_tests
           working_directory: /home/user/project/packages/arb-avm-cpp/debug-tsan
       - run: codecovbash -R /home/user/project -c -F unit
