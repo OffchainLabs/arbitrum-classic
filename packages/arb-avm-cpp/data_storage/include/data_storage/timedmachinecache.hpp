@@ -36,8 +36,8 @@ class TimedMachineCache {
     const uint32_t expiration_seconds;
 
    public:
-    explicit TimedMachineCache(uint32_t expiration_seconds)
-        : expiration_seconds{expiration_seconds} {}
+    explicit TimedMachineCache(uint32_t expiration_seconds_)
+        : expiration_seconds{expiration_seconds_} {}
 
     size_t size();
     void add(std::unique_ptr<Machine> machine);

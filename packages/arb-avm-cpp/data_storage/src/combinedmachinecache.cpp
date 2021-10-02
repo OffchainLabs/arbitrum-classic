@@ -104,31 +104,52 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
     // Unique lock required to update LRU cache
     std::unique_lock lock(mutex);
 
+    std::optional<uint256_t> best_non_database_gas;
+    best_non_database_gas = existing_gas_used;
+
     auto cache_machine = atOrBeforeGasImpl(gas_used);
     std::optional<uint256_t> cache_gas;
     if (cache_machine.has_value()) {
         cache_gas =
             cache_machine.value().get().machine_state.output.arb_gas_used;
+
+        if (!best_non_database_gas.has_value() ||
+            cache_gas.value() > best_non_database_gas.value()) {
+            best_non_database_gas = cache_gas.value();
+        }
     }
 
-    auto load_from_database = (database_gas.has_value() &&
-                               (!cache_gas.has_value() ||
-                                ((database_gas.value() > cache_gas.value()) &&
-                                 ((database_gas.value() - cache_gas.value()) >
-                                  database_load_gas_cost))));
+    auto load_from_database =
+        (database_gas.has_value() &&
+         (!best_non_database_gas.has_value() ||
+          ((database_gas.value() > best_non_database_gas.value()) &&
+           ((database_gas.value() - best_non_database_gas.value()) >
+            database_load_gas_cost))));
     if (load_from_database) {
+        if (use_max_execution && (max_execution_gas != 0) &&
+            (gas_used - database_gas.value() > max_execution_gas)) {
+            // Distance from last cache entry too far to execute
+            return {nullptr, TooMuchExecution};
+        }
+
         // Loading from database is quicker than executing last cache entry
         return {nullptr, UseDatabase};
     }
 
     if (existing_gas_used.has_value() && existing_gas_used > cache_gas) {
+        if (use_max_execution && (max_execution_gas != 0) &&
+            (gas_used - existing_gas_used.value() > max_execution_gas)) {
+            // Distance from last cache entry too far to execute
+            return {nullptr, TooMuchExecution};
+        }
+
         // Use existing
         return {nullptr, UseExisting};
     }
 
     if (cache_machine.has_value()) {
-        if (use_max_execution && (database_max_execution_gas != 0) &&
-            (gas_used - cache_gas.value() > database_max_execution_gas)) {
+        if (use_max_execution && (max_execution_gas != 0) &&
+            (gas_used - cache_gas.value() > max_execution_gas)) {
             // Distance from last cache entry too far to execute
             return {nullptr, TooMuchExecution};
         }

@@ -24,13 +24,13 @@
 #include <catch2/catch.hpp>
 
 TEST_CASE("CombinedMachineCache add and get") {
-    auto basic_size = 2;
-    auto lru_size = 2;
-    auto timed_expire = 20;
-    auto database_load_cost = 10;
-    auto max_execution_gas = 100'000'000;
-    CombinedMachineCache cache(basic_size, lru_size, timed_expire,
-                               database_load_cost, max_execution_gas);
+    ArbCoreConfig coreConfig;
+    coreConfig.basic_machine_cache_size = 2;
+    coreConfig.lru_machine_cache_size = 2;
+    coreConfig.timed_cache_expiration_seconds = 20;
+    coreConfig.checkpoint_load_gas_cost = 10;
+    coreConfig.checkpoint_max_execution_gas = 100'000'000;
+    CombinedMachineCache cache(coreConfig);
 
     // Test empty cache case
     REQUIRE(cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true).machine ==
@@ -99,18 +99,20 @@ TEST_CASE("CombinedMachineCache add and get") {
 }
 
 TEST_CASE("CombinedMachineCache currentTimeExpired") {
-    auto basic_size = 2;
-    auto lru_size = 2;
-    auto timed_expire = 20;
+    ArbCoreConfig coreConfig;
+    coreConfig.basic_machine_cache_size = 2;
+    coreConfig.lru_machine_cache_size = 2;
+    coreConfig.timed_cache_expiration_seconds = 20;
+    coreConfig.checkpoint_load_gas_cost = 10;
+    coreConfig.checkpoint_max_execution_gas = 100'000'000;
+    CombinedMachineCache cache(coreConfig);
     auto expiration_fudge_factor = 10;
-    auto database_load_cost = 100000;
-    auto max_execution_gas = 100'000'000;
-    CombinedMachineCache cache(basic_size, lru_size, timed_expire,
-                               database_load_cost, max_execution_gas);
 
     auto expired = cache.currentTimeExpired();
-    REQUIRE(expired >
-            std::time(nullptr) - timed_expire - expiration_fudge_factor);
-    REQUIRE(expired <
-            std::time(nullptr) - timed_expire + expiration_fudge_factor);
+    REQUIRE(expired > std::time(nullptr) -
+                          coreConfig.timed_cache_expiration_seconds -
+                          expiration_fudge_factor);
+    REQUIRE(expired < std::time(nullptr) -
+                          coreConfig.timed_cache_expiration_seconds +
+                          expiration_fudge_factor);
 }

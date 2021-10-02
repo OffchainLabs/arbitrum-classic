@@ -22,6 +22,7 @@
 #include <data_storage/basicmachinecache.hpp>
 #include <data_storage/lrumachinecache.hpp>
 #include <data_storage/timedmachinecache.hpp>
+#include <data_storage/util.hpp>
 
 class CombinedMachineCache {
    public:
@@ -44,19 +45,15 @@ class CombinedMachineCache {
     LRUMachineCache lru;
     TimedMachineCache timed;
     uint256_t database_load_gas_cost;
-    uint256_t database_max_execution_gas;
+    uint256_t max_execution_gas;
 
    public:
-    explicit CombinedMachineCache(size_t basic_size,
-                                  size_t lru_size,
-                                  uint32_t timed_expiration_seconds,
-                                  uint256_t database_load_gas_cost,
-                                  uint256_t database_max_execution_gas)
-        : basic{basic_size},
-          lru{lru_size},
-          timed{timed_expiration_seconds},
-          database_load_gas_cost{database_load_gas_cost},
-          database_max_execution_gas{database_max_execution_gas} {}
+    explicit CombinedMachineCache(ArbCoreConfig coreConfig)
+        : basic{coreConfig.basic_machine_cache_size},
+          lru{coreConfig.lru_machine_cache_size},
+          timed{coreConfig.timed_cache_expiration_seconds},
+          database_load_gas_cost{coreConfig.checkpoint_load_gas_cost},
+          max_execution_gas{coreConfig.checkpoint_max_execution_gas} {}
 
     void basic_add(std::unique_ptr<Machine> machine);
     void lru_add(std::unique_ptr<Machine> machine);

@@ -30,7 +30,7 @@ class BasicMachineCache {
     const size_t max_size;
 
    public:
-    explicit BasicMachineCache(size_t max_size) : max_size{max_size} {}
+    explicit BasicMachineCache(size_t max_size_) : max_size{max_size_} {}
 
     size_t size();
     void add(std::unique_ptr<Machine> machine);
