@@ -190,7 +190,7 @@ class ArbCore {
     rocksdb::Status reorgCheckpoints(
         const std::function<bool(const MachineOutput&)>& check_output,
         bool initial_start,
-        ValueCache& cache);
+        ValueCache& value_cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(
         const ReadTransaction& transaction,
