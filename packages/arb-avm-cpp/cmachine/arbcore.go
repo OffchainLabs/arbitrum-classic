@@ -80,6 +80,10 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
+func (ac *ArbCore) PrintCoreThreadBacktrace() {
+	C.arbCorePrintCoreThreadBacktrace(ac.c)
+}
+
 func sequencerBatchItemsToByteSliceArray(batchItems []inbox.SequencerBatchItem) C.struct_ByteSliceArrayStruct {
 	return bytesArrayToByteSliceArray(encodeSequencerBatchItems(batchItems))
 }
@@ -505,12 +509,12 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	return true, nil
 }
 
-func (ac *ArbCore) GetMachineForSideload(blockNumber uint64, allowSlowLookup bool) (machine.Machine, error) {
+func (ac *ArbCore) GetMachineAtBlock(blockNumber uint64, allowSlowLookup bool) (machine.Machine, error) {
 	CallowSlowLookup := 0
 	if allowSlowLookup {
 		CallowSlowLookup = 1
 	}
-	cMachineResult := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber), C.int(CallowSlowLookup))
+	cMachineResult := C.arbCoreGetMachineAtBlock(ac.c, C.uint64_t(blockNumber), C.int(CallowSlowLookup))
 
 	if cMachineResult.slow_error == 1 {
 		return nil, errors.Errorf("missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )")

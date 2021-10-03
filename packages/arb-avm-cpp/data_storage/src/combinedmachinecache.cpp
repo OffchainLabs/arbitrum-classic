@@ -14,46 +14,46 @@
  * limitations under the License.
  */
 
-#include <data_storage/combinedsideloadcache.hpp>
+#include <data_storage/combinedmachinecache.hpp>
 
-void CombinedSideloadCache::basic_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::basic_add(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
     basic.add(std::move(machine));
 }
 
-void CombinedSideloadCache::lru_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::lru_add(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
     lru.add(std::move(machine));
 }
 
-void CombinedSideloadCache::timed_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::timed_add(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
     timed.add(std::move(machine));
 }
 
-size_t CombinedSideloadCache::basic_size() {
+size_t CombinedMachineCache::basic_size() {
     std::shared_lock lock(mutex);
 
     return basic.size();
 }
 
-size_t CombinedSideloadCache::lru_size() {
+size_t CombinedMachineCache::lru_size() {
     std::shared_lock lock(mutex);
 
     return lru.size();
 }
 
-size_t CombinedSideloadCache::timed_size() {
+size_t CombinedMachineCache::timed_size() {
     std::shared_lock lock(mutex);
 
     return timed.size();
 }
 
 std::optional<std::reference_wrapper<const Machine>>
-CombinedSideloadCache::atOrBeforeGasImpl(uint256_t& gas_used) {
+CombinedMachineCache::atOrBeforeGasImpl(uint256_t& gas_used) {
     uint256_t basic_gas;
     uint256_t lru_gas;
     uint256_t timed_gas;
@@ -80,11 +80,12 @@ CombinedSideloadCache::atOrBeforeGasImpl(uint256_t& gas_used) {
         timed_gas = 0;
     }
 
-    if (basic_gas > lru_gas && basic_gas > timed_gas && basic_it.has_value()) {
+    if (basic_gas >= lru_gas && basic_gas >= timed_gas &&
+        basic_it.has_value()) {
         return std::cref(*basic_it.value()->second);
     }
 
-    if (lru_gas > basic_gas && lru_gas > timed_gas && lru_it.has_value()) {
+    if (lru_gas >= timed_gas && lru_it.has_value()) {
         return std::cref(*lru_it.value()->second.first);
     }
 
@@ -95,47 +96,64 @@ CombinedSideloadCache::atOrBeforeGasImpl(uint256_t& gas_used) {
     return std::nullopt;
 }
 
-CombinedSideloadCache::CacheResultStruct CombinedSideloadCache::atOrBeforeGas(
+CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
     uint256_t gas_used,
-    uint256_t existing_gas_used,
-    uint256_t database_gas,
-    uint256_t database_load_gas_cost,
-    uint256_t database_load_gas_factor,
-    bool allow_slow_lookup,
-    uint256_t max_execution_gas) {
+    std::optional<uint256_t> existing_gas_used,
+    std::optional<uint256_t> database_gas,
+    bool use_max_execution) {
     // Unique lock required to update LRU cache
     std::unique_lock lock(mutex);
 
+    std::optional<uint256_t> best_non_database_gas;
+    best_non_database_gas = existing_gas_used;
+
     auto cache_machine = atOrBeforeGasImpl(gas_used);
-    uint256_t cache_gas;
+    std::optional<uint256_t> cache_gas;
     if (cache_machine.has_value()) {
         cache_gas =
             cache_machine.value().get().machine_state.output.arb_gas_used;
-    } else {
-        cache_gas = 0;
+
+        if (!best_non_database_gas.has_value() ||
+            cache_gas.value() > best_non_database_gas.value()) {
+            best_non_database_gas = cache_gas.value();
+        }
     }
 
     auto load_from_database =
-        (database_gas > cache_gas) && allow_slow_lookup &&
-        ((database_gas - cache_gas) >
-         (database_load_gas_cost +
-          ((database_gas - cache_gas) * database_load_gas_factor)));
+        (database_gas.has_value() &&
+         (!best_non_database_gas.has_value() ||
+          ((database_gas.value() > best_non_database_gas.value()) &&
+           ((database_gas.value() - best_non_database_gas.value()) >
+            database_load_gas_cost))));
     if (load_from_database) {
+        if (use_max_execution && (max_execution_gas != 0) &&
+            (gas_used - database_gas.value() > max_execution_gas)) {
+            // Distance from last cache entry too far to execute
+            return {nullptr, TooMuchExecution};
+        }
+
         // Loading from database is quicker than executing last cache entry
         return {nullptr, UseDatabase};
     }
 
-    if (existing_gas_used != 0 && existing_gas_used > cache_gas) {
+    if (existing_gas_used.has_value() && existing_gas_used > cache_gas) {
+        if (use_max_execution && (max_execution_gas != 0) &&
+            (gas_used - existing_gas_used.value() > max_execution_gas)) {
+            // Distance from last cache entry too far to execute
+            return {nullptr, TooMuchExecution};
+        }
+
         // Use existing
         return {nullptr, UseExisting};
     }
 
-    if (gas_used - cache_gas > max_execution_gas) {
-        // Distance from last cache entry too far to execute
-        return {nullptr, TooMuchExecution};
-    }
-
     if (cache_machine.has_value()) {
+        if (use_max_execution && (max_execution_gas != 0) &&
+            (gas_used - cache_gas.value() > max_execution_gas)) {
+            // Distance from last cache entry too far to execute
+            return {nullptr, TooMuchExecution};
+        }
+
         return {std::make_unique<Machine>(cache_machine.value().get()),
                 Success};
     }
@@ -143,7 +161,7 @@ CombinedSideloadCache::CacheResultStruct CombinedSideloadCache::atOrBeforeGas(
     return {nullptr, NotFound};
 }
 
-void CombinedSideloadCache::reorg(uint256_t next_gas_used) {
+void CombinedMachineCache::reorg(uint256_t next_gas_used) {
     std::unique_lock lock(mutex);
 
     basic.reorg(next_gas_used);
@@ -151,7 +169,7 @@ void CombinedSideloadCache::reorg(uint256_t next_gas_used) {
     timed.reorg(next_gas_used);
 }
 
-uint256_t CombinedSideloadCache::currentTimeExpired() {
+uint256_t CombinedMachineCache::currentTimeExpired() {
     std::shared_lock lock(mutex);
 
     return timed.currentTimeExpired();

@@ -525,7 +525,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if cachedSnap != nil {
 		return cachedSnap, nil
 	}
-	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64(), db.allowSlowLookup)
+	mach, err := db.Lookup.GetMachineAtBlock(info.Header.Number.Uint64(), db.allowSlowLookup)
 	if err != nil || mach == nil {
 		return nil, err
 	}

@@ -564,9 +564,9 @@ CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
         arbCore->takeExecutionCursorMachine(*executionCursor).release());
 }
 
-CMachineResult arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
-                                            uint64_t block_number,
-                                            int allow_slow_lookup) {
+CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
+                                        uint64_t block_number,
+                                        int allow_slow_lookup) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
 
     try {
@@ -590,4 +590,9 @@ CMachineResult arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
                   << std::endl;
         return {nullptr, 0};
     }
+}
+
+void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    arb_core->printCoreThreadBacktrace();
 }

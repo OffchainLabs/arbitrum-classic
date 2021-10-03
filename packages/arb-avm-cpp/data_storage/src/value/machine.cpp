@@ -117,7 +117,15 @@ MachineOutput extractMachineOutput(
         last_sideload};
 }
 
-std::variant<MachineStateKeys, MachineOutput> extractMachineStateKeys(
+MachineOutput getMachineOutput(const CheckpointVariant checkpoint_variant) {
+    if (std::holds_alternative<MachineOutput>(checkpoint_variant)) {
+        return std::get<MachineOutput>(checkpoint_variant);
+    } else {
+        return std::get<MachineStateKeys>(checkpoint_variant).output;
+    }
+}
+
+CheckpointVariant extractMachineStateKeys(
     const std::vector<unsigned char>& data) {
     auto iter = data.cbegin();
 
@@ -215,7 +223,7 @@ DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash) {
     return results;
 }
 
-DbResult<std::variant<MachineStateKeys, MachineOutput>> getMachineStateKeys(
+DbResult<CheckpointVariant> getMachineStateKeys(
     const ReadTransaction& transaction,
     uint256_t machineHash) {
     std::vector<unsigned char> checkpoint_name;
@@ -228,8 +236,8 @@ DbResult<std::variant<MachineStateKeys, MachineOutput>> getMachineStateKeys(
     }
     auto parsed_state = extractMachineStateKeys(results.stored_value);
 
-    return CountedData<std::variant<MachineStateKeys, MachineOutput>>{
-        results.reference_count, parsed_state};
+    return CountedData<CheckpointVariant>{results.reference_count,
+                                          parsed_state};
 }
 
 std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
@@ -300,7 +308,7 @@ SaveResults saveTestMachine(ReadWriteTransaction& transaction,
     auto core_code = dynamic_cast<CoreCode*>(parent_code.get());
     assert(core_code != nullptr);
 
-    core_code->commitChanges(*machine_code, machine_save_res.second);
+    machine_code->commitCodeToParent(machine_save_res.second);
     machine.machine_state.code = std::make_shared<RunningCode>(parent_code);
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),

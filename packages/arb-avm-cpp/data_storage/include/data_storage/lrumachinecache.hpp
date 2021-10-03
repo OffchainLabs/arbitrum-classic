@@ -14,38 +14,42 @@
  * limitations under the License.
  */
 
-#ifndef ARB_AVM_CPP_TIMEDSIDELOADCACHE_H
-#define ARB_AVM_CPP_TIMEDSIDELOADCACHE_H
+#ifndef ARB_AVM_CPP_LRUMACHINECACHE_HPP
+#define ARB_AVM_CPP_LRUMACHINECACHE_HPP
 
 #include <avm/machine.hpp>
 #include <avm_values/bigint.hpp>
 
-class TimedSideloadCache {
+#include <boost/compute/detail/lru_cache.hpp>
+
+#include <list>
+#include <map>
+#include <shared_mutex>
+#include <utility>
+
+class LRUMachineCache {
    public:
-    struct Record {
-        uint256_t timestamp;
-
-        std::unique_ptr<Machine> machine;
-    };
-
-    typedef std::map<uint256_t, Record> map_type;
+    typedef std::map<
+        uint256_t,
+        std::pair<std::unique_ptr<Machine>, std::list<uint256_t>::iterator>>
+        map_type;
 
    private:
     map_type cache;
+    std::list<uint256_t> lru_list;
 
-    const uint32_t expiration_seconds;
+    const size_t max_size;
 
    public:
-    explicit TimedSideloadCache(uint32_t expiration_seconds)
-        : expiration_seconds{expiration_seconds} {}
+    explicit LRUMachineCache(size_t max_size_) : max_size{max_size_} {}
 
     size_t size();
     void add(std::unique_ptr<Machine> machine);
     std::optional<map_type::iterator> atOrBeforeGas(uint256_t gas_used);
+    void updateUsed(LRUMachineCache::map_type::iterator& cache_it);
     void reorg(uint256_t next_gas_used);
-    void deleteExpired();
-    [[nodiscard]] uint256_t expiredTimestamp();
-    [[nodiscard]] uint256_t currentTimeExpired() const;
+
+    void evict();
 };
 
-#endif  // ARB_AVM_CPP_TIMEDSIDELOADCACHE_H
+#endif  // ARB_AVM_CPP_LRUMACHINECACHE_HPP

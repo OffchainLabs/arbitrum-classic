@@ -14,28 +14,38 @@
  * limitations under the License.
  */
 
-#ifndef ARB_AVM_CPP_BASICSIDELOADCACHE_HPP
-#define ARB_AVM_CPP_BASICSIDELOADCACHE_HPP
+#ifndef ARB_AVM_CPP_TIMEDMACHINECACHE_H
+#define ARB_AVM_CPP_TIMEDMACHINECACHE_H
 
 #include <avm/machine.hpp>
 #include <avm_values/bigint.hpp>
 
-class BasicSideloadCache {
+class TimedMachineCache {
    public:
-    typedef std::map<uint256_t, std::unique_ptr<Machine>> map_type;
+    struct Record {
+        uint256_t timestamp;
+
+        std::unique_ptr<Machine> machine;
+    };
+
+    typedef std::map<uint256_t, Record> map_type;
+
    private:
     map_type cache;
 
-    const size_t max_size;
+    const uint32_t expiration_seconds;
 
    public:
-    explicit BasicSideloadCache(size_t max_size)
-        : max_size{max_size} {}
+    explicit TimedMachineCache(uint32_t expiration_seconds_)
+        : expiration_seconds{expiration_seconds_} {}
 
     size_t size();
     void add(std::unique_ptr<Machine> machine);
     std::optional<map_type::iterator> atOrBeforeGas(uint256_t gas_used);
     void reorg(uint256_t next_gas_used);
+    void deleteExpired();
+    [[nodiscard]] uint256_t expiredTimestamp();
+    [[nodiscard]] uint256_t currentTimeExpired() const;
 };
 
-#endif  // ARB_AVM_CPP_BASICSIDELOADCACHE_HPP
+#endif  // ARB_AVM_CPP_TIMEDMACHINECACHE_H

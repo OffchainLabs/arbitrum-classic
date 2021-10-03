@@ -19,14 +19,14 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/timedsideloadcache.hpp>
+#include <data_storage/timedmachinecache.hpp>
 
 #include <catch2/catch.hpp>
 
-TEST_CASE("TimedSideloadCache add") {
+TEST_CASE("TimedMachineCache add") {
     auto expiration_seconds = 3;
     auto fake_time = 3600;
-    TimedSideloadCache cache(expiration_seconds);
+    TimedMachineCache cache(expiration_seconds);
 
     // Test that initial block with any time is added
     auto initial_machine = std::make_unique<Machine>(getComplexMachine());
@@ -64,9 +64,9 @@ TEST_CASE("TimedSideloadCache add") {
     REQUIRE(expired_machine_b.value()
                 ->second.machine->machine_state.output.arb_gas_used == 3);
 }
-TEST_CASE("TimedSideloadCache get") {
+TEST_CASE("TimedMachineCache get") {
     auto expiration_seconds = 3;
-    TimedSideloadCache cache(expiration_seconds);
+    TimedMachineCache cache(expiration_seconds);
 
     auto orig_machine = Machine::loadFromFile(
         std::string(machine_test_cases_path) + "/sideloadtest.mexe");
@@ -98,9 +98,9 @@ TEST_CASE("TimedSideloadCache get") {
         machine2b.value()->second.machine->machine_state.output.arb_gas_used);
 }
 
-TEST_CASE("TimedSideloadCache reorg") {
+TEST_CASE("TimedMachineCache reorg") {
     auto expiration_seconds = 30;
-    TimedSideloadCache cache(expiration_seconds);
+    TimedMachineCache cache(expiration_seconds);
 
     auto orig_machine = Machine::loadFromFile(
         std::string(machine_test_cases_path) + "/sideloadtest.mexe");
@@ -195,9 +195,9 @@ TEST_CASE("TimedSideloadCache reorg") {
     REQUIRE(cache.size() == 3);
 }
 
-TEST_CASE("TimedSideloadCache expire") {
+TEST_CASE("TimedMachineCache expire") {
     auto expiration_seconds = 2;
-    TimedSideloadCache cache(expiration_seconds);
+    TimedMachineCache cache(expiration_seconds);
 
     auto orig_machine = Machine::loadFromFile(
         std::string(machine_test_cases_path) + "/sideloadtest.mexe");
@@ -244,10 +244,10 @@ TEST_CASE("TimedSideloadCache expire") {
     REQUIRE(cache.size() == 1);
 }
 
-TEST_CASE("TimedSideloadCache expiredTimestamp") {
+TEST_CASE("TimedMachineCache expiredTimestamp") {
     auto timed_expire = 20;
     auto fake_time = 1000000;
-    TimedSideloadCache cache(timed_expire);
+    TimedMachineCache cache(timed_expire);
 
     auto expired = cache.expiredTimestamp();
     REQUIRE(expired == 0);
@@ -264,10 +264,10 @@ TEST_CASE("TimedSideloadCache expiredTimestamp") {
     REQUIRE(expired2 == fake_time - timed_expire);
 }
 
-TEST_CASE("TimedSideloadCache currentTimeExpired") {
+TEST_CASE("TimedMachineCache currentTimeExpired") {
     auto timed_expire = 20;
     auto expiration_fudge_factor = 10;
-    TimedSideloadCache cache(timed_expire);
+    TimedMachineCache cache(timed_expire);
 
     auto expired = cache.currentTimeExpired();
     REQUIRE(expired >=

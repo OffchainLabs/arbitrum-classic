@@ -231,7 +231,7 @@ TEST_CASE("ArbCore tests") {
         REQUIRE(advanceStatus.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
 
-        //        auto before_sideload = arbCore->getMachineForSideload(
+        //        auto before_sideload = arbCore->getMachineAtBlock(
         //            inbox_messages.back().block_number, value_cache);
         //        REQUIRE(before_sideload.status.ok());
         //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()

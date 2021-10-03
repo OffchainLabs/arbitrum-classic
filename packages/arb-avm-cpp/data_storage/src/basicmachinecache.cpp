@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include <data_storage/basicsideloadcache.hpp>
+#include <data_storage/basicmachinecache.hpp>
 
-size_t BasicSideloadCache::size() {
+size_t BasicMachineCache::size() {
     return cache.size();
 }
 
-void BasicSideloadCache::add(std::unique_ptr<Machine> machine) {
+void BasicMachineCache::add(std::unique_ptr<Machine> machine) {
     auto gas_used = machine->machine_state.output.arb_gas_used;
 
     if (cache.size() >= max_size) {
@@ -37,8 +37,8 @@ void BasicSideloadCache::add(std::unique_ptr<Machine> machine) {
     cache[gas_used] = std::move(machine);
 }
 
-std::optional<BasicSideloadCache::map_type::iterator>
-BasicSideloadCache::atOrBeforeGas(uint256_t gas_used) {
+std::optional<BasicMachineCache::map_type::iterator>
+BasicMachineCache::atOrBeforeGas(uint256_t gas_used) {
     auto it = cache.upper_bound(gas_used);
     if (it == cache.begin()) {
         return std::nullopt;
@@ -49,7 +49,7 @@ BasicSideloadCache::atOrBeforeGas(uint256_t gas_used) {
     return it;
 }
 
-void BasicSideloadCache::reorg(uint256_t next_gas_used) {
+void BasicMachineCache::reorg(uint256_t next_gas_used) {
     auto it = cache.lower_bound(next_gas_used);
     cache.erase(it, cache.end());
 }

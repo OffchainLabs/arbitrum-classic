@@ -90,6 +90,22 @@ type CoreTest struct {
 	RunUntil            int64 `koanf:"run-until"`
 }
 
+// DefaultCoreSettings is useful in unit tests
+func DefaultCoreSettings() *Core {
+	return &Core{
+		Cache: CoreCache{
+			BasicInterval: 100,
+			BasicSize:     1000,
+			LRUSize:       1000,
+			TimedExpire:   20 * time.Minute,
+		},
+		CheckpointLoadGasCost:     1_000_000,
+		CheckpointMaxExecutionGas: 0,
+		GasCheckpointFrequency:    1_000_000,
+		MessageProcessCount:       10,
+	}
+}
+
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
 	URLs    []string      `koanf:"url"`
@@ -434,7 +450,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
-	f.Int("core.cache.basic-interval", 1_000_000, "amount of gas to wait between saving to basic cache")
+	f.Int("core.cache.basic-interval", 100_000_000, "amount of gas to wait between saving to basic cache")
 	f.Int("core.cache.basic-size", 100, "number of recently used L2 blocks to hold in basic memory cache")
 	f.Bool("core.cache.disable", false, "disable saving to cache while in core thread")
 	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")

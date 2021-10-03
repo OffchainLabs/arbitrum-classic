@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-#include <data_storage/lrusideloadcache.hpp>
+#include <data_storage/lrumachinecache.hpp>
 
-size_t LRUSideloadCache::size() {
+size_t LRUMachineCache::size() {
     return cache.size();
 }
 
-void LRUSideloadCache::add(std::unique_ptr<Machine> machine) {
+void LRUMachineCache::add(std::unique_ptr<Machine> machine) {
+    if (max_size == 0) {
+        return;
+    }
+
     auto gas_used = machine->machine_state.output.arb_gas_used;
 
     if (cache.size() >= max_size) {
@@ -33,8 +37,8 @@ void LRUSideloadCache::add(std::unique_ptr<Machine> machine) {
     cache[gas_used] = std::make_pair(std::move(machine), lru_list.begin());
 }
 
-std::optional<LRUSideloadCache::map_type::iterator>
-LRUSideloadCache::atOrBeforeGas(uint256_t gas_used) {
+std::optional<LRUMachineCache::map_type::iterator>
+LRUMachineCache::atOrBeforeGas(uint256_t gas_used) {
     // Lookup value in the cache
     auto cache_it = cache.upper_bound(gas_used);
     if (cache_it == cache.begin()) {
@@ -49,8 +53,8 @@ LRUSideloadCache::atOrBeforeGas(uint256_t gas_used) {
     return cache_it;
 }
 
-void LRUSideloadCache::updateUsed(
-    LRUSideloadCache::map_type::iterator& cache_it) {
+void LRUMachineCache::updateUsed(
+    LRUMachineCache::map_type::iterator& cache_it) {
     auto list_it = cache_it->second.second;
     if (list_it == lru_list.begin()) {
         // The item is already at the front of the most recently
@@ -66,7 +70,7 @@ void LRUSideloadCache::updateUsed(
     cache_it->second.second = lru_list.begin();
 }
 
-void LRUSideloadCache::reorg(uint256_t next_gas_used) {
+void LRUMachineCache::reorg(uint256_t next_gas_used) {
     if (cache.empty()) {
         // Nothing to reorg
         return;
@@ -79,7 +83,7 @@ void LRUSideloadCache::reorg(uint256_t next_gas_used) {
     }
 }
 
-void LRUSideloadCache::evict() {
+void LRUMachineCache::evict() {
     // Evict item from the end of most recently used list
     auto i = --lru_list.end();
     cache.erase(*i);
