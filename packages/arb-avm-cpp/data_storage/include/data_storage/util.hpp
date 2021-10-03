@@ -49,7 +49,7 @@ struct ArbCoreConfig {
     uint32_t timed_cache_expiration_seconds{20 * 60};
 
     // Number of milliseconds to sleep when idle
-    uint32_t idle_sleep_milliseconds;
+    uint32_t idle_sleep_milliseconds{5};
 
     // Seed cache on startup by forcing re-execution from timed_cache_expiration
     bool seed_cache_on_startup{false};
