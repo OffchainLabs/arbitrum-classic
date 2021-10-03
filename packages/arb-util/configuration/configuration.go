@@ -90,22 +90,6 @@ type CoreTest struct {
 	RunUntil            int64 `koanf:"run-until"`
 }
 
-// DefaultCoreSettings is useful in unit tests
-func DefaultCoreSettings() *Core {
-	return &Core{
-		Cache: CoreCache{
-			BasicInterval: 100,
-			BasicSize:     1000,
-			LRUSize:       1000,
-			TimedExpire:   20 * time.Minute,
-		},
-		CheckpointLoadGasCost:     1_000_000,
-		CheckpointMaxExecutionGas: 0,
-		GasCheckpointFrequency:    1_000_000,
-		MessageProcessCount:       10,
-	}
-}
-
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
 	URLs    []string      `koanf:"url"`
