@@ -211,17 +211,46 @@ export class L1Bridge {
       name,
     }
   }
+  private async _depositETH(
+    value: BigNumber,
+    maxSubmissionPrice: BigNumber,
+    estimateGas: boolean,
+    overrides: PayableOverrides = {}
+  ): Promise<ContractTransaction | BigNumber> {
+    const inbox = await this.getInbox()
+    const method = estimateGas
+      ? inbox.estimateGas.depositEth
+      : inbox.functions.depositEth
+    return method(maxSubmissionPrice, {
+      value,
+      ...overrides,
+    })
+  }
+
+  public async estimateGasDepositEth(
+    value: BigNumber,
+    maxSubmissionPrice: BigNumber,
+    overrides: PayableOverrides = {}
+  ) {
+    return this._depositETH(
+      value,
+      maxSubmissionPrice,
+      true,
+      overrides
+    ) as Promise<BigNumber>
+  }
 
   public async depositETH(
     value: BigNumber,
     maxSubmissionPrice: BigNumber,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
-    const inbox = await this.getInbox()
-    return inbox.functions.depositEth(maxSubmissionPrice, {
+    return this._depositETH(
       value,
-      ...overrides,
-    })
+      maxSubmissionPrice,
+      false,
+      overrides
+    ) as Promise<ContractTransaction>
   }
 
   public async getGatewayAddress(erc20L1Address: string): Promise<string> {
