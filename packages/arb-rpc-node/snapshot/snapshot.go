@@ -371,6 +371,46 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 	return arbos.ParseGetStorageAtResult(res.ReturnData)
 }
 
+func (s *Snapshot) SetNonce(account common.Address, nonce uint64) error {
+	_, err := s.basicCall(arbos.SetNonceData(account, nonce), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Snapshot) SetBalance(account common.Address, ballance *big.Int) error {
+	_, err := s.basicCall(arbos.SetBalanceData(account, ballance), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Snapshot) SetStorage(account common.Address, storage map[common.Hash]common.Hash) error {
+	_, err := s.basicCall(arbos.SetStorageData(account, storage), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Snapshot) SetCode(account common.Address, code []byte) error {
+	_, err := s.basicCall(arbos.SetCodeData(account, code), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Snapshot) Store(account common.Address, key, val common.Hash) error {
+	_, err := s.basicCall(arbos.StoreData(account, key, val), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
 	res, _, err := s.basicCallUnsafe(arbos.ArbOSVersionData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {

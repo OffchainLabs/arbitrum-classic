@@ -183,7 +183,7 @@ func (s *Server) GetCode(address *common.Address, blockNum rpc.BlockNumberOrHash
 	return code, nil
 }
 
-func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overrides *map[common.Address]EthCallOverride) (hexutil.Bytes, error) {
 	if callArgs.To != nil && *callArgs.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		var data []byte
 		if callArgs.Data != nil {
@@ -198,6 +198,33 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash) (hexu
 	}
 	if snap.ArbosVersion() >= 42 && (callArgs.GasPrice == nil || callArgs.GasPrice.ToInt().Sign() <= 0) {
 		callArgs.GasPrice = (*hexutil.Big)(big.NewInt(1 << 60))
+	}
+
+	if overrides != nil {
+		for address, override := range *overrides {
+			account := arbcommon.NewAddressFromEth(address)
+			if override.Nonce != nil {
+				snap.SetNonce(account, uint64(*override.Nonce))
+			}
+			if override.Balance != nil {
+				snap.SetBalance(account, override.Balance.ToInt())
+			}
+			if override.Code != nil {
+				snap.SetCode(account, *override.Code)
+			}
+			if override.State != nil {
+				storage := make(map[arbcommon.Hash]arbcommon.Hash)
+				for key, val := range *override.State {
+					storage[arbcommon.NewHashFromEth(key)] = arbcommon.NewHashFromEth(val)
+				}
+				snap.SetStorage(account, storage)
+			}
+			if override.StateDiff != nil {
+				for key, val := range *override.StateDiff {
+					snap.Store(account, arbcommon.NewHashFromEth(key), arbcommon.NewHashFromEth(val))
+				}
+			}
+		}
 	}
 
 	from, msg := buildCallMsg(callArgs, s.maxCallGas)
