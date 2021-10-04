@@ -175,6 +175,7 @@ std::vector<value> serializeValue(
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>&) {
     std::vector<value> ret{};
+    std::cerr << "Serialize wasm code point\n";
     value_vector.push_back(WASM_CODE_POINT);
     marshal_uint256_t(hash_value(*val.data), value_vector);
     ret.push_back(*val.data);
@@ -540,6 +541,8 @@ GetResults processVal(const ReadTransaction& tx,
         return applyValue(std::move(*val), 0, val_stack);
     }
 
+    std::cerr << "process wasm val\n";
+
     // Value not in cache, so need to load from database
     auto results = getValue(tx, val_hash.hash, val_cache);
     if (std::holds_alternative<rocksdb::Status>(results)) {
@@ -575,6 +578,7 @@ GetResults processFirstVal(const ReadTransaction& tx,
         return GetResults{0, rocksdb::Status::OK(), {}};
     }
 
+    std::cerr << "process first wasm val\n";
     // Value not in cache, so need to load from database
     auto results = getValue(tx, val_hash.hash, val_cache);
     // auto results = getStoredValue(tx, val_hash);

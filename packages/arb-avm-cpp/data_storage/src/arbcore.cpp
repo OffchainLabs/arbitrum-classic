@@ -204,15 +204,11 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         return status;
     }
 
-    std::cerr << "Reorg success\n";
-
     code->addSegment(executable.code);
     machine = std::make_unique<MachineThread>(
         MachineState{code, executable.static_val});
 
     last_machine = std::make_unique<Machine>(*machine);
-
-    std::cerr << "Code segment\n";
 
     ReadWriteTransaction tx(data_storage);
     // Need to initialize database from scratch
@@ -253,7 +249,6 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         return status;
     }
 
-    std::cerr << "Init worked\n";
     return rocksdb::Status::OK();
 }
 

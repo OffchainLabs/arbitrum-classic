@@ -482,8 +482,8 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::SET_BUFFER64, 100},
     {OpCode::SET_BUFFER256, 100},
 
-    {OpCode::WASM_COMPILE, 1001000},
-    {OpCode::WASM_RUN, 2000000},
+    {OpCode::WASM_COMPILE, 100},
+    {OpCode::WASM_RUN, 1000000},
 
     {OpCode::ECRECOVER, 20000},
     {OpCode::ECADD, 3500},
