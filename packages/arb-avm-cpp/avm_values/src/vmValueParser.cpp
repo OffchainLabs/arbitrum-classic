@@ -195,6 +195,7 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
     if (!executable_input_stream.is_open()) {
         throw std::runtime_error("doesn't exist");
     }
+    std::cerr << "Loading\n";
     nlohmann::json executable_json;
     executable_input_stream >> executable_json;
     auto& json_code = executable_json.at(CODE_LABEL);
@@ -208,5 +209,6 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
     }
     value static_val = value_from_json(
         std::move(executable_json.at(STATIC_LABEL)), op_count, *segment);
+    std::cerr << "Loaded\n";
     return {std::move(segment), std::move(static_val)};
 }

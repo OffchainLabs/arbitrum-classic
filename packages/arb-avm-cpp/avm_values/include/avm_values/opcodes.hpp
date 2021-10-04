@@ -391,6 +391,8 @@ const std::unordered_map<OpCode, std::vector<size_t>> InstructionAuxStackPops =
      {OpCode::SET_BUFFER8, {}},
      {OpCode::SET_BUFFER64, {}},
      {OpCode::SET_BUFFER256, {}},
+     {OpCode::WASM_COMPILE, {}},
+     {OpCode::WASM_RUN, {}},
      {OpCode::ECRECOVER, {}},
      {OpCode::ECADD, {}},
      {OpCode::ECMUL, {}},
@@ -481,7 +483,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::SET_BUFFER256, 100},
 
     {OpCode::WASM_COMPILE, 1001000},
-    {OpCode::WASM_RUN, 1001000},
+    {OpCode::WASM_RUN, 2000000},
 
     {OpCode::ECRECOVER, 20000},
     {OpCode::ECADD, 3500},

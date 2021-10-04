@@ -113,6 +113,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    std::cerr << "Going to exec\n";
+
     MachineExecutionConfig execConfig;
     execConfig.inbox_messages = inbox_messages;
     mach->machine_state.context = AssertionContext{execConfig};

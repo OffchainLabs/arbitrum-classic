@@ -76,57 +76,66 @@ func runExecutionTest(t *testing.T, startGas *big.Int, endGas *big.Int, faultCon
 }
 
 func TestWasmChallenge(t *testing.T) {
-	messages := []inbox.InboxMessage{makeInitMsg()}
 	startGas := big.NewInt(0)
 	endGas := big.NewInt(100012)
-	arbCore, shutdown := test.PrepareArbCoreGen(t, messages, "/home/sami/arb-os/wasm-inst.json")
+	mon, shutdown := monitor.PrepareArbCoreWithMexe(t, "/home/sami/arb-os/wasm-inst.json")
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge, messages := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
 	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(400)}
 	defer shutdown()
-	faultyCore := NewFaultyCore(arbCore, faultConfig)
+	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
-	challengedNode, err := initializeChallengeData(t, faultyCore, startGas, endGas)
+	challengedAssertion, err := initializeChallengeData(t, faultyCore, startGas, endGas)
 	if err != nil {
 		t.Fatal("Error with initializeChallengeData")
 	}
 
-	time := big.NewInt(100)
-	executeChallenge(
+	startChallenge(challengedAssertion)
+	moves, asserterErr := executeChallenge(
 		t,
-		challengedNode,
-		time,
-		time,
-		arbCore,
+		challengedAssertion,
+		mon.Core,
 		faultyCore,
-		false,
+		client,
+		tester,
+		seqInboxAddr,
+		asserterWallet,
+		challengerWallet,
 	)
+	test.FailIfError(t, asserterErr)
+	saveChallengeData(t, challengedAssertion, messages, moves, asserterErr)
 }
 
 func TestWasmRunChallenge(t *testing.T) {
-	messages := []inbox.InboxMessage{makeInitMsg()}
 	startGas := big.NewInt(0)
 	endGas := big.NewInt(2005657)
-	arbCore, shutdown := test.PrepareArbCoreGen(t, messages, "/home/sami/arbitrum/wasm-run.mexe")
+	mon, shutdown := monitor.PrepareArbCoreWithMexe(t, "/home/sami/arbitrum/wasm-run.mexe")
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge, messages := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
 	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(1900000)}
 	defer shutdown()
-	faultyCore := NewFaultyCore(arbCore, faultConfig)
+	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
-	challengedNode, err := initializeChallengeData(t, faultyCore, startGas, endGas)
+	challengedAssertion, err := initializeChallengeData(t, faultyCore, startGas, endGas)
 	if err != nil {
 		t.Fatal("Error with initializeChallengeData")
 	}
 
-	time := big.NewInt(200)
-	executeChallenge(
+	startChallenge(challengedAssertion)
+	moves, asserterErr := executeChallenge(
 		t,
-		challengedNode,
-		time,
-		time,
-		arbCore,
+		challengedAssertion,
+		mon.Core,
 		faultyCore,
-		true,
+		client,
+		tester,
+		seqInboxAddr,
+		asserterWallet,
+		challengerWallet,
 	)
+	test.FailIfError(t, asserterErr)
+	saveChallengeData(t, challengedAssertion, messages, moves, asserterErr)
 }
 
+/*
 func TestWasmRunReversed(t *testing.T) {
 	messages := []inbox.InboxMessage{makeInitMsg()}
 	startGas := big.NewInt(0)
@@ -152,6 +161,7 @@ func TestWasmRunReversed(t *testing.T) {
 		true,
 	)
 }
+*/
 
 func TestChallengeToOSP(t *testing.T) {
 	runExecutionTest(t, big.NewInt(0), big.NewInt(400*2), FaultConfig{DistortMachineAtGas: big.NewInt(1)}, false)
