@@ -58,12 +58,15 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.lazy_load_core_machine = arb_core_config.lazy_load_core_machine;
     coreConfig.lazy_load_archive_queries =
         arb_core_config.lazy_load_archive_queries;
-    coreConfig.profile_reorg_to = arb_core_config.profile_reorg_to;
-    coreConfig.profile_run_until = arb_core_config.profile_run_until;
-    coreConfig.profile_load_count = arb_core_config.profile_load_count;
-    coreConfig.profile_reset_db_except_inbox =
-        arb_core_config.profile_reset_db_except_inbox;
-    coreConfig.profile_just_metadata = arb_core_config.profile_just_metadata;
+    coreConfig.test_reorg_to_l1_block = arb_core_config.test_reorg_to_l1_block;
+    coreConfig.test_reorg_to_l2_block = arb_core_config.test_reorg_to_l2_block;
+    coreConfig.test_reorg_to_log = arb_core_config.test_reorg_to_log;
+    coreConfig.test_reorg_to_message = arb_core_config.test_reorg_to_message;
+    coreConfig.test_run_until = arb_core_config.test_run_until;
+    coreConfig.test_load_count = arb_core_config.test_load_count;
+    coreConfig.test_reset_db_except_inbox =
+        arb_core_config.test_reset_db_except_inbox;
+    coreConfig.test_just_metadata = arb_core_config.test_just_metadata;
 
     try {
         auto storage = new ArbStorage(string_filename, coreConfig);

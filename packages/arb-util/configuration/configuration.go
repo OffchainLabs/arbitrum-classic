@@ -62,7 +62,6 @@ type Core struct {
 	CheckpointLoadGasCost     int           `koanf:"checkpoint-load-gas-cost"`
 	CheckpointLoadGasFactor   int           `koanf:"checkpoint-load-gas-factor"`
 	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution-gas"`
-	Profile                   CoreTest      `koanf:"profile"`
 	Test                      CoreTest      `koanf:"test"`
 	Debug                     bool          `koanf:"debug"`
 	IdleSleep                 time.Duration `koanf:"idle-sleep"`
@@ -83,11 +82,18 @@ type CoreCache struct {
 }
 
 type CoreTest struct {
-	JustMetadata        bool  `koanf:"just-metadata"`
-	LoadCount           int64 `koanf:"load-count"`
-	ReorgTo             int64 `koanf:"reorg-to"`
-	ResetAllExceptInbox bool  `koanf:"reset-all-except-inbox"`
-	RunUntil            int64 `koanf:"run-until"`
+	JustMetadata        bool        `koanf:"just-metadata"`
+	LoadCount           int64       `koanf:"load-count"`
+	ReorgTo             TestReorgTo `koanf:"reorg-to"`
+	ResetAllExceptInbox bool        `koanf:"reset-all-except-inbox"`
+	RunUntil            int64       `koanf:"run-until"`
+}
+
+type TestReorgTo struct {
+	L1Block int64 `koanf:"l1-block"`
+	L2Block int64 `koanf:"l2-block"`
+	Log     int64 `koanf:"log"`
+	Message int64 `koanf:"message"`
 }
 
 type FeedInput struct {
@@ -460,7 +466,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 	f.Bool("core.test.just-metadata", false, "just print database metadata and exit")
 	f.Int("core.test.load-count", 0, "number of snapshots to load from database for profile test, zero to disable")
-	f.Int("core.test.reorg-to", 0, "reorg to snapshot with given gas, zero to disable")
+	f.Int("core.test.reorg-to.l1-block", 0, "reorg to snapshot with given L1 block or before, zero to disable")
+	f.Int("core.test.reorg-to.l2-block", 0, "reorg to snapshot with given L2 block or before, zero to disable")
+	f.Int("core.test.reorg-to.log", 0, "reorg to snapshot with given log or before, zero to disable")
+	f.Int("core.test.reorg-to.message", 0, "reorg to snapshot with given message or before, zero to disable")
 	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
 	f.Int("core.test.run-until", 0, "run until gas is reacheck for profile test, zero to disable")
 

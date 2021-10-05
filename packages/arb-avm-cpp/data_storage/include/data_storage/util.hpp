@@ -66,20 +66,29 @@ struct ArbCoreConfig {
     // If any profile_* parameters are non-zero, program will exit after
     // all profile conditions are satisfied.
 
+    // Reorg database to l1 block
+    uint64_t test_reorg_to_l1_block{0};
+
+    // Reorg database to l2 block
+    uint64_t test_reorg_to_l2_block{0};
+
+    // Reorg database to log
+    uint64_t test_reorg_to_log{0};
+
     // Reorg database to message
-    uint64_t profile_reorg_to{0};
+    uint64_t test_reorg_to_message{0};
 
     // Run until message reached
-    uint64_t profile_run_until{0};
+    uint64_t test_run_until{0};
 
-    // Load specified number of machines backwards from profile_run_until
-    uint64_t profile_load_count{0};
+    // Load specified number of machines backwards from test_run_until
+    uint64_t test_load_count{0};
 
     // Delete all database entries except for inbox
-    bool profile_reset_db_except_inbox{false};
+    bool test_reset_db_except_inbox{false};
 
     // Exit after printing out metadata from database
-    bool profile_just_metadata{false};
+    bool test_just_metadata{false};
 
     // Whether to lazy load the core machine
     bool lazy_load_core_machine{false};

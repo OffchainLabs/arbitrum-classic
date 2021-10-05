@@ -41,11 +41,14 @@ typedef struct {
     const char* save_rocksdb_path;
     int32_t lazy_load_core_machine;
     int32_t lazy_load_archive_queries;
-    int32_t profile_reorg_to;
-    int32_t profile_run_until;
-    int32_t profile_load_count;
-    int32_t profile_reset_db_except_inbox;
-    int32_t profile_just_metadata;
+    int32_t test_reorg_to_l1_block;
+    int32_t test_reorg_to_l2_block;
+    int32_t test_reorg_to_log;
+    int32_t test_reorg_to_message;
+    int32_t test_run_until;
+    int32_t test_load_count;
+    int32_t test_reset_db_except_inbox;
+    int32_t test_just_metadata;
 } CArbCoreConfig;
 
 CArbStorage* createArbStorage(const char* db_path,
