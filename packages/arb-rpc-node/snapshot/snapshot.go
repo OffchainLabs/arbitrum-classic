@@ -372,41 +372,56 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 }
 
 func (s *Snapshot) SetNonce(account common.Address, nonce uint64) error {
-	_, err := s.basicCall(arbos.SetNonceData(account, nonce), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicCall(arbos.SetNonceData(account, nonce), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
+	}
+	if err := checkValidResult(res); err != nil {
+		return nil
 	}
 	return nil
 }
 
 func (s *Snapshot) SetBalance(account common.Address, ballance *big.Int) error {
-	_, err := s.basicCall(arbos.SetBalanceData(account, ballance), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicCall(arbos.SetBalanceData(account, ballance), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
+	}
+	if err := checkValidResult(res); err != nil {
+		return nil
 	}
 	return nil
 }
 
 func (s *Snapshot) SetState(account common.Address, storage map[common.Hash]common.Hash) error {
-	_, err := s.basicCall(arbos.SetStateData(account, storage), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicCall(arbos.SetStateData(account, storage), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
+	}
+	if err := checkValidResult(res); err != nil {
+		return nil
 	}
 	return nil
 }
 
 func (s *Snapshot) SetCode(account common.Address, code []byte) error {
-	_, err := s.basicCall(arbos.SetCodeData(account, code), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicCall(arbos.SetCodeData(account, code), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
+	}
+	if err := checkValidResult(res); err != nil {
+		return nil
 	}
 	return nil
 }
 
 func (s *Snapshot) Store(account common.Address, key, val common.Hash) error {
-	_, err := s.basicCall(arbos.StoreData(account, key, val), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicCall(arbos.StoreData(account, key, val), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
+	}
+	if err := checkValidResult(res); err != nil {
+		return nil
 	}
 	return nil
 }
