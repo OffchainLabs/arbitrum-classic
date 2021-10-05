@@ -56,7 +56,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.3.4
+      - image: offchainlabs/backend-base:0.3.6
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -166,7 +166,7 @@ jobs:
           path: *test-path
   cpp-avm-build:
     docker:
-      - image: offchainlabs/cpp-base:0.3.1
+      - image: offchainlabs/cpp-base:0.3.6
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -190,7 +190,7 @@ jobs:
             - ./project/packages/arb-avm-cpp/build/*
   cpp-avm-asan:
     docker:
-      - image: offchainlabs/cpp-base:0.3.1
+      - image: offchainlabs/cpp-base:0.3.6
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -218,7 +218,7 @@ jobs:
 
   cpp-avm-tsan:
     docker:
-      - image: offchainlabs/cpp-base:0.3.1
+      - image: offchainlabs/cpp-base:0.3.6
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -244,7 +244,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.3.4
+      - image: offchainlabs/backend-base:0.3.6
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -285,7 +285,7 @@ jobs:
 
   backend-rpc:
     docker:
-      - image: offchainlabs/backend-base:0.3.4
+      - image: offchainlabs/backend-base:0.3.6
     resource_class: large
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
@@ -315,7 +315,7 @@ jobs:
 
   arb-bridge-peripherals:
     docker:
-      - image: offchainlabs/integration-base:0.3.5
+      - image: offchainlabs/integration-base:0.3.7
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
