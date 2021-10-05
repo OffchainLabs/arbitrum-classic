@@ -15,7 +15,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v6.20.3.tar.gz --output rocksdb-6.20.3.tar.gz && \
     tar xf rocksdb-6.20.3.tar.gz && \
     cd rocksdb-6.20.3 && \
-    make shared_lib install-shared && \
+    PREFIX=/usr make shared_lib install-shared && \
     useradd -ms /bin/bash user
 USER user
 WORKDIR /home/user/
