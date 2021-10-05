@@ -276,10 +276,11 @@ export class Bridge {
       this.l1Provider
     )
     const sender = await this.l1Bridge.getWalletAddress()
+    const to = destinationAddress ? destinationAddress : sender
     const depositCalldata = await l1Gateway.getOutboundCalldata(
       erc20L1Address,
       sender,
-      destinationAddress ? destinationAddress : sender,
+      to,
       amount,
       '0x'
     )
@@ -364,7 +365,7 @@ export class Bridge {
       gasPriceBid,
       l1CallValue: BigNumber.from(totalEthCallvalueToSend),
       maxSubmissionCost: maxSubmissionPrice,
-      destinationAddress,
+      destinationAddress: to,
       amount,
       erc20L1Address,
     }
