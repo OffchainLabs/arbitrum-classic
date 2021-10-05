@@ -217,7 +217,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overr
 				for key, val := range *override.State {
 					storage[arbcommon.NewHashFromEth(key)] = arbcommon.NewHashFromEth(val)
 				}
-				snap.SetStorage(account, storage)
+				snap.SetState(account, storage)
 			}
 			if override.StateDiff != nil {
 				for key, val := range *override.StateDiff {

@@ -14,7 +14,7 @@ var (
 	setNonceABI   abi.Method
 	setBalanceABI abi.Method
 	setCodeABI    abi.Method
-	setStorageABI abi.Method
+	setStateABI   abi.Method
 	storeABI      abi.Method
 )
 
@@ -27,7 +27,7 @@ func init() {
 	setNonceABI = arbostest.Methods["setNonce"]
 	setBalanceABI = arbostest.Methods["setBalance"]
 	setCodeABI = arbostest.Methods["setCode"]
-	setStorageABI = arbostest.Methods["setStorage"]
+	setStateABI = arbostest.Methods["setState"]
 	storeABI = arbostest.Methods["store"]
 }
 
@@ -55,12 +55,12 @@ func SetCodeData(address common.Address, code []byte) []byte {
 	return append(setCodeABI.ID, args...)
 }
 
-func SetStorageData(address common.Address, storage map[common.Hash]common.Hash) []byte {
-	args, err := setStorageABI.Inputs.Pack(address, storage)
+func SetStateData(address common.Address, storage map[common.Hash]common.Hash) []byte {
+	args, err := setStateABI.Inputs.Pack(address, storage)
 	if err != nil {
 		panic(err)
 	}
-	return append(setStorageABI.ID, args...)
+	return append(setStateABI.ID, args...)
 }
 
 func StoreData(address common.Address, key, val common.Hash) []byte {

@@ -387,8 +387,8 @@ func (s *Snapshot) SetBalance(account common.Address, ballance *big.Int) error {
 	return nil
 }
 
-func (s *Snapshot) SetStorage(account common.Address, storage map[common.Hash]common.Hash) error {
-	_, err := s.basicCall(arbos.SetStorageData(account, storage), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+func (s *Snapshot) SetState(account common.Address, storage map[common.Hash]common.Hash) error {
+	_, err := s.basicCall(arbos.SetStateData(account, storage), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
 	}
