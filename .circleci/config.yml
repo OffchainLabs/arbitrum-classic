@@ -282,7 +282,7 @@ jobs:
           working_directory: /home/user/project/packages/arb-rpc-node
       - run:
           name: test arb-rpc-node/dev upgrade
-          command: gotestsum --format short-verbose -- -upgrade -race
+          command: gotestsum --format short-verbose -- -upgrade -race -timeout 1h
           working_directory: /home/user/project/packages/arb-rpc-node/dev/
       - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
