@@ -445,11 +445,7 @@ export class Bridge {
   public async getInboxSeqNumFromContractTransaction(
     l1Transaction: TransactionReceipt
   ): Promise<BigNumber[] | undefined> {
-    return BridgeHelper.getInboxSeqNumFromContractTransaction(
-      l1Transaction,
-      // TODO: we don't need to actually make this query if random address fetches interface
-      (await this.l1Bridge.getInbox()).address
-    )
+    return BridgeHelper.getInboxSeqNumFromContractTransaction(l1Transaction)
   }
 
   /**
@@ -550,30 +546,16 @@ export class Bridge {
     return this.l2Bridge.arbRetryableTx.cancel(redemptionTxHash, overrides)
   }
 
-  public getBuddyDeployInL2Transaction(
-    l2Transaction: TransactionReceipt
-  ): Promise<BuddyDeployEventResult[]> {
-    return BridgeHelper.getBuddyDeployInL2Transaction(l2Transaction)
-  }
-
   public getWithdrawalsInL2Transaction(
     l2Transaction: TransactionReceipt
   ): L2ToL1EventResult[] {
-    return BridgeHelper.getWithdrawalsInL2Transaction(
-      l2Transaction,
-      this.l2Provider
-    )
+    return BridgeHelper.getWithdrawalsInL2Transaction(l2Transaction)
   }
 
   public async getDepositTokenEventData(
     l1Transaction: TransactionReceipt
   ): Promise<DepositInitiated[]> {
-    const defaultGatewayAddress = (await this.l1Bridge.getDefaultL1Gateway())
-      .address
-    return BridgeHelper.getDepositTokenEventData(
-      l1Transaction,
-      defaultGatewayAddress
-    )
+    return BridgeHelper.getDepositTokenEventData(l1Transaction)
   }
 
   /**
@@ -700,9 +682,10 @@ export class Bridge {
     fromAddress?: string,
     filter?: Filter
   ): Promise<WithdrawalInitiated[]> {
-    return BridgeHelper.getGatewayWithdrawEventData(
+    return BridgeHelper.getTokenWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
+      undefined,
       fromAddress,
       filter
     )
