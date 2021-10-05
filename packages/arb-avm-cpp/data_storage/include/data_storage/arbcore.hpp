@@ -200,6 +200,23 @@ class ArbCore {
         const std::function<bool(const MachineOutput&)>& check_output,
         bool initial_start,
         ValueCache& value_cache);
+
+    rocksdb::Status reorgToMachineOutput(const MachineOutput& output,
+                                         ValueCache& value_cache);
+    rocksdb::Status advanceCoreToTarget(const MachineOutput& target_output,
+                                        bool cache_sideloads);
+    std::variant<MachineOutput, rocksdb::Status> reorgToFirstMatchingCheckpoint(
+        const std::function<bool(const MachineOutput&)>& check_output,
+        ReadWriteTransaction& tx,
+        std::unique_ptr<rocksdb::Iterator>& checkpoint_it);
+    std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
+    reorgToFirstMatchingMachineCheckpoint(
+        const MachineOutput& target_machine_output,
+        const std::function<bool(const MachineOutput&)>& check_output,
+        ReadWriteTransaction& tx,
+        std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
+        ValueCache& value_cache);
+
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(
         const ReadTransaction& transaction,
@@ -222,6 +239,8 @@ class ArbCore {
                                       ValueCache& value_cache,
                                       bool lazy_load);
     rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
+    void deleteCheckpoint(ReadWriteTransaction& tx,
+                          const CheckpointVariant& checkpoint_variant);
 
    public:
     // Useful for unit tests
@@ -407,7 +426,8 @@ class ArbCore {
     rocksdb::Status updateSendInsertedCount(ReadWriteTransaction& tx,
                                             const uint256_t& send_index);
     bool runMachineWithMessages(MachineExecutionConfig& execConfig,
-                                size_t max_message_batch_size);
+                                size_t max_message_batch_size,
+                                bool asynchronous);
 
    public:
     // Public sideload interaction

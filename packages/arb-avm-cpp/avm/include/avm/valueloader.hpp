@@ -38,10 +38,10 @@ class ValueLoader : public AbstractValueLoader {
     ValueLoader() : impl(nullptr) {}
     ValueLoader(std::unique_ptr<AbstractValueLoader> impl_)
         : impl(std::move(impl_)) {}
-    ValueLoader(const ValueLoader& other) : impl(std::move(other.clone())) {}
+    ValueLoader(const ValueLoader& other) : impl(other.clone()) {}
 
     ValueLoader& operator=(const ValueLoader& other) {
-        impl = std::move(other.clone());
+        impl = other.clone();
         return *this;
     }
 
