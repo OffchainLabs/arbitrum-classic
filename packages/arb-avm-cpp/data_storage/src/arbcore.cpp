@@ -469,6 +469,8 @@ rocksdb::Status ArbCore::reorgToTimestampOrBefore(const uint256_t& timestamp,
         initial_start, cache);
 }
 
+// reorgToMachineOutput resets database entries to match the state when the
+// given output was the latest machine
 rocksdb::Status ArbCore::reorgToMachineOutput(const MachineOutput& output,
                                               ValueCache& value_cache) {
     auto log_inserted_count = logInsertedCount();
@@ -519,6 +521,8 @@ rocksdb::Status ArbCore::reorgToMachineOutput(const MachineOutput& output,
     return tx.commit();
 }
 
+// advanceCoreToTarget synchronously advances the core machine to the given
+// target
 rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
                                              bool cache_sideloads) {
     while (core_machine->machine_state.output.arb_gas_used <
@@ -576,6 +580,9 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
     return rocksdb::Status::OK();
 }
 
+// reorgToFirstMatchingCheckpoint resets the checkpoint
+// such that machine state is at the first matching checkpoint. cleaning
+// up old references as needed.
 std::variant<MachineOutput, rocksdb::Status>
 ArbCore::reorgToFirstMatchingCheckpoint(
     const std::function<bool(const MachineOutput&)>& check_output,
@@ -627,10 +634,9 @@ ArbCore::reorgToFirstMatchingCheckpoint(
     return rocksdb::Status::NotFound();
 }
 
-// reorgCheckpoints resets the checkpoint and database entries
-// such that machine state is at or before the requested message. cleaning
-// up old references as needed.
-// If initial_start is true, caches are seeded but no reorg is done.
+// reorgToFirstMatchingMachineCheckpoint finds the first checkpoint
+// that includes a machine and matches matching checkpoint. cleaning
+// up invalid checkpoints as needed.
 std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
 ArbCore::reorgToFirstMatchingMachineCheckpoint(
     const MachineOutput& target_machine_output,
