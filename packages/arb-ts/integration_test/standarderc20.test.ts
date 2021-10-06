@@ -125,9 +125,7 @@ describe('standard ERC20', () => {
   it('getERC20L1Address/getERC20L2Address work as expected', async () => {
     const { bridge } = await instantiateBridgeWithRandomWallet()
     const queriedL2Address = await bridge.getERC20L2Address(existentTestERC20)
-    const queriedL1Address = await bridge.l2Bridge.getERC20L1Address(
-      queriedL2Address
-    )
+    const queriedL1Address = await bridge.getERC20L1Address(queriedL2Address)
 
     expect(queriedL1Address).to.equal(
       existentTestERC20,
@@ -135,9 +133,7 @@ describe('standard ERC20', () => {
     )
 
     const randomAddress = await bridge.l1Bridge.getWalletAddress()
-    const notAnL1Address = await bridge.l2Bridge.getERC20L1Address(
-      randomAddress
-    )
+    const notAnL1Address = await bridge.getERC20L1Address(randomAddress)
     expect(notAnL1Address).to.be.null,
       "getERC20L1Address didn't return null for random input"
   })
