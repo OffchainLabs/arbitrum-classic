@@ -187,7 +187,7 @@ class ArbCore {
     rocksdb::Status reorgToL2Block(const uint256_t& l2_block_number,
                                    bool initial_start,
                                    ValueCache& cache);
-    rocksdb::Status reorgToLogCountOrBefore(const uint256_t& message_count,
+    rocksdb::Status reorgToLogCountOrBefore(const uint256_t& log_count,
                                             bool initial_start,
                                             ValueCache& cache);
     rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
