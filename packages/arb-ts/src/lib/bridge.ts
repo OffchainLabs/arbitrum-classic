@@ -749,6 +749,12 @@ export class Bridge {
     return this.l1Bridge.getERC20L2Address(erc20L1Address)
   }
 
+  public async getERC20L1Address(
+    erc20L2Address: string
+  ): Promise<string | null> {
+    return this.l2Bridge.getERC20L1Address(erc20L2Address)
+  }
+
   public async withdrawETH(
     value: BigNumber,
     destinationAddress?: string,
