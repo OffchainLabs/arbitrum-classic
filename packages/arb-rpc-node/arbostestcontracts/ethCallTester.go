@@ -394,8 +394,8 @@ func (_ArbosTest *ArbosTestTransactorSession) Store(addr common.Address, key uin
 
 // EthCallTesterMetaData contains all meta data concerning the EthCallTester contract.
 var EthCallTesterMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"failStore\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getX\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"key\",\"type\":\"uint256\"}],\"name\":\"sLoad\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b50610100600055610121806100266000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c806330874d8d1460415780635197c7aa14606d5780638bb204a1146073575b600080fd5b605b60048036036020811015605557600080fd5b5035607b565b60408051918252519081900360200190f35b605b607f565b60796085565b005b5490565b60005490565b60408051632e619f5760e01b8152306004820152600060248201819052630300000060448301529151606992632e619f57926064808201939182900301818387803b15801560d257600080fd5b505af115801560e5573d6000803e3d6000fd5b5050505056fea26469706673582212203192f99bcdce4bdab4353dcd22ad7b079f38e5d6dfe21cdf8d5dc1ed91bd1ecd64736f6c634300060c0033",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"failStore\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getX\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"key\",\"type\":\"uint256\"}],\"name\":\"sLoad\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b50610100600055610146806100266000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c806312065fe01461005157806330874d8d1461006b5780635197c7aa146100885780638bb204a114610090575b600080fd5b61005961009a565b60408051918252519081900360200190f35b6100596004803603602081101561008157600080fd5b503561009e565b6100596100a2565b6100986100a8565b005b4790565b5490565b60005490565b60408051632e619f5760e01b8152306004820152600060248201819052630300000060448301529151606992632e619f57926064808201939182900301818387803b1580156100f657600080fd5b505af115801561010a573d6000803e3d6000fd5b5050505056fea264697066735822122089b7777e8ef15ddea1bcf79a6890c4381f424905b7832dfa58dc66dde08a19b764736f6c634300060c0033",
 }
 
 // EthCallTesterABI is the input ABI used to generate the binding from.
@@ -584,6 +584,27 @@ func (_EthCallTester *EthCallTesterSession) FailStore() (*types.Transaction, err
 // Solidity: function failStore() returns()
 func (_EthCallTester *EthCallTesterTransactorSession) FailStore() (*types.Transaction, error) {
 	return _EthCallTester.Contract.FailStore(&_EthCallTester.TransactOpts)
+}
+
+// GetBalance is a paid mutator transaction binding the contract method 0x12065fe0.
+//
+// Solidity: function getBalance() returns(uint256)
+func (_EthCallTester *EthCallTesterTransactor) GetBalance(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _EthCallTester.contract.Transact(opts, "getBalance")
+}
+
+// GetBalance is a paid mutator transaction binding the contract method 0x12065fe0.
+//
+// Solidity: function getBalance() returns(uint256)
+func (_EthCallTester *EthCallTesterSession) GetBalance() (*types.Transaction, error) {
+	return _EthCallTester.Contract.GetBalance(&_EthCallTester.TransactOpts)
+}
+
+// GetBalance is a paid mutator transaction binding the contract method 0x12065fe0.
+//
+// Solidity: function getBalance() returns(uint256)
+func (_EthCallTester *EthCallTesterTransactorSession) GetBalance() (*types.Transaction, error) {
+	return _EthCallTester.Contract.GetBalance(&_EthCallTester.TransactOpts)
 }
 
 // GetX is a paid mutator transaction binding the contract method 0x5197c7aa.

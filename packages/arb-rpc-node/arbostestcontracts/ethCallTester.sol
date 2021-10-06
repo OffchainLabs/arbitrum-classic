@@ -55,4 +55,8 @@ contract EthCallTester {
         }
         return val;
     }
+
+    function getBalance() external returns (uint256) {
+        return address(this).balance;
+    }
 }
