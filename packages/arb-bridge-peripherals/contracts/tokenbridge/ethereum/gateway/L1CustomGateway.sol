@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import { ArbitrumEnabledToken } from "../ICustomToken.sol";
+import { ArbitrumEnabledToken, L1MintableToken } from "../ICustomToken.sol";
 import "./L1ArbitrumExtendedGateway.sol";
 import "../../arbitrum/gateway/L2CustomGateway.sol";
 import "../../libraries/gateway/ICustomGateway.sol";
@@ -50,6 +50,32 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         owner = _owner;
         // disable whitelist by default
         whitelist = address(0);
+    }
+
+    function inboundEscrowTransfer(
+        address _l1Token,
+        address _dest,
+        uint256 _amount
+    ) internal override {
+        // The token gateways assume that there is always a 1:1 escrow when users are withdrawing
+        // from the L2 to L1.
+
+        // This assumption breaks when tokens wish to be able to mint in the L2.
+        // In order to support that feature, the L1 token must allow this gateway to
+        // mint more collateral as needed when its underfunded.
+        uint256 escrowBalance = L1MintableToken(_l1Token).balanceOf(address(this));
+        if (escrowBalance < _amount) {
+            // this will never overflow because of the < check
+            uint256 escrowNeeded = _amount - escrowBalance;
+
+            // This codepath may still be triggerred by tokens that are not minting in the L2
+            // but this doesnt affect their security.
+
+            // tokens were minted in L2 and now we should mint the extra needed in L1
+            // if this was not supposed to mint, it will revert then continue to attempt the regular codepath
+            try L1MintableToken(_l1Token).bridgeMint(address(this), escrowNeeded) {} catch {}
+        }
+        super.inboundEscrowTransfer(_l1Token, _dest, _amount);
     }
 
     /**
