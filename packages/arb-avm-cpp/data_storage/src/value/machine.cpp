@@ -297,8 +297,6 @@ SaveResults saveTestMachine(ReadWriteTransaction& transaction,
         dynamic_cast<RunningCode*>(machine.machine_state.code.get());
     assert(machine_code != nullptr);
     auto parent_code = machine_code->getParent();
-    auto core_code = dynamic_cast<CoreCode*>(parent_code.get());
-    assert(core_code != nullptr);
 
     machine_code->commitCodeToParent(machine_save_res.second);
     machine.machine_state.code = std::make_shared<RunningCode>(parent_code);
