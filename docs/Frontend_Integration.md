@@ -18,7 +18,7 @@ See our [Tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) repo for
 
 #### Ethers.js
 
-Ethers-js can be used to interact with an Arbitrum chain exactly as one would use it to interact with Ethereum ([see docs](https://docs.ethers.io/v5/)); simply instantiate a provider connected to an Arbitrum node.
+[`ethers`](https://www.npmjs.com/package/ethers) can be used to interact with an Arbitrum chain exactly as one would use it to interact with Ethereum ([see docs](https://docs.ethers.io/v5/)); simply instantiate a provider connected to an Arbitrum node.
 
 I.e., with MetaMask already connected to an Arbitrum node via a custom RPC url:
 
@@ -56,10 +56,10 @@ Accessing bridging methods can be done via our `arb-ts` library, or by simply co
 **Installation**:
 
 ```
-yarn add arb-ts ethers-js
+yarn add arb-ts ethers
 ```
 
-**Usage (with Ethers-js wallets/providers)**:
+**Usage (with Ethers wallets/providers)**:
 
 ```ts
 import { providers, Wallet } from 'ethers'
