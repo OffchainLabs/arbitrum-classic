@@ -238,7 +238,7 @@ jobs:
       - run:
           name: Test
           command: |
-            echo 'called_from_lib:librocksdb.so' > /tmp/tsan-supressions
+            echo 'race:rocksdb::Slice::compare' > /tmp/tsan-supressions
             TSAN_OPTIONS=supressions=/tmp/tsan-supressions ./bin/avm_tests
           working_directory: /home/user/project/packages/arb-avm-cpp/debug-tsan
       - run: codecovbash -R /home/user/project -c -F unit
