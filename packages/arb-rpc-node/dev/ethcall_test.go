@@ -1,24 +1,33 @@
 package dev
 
 import (
-	// "encoding/hex"
-	//	"encoding/json"
-	// "fmt"
+	"encoding/hex"
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
+
+func expectHex(t *testing.T, result []byte, resultErr error, expected string) {
+	test.FailIfError(t, resultErr)
+	if ethcommon.BytesToHash(result) != ethcommon.HexToHash(expected) {
+		t.Fatal("Unexpected ", expected, "Got", ethcommon.BytesToHash(result))
+	}
+}
 
 func TestEthCall(t *testing.T) {
 	//skipBelowVersion(t, 46)
@@ -74,22 +83,13 @@ func TestEthCall(t *testing.T) {
 
 	t.Log("No Overrides")
 	callRes, err := ethServer.Call(getXTxArgs, block, nil)
-	test.FailIfError(t, err)
-	if ethcommon.BytesToHash(callRes) != ethcommon.HexToHash("0x100") {
-		t.Fatal("Unexpected return val")
-	}
+	expectHex(t, callRes, err, "0x100")
 
 	callRes, err = ethServer.Call(sloadTxArgs, block, nil)
-	test.FailIfError(t, err)
-	if ethcommon.BytesToHash(callRes) != ethcommon.HexToHash("0x0") {
-		t.Fatal("Unexpected return val")
-	}
+	expectHex(t, callRes, err, "0x0")
 
 	callRes, err = ethServer.Call(getBalanceTxArgs, block, nil)
-	test.FailIfError(t, err)
-	if ethcommon.BytesToHash(callRes) != ethcommon.HexToHash("0x0") {
-		t.Fatal("Unexpected Balance")
-	}
+	expectHex(t, callRes, err, "0x0")
 
 	t.Log("Override Balance")
 	overrideMap := make(map[ethcommon.Address]web3.EthCallOverride)
@@ -97,16 +97,10 @@ func TestEthCall(t *testing.T) {
 		Balance: (*hexutil.Big)(hexutil.MustDecodeBig("0x3000")),
 	}
 	callRes, err = ethServer.Call(sloadTxArgs, block, &overrideMap)
-	test.FailIfError(t, err)
-	if ethcommon.BytesToHash(callRes) != ethcommon.HexToHash("0x0") {
-		t.Fatal("Unexpected return val")
-	}
+	expectHex(t, callRes, err, "0x0")
 
 	callRes, err = ethServer.Call(getBalanceTxArgs, block, &overrideMap)
-	test.FailIfError(t, err)
-	if ethcommon.BytesToHash(callRes) != ethcommon.HexToHash("0x3000") {
-		t.Fatal("Unexpected Balance")
-	}
+	expectHex(t, callRes, err, "0x3000")
 
 	t.Log("StateDiff")
 	stateMap := make(map[ethcommon.Hash]ethcommon.Hash)
@@ -118,16 +112,10 @@ func TestEthCall(t *testing.T) {
 	}
 
 	callRes, err = ethServer.Call(sloadTxArgs, block, &overrideMap)
-	test.FailIfError(t, err)
-	if ethcommon.BytesToHash(callRes) != ethcommon.HexToHash("0x90") {
-		t.Fatal("Unexpected return val")
-	}
+	expectHex(t, callRes, err, "0x90")
 
 	callRes, err = ethServer.Call(getXTxArgs, block, &overrideMap)
-	test.FailIfError(t, err)
-	if ethcommon.BytesToHash(callRes) != ethcommon.HexToHash("0x10") {
-		t.Fatal("Unexpected return val")
-	}
+	expectHex(t, callRes, err, "0x10")
 
 	t.Log("State")
 	overrideMap = make(map[ethcommon.Address]web3.EthCallOverride)
@@ -136,15 +124,57 @@ func TestEthCall(t *testing.T) {
 	}
 
 	callRes, err = ethServer.Call(sloadTxArgs, block, &overrideMap)
-	test.FailIfError(t, err)
-	if ethcommon.BytesToHash(callRes) != ethcommon.HexToHash("0x90") {
-		t.Fatal("Unexpected return val")
-	}
+	expectHex(t, callRes, err, "0x90")
 
 	callRes, err = ethServer.Call(getXTxArgs, block, &overrideMap)
+	expectHex(t, callRes, err, "0x10")
+
+	t.Log("Code over empty")
+	newContractAddr := ethcommon.HexToAddress("0x3000000000")
+	// code translates to: storage[1] = storage[0] + 0x10, return (storage[1])
+	code, err := hex.DecodeString("6000546010018060015560005260206000f3")
 	test.FailIfError(t, err)
-	if ethcommon.BytesToHash(callRes) != ethcommon.HexToHash("0x10") {
-		t.Fatal("Unexpected return val")
+	noData := make(hexutil.Bytes, 0)
+	newContractTxArgs := web3.CallTxArgs{
+		To:   &newContractAddr,
+		Data: &noData,
 	}
+	codeOverride := make(map[ethcommon.Address]web3.EthCallOverride)
+	codeOverride[newContractAddr] = web3.EthCallOverride{
+		Code: (*hexutil.Bytes)(&code),
+	}
+	callRes, err = ethServer.Call(newContractTxArgs, block, &codeOverride)
+	expectHex(t, callRes, err, "0x10")
+
+	t.Log("Code + state over existing")
+	codeOverride[testerAddr] = web3.EthCallOverride{
+		Code:  (*hexutil.Bytes)(&code),
+		State: &stateMap,
+	}
+	overrideTxArgs := web3.CallTxArgs{
+		To:   &testerAddr,
+		Data: &noData,
+	}
+	callRes, err = ethServer.Call(overrideTxArgs, block, &codeOverride)
+	expectHex(t, callRes, err, "0x20")
+
+	t.Log("Nonce")
+	arbostest, err := abi.JSON(strings.NewReader(arboscontracts.ArbosTestABI))
+	test.FailIfError(t, err)
+	arbosGetAccountInfo := arbostest.Methods["getAccountInfo"]
+	getInfoArgs, err := arbosGetAccountInfo.Inputs.Pack(newContractAddr)
+	test.FailIfError(t, err)
+	getInfoData := append(arbosGetAccountInfo.ID, getInfoArgs...)
+	getInfoTxArgs := web3.CallTxArgs{
+		To:   &arbos.ARB_TEST_ADDRESS,
+		Data: (*hexutil.Bytes)(&getInfoData),
+	}
+	nonceToTest := uint64(0x60)
+	codeOverride[newContractAddr] = web3.EthCallOverride{
+		Nonce: (*hexutil.Uint64)(&nonceToTest),
+	}
+	callRes, err = ethServer.Call(getInfoTxArgs, block, &codeOverride)
+	//returns some information.. 2nd uint256 is nonce for the request
+	expectHex(t, callRes[32:64], err, "0x60")
 
 }
