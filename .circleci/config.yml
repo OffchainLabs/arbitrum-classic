@@ -237,7 +237,9 @@ jobs:
             cmake --build . -j 2
       - run:
           name: Test
-          command: ./bin/avm_tests
+          command: |
+            echo 'race:rocksdb::Slice::compare' > /tmp/tsan-suppressions
+            TSAN_OPTIONS=suppressions=/tmp/tsan-suppressions ./bin/avm_tests
           working_directory: /home/user/project/packages/arb-avm-cpp/debug-tsan
       - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
