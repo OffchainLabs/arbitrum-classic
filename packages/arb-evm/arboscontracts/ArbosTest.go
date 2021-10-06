@@ -30,7 +30,7 @@ var (
 
 // ArbosTestMetaData contains all meta data concerning the ArbosTest contract.
 var ArbosTestMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"gasAmount\",\"type\":\"uint256\"}],\"name\":\"burnArbGas\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getAccountInfo\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getMarshalledStorage\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isEOA\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"code\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"initStorage\",\"type\":\"bytes\"}],\"name\":\"installAccount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"}],\"name\":\"setBalance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"code\",\"type\":\"bytes\"}],\"name\":\"setCode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"setNonce\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"state\",\"type\":\"bytes\"}],\"name\":\"setState\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"key\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"value\",\"type\":\"uint32\"}],\"name\":\"store\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"gasAmount\",\"type\":\"uint256\"}],\"name\":\"burnArbGas\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getAccountInfo\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getMarshalledStorage\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isEOA\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"code\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"initStorage\",\"type\":\"bytes\"}],\"name\":\"installAccount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"}],\"name\":\"setBalance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"code\",\"type\":\"bytes\"}],\"name\":\"setCode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"setNonce\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"state\",\"type\":\"bytes\"}],\"name\":\"setState\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"key\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"store\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // ArbosTestABI is the input ABI used to generate the binding from.
@@ -371,23 +371,23 @@ func (_ArbosTest *ArbosTestTransactorSession) SetState(addr common.Address, stat
 	return _ArbosTest.Contract.SetState(&_ArbosTest.TransactOpts, addr, state)
 }
 
-// Store is a paid mutator transaction binding the contract method 0x2e619f57.
+// Store is a paid mutator transaction binding the contract method 0xf0c26aff.
 //
-// Solidity: function store(address addr, uint32 key, uint32 value) returns()
-func (_ArbosTest *ArbosTestTransactor) Store(opts *bind.TransactOpts, addr common.Address, key uint32, value uint32) (*types.Transaction, error) {
+// Solidity: function store(address addr, uint256 key, uint256 value) returns()
+func (_ArbosTest *ArbosTestTransactor) Store(opts *bind.TransactOpts, addr common.Address, key *big.Int, value *big.Int) (*types.Transaction, error) {
 	return _ArbosTest.contract.Transact(opts, "store", addr, key, value)
 }
 
-// Store is a paid mutator transaction binding the contract method 0x2e619f57.
+// Store is a paid mutator transaction binding the contract method 0xf0c26aff.
 //
-// Solidity: function store(address addr, uint32 key, uint32 value) returns()
-func (_ArbosTest *ArbosTestSession) Store(addr common.Address, key uint32, value uint32) (*types.Transaction, error) {
+// Solidity: function store(address addr, uint256 key, uint256 value) returns()
+func (_ArbosTest *ArbosTestSession) Store(addr common.Address, key *big.Int, value *big.Int) (*types.Transaction, error) {
 	return _ArbosTest.Contract.Store(&_ArbosTest.TransactOpts, addr, key, value)
 }
 
-// Store is a paid mutator transaction binding the contract method 0x2e619f57.
+// Store is a paid mutator transaction binding the contract method 0xf0c26aff.
 //
-// Solidity: function store(address addr, uint32 key, uint32 value) returns()
-func (_ArbosTest *ArbosTestTransactorSession) Store(addr common.Address, key uint32, value uint32) (*types.Transaction, error) {
+// Solidity: function store(address addr, uint256 key, uint256 value) returns()
+func (_ArbosTest *ArbosTestTransactorSession) Store(addr common.Address, key *big.Int, value *big.Int) (*types.Transaction, error) {
 	return _ArbosTest.Contract.Store(&_ArbosTest.TransactOpts, addr, key, value)
 }
