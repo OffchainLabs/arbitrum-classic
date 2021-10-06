@@ -378,7 +378,7 @@ func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *b
 
 	AddForwarderTarget(f)
 
-	return ParseNonRelay(ctx, f, "cli-wallet")
+	return ParseNonRelay(ctx, f, "cli-wallet", 0)
 }
 
 func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
@@ -435,7 +435,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
 
-	return ParseNonRelay(ctx, f, "rpc-wallet")
+	return ParseNonRelay(ctx, f, "rpc-wallet", 250_000_000)
 }
 
 func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -450,10 +450,10 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
 	f.Bool("validator.dont-challenge", false, "don't challenge any other validators' assertions")
 
-	return ParseNonRelay(ctx, f, "validator-wallet")
+	return ParseNonRelay(ctx, f, "validator-wallet", 0)
 }
 
-func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string, maxExecutionGas int) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Int("core.cache.basic-interval", 100_000_000, "amount of gas to wait between saving to basic cache")
@@ -466,7 +466,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
 	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
 	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")
-	f.Int("core.checkpoint-max-execution-gas", 250_000_000, "maximum amount of gas any given checkpoint is allowed to execute")
+	f.Int("core.checkpoint-max-execution-gas", maxExecutionGas, "maximum amount of gas any given checkpoint is allowed to execute")
 
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
 
