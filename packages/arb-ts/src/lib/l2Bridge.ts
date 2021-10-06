@@ -189,18 +189,17 @@ export class L2Bridge {
 
   public getERC20L1Address(
     erc20L2Address: string
-  ): Promise<string> | undefined {
-    try {
-      const arbERC20 = StandardArbERC20__factory.connect(
-        erc20L2Address,
-        this.l2Signer
-      )
-      return arbERC20.functions.l1Address().then(([res]) => res)
-    } catch (e) {
-      console.warn('Could not get L1 Address')
-
-      return undefined
-    }
+  ): Promise<string | undefined> {
+    const arbERC20 = StandardArbERC20__factory.connect(
+      erc20L2Address,
+      this.l2Signer
+    )
+    return arbERC20.functions
+      .l1Address()
+      .then(([res]) => res)
+      .catch(e => {
+        return undefined
+      })
   }
 
   public getTxnSubmissionPrice(
