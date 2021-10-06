@@ -122,6 +122,25 @@ describe('standard ERC20', () => {
       'token withdraw getTokenWithdrawEventData query failed'
     )
   })
+  it('getERC20L1Address/getERC20L2Address work as expected', async () => {
+    const { bridge } = await instantiateBridgeWithRandomWallet()
+    const queriedL2Address = await bridge.getERC20L2Address(existentTestERC20)
+    const queriedL1Address = await bridge.l2Bridge.getERC20L1Address(
+      queriedL2Address
+    )
+
+    expect(queriedL1Address).to.equal(
+      existentTestERC20,
+      'getERC20L1Address/getERC20L2Address failed with proper token address'
+    )
+
+    const randomAddress = await bridge.l1Bridge.getWalletAddress()
+    const notAnL1Address = await bridge.l2Bridge.getERC20L1Address(
+      randomAddress
+    )
+    expect(notAnL1Address).to.be.null,
+      "getERC20L1Address didn't return null for random input"
+  })
 })
 
 const depositTokenTest = async (bridge: Bridge) => {
