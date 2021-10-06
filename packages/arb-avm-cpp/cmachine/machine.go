@@ -109,11 +109,7 @@ func (m *Machine) CurrentStatus() machine.Status {
 }
 
 func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
-	newMessagesInt := 0
-	if newMessages {
-		newMessagesInt = 1
-	}
-	cBlockReason := C.machineIsBlocked(m.c, C.int(newMessagesInt))
+	cBlockReason := C.machineIsBlocked(m.c, boolToCInt(newMessages))
 	switch cBlockReason.blockType {
 	case C.BLOCK_TYPE_NOT_BLOCKED:
 		return nil
@@ -187,11 +183,7 @@ func (m *Machine) ExecuteAssertionAdvanced(
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	conf := C.machineExecutionConfigCreate()
 
-	goOverGasInt := C.int(0)
-	if goOverGas {
-		goOverGasInt = 1
-	}
-	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), goOverGasInt)
+	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), boolToCInt(goOverGas))
 
 	msgData := bytesArrayToByteSliceArray(encodeMachineInboxMessages(messages))
 	defer C.free(msgData.slices)
@@ -203,11 +195,7 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	defer C.free(sideloadsData.slices)
 	C.machineExecutionConfigSetSideloads(conf, sideloadsData)
 
-	stopOnSideloadInt := C.int(0)
-	if stopOnSideload {
-		stopOnSideloadInt = 1
-	}
-	C.machineExecutionConfigSetStopOnSideload(conf, stopOnSideloadInt)
+	C.machineExecutionConfigSetStopOnSideload(conf, boolToCInt(stopOnSideload))
 
 	assertion := C.executeAssertion(m.c, conf)
 

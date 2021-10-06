@@ -227,12 +227,12 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	cursor := stakerInfo.latestExecutionCursor
 	if cursor == nil || startState.TotalGasConsumed.Cmp(cursor.TotalGasConsumed()) < 0 {
-		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
+		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed, true)
 		if err != nil {
 			return nil, false, err
 		}
 	} else {
-		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false)
+		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false, true)
 		if err != nil {
 			return nil, false, err
 		}
@@ -326,7 +326,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 					number: nd.NodeNum,
 					hash:   nd.NodeHash,
 				}
-				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed)
+				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed, true)
 				if err != nil {
 					return nil, false, err
 				}
@@ -353,7 +353,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	if err != nil {
 		return nil, false, err
 	}
-	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget)
+	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget, true)
 	if err != nil {
 		return nil, false, err
 	}

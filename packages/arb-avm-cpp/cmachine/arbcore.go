@@ -348,10 +348,10 @@ func (ac *ArbCore) CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.
 	return
 }
 
-func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {
+func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (core.ExecutionCursor, error) {
 	totalGasUsedData := math.U256Bytes(totalGasUsed)
 
-	cExecutionCursor := C.arbCoreGetExecutionCursor(ac.c, unsafeDataPointer(totalGasUsedData))
+	cExecutionCursor := C.arbCoreGetExecutionCursor(ac.c, unsafeDataPointer(totalGasUsedData), boolToCInt(allowSlowLookup))
 
 	if cExecutionCursor == nil {
 		return nil, errors.Errorf("error creating execution cursor")
@@ -359,19 +359,14 @@ func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCurs
 	return NewExecutionCursor(cExecutionCursor)
 }
 
-func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
+func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return errors.Errorf("unsupported execution cursor type %T", executionCursor)
 	}
 	maxGasData := math.U256Bytes(maxGas)
 
-	goOverGasInt := 0
-	if goOverGas {
-		goOverGasInt = 1
-	}
-
-	status := C.arbCoreAdvanceExecutionCursor(ac.c, cursor.c, unsafeDataPointer(maxGasData), C.int(goOverGasInt))
+	status := C.arbCoreAdvanceExecutionCursor(ac.c, cursor.c, unsafeDataPointer(maxGasData), boolToCInt(goOverGas), boolToCInt(allowSlowLookup))
 	if status == 0 {
 		return errors.New("failed to advance")
 	}
@@ -514,12 +509,12 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	return true, nil
 }
 
-func (ac *ArbCore) GetMachineForSideload(blockNumber uint64, allowSlowLookup bool) (machine.Machine, error) {
+func (ac *ArbCore) GetMachineAtBlock(blockNumber uint64, allowSlowLookup bool) (machine.Machine, error) {
 	CallowSlowLookup := 0
 	if allowSlowLookup {
 		CallowSlowLookup = 1
 	}
-	cMachineResult := C.arbCoreGetMachineForSideload(ac.c, C.uint64_t(blockNumber), C.int(CallowSlowLookup))
+	cMachineResult := C.arbCoreGetMachineAtBlock(ac.c, C.uint64_t(blockNumber), C.int(CallowSlowLookup))
 
 	if cMachineResult.slow_error == 1 {
 		return nil, errors.Errorf("missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )")

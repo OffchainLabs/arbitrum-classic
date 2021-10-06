@@ -52,7 +52,7 @@ func TestMachineCreation(t *testing.T) {
 	}
 	defer arbStorage.CloseArbStorage()
 	core := arbStorage.GetArbCore()
-	cursor, err := core.GetExecutionCursor(big.NewInt(0))
+	cursor, err := core.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -57,21 +57,25 @@ type Conf struct {
 }
 
 type Core struct {
-	Cache                  CoreCache     `koanf:"cache"`
-	CheckpointLoadGasCost  int           `koanf:"checkpoint-load-gas-cost"`
-	Profile                CoreProfile   `koanf:"profile"`
-	Debug                  bool          `koanf:"debug"`
-	GasCheckpointFrequency int           `koanf:"gas-checkpoint-frequency"`
-	MessageProcessCount    int           `koanf:"message-process-count"`
-	SaveRocksdbInterval    time.Duration `koanf:"save-rocksdb-interval"`
-	SaveRocksdbPath        string        `koanf:"save-rocksdb-path"`
-	LazyLoadCoreMachine    bool          `koanf:"lazy-load-core-machine"`
-	LazyLoadArchiveQueries bool          `koanf:"lazy-load-archive-queries"`
+	Cache                     CoreCache     `koanf:"cache"`
+	CheckpointLoadGasCost     int           `koanf:"checkpoint-load-gas-cost"`
+	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution"`
+	Profile                   CoreProfile   `koanf:"profile"`
+	Debug                     bool          `koanf:"debug"`
+	GasCheckpointFrequency    int           `koanf:"gas-checkpoint-frequency"`
+	MessageProcessCount       int           `koanf:"message-process-count"`
+	SaveRocksdbInterval       time.Duration `koanf:"save-rocksdb-interval"`
+	SaveRocksdbPath           string        `koanf:"save-rocksdb-path"`
+	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
 }
 
 type CoreCache struct {
-	LRUSize     int           `koanf:"lru-size"`
-	TimedExpire time.Duration `koanf:"timed-expire"`
+	BasicInterval int           `koanf:"basic-interval"`
+	BasicSize     int           `koanf:"basic-size"`
+	LRUSize       int           `koanf:"lru-size"`
+	SeedOnStartup bool          `koanf:"seed-on-startup"`
+	TimedExpire   time.Duration `koanf:"timed-expire"`
 }
 
 type CoreProfile struct {
@@ -86,12 +90,15 @@ type CoreProfile struct {
 func DefaultCoreSettings() *Core {
 	return &Core{
 		Cache: CoreCache{
-			LRUSize:     1000,
-			TimedExpire: 20 * time.Minute,
+			BasicInterval: 100,
+			BasicSize:     1000,
+			LRUSize:       1000,
+			TimedExpire:   20 * time.Minute,
 		},
-		CheckpointLoadGasCost:  1_000_000,
-		GasCheckpointFrequency: 1_000_000,
-		MessageProcessCount:    10,
+		CheckpointLoadGasCost:     1_000_000,
+		CheckpointMaxExecutionGas: 0,
+		GasCheckpointFrequency:    1_000_000,
+		MessageProcessCount:       10,
 	}
 }
 
@@ -390,7 +397,10 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
-	f.Int("core.cache.lru-size", 20, "number of recently used L2 blocks to hold in lru memory cache")
+	f.Int("core.cache.basic-interval", 100_000_000, "amount of gas to wait between saving to basic cache")
+	f.Int("core.cache.basic-size", 100, "number of recently used L2 blocks to hold in basic memory cache")
+	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
+	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
 
@@ -673,6 +683,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	err = k.Load(confmap.Provider(map[string]interface{}{
 		"core.message-process-count":             10,
 		"core.checkpoint-load-gas-cost":          1_000_000_000,
+		"core.checkpoint-max-execution":          0,
 		"core.gas-checkpoint-frequency":          1_000_000_000,
 		"feed.output.queue":                      100,
 		"node.sequencer.lockout.timeout":         30 * time.Second,

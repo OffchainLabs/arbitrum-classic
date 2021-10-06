@@ -55,8 +55,8 @@ class MachineThread : public Machine {
         : Machine(std::move(machine_state_)),
           reorg_check_data(machine_state.output.fully_processed_inbox) {}
 
-    bool runMachine(MachineExecutionConfig config);
-    bool continueRunningMachine();
+    bool runMachine(MachineExecutionConfig config, bool asynchronous);
+    bool continueRunningMachine(bool asynchronous);
     void abortMachine();
     machine_status_enum status();
     std::string getErrorString();

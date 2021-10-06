@@ -166,11 +166,11 @@ func TestInboxProof(t *testing.T) {
 	test.FailIfError(t, err)
 
 	var cursors []core.ExecutionCursor
-	cursor, err := arbCore.Core.GetExecutionCursor(big.NewInt(0))
+	cursor, err := arbCore.Core.GetExecutionCursor(big.NewInt(0), true)
 	test.FailIfError(t, err)
 	cursors = append(cursors, cursor.Clone())
 	for {
-		err = arbCore.Core.AdvanceExecutionCursor(cursor, big.NewInt(1), true)
+		err = arbCore.Core.AdvanceExecutionCursor(cursor, big.NewInt(1), true, true)
 		test.FailIfError(t, err)
 		if cursor.TotalGasConsumed().Cmp(cursors[len(cursors)-1].TotalGasConsumed()) == 0 {
 			break

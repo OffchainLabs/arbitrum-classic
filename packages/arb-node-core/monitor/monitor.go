@@ -97,7 +97,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking initial chain state")
 	}
-	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0))
+	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
 		return nil, errors.Wrap(err, "error loading initial ArbCore machine")
 	}

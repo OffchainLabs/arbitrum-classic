@@ -50,7 +50,7 @@ func TestExecutionCursor(t *testing.T) {
 	defer arbStorage.CloseArbStorage()
 
 	lookup := arbStorage.GetArbCore()
-	cursor, err := lookup.GetExecutionCursor(big.NewInt(0))
+	cursor, err := lookup.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestExecutionCursor(t *testing.T) {
 		t.Error("log acc isn't zero at beginning")
 	}
 
-	err = lookup.AdvanceExecutionCursor(cursor, big.NewInt(10000), true)
+	err = lookup.AdvanceExecutionCursor(cursor, big.NewInt(10000), true, true)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -21,13 +21,14 @@
 #include <avm/machinethread.hpp>
 #include <avm/valueloader.hpp>
 #include <avm_values/bigint.hpp>
+#include <data_storage/combinedmachinecache.hpp>
 #include <data_storage/datacursor.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/executioncursor.hpp>
 #include <data_storage/messageentry.hpp>
 #include <data_storage/readsnapshottransaction.hpp>
-#include <data_storage/sideloadcache.hpp>
 #include <data_storage/storageresultfwd.hpp>
+#include <data_storage/util.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
 
@@ -60,59 +61,6 @@ struct RawMessageInfo {
         : message(std::move(message_)),
           sequence_number(sequence_number_),
           accumulator(accumulator_) {}
-};
-
-struct ArbCoreConfig {
-    // Maximum number of messages to process at a time
-    uint32_t message_process_count{10};
-
-    // Checkpoint loaded from disk if difference greater than cost,
-    // otherwise just run machine until gas reached
-    uint256_t checkpoint_load_gas_cost{1'000'000};
-
-    // Frequency to save checkpoint to database
-    uint256_t min_gas_checkpoint_frequency{1'000'000};
-
-    // How long to keep items in memory cache
-    uint32_t timed_cache_expiration_seconds{60 * 20};
-
-    // Number of items to keep in LRU cache
-    uint32_t lru_sideload_cache_size{20};
-
-    // Print extra debug messages to stderr
-    bool debug{false};
-
-    // Number of seconds to wait between saving rocksdb checkpoint, 0 to disable
-    uint64_t save_rocksdb_interval{0};
-
-    // Rocksdb checkpoints will be saved in save_rocksdb_path/timestamp/
-    std::string save_rocksdb_path{};
-
-    // If any profile_* parameters are non-zero, program will exit after
-    // all profile conditions are satisfied.
-
-    // Reorg database to message
-    uint64_t profile_reorg_to{0};
-
-    // Run until message reached
-    uint64_t profile_run_until{0};
-
-    // Load specified number of machines backwards from profile_run_until
-    uint64_t profile_load_count{0};
-
-    // Delete all database entries except for inbox
-    bool profile_reset_db_except_inbox{false};
-
-    // Exit after printing out metadata from database
-    bool profile_just_metadata;
-
-    // Whether to lazy load the core machine
-    bool lazy_load_core_machine;
-
-    // Whether to lazy load archive queries
-    bool lazy_load_archive_queries;
-
-    ArbCoreConfig() = default;
 };
 
 class ArbCore {
@@ -175,11 +123,8 @@ class ArbCore {
     std::unique_ptr<MachineThread> core_machine;
     std::shared_ptr<CoreCode> core_code{};
 
-    // Cache a machine ready to sideload view transactions just after recent
-    // blocks
-    std::shared_mutex lru_sideload_cache_mutex;
-    std::map<uint256_t, std::unique_ptr<Machine>> lru_sideload_cache;
-    SideloadCache timed_sideload_cache;
+    // Machine caches
+    CombinedMachineCache combined_machine_cache;
 
     // Core thread inbox status input/output. Core thread will update if and
     // only if set to MESSAGES_READY
@@ -199,13 +144,8 @@ class ArbCore {
     std::atomic<bool> machine_error{false};
     std::string machine_error_string;
 
-    std::unique_ptr<Machine> last_machine;
     std::shared_mutex last_machine_mutex;
-
-    std::shared_mutex old_machine_cache_mutex;
-    std::map<uint256_t, std::unique_ptr<Machine>> old_machine_cache;
-    // Not protected by mutex! Must only be used by the main ArbCore thread.
-    uint256_t last_old_machine_cache_gas;
+    std::unique_ptr<Machine> last_machine;
 
 #ifdef __linux__
     std::atomic<std::optional<pthread_t>> core_pthread;
@@ -240,6 +180,7 @@ class ArbCore {
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas);
+    rocksdb::Status reorgToLastMessage(ValueCache& cache);
     rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
                                                 bool initial_start,
                                                 ValueCache& cache);
@@ -249,7 +190,24 @@ class ArbCore {
     rocksdb::Status reorgCheckpoints(
         const std::function<bool(const MachineOutput&)>& check_output,
         bool initial_start,
-        ValueCache& cache);
+        ValueCache& value_cache);
+
+    rocksdb::Status reorgToMachineOutput(const MachineOutput& output,
+                                         ValueCache& value_cache);
+    rocksdb::Status advanceCoreToTarget(const MachineOutput& target_output,
+                                        bool cache_sideloads);
+    std::variant<MachineOutput, rocksdb::Status> reorgToFirstMatchingCheckpoint(
+        const std::function<bool(const MachineOutput&)>& check_output,
+        ReadWriteTransaction& tx,
+        std::unique_ptr<rocksdb::Iterator>& checkpoint_it);
+    std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
+    reorgToFirstMatchingMachineCheckpoint(
+        const MachineOutput& target_machine_output,
+        const std::function<bool(const MachineOutput&)>& check_output,
+        ReadWriteTransaction& tx,
+        std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
+        ValueCache& value_cache);
+
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(
         const ReadTransaction& transaction,
@@ -272,6 +230,8 @@ class ArbCore {
                                       ValueCache& value_cache,
                                       bool lazy_load);
     rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
+    void deleteCheckpoint(ReadWriteTransaction& tx,
+                          const CheckpointVariant& checkpoint_variant);
 
    public:
     // Useful for unit tests
@@ -321,10 +281,12 @@ class ArbCore {
    public:
     // Execution Cursor interaction
     ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
-        uint256_t total_gas_used);
+        uint256_t total_gas_used,
+        bool allow_slow_lookup);
     rocksdb::Status advanceExecutionCursor(ExecutionCursor& execution_cursor,
                                            uint256_t max_gas,
-                                           bool go_over_gas);
+                                           bool go_over_gas,
+                                           bool allow_slow_lookup);
 
     std::unique_ptr<Machine> takeExecutionCursorMachine(
         ExecutionCursor& execution_cursor);
@@ -335,7 +297,8 @@ class ArbCore {
         ExecutionCursor& execution_cursor,
         uint256_t total_gas_used,
         bool go_over_gas,
-        size_t message_group_size);
+        size_t message_group_size,
+        bool allow_slow_lookup);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,
@@ -435,21 +398,31 @@ class ArbCore {
 
     [[nodiscard]] bool isValid(const ReadTransaction& tx,
                                const InboxState& fully_processed_inbox) const;
-
-    std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionMachine(
+    std::variant<rocksdb::Status, ExecutionCursor> getExecutionCursorAtBlock(
+        const uint256_t& block_number,
+        bool allow_slow_lookup);
+    std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionCursor(
         ReadTransaction& tx,
-        const uint256_t& total_gas_used);
+        uint256_t& total_gas_used,
+        bool allow_slow_lookup);
+    rocksdb::Status findCloserExecutionCursor(
+        ReadTransaction& tx,
+        ExecutionCursor& execution_cursor,
+        std::optional<uint256_t> current_gas,
+        uint256_t& total_gas_used,
+        bool allow_slow_lookup);
 
     rocksdb::Status updateLogInsertedCount(ReadWriteTransaction& tx,
                                            const uint256_t& log_index);
     rocksdb::Status updateSendInsertedCount(ReadWriteTransaction& tx,
                                             const uint256_t& send_index);
     bool runMachineWithMessages(MachineExecutionConfig& execConfig,
-                                size_t max_message_batch_size);
+                                size_t max_message_batch_size,
+                                bool asynchronous);
 
    public:
     // Public sideload interaction
-    ValueResult<std::unique_ptr<Machine>> getMachineForSideload(
+    ValueResult<std::unique_ptr<Machine>> getMachineAtBlock(
         const uint256_t& block_number,
         bool allow_slow_lookup);
 
