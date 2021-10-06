@@ -391,7 +391,7 @@ TEST_CASE("ArbCore duplicate code segments") {
     DBDeleter deleter;
 
     ArbCoreConfig coreConfig{};
-    coreConfig.min_gas_checkpoint_frequency = 1;
+    coreConfig.checkpoint_gas_frequency = 1;
     ArbStorage storage(dbpath, coreConfig);
     REQUIRE(storage
                 .initialize(std::string{machine_test_cases_path} +

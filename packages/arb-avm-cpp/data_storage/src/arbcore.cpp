@@ -183,7 +183,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         }
     }
 
-    if (coreConfig.profile_reset_db_except_inbox) {
+    if (coreConfig.test_reset_db_except_inbox) {
         {
             ReadWriteTransaction tx(data_storage);
             saveNextSegmentID(tx, 0);
@@ -204,10 +204,22 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     }
 
     rocksdb::Status status = rocksdb::Status::OK();
-    if (coreConfig.profile_reorg_to != 0) {
+    if (coreConfig.test_reorg_to_l1_block != 0) {
         // Reset database for profile testing
-        status = reorgToMessageCountOrBefore(coreConfig.profile_reorg_to, false,
-                                             cache);
+        status =
+            reorgToL1Block(coreConfig.test_reorg_to_l1_block, false, cache);
+    } else if (coreConfig.test_reorg_to_l1_block != 0) {
+        // Reset database for profile testing
+        status =
+            reorgToL2Block(coreConfig.test_reorg_to_l2_block, false, cache);
+    } else if (coreConfig.test_reorg_to_log != 0) {
+        // Reset database for profile testing
+        status =
+            reorgToLogCountOrBefore(coreConfig.test_reorg_to_log, false, cache);
+    } else if (coreConfig.test_reorg_to_message != 0) {
+        // Reset database for profile testing
+        status = reorgToMessageCountOrBefore(coreConfig.test_reorg_to_message,
+                                             false, cache);
     } else if (coreConfig.seed_cache_on_startup) {
         status = reorgToTimestampOrBefore(
             combined_machine_cache.currentTimeExpired(), true, cache);
@@ -434,6 +446,56 @@ rocksdb::Status ArbCore::reorgToLastMessage(ValueCache& cache) {
                             cache);
 }
 
+rocksdb::Status ArbCore::reorgToL1Block(const uint256_t& l1_block_number,
+                                        bool initial_start,
+                                        ValueCache& cache) {
+    if (initial_start) {
+        std::cerr << "Reloading chain starting L1 block " << l1_block_number
+                  << "\n";
+    } else {
+        std::cerr << "Reorg'ing chain to gas " << l1_block_number << "\n";
+    }
+
+    return reorgCheckpoints(
+        [&](const MachineOutput& output) {
+            return output.l1_block_number <= l1_block_number;
+        },
+        initial_start, cache);
+}
+
+rocksdb::Status ArbCore::reorgToL2Block(const uint256_t& l2_block_number,
+                                        bool initial_start,
+                                        ValueCache& cache) {
+    if (initial_start) {
+        std::cerr << "Reloading chain starting L2 block " << l2_block_number
+                  << "\n";
+    } else {
+        std::cerr << "Reorg'ing chain to L2 block " << l2_block_number << "\n";
+    }
+
+    return reorgCheckpoints(
+        [&](const MachineOutput& output) {
+            return output.l2_block_number <= l2_block_number;
+        },
+        initial_start, cache);
+}
+
+rocksdb::Status ArbCore::reorgToLogCountOrBefore(const uint256_t& log_count,
+                                                 bool initial_start,
+                                                 ValueCache& cache) {
+    if (initial_start) {
+        std::cerr << "Reloading chain starting with log " << log_count << "\n";
+    } else {
+        std::cerr << "Reorg'ing chain to log " << log_count << "\n";
+    }
+
+    return reorgCheckpoints(
+        [&](const MachineOutput& output) {
+            return output.log_count <= log_count;
+        },
+        initial_start, cache);
+}
+
 rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     const uint256_t& message_count,
     bool initial_start,
@@ -447,7 +509,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
 
     return reorgCheckpoints(
         [&](const MachineOutput& output) {
-            return message_count >= output.fully_processed_inbox.count;
+            return output.fully_processed_inbox.count <= message_count;
         },
         initial_start, cache);
 }
@@ -464,7 +526,7 @@ rocksdb::Status ArbCore::reorgToTimestampOrBefore(const uint256_t& timestamp,
 
     return reorgCheckpoints(
         [&](const MachineOutput& output) {
-            return timestamp >= output.last_inbox_timestamp;
+            return output.last_inbox_timestamp <= timestamp;
         },
         initial_start, cache);
 }
@@ -1006,7 +1068,7 @@ void ArbCore::operator()() {
     }
 
     uint256_t next_checkpoint_gas =
-        maxCheckpointGas() + coreConfig.min_gas_checkpoint_frequency;
+        maxCheckpointGas() + coreConfig.checkpoint_gas_frequency;
     uint256_t next_basic_cache_gas =
         maxCheckpointGas() + coreConfig.basic_machine_cache_interval;
     while (!arbcore_abort) {
@@ -1026,7 +1088,7 @@ void ArbCore::operator()() {
                              "reorgCheckpoints: "
                           << status.ToString() << std::endl;
             }
-            next_checkpoint_gas = coreConfig.min_gas_checkpoint_frequency;
+            next_checkpoint_gas = coreConfig.checkpoint_gas_frequency;
         }
         if (message_data_status == MESSAGES_READY) {
             // Reorg might occur while adding messages
@@ -1044,7 +1106,7 @@ void ArbCore::operator()() {
                     if (add_status.data.has_value()) {
                         next_checkpoint_gas =
                             add_status.data.value() +
-                            coreConfig.min_gas_checkpoint_frequency;
+                            coreConfig.checkpoint_gas_frequency;
                     }
                 }
             } catch (const std::exception& e) {
@@ -1102,7 +1164,7 @@ void ArbCore::operator()() {
 
                 if (core_machine->machine_state.output.arb_gas_used >=
                     next_checkpoint_gas) {
-                    // Save checkpoint after min_gas_checkpoint_frequency gas
+                    // Save checkpoint after checkpoint_gas_frequency gas
                     // used
                     status = saveCheckpoint(tx);
                     if (!status.ok()) {
@@ -1113,7 +1175,7 @@ void ArbCore::operator()() {
                     }
                     next_checkpoint_gas =
                         core_machine->machine_state.output.arb_gas_used +
-                        coreConfig.min_gas_checkpoint_frequency;
+                        coreConfig.checkpoint_gas_frequency;
                     // Clear oldest cache and start populating next cache
                     std::cout
                         << "Last checkpoint gas used: "
@@ -1172,9 +1234,9 @@ void ArbCore::operator()() {
                 break;
             }
 
-            if (coreConfig.profile_run_until != 0 &&
+            if (coreConfig.test_run_until != 0 &&
                 last_machine->machine_state.output.fully_processed_inbox
-                        .count >= coreConfig.profile_run_until) {
+                        .count >= coreConfig.test_run_until) {
                 // Reached stopping point for profiling
                 auto end_time = std::chrono::steady_clock::now();
                 auto duration =
@@ -1187,12 +1249,11 @@ void ArbCore::operator()() {
                           << ", profiling took " << duration << " seconds"
                           << std::endl;
 
-                if (coreConfig.profile_load_count > 0) {
+                if (coreConfig.test_load_count > 0) {
                     auto load_begin_time = std::chrono::steady_clock::now();
                     auto target_gas =
                         last_machine->machine_state.output.arb_gas_used;
-                    for (uint64_t i = 0; i < coreConfig.profile_load_count;
-                         i++) {
+                    for (uint64_t i = 0; i < coreConfig.test_load_count; i++) {
                         std::cerr << "Loading machine " << i << std::endl;
                         auto current_execution =
                             getClosestExecutionCursor(tx, target_gas, true);
@@ -1213,8 +1274,7 @@ void ArbCore::operator()() {
                         std::chrono::duration_cast<std::chrono::seconds>(
                             load_end_time - load_begin_time)
                             .count();
-                    std::cerr << "Done loading "
-                              << coreConfig.profile_load_count
+                    std::cerr << "Done loading " << coreConfig.test_load_count
                               << " machines, profiling took " << load_duration
                               << " seconds" << std::endl;
                 }
@@ -1255,7 +1315,8 @@ void ArbCore::operator()() {
         if (!machineIdle() || message_data_status != MESSAGES_READY) {
             // Machine is already running or no new messages, so sleep for a
             // short while
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(coreConfig.idle_sleep_milliseconds));
         }
     }
 

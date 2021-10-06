@@ -51,7 +51,7 @@ func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Cor
 		return nil, err
 	}
 
-	logger.Info().Msg("database opened")
+	logger.Info().Str("directory", dbDir).Msg("database opened")
 
 	err = storage.Initialize(contractFile)
 	if err != nil {

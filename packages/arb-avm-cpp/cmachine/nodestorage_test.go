@@ -37,7 +37,7 @@ func TestMessageBatch(t *testing.T) {
 		}
 	}()
 
-	coreConfig := configuration.DefaultCoreSettings()
+	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 	arbStorage, err := NewArbStorage(dePath, coreConfig)
 	if err != nil {
 		t.Fatal(err)
