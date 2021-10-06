@@ -66,7 +66,7 @@ export interface DepositParams {
   maxSubmissionCost: BigNumber
   maxGas: BigNumber
   gasPriceBid: BigNumber
-  destinationAddress?: string
+  destinationAddress: string
 }
 
 /**
@@ -227,11 +227,31 @@ export class L1Bridge {
     }
   }
 
+  public async estimateGasDepositEth(
+    value: BigNumber,
+    maxSubmissionPrice: BigNumber,
+    overrides: PayableOverrides = {}
+  ) {
+    if (overrides.value)
+      console.warn(
+        'You are overriding value argument in an eth deposit. Be careful.'
+      )
+    const inbox = await this.getInbox()
+    return inbox.estimateGas.depositEth(maxSubmissionPrice, {
+      value,
+      ...overrides,
+    })
+  }
+
   public async depositETH(
     value: BigNumber,
     maxSubmissionPrice: BigNumber,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
+    if (overrides.value)
+      console.warn(
+        'You are overriding value argument in an eth deposit. Be careful.'
+      )
     const inbox = await this.getInbox()
     return inbox.functions.depositEth(maxSubmissionPrice, {
       value,
@@ -278,38 +298,48 @@ export class L1Bridge {
     )
   }
 
-  public async deposit(
-    {
-      erc20L1Address,
-      amount,
-      maxSubmissionCost,
-      maxGas,
-      gasPriceBid,
-      destinationAddress,
-      l1CallValue,
-    }: DepositParams,
+  public async estimateGasDeposit(
+    depositParams: DepositParams,
     overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    const destination = destinationAddress || (await this.getWalletAddress())
+  ): Promise<BigNumber> {
     const data = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
-      [maxSubmissionCost, '0x']
+      [depositParams.maxSubmissionCost, '0x']
     )
+    return this.l1GatewayRouter.estimateGas.outboundTransfer(
+      depositParams.erc20L1Address,
+      depositParams.destinationAddress,
+      depositParams.amount,
+      depositParams.maxGas,
+      depositParams.gasPriceBid,
+      data,
+      { ...overrides, value: depositParams.l1CallValue }
+    )
+  }
 
+  public async deposit(
+    depositParams: DepositParams,
+    overrides: PayableOverrides = {}
+  ): Promise<ContractTransaction> {
+    const data = defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [depositParams.maxSubmissionCost, '0x']
+    )
     if (overrides.value)
       throw new Error('L1 call value should be set through l1CallValue param')
-    if (l1CallValue.eq(0)) throw new Error('L1 call value should not be zero')
-    if (maxSubmissionCost.eq(0))
+    if (depositParams.l1CallValue.eq(0))
+      throw new Error('L1 call value should not be zero')
+    if (depositParams.maxSubmissionCost.eq(0))
       throw new Error('Max submission cost should not be zero')
 
     return this.l1GatewayRouter.functions.outboundTransfer(
-      erc20L1Address,
-      destination,
-      amount,
-      maxGas,
-      gasPriceBid,
+      depositParams.erc20L1Address,
+      depositParams.destinationAddress,
+      depositParams.amount,
+      depositParams.maxGas,
+      depositParams.gasPriceBid,
       data,
-      { ...overrides, value: l1CallValue }
+      { ...overrides, value: depositParams.l1CallValue }
     )
   }
 

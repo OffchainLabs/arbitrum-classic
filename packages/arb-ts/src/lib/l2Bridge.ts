@@ -120,6 +120,18 @@ export class L2Bridge {
     })
   }
 
+  public async estimateGasWithdrawETH(
+    value: BigNumber,
+    destinationAddress?: string,
+    overrides: PayableOverrides = {}
+  ): Promise<BigNumber> {
+    const address = destinationAddress || (await this.getWalletAddress())
+    return this.arbSys.estimateGas.withdrawEth(address, {
+      value,
+      ...overrides,
+    })
+  }
+
   public getLatestBlock(): Promise<Block> {
     return this.l2Provider.getBlock('latest')
   }
@@ -135,6 +147,19 @@ export class L2Bridge {
     const to = destinationAddress || (await this.getWalletAddress())
 
     return this.l2GatewayRouter.functions[
+      'outboundTransfer(address,address,uint256,bytes)'
+    ](erc20l1Address, to, amount, '0x', overrides)
+  }
+
+  public async estimateGasWithdrawERC20(
+    erc20l1Address: string,
+    amount: BigNumber,
+    destinationAddress?: string,
+    overrides: PayableOverrides = {}
+  ): Promise<BigNumber> {
+    const to = destinationAddress || (await this.getWalletAddress())
+
+    return this.l2GatewayRouter.estimateGas[
       'outboundTransfer(address,address,uint256,bytes)'
     ](erc20l1Address, to, amount, '0x', overrides)
   }
