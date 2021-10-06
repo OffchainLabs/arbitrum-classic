@@ -48,7 +48,7 @@ class CombinedMachineCache {
     uint256_t max_execution_gas;
 
    public:
-    explicit CombinedMachineCache(ArbCoreConfig coreConfig)
+    explicit CombinedMachineCache(const ArbCoreConfig& coreConfig)
         : basic{coreConfig.basic_machine_cache_size},
           lru{coreConfig.lru_machine_cache_size},
           timed{coreConfig.timed_cache_expiration_seconds},
