@@ -116,7 +116,7 @@ func startup() error {
 	}
 	if config.Node.ChainID == 0 {
 		badConfig = true
-		fmt.Println("Missing --rollup.chain-id")
+		fmt.Println("Missing --node.chain-id")
 	}
 	if config.Rollup.Machine.Filename == "" {
 		badConfig = true

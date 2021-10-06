@@ -52,7 +52,7 @@ var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
 func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
 	nodeConfig := configuration.DefaultNodeSettings()
-	coreConfig := configuration.DefaultCoreSettings()
+	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 
 	mon, err := monitor.NewMonitor(dir, arbosPath, coreConfig)
 	if err != nil {

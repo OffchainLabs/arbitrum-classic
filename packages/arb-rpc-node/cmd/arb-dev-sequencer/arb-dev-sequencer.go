@@ -96,7 +96,7 @@ func startup() error {
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 
 	config := configuration.Config{
-		Core: *configuration.DefaultCoreSettings(),
+		Core: *configuration.DefaultCoreSettingsMaxExecution(),
 		Feed: configuration.Feed{
 			Output: configuration.FeedOutput{
 				Addr:          "127.0.0.1",

@@ -42,7 +42,7 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	coreConfig := configuration.DefaultCoreSettings()
+	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 	arbStorage, err := NewArbStorage(dePath, coreConfig)
 	if err != nil {
 		t.Fatal(err)

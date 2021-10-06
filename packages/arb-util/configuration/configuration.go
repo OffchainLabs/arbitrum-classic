@@ -319,7 +319,23 @@ type Config struct {
 }
 
 // DefaultCoreSettings is useful in unit tests
-func DefaultCoreSettings() *Core {
+func DefaultCoreSettingsNoMaxExecution() *Core {
+	return &Core{
+		Cache: CoreCache{
+			BasicInterval: 100,
+			BasicSize:     1000,
+			LRUSize:       1000,
+			TimedExpire:   20 * time.Minute,
+		},
+		CheckpointGasFrequency:    1_000_000,
+		CheckpointLoadGasCost:     1_000_000,
+		CheckpointLoadGasFactor:   4,
+		CheckpointMaxExecutionGas: 0,
+		MessageProcessCount:       10,
+	}
+}
+
+func DefaultCoreSettingsMaxExecution() *Core {
 	return &Core{
 		Cache: CoreCache{
 			BasicInterval: 100,
