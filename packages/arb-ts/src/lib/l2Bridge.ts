@@ -187,9 +187,7 @@ export class L2Bridge {
       .gateway
   }
 
-  public getERC20L1Address(
-    erc20L2Address: string
-  ): Promise<string | undefined> {
+  public getERC20L1Address(erc20L2Address: string): Promise<string | null> {
     const arbERC20 = StandardArbERC20__factory.connect(
       erc20L2Address,
       this.l2Signer
@@ -198,7 +196,7 @@ export class L2Bridge {
       .l1Address()
       .then(([res]) => res)
       .catch(e => {
-        return undefined
+        return null
       })
   }
 
