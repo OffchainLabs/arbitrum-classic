@@ -194,6 +194,24 @@ RawCodeSegmentData prepareToSaveCodeSegment(
         op_data.push_back(op.immediate ? 1 : 0);
         op_data.push_back(static_cast<unsigned char>(op.opcode));
         if (op.immediate) {
+            auto imm_cp = std::get_if<CodePointStub>(op.immediate.get());
+            if (imm_cp && segment_counts.find(imm_cp->pc.segment) ==
+                              segment_counts.end()) {
+                // Attempt to canonicalize the codepoint
+                ValueCache cache{1, 0};
+                auto canonical = getValue(tx, ::hash(*imm_cp), cache, false);
+                if (auto data = std::get_if<CountedData<value>>(&canonical)) {
+                    *imm_cp = std::get<CodePointStub>(data->data);
+                } else {
+                    auto status = std::get<rocksdb::Status>(canonical);
+                    if (!status.IsNotFound()) {
+                        throw std::runtime_error(
+                            std::string(
+                                "failed to load canonical codepoint: ") +
+                            status.ToString());
+                    }
+                }
+            }
             auto values = serializeValue(tx.getSecretHashSeed(), *op.immediate,
                                          op_data, segment_counts);
             // Save the immediate values, that weren't already saved for this
