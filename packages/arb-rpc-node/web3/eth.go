@@ -204,24 +204,39 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overr
 		for address, override := range *overrides {
 			account := arbcommon.NewAddressFromEth(address)
 			if override.Nonce != nil {
-				snap.SetNonce(account, uint64(*override.Nonce))
+				err := snap.SetNonce(account, uint64(*override.Nonce))
+				if err != nil {
+					return nil, err
+				}
 			}
 			if override.Balance != nil {
-				snap.SetBalance(account, override.Balance.ToInt())
+				err := snap.SetBalance(account, override.Balance.ToInt())
+				if err != nil {
+					return nil, err
+				}
 			}
 			if override.Code != nil {
-				snap.SetCode(account, *override.Code)
+				err := snap.SetCode(account, *override.Code)
+				if err != nil {
+					return nil, err
+				}
 			}
 			if override.State != nil {
 				storage := make(map[arbcommon.Hash]arbcommon.Hash)
 				for key, val := range *override.State {
 					storage[arbcommon.NewHashFromEth(key)] = arbcommon.NewHashFromEth(val)
 				}
-				snap.SetState(account, storage)
+				err := snap.SetState(account, storage)
+				if err != nil {
+					return nil, err
+				}
 			}
 			if override.StateDiff != nil {
 				for key, val := range *override.StateDiff {
-					snap.Store(account, arbcommon.NewHashFromEth(key), arbcommon.NewHashFromEth(val))
+					err := snap.Store(account, arbcommon.NewHashFromEth(key), arbcommon.NewHashFromEth(val))
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 		}

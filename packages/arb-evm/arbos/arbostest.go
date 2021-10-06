@@ -56,7 +56,12 @@ func SetCodeData(address common.Address, code []byte) []byte {
 }
 
 func SetStateData(address common.Address, storage map[common.Hash]common.Hash) []byte {
-	args, err := setStateABI.Inputs.Pack(address, storage)
+	var stateData []byte
+	for key, val := range storage {
+		stateData = append(stateData, key.Bytes()...)
+		stateData = append(stateData, val.Bytes()...)
+	}
+	args, err := setStateABI.Inputs.Pack(address, stateData)
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +69,7 @@ func SetStateData(address common.Address, storage map[common.Hash]common.Hash) [
 }
 
 func StoreData(address common.Address, key, val common.Hash) []byte {
-	args, err := storeABI.Inputs.Pack(address, key, val)
+	args, err := storeABI.Inputs.Pack(address, key.ToEthHash().Big(), val.ToEthHash().Big())
 	if err != nil {
 		panic(err)
 	}

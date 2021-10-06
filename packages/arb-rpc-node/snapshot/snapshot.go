@@ -320,6 +320,23 @@ func (s *Snapshot) basicCall(data []byte, dest common.Address) (*evm.TxResult, e
 	return res, err
 }
 
+func (s *Snapshot) basicAddMessage(data []byte, dest common.Address) (*evm.TxResult, error) {
+	msg := message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(1000000000),
+			GasPriceBid: s.MaxGasPriceBid(),
+			DestAddress: dest,
+			Payment:     big.NewInt(0),
+			Data:        data,
+		},
+	}
+	var targetHash common.Hash
+	if s.chainId != nil {
+		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+	}
+	return s.AddMessage(message.NewSafeL2Message(msg), common.Address{}, targetHash)
+}
+
 func checkValidResult(res *evm.TxResult) error {
 	if res.ResultCode == evm.ReturnCode {
 		return nil
@@ -372,56 +389,56 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 }
 
 func (s *Snapshot) SetNonce(account common.Address, nonce uint64) error {
-	res, err := s.basicCall(arbos.SetNonceData(account, nonce), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicAddMessage(arbos.SetNonceData(account, nonce), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
 	}
 	if err := checkValidResult(res); err != nil {
-		return nil
+		return err
 	}
 	return nil
 }
 
 func (s *Snapshot) SetBalance(account common.Address, ballance *big.Int) error {
-	res, err := s.basicCall(arbos.SetBalanceData(account, ballance), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicAddMessage(arbos.SetBalanceData(account, ballance), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
 	}
 	if err := checkValidResult(res); err != nil {
-		return nil
+		return err
 	}
 	return nil
 }
 
 func (s *Snapshot) SetState(account common.Address, storage map[common.Hash]common.Hash) error {
-	res, err := s.basicCall(arbos.SetStateData(account, storage), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicAddMessage(arbos.SetStateData(account, storage), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
 	}
 	if err := checkValidResult(res); err != nil {
-		return nil
+		return err
 	}
 	return nil
 }
 
 func (s *Snapshot) SetCode(account common.Address, code []byte) error {
-	res, err := s.basicCall(arbos.SetCodeData(account, code), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicAddMessage(arbos.SetCodeData(account, code), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
 	}
 	if err := checkValidResult(res); err != nil {
-		return nil
+		return err
 	}
 	return nil
 }
 
 func (s *Snapshot) Store(account common.Address, key, val common.Hash) error {
-	res, err := s.basicCall(arbos.StoreData(account, key, val), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicAddMessage(arbos.StoreData(account, key, val), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
 	}
 	if err := checkValidResult(res); err != nil {
-		return nil
+		return err
 	}
 	return nil
 }
