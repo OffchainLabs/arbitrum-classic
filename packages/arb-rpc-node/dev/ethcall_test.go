@@ -23,9 +23,10 @@ import (
 )
 
 func expectHex(t *testing.T, result []byte, resultErr error, expected string) {
+	t.Helper()
 	test.FailIfError(t, resultErr)
-	if ethcommon.BytesToHash(result) != ethcommon.HexToHash(expected) {
-		t.Fatal("Unexpected ", expected, "Got", ethcommon.BytesToHash(result))
+	if (ethcommon.BytesToHash(result) != ethcommon.HexToHash(expected)) || (len(result) != 32) {
+		t.Fatal("Expected ", expected, "Got", ethcommon.BytesToHash(result), " [", len(result), "]")
 	}
 }
 
