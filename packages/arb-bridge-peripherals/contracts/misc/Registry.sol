@@ -3,18 +3,18 @@
 pragma solidity ^0.6.11;
 
 contract Registry {
-    event SignalEmitted(
+    event ArbitrumSignalEmitted(
         address sender,
-        address indexed l1Address,
-        address indexed l2Address,
+        address indexed l1Token,
+        address indexed l2Token,
         address indexed l2OwnerAddress
     );
 
-    function signal(
-        address l1Address,
-        address l2Address,
+    function signalTokenAddressInArbitrum(
+        address l1Token,
+        address l2Token,
         address l2OwnerAddress
     ) external {
-        emit SignalEmitted(msg.sender, l1Address, l2Address, l2OwnerAddress);
+        emit ArbitrumSignalEmitted(msg.sender, l1Token, l2Token, l2OwnerAddress);
     }
 }
