@@ -24,7 +24,7 @@ interface ArbitrumEnabledToken {
 }
 
 interface L1MintableToken {
-    function balanceOf(address account) external returns (uint256 amount);
+    function balanceOf(address account) external view returns (uint256);
 
     function bridgeMint(address account, uint256 amount) external;
 }

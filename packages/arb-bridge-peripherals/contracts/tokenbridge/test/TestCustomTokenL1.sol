@@ -33,6 +33,7 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
     function balanceOf(address account)
         public
         view
+        virtual
         override(ERC20Upgradeable, ICustomToken)
         returns (uint256)
     {
@@ -65,5 +66,22 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
         );
 
         shouldRegisterGateway = prev;
+    }
+}
+
+contract MintableTestCustomTokenL1 is L1MintableToken, TestCustomTokenL1 {
+    constructor(address _bridge) public TestCustomTokenL1(_bridge) {}
+
+    function bridgeMint(address account, uint256 amount) public override(L1MintableToken) {
+        _mint(account, amount);
+    }
+
+    function balanceOf(address account)
+        public
+        view
+        override(L1MintableToken, TestCustomTokenL1)
+        returns (uint256 amount)
+    {
+        return super.balanceOf(account);
     }
 }
