@@ -36,15 +36,17 @@ func TestEthCall(t *testing.T) {
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
+	auth, owner := OwnerAuthPair(t, nil)
 	senderKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 
-	ownerKey, err := crypto.GenerateKey()
-	test.FailIfError(t, err)
-	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)
-
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, owner, nil)
 	defer cancelDevNode()
+
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, auth)
+		enableRewrites(t, backend, srv, auth)
+	}
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
 	test.FailIfError(t, err)
