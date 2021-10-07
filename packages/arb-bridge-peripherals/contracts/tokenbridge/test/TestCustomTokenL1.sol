@@ -26,7 +26,7 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
         address sender,
         address recipient,
         uint256 amount
-    ) public override(ERC20Upgradeable, ICustomToken) returns (bool) {
+    ) public virtual override(ERC20Upgradeable, ICustomToken) returns (bool) {
         return ERC20Upgradeable.transferFrom(sender, recipient, amount);
     }
 
@@ -79,9 +79,17 @@ contract MintableTestCustomTokenL1 is L1MintableToken, TestCustomTokenL1 {
     function balanceOf(address account)
         public
         view
-        override(L1MintableToken, TestCustomTokenL1)
+        override(TestCustomTokenL1, ICustomToken)
         returns (uint256 amount)
     {
         return super.balanceOf(account);
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public override(TestCustomTokenL1, ICustomToken) returns (bool) {
+        return super.transferFrom(sender, recipient, amount);
     }
 }

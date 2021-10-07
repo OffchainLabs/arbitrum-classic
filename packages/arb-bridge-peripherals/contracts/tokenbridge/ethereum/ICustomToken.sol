@@ -23,12 +23,6 @@ interface ArbitrumEnabledToken {
     function isArbitrumEnabled() external view returns (uint8);
 }
 
-interface L1MintableToken {
-    function balanceOf(address account) external view returns (uint256);
-
-    function bridgeMint(address account, uint256 amount) external;
-}
-
 /**
  * @title Minimum expected interface for L1 custom token (see TestCustomTokenL1.sol for an example implementation)
  */
@@ -51,4 +45,8 @@ interface ICustomToken is ArbitrumEnabledToken {
     ) external returns (bool);
 
     function balanceOf(address account) external view returns (uint256);
+}
+
+interface L1MintableToken is ICustomToken {
+    function bridgeMint(address account, uint256 amount) external;
 }
