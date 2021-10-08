@@ -19,8 +19,8 @@ import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
-// TODO: remove only
-describe.only('Bridge peripherals end-to-end custom gateway', () => {
+
+describe('Bridge peripherals end-to-end custom gateway', () => {
   let accounts: SignerWithAddress[]
 
   let l1RouterTestBridge: Contract
