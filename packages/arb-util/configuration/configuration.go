@@ -445,7 +445,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	AddL1PostingStrategyOptions(f, "validator.")
 
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
-	f.String("validator.utils-address", "", "strategy for validator to use")
+	f.String("validator.utils-address", "", "validator utilities address")
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
 	f.Bool("validator.dont-challenge", false, "don't challenge any other validators' assertions")
@@ -675,6 +675,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 			Int64("l1-chainid", l1ChainId.Int64()).
 			Msg("unexpected chain id")
 		return nil, nil, nil, nil, fmt.Errorf("expected chain id %v but l1 node has chain id %v", out.L1.ChainID, l1ChainId)
+	}
+
+	if out.Node.Cache.AllowSlowLookup {
+		// Force unlimited execution
+		out.Core.CheckpointMaxExecutionGas = 0
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil
