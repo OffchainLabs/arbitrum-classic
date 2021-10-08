@@ -19,8 +19,8 @@ import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
-
-describe('Bridge peripherals end-to-end custom gateway', () => {
+// TODO: remove only
+describe.only('Bridge peripherals end-to-end custom gateway', () => {
   let accounts: SignerWithAddress[]
 
   let l1RouterTestBridge: Contract
@@ -37,7 +37,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
 
     // l1 side deploy
     const L1RouterTestBridge: ContractFactory = await ethers.getContractFactory(
-      'L1GatewayRouter'
+      'L1GatewayRouterTester'
     )
     l1RouterTestBridge = await L1RouterTestBridge.deploy()
 
@@ -54,7 +54,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     l2TestBridge = await L2TestBridge.deploy()
 
     const L2RouterTestBridge: ContractFactory = await ethers.getContractFactory(
-      'L2GatewayRouter'
+      'L2GatewayRouterTester'
     )
     l2RouterTestBridge = await L2RouterTestBridge.deploy()
 
@@ -72,7 +72,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
 
     await l1RouterTestBridge.functions.initialize(
       accounts[0].address,
-      l1TestBridge.address, // defaultGateway
+      ethers.constants.AddressZero, // l1TestBridge.address, // defaultGateway
       '0x0000000000000000000000000000000000000000', // no whitelist
       l2RouterTestBridge.address, // counterparty
       accounts[0].address // inbox
@@ -90,7 +90,10 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     const L1CustomToken: ContractFactory = await ethers.getContractFactory(
       'TestCustomTokenL1'
     )
-    const l1CustomToken = await L1CustomToken.deploy(l1TestBridge.address)
+    const l1CustomToken = await L1CustomToken.deploy(
+      l1TestBridge.address,
+      l1RouterTestBridge.address
+    )
 
     const L2Token = await ethers.getContractFactory('TestArbCustomToken')
     const l2Token = await L2Token.deploy(
@@ -100,6 +103,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
 
     await l1CustomToken.registerTokenOnL2(
       l2Token.address,
+      0,
       0,
       0,
       0,
@@ -142,7 +146,10 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     const L1CustomToken: ContractFactory = await ethers.getContractFactory(
       'TestCustomTokenL1'
     )
-    const l1CustomToken = await L1CustomToken.deploy(l1TestBridge.address)
+    const l1CustomToken = await L1CustomToken.deploy(
+      l1TestBridge.address,
+      l1RouterTestBridge.address
+    )
 
     const L2Token = await ethers.getContractFactory('TestArbCustomToken')
     const l2Token = await L2Token.deploy(
@@ -153,6 +160,13 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     await l1TestBridge.forceRegisterTokenToL2(
       [l1CustomToken.address],
       [l2Token.address],
+      0,
+      0,
+      0
+    )
+    await l1RouterTestBridge.setGateways(
+      [l1CustomToken.address],
+      [l1TestBridge.address],
       0,
       0,
       0
@@ -197,12 +211,22 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     const L1CustomToken: ContractFactory = await ethers.getContractFactory(
       'TestCustomTokenL1'
     )
-    const l1CustomToken = await L1CustomToken.deploy(l1TestBridge.address)
+    const l1CustomToken = await L1CustomToken.deploy(
+      l1TestBridge.address,
+      l1RouterTestBridge.address
+    )
 
     // register a non-existent L2 token so we can test the force withdrawal
     await l1TestBridge.forceRegisterTokenToL2(
       [l1CustomToken.address],
       ['0x0000000000000000000000000000000000000001'],
+      0,
+      0,
+      0
+    )
+    await l1RouterTestBridge.setGateways(
+      [l1CustomToken.address],
+      [l1TestBridge.address],
       0,
       0,
       0
