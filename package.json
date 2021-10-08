@@ -33,8 +33,7 @@
     "demo:initialize": "yarn workspace tools demo:initialize",
     "demo:deploy": "./scripts/arb_deploy.py local",
     "prod:initialize": "yarn workspace tools prod:initialize",
-    "deploy:validators": "./scripts/arb_deploy.py",
-    "sol_docs:generate": "python docs/sol_contract_docs/generate_docs.py"
+    "deploy:validators": "./scripts/arb_deploy.py"
   },
   "engines": {
     "node": ">= 8.0.0",
