@@ -26,7 +26,7 @@ A good place to start is to connect your favorite Ethereum wallet to the Arbitru
 
 **Chain Info:**
 
-Name:** Arbitrum One**
+Name: **Arbitrum One**
 
 ChainID: **42161**
 
