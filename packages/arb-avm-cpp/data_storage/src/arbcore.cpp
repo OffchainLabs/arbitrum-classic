@@ -2311,7 +2311,7 @@ ArbCore::getExecutionCursorAtBlock(const uint256_t& block_number,
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {
         ReadSnapshotTransaction tx(data_storage);
-        auto gas_used_result = getSideloadPosition(tx, block_number);
+        auto gas_used_result = getGasAtBlock(tx, block_number);
         if (!gas_used_result.status.ok()) {
             return gas_used_result.status;
         }
@@ -3200,9 +3200,8 @@ rocksdb::Status ArbCore::saveSideloadPosition(ReadWriteTransaction& tx,
     return tx.sideloadPut(key_slice, value_slice);
 }
 
-ValueResult<uint256_t> ArbCore::getSideloadPosition(
-    ReadTransaction& tx,
-    const uint256_t& block_number) {
+ValueResult<uint256_t> ArbCore::getGasAtBlock(ReadTransaction& tx,
+                                              const uint256_t& block_number) {
     std::vector<unsigned char> key;
     marshal_uint256_t(block_number, key);
     auto key_slice = vecToSlice(key);

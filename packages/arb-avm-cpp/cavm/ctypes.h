@@ -88,6 +88,11 @@ typedef struct {
     int slow_error;
 } CMachineResult;
 
+typedef struct {
+    void* execution_cursor;
+    int slow_error;
+} CExecutionCursorResult;
+
 typedef void CAggregatorStore;
 typedef void CArbCore;
 typedef void CArbStorage;

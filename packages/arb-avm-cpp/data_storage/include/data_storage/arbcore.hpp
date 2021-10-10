@@ -407,9 +407,6 @@ class ArbCore {
 
     [[nodiscard]] bool isValid(const ReadTransaction& tx,
                                const InboxState& fully_processed_inbox) const;
-    std::variant<rocksdb::Status, ExecutionCursor> getExecutionCursorAtBlock(
-        const uint256_t& block_number,
-        bool allow_slow_lookup);
     std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionCursor(
         ReadTransaction& tx,
         uint256_t& total_gas_used,
@@ -431,12 +428,15 @@ class ArbCore {
 
    public:
     // Public sideload interaction
+    std::variant<rocksdb::Status, ExecutionCursor> getExecutionCursorAtBlock(
+        const uint256_t& block_number,
+        bool allow_slow_lookup);
     ValueResult<std::unique_ptr<Machine>> getMachineAtBlock(
         const uint256_t& block_number,
         bool allow_slow_lookup);
 
-    ValueResult<uint256_t> getSideloadPosition(ReadTransaction& tx,
-                                               const uint256_t& block_number);
+    ValueResult<uint256_t> getGasAtBlock(ReadTransaction& tx,
+                                         const uint256_t& block_number);
 
    private:
     // Private sideload interaction

@@ -160,6 +160,14 @@ func (m *Server) GetTxInBlockAtIndexResults(res *machine.BlockInfo, index uint64
 	return evmRes, nil
 }
 
+func (m *Server) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (core.ExecutionCursor, error) {
+	return m.db.Lookup.GetExecutionCursor(totalGasUsed, allowSlowLookup)
+}
+
+func (m *Server) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
+	return m.db.Lookup.AdvanceExecutionCursor(executionCursor, maxGas, goOverGas, allowSlowLookup)
+}
+
 func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
 	return m.db.GetSnapshot(blockHeight)
 }

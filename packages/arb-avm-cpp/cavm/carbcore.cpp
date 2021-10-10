@@ -596,3 +596,33 @@ void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     arb_core->printCoreThreadBacktrace();
 }
+
+CExecutionCursorResult arbCoreGetExecutionCursorAtBlock(CArbCore* arbcore_ptr,
+                                                        uint64_t block_number,
+                                                        int allow_slow_lookup) {
+    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+
+    try {
+        auto cursor =
+            arbcore->getExecutionCursorAtBlock(block_number, allow_slow_lookup);
+        if (std::holds_alternative<rocksdb::Status>(cursor)) {
+            auto status = std::get<rocksdb::Status>(cursor);
+            if (status.IsNotFound() && !allow_slow_lookup) {
+                // Machine not found in memory cache and database lookup
+                // disabled
+                return {nullptr, 1};
+            }
+
+            std::cerr << "Failed to load machine for sideload "
+                      << status.ToString() << std::endl;
+            return {nullptr, 0};
+        }
+
+        auto newCursor = new ExecutionCursor(std::get<ExecutionCursor>(cursor));
+        return {static_cast<void*>(newCursor), 0};
+    } catch (const std::exception& e) {
+        std::cerr << "Exception while loading machine at specific block: "
+                  << e.what() << std::endl;
+        return {nullptr, 0};
+    }
+}

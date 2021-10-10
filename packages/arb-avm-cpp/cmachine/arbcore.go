@@ -526,3 +526,20 @@ func (ac *ArbCore) GetMachineAtBlock(blockNumber uint64, allowSlowLookup bool) (
 
 	return WrapCMachine(cMachineResult.machine), nil
 }
+
+func (ac *ArbCore) GetExecutionCursorAtBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
+	CallowSlowLookup := 0
+	if allowSlowLookup {
+		CallowSlowLookup = 1
+	}
+	cExecutionCursorResult := C.arbCoreGetExecutionCursorAtBlock(ac.c, C.uint64_t(blockNumber), C.int(CallowSlowLookup))
+
+	if cExecutionCursorResult.slow_error == 1 {
+		return nil, errors.Errorf("missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )")
+	}
+
+	if cExecutionCursorResult.execution_cursor == nil {
+		return nil, errors.Errorf("error creating execution cursor")
+	}
+	return NewExecutionCursor(cExecutionCursorResult.execution_cursor)
+}
