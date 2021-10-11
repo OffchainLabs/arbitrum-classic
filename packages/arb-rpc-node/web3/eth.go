@@ -31,9 +31,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
@@ -42,23 +44,26 @@ var gasPriceFactor = big.NewInt(2)
 var gasEstimationCushion = 10
 
 type Server struct {
-	srv         *aggregator.Server
-	ganacheMode bool
-	maxCallGas  uint64
-	maxAVMGas   uint64
-	aggregator  *arbcommon.Address
+	srv                   *aggregator.Server
+	ganacheMode           bool
+	maxCallGas            uint64
+	maxAVMGas             uint64
+	aggregator            *arbcommon.Address
+	sequencerInboxWatcher *ethbridge.SequencerInboxWatcher
 }
 
 func NewServer(
 	srv *aggregator.Server,
 	ganacheMode bool,
+	sequencerInboxWatcher *ethbridge.SequencerInboxWatcher,
 ) *Server {
 	return &Server{
-		srv:         srv,
-		ganacheMode: ganacheMode,
-		maxCallGas:  1<<31 - 1,
-		maxAVMGas:   500000000,
-		aggregator:  srv.Aggregator(),
+		srv:                   srv,
+		ganacheMode:           ganacheMode,
+		maxCallGas:            1<<31 - 1,
+		maxAVMGas:             500000000,
+		aggregator:            srv.Aggregator(),
+		sequencerInboxWatcher: sequencerInboxWatcher,
 	}
 }
 
@@ -293,22 +298,22 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 	return s.getBlock(info, includeTxData)
 }
 
-func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, error) {
+func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, core.InboxState, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
-	res, err := s.srv.GetRequestResult(requestId)
+	res, inbox, err := s.srv.GetRequestResult(requestId)
 	if err != nil || res == nil {
-		return nil, nil, err
+		return nil, nil, core.InboxState{}, err
 	}
 	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
-		return nil, nil, err
+		return nil, nil, core.InboxState{}, err
 	}
-	return res, info, nil
+	return res, info, inbox, nil
 }
 
 func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
-	res, info, err := s.getTransactionInfoByHash(txHash)
+	res, info, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -347,8 +352,8 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 	return s.getTransactionByBlockAndIndex(info, index)
 }
 
-func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionReceiptResult, error) {
-	res, info, err := s.getTransactionInfoByHash(txHash)
+func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes, opts *ArbGetTxReceiptOpts) (*GetTransactionReceiptResult, error) {
+	res, info, inboxState, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -364,6 +369,47 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 	emptyAddress := common.Address{}
 	if receipt.ContractAddress != emptyAddress {
 		contractAddress = &receipt.ContractAddress
+	}
+
+	var l1InboxBatchInfo *L1InboxBatchInfo
+	if opts != nil && opts.ReturnL1InboxBatchInfo {
+		if s.sequencerInboxWatcher == nil {
+			return nil, errors.New("RPC L1 lookups disabled")
+		}
+		lookup := s.srv.GetLookup()
+		seqNum := new(big.Int).Sub(inboxState.Count, big.NewInt(1))
+		batch, err := s.sequencerInboxWatcher.LookupBatchContaining(ctx, lookup, seqNum)
+		if err != nil {
+			return nil, err
+		}
+		if batch != nil {
+			if batch.GetAfterCount().Cmp(inboxState.Count) < 0 {
+				return nil, errors.New("retrieved too early sequencer batch")
+			}
+			expectedTxAcc, expectedBatchAcc, err := lookup.GetInboxAccPair(seqNum, new(big.Int).Sub(batch.GetAfterCount(), big.NewInt(1)))
+			if err != nil {
+				return nil, err
+			}
+			if expectedTxAcc != inboxState.Accumulator || expectedBatchAcc != batch.GetAfterAcc() {
+				return nil, errors.New("inconsistent sequencer inbox state")
+			}
+			currentBlockHeight, err := s.sequencerInboxWatcher.CurrentBlockHeight(ctx)
+			if err != nil {
+				return nil, err
+			}
+			rawLog := batch.GetRawLog()
+			blockNum := new(big.Int).SetUint64(rawLog.BlockNumber)
+			confirmations := new(big.Int).Sub(currentBlockHeight, blockNum)
+			if confirmations.Sign() >= 0 {
+				l1InboxBatchInfo = &L1InboxBatchInfo{
+					Confirmations: (*hexutil.Big)(confirmations),
+					BlockNumber:   (*hexutil.Big)(blockNum),
+					LogAddress:    rawLog.Address,
+					LogTopics:     rawLog.Topics,
+					LogData:       rawLog.Data,
+				}
+			}
+		}
 	}
 
 	return &GetTransactionReceiptResult{
@@ -387,7 +433,8 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 			UnitsUsed: feeSetToFeeSetResult(res.FeeStats.UnitsUsed),
 			Paid:      feeSetToFeeSetResult(res.FeeStats.Paid),
 		},
-		L1BlockNumber: (*hexutil.Big)(res.IncomingRequest.L1BlockNumber),
+		L1BlockNumber:    (*hexutil.Big)(res.IncomingRequest.L1BlockNumber),
+		L1InboxBatchInfo: l1InboxBatchInfo,
 	}, nil
 }
 

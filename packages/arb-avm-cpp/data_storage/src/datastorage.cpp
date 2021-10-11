@@ -15,10 +15,12 @@
  */
 
 #include <data_storage/datastorage.hpp>
+#include <data_storage/readtransaction.hpp>
+#include <data_storage/storageresult.hpp>
 
+#include <openssl/rand.h>
 #include <rocksdb/convenience.h>
 #include <rocksdb/filter_policy.h>
-#include <data_storage/storageresult.hpp>
 
 #include <iostream>
 #include <string>
@@ -106,6 +108,11 @@ DataStorage::DataStorage(const std::string& db_path) {
     //    }
 
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
+
+    status = updateSecretHashSeed();
+    if (!status.ok()) {
+        throw std::runtime_error(status.ToString());
+    }
 }
 
 rocksdb::Status DataStorage::flushNextColumn() {
@@ -142,4 +149,27 @@ rocksdb::Status DataStorage::clearDBExceptInbox() {
         }
     }
     return rocksdb::Status::OK();
+}
+
+rocksdb::Status DataStorage::updateSecretHashSeed() {
+    std::string key("secretHashSeed");
+    rocksdb::PinnableSlice value;
+    rocksdb::ReadOptions read_opts;
+    auto status =
+        txn_db->Get(read_opts, column_handles[STATE_COLUMN], key, &value);
+    if (status.IsNotFound()) {
+        secret_hash_seed.resize(32);
+        RAND_bytes(secret_hash_seed.data(), secret_hash_seed.size());
+        rocksdb::WriteOptions write_opts;
+        rocksdb::Slice value_slice(
+            reinterpret_cast<const char*>(secret_hash_seed.data()),
+            secret_hash_seed.size());
+        status = txn_db->Put(write_opts, column_handles[STATE_COLUMN], key,
+                             value_slice);
+    } else if (status.ok()) {
+        secret_hash_seed = std::vector<unsigned char>(
+            value.data(), value.data() + value.size());
+        value.Reset();
+    }
+    return status;
 }

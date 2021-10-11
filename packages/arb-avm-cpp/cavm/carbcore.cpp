@@ -118,10 +118,12 @@ ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
         }
 
         std::vector<std::vector<unsigned char>> data;
-        for (const auto& val : logs.data) {
-            std::vector<unsigned char> marshalled_value;
-            marshal_value(val, marshalled_value);
-            data.push_back(move(marshalled_value));
+        for (const auto& log : logs.data) {
+            std::vector<unsigned char> marshalled_log;
+            marshal_uint256_t(log.inbox.count, marshalled_log);
+            marshal_uint256_t(log.inbox.accumulator, marshalled_log);
+            marshal_value(log.val, marshalled_log);
+            data.push_back(move(marshalled_log));
         }
         return {returnCharVectorVector(data), true};
     } catch (const std::exception& e) {
@@ -324,7 +326,7 @@ int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
         std::copy(val1.begin(), val1.end(), reinterpret_cast<char*>(ret1));
 
         std::array<unsigned char, 32> val2{};
-        to_big_endian(result.data.first, val2.begin());
+        to_big_endian(result.data.second, val2.begin());
         std::copy(val2.begin(), val2.end(), reinterpret_cast<char*>(ret2));
         return true;
     } catch (const std::exception& e) {
@@ -413,17 +415,21 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
 
         std::vector<std::vector<unsigned char>> marshalled_logs;
         marshalled_logs.reserve(result.data.logs.size());
-        for (const auto& val : result.data.logs) {
+        for (const auto& log : result.data.logs) {
             std::vector<unsigned char> marshalled_value;
-            marshal_value(val, marshalled_value);
+            marshal_uint256_t(log.inbox.count, marshalled_value);
+            marshal_uint256_t(log.inbox.accumulator, marshalled_value);
+            marshal_value(log.val, marshalled_value);
             marshalled_logs.push_back(move(marshalled_value));
         }
 
         std::vector<std::vector<unsigned char>> marshalled_deleted_logs;
         marshalled_deleted_logs.reserve(result.data.deleted_logs.size());
-        for (const auto& val : result.data.deleted_logs) {
+        for (const auto& log : result.data.deleted_logs) {
             std::vector<unsigned char> marshalled_value;
-            marshal_value(val, marshalled_value);
+            marshal_uint256_t(log.inbox.count, marshalled_value);
+            marshal_uint256_t(log.inbox.accumulator, marshalled_value);
+            marshal_value(log.val, marshalled_value);
             marshalled_deleted_logs.push_back(move(marshalled_value));
         }
 
@@ -491,15 +497,21 @@ char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
 }
 
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
-                                            const void* total_gas_used_ptr) {
+                                            const void* total_gas_used_ptr,
+                                            int allow_slow_lookups) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto total_gas_used = receiveUint256(total_gas_used_ptr);
 
     try {
-        auto executionCursor = arbcore->getExecutionCursor(total_gas_used);
+        auto executionCursor =
+            arbcore->getExecutionCursor(total_gas_used, allow_slow_lookups);
         if (!executionCursor.status.ok()) {
             std::cerr << "Failed to load execution cursor "
                       << executionCursor.status.ToString() << std::endl;
+            return nullptr;
+        }
+        if (executionCursor.data == nullptr) {
+            // Not in cache and database lookup disabled
             return nullptr;
         }
         return static_cast<void*>(executionCursor.data.release());
@@ -513,13 +525,14 @@ CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
 int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   CExecutionCursor* execution_cursor_ptr,
                                   const void* max_gas_ptr,
-                                  int go_over_gas) {
+                                  int go_over_gas,
+                                  int allow_slow_lookup) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     auto max_gas = receiveUint256(max_gas_ptr);
     try {
-        auto status = arbCore->advanceExecutionCursor(*executionCursor, max_gas,
-                                                      go_over_gas);
+        auto status = arbCore->advanceExecutionCursor(
+            *executionCursor, max_gas, go_over_gas, allow_slow_lookup);
         if (!status.ok()) {
             return false;
         }
@@ -551,14 +564,14 @@ CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
         arbCore->takeExecutionCursorMachine(*executionCursor).release());
 }
 
-CMachineResult arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
-                                            uint64_t block_number,
-                                            int allow_slow_lookup) {
+CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
+                                        uint64_t block_number,
+                                        int allow_slow_lookup) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
 
     try {
         auto machine =
-            arbcore->getMachineForSideload(block_number, allow_slow_lookup);
+            arbcore->getMachineAtBlock(block_number, allow_slow_lookup);
         if (!machine.status.ok()) {
             if (machine.status.IsNotFound() && !allow_slow_lookup) {
                 // Machine not found in memory cache and database lookup
@@ -577,4 +590,9 @@ CMachineResult arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
                   << std::endl;
         return {nullptr, 0};
     }
+}
+
+void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    arb_core->printCoreThreadBacktrace();
 }
