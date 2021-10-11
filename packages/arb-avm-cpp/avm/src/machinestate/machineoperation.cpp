@@ -993,8 +993,14 @@ static Buffer convert_string_to_buffer(const std::string& s) {
 }
 
 const static std::unordered_map<std::string, int> OPEARTOR_ARITY = {
-    {"add_cipher_cipher", 2}, {"add_cipher_plain", 2}, {"sub_cipher_cipher", 2},
-    {"sub_cipher_plain", 2},  {"encrypt", 1},          {"decrypt", 1}};
+    {"add_cipher_cipher", 2},
+    {"add_cipher_plain", 2},
+    {"sub_cipher_cipher", 2},
+    {"sub_cipher_plain", 2},
+    {"encrypt", 1},
+    {"decrypt", 1},
+    {"compare_cipher_cipher", 2},
+    {"compare_cipher_plain", 2}};
 
 void ecall(MachineState& m) {
     m.stack.prepForMod(1);
@@ -1055,7 +1061,8 @@ void ecall(MachineState& m) {
     std::ostringstream oss;
 
     if (OPEARTOR_ARITY.count(operator_string)) {
-        oss << operator_string << "," << OPEARTOR_ARITY.at(operator_string) << ",";
+        oss << operator_string << "," << OPEARTOR_ARITY.at(operator_string)
+            << ",";
 
         switch (OPEARTOR_ARITY.at(operator_string)) {
             case 1:
