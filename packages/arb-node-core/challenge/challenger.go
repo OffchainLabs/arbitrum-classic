@@ -73,7 +73,7 @@ func (c *Challenger) HandleConflict(ctx context.Context) (Move, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Lookup bisection %v\n", prevBisection)
+	// fmt.Printf("Lookup bisection %v\n", prevBisection)
 
 	// challengeImpl := ExecutionImpl{}
 

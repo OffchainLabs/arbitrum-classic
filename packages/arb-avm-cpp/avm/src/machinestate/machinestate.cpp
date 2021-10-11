@@ -496,14 +496,14 @@ void MachineState::marshalWasmProof(OneStepProof &proof) const {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
 
-    std::vector<size_t> stackPops = { 1, 1 };
+    std::vector<size_t> stackPops = { 1, 1, 1, 1 };
 
     std::vector<size_t> auxStackPops;
 
     size_t immediateMarshalLevel = 0;
     if (current_op.immediate && !stackPops.empty()) {
         immediateMarshalLevel = stackPops[0];
-        stackPops = { 1 };
+        stackPops = { 1, 1, 1 };
     }
 
     auto stackProof = stack.marshalForProof(stackPops, *code);
@@ -593,8 +593,7 @@ MachineState MachineState::initialWasmMachine() const {
         // Looks like the table and jump point are useless, need to recreate them for the "submachine"
         uint64_t code_len = static_cast<uint64_t>(*std::get_if<uint256_t>(&tpl3));
         Buffer code_buffer = *std::get_if<Buffer>(&tpl2);
-        RunWasm copy = compile;
-        auto res = copy.run_wasm(code_buffer, code_len);
+        auto res = compile->run_wasm(code_buffer, code_len);
 
         return makeWasmMachine(res, len, buf, elem_arg);
     } else if (op.opcode == OpCode::WASM_COMPILE) {
@@ -607,8 +606,7 @@ MachineState MachineState::initialWasmMachine() const {
         std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
         input.close();
 
-        RunWasm copy = compile;
-        auto res = copy.run_wasm(vec2buf(bytes), bytes.size());
+        auto res = compile->run_wasm(vec2buf(bytes), bytes.size());
 
         return makeWasmMachine(res, len, buf, 0);
     } else {
@@ -623,8 +621,7 @@ WasmCodePoint MachineState::compiledWasmCodePoint() const {
     auto elem1 = getStackOrImmed(1, op);
     uint64_t code_len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
     Buffer code_buf = *std::get_if<Buffer>(&elem1);
-    RunWasm m = compile;
-    auto res = m.run_wasm(code_buf, code_len);
+    auto res = compile->run_wasm(code_buf, code_len);
     auto bytes = buf2vec(res.buffer, res.buffer_len);
     auto wasm_bytes = buf2vec(code_buf, code_len);
     return wasmAvmToCodePoint(res, wasm_bytes);
@@ -694,6 +691,7 @@ OneStepProof MachineState::marshalForProof() const {
 
     if (current_op.opcode == OpCode::WASM_RUN) {
 
+        // std::cerr << "machine state before wasm run " << *this;
         auto state = initialWasmMachine();
 
         uint256_t gasUsed = runWasmMachine(state);
@@ -783,7 +781,7 @@ BlockReason MachineState::runOne() {
     uint64_t start_stack_size = stack.stacksize();
     uint64_t start_auxstack_size = auxstack.stacksize();
 
-    // std::cerr << "Inst " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
+    // std::cerr << "Inst " << op.opcode << " gas used " << output.arb_gas_used << "\n";
 
     bool is_valid_instruction =
         instructionValidity()[static_cast<size_t>(op.opcode)];

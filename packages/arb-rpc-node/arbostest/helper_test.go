@@ -275,6 +275,7 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 		failIfError(t, err)
 		totalExecutionGas += assertion.NumGas
 		parsedDebugPrints := processDebugPrints(t, dPrints)
+
 		for _, d := range parsedDebugPrints {
 			t.Log("debugprint", d)
 		}

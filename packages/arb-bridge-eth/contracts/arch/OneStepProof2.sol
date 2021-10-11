@@ -361,17 +361,17 @@ contract OneStepProof2 is OneStepProofCommon {
         bytes32 nword = get(buf, offset / 32, proof.proof1);
         if ((offset % 32) + 8 > 32) {
             for (uint256 i = 0; i < 8 - ((offset % 32) + 8 - 32); i++) {
-                nword = setByte(nword, (offset + i) % 32, arr[i]);
+                nword = setByte(nword, (offset + i) % 32, arr[i+24]);
             }
             buf = set(buf, offset / 32, nword, proof.proof1, proof.nproof1);
             bytes32 nword2 = get(buf, offset / 32 + 1, proof.proof2);
             for (uint256 i = 8 - ((offset % 32) + 8 - 32); i < 8; i++) {
-                nword2 = setByte(nword2, (offset + i) % 32, arr[i]);
+                nword2 = setByte(nword2, (offset + i) % 32, arr[i+24]);
             }
             buf = set(buf, offset / 32 + 1, nword2, proof.proof2, proof.nproof2);
         } else {
             for (uint256 i = 0; i < 8; i++) {
-                nword = setByte(nword, (offset % 32) + i, arr[i]);
+                nword = setByte(nword, (offset % 32) + i, arr[i+24]);
             }
             buf = set(buf, offset / 32, nword, proof.proof1, proof.nproof1);
         }
@@ -626,46 +626,6 @@ contract OneStepProof2 is OneStepProofCommon {
         return Value.newTuple(init);
     }
 
-    function executeWasmTest(AssertionContext memory context) internal pure {
-        Value.Data memory val2 = popVal(context.stack);
-        Value.Data memory val1 = popVal(context.stack);
-        if (!val1.isBuffer()) {
-            handleOpcodeError(context);
-            return;
-        }
-        if (!val2.isInt()) {
-            handleOpcodeError(context);
-            return;
-        }
-        Value.Data[] memory init = new Value.Data[](2);
-        init[0] = val1;
-        init[1] = Value.newEmptyTuple();
-        // Construct initial machine
-        Machine.Data memory initialMachine = Machine.Data(
-            wasmProgram,
-            mkPair(Value.newHashedValue(wasmProgramLink, wasmProgramLinkSize),
-              mkPair(val1, mkPair(val2, Value.newEmptyTuple()))), //    machine.dataStack,
-            Value.newEmptyTuple(), //    machine.auxStack,
-            Value.newEmptyTuple(), //    machine.registerVal,
-            Value.newInt(0), //    machine.staticVal,
-            1000000, //    machine.arbGasRemaining,
-            errHandlerHash, //    machine.errHandlerHash,
-            Machine.MACHINE_EXTENSIVE //    machine.status
-        );
-        // Final machine is given
-        (Machine.Data memory finalMachine,
-         Value.Data[] memory stackVals,
-         /* Value.Data[] memory auxstackVals */,
-         uint256 len,) = decodeWasmData(context.bufProof);
-        // Return value must come from the final machine
-        require(stackVals.length >= 2, "Not enough wasm stack returns");
-        pushVal(context.stack, stackVals[1]);
-        pushVal(context.stack, stackVals[0]);
-        context.startState = Machine.hash(initialMachine);
-        context.endState = Machine.hash(finalMachine);
-        context.nextLength = len;
-    }
-
     bytes32 constant compilerProgram = 0x9035048daf60a7f343b8078730a8859bcccc481f657dadff27411ae58e65b7cb;
     bytes32 constant compilerProgramLink = 0x97e073b103571a1794a6e51e9ca3464c07686628b9b59f59a0791bd9b3c5329d;
     uint256 constant compilerProgramLinkSize = 37449;
@@ -718,12 +678,14 @@ contract OneStepProof2 is OneStepProofCommon {
 
     function executeWasmRun(AssertionContext memory context) internal pure {
 
-        // require(Machine.hash(context.startMachine) == bytes32(uint256(0x78d4e5dcdec1a54b7b3afdabc972f706b1ca14062146c98af8a781d686e5aa92)), "init hash?");
+        // return;
+        // require(Machine.hash(context.startMachine) == bytes32(uint256(0xfe8e1da832fb54a394dcb7ac6cdfdb3e7223c4e42b1432bf3c7c4804d7994f30)), "init hash?");
 
         Value.Data memory val4 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
+
         if (!val1.isBuffer()) {
             handleOpcodeError(context);
             return;
@@ -761,15 +723,16 @@ contract OneStepProof2 is OneStepProofCommon {
         // Return value must come from the final machine
         require(stackVals.length >= 3, "Not enough wasm stack returns");
         // Buffer, len
-        require(stackVals[1].isInt(), "stack top not int");
-        require(stackVals[0].isBuffer(), "stack next not buf");
-        require(stackVals[2].isInt(), "stack gas not int");
+        require(stackVals[3].isInt(), "stack top not int");
+        require(stackVals[2].isBuffer(), "stack next not buf");
+        require(stackVals[1].isInt(), "stack gas not int");
         // require(stackVals[0].hash() == 0x0b179c33f802237faf5553da8854df679313390e8155a46bc8699f6d1d1e9bd2, "wrong buffer");
-        pushVal(context.stack, mkPair(stackVals[0], stackVals[1]));
-        uint64 gas = uint64(stackVals[2].intVal);
-        // require(gas == 0, "non zero gas");
+        pushVal(context.stack, mkPair(stackVals[3], stackVals[2]));
+        uint64 gas = uint64(stackVals[1].intVal);
+        require(gas == 500000, "wrong gas");
+        require(stackVals[3].intVal == 67, "wrong length");
         context.gas -= gas;
-        context.afterMachine.avmGasRemaining += gas + 1000;
+        context.afterMachine.avmGasRemaining += gas;
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
         // require(context.startState == 0xd71c80de4c79fa65f83c1149092a08a3f9793b69d15f63cd1410a81089f54e0a, "first state bad");
@@ -800,12 +763,10 @@ contract OneStepProof2 is OneStepProofCommon {
             return (3, 0, 100, executeSetBuffer64);
         } else if (opCode == OP_SETBUFFER256) {
             return (3, 0, 100, executeSetBuffer256);
-        } else if (opCode == OP_WASMTEST) {
-            return (2, 0, 100, executeWasmTest);
         } else if (opCode == OP_WASMCOMPILE) {
-            return (2, 0, 1001000, executeWasmCompile);
+            return (2, 0, 100, executeWasmCompile);
         } else if (opCode == OP_WASMRUN) {
-            return (4, 0, 1001000, executeWasmRun);
+            return (4, 0, 1000100, executeWasmRun);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
         } else {

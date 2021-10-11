@@ -2,6 +2,7 @@ package dev
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -41,8 +42,10 @@ func TestTopLevelCall(t *testing.T) {
 
 	client := web3.NewEthClient(srv, true)
 
+	fmt.Println("????????????????????")
 	conAddr, _, con, err := arbostestcontracts.DeployTopLevel(senderAuth, client)
 	test.FailIfError(t, err)
+	fmt.Println("deployed")
 	topABI, err := abi.JSON(strings.NewReader(arbostestcontracts.TopLevelABI))
 	test.FailIfError(t, err)
 

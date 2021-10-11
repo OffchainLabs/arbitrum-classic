@@ -156,7 +156,7 @@ struct MachineState {
     MachineOutput output;
 
     AssertionContext context;
-    RunWasm compile{wasm_compiler_path};
+    RunWasm *compile = 0; // {wasm_compiler_path};
 
     static MachineState loadFromFile(const std::string& executable_filename);
 

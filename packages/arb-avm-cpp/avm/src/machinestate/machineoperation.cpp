@@ -879,6 +879,7 @@ void log(MachineState& m) {
 
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
+    // std::cerr << "Debug print: " << m.stack[0] << "\n";
     m.context.debug_prints.push_back(m.stack.pop());
     ++m.pc;
 }
@@ -993,7 +994,10 @@ void wasm_compile(MachineState& m) {
     m.stack.prepForMod(2);
     auto len = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
-    auto res = m.compile.run_wasm(md, len);
+    if (!m.compile) {
+        m.compile = new RunWasm(wasm_compiler_path);
+    }
+    auto res = m.compile->run_wasm(md, len);
 
     auto bytes = buf2vec(res.buffer, res.buffer_len);
     auto wasm_bytes = buf2vec(md, len);
@@ -1008,15 +1012,15 @@ void wasm_compile(MachineState& m) {
 void wasm_run(MachineState& m) {
     m.stack.prepForMod(4);
     value arg = m.stack[0];
+    // std::cerr << "arg: " << arg << "\n";
     auto len = assumeInt64(assumeInt(m.stack[1]));
     Buffer& md = assumeBuffer(m.stack[2]);
     WasmCodePoint& wasmcp = assumeWasm(m.stack[3]);
     auto res = wasmcp.runner->run_wasm(md, len, arg);
     m.arb_gas_remaining += res.gas_left;
     m.output.arb_gas_used -= res.gas_left;
-    std::cerr << "Gas left: " << res.gas_left << "\n";
-
-    Tuple tpl = Tuple(res.buffer, res.buffer_len);
+    std::cerr << "Gas left: " << res.gas_left << " res len " << res.buffer_len << " arg " << arg << "\n";
+    Tuple tpl = Tuple(res.buffer_len, res.buffer);
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
@@ -1089,10 +1093,9 @@ void setbuffer8(MachineState& m) {
     m.stack.prepForMod(3);
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     auto val_int = assumeInt(m.stack[1]);
-    /*
     if (val_int > std::numeric_limits<uint8_t>::max()) {
         throw int_out_of_bounds{};
-    }*/
+    }
     auto val = static_cast<uint8_t>(val_int);
     Buffer& md = assumeBuffer(m.stack[2]);
     auto res = md.set(offset, val);

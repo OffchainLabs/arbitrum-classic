@@ -18,7 +18,6 @@ package ethbridge
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -133,7 +132,7 @@ func (c *Challenge) OneStepProveExecution(
 	if (opcode >= 0xa1 && opcode <= 0xa8) || opcode == 0x70 || opcode == 0xf1 {
 		// OSP2 (covers buffer related stuff)
 		prover = 1
-		fmt.Printf("Buffer proof len %v\n", len(bufferProof))
+		// fmt.Printf("Buffer proof len %v\n", len(bufferProof))
 	} else if opcode >= 0x20 && opcode <= 0x24 {
 		// OSPHash
 		prover = 2
@@ -141,7 +140,9 @@ func (c *Challenge) OneStepProveExecution(
 		// OSP
 		prover = 0
 	}
-	fmt.Printf("Old end hash %v\n", prevCutHashes[segmentToChallenge+1])
+	// prevCutHashes[segmentToChallenge+1][10] = 0
+	// fmt.Printf("Old end hash %v\n", prevCutHashes[segmentToChallenge+1])
+	// fmt.Printf("segment start %v length %v\n", challengedSegment.Start, challengedSegment.Length)
 	_, err := c.builderCon.OneStepProveExecution(
 		authWithContext(ctx, c.builderAuth),
 		nodes,
@@ -160,7 +161,7 @@ func (c *Challenge) OneStepProveExecution(
 		bufferProof,
 		prover,
 	)
-	fmt.Printf("Error %v\n", err)
+	// fmt.Printf("Error %v\n", err)
 	return errors.WithStack(err)
 }
 
