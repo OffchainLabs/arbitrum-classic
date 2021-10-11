@@ -119,7 +119,7 @@ If for some reason you need to compute the L1 address from an L2 alias on chain,
 
 ```sol
     modifier onlyFromMyL1Contract() override {
-        require(AddressAliasHelper.undoL1ToL2Alias(msg.sender) === myL1ContractAddress, "ONLY_COUNTERPART_CONTRACT");
+        require(AddressAliasHelper.undoL1ToL2Alias(msg.sender) == myL1ContractAddress, "ONLY_COUNTERPART_CONTRACT");
         _;
     }
 ```
