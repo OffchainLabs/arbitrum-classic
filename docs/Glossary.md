@@ -18,7 +18,7 @@ custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Gloss
 
 - **Arbitrum Sidechains**: Arbitrum protocol in which data is kept off chain and an any-trusted committee is responsible for updating the chain's state via unanimous consent.
 
-- **ArbGas**: Unit for pricing execution on Arbitrum; denominated in the chain's native currency (Ether on Arbitrum One). ArgGas is somewhat analogous to gas on L1 Ethereum, though different factors go into its calculation. ( See [ArbGas and Fees](Inside_Arbitrum.md#arbgas-and-fees).)
+- **ArbGas**: Unit for pricing execution on Arbitrum; denominated in the chain's native currency (Ether on Arbitrum One). ArbGas is somewhat analogous to gas on L1 Ethereum, though different factors go into its calculation. ( See [ArbGas and Fees](Inside_Arbitrum.md#arbgas-and-fees).)
 
 - **Arbitrum Full Node**: A party who keeps track of the state of an Arbitrum chain and receives remote procedure calls (RPCs) from clients. Analogous to a non-mining L1 Ethereum node.
 
@@ -34,7 +34,7 @@ custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Gloss
 
 - **Rollup Protocol**: Protocol for tracking the tree of assertions in an Arbitrum chain their confirmation status.
 
-- **Speed Limit**: Target computation limit for an Arbitrum chain; currently, on Arbitrum One targets 80,000 ArgGas per second.
+- **Speed Limit**: Target computation limit for an Arbitrum chain; currently, on Arbitrum One targets 80,000 ArbGas per second.
 
 ## Proving Fraud
 
@@ -76,13 +76,13 @@ custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Gloss
 
 - **Arb Token Bridge**: A series of contracts on Ethereum and Arbitrum for trustlessly moving tokens between the L1 and L2.
 
-- **Token Gateway**: A pair of contracts in the token bridge — one on L1, one on L2 — that provide a particular mechanism for handling the transfer of tokens between layers. Token gateways currently active in the bridge the StandardERC20 Gateway, the CustomERC20 Gateway, and the WETH Gateway.
+- **Token Gateway**: A pair of contracts in the token bridge — one on L1, one on L2 — that provide a particular mechanism for handling the transfer of tokens between layers. Token gateways currently active in the bridge are the StandardERC20 Gateway, the CustomERC20 Gateway, and the WETH Gateway.
 
 - **Gateway Router**: Contracts in the token bridge responsible for mapping tokens to their appropriate gateways.
 
 - **Standard Arb-Token**: An L2 token contract deployed via the StandardERC20 gateway; offers basic ERC20 functionality in addition to deposit / withdrawal affordances.
 
-- **Custom Arb-Token**: Any L2 token contract registered to the Arb Token Bridge that isn't a standard arb-token (i.e., it a token that uses any gateway other than the StandardERC20 Gateway).
+- **Custom Arb-Token**: Any L2 token contract registered to the Arb Token Bridge that isn't a standard arb-token (i.e., a token that uses any gateway other than the StandardERC20 Gateway).
 
 ## Transaction Ordering
 
