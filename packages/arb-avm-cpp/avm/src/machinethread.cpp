@@ -80,8 +80,10 @@ Assertion MachineThread::nextAssertion() {
     if (machine_status != MACHINE_SUCCESS) {
         return {};
     }
-    machine_thread->join();
-    machine_thread = nullptr;
+    if (machine_thread != nullptr) {
+        machine_thread->join();
+        machine_thread = nullptr;
+    }
     machine_status = MACHINE_NONE;
     return std::move(last_assertion);
 }
