@@ -487,7 +487,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Int("core.test.reorg-to.log", 0, "reorg to snapshot with given log or before, zero to disable")
 	f.Int("core.test.reorg-to.message", 0, "reorg to snapshot with given message or before, zero to disable")
 	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
-	f.Int("core.test.run-until", 0, "run until gas is reacheck for profile test, zero to disable")
+	f.Int("core.test.run-until", 0, "run until gas is reached for profile test, zero to disable")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 
