@@ -12,21 +12,22 @@
     "deploy": "yarn deploy:tokenbridge",
     "gen:uml": "ynpx sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/ethereum,./contracts/tokenbridge/libraries -o ./gatewayUML.svg",
     "gen:uml:test": "ynpx sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/test -o ./gatewayTestUML.svg",
-    "pre:slither": "yarn post:slither && ln -s ../../node_modules/arb-bridge-eth && ln -s ../../node_modules/arbos-contracts",
-    "slither": "yarn pre:slither && slither --hardhat-artifacts-directory build/contracts .  --filter-paths 'node_modules|arb-bridge-eth|arbos-contracts' && yarn post:slither",
-    "post:slither": "rm -f arb-bridge-eth && rm -f arbos-contracts",
-    "hardhat": "hardhat compile && hardhat"
+    "pre:slither": "yarn post:slither && ln -s ../../node_modules/arb-bridge-eth && ln -s ../../node_modules/arbos-precompiles",
+    "slither": "yarn pre:slither && slither --hardhat-artifacts-directory build/contracts .  --filter-paths 'node_modules|arb-bridge-eth|arbos-precompiles' && yarn post:slither",
+    "post:slither": "rm -f arb-bridge-eth && rm -f arbos-precompiles",
+    "hardhat": "hardhat"
+  },
+  "dependencies": {
+    "arbos-precompiles": "^1.0.1",
+    "@openzeppelin/contracts": "3.4.0",
+    "@openzeppelin/contracts-upgradeable": "3.4.0"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.0",
-    "@openzeppelin/contracts": "3.4.2",
-    "@openzeppelin/contracts-upgradeable": "3.4.2",
-    "@openzeppelin/upgrades-core": "^1.7.6",
     "@types/chai": "^4.2.15",
     "@types/mocha": "^9.0.0",
     "@types/node": "^14.14.28",
-    "arbos-contracts": "^1.0.0",
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.0.0",
     "ethers": "^5.4.5",
