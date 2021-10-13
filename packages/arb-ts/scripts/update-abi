@@ -8,7 +8,7 @@ yarn workspace arb-bridge-eth typechain
 
 echo 'Generating typechain interfaces for arbos-contracts:'
 rm -r ../../packages/arb-os/contracts/src/types
-yarn workspace arbos-contracts typechain
+yarn workspace arbos-precompiles typechain
 
 echo 'Generating typechain interfaces for arb-bridge-peripherals:'
 rm -r ../../packages/arb-bridge-peripherals/build
