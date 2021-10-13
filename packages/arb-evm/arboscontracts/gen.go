@@ -44,6 +44,7 @@ func RunBindingGen() error {
 			"ArbGasInfo",
 			"ArbInfo",
 			"ArbOwner",
+			"ArbosTest",
 			"ArbRetryableTx",
 			"ArbStatistics",
 			"ArbSys",

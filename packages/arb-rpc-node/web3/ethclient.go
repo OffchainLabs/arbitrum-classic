@@ -66,7 +66,7 @@ func (c *EthClient) CallContract(_ context.Context, call ethereum.CallMsg, block
 		Value:    (*hexutil.Big)(call.Value),
 		Data:     (*hexutil.Bytes)(&call.Data),
 	}
-	return c.srv.Call(args, blockNum(blockNumber))
+	return c.srv.Call(args, blockNum(blockNumber), nil)
 }
 
 func (c *EthClient) PendingCodeAt(_ context.Context, account common.Address) ([]byte, error) {
