@@ -212,6 +212,7 @@ describe('Bridge peripherals end-to-end', () => {
     await l2TestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](token.address, accounts[0].address, tokenAmount, '0x')
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
 
@@ -250,6 +251,7 @@ describe('Bridge peripherals end-to-end', () => {
     await l2RouterTestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](token.address, accounts[0].address, tokenAmount, '0x')
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
 
@@ -291,6 +293,7 @@ describe('Bridge peripherals end-to-end', () => {
       data,
       { value: maxSubmissionCost + maxGas * gasPrice }
     )
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
     const postAllowance = await token.allowance(

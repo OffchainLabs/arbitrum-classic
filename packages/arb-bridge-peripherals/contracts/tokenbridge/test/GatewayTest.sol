@@ -87,12 +87,31 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
 }
 
 abstract contract L2ArbitrumTestMessenger is L2ArbitrumMessenger {
+    struct PendingCall {
+        address _to;
+        uint256 _l1CallValue;
+        bytes _data;
+    }
+    PendingCall[] pending;
+
     function sendTxToL1(
         uint256 _l1CallValue,
         address, /* _from */
         address _to,
         bytes memory _data
     ) internal virtual override returns (uint256) {
+        pending.push(PendingCall({ _to: _to, _l1CallValue: _l1CallValue, _data: _data }));
+    }
+
+    function triggerTxToL1() external {
+        PendingCall storage currCall = pending[pending.length - 1];
+
+        address _to = currCall._to;
+        uint256 _l1CallValue = currCall._l1CallValue;
+        bytes memory _data = currCall._data;
+
+        pending.pop();
+
         (bool success, bytes memory retdata) = _to.call{ value: _l1CallValue }(_data);
         assembly {
             switch success
@@ -100,7 +119,6 @@ abstract contract L2ArbitrumTestMessenger is L2ArbitrumMessenger {
                 revert(add(retdata, 32), mload(retdata))
             }
         }
-        return 1337;
     }
 }
 
