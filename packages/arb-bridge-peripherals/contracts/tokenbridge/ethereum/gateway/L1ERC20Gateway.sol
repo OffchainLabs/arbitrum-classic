@@ -37,6 +37,49 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
     // whitelist not used anymore
     address public whitelist;
 
+    // start of inline reentrancy guard
+    // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.2/contracts/utils/ReentrancyGuard.sol
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 private _status;
+
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+
+    // end of inline reentrancy guard
+
+    function postUpgradeInit() external override {
+        _status = _NOT_ENTERED;
+    }
+
+    function outboundTransfer(
+        address _l1Token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable override nonReentrant returns (bytes memory res) {
+        return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
+    }
+
+    function finalizeInboundTransfer(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _data
+    ) public payable virtual override nonReentrant {
+        // the superclass checks onlyCounterpartGateway
+        super.finalizeInboundTransfer(_token, _from, _to, _amount, _data);
+    }
+
     function initialize(
         address _l2Counterpart,
         address _router,
