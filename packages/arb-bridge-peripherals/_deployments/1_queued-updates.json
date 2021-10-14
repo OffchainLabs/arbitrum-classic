@@ -6,9 +6,15 @@
     "buildInfo": ""
   },
   "L1CustomGateway": {
-    "address": "0xcD224c5dC33e059C661fba01FaE2843b7d707362",
-    "deployTxn": "0xf832f17c433a45d4ece2adf29865a8c44c5e5340b9f2f0e006991aa38efb97f8",
-    "arbitrumCommitHash": "8eb4685d3e44fa059901e423a70e6dd5c80508a3",
+    "address": "0x73bd0a2476b40A6aE04497D36efc85affeD3516b",
+    "deployTxn": "0xcca0dd9a39a58f9cc16c9b0aa616dd44348ea50a4ef89417bf828dccdae9bb04",
+    "arbitrumCommitHash": "acac7fd8ca2e5fb49d4da58b1560a9e898b8b970",
+    "buildInfo": ""
+  },
+  "L1ERC20Gateway": {
+    "address": "0xd710c475216999184db1737aad197fc855255ad7",
+    "deployTxn": "0xe0dc4213d73987dd17c925aed28328ddc29ccdf8bf37544df0663e3bde82fe52",
+    "arbitrumCommitHash": "acac7fd8ca2e5fb49d4da58b1560a9e898b8b970",
     "buildInfo": ""
   }
 }
