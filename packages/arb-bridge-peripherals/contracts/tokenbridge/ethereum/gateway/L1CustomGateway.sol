@@ -93,6 +93,8 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         owner = _owner;
         // disable whitelist by default
         whitelist = address(0);
+        // reentrancy guard
+        _status = _NOT_ENTERED;
     }
 
     /**

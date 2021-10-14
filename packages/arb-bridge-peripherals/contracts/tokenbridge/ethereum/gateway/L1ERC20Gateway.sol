@@ -94,6 +94,8 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         l2BeaconProxyFactory = _l2BeaconProxyFactory;
         // disable whitelist by default
         whitelist = address(0);
+        // reentrancy guard
+        _status = _NOT_ENTERED;
     }
 
     /**
