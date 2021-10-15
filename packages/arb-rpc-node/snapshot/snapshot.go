@@ -320,6 +320,34 @@ func (s *Snapshot) basicCall(data []byte, dest common.Address) (*evm.TxResult, e
 	return res, err
 }
 
+func (s *Snapshot) basicAddMessage(data []byte, dest common.Address) (*evm.TxResult, error) {
+	msg := message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(1000000000),
+			GasPriceBid: s.MaxGasPriceBid(),
+			DestAddress: dest,
+			Payment:     big.NewInt(0),
+			Data:        data,
+		},
+	}
+	var targetHash common.Hash
+	if s.chainId != nil {
+		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+	}
+	return s.AddMessage(message.NewSafeL2Message(msg), common.Address{}, targetHash)
+}
+
+func (s *Snapshot) addArbosTestMessage(data []byte) error {
+	res, err := s.basicAddMessage((data), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	if err != nil {
+		return err
+	}
+	if err := checkValidResult(res); err != nil {
+		return err
+	}
+	return nil
+}
+
 func checkValidResult(res *evm.TxResult) error {
 	if res.ResultCode == evm.ReturnCode {
 		return nil
@@ -369,6 +397,26 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 		return nil, err
 	}
 	return arbos.ParseGetStorageAtResult(res.ReturnData)
+}
+
+func (s *Snapshot) SetNonce(account common.Address, nonce uint64) error {
+	return s.addArbosTestMessage(arbos.SetNonceData(account, nonce))
+}
+
+func (s *Snapshot) SetBalance(account common.Address, balance *big.Int) error {
+	return s.addArbosTestMessage(arbos.SetBalanceData(account, balance))
+}
+
+func (s *Snapshot) SetState(account common.Address, storage map[common.Hash]common.Hash) error {
+	return s.addArbosTestMessage(arbos.SetStateData(account, storage))
+}
+
+func (s *Snapshot) SetCode(account common.Address, code []byte) error {
+	return s.addArbosTestMessage(arbos.SetCodeData(account, code))
+}
+
+func (s *Snapshot) Store(account common.Address, key, val common.Hash) error {
+	return s.addArbosTestMessage(arbos.StoreData(account, key, val))
 }
 
 func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
