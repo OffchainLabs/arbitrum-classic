@@ -59,6 +59,8 @@ ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
       data_storage(std::move(data_storage_)),
       core_code(std::make_shared<CoreCode>(getNextSegmentID(data_storage))),
       combined_machine_cache(coreConfig) {
+    std::cerr << "Loaded ArbCore with next code segment number "
+              << core_code->initialSegmentForChildCode() << std::endl;
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
     }

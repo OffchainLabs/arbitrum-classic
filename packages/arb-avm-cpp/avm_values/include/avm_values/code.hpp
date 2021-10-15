@@ -452,6 +452,7 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
         auto it = segment_counts.lower_bound(impl->first_segment);
         auto end = segment_counts.end();
         for (; it != end; ++it) {
+            std::cerr << "Committing code segment " << it->first << std::endl;
             auto inserted = parent_segments.segments->insert(
                 std::make_pair(it->first, impl->getSegment(it->first)));
             // Verify that the element didn't exist previously

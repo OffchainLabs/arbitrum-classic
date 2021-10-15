@@ -62,8 +62,12 @@ CodePointStub assumeCodePoint(MachineState& m, value& val) {
         throw bad_pop_type{};
     }
     if (!m.code->containsSegment(cp->pc.segment)) {
-        return std::get<CodePointStub>(
-            m.value_loader.loadValue(hash_value(*cp)));
+        auto new_cp =
+            std::get<CodePointStub>(m.value_loader.loadValue(hash_value(*cp)));
+        std::cerr << "Canonicalized code point at runtime " << cp->pc.segment
+                  << ", " << cp->pc.pc << " to segment " << new_cp.pc.segment
+                  << std::endl;
+        return new_cp;
     }
     return *cp;
 }

@@ -201,8 +201,16 @@ RawCodeSegmentData prepareToSaveCodeSegment(
                 ValueCache cache{1, 0};
                 auto canonical = getValue(tx, ::hash(*imm_cp), cache, false);
                 if (auto data = std::get_if<CountedData<value>>(&canonical)) {
-                    *imm_cp = std::get<CodePointStub>(data->data);
+                    auto new_cp = std::get<CodePointStub>(data->data);
+                    std::cerr << "Canonicalized code point at save time "
+                              << imm_cp->pc.segment << ", " << imm_cp->pc.pc
+                              << " to segment " << new_cp.pc.segment
+                              << std::endl;
+                    *imm_cp = new_cp;
                 } else {
+                    std::cerr << "Could not canonicalize code point "
+                              << imm_cp->pc.segment << ", " << imm_cp->pc.pc
+                              << std::endl;
                     auto status = std::get<rocksdb::Status>(canonical);
                     if (!status.IsNotFound()) {
                         throw std::runtime_error(
@@ -493,6 +501,7 @@ rocksdb::Status saveCode(ReadWriteTransaction& tx,
                     // do
                     return false;
                 }
+                std::cerr << "Saving code segment " << segment_id << std::endl;
                 uint64_t current_segment_count =
                     next_segment_counts[segment_id];
                 code_segments_to_save[segment_id] = prepareToSaveCodeSegment(

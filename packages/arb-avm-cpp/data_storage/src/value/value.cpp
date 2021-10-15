@@ -160,6 +160,8 @@ std::vector<value> serializeValue(
     std::map<uint64_t, uint64_t>& segment_counts) {
     value_vector.push_back(CODE_POINT_STUB);
     val.marshal(value_vector);
+    std::cerr << "Serializing code point " << val.pc.segment << ", "
+              << val.pc.pc << std::endl;
     ++segment_counts[val.pc.segment];
     return {};
 }
