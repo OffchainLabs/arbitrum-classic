@@ -21,15 +21,22 @@ std::vector<uint8_t> getFile(std::string fname) {
     return bytes;
 }
 
-MachineState mkWasmMachine(WasmResult res, std::string fname) {
+MachineState mkWasmMachine(WasmResult res, std::vector<uint8_t> arg_buf) {
     CodeResult cres = wasmAvmToCode(res);
 
     MachineState state(cres.code, 0);
-    auto arg_buf = getFile(fname);
     state.stack.push(arg_buf.size());
     state.stack.push(vec2buf(arg_buf));
     state.stack.push(std::move(cres.table));
-    state.stack.push(0);
+    std::vector<uint8_t> b1 = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    std::vector<uint8_t> b2 = {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2};
+    auto tpl = Tuple(
+        123,
+        vec2buf(b1),
+        Tuple(vec2buf(b2), 234, 234),
+        12345678
+    );
+    state.stack.push(tpl);
     state.arb_gas_remaining = 1000000000000;
     state.output.arb_gas_used = 0;
 
@@ -37,7 +44,52 @@ MachineState mkWasmMachine(WasmResult res, std::string fname) {
 
 }
 
+MachineState mkWasmMachine(WasmResult res, std::string fname) {
+    return mkWasmMachine(res, getFile(fname));
+}
+
 TEST_CASE("Wasm") {
+    SECTION("Test env functions") {
+        // for (int i = 0; i < 11; i++) {
+        for (int i = 5; i < 6; i++) {
+            RunWasm runner(wasm_compile_path);
+            auto buf = getFile(wasm_env_path);
+            auto res = runner.run_wasm(vec2buf(buf), buf.size());
+
+            auto test_buf = std::vector<uint8_t>();
+            test_buf.push_back(i);
+            for (int j = 1; j < 128; j++) {
+                test_buf.push_back(j);
+            }
+
+            auto m = mkWasmMachine(res, test_buf);
+            std::cerr << "Running machine " << "\n";
+            auto start = std::chrono::system_clock::now();
+            runWasmMachine(m);
+            auto end = std::chrono::system_clock::now();
+
+            uint256_t err_code = intx::from_string<uint256_t>("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+            bool err = false;
+            std::cerr << "Result stack " << m.stack[0] << "\n";
+            if (m.stack[0] == value(err_code)) {
+                std::cerr << "Error at test " << i << "\n";
+                err = true;
+            }
+            /*
+            m.stack[0].;
+            std::cerr << "Result stack " << m.stack[1] << "\n";
+            std::cerr << "Result stack " << m.stack[2] << "\n";
+            */
+
+            std::chrono::duration<double> elapsed_seconds = end-start;
+
+            std::cerr << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
+        }
+    }
+
+/*
     SECTION("Making compiler machine") {
         RunWasm runner(wasm_compile_path);
         auto buf = getFile(wasm_compile_path);
@@ -73,6 +125,6 @@ TEST_CASE("Wasm") {
         REQUIRE(hash_value(m.stack[3]) == hash_value(cres.stub));
 
     }
-
+*/
 }
 

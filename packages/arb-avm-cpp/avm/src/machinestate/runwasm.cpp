@@ -43,28 +43,6 @@ wasm_trap_t* cb_usegas(void* env,
     return NULL;
 }
 
-value simple_table_aux(int level) {
-    if (level == 0) {
-        return Tuple(0,0,0,0,0,0,0,0);
-    }
-    return Tuple(
-        simple_table_aux(level - 1),
-        simple_table_aux(level - 1),
-        simple_table_aux(level - 1),
-        simple_table_aux(level - 1),
-        simple_table_aux(level - 1),
-        simple_table_aux(level - 1),
-        simple_table_aux(level - 1),
-        simple_table_aux(level - 1)
-    );
-}
-
-const int LEVEL = 5;
-
-value simple_table() {
-    return simple_table_aux(LEVEL - 1);
-}
-
 wasm_trap_t* cb_uint_immed(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t*) {

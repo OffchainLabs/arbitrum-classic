@@ -25,6 +25,7 @@ set(ARB_OS_TEST_CASES_PATH ${ARB_OS_DIR}/replayTests)
 set(MACHINE_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/machine-cases)
 set(WASM_TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../test.wasm)
 set(WASM_COMPILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../compiler.wasm)
+set(WASM_ENV_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../test-env.wasm)
 
 configure_file (
     "${CMAKE_CURRENT_SOURCE_DIR}/config.hpp.in"

@@ -879,7 +879,7 @@ void log(MachineState& m) {
 
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
-    // std::cerr << "Debug print: " << m.stack[0] << "\n";
+    std::cerr << "Debug print: " << m.stack[0] << "\n";
     m.context.debug_prints.push_back(m.stack.pop());
     ++m.pc;
 }
