@@ -51,7 +51,7 @@ func TestEthCall(t *testing.T) {
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
 	test.FailIfError(t, err)
 
-	ethServer := web3.NewServer(srv, false)
+	ethServer := web3.NewServer(srv, false, nil)
 
 	client := web3.NewEthClient(srv, true)
 
