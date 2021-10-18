@@ -21,30 +21,31 @@ pragma solidity ^0.6.11;
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 import "arb-bridge-eth/contracts/libraries/DebugPrint.sol";
 
-library BytesParserWithDefault {
+library BytesParser {
     using BytesLib for bytes;
 
-    function toUint8(bytes memory input, uint8 defaultValue) internal pure returns (uint8) {
+    function toUint8(bytes memory input) internal pure returns (bool success, uint8 res) {
         if (input.length == 0) {
-            return defaultValue;
+            success = false;
+            // return the default value of uint8
         } else {
             // TODO: try catch to handle error
-            return abi.decode(input, (uint8));
+            success = true;
+            res = abi.decode(input, (uint8));
         }
     }
 
-    function toString(bytes memory input, string memory defaultValue)
-        internal
-        pure
-        returns (string memory)
-    {
+    function toString(bytes memory input) internal pure returns (bool success, string memory res) {
         if (input.length == 0) {
-            return defaultValue;
+            success = false;
+            // return default value of string
         } else if (input.length == 32) {
-            return DebugPrint.bytes32string(input.toBytes32(0));
+            success = true;
+            res = DebugPrint.bytes32string(input.toBytes32(0));
         } else {
             // TODO: try catch to handle error
-            return abi.decode(input, (string));
+            success = true;
+            res = abi.decode(input, (string));
         }
     }
 }
