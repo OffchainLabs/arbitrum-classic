@@ -50,9 +50,26 @@ wasm_trap_t* cb_uint_immed(void* env,
 
     if (args->data[0].kind == WASM_I32) {
         // read uint from memory
+        auto ptr = args->data[0].of.i32;
+        auto sz = wasm_memory_data_size(dta->memory);
         auto mem = (const char*)wasm_memory_data(dta->memory);
-        mem += + args->data[0].of.i32;
-        uint256_t num = deserializeUint256t(mem);
+        char tmp[32];
+        for (int i = 0; i < 32; i++) {
+            tmp[i] = 0;
+        }
+        if (sz > ptr + 32) {
+            for (int i = 0; i < 32; i++) {
+                tmp[i] = mem[ptr+i];
+            }
+        } else if (ptr > sz) {
+        } else {
+            auto num = sz - ptr;
+            for (int i = 0; i <= num; i++) {
+                tmp[i] = mem[ptr+i];
+            }
+        }
+        const char *tmp2 = tmp;
+        uint256_t num = deserializeUint256t(tmp2);
         dta->immed = std::make_shared<value>(num);
     }
     return NULL;
@@ -165,12 +182,25 @@ wasm_trap_t* cb_tuplebytes(void* env,
 
         auto immed = *dta->immed;
         auto t = std::get_if<Tuple>(&immed);
+        if (!t) {
+            return dta->wasm_trap;
+        }
+        if (t->tuple_size() <= idx) {
+            return dta->wasm_trap;
+        }
         auto buf = t->get_element(idx);
         auto num = std::get_if<uint256_t>(&buf);
+        if (!num) {
+            return dta->wasm_trap;
+        }
 
         std::vector<uint8_t> buffer;
         marshal_uint256_t(*num, buffer);
 
+        auto sz = wasm_memory_data_size(dta->memory);
+        if (ptr + 32 >= sz) {
+            return dta->wasm_trap;
+        }
         for (int i = 0; i < 32; i++) {
             mem[ptr+i] = buffer[i];
         }
@@ -194,14 +224,33 @@ wasm_trap_t* cb_tuple2bytes(void* env,
 
         auto immed = *dta->immed;
         auto t = std::get_if<Tuple>(&immed);
+        if (!t) {
+            return dta->wasm_trap;
+        }
+        if (t->tuple_size() <= idx) {
+            return dta->wasm_trap;
+        }
         auto t1 = t->get_element(idx);
         auto t2 = std::get_if<Tuple>(&t1);
+        if (!t2) {
+            return dta->wasm_trap;
+        }
+        if (t2->tuple_size() <= idx2) {
+            return dta->wasm_trap;
+        }
         auto buf = t2->get_element(idx2);
         auto num = std::get_if<uint256_t>(&buf);
+        if (!num) {
+            return dta->wasm_trap;
+        }
 
         std::vector<uint8_t> buffer;
         marshal_uint256_t(*num, buffer);
 
+        auto sz = wasm_memory_data_size(dta->memory);
+        if (ptr + 32 >= sz) {
+            return dta->wasm_trap;
+        }
         for (uint64_t i = 0; i < 32; i++) {
             mem[ptr+i] = buffer[i];
         }
@@ -227,11 +276,30 @@ wasm_trap_t* cb_tuple2buffer(void* env,
 
         auto immed = *dta->immed;
         auto t = std::get_if<Tuple>(&immed);
+        if (!t) {
+            return dta->wasm_trap;
+        }
+        if (t->tuple_size() <= idx) {
+            return dta->wasm_trap;
+        }
         auto t1 = t->get_element(idx);
         auto t2 = std::get_if<Tuple>(&t1);
+        if (!t2) {
+            return dta->wasm_trap;
+        }
+        if (t2->tuple_size() <= idx2) {
+            return dta->wasm_trap;
+        }
         auto buf = t2->get_element(idx2);
         auto buffer = std::get_if<Buffer>(&buf);
+        if (!buffer) {
+            return dta->wasm_trap;
+        }
 
+        auto sz = wasm_memory_data_size(dta->memory);
+        if (ptr + 32 >= sz) {
+            return dta->wasm_trap;
+        }
         for (uint64_t i = 0; i < len; i++) {
             mem[ptr+i] = buffer->get(i);
         }
@@ -363,6 +431,9 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
     }
 
     WasmEnvData* env = this->data;
+    wasm_name_t msg;
+    wasm_name_new_from_string_nt(&msg, "error");
+    env->wasm_trap = wasm_trap_new(store, &msg);
 
     // Create external functions
     wasm_functype_t* callback_type_getlen =
@@ -499,30 +570,7 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
 }
 
 WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len) {
-    data->buffer = buf;
-    data->buffer_len = len;
-    wasm_val_vec_t args_vec;
-    wasm_val_vec_new_empty(&args_vec);
-
-    wasm_val_t res_params[1];
-    wasm_val_vec_t results_vec;
-    res_params[0].kind = WASM_I32;
-    res_params[0].of.i64 = 123;
-    wasm_val_vec_new(&results_vec, 1, res_params);
-
-    data->gas_left = 1000000;
-    data->extra.resize(0);
-
-    data->table = std::vector<std::pair<uint64_t, uint64_t>>();
-    data->immed = std::make_shared<value>(0);
-    data->insn = std::make_shared<std::vector<Operation>>();
-
-    if (wasm_func_call(run, &args_vec, &results_vec)) {
-        std::cerr << "Error running wasm\n";
-    }
-
-    return {data->buffer_len, data->buffer, data->extra, data->gas_left, data->immed, data->insn, data->table};
-
+    return run_wasm(buf, len, 0);
 }
 
 WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len, value v) {
@@ -544,14 +592,13 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len, value v) {
     data->immed = std::make_shared<value>(v);
     data->insn = std::make_shared<std::vector<Operation>>();
 
+    bool error = false;
     if (wasm_func_call(run, &args_vec, &results_vec)) {
         std::cerr << "Error running wasm\n";
+        error = true;
     }
 
-    return {data->buffer_len, data->buffer, data->extra, data->gas_left, data->immed, data->insn, data->table};
+    return {data->buffer_len, data->buffer, data->extra, data->gas_left, data->immed, data->insn, data->table, error};
 
 }
 
-std::pair<Buffer, uint64_t> run_wasm(Buffer buf, uint64_t len) {
-    return {buf, len};
-}

@@ -36,7 +36,8 @@ struct WasmResult {
     uint64_t gas_left;
     std::shared_ptr<value> immed;
     std::shared_ptr<std::vector<Operation>> insn;
-    std::vector<std::pair<uint64_t, uint64_t>> table; 
+    std::vector<std::pair<uint64_t, uint64_t>> table;
+    bool error;
 };
 
 class WasmRunner {

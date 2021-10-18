@@ -30,6 +30,7 @@ struct WasmEnvData {
     std::shared_ptr<std::vector<Operation>> insn;
     std::vector<std::pair<uint64_t, uint64_t>> table; 
     wasm_memory_t *memory;
+    wasm_trap_t *wasm_trap;
 };
 
 struct RunWasm : WasmRunner {
@@ -45,7 +46,5 @@ struct RunWasm : WasmRunner {
     virtual WasmResult run_wasm(Buffer buf, uint64_t len, value v);
 
 };
-
-// std::pair<Buffer, uint64_t> run_wasm(Buffer buf, uint64_t len);
 
 #endif /* runwasm_hpp */

@@ -50,8 +50,8 @@ MachineState mkWasmMachine(WasmResult res, std::string fname) {
 
 TEST_CASE("Wasm") {
     SECTION("Test env functions") {
-        // for (int i = 0; i < 11; i++) {
-        for (int i = 5; i < 6; i++) {
+        for (int i = 0; i < 11; i++) {
+        // for (int i = 5; i < 6; i++) {
             RunWasm runner(wasm_compile_path);
             auto buf = getFile(wasm_env_path);
             auto res = runner.run_wasm(vec2buf(buf), buf.size());
@@ -85,6 +85,20 @@ TEST_CASE("Wasm") {
             std::chrono::duration<double> elapsed_seconds = end-start;
 
             std::cerr << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
+            std::vector<uint8_t> b1 = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+            std::vector<uint8_t> b2 = {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2};
+            auto tpl = Tuple(
+                123,
+                vec2buf(b1),
+                Tuple(vec2buf(b2), 234, 234),
+                12345678
+            );
+            RunWasm fail_runner(wasm_env_path);
+            auto res2 = fail_runner.run_wasm(vec2buf(test_buf), test_buf.size(), tpl);
+            if (res2.error) {
+                std::cerr << "JIT error\n";
+            }
 
         }
     }
