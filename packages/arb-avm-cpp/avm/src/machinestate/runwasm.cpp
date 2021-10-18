@@ -50,7 +50,7 @@ wasm_trap_t* cb_uint_immed(void* env,
 
     if (args->data[0].kind == WASM_I32) {
         // read uint from memory
-        auto ptr = args->data[0].of.i32;
+        uint64_t ptr = args->data[0].of.i32;
         auto sz = wasm_memory_data_size(dta->memory);
         auto mem = (const char*)wasm_memory_data(dta->memory);
         char tmp[32];
@@ -63,8 +63,8 @@ wasm_trap_t* cb_uint_immed(void* env,
             }
         } else if (ptr > sz) {
         } else {
-            auto num = sz - ptr;
-            for (int i = 0; i <= num; i++) {
+            uint64_t num = sz - ptr;
+            for (uint64_t i = 0; i <= num; i++) {
                 tmp[i] = mem[ptr+i];
             }
         }
@@ -594,7 +594,7 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len, value v) {
 
     bool error = false;
     if (wasm_func_call(run, &args_vec, &results_vec)) {
-        std::cerr << "Error running wasm\n";
+        // std::cerr << "Error running wasm\n";
         error = true;
     }
 
