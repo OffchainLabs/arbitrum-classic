@@ -150,16 +150,26 @@ std::unique_ptr<rocksdb::Iterator> ReadTransaction::delayedMessageGetIterator(
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadTransaction::logGetIterator() const {
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::logGetIterator(
+    rocksdb::Slice* lower_bound,
+    rocksdb::Slice* upper_bound) const {
+    auto read_opts = read_options;
+    read_opts.iterate_lower_bound = lower_bound;
+    read_opts.iterate_upper_bound = upper_bound;
     auto it = transaction->transaction->GetIterator(
-        read_options,
+        read_opts,
         transaction->datastorage->column_handles[DataStorage::LOG_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadTransaction::sendGetIterator() const {
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::sendGetIterator(
+    rocksdb::Slice* lower_bound,
+    rocksdb::Slice* upper_bound) const {
+    auto read_opts = read_options;
+    read_opts.iterate_lower_bound = lower_bound;
+    read_opts.iterate_upper_bound = upper_bound;
     auto it = transaction->transaction->GetIterator(
-        read_options,
+        read_opts,
         transaction->datastorage->column_handles[DataStorage::SEND_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
@@ -390,4 +400,8 @@ ValueResult<uint256_t> ReadTransaction::getUint256UsingFamilyAndKey(
 
     auto data = reinterpret_cast<const char*>(result.data.data());
     return {result.status, deserializeUint256t(data)};
+}
+
+const std::vector<unsigned char>& ReadTransaction::getSecretHashSeed() {
+    return transaction->datastorage->secret_hash_seed;
 }

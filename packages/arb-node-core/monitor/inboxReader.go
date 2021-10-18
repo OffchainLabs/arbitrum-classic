@@ -138,6 +138,10 @@ func (ir *InboxReader) WaitToCatchUp(ctx context.Context) {
 
 }
 
+func (ir *InboxReader) GetSequencerInboxWatcher() *ethbridge.SequencerInboxWatcher {
+	return ir.sequencerInbox
+}
+
 const inboxReaderDelay int64 = 4
 
 func (ir *InboxReader) getMessages(ctx context.Context) error {
@@ -307,7 +311,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					Str("afterCount", sequencerBatches[len(sequencerBatches)-1].GetAfterCount().String())
 			}
 			logMsg.Msg("Looking up messages")
-			if !reorgingDelayed && !reorgingSequencer && len(delayedMessages) != 0 || len(sequencerBatches) != 0 {
+			if !reorgingDelayed && !reorgingSequencer && (len(delayedMessages) != 0 || len(sequencerBatches) != 0) {
 				missingDelayed, err := ir.addMessages(ctx, sequencerBatches, delayedMessages)
 				if err != nil {
 					return err

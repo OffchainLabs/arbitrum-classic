@@ -140,8 +140,10 @@ export class L1Bridge {
           .name()
           .then(([res]) => res)
           .catch(() => symbol + '_Token')
-
-        const allowed = await allowance.gte(MIN_APPROVAL.div(2))
+        const allowanceLimit = BigNumber.from(
+          '0xffffffffffffffffffffffff'
+        ) /** for ERC20s that cap approve at 96 bits  */
+        const allowed = await allowance.gte(allowanceLimit.div(2))
         tokenData.ERC20 = {
           contract: ethERC20TokenContract,
           balance,

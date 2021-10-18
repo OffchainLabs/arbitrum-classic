@@ -35,7 +35,7 @@ func TestTrace(t *testing.T) {
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
 	test.FailIfError(t, err)
 
-	ethServer := web3.NewServer(srv, false)
+	ethServer := web3.NewServer(srv, false, nil)
 	tracer := web3.NewTracer(ethServer)
 
 	client := web3.NewEthClient(srv, true)

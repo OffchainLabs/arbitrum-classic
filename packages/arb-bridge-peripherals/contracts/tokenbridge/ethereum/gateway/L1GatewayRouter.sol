@@ -170,14 +170,12 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
      * return Retryable ticket ID
      */
     function setGateway(
-        address, /* _gateway */
-        uint256, /* _maxGas */
-        uint256, /* _gasPriceBid */
-        uint256, /* _maxSubmissionCost */
-        address /* _creditBackAddress */
+        address _gateway,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
     ) public payable returns (uint256) {
-        revert("SELF_REGISTRATION_DISABLED");
-        /*
         require(
             ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
             "NOT_ARB_ENABLED"
@@ -205,7 +203,6 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
                 _maxSubmissionCost,
                 _creditBackAddress
             );
-        */
     }
 
     function setGateways(

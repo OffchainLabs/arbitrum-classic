@@ -23,6 +23,8 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 )
 
@@ -40,10 +42,15 @@ type ServerConfig struct {
 	Tracing bool
 }
 
-func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, config ServerConfig, plugins map[string]interface{}) (*rpc.Server, error) {
+func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, config ServerConfig, plugins map[string]interface{}, inboxReader *monitor.InboxReader) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
-	ethServer := NewServer(server, config.Mode == GanacheMode)
+	var sequencerInboxWatcher *ethbridge.SequencerInboxWatcher
+	if inboxReader != nil {
+		sequencerInboxWatcher = inboxReader.GetSequencerInboxWatcher()
+	}
+
+	ethServer := NewServer(server, config.Mode == GanacheMode, sequencerInboxWatcher)
 	forwarderServer := NewForwarderServer(server, ethServer, config.Mode)
 
 	if config.Tracing {
