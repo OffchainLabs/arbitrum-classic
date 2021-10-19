@@ -117,7 +117,7 @@ Follow the following steps to get your token set up to use the Generic Custom Ga
 
 **0. Have an L1 token**
 
-- You token on L1 should conform to the [ICustomToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/libraries/gateway/ICustomGateway.md) interface; (see [TestCustomTokenL1](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-peripherals/contracts/tokenbridge/test/TestCustomTokenL1.sol) for an example implementation). Crucially, it must have an `isArbitrumEnabled` method in its interface.
+- Your token on L1 should conform to the [ICustomToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/ICustomToken.md) interface; (see [TestCustomTokenL1](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-peripherals/contracts/tokenbridge/test/TestCustomTokenL1.sol) for an example implementation). Crucially, it must have an `isArbitrumEnabled` method in its interface.
 
 **1. Deploy your token on Arbitrum**
 
