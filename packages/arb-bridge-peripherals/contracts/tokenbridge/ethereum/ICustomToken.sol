@@ -32,7 +32,8 @@ interface ICustomToken is ArbitrumEnabledToken {
      */
     function registerTokenOnL2(
         address l2CustomTokenAddress,
-        uint256 maxSubmissionCost,
+        uint256 maxSubmissionCostForCustomBridge,
+        uint256 maxSubmissionCostForRouter,
         uint256 maxGas,
         uint256 gasPriceBid,
         address creditBackAddress
