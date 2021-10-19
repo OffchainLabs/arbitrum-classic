@@ -385,6 +385,16 @@ export class Bridge {
     return this.l1Bridge.deposit(depositInput, overrides)
   }
 
+  public async estimateGasDeposit(
+    params: DepositParams | DepositInputParams,
+    overrides: PayableOverrides = {}
+  ) {
+    const depositInput: DepositParams = isDepositInputParams(params)
+      ? await this.getDepositTxParams(params)
+      : params
+    return this.l1Bridge.estimateGasDeposit(depositInput, overrides)
+  }
+
   public async getL1EthBalance(): Promise<BigNumber> {
     return this.l1Bridge.getL1EthBalance()
   }
@@ -648,9 +658,14 @@ export class Bridge {
    * Return receipt of retryable transaction after execution
    */
   public async waitForRetryableReceipt(
-    seqNum: BigNumber
+    seqNum: BigNumber,
+    confirmations?: number
   ): Promise<TransactionReceipt> {
-    return BridgeHelper.waitForRetryableReceipt(seqNum, this.l2Provider)
+    return BridgeHelper.waitForRetryableReceipt(
+      seqNum,
+      this.l2Provider,
+      confirmations
+    )
   }
 
   /**
