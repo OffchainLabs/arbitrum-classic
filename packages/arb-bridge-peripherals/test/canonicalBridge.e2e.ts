@@ -361,13 +361,7 @@ describe('Bridge peripherals end-to-end', () => {
     const name = await l2Token.name()
     const symbol = await l2Token.symbol()
 
-    assert.equal(
-      name,
-      '4d616b6572000000000000000000000000000000000000000000000000000000'
-    )
-    assert.equal(
-      symbol,
-      '4d4b520000000000000000000000000000000000000000000000000000000000'
-    )
+    assert.equal(name, 'Maker')
+    assert.equal(symbol, 'MKR')
   })
 })

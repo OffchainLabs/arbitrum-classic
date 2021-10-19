@@ -19,7 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
-import "arb-bridge-eth/contracts/libraries/DebugPrint.sol";
+import "hardhat/console.sol";
 
 library BytesParser {
     using BytesLib for bytes;
@@ -35,13 +35,32 @@ library BytesParser {
         }
     }
 
-    function toString(bytes memory input) internal pure returns (bool success, string memory res) {
+    function toString(bytes memory input) internal view returns (bool success, string memory res) {
         if (input.length == 0) {
             success = false;
             // return default value of string
         } else if (input.length == 32) {
             success = true;
-            res = DebugPrint.bytes32string(input.toBytes32(0));
+            // here we assume its a null terminated Bytes32 string
+            // https://github.com/ethereum/solidity/blob/5852972ec148bc041909400affc778dee66d384d/test/libsolidity/semanticTests/externalContracts/_stringutils/stringutils.sol#L89
+            // https://github.com/Arachnid/solidity-stringutils
+            // TODO: can validate anything other than length and being null terminated?
+
+            uint256 len = 32;
+            while (input[len - 1] == bytes1(0x00)) {
+                len--;
+            }
+
+            bytes memory foo = new bytes(len);
+
+            for (uint8 i = 0; i < len; i++) {
+                foo[i] = input[i];
+            }
+            // we can't just do `res := input` because of the null values in the end
+            // TODO: can we instead use a bitwise AND? build it dynamically with the length
+            assembly {
+                res := foo
+            }
         } else {
             // TODO: try catch to handle error
             success = true;
