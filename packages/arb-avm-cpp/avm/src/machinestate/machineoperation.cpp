@@ -992,15 +992,9 @@ static Buffer convert_string_to_buffer(const std::string& s) {
     return Buffer::fromData(v);
 }
 
-const static std::unordered_map<std::string, int> OPEARTOR_ARITY = {
-    {"add_cipher_cipher", 2},
-    {"add_cipher_plain", 2},
-    {"sub_cipher_cipher", 2},
-    {"sub_cipher_plain", 2},
-    {"encrypt", 1},
-    {"decrypt", 1},
-    {"compare_cipher_cipher", 2},
-    {"compare_cipher_plain", 2}};
+int get_arity(const std::string& op) {
+    return int(op[op.size() - 1] - '0');
+}
 
 void ecall(MachineState& m) {
     m.stack.prepForMod(1);
@@ -1060,30 +1054,27 @@ void ecall(MachineState& m) {
     std::string method_string = "operator";
     std::ostringstream oss;
 
-    if (OPEARTOR_ARITY.count(operator_string)) {
-        oss << operator_string << "," << OPEARTOR_ARITY.at(operator_string)
-            << ",";
+    int arity = get_arity(operator_string);
+    oss << operator_string << "," << arity << ",";
 
-        switch (OPEARTOR_ARITY.at(operator_string)) {
-            case 1:
-                oss << arg1;
-                break;
-            case 2:
-                oss << arg1 << "," << arg2;
-                break;
-            case 3:
-                oss << arg1 << "," << arg2 << "," << arg3;
-                break;
-            default:
-                std::cerr << "[TEESDK] arity of " << arg1 << " is "
-                          << OPEARTOR_ARITY.at(arg1)
-                          << ", it is not supported now" << std::endl;
-                m.stack.popClear();
-                // Returns a empty Buffer
-                m.stack.push(Tuple(0, Buffer()));
-                ++m.pc;
-                return;
-        }
+    switch (arity) {
+        case 1:
+            oss << arg1;
+            break;
+        case 2:
+            oss << arg1 << "," << arg2;
+            break;
+        case 3:
+            oss << arg1 << "," << arg2 << "," << arg3;
+            break;
+        default:
+            std::cerr << "[TEESDK] arity of " << operator_string << " is "
+                      << arity << ", it is not supported now" << std::endl;
+            m.stack.popClear();
+            // Returns a empty Buffer
+            m.stack.push(Tuple(0, Buffer()));
+            ++m.pc;
+            return;
     }
 
     if (result == 0) {
