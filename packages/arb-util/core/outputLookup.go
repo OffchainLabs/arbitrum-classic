@@ -20,7 +20,6 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -42,7 +41,7 @@ type ArbOutputLookup interface {
 	GetDelayedMessageCount() (*big.Int, error)
 	GetTotalDelayedMessagesSequenced() (*big.Int, error)
 
-	GetMachineAtBlock(uint64, bool) (machine.Machine, error)
+	GetExecutionCursorAtBlock(uint64, bool) (ExecutionCursor, error)
 }
 
 type InMemoryOutputLookup struct {

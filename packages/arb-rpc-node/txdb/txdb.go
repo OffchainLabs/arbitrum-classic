@@ -525,10 +525,15 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if cachedSnap != nil {
 		return cachedSnap, nil
 	}
-	mach, err := db.Lookup.GetMachineAtBlock(info.Header.Number.Uint64(), db.allowSlowLookup)
-	if err != nil || mach == nil {
+	cursor, err := db.Lookup.GetExecutionCursorAtBlock(info.Header.Number.Uint64(), db.allowSlowLookup)
+	if err != nil {
 		return nil, err
 	}
+	mach, err := db.Lookup.TakeMachine(cursor)
+	if err != nil {
+		return nil, err
+	}
+
 	currentTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(info.Header.Number)),
 		Timestamp: new(big.Int).SetUint64(info.Header.Time),

@@ -3248,19 +3248,6 @@ rocksdb::Status ArbCore::deleteSideloadsStartingAt(
     return s;
 }
 
-ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineAtBlock(
-    const uint256_t& block_number,
-    bool allow_slow_lookup) {
-    auto cursor = getExecutionCursorAtBlock(block_number, allow_slow_lookup);
-    if (std::holds_alternative<rocksdb::Status>(cursor)) {
-        return {std::get<rocksdb::Status>(cursor), nullptr};
-    }
-
-    ReadSnapshotTransaction tx(data_storage);
-    return {rocksdb::Status::OK(), takeExecutionCursorMachineImpl(
-                                       tx, std::get<ExecutionCursor>(cursor))};
-}
-
 uint64_t seconds_since_epoch() {
     return std::chrono::duration_cast<std::chrono::seconds>(
                std::chrono::system_clock::now().time_since_epoch())

@@ -44,6 +44,8 @@ type ArbCore struct {
 	storage *ArbStorage
 }
 
+const slowLookupErrorString = "missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )"
+
 func NewArbCore(c unsafe.Pointer, storage *ArbStorage) *ArbCore {
 	// ArbCore has same lifetime as ArbStorage, no need to have finalizer
 	// Keeping a reference to ArbStorage makes sure that ArbCore isn't
@@ -509,33 +511,11 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	return true, nil
 }
 
-func (ac *ArbCore) GetMachineAtBlock(blockNumber uint64, allowSlowLookup bool) (machine.Machine, error) {
-	CallowSlowLookup := 0
-	if allowSlowLookup {
-		CallowSlowLookup = 1
-	}
-	cMachineResult := C.arbCoreGetMachineAtBlock(ac.c, C.uint64_t(blockNumber), C.int(CallowSlowLookup))
-
-	if cMachineResult.slow_error == 1 {
-		return nil, errors.Errorf("missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )")
-	}
-
-	if cMachineResult.machine == nil {
-		return nil, errors.Errorf("error getting machine for sideload")
-	}
-
-	return WrapCMachine(cMachineResult.machine), nil
-}
-
 func (ac *ArbCore) GetExecutionCursorAtBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
-	CallowSlowLookup := 0
-	if allowSlowLookup {
-		CallowSlowLookup = 1
-	}
-	cExecutionCursorResult := C.arbCoreGetExecutionCursorAtBlock(ac.c, C.uint64_t(blockNumber), C.int(CallowSlowLookup))
+	cExecutionCursorResult := C.arbCoreGetExecutionCursorAtBlock(ac.c, C.uint64_t(blockNumber), boolToCInt(allowSlowLookup))
 
 	if cExecutionCursorResult.slow_error == 1 {
-		return nil, errors.Errorf("missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )")
+		return nil, errors.Errorf(slowLookupErrorString)
 	}
 
 	if cExecutionCursorResult.execution_cursor == nil {

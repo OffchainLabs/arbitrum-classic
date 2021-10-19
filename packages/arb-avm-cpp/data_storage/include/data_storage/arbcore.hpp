@@ -431,9 +431,6 @@ class ArbCore {
     std::variant<rocksdb::Status, ExecutionCursor> getExecutionCursorAtBlock(
         const uint256_t& block_number,
         bool allow_slow_lookup);
-    ValueResult<std::unique_ptr<Machine>> getMachineAtBlock(
-        const uint256_t& block_number,
-        bool allow_slow_lookup);
 
     ValueResult<uint256_t> getGasAtBlock(ReadTransaction& tx,
                                          const uint256_t& block_number);

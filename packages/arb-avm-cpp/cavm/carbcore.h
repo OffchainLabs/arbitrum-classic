@@ -109,9 +109,6 @@ CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr);
 Uint256Result arbCoreGetLastMachineTotalGas(CArbCore* arbcore_ptr);
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr);
-CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
-                                        uint64_t block_number,
-                                        int allow_slow_lookup);
 CExecutionCursorResult arbCoreGetExecutionCursorAtBlock(CArbCore* arbcore_ptr,
                                                         uint64_t block_number,
                                                         int allow_slow_lookup);
