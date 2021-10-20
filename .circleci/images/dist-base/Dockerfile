@@ -21,7 +21,7 @@ FROM debian:bullseye-slim as debian
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y curl \
-    node-ws vim-tiny libatomic1 \
+    node-ws vim-tiny libatomic1 python3 \
     libgmp10 libssl1.1 \
     libjemalloc2 \
     libgflags2.2 libsnappy1v5 libzstd1  && \
