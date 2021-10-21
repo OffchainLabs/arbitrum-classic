@@ -18,12 +18,7 @@ if (!args.l1TokenAddress) {
     'Include l1TokenAddress arg (--l1TokenAddress 0xmytokenaddress)'
   )
 }
-if (!args.amount) {
-  throw new Error('Include amount arg (--amount 123)')
-}
-
-const { l1TokenAddress: l1TokenAddress, amount } = args
-const amountBigNum = BigNumber.from(amount)
+const { l1TokenAddress: l1TokenAddress } = args
 
 const main = async () => {
   const { bridge } = await instantiateBridge(privKey, privKey)
@@ -86,12 +81,6 @@ const main = async () => {
   if (walletBal.eq(constants.Zero)) {
     throw new Error(`${walletAddress} has no Ether to pay for gas`)
   }
-  /* check token bal */
-  if (l1TokenData.balance.lt(amountBigNum)) {
-    throw new Error(
-      `Insufficient token balance for deposit; you tried depositing ${amount} but you only have ${l1TokenData.balance.toString()}`
-    )
-  }
 
   /* check token not yet deployed */
   const l2TokenAddress = await bridge.l1Bridge.getERC20L2Address(l1TokenAddress)
@@ -117,7 +106,7 @@ const main = async () => {
   }
   const depositParams = {
     erc20L1Address: l1TokenAddress,
-    amount: amountBigNum,
+    amount: BigNumber.from(0),
   }
   /* check for required gas */
   const gasNeeded = await bridge.estimateGasDeposit(depositParams)

@@ -26,9 +26,6 @@ const argv = yargs(process.argv.slice(2))
     l1TokenAddress: {
       type: 'string',
     },
-    amount: {
-      type: 'number',
-    },
     txid: {
       type: 'string',
     },
