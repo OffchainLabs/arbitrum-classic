@@ -226,11 +226,12 @@ export class BridgeHelper {
 
   static waitForRetryableReceipt = async (
     seqNum: BigNumber,
-    l2Provider: Provider
+    l2Provider: Provider,
+    confirmations?: number
   ): Promise<TransactionReceipt> => {
     const l2RetryableHash =
       await BridgeHelper.calculateL2RetryableTransactionHash(seqNum, l2Provider)
-    return l2Provider.waitForTransaction(l2RetryableHash)
+    return l2Provider.waitForTransaction(l2RetryableHash, confirmations)
   }
 
   static getL2Transaction = async (
