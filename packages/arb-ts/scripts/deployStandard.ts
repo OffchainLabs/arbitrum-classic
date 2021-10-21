@@ -110,8 +110,9 @@ const main = async () => {
   }
   /* check for required gas */
   const gasNeeded = await bridge.estimateGasDeposit(depositParams)
-
-  if (gasNeeded.gt(walletBal)) {
+  const { maxFeePerGas } = await bridge.l1Provider.getFeeData()
+  const fee = maxFeePerGas.mul(gasNeeded)
+  if (fee.gt(walletBal)) {
     throw new Error(
       `An estimated ${utils.formatEther(
         gasNeeded
