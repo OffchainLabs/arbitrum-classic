@@ -1255,8 +1255,8 @@ void ArbCore::operator()() {
                         last_machine->machine_state.output.arb_gas_used;
                     for (uint64_t i = 0; i < coreConfig.test_load_count; i++) {
                         std::cerr << "Loading machine " << i << std::endl;
-                        auto current_execution =
-                            getClosestExecutionCursor(tx, target_gas, true);
+                        auto current_execution = findCloserExecutionCursor(
+                            tx, std::nullopt, target_gas, true);
                         if (std::holds_alternative<rocksdb::Status>(
                                 current_execution)) {
                             std::cerr
@@ -2064,8 +2064,8 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     {
         ReadSnapshotTransaction tx(data_storage);
 
-        auto closest_checkpoint =
-            getClosestExecutionCursor(tx, total_gas_used, allow_slow_lookup);
+        auto closest_checkpoint = findCloserExecutionCursor(
+            tx, std::nullopt, total_gas_used, allow_slow_lookup);
         if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
             std::cerr << "No execution machine available" << std::endl;
             return {std::get<rocksdb::Status>(closest_checkpoint), nullptr};
@@ -2095,12 +2095,13 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     auto total_gas_used = current_gas + max_gas;
     {
         ReadSnapshotTransaction tx(data_storage);
-        auto status =
-            findCloserExecutionCursor(tx, execution_cursor, current_gas,
-                                      total_gas_used, allow_slow_lookup);
-        if (!status.ok()) {
-            return status;
+        auto result = findCloserExecutionCursor(
+            tx, execution_cursor, total_gas_used, allow_slow_lookup);
+        if (std::holds_alternative<rocksdb::Status>(result)) {
+            return std::get<rocksdb::Status>(result);
         }
+
+        execution_cursor = std::get<ExecutionCursor>(result);
     }
 
     return advanceExecutionCursorImpl(
@@ -2226,8 +2227,8 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
         if (handle_reorg) {
             ReadSnapshotTransaction tx(data_storage);
 
-            auto closest_checkpoint = getClosestExecutionCursor(
-                tx, total_gas_used, allow_slow_lookup);
+            auto closest_checkpoint = findCloserExecutionCursor(
+                tx, std::nullopt, total_gas_used, allow_slow_lookup);
             if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
                 std::cerr << "No execution machine available" << std::endl;
                 return std::get<rocksdb::Status>(closest_checkpoint);
@@ -2248,28 +2249,19 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
 }
 
 std::variant<rocksdb::Status, ExecutionCursor>
-ArbCore::getClosestExecutionCursor(ReadTransaction& tx,
-                                   uint256_t& total_gas_used,
-                                   bool allow_slow_lookup) {
-    ExecutionCursor execution_cursor{nullptr};
-    auto status = findCloserExecutionCursor(tx, execution_cursor, std::nullopt,
-                                            total_gas_used, allow_slow_lookup);
-    if (!status.ok()) {
-        return status;
-    }
-
-    return execution_cursor;
-}
-
-rocksdb::Status ArbCore::findCloserExecutionCursor(
+ArbCore::findCloserExecutionCursor(
     ReadTransaction& tx,
-    ExecutionCursor& execution_cursor,
-    std::optional<uint256_t> current_gas,
+    std::optional<ExecutionCursor> execution_cursor,
     uint256_t& total_gas_used,
     bool allow_slow_lookup) {
-    if (current_gas == total_gas_used) {
-        // Nothing needs to be done
-        return rocksdb::Status::OK();
+    std::optional<uint256_t> existing_gas_used;
+    if (execution_cursor.has_value()) {
+        existing_gas_used = execution_cursor.value().getOutput().arb_gas_used;
+
+        if (existing_gas_used.value() == total_gas_used) {
+            // Nothing needs to be done
+            return rocksdb::Status::OK();
+        }
     }
 
     std::optional<MachineStateKeys> database_machine_state_keys;
@@ -2288,20 +2280,25 @@ rocksdb::Status ArbCore::findCloserExecutionCursor(
     }
 
     auto mach = combined_machine_cache.atOrBeforeGas(
-        total_gas_used, current_gas, database_gas, true);
+        total_gas_used, existing_gas_used, database_gas, true);
 
-    if (mach.machine != nullptr) {
-        // Use checkpoint from cache
-        execution_cursor = ExecutionCursor(std::move(mach.machine));
-    } else if (mach.status == CombinedMachineCache::UseDatabase) {
-        // Use checkpoint from database
-        execution_cursor = ExecutionCursor(database_machine_state_keys.value());
-    } else if (mach.status == CombinedMachineCache::TooMuchExecution) {
-        // Too much execution required to get to requested gas amount
+    switch (mach.status) {
+        case CombinedMachineCache::Success:
+            return ExecutionCursor(std::move(mach.machine));
+        case CombinedMachineCache::UseDatabase:
+            return ExecutionCursor(database_machine_state_keys.value());
+        case CombinedMachineCache::TooMuchExecution:
+            return rocksdb::Status::NotFound();
+        case CombinedMachineCache::UseExisting:
+        case CombinedMachineCache::NotFound:
+            break;
+    }
+
+    if (!execution_cursor.has_value()) {
         return rocksdb::Status::NotFound();
     }
 
-    return rocksdb::Status::OK();
+    return execution_cursor.value();
 }
 
 std::variant<rocksdb::Status, ExecutionCursor>
@@ -2317,8 +2314,8 @@ ArbCore::getExecutionCursorAtBlock(const uint256_t& block_number,
         }
         gas_target = gas_used_result.data;
 
-        auto closest_checkpoint =
-            getClosestExecutionCursor(tx, gas_target, allow_slow_lookup);
+        auto closest_checkpoint = findCloserExecutionCursor(
+            tx, std::nullopt, gas_target, allow_slow_lookup);
         if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
             return std::get<rocksdb::Status>(closest_checkpoint);
         }
