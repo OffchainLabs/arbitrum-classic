@@ -3,6 +3,7 @@ import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 import dotenv from 'dotenv'
 import args from './getCLargs'
 import { constants, BigNumber, utils } from 'ethers'
+import { L1TokenData } from '../src'
 
 dotenv.config()
 
@@ -31,11 +32,9 @@ const main = async () => {
   // TODO: check blacklist
 
   /* Looks like an L1 token: */
+  let l1TokenData: L1TokenData | undefined
   try {
-    await l1Token.symbol()
-    await l1Token.name()
-    await l1Token.decimals()
-    await l1Token.balanceOf(walletAddress)
+    l1TokenData = await bridge.l1Bridge.getL1TokenData(l1TokenAddress)
   } catch (err) {
     console.warn(`${l1TokenAddress} doesn't look like an L1 ERC20 token`)
     throw err
@@ -46,10 +45,9 @@ const main = async () => {
     throw new Error(`${walletAddress} has no Ether to pay for gas`)
   }
   /* check token bal */
-  const tokenBal = await l1Token.balanceOf(walletAddress)
-  if (tokenBal.lte(amountBigNum)) {
+  if (l1TokenData.balance.lt(amountBigNum)) {
     throw new Error(
-      `Insufficient token balance for deposit; you tried depositing ${amount} but you only have ${tokenBal.toString()}`
+      `Insufficient token balance for deposit; you tried depositing ${amount} but you only have ${l1TokenData.balance.toString()}`
     )
   }
 
@@ -64,19 +62,9 @@ const main = async () => {
       `${l1TokenAddress} already deployed on L2 at ${l2TokenAddress}`
     )
   }
-  /* check allowance */
-
-  const isAllowed = await (async () => {
-    const gatewayAddress = await bridge.l1Bridge.getGatewayAddress(
-      l1TokenAddress
-    )
-    return (await l1Token.allowance(walletAddress, gatewayAddress)).gte(
-      amountBigNum
-    )
-  })()
 
   /* set allowance */
-  if (!isAllowed) {
+  if (!l1TokenData.allowed) {
     console.log('Setting allowance on gateway')
 
     const res = await bridge.approveToken(l1TokenAddress)
