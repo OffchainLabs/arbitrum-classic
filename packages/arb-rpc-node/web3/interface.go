@@ -31,6 +31,14 @@ type GetBlockResult struct {
 	L1BlockNumber *hexutil.Big `json:"l1BlockNumber"`
 }
 
+type EthCallOverride struct {
+	Nonce     *hexutil.Uint64              `json:"nonce"`
+	Code      *hexutil.Bytes               `json:"code"`
+	Balance   *hexutil.Big                 `json:"balance"`
+	State     *map[common.Hash]common.Hash `json:"state"`
+	StateDiff *map[common.Hash]common.Hash `json:"stateDiff"`
+}
+
 type CallTxArgs struct {
 	From       *common.Address `json:"from"`
 	To         *common.Address `json:"to"`
