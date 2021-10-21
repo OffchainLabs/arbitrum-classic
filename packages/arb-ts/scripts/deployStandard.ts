@@ -57,7 +57,7 @@ const main = async () => {
     })()
     console.log()
     console.log(
-      `${l1TokenAddress} is ${description}; it will likely have unusual behavior when deployed as as standard token to Arbitrum. It is not recommended that you deploy it.`
+      `${l1TokenAddress} is ${description}; it will likely have unusual behavior when deployed as as standard token to Arbitrum. It is not recommended that you deploy it. (See https://developer.offchainlabs.com/docs/bridging_assets for more info.)`
     )
     console.log()
 
