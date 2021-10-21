@@ -48,8 +48,8 @@ Bridging new a token to L2 (i.e., deploying a new token contract) through the st
 
 Required CL params:
 `networkID`:number — Chain ID of L1 network
-`l1_token_address`:string — address of L1 token to be bridged
+`l1TokenAddress`:string — address of L1 token to be bridged
 `amount`:number — token amount to bridge for initial deposit. Raw amount will be used (i.e., not adjusted for decimals) (any non-zero amount will work)
 
 Ex:
-`yarn bridgeStandardToken --networkID 4 --l1_token_address 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
+`yarn bridgeStandardToken --networkID 4 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`

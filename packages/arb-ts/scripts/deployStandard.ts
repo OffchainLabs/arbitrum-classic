@@ -12,16 +12,16 @@ if (!privKey) {
   throw new Error('Set PRIVKEY env variable')
 }
 
-if (!args.l1_token_address) {
+if (!args.l1TokenAddress) {
   throw new Error(
-    'Include l1_token_address arg (--l1_token_address 0xmytokenaddress)'
+    'Include l1TokenAddress arg (--l1TokenAddress 0xmytokenaddress)'
   )
 }
 if (!args.amount) {
   throw new Error('Include amount arg (--amount 123)')
 }
 
-const { l1_token_address: l1TokenAddress, amount } = args
+const { l1TokenAddress: l1TokenAddress, amount } = args
 const amountBigNum = BigNumber.from(amount)
 
 const main = async () => {

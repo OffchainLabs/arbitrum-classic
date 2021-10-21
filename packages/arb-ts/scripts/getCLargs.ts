@@ -23,7 +23,7 @@ const argv = yargs(process.argv.slice(2))
     address: {
       type: 'string',
     },
-    l1_token_address: {
+    l1TokenAddress: {
       type: 'string',
     },
     amount: {
