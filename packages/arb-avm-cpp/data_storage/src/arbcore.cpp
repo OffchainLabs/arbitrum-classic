@@ -2096,7 +2096,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     {
         ReadSnapshotTransaction tx(data_storage);
         auto result = findCloserExecutionCursor(
-            tx, execution_cursor, total_gas_used, allow_slow_lookup);
+            tx, std::move(execution_cursor), total_gas_used, allow_slow_lookup);
         if (std::holds_alternative<rocksdb::Status>(result)) {
             return std::get<rocksdb::Status>(result);
         }
@@ -2260,7 +2260,7 @@ ArbCore::findCloserExecutionCursor(
 
         if (existing_gas_used.value() == total_gas_used) {
             // Nothing needs to be done
-            return rocksdb::Status::OK();
+            return execution_cursor.value();
         }
     }
 
