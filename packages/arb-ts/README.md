@@ -44,7 +44,7 @@ Bridging new a token to L2 (i.e., deploying a new token contract) through the st
 
 1. `cd packages/arb-ts`
 
-1. Set `PRIVKEY` environmental variable to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
+1. Set `PRIVKEY` environmental variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
 
 1. `yarn bridgeStandardToken`
 
