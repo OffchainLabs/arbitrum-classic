@@ -38,13 +38,15 @@ Bridging new a token to L2 (i.e., deploying a new token contract) through the st
 
 1. clone `arbitrum` monorepo
 
-2. `yarn install` (from root)
+1. `git submodule update --init --recursive`
 
-3. `cd packages/arb-ts`
+1. `yarn install` (from root)
 
-4. Set `PRIVKEY` environmental variable to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
+1. `cd packages/arb-ts`
 
-5. `yarn bridgeStandardToken`
+1. Set `PRIVKEY` environmental variable to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
+
+1. `yarn bridgeStandardToken`
 
 Required CL params:
 `networkID`:number — Chain ID of L1 network
