@@ -38,6 +38,14 @@ const main = async () => {
     throw err
   }
 
+  /** Check if disabled */
+  const isDisabled = await bridge.l1Bridge.tokenIsDisabled(l1TokenAddress)
+  if (isDisabled) {
+    console.log(`Deploying ${l1TokenAddress} is currently disabled`)
+    return
+  }
+
+  /* Handle warning tokens */
   const warningTokens = (
     await axios.get(
       'https://raw.githubusercontent.com/OffchainLabs/arb-token-lists/master/src/WarningList/warningTokens.json'
