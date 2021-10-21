@@ -4,7 +4,8 @@ import dotenv from 'dotenv'
 import args from './getCLargs'
 import { constants, BigNumber, utils } from 'ethers'
 import { L1TokenData } from '../src'
-
+import axios from 'axios'
+import prompt from 'prompts'
 dotenv.config()
 
 const privKey = process.env.PRIVKEY as string
@@ -28,9 +29,6 @@ const main = async () => {
   const { bridge } = await instantiateBridge(privKey, privKey)
   const walletAddress = await bridge.l1Bridge.getWalletAddress()
 
-  const l1Token = ERC20__factory.connect(l1TokenAddress, bridge.l1Provider)
-  // TODO: check blacklist
-
   /* Looks like an L1 token: */
   let l1TokenData: L1TokenData | undefined
   try {
@@ -39,6 +37,42 @@ const main = async () => {
     console.warn(`${l1TokenAddress} doesn't look like an L1 ERC20 token`)
     throw err
   }
+
+  const warningTokens = (
+    await axios.get(
+      'https://raw.githubusercontent.com/OffchainLabs/arb-token-lists/master/src/WarningList/warningTokens.json'
+    )
+  ).data
+  const warningToken = warningTokens[l1TokenAddress]
+  if (warningToken) {
+    const description = (() => {
+      switch (warningToken.type) {
+        case 0:
+          return 'a supply rebasing token'
+        case 1:
+          return 'an interest accruing token'
+        default:
+          return 'a non-standard ERC20 token'
+      }
+    })()
+    console.log()
+    console.log(
+      `${l1TokenAddress} is ${description}; it will likely have unusual behavior when deployed as as standard token to Arbitrum. It is not recommended that you deploy it.`
+    )
+    console.log()
+
+    const res = await prompt({
+      type: 'confirm',
+      name: 'value',
+      message: 'Are you sure you would like to proceed?',
+      initial: true,
+    })
+    if (!res.value) {
+      console.log('Good decision; terminating 👋')
+      return
+    }
+  }
+
   /* check that you have some eth */
   const walletBal = await bridge.l1Provider.getBalance(walletAddress)
   if (walletBal.eq(constants.Zero)) {

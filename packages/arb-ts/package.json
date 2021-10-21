@@ -41,8 +41,10 @@
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@types/prompts": "^2.0.14",
     "dotenv": "^10.0.0",
-    "ethers": "^5.1.0"
+    "ethers": "^5.1.0",
+    "prompts": "^2.4.2"
   },
   "resolutions": {
     "@ethersproject/bignumber": "^5.1.1"
