@@ -25,18 +25,15 @@ library BytesParser {
 
     function toUint8(bytes memory input) internal pure returns (bool success, uint8 res) {
         if (input.length != 32) {
-            success = false;
-            // return the default value of uint8
-        } else {
-            uint256 inputNum = abi.decode(input, (uint256));
-            if (inputNum > type(uint8).max) {
-                // success is false by default
-            } else {
-                // TODO: try catch to handle error
-                res = uint8(inputNum);
-                success = true;
-            }
+            return (false, 0);
         }
+        // TODO: try catch to handle error
+        uint256 inputNum = abi.decode(input, (uint256));
+        if (inputNum > type(uint8).max) {
+            return (false, 0);
+        }
+        res = uint8(inputNum);
+        success = true;
     }
 
     function toString(bytes memory input) internal pure returns (bool success, string memory res) {
