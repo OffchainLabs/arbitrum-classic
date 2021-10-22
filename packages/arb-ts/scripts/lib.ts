@@ -72,6 +72,12 @@ export const validateGateway = async (
   tokenAddress: string,
   gatewayAddress: string
 ): Promise<void> => {
+  if (
+    gatewayAddress == '0x0000000000000000000000000000000000000000' ||
+    gatewayAddress == '0x0000000000000000000000000000000000000001'
+  ) {
+    return
+  }
   try {
     const gateway = await ITokenGateway__factory.connect(
       gatewayAddress,
