@@ -49,6 +49,41 @@ MachineState mkWasmMachine(WasmResult res, std::string fname) {
 }
 
 TEST_CASE("Wasm") {
+    SECTION("Making compiler machine") {
+        RunWasm runner(wasm_compile_path);
+        auto buf = getFile(wasm_compile_path);
+        auto res = runner.run_wasm(vec2buf(buf), buf.size());
+
+        std::string test_file = wasm_test_path;
+
+        auto m = mkWasmMachine(res, test_file);
+        std::cerr << "Running machine " << "\n";
+        auto start = std::chrono::system_clock::now();
+        runWasmMachine(m);
+        auto end = std::chrono::system_clock::now();
+
+        std::cerr << "Result stack " << m.stack[0] << "\n";
+        std::cerr << "Result stack " << m.stack[1] << "\n";
+        std::cerr << "Result stack " << m.stack[2] << "\n";
+
+        std::cerr << "Table " << hash_value(m.stack[4]) << " \n";
+        std::cerr << "Codepoint " << hash_value(m.stack[3]) << " \n";
+
+        std::chrono::duration<double> elapsed_seconds = end-start;
+
+        std::cerr << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
+        auto buf2 = getFile(test_file);
+        auto res2 = runner.run_wasm(vec2buf(buf2), buf2.size());
+
+        CodeResult cres = wasmAvmToCode(res2);
+        std::cerr << "Made table " << hash_value(cres.table) << " \n";
+        std::cerr << "Codepoint " << hash_value(cres.stub) << " \n";
+
+        REQUIRE(hash_value(m.stack[4]) == hash_value(cres.table));
+        REQUIRE(hash_value(m.stack[3]) == hash_value(cres.stub));
+
+    }
     SECTION("Test env functions") {
         for (int i = 0; i < 11; i++) {
             RunWasm runner(wasm_compile_path);
@@ -99,40 +134,5 @@ TEST_CASE("Wasm") {
         }
     }
 
-    SECTION("Making compiler machine") {
-        RunWasm runner(wasm_compile_path);
-        auto buf = getFile(wasm_compile_path);
-        auto res = runner.run_wasm(vec2buf(buf), buf.size());
-
-        std::string test_file = wasm_test_path;
-
-        auto m = mkWasmMachine(res, test_file);
-        std::cerr << "Running machine " << "\n";
-        auto start = std::chrono::system_clock::now();
-        runWasmMachine(m);
-        auto end = std::chrono::system_clock::now();
-
-        std::cerr << "Result stack " << m.stack[0] << "\n";
-        std::cerr << "Result stack " << m.stack[1] << "\n";
-        std::cerr << "Result stack " << m.stack[2] << "\n";
-
-        std::cerr << "Table " << hash_value(m.stack[4]) << " \n";
-        std::cerr << "Codepoint " << hash_value(m.stack[3]) << " \n";
-
-        std::chrono::duration<double> elapsed_seconds = end-start;
-
-        std::cerr << "elapsed time: " << elapsed_seconds.count() << "s\n";
-
-        auto buf2 = getFile(test_file);
-        auto res2 = runner.run_wasm(vec2buf(buf2), buf2.size());
-
-        CodeResult cres = wasmAvmToCode(res2);
-        std::cerr << "Made table " << hash_value(cres.table) << " \n";
-        std::cerr << "Codepoint " << hash_value(cres.stub) << " \n";
-
-        REQUIRE(hash_value(m.stack[4]) == hash_value(cres.table));
-        REQUIRE(hash_value(m.stack[3]) == hash_value(cres.stub));
-
-    }
 }
 
