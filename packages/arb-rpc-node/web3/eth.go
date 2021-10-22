@@ -17,7 +17,6 @@
 package web3
 
 import (
-	"bytes"
 	"context"
 	"math/big"
 
@@ -404,35 +403,17 @@ func (s *Server) TraceTransaction(txHash hexutil.Bytes) (interface{}, error) {
 	receipt := res.ToEthReceipt(arbcommon.NewHashFromEth(info.Header.Hash()))
 	_ = receipt
 
-	blockRes, err := s.GetBlockByHash(receipt.BlockHash.Bytes(), true)
-	txs, ok := blockRes.Transactions.([]*TransactionResult)
-	if !ok {
-		logger.
-			Error().
-			Str("txHash", txHash.String()).
-			Hex("blockHash", receipt.BlockHash.Bytes()).
-			Msg("traceTransaction missing transactions in block")
-		return nil, errors.New("block missing transactions")
-	}
-
-	currentBlockIndex := 0
-	for currentBlockIndex < len(txs) && !bytes.Equal(txs[currentBlockIndex].Hash.Bytes(), txHash) {
-	}
-
-	gasBefore := new(big.Int).Sub(res.CumulativeGas, res.GasUsed)
-	cursor, err := s.srv.GetExecutionCursor(gasBefore, true)
+	cursor, err := s.srv.GetExecutionCursorAtBlock(receipt.BlockNumber.Uint64(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	if cursor.TotalGasConsumed().Cmp(gasBefore) != 0 {
-		logger.
-			Error().
-			Uint64("gasbefore", gasBefore.Uint64()).
-			Uint64("cursorgasconsumed", cursor.TotalGasConsumed().Uint64()).
-			Msg("cursor before trace used too much gas")
-		return nil, errors.New("cursor before trace used too much gas")
+	gasBefore := receipt.CumulativeGasUsed - receipt.GasUsed
+	err = s.srv.AdvanceExecutionCursor(cursor, big.NewInt(int64(gasBefore)), false, true)
+	if err != nil {
+		return nil, err
 	}
+
 	debugPrints, err := s.srv.AdvanceExecutionCursorWithTracing(cursor, res.GasUsed, false, true)
 	if err != nil {
 		return nil, err
