@@ -1,8 +1,1 @@
-{
-  "StandardArbERC20": {
-    "address": "0x3f770Ac673856F105b586bb393d122721265aD46",
-    "deployTxn": "0xc7006f7e9f716a73ecee7e2939adacf84a122345dca581ed1f78c06be5cd8a5a",
-    "arbitrumCommitHash": "7ac9347a41ece951af883d435cbe7d8e84329e36",
-    "buildInfo": ""
-  }
-}
+{}
