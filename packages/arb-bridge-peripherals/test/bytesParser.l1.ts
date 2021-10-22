@@ -29,7 +29,7 @@ describe('Bridge peripherals layer 1', () => {
   let testBytesParser: Awaited<typeof deployment>
 
   before(async function () {
-    testBytesParser = await testBytesParser
+    testBytesParser = await deployment
   })
 
   it('should fail on empty data', async function () {
