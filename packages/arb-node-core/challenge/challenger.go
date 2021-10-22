@@ -3,6 +3,7 @@ package challenge
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -97,7 +98,12 @@ func (c *Challenger) HandleConflict(ctx context.Context) (Move, error) {
 			// Get new lookup
 			fmt.Printf("Found wasm test, making new lookup\n")
 			coreConfig := configuration.DefaultCoreSettings()
-			storage, err := cmachine.NewArbStorage("/tmp/arbStorage2", coreConfig)
+			dir, err := ioutil.TempDir("/tmp", "arb-storage-")
+			if err != nil {
+				return nil, err
+			}
+
+			storage, err := cmachine.NewArbStorage(dir, coreConfig)
 			fmt.Printf("Found wasm test, making new lookup ??? %v\n", err)
 			storage.InitializeForWasm((machine).(cmachine.ExtendedMachine))
 			arbCore := storage.GetArbCore()
@@ -189,7 +195,12 @@ func (c *Challenger) handleChallenge(
 			// Get new lookup
 			fmt.Printf("Found wasm test, making new lookup\n")
 			coreConfig := configuration.DefaultCoreSettings()
-			storage, err := cmachine.NewArbStorage("/tmp/arbStorage", coreConfig)
+			dir, err := ioutil.TempDir("/tmp", "arb-storage-")
+			if err != nil {
+				return nil, err
+			}
+
+			storage, err := cmachine.NewArbStorage(dir, coreConfig)
 			storage.InitializeForWasm((*machine).(cmachine.ExtendedMachine))
 			arbCore := storage.GetArbCore()
 			arbCore.StartThread()
