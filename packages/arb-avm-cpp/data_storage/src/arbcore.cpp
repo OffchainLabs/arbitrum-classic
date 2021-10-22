@@ -53,11 +53,6 @@ constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-120};
 }  // namespace
 
-void DebugPrints::clear() {
-    debug_prints.clear();
-    count = 0;
-};
-
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
                  ArbCoreConfig coreConfig_)
     : coreConfig(std::move(coreConfig_)),
@@ -2124,11 +2119,11 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     return rocksdb::Status::OK();
 }
 
-ValueResult<DebugPrints> ArbCore::getDebugPrints(
-    ExecutionCursor& execution_cursor,
-    uint256_t max_gas,
-    bool go_over_gas,
-    bool allow_slow_lookup) {
+ValueResult<std::vector<MachineEmission<value>>>
+ArbCore::advanceExecutionCursorWithTracing(ExecutionCursor& execution_cursor,
+                                           uint256_t max_gas,
+                                           bool go_over_gas,
+                                           bool allow_slow_lookup) {
     auto current_gas = execution_cursor.getOutput().arb_gas_used;
     auto total_gas_used = current_gas + max_gas;
 
@@ -2140,7 +2135,8 @@ ValueResult<DebugPrints> ArbCore::getDebugPrints(
         return {std::get<rocksdb::Status>(result), {}};
     }
 
-    return {rocksdb::Status::OK(), std::get<DebugPrints>(result)};
+    return {rocksdb::Status::OK(),
+            std::get<std::vector<MachineEmission<value>>>(result)};
 }
 
 MachineState& resolveExecutionVariant(std::unique_ptr<Machine>& mach) {
@@ -2180,17 +2176,17 @@ std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachine(
     return takeExecutionCursorMachineImpl(tx, execution_cursor);
 }
 
-std::variant<rocksdb::Status, DebugPrints> ArbCore::advanceExecutionCursorImpl(
-    ExecutionCursor& execution_cursor,
-    uint256_t total_gas_used,
-    bool go_over_gas,
-    size_t message_group_size,
-    bool allow_slow_lookup,
-    bool save_debug_prints) {
+std::variant<rocksdb::Status, std::vector<MachineEmission<value>>>
+ArbCore::advanceExecutionCursorImpl(ExecutionCursor& execution_cursor,
+                                    uint256_t total_gas_used,
+                                    bool go_over_gas,
+                                    size_t message_group_size,
+                                    bool allow_slow_lookup,
+                                    bool save_debug_prints) {
     auto handle_reorg = true;
     size_t reorg_attempts = 0;
     uint256_t orig_gas_used = execution_cursor.getOutput().arb_gas_used;
-    DebugPrints debug_prints_data;
+    std::vector<MachineEmission<value>> debug_prints;
     while (handle_reorg) {
         handle_reorg = false;
         if (reorg_attempts > 0) {
@@ -2258,11 +2254,9 @@ std::variant<rocksdb::Status, DebugPrints> ArbCore::advanceExecutionCursorImpl(
             auto assertion = mach->run();
             if (save_debug_prints &&
                 (mach->machine_state.output.arb_gas_used > orig_gas_used)) {
-                for (const auto& debug_print : assertion.debug_prints) {
-                    marshal_value(debug_print.val,
-                                  debug_prints_data.debug_prints);
-                    debug_prints_data.count++;
-                }
+                debug_prints.insert(debug_prints.end(),
+                                    assertion.debug_prints.begin(),
+                                    assertion.debug_prints.end());
             }
             if (assertion.gas_count == 0) {
                 break;
@@ -2287,7 +2281,7 @@ std::variant<rocksdb::Status, DebugPrints> ArbCore::advanceExecutionCursorImpl(
             }
             execution_cursor =
                 std::move(std::get<ExecutionCursor>(closest_checkpoint));
-            debug_prints_data.clear();
+            debug_prints.clear();
         }
     }
 
@@ -2299,7 +2293,7 @@ std::variant<rocksdb::Status, DebugPrints> ArbCore::advanceExecutionCursorImpl(
     }
 
     if (save_debug_prints) {
-        return debug_prints_data;
+        return debug_prints;
     }
 
     return rocksdb::Status::OK();

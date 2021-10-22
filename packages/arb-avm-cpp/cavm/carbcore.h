@@ -105,7 +105,7 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   const void* max_gas_ptr,
                                   int go_over_gas,
                                   int allow_slow_lookup);
-ByteSliceCountResult arbCoreGetDebugPrints(
+ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     CArbCore* arbcore_ptr,
     CExecutionCursor* execution_cursor_ptr,
     const void* max_gas_ptr,

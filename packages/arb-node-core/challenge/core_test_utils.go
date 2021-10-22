@@ -100,7 +100,7 @@ func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor,
 	return c.ArbCore.AdvanceExecutionCursor(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
-func (c FaultyCore) GetDebugPrints(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error) {
+func (c FaultyCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error) {
 	faultyCursor := executionCursor.(FaultyExecutionCursor)
 	targetGas := new(big.Int).Add(executionCursor.TotalGasConsumed(), maxGas)
 	if c.config.StallMachineAt != nil && targetGas.Cmp(c.config.StallMachineAt) > 0 {
@@ -111,7 +111,7 @@ func (c FaultyCore) GetDebugPrints(executionCursor core.ExecutionCursor, maxGas 
 			return nil, nil
 		}
 	}
-	return c.ArbCore.GetDebugPrints(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup)
+	return c.ArbCore.AdvanceExecutionCursorWithTracing(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
 func (c FaultyCore) GetLastMachine() (machine.Machine, error) {

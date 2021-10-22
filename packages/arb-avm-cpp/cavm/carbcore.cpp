@@ -545,7 +545,7 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     }
 }
 
-ByteSliceCountResult arbCoreGetDebugPrints(
+ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     CArbCore* arbcore_ptr,
     CExecutionCursor* execution_cursor_ptr,
     const void* max_gas_ptr,
@@ -555,14 +555,20 @@ ByteSliceCountResult arbCoreGetDebugPrints(
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     auto max_gas = receiveUint256(max_gas_ptr);
     try {
-        auto result = arbCore->getDebugPrints(*executionCursor, max_gas,
-                                              go_over_gas, allow_slow_lookup);
+        auto result = arbCore->advanceExecutionCursorWithTracing(
+            *executionCursor, max_gas, go_over_gas, allow_slow_lookup);
         if (!result.status.ok()) {
             return {{}, false};
         }
 
-        return {{returnCharVector(result.data.debug_prints), result.data.count},
-                1};
+        std::vector<unsigned char> debug_print_data;
+        int debug_print_count = 0;
+        for (const auto& debug_print : result.data) {
+            marshal_value(debug_print.val, debug_print_data);
+            debug_print_count++;
+        }
+
+        return {{returnCharVector(debug_print_data), debug_print_count}, 1};
     } catch (const std::exception& e) {
         std::cerr << "Exception while advancing execution cursor " << e.what()
                   << std::endl;

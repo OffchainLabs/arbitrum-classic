@@ -433,7 +433,7 @@ func (s *Server) TraceTransaction(txHash hexutil.Bytes) (interface{}, error) {
 			Msg("cursor before trace used too much gas")
 		return nil, errors.New("cursor before trace used too much gas")
 	}
-	debugPrints, err := s.srv.GetDebugPrints(cursor, res.GasUsed, false, true)
+	debugPrints, err := s.srv.AdvanceExecutionCursorWithTracing(cursor, res.GasUsed, false, true)
 	if err != nil {
 		return nil, err
 	}

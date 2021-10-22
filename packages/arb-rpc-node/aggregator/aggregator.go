@@ -168,8 +168,8 @@ func (m *Server) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, ma
 	return m.db.Lookup.AdvanceExecutionCursor(executionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
-func (m *Server) GetDebugPrints(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error) {
-	return m.db.Lookup.GetDebugPrints(executionCursor, maxGas, goOverGas, allowSlowLookup)
+func (m *Server) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error) {
+	return m.db.Lookup.AdvanceExecutionCursorWithTracing(executionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
 func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
