@@ -17,16 +17,19 @@
 /* eslint-env node, mocha */
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
-import { TestBytesParser } from '../build/types/TestBytesParser'
+
+type Awaited<T> = T extends PromiseLike<infer U> ? U : T
 
 const sample = 'abcdefghijklmnopqrstuvwxyz'.repeat(10)
 
 describe('Bridge peripherals layer 1', () => {
-  let testBytesParser: TestBytesParser
+  const TestBytesParser = ethers.getContractFactory('TestBytesParser')
+  const deployment = TestBytesParser.then(factory => factory.deploy())
+  // the before hook always awaits for this
+  let testBytesParser: Awaited<typeof deployment>
 
   before(async function () {
-    const TestBytesParser = await ethers.getContractFactory('TestBytesParser')
-    testBytesParser = await TestBytesParser.deploy()
+    testBytesParser = await testBytesParser
   })
 
   it('should fail on empty data', async function () {
@@ -81,25 +84,24 @@ describe('Bridge peripherals layer 1', () => {
 
   it('should handle proper uint8s', async function () {
     const sampleSize = 20
-    const [min, max] = [ 0, 256 ]
+    const [min, max] = [0, 256]
     const randVals = Array(sampleSize + 1)
       .fill(0)
       .map(_ => Math.floor(Math.random() * (max - min) + min))
 
     const inputs = [...randVals, 0, 1, 254, 255]
-    
+
     const encoded = inputs.map(input =>
       ethers.utils.defaultAbiCoder.encode(['uint8'], [input])
     )
 
-    for(const i in encoded) {
+    for (const i in encoded) {
       const input = encoded[i]
       const expectedOutput = inputs[i]
       const [success, actualOutput] = await testBytesParser.bytesToUint8(input)
       expect(success).to.be.true
       expect(actualOutput).to.equal(expectedOutput)
     }
-
   })
 
   it('should handle overflow uint8', async function () {
