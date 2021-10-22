@@ -26,4 +26,8 @@ contract TestBytesParser {
     {
         return BytesParser.toString(input);
     }
+
+    function bytesToUint8(bytes memory input) public pure returns (bool, uint8) {
+        return BytesParser.toUint8(input);
+    }
 }
