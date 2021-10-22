@@ -53,14 +53,14 @@ library BytesParser {
                 len--;
             }
 
-            bytes memory foo = new bytes(len);
+            bytes memory inputTruncated = new bytes(len);
             for (uint8 i = 0; i < len; i++) {
-                foo[i] = input[i];
+                inputTruncated[i] = input[i];
             }
             // we can't just do `res := input` because of the null values in the end
             // TODO: can we instead use a bitwise AND? build it dynamically with the length
             assembly {
-                res := foo
+                res := inputTruncated
             }
         } else {
             // TODO: try catch to handle error
