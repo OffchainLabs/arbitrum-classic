@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface IOutboxInterface extends ethers.utils.Interface {
   functions: {
@@ -102,6 +102,24 @@ interface IOutboxInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'OutBoxTransactionExecuted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboxEntryCreated'): EventFragment
 }
+
+export type OutBoxTransactionExecutedEvent = TypedEvent<
+  [string, string, BigNumber, BigNumber] & {
+    destAddr: string
+    l2Sender: string
+    outboxEntryIndex: BigNumber
+    transactionIndex: BigNumber
+  }
+>
+
+export type OutboxEntryCreatedEvent = TypedEvent<
+  [BigNumber, BigNumber, string, BigNumber] & {
+    batchNum: BigNumber
+    outboxEntryIndex: BigNumber
+    outputRoot: string
+    numInBatch: BigNumber
+  }
+>
 
 export class IOutbox extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -220,6 +238,21 @@ export class IOutbox extends BaseContract {
   }
 
   filters: {
+    'OutBoxTransactionExecuted(address,address,uint256,uint256)'(
+      destAddr?: string | null,
+      l2Sender?: string | null,
+      outboxEntryIndex?: BigNumberish | null,
+      transactionIndex?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, BigNumber],
+      {
+        destAddr: string
+        l2Sender: string
+        outboxEntryIndex: BigNumber
+        transactionIndex: BigNumber
+      }
+    >
+
     OutBoxTransactionExecuted(
       destAddr?: string | null,
       l2Sender?: string | null,
@@ -232,6 +265,21 @@ export class IOutbox extends BaseContract {
         l2Sender: string
         outboxEntryIndex: BigNumber
         transactionIndex: BigNumber
+      }
+    >
+
+    'OutboxEntryCreated(uint256,uint256,bytes32,uint256)'(
+      batchNum?: BigNumberish | null,
+      outboxEntryIndex?: null,
+      outputRoot?: null,
+      numInBatch?: null
+    ): TypedEventFilter<
+      [BigNumber, BigNumber, string, BigNumber],
+      {
+        batchNum: BigNumber
+        outboxEntryIndex: BigNumber
+        outputRoot: string
+        numInBatch: BigNumber
       }
     >
 

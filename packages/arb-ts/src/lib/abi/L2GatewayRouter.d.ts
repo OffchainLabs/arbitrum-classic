@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface L2GatewayRouterInterface extends ethers.utils.Interface {
   functions: {
@@ -137,6 +137,32 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TransferRouted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL1'): EventFragment
 }
+
+export type DefaultGatewayUpdatedEvent = TypedEvent<
+  [string] & { newDefaultGateway: string }
+>
+
+export type GatewaySetEvent = TypedEvent<
+  [string, string] & { l1Token: string; gateway: string }
+>
+
+export type TransferRoutedEvent = TypedEvent<
+  [string, string, string, string] & {
+    token: string
+    _userFrom: string
+    _userTo: string
+    gateway: string
+  }
+>
+
+export type TxToL1Event = TypedEvent<
+  [string, string, BigNumber, string] & {
+    _from: string
+    _to: string
+    _id: BigNumber
+    _data: string
+  }
+>
 
 export class L2GatewayRouter extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -403,14 +429,33 @@ export class L2GatewayRouter extends BaseContract {
   }
 
   filters: {
+    'DefaultGatewayUpdated(address)'(
+      newDefaultGateway?: null
+    ): TypedEventFilter<[string], { newDefaultGateway: string }>
+
     DefaultGatewayUpdated(
       newDefaultGateway?: null
     ): TypedEventFilter<[string], { newDefaultGateway: string }>
+
+    'GatewaySet(address,address)'(
+      l1Token?: string | null,
+      gateway?: string | null
+    ): TypedEventFilter<[string, string], { l1Token: string; gateway: string }>
 
     GatewaySet(
       l1Token?: string | null,
       gateway?: string | null
     ): TypedEventFilter<[string, string], { l1Token: string; gateway: string }>
+
+    'TransferRouted(address,address,address,address)'(
+      token?: string | null,
+      _userFrom?: string | null,
+      _userTo?: string | null,
+      gateway?: null
+    ): TypedEventFilter<
+      [string, string, string, string],
+      { token: string; _userFrom: string; _userTo: string; gateway: string }
+    >
 
     TransferRouted(
       token?: string | null,
@@ -420,6 +465,16 @@ export class L2GatewayRouter extends BaseContract {
     ): TypedEventFilter<
       [string, string, string, string],
       { token: string; _userFrom: string; _userTo: string; gateway: string }
+    >
+
+    'TxToL1(address,address,uint256,bytes)'(
+      _from?: string | null,
+      _to?: string | null,
+      _id?: BigNumberish | null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string],
+      { _from: string; _to: string; _id: BigNumber; _data: string }
     >
 
     TxToL1(

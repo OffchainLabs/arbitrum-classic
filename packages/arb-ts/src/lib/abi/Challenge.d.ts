@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface ChallengeInterface extends ethers.utils.Interface {
   functions: {
@@ -207,6 +207,25 @@ interface ChallengeInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'InitiatedChallenge'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OneStepProofCompleted'): EventFragment
 }
+
+export type AsserterTimedOutEvent = TypedEvent<[] & {}>
+
+export type BisectedEvent = TypedEvent<
+  [string, BigNumber, BigNumber, string[]] & {
+    challengeRoot: string
+    challengedSegmentStart: BigNumber
+    challengedSegmentLength: BigNumber
+    chainHashes: string[]
+  }
+>
+
+export type ChallengerTimedOutEvent = TypedEvent<[] & {}>
+
+export type ContinuedExecutionProvenEvent = TypedEvent<[] & {}>
+
+export type InitiatedChallengeEvent = TypedEvent<[] & {}>
+
+export type OneStepProofCompletedEvent = TypedEvent<[] & {}>
 
 export class Challenge extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -504,7 +523,24 @@ export class Challenge extends BaseContract {
   }
 
   filters: {
+    'AsserterTimedOut()'(): TypedEventFilter<[], {}>
+
     AsserterTimedOut(): TypedEventFilter<[], {}>
+
+    'Bisected(bytes32,uint256,uint256,bytes32[])'(
+      challengeRoot?: BytesLike | null,
+      challengedSegmentStart?: null,
+      challengedSegmentLength?: null,
+      chainHashes?: null
+    ): TypedEventFilter<
+      [string, BigNumber, BigNumber, string[]],
+      {
+        challengeRoot: string
+        challengedSegmentStart: BigNumber
+        challengedSegmentLength: BigNumber
+        chainHashes: string[]
+      }
+    >
 
     Bisected(
       challengeRoot?: BytesLike | null,
@@ -521,11 +557,19 @@ export class Challenge extends BaseContract {
       }
     >
 
+    'ChallengerTimedOut()'(): TypedEventFilter<[], {}>
+
     ChallengerTimedOut(): TypedEventFilter<[], {}>
+
+    'ContinuedExecutionProven()'(): TypedEventFilter<[], {}>
 
     ContinuedExecutionProven(): TypedEventFilter<[], {}>
 
+    'InitiatedChallenge()'(): TypedEventFilter<[], {}>
+
     InitiatedChallenge(): TypedEventFilter<[], {}>
+
+    'OneStepProofCompleted()'(): TypedEventFilter<[], {}>
 
     OneStepProofCompleted(): TypedEventFilter<[], {}>
   }

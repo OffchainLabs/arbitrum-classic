@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface IERC721Interface extends ethers.utils.Interface {
   functions: {
@@ -93,6 +93,30 @@ interface IERC721Interface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'ApprovalForAll'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Transfer'): EventFragment
 }
+
+export type ApprovalEvent = TypedEvent<
+  [string, string, BigNumber] & {
+    _owner: string
+    _approved: string
+    _tokenId: BigNumber
+  }
+>
+
+export type ApprovalForAllEvent = TypedEvent<
+  [string, string, boolean] & {
+    _owner: string
+    _operator: string
+    _approved: boolean
+  }
+>
+
+export type TransferEvent = TypedEvent<
+  [string, string, BigNumber] & {
+    _from: string
+    _to: string
+    _tokenId: BigNumber
+  }
+>
 
 export class IERC721 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -292,6 +316,15 @@ export class IERC721 extends BaseContract {
   }
 
   filters: {
+    'Approval(address,address,uint256)'(
+      _owner?: string | null,
+      _approved?: string | null,
+      _tokenId?: BigNumberish | null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { _owner: string; _approved: string; _tokenId: BigNumber }
+    >
+
     Approval(
       _owner?: string | null,
       _approved?: string | null,
@@ -301,6 +334,15 @@ export class IERC721 extends BaseContract {
       { _owner: string; _approved: string; _tokenId: BigNumber }
     >
 
+    'ApprovalForAll(address,address,bool)'(
+      _owner?: string | null,
+      _operator?: string | null,
+      _approved?: null
+    ): TypedEventFilter<
+      [string, string, boolean],
+      { _owner: string; _operator: string; _approved: boolean }
+    >
+
     ApprovalForAll(
       _owner?: string | null,
       _operator?: string | null,
@@ -308,6 +350,15 @@ export class IERC721 extends BaseContract {
     ): TypedEventFilter<
       [string, string, boolean],
       { _owner: string; _operator: string; _approved: boolean }
+    >
+
+    'Transfer(address,address,uint256)'(
+      _from?: string | null,
+      _to?: string | null,
+      _tokenId?: BigNumberish | null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { _from: string; _to: string; _tokenId: BigNumber }
     >
 
     Transfer(
