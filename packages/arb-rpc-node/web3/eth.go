@@ -395,7 +395,7 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 	return s.getTransactionByBlockAndIndex(info, index)
 }
 
-func (s *Server) TraceTransaction(txHash hexutil.Bytes) (*GetTransactionReceiptResult, error) {
+func (s *Server) TraceTransaction(txHash hexutil.Bytes) (interface{}, error) {
 	res, info, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
@@ -433,7 +433,7 @@ func (s *Server) TraceTransaction(txHash hexutil.Bytes) (*GetTransactionReceiptR
 			Msg("cursor before trace used too much gas")
 		return nil, errors.New("cursor before trace used too much gas")
 	}
-	err = s.srv.AdvanceExecutionCursor(cursor, res.GasUsed, false, true)
+	debugPrints, err := s.srv.GetDebugPrints(cursor, res.GasUsed, false, true)
 	if err != nil {
 		return nil, err
 	}
@@ -445,6 +445,9 @@ func (s *Server) TraceTransaction(txHash hexutil.Bytes) (*GetTransactionReceiptR
 			Msg("cursor after trace used too much gas")
 		return nil, errors.New("cursor after trace used too much gas")
 	}
+
+	trace, err := evm.GetTrace(debugPrints)
+	_ = trace
 
 	return nil, nil
 }

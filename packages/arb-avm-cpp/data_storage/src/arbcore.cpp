@@ -53,6 +53,11 @@ constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-120};
 }  // namespace
 
+void DebugPrints::clear() {
+    debug_prints.clear();
+    count = 0;
+};
+
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
                  ArbCoreConfig coreConfig_)
     : coreConfig(std::move(coreConfig_)),
@@ -2075,15 +2080,20 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
             std::get<ExecutionCursor>(closest_checkpoint));
     }
 
-    auto status = advanceExecutionCursorImpl(
+    auto result = advanceExecutionCursorImpl(
         *execution_cursor, total_gas_used, false,
-        coreConfig.message_process_count, allow_slow_lookup);
+        coreConfig.message_process_count, allow_slow_lookup, false);
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        auto status = std::get<rocksdb::Status>(result);
+        if (!status.ok()) {
+            std::cerr << "Couldn't advance execution machine: "
+                      << status.ToString() << std::endl;
 
-    if (!status.ok()) {
-        std::cerr << "Couldn't advance execution machine" << std::endl;
+            return {status, nullptr};
+        }
     }
 
-    return {status, std::move(execution_cursor)};
+    return {rocksdb::Status::OK(), std::move(execution_cursor)};
 }
 
 rocksdb::Status ArbCore::advanceExecutionCursor(
@@ -2103,9 +2113,34 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
         }
     }
 
-    return advanceExecutionCursorImpl(
+    auto result = advanceExecutionCursorImpl(
         execution_cursor, total_gas_used, go_over_gas,
-        coreConfig.message_process_count, allow_slow_lookup);
+        coreConfig.message_process_count, allow_slow_lookup, false);
+
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        return std::get<rocksdb::Status>(result);
+    }
+
+    return rocksdb::Status::OK();
+}
+
+ValueResult<DebugPrints> ArbCore::getDebugPrints(
+    ExecutionCursor& execution_cursor,
+    uint256_t max_gas,
+    bool go_over_gas,
+    bool allow_slow_lookup) {
+    auto current_gas = execution_cursor.getOutput().arb_gas_used;
+    auto total_gas_used = current_gas + max_gas;
+
+    auto result = advanceExecutionCursorImpl(
+        execution_cursor, total_gas_used, go_over_gas,
+        coreConfig.message_process_count, allow_slow_lookup, true);
+
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        return {std::get<rocksdb::Status>(result), {}};
+    }
+
+    return {rocksdb::Status::OK(), std::get<DebugPrints>(result)};
 }
 
 MachineState& resolveExecutionVariant(std::unique_ptr<Machine>& mach) {
@@ -2145,14 +2180,17 @@ std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachine(
     return takeExecutionCursorMachineImpl(tx, execution_cursor);
 }
 
-rocksdb::Status ArbCore::advanceExecutionCursorImpl(
+std::variant<rocksdb::Status, DebugPrints> ArbCore::advanceExecutionCursorImpl(
     ExecutionCursor& execution_cursor,
     uint256_t total_gas_used,
     bool go_over_gas,
     size_t message_group_size,
-    bool allow_slow_lookup) {
+    bool allow_slow_lookup,
+    bool save_debug_prints) {
     auto handle_reorg = true;
     size_t reorg_attempts = 0;
+    uint256_t orig_gas_used = execution_cursor.getOutput().arb_gas_used;
+    DebugPrints debug_prints_data;
     while (handle_reorg) {
         handle_reorg = false;
         if (reorg_attempts > 0) {
@@ -2218,6 +2256,14 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
             mach->machine_state.context = AssertionContext(execConfig);
             auto assertion = mach->run();
+            if (save_debug_prints &&
+                (mach->machine_state.output.arb_gas_used > orig_gas_used)) {
+                for (const auto& debug_print : assertion.debug_prints) {
+                    marshal_value(debug_print.val,
+                                  debug_prints_data.debug_prints);
+                    debug_prints_data.count++;
+                }
+            }
             if (assertion.gas_count == 0) {
                 break;
             }
@@ -2226,14 +2272,22 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
         if (handle_reorg) {
             ReadSnapshotTransaction tx(data_storage);
 
+            uint256_t target_gas_used;
+            if (save_debug_prints) {
+                target_gas_used = orig_gas_used;
+            } else {
+                target_gas_used = total_gas_used;
+            }
+
             auto closest_checkpoint = getClosestExecutionCursor(
-                tx, total_gas_used, allow_slow_lookup);
+                tx, target_gas_used, allow_slow_lookup);
             if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
                 std::cerr << "No execution machine available" << std::endl;
                 return std::get<rocksdb::Status>(closest_checkpoint);
             }
             execution_cursor =
                 std::move(std::get<ExecutionCursor>(closest_checkpoint));
+            debug_prints_data.clear();
         }
     }
 
@@ -2242,6 +2296,10 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
         auto& mach =
             std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
         combined_machine_cache.lru_add(std::make_unique<Machine>(*mach));
+    }
+
+    if (save_debug_prints) {
+        return debug_prints_data;
     }
 
     return rocksdb::Status::OK();
@@ -2327,11 +2385,19 @@ ArbCore::getExecutionCursorAtBlock(const uint256_t& block_number,
             std::get<ExecutionCursor>(closest_checkpoint));
     }
 
-    auto status = advanceExecutionCursorImpl(
+    auto result = advanceExecutionCursorImpl(
         *execution_cursor, gas_target, false, coreConfig.message_process_count,
-        allow_slow_lookup);
+        allow_slow_lookup, false);
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        auto status = std::get<rocksdb::Status>(result);
+        if (!status.ok()) {
+            std::cerr << "Couldn't advance execution machine: "
+                      << status.ToString() << std::endl;
 
-    ReadSnapshotTransaction tx(data_storage);
+            return status;
+        }
+    }
+
     return *execution_cursor;
 }
 

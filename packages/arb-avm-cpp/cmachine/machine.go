@@ -189,8 +189,6 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	defer C.free(msgData.slices)
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
 
-	C.machineExecutionConfigSetInboxMessages(conf, msgData)
-
 	sideloadsData := bytesArrayToByteSliceArray(encodeInboxMessages(sideloads))
 	defer C.free(sideloadsData.slices)
 	C.machineExecutionConfigSetSideloads(conf, sideloadsData)

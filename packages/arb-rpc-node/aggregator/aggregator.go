@@ -20,11 +20,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -37,8 +32,13 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
@@ -166,6 +166,10 @@ func (m *Server) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool)
 
 func (m *Server) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
 	return m.db.Lookup.AdvanceExecutionCursor(executionCursor, maxGas, goOverGas, allowSlowLookup)
+}
+
+func (m *Server) GetDebugPrints(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error) {
+	return m.db.Lookup.GetDebugPrints(executionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
 func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {

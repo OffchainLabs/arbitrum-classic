@@ -24,6 +24,7 @@ package cmachine
 import "C"
 import (
 	"bytes"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"math/big"
 	"runtime"
 	"unsafe"
@@ -374,6 +375,21 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	}
 
 	return cursor.updateValues()
+}
+
+func (ac *ArbCore) GetDebugPrints(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error) {
+	cursor, ok := executionCursor.(*ExecutionCursor)
+	if !ok {
+		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
+	}
+	maxGasData := math.U256Bytes(maxGas)
+
+	result := C.arbCoreGetDebugPrints(ac.c, cursor.c, unsafeDataPointer(maxGasData), boolToCInt(goOverGas), boolToCInt(allowSlowLookup))
+	if result.found == 0 {
+		return nil, errors.New("failed to advance")
+	}
+
+	return protocol.BytesArrayToVals(receiveByteSlice(result.data.slice), uint64(result.data.count))
 }
 
 func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {

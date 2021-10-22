@@ -63,6 +63,13 @@ struct RawMessageInfo {
           accumulator(accumulator_) {}
 };
 
+struct DebugPrints {
+    std::vector<unsigned char> debug_prints;
+    int count;
+
+    void clear();
+};
+
 class ArbCore {
    public:
     typedef enum {
@@ -296,18 +303,23 @@ class ArbCore {
                                            uint256_t max_gas,
                                            bool go_over_gas,
                                            bool allow_slow_lookup);
+    ValueResult<DebugPrints> getDebugPrints(ExecutionCursor& execution_cursor,
+                                            uint256_t max_gas,
+                                            bool go_over_gas,
+                                            bool allow_slow_lookup);
 
     std::unique_ptr<Machine> takeExecutionCursorMachine(
         ExecutionCursor& execution_cursor);
 
    private:
     // Execution cursor internal functions
-    rocksdb::Status advanceExecutionCursorImpl(
+    std::variant<rocksdb::Status, DebugPrints> advanceExecutionCursorImpl(
         ExecutionCursor& execution_cursor,
         uint256_t total_gas_used,
         bool go_over_gas,
         size_t message_group_size,
-        bool allow_slow_lookup);
+        bool allow_slow_lookup,
+        bool save_debug_prints);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,

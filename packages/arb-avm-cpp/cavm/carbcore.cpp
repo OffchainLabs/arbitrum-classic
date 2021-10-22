@@ -545,6 +545,31 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     }
 }
 
+ByteSliceCountResult arbCoreGetDebugPrints(
+    CArbCore* arbcore_ptr,
+    CExecutionCursor* execution_cursor_ptr,
+    const void* max_gas_ptr,
+    int go_over_gas,
+    int allow_slow_lookup) {
+    auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
+    auto max_gas = receiveUint256(max_gas_ptr);
+    try {
+        auto result = arbCore->getDebugPrints(*executionCursor, max_gas,
+                                              go_over_gas, allow_slow_lookup);
+        if (!result.status.ok()) {
+            return {{}, false};
+        }
+
+        return {{returnCharVector(result.data.debug_prints), result.data.count},
+                1};
+    } catch (const std::exception& e) {
+        std::cerr << "Exception while advancing execution cursor " << e.what()
+                  << std::endl;
+        return {{}, false};
+    }
+}
+
 CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
     return static_cast<void*>(arbCore->getLastMachine().release());

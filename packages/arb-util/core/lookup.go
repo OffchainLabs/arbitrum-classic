@@ -78,6 +78,10 @@ type ArbCoreLookup interface {
 	// optionally until it reaches or goes over maxGas
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error
 
+	// GetDebugPrints executes as much as it can without going over maxGas or
+	// optionally until it reaches or goes over maxGas and returns all debug prints created
+	GetDebugPrints(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error)
+
 	// TakeMachine takes ownership of machine such that ExecutionCursor will
 	// no longer be able to advance.
 	TakeMachine(executionCursor ExecutionCursor) (machine.Machine, error)
