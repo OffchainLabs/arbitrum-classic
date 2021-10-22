@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface GatewayRouterInterface extends ethers.utils.Interface {
   functions: {
@@ -121,6 +121,23 @@ interface GatewayRouterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'GatewaySet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferRouted'): EventFragment
 }
+
+export type DefaultGatewayUpdatedEvent = TypedEvent<
+  [string] & { newDefaultGateway: string }
+>
+
+export type GatewaySetEvent = TypedEvent<
+  [string, string] & { l1Token: string; gateway: string }
+>
+
+export type TransferRoutedEvent = TypedEvent<
+  [string, string, string, string] & {
+    token: string
+    _userFrom: string
+    _userTo: string
+    gateway: string
+  }
+>
 
 export class GatewayRouter extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -312,14 +329,33 @@ export class GatewayRouter extends BaseContract {
   }
 
   filters: {
+    'DefaultGatewayUpdated(address)'(
+      newDefaultGateway?: null
+    ): TypedEventFilter<[string], { newDefaultGateway: string }>
+
     DefaultGatewayUpdated(
       newDefaultGateway?: null
     ): TypedEventFilter<[string], { newDefaultGateway: string }>
+
+    'GatewaySet(address,address)'(
+      l1Token?: string | null,
+      gateway?: string | null
+    ): TypedEventFilter<[string, string], { l1Token: string; gateway: string }>
 
     GatewaySet(
       l1Token?: string | null,
       gateway?: string | null
     ): TypedEventFilter<[string, string], { l1Token: string; gateway: string }>
+
+    'TransferRouted(address,address,address,address)'(
+      token?: string | null,
+      _userFrom?: string | null,
+      _userTo?: string | null,
+      gateway?: null
+    ): TypedEventFilter<
+      [string, string, string, string],
+      { token: string; _userFrom: string; _userTo: string; gateway: string }
+    >
 
     TransferRouted(
       token?: string | null,

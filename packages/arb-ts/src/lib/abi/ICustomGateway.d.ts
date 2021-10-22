@@ -16,7 +16,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface ICustomGatewayInterface extends ethers.utils.Interface {
   functions: {
@@ -33,6 +33,10 @@ interface ICustomGatewayInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'TokenSet'): EventFragment
 }
+
+export type TokenSetEvent = TypedEvent<
+  [string, string] & { l1Address: string; l2Address: string }
+>
 
 export class ICustomGateway extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -91,6 +95,14 @@ export class ICustomGateway extends BaseContract {
   }
 
   filters: {
+    'TokenSet(address,address)'(
+      l1Address?: string | null,
+      l2Address?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { l1Address: string; l2Address: string }
+    >
+
     TokenSet(
       l1Address?: string | null,
       l2Address?: string | null

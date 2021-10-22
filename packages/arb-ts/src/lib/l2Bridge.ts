@@ -35,15 +35,15 @@ import {
   ARB_SYS_ADDRESS,
   ARB_RETRYABLE_TX_ADDRESS,
 } from './precompile_addresses'
+import { Network } from './networks'
+import { ArbMulticall2__factory } from './abi/factories/ArbMulticall2__factory'
+import { MulticallFunctionInput, BridgeHelper } from './bridge_helpers'
 
 export interface L2TokenData {
-  ERC20?: { contract: StandardArbERC20; balance: BigNumber }
-  CUSTOM?: { contract: ICustomToken; balance: BigNumber } // Here we don't use the particlar custom token's interface; for the sake of this sdk that's fine
+  contract: StandardArbERC20
+  balance: BigNumber
 }
 
-export interface Tokens {
-  [contractAddress: string]: L2TokenData | undefined
-}
 /**
  * L2 side only of {@link Bridge}
  */
@@ -51,15 +51,14 @@ export class L2Bridge {
   l2Signer: Signer
   arbSys: ArbSys
   l2GatewayRouter: L2GatewayRouter
-  l2Tokens: Tokens
   l2Provider: Provider
   arbRetryableTx: ArbRetryableTx
   walletAddressCache?: string
+  network: Network
 
-  constructor(l2GatewayRouterAddress: string, l2Signer: Signer) {
-    this.l2Tokens = {}
-
+  constructor(network: Network, l2Signer: Signer) {
     this.l2Signer = l2Signer
+    this.network = network
 
     const l2Provider = l2Signer.provider
 
@@ -71,7 +70,7 @@ export class L2Bridge {
     this.arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Signer)
 
     this.l2GatewayRouter = L2GatewayRouter__factory.connect(
-      l2GatewayRouterAddress,
+      network.tokenBridge.l2GatewayRouter,
       l2Signer
     )
 
@@ -79,6 +78,31 @@ export class L2Bridge {
       ARB_RETRYABLE_TX_ADDRESS,
       l2Signer
     )
+  }
+
+  public async setSigner(newSigner: Signer) {
+    const newL2Provider = newSigner.provider
+    if (newL2Provider === undefined) {
+      throw new Error('Signer must be connected to an (Arbitrum) provider')
+    }
+    // check chainId to ensure its still in the same network.
+    const [prevNetwork, newNetwork] = await Promise.all([
+      this.l2Provider.getNetwork(),
+      newL2Provider.getNetwork(),
+    ])
+    if (prevNetwork.chainId !== newNetwork.chainId)
+      throw new Error('Error. New signer in L2 is a different network.')
+
+    this.l2Provider = newL2Provider
+    this.l2Signer = newSigner
+    // we need to update the cache
+    // TODO: remove this cache. can we memoize based on the signer? useCallback style
+    this.walletAddressCache = await this.l2Signer.getAddress()
+
+    // TODO: is it worth keeping contracts instantiated? we can instead have a util function
+    this.arbSys = this.arbSys.connect(newSigner)
+    this.l2GatewayRouter = this.l2GatewayRouter.connect(newSigner)
+    this.arbRetryableTx = this.arbRetryableTx.connect(newSigner)
   }
 
   /**
@@ -91,6 +115,18 @@ export class L2Bridge {
   ): Promise<ContractTransaction> {
     const address = destinationAddress || (await this.getWalletAddress())
     return this.arbSys.functions.withdrawEth(address, {
+      value,
+      ...overrides,
+    })
+  }
+
+  public async estimateGasWithdrawETH(
+    value: BigNumber,
+    destinationAddress?: string,
+    overrides: PayableOverrides = {}
+  ): Promise<BigNumber> {
+    const address = destinationAddress || (await this.getWalletAddress())
+    return this.arbSys.estimateGas.withdrawEth(address, {
       value,
       ...overrides,
     })
@@ -115,94 +151,53 @@ export class L2Bridge {
     ](erc20l1Address, to, amount, '0x', overrides)
   }
 
-  public async updateAllL2Tokens(): Promise<Tokens> {
-    for (const l1Address in this.l2Tokens) {
-      const l2Address = this.l2Tokens[l1Address]?.ERC20?.contract.address
-      if (l2Address) {
-        await this.getAndUpdateL2TokenData(l1Address, l2Address)
-      }
-    }
-    return this.l2Tokens
+  public async estimateGasWithdrawERC20(
+    erc20l1Address: string,
+    amount: BigNumber,
+    destinationAddress?: string,
+    overrides: PayableOverrides = {}
+  ): Promise<BigNumber> {
+    const to = destinationAddress || (await this.getWalletAddress())
+
+    return this.l2GatewayRouter.estimateGas[
+      'outboundTransfer(address,address,uint256,bytes)'
+    ](erc20l1Address, to, amount, '0x', overrides)
   }
 
-  public async getAndUpdateL2TokenData(
-    erc20L1Address: string,
-    l2ERC20Address: string
-  ): Promise<L2TokenData | undefined> {
-    const tokenData = this.l2Tokens[erc20L1Address] || {
-      ERC20: undefined,
-      CUSTOM: undefined,
-    }
+  public async getL2TokenData(l2ERC20Address: string): Promise<L2TokenData> {
     const walletAddress = await this.getWalletAddress()
 
-    // check if standard arb erc20:
-    if (!tokenData.ERC20) {
-      if ((await this.l2Provider.getCode(l2ERC20Address)).length > 2) {
-        const arbERC20TokenContract = await StandardArbERC20__factory.connect(
-          l2ERC20Address,
-          this.l2Signer
-        )
-        const [balance] = await arbERC20TokenContract.functions.balanceOf(
-          walletAddress
-        )
-        tokenData.ERC20 = {
-          contract: arbERC20TokenContract,
-          balance,
-        }
-      } else {
-        console.info(
-          `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed (would be at ${l2ERC20Address})`
-        )
-      }
-    } else {
-      const arbERC20TokenContract = await StandardArbERC20__factory.connect(
-        l2ERC20Address,
-        this.l2Signer
-      )
-      const [balance] = await arbERC20TokenContract.functions.balanceOf(
-        walletAddress
-      )
-      tokenData.ERC20.balance = balance
-    }
-
-    if (tokenData.ERC20 || tokenData.CUSTOM) {
-      this.l2Tokens[erc20L1Address] = tokenData
-      return tokenData
-    } else {
-      console.warn(`No L2 token for ${erc20L1Address} found`)
-      return
+    const arbERC20TokenContract = StandardArbERC20__factory.connect(
+      l2ERC20Address,
+      this.l2Signer
+    )
+    // this will throw if not a contract / ERC20
+    const [balance] = await arbERC20TokenContract.functions.balanceOf(
+      walletAddress
+    )
+    // TODO: should we include extra data? ie: `l2ERC20Address.l1Address()` and `l2GatewayRouter.getGateway(erc20L1Address)`
+    return {
+      contract: arbERC20TokenContract,
+      balance,
     }
   }
-
-  // public getERC20L2Address(erc20L1Address: string) {
-  //   let address: string | undefined
-  //   if ((address = this.l2Tokens[erc20L1Address]?.ERC20?.contract.address)) {
-  //     return address
-  //   }
-  //   return this.l2GatewayRouter.functions
-  //     .calculateL2TokenAddress(erc20L1Address)
-  //     .then(([res]) => res)
-  // }
 
   public async getGatewayAddress(erc20L1Address: string): Promise<string> {
     return (await this.l2GatewayRouter.functions.getGateway(erc20L1Address))
       .gateway
   }
 
-  public getERC20L1Address(
-    erc20L2Address: string
-  ): Promise<string> | undefined {
-    try {
-      const arbERC20 = StandardArbERC20__factory.connect(
-        erc20L2Address,
-        this.l2Signer
-      )
-      return arbERC20.functions.l1Address().then(([res]) => res)
-    } catch (e) {
-      console.warn('Could not get L1 Address')
-
-      return undefined
-    }
+  public getERC20L1Address(erc20L2Address: string): Promise<string | null> {
+    const arbERC20 = StandardArbERC20__factory.connect(
+      erc20L2Address,
+      this.l2Signer
+    )
+    return arbERC20.functions
+      .l1Address()
+      .then(([res]) => res)
+      .catch(e => {
+        return null
+      })
   }
 
   public getTxnSubmissionPrice(
@@ -221,5 +216,14 @@ export class L2Bridge {
 
   public getL2EthBalance(): Promise<BigNumber> {
     return this.l2Signer.getBalance()
+  }
+
+  public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
+    const multicall = ArbMulticall2__factory.connect(
+      this.network.tokenBridge.l2Multicall,
+      this.l2Provider
+    )
+
+    return BridgeHelper.getMulticallTryAggregate(functionCalls, multicall)
   }
 }

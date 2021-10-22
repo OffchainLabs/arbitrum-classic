@@ -31,3 +31,26 @@ Defaults to `rinkArby`, for custom network use `--network` flag.
 
 `rinkArby` expects env var `DEVNET_PRIVKEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
 (see `integration_test/config.ts`)
+
+### Bridge A Standard Token
+
+Bridging new a token to L2 (i.e., deploying a new token contract) through the standard gateway is done by simply depositing a token that hasn't yet been bridged. This repo includes a script to trigger this initial deposit/deployment:
+
+1. clone `arbitrum` monorepo
+
+1. `git submodule update --init --recursive`
+
+1. `yarn install` (from root)
+
+1. `cd packages/arb-ts`
+
+1. Set `PRIVKEY` environmental variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
+
+1. `yarn bridgeStandardToken`
+
+Required CL params:
+`networkID`:number — Chain ID of L1 network
+`l1TokenAddress`:string — address of L1 token to be bridged
+
+Ex:
+`yarn bridgeStandardToken --networkID 4 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
