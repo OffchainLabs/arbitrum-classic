@@ -47,7 +47,7 @@ library BytesParser {
             // https://github.com/ethereum/solidity/blob/5852972ec148bc041909400affc778dee66d384d/test/libsolidity/semanticTests/externalContracts/_stringutils/stringutils.sol#L89
             // https://github.com/Arachnid/solidity-stringutils
             uint256 len = 32;
-            while (input[len - 1] == bytes1(0x00)) {
+            while (len > 0 && input[len - 1] == bytes1(0x00)) {
                 len--;
             }
 
