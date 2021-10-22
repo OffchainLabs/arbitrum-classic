@@ -110,17 +110,25 @@ const main = async () => {
   }
   /* check for required gas */
   const gasNeeded = await bridge.estimateGasDeposit(depositParams)
-  const { maxFeePerGas } = await bridge.l1Provider.getFeeData()
-  const fee = maxFeePerGas.mul(gasNeeded)
-  if (fee.gt(walletBal)) {
-    throw new Error(
-      `An estimated ${utils.formatEther(
-        gasNeeded
-      )} ether is needed for deposit; you only have ${utils.formatEther(
-        walletBal
-      )} ether`
+  const { maxFeePerGas, gasPrice } = await bridge.l1Provider.getFeeData()
+  const price = maxFeePerGas || gasPrice
+  if (!price) {
+    console.log(
+      'Warning: could not get gas price estimate; will try depositing anyway'
     )
+  } else {
+    const fee = price.mul(gasNeeded)
+    if (fee.gt(walletBal)) {
+      console.log(
+        `An estimated ${utils.formatEther(
+          fee
+        )} ether is needed for deposit; you only have ${utils.formatEther(
+          walletBal
+        )} ether. Will try depositing anyway:`
+      )
+    }
   }
+
   console.log('Depositing / deploying standard token contract:')
 
   const res = await bridge.deposit(depositParams)
