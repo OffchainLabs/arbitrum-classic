@@ -84,7 +84,7 @@ func executeChallenge(
 	turn := ethbridge.CHALLENGER_TURN
 	rounds := 0
 	for {
-		t.Logf("####################################### executing challenge round %v", rounds)
+		t.Logf("\n\n####################################### Executing challenge round %v", rounds)
 		checkTurn(t, challenge, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
 			move, err := challenger.HandleConflict(ctx)

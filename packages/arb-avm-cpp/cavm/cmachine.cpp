@@ -134,10 +134,8 @@ COneStepProof machineMarshallForProof(CMachine* m) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     auto osp = mach->marshalForProof();
-    // std::cerr << "buffer proof " << osp.buffer_proof.size() << "\n";
     auto standard = returnCharVector(osp.standard_proof);
     auto buf = returnCharVector(osp.buffer_proof);
-    // std::cerr << "buffer proof " << osp.buffer_proof.size() << "\n";
     return {standard, buf};
 }
 

@@ -879,7 +879,7 @@ void log(MachineState& m) {
 
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
-    std::cerr << "Debug print: " << m.stack[0] << "\n";
+    // std::cerr << "Debug print: " << m.stack[0] << "\n";
     m.context.debug_prints.push_back(m.stack.pop());
     ++m.pc;
 }
@@ -1012,14 +1012,13 @@ void wasm_compile(MachineState& m) {
 void wasm_run(MachineState& m) {
     m.stack.prepForMod(4);
     value arg = m.stack[0];
-    // std::cerr << "arg: " << arg << "\n";
     auto len = assumeInt64(assumeInt(m.stack[1]));
     Buffer& md = assumeBuffer(m.stack[2]);
     WasmCodePoint& wasmcp = assumeWasm(m.stack[3]);
     auto res = wasmcp.runner->run_wasm(md, len, arg);
     m.arb_gas_remaining += res.gas_left;
     m.output.arb_gas_used -= res.gas_left;
-    std::cerr << "Gas left: " << res.gas_left << " res len " << res.buffer_len << " arg " << arg << "\n";
+    // std::cerr << "Gas left: " << res.gas_left << " res len " << res.buffer_len << " arg " << arg << "\n";
     Tuple tpl = Tuple(res.buffer_len, res.buffer);
     m.stack.popClear();
     m.stack.popClear();

@@ -74,16 +74,13 @@ func (c *Challenger) HandleConflict(ctx context.Context) (Move, error) {
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Printf("Lookup bisection %v\n", prevBisection)
-
-	// challengeImpl := ExecutionImpl{}
 
 	segment, err := c.challenge.LookupContinue(ctx, challengeState)
 	if err != nil {
 		return nil, err
 	}
 	if segment != nil {
-		fmt.Printf("Lookup subobligation start %v\n", segment)
+		logger.Debug().Str("segment", fmt.Sprintf("%v", segment)).Msg("Lookup subobligation start")
 		opcode, machine, err := OneStepProofMachine(
 			ctx,
 			c.challenge,
@@ -94,9 +91,9 @@ func (c *Challenger) HandleConflict(ctx context.Context) (Move, error) {
 		if err != nil {
 			return nil, err
 		}
-		if opcode == 241 || opcode == 167 || opcode == 168 {
+		if opcode == 167 || opcode == 168 {
 			// Get new lookup
-			fmt.Printf("Found wasm test, making new lookup\n")
+			logger.Debug().Msg("Found wasm instruction, making new lookup")
 			coreConfig := configuration.DefaultCoreSettings()
 			dir, err := ioutil.TempDir("/tmp", "arb-storage-")
 			if err != nil {
@@ -104,7 +101,6 @@ func (c *Challenger) HandleConflict(ctx context.Context) (Move, error) {
 			}
 
 			storage, err := cmachine.NewArbStorage(dir, coreConfig)
-			fmt.Printf("Found wasm test, making new lookup ??? %v\n", err)
 			storage.InitializeForWasm((machine).(cmachine.ExtendedMachine))
 			arbCore := storage.GetArbCore()
 			arbCore.StartThread()
@@ -191,9 +187,9 @@ func (c *Challenger) handleChallenge(
 			sequencerInbox,
 			lookup,
 		)
-		if opcode == 241 || opcode == 167 || opcode == 168 {
+		if opcode == 167 || opcode == 168 {
 			// Get new lookup
-			fmt.Printf("Found wasm test, making new lookup\n")
+			logger.Debug().Msg("Found wasm instruction, making new lookup")
 			coreConfig := configuration.DefaultCoreSettings()
 			dir, err := ioutil.TempDir("/tmp", "arb-storage-")
 			if err != nil {

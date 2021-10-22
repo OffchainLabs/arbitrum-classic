@@ -3,7 +3,6 @@ package challenge
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	// 	"github.com/docker/docker/daemon/logger"
@@ -85,7 +84,6 @@ func FindFirstDivergence(lookup core.ArbCoreLookup, assertion *core.Assertion, o
 		SegmentSteps:     big.NewInt(0),
 		EndIsUnreachable: false,
 	}
-	// fmt.Printf("search divergence %v cuts %v\n", offsets, cuts)
 	execTracker := core.NewExecutionTracker(lookup, true, offsets, true)
 	lastSteps := big.NewInt(0)
 	for i, offset := range offsets {
@@ -94,7 +92,6 @@ func FindFirstDivergence(lookup core.ArbCoreLookup, assertion *core.Assertion, o
 			return errRes, err
 		}
 		if localCut != cuts[i] {
-			fmt.Printf("Found divergence %v localcut %v opponent %v offsset %v\n", i, localCut, cuts[i], offset)
 			return DivergenceInfo{
 				DifferentIndex:   i,
 				SegmentSteps:     new(big.Int).Sub(newSteps, lastSteps),
@@ -103,7 +100,6 @@ func FindFirstDivergence(lookup core.ArbCoreLookup, assertion *core.Assertion, o
 		}
 		lastSteps = newSteps
 	}
-	fmt.Printf("no divergence %v cuts %v\n", offsets, cuts)
 	return errRes, errors.New("no divergence found in cuts")
 }
 
@@ -156,11 +152,7 @@ func (m *BisectMove) MarshalJSON() ([]byte, error) {
 }
 
 func (m *BisectMove) execute(ctx context.Context, challenge *ethbridge.Challenge) error {
-	/*logger.Info().
-	Str("start", m.inconsistentSegment.Start.String()).
-	Str("end", m.inconsistentSegment.GetEnd().String()).
-	Msg("Bisecting challenge") */
-	fmt.Printf("bisecting %v\n", m.subCuts)
+	logger.Info().Str("start", m.inconsistentSegment.Start.String()).Str("end", m.inconsistentSegment.GetEnd().String()).Msg("Bisecting challenge")
 	return challenge.BisectExecution(
 		ctx,
 		m.prevBisection,
@@ -296,8 +288,6 @@ func (m *OneStepProofMove) execute(ctx context.Context, challenge *ethbridge.Cha
 	opcode := m.proofData[0]
 	logger.Info().Int("opcode", int(opcode)).Str("gas", m.previousCut.TotalGasConsumed.String()).Msg("Issuing one step proof")
 
-	// fmt.Printf("buffer %v, op %v\n", bufferProofData, opcode)
-
 	return challenge.OneStepProveExecution(
 		ctx,
 		m.prevBisection,
@@ -322,14 +312,12 @@ func OneStepProofMachine(
 		return 0, nil, err
 	}
 
-	proofData, bufferProofData, err := previousMachine.MarshalForProof()
+	proofData, _, err := previousMachine.MarshalForProof()
 	if err != nil {
 		return 0, nil, err
 	}
 
 	opcode := proofData[0]
-
-	fmt.Printf("buffer %v, op %v\n", bufferProofData, opcode)
 
 	return opcode, previousMachine, nil
 }
@@ -348,14 +336,12 @@ func OneStepProofInfo(
 		return 0, nil, err
 	}
 
-	proofData, bufferProofData, err := previousMachine.MarshalForProof()
+	proofData, _, err := previousMachine.MarshalForProof()
 	if err != nil {
 		return 0, nil, err
 	}
 
 	opcode := proofData[0]
-
-	fmt.Printf("buffer %v, op %v\n", bufferProofData, opcode)
 
 	return opcode, previousMachine, nil
 }
