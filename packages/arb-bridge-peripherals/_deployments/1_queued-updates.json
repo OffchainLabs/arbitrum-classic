@@ -1,14 +1,8 @@
 {
   "L1GatewayRouter": {
-    "address": "0x32f39fa08c1e0bba551cbda4197e543c53b3fc53",
-    "deployTxn": "0x0db4fd99600533113346de3a6081d83d103fe3d4ab4f58dff80a91365aa67616",
-    "arbitrumCommitHash": "8eb4685d3e44fa059901e423a70e6dd5c80508a3",
-    "buildInfo": ""
-  },
-  "L1CustomGateway": {
-    "address": "0xcD224c5dC33e059C661fba01FaE2843b7d707362",
-    "deployTxn": "0xf832f17c433a45d4ece2adf29865a8c44c5e5340b9f2f0e006991aa38efb97f8",
-    "arbitrumCommitHash": "8eb4685d3e44fa059901e423a70e6dd5c80508a3",
+    "address": "0x2e8e3e55cE12F981EbF8E545Cb263aB238e19715",
+    "deployTxn": "0xc5e2fd78cf99985d15f2aa175ec56e69728a1eac7497bad4aa95af761fc38496",
+    "arbitrumCommitHash": "7ac9347a41ece951af883d435cbe7d8e84329e36",
     "buildInfo": ""
   }
 }
