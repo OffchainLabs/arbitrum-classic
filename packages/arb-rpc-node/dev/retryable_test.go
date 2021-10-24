@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
@@ -113,7 +114,7 @@ func TestRetryableRedeem(t *testing.T) {
 	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
 
@@ -127,7 +128,7 @@ func TestRetryableRedeem(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		enableRewrites(t, backend, srv, ownerAuth)
+		enableRewrites(t, srv, ownerAuth)
 	}
 
 	retryableTx, requestId := setupTicket(t, backend, sender, common.NewAddressFromEth(dest), simpleABI.Methods["exists"].ID, common.NewAddressFromEth(beneficiaryAuth.From))
@@ -274,13 +275,13 @@ func TestRetryableCancel(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		enableRewrites(t, backend, srv, ownerAuth)
+		enableRewrites(t, srv, ownerAuth)
 	}
 
 	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
 
@@ -321,13 +322,13 @@ func TestRetryableTimeout(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		enableRewrites(t, backend, srv, ownerAuth)
+		enableRewrites(t, srv, ownerAuth)
 	}
 
 	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
 
@@ -442,7 +443,7 @@ func TestRetryableReverted(t *testing.T) {
 	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
@@ -452,7 +453,7 @@ func TestRetryableReverted(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		enableRewrites(t, backend, srv, ownerAuth)
+		enableRewrites(t, srv, ownerAuth)
 	}
 
 	retryableTx := message.RetryableTx{
@@ -490,7 +491,7 @@ func TestRetryableWithReturnData(t *testing.T) {
 	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
@@ -515,7 +516,7 @@ func TestRetryableWithReturnData(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		enableRewrites(t, backend, srv, ownerAuth)
+		enableRewrites(t, srv, ownerAuth)
 	}
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
@@ -549,7 +550,7 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
@@ -574,7 +575,7 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		enableRewrites(t, backend, srv, ownerAuth)
+		enableRewrites(t, srv, ownerAuth)
 	}
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
@@ -596,7 +597,7 @@ func TestRetryableImmediateNoGas(t *testing.T) {
 	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
@@ -621,7 +622,7 @@ func TestRetryableImmediateNoGas(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		enableRewrites(t, backend, srv, ownerAuth)
+		enableRewrites(t, srv, ownerAuth)
 	}
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
@@ -651,7 +652,7 @@ func TestRetryableSeparateReceipts(t *testing.T) {
 	sender, beneficiaryAuth, otherAuth, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
@@ -676,7 +677,7 @@ func TestRetryableSeparateReceipts(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		enableRewrites(t, backend, srv, ownerAuth)
+		enableRewrites(t, srv, ownerAuth)
 	}
 
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
@@ -696,7 +697,7 @@ func TestRetryableEmptyDest(t *testing.T) {
 	sender, beneficiaryAuth, _, ownerAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	retryableTx := message.RetryableTx{
 		Destination:       common.Address{},
@@ -715,7 +716,7 @@ func TestRetryableEmptyDest(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, ownerAuth)
-		enableRewrites(t, backend, srv, ownerAuth)
+		enableRewrites(t, srv, ownerAuth)
 	}
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
@@ -731,7 +732,7 @@ func TestRetryableEmptyDest(t *testing.T) {
 	test.FailIfError(t, err)
 }
 
-func checkRetryableCreationTx(t *testing.T, client *web3.EthClient, retryableTx message.RetryableTx, requestId common.Hash) {
+func checkRetryableCreationTx(t *testing.T, client *ethclient.Client, retryableTx message.RetryableTx, requestId common.Hash) {
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
@@ -777,7 +778,7 @@ func checkRetryableCreationTx(t *testing.T, client *web3.EthClient, retryableTx 
 	}
 }
 
-func checkRetryableRedeem(t *testing.T, client *web3.EthClient, requestId, redeemId common.Hash, successful bool) {
+func checkRetryableRedeem(t *testing.T, client *ethclient.Client, requestId, redeemId common.Hash, successful bool) {
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
@@ -838,7 +839,7 @@ func checkRetryableRedeem(t *testing.T, client *web3.EthClient, requestId, redee
 	}
 }
 
-func checkRetryableExecution(t *testing.T, client *web3.EthClient, srv *aggregator.Server, retryableTx message.RetryableTx, requestId common.Hash, redeemGas uint64, redeemGasPrice *big.Int, hasLog bool, l1Sender common.Address) {
+func checkRetryableExecution(t *testing.T, client *ethclient.Client, srv *aggregator.Server, retryableTx message.RetryableTx, requestId common.Hash, redeemGas uint64, redeemGasPrice *big.Int, hasLog bool, l1Sender common.Address) {
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 	l2Sender := message.L2RemapAccount(l1Sender)
 

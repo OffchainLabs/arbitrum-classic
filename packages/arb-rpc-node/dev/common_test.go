@@ -135,7 +135,7 @@ func NewTestDevNode(
 	}()
 
 	srv := aggregator.NewServer(backend, common.Address{}, chainId, db)
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	test.FailIfError(t, err)
 
@@ -181,7 +181,7 @@ func UpgradeTestDevNode(t *testing.T, backend *Backend, srv *aggregator.Server, 
 		t.Fatal(err)
 	}
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	test.FailIfError(t, err)
 
@@ -266,9 +266,8 @@ func OwnerAuthPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, com
 	return auth, address
 }
 
-func enableRewrites(t *testing.T, backend *Backend, srv *aggregator.Server, auth *bind.TransactOpts) {
-
-	client := web3.NewEthClient(srv, true)
+func enableRewrites(t *testing.T, srv *aggregator.Server, auth *bind.TransactOpts) {
+	client := web3.NewTestEthClient(t, srv, true)
 
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	test.FailIfError(t, err)

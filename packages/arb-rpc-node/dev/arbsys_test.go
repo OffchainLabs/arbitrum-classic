@@ -39,7 +39,7 @@ func TestTopLevelCall(t *testing.T) {
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
 	test.FailIfError(t, err)
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	conAddr, _, con, err := arbostestcontracts.DeployTopLevel(senderAuth, client)
 	test.FailIfError(t, err)
