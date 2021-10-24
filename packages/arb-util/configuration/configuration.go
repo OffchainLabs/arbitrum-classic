@@ -145,6 +145,7 @@ type RPC struct {
 	Port          string `koanf:"port"`
 	Path          string `koanf:"path"`
 	EnableL1Calls bool   `koanf:"enable-l1-calls"`
+	EnableTracing bool   `koanf:"enable-tracing"`
 }
 
 type S3 struct {
@@ -196,7 +197,6 @@ type Node struct {
 	Aggregator      Aggregator    `koanf:"aggregator"`
 	Cache           NodeCache     `koanf:"cache"`
 	ChainID         uint64        `koanf:"chain-id"`
-	EnableTracing   bool          `koanf:"enable-tracing"`
 	Forwarder       Forwarder     `koanf:"forwarder"`
 	LogProcessCount int           `koanf:"log-process-count"`
 	LogIdleSleep    time.Duration `koanf:"log-idle-sleep"`

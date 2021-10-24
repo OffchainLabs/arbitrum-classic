@@ -339,7 +339,7 @@ func startup() error {
 	}
 
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.ServerConfig{Mode: rpcMode, Tracing: config.Node.EnableTracing}, nil, web3InboxReaderRef)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.ServerConfig{Mode: rpcMode, Tracing: config.Node.RPC.EnableTracing}, nil, web3InboxReaderRef)
 	if err != nil {
 		return err
 	}
