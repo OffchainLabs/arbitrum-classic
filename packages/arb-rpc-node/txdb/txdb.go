@@ -67,6 +67,8 @@ type TxDB struct {
 
 	snapshotLRUCache  *lru.Cache
 	blockInfoLRUCache *lru.Cache
+
+	Metrics       *Metrics
 }
 
 func New(
@@ -98,6 +100,7 @@ func New(
 		snapshotLRUCache:  snapshotLRUCache,
 		blockInfoLRUCache: blockInfoLRUCache,
 		allowSlowLookup:   cacheConfig.AllowSlowLookup,
+		Metrics:       NewMetrics(),
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
@@ -168,11 +171,13 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 	logger.Info().Str("start", initialLogIndex.String()).Int("count", len(avmLogs)).Msg("adding logs")
 	logIndex := initialLogIndex.Uint64()
 	for _, avmLog := range avmLogs {
-		if err := db.HandleLog(logIndex, avmLog); err != nil {
+		if err := db.handleLog(logIndex, avmLog); err != nil {
 			return err
 		}
 		logIndex++
 	}
+	db.Metrics.LogsAddedTotal.Update(int64(logIndex))
+	db.Metrics.LogsAdded.Inc(int64(len(avmLogs)))
 	return nil
 }
 
@@ -242,11 +247,11 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 			db.blockInfoLRUCache.Remove(reorgBlockHeight)
 		}
 	}
-
+	db.Metrics.LogsDeleted.Inc(int64(len(avmLogs)))
 	return nil
 }
 
-func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
+func (db *TxDB) handleLog(logIndex uint64, avmLog value.Value) error {
 	res, err := evm.NewResultFromValue(avmLog)
 	if err != nil {
 		logger.Error().Err(err).Msg("Error parsing log result")
@@ -289,11 +294,6 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 			Int("real", len(txResults)).
 			Uint64("claimed", blockInfo.BlockStats.TxCount.Uint64()).
 			Msg("expected to get same number of results")
-	}
-	if blockInfo.BlockStats.AVMLogCount.Cmp(big.NewInt(0)) == 0 {
-		logger.Warn().
-			Uint64("block", blockInfo.BlockNum.Uint64()).
-			Msg("found empty block")
 	}
 
 	processedResults := evm.FilterEthTxResults(txResults)
@@ -392,6 +392,9 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	if len(ethLogs) > 0 {
 		db.logsFeed.Send(ethLogs)
 	}
+
+	db.Metrics.BlocksAdded.Inc(1)
+	db.Metrics.LatestBlock.Update(blockInfo.BlockNum.Int64())
 	return nil
 }
 

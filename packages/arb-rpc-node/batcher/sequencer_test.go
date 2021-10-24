@@ -226,15 +226,15 @@ func TestSequencerBatcher(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
+
 	_, err = seqMon.StartInboxReader(
 		ctx,
 		client,
 		common.NewAddressFromEth(rollupAddr),
 		rollupBlock.Int64(),
 		common.NewAddressFromEth(bridgeUtilsAddr),
-		nil,
 		dummySequencerFeed,
-	)
+		)
 	test.FailIfError(t, err)
 
 	_, err = otherMon.StartInboxReader(
@@ -243,9 +243,8 @@ func TestSequencerBatcher(t *testing.T) {
 		common.NewAddressFromEth(rollupAddr),
 		rollupBlock.Int64(),
 		common.NewAddressFromEth(bridgeUtilsAddr),
-		nil,
 		dummySequencerFeed,
-	)
+		)
 	test.FailIfError(t, err)
 
 	batcher, err := NewSequencerBatcher(

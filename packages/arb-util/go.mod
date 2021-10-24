@@ -3,6 +3,7 @@ module github.com/offchainlabs/arbitrum/packages/arb-util
 go 1.13
 
 require (
+	github.com/AppsFlyer/go-sundheit v0.5.0
 	github.com/ethereum/go-ethereum v1.10.8
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect

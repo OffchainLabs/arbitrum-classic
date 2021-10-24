@@ -36,15 +36,16 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/arbmetrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/healthcheck"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
@@ -81,7 +82,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, walletConfig, l1Client, l1ChainId, err := configuration.ParseValidator(ctx)
+	config, walletConfig, l1URL, l1ChainId, err := configuration.ParseValidator(ctx, os.Args)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		len(config.Validator.UtilsAddress) == 0 || len(config.Validator.WalletFactoryAddress) == 0 ||
@@ -108,27 +109,16 @@ func startup() error {
 	// Dummy sequencerFeed since validator doesn't use it
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 
-	metricsConfig := metrics.NewMetricsConfig(config.MetricsServer, &config.Healthcheck.MetricsPrefix)
+	metricsConfig := arbmetrics.NewMetricsConfig(config.MetricsServer)
 
-	const largeChannelBuffer = 200
-	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+	health, err := healthcheck.NewNodeHealth(config.Healthcheck, metricsConfig.Registry)
+	if err != nil {
+		return err
+	}
 
-	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry)
-		if err != nil {
-			log.Error().Err(err).Msg("healthcheck server failed")
-		}
-	}()
-
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics}
-	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer}
-	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node}
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
-	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
-	nodehealth.Init(healthChan)
+	health.Launch()
 
 	rollupAddr := ethcommon.HexToAddress(config.Rollup.Address)
-	bridgeUtilsAddr := ethcommon.HexToAddress(config.BridgeUtilsAddress)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
 	auth, _, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, false)
@@ -167,6 +157,10 @@ func startup() error {
 		}
 	}
 
+	l1Client, err := ethutils.NewRPCEthClient(l1URL)
+	if err != nil {
+		return err
+	}
 	var valAuth transactauth.TransactAuth
 	if len(walletConfig.Fireblocks.SSLKey) > 0 {
 		valAuth, _, err = transactauth.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, walletConfig, false)
@@ -174,6 +168,7 @@ func startup() error {
 		valAuth, err = transactauth.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
 
 	}
+
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
@@ -207,11 +202,23 @@ func startup() error {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
 
-	mon, err := monitor.NewMonitor(config.GetValidatorDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
+	mon, err := monitor.NewMonitor(config.GetValidatorDatabasePath(), &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
 	defer mon.Close()
+
+	if err := metricsConfig.Register(mon.Metrics); err != nil {
+		return err
+	}
+
+	if err := mon.Metrics.RegisterSyncChecks(config.Healthcheck, health.Synced); err != nil {
+		return err
+	}
+
+	if err := mon.StartCore(config.Rollup.Machine.Filename); err != nil {
+		return err
+	}
 
 	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, l1Client, valAuth)
 	if err != nil {
@@ -223,9 +230,9 @@ func startup() error {
 		return errors.Wrap(err, "error setting up staker")
 	}
 
-	_, err = mon.StartInboxReader(ctx, l1Client, common.NewAddressFromEth(rollupAddr), config.Rollup.FromBlock, common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed)
+	_, err = mon.TryStartInboxReaderLoop(ctx, l1URL, dummySequencerFeed, config)
 	if err != nil {
-		return errors.Wrap(err, "failed to create inbox reader")
+		return err
 	}
 
 	logger.Info().Int("strategy", int(strategy)).Msg("Initialized validator")
