@@ -1,18 +1,31 @@
-import { instantiateBridge } from './instantiate_bridge'
-import { BigNumber } from '@ethersproject/bignumber'
+import { JsonRpcProvider } from '@ethersproject/providers'
+import { NODE_INTERFACE_ADDRESS } from '../src/lib/precompile_addresses'
+import { NodeInterface__factory } from '../src/lib/abi/factories/NodeInterface__factory'
 ;(async () => {
-  const { bridge } = await instantiateBridge()
+  const rpcURL = process.env['DEV_RPC']
+  const arbProvider = new JsonRpcProvider(rpcURL)
+  const nodeInterface = NodeInterface__factory.connect(
+    NODE_INTERFACE_ADDRESS,
+    arbProvider
+  )
+
   for (let i = 0; i < 10; i++) {
     console.log('Starting round', i)
     const promises = []
     for (let j = 0; j < 200; j++) {
       promises.push(
-        bridge.getDepositTxParams({
-          erc20L1Address: '0xb6ed7644c69416d67b522e20bc294a9a9b405b31',
-          amount: BigNumber.from(0),
-          retryableGasArgs: {},
-          destinationAddress: '0xb6ed7644c69416d67b522e20bc294a9a9b405b31',
-        })
+        nodeInterface.estimateRetryableTicket(
+          '0xb6ed7644c69416d67b522e20bc294a9a9b405b31',
+          0,
+          '0xb6ed7644c69416d67b522e20bc294a9a9b405b31',
+          0,
+          0,
+          '0xb6ed7644c69416d67b522e20bc294a9a9b405b31',
+          '0xb6ed7644c69416d67b522e20bc294a9a9b405b31',
+          0,
+          0,
+          '0x'
+        )
       )
     }
     await Promise.all(promises)
