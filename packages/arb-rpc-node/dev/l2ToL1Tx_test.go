@@ -50,7 +50,7 @@ func TestL2ToL1Tx(t *testing.T) {
 	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, upgraderAccount, nil)
 	defer cancelDevNode()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	if err != nil {
 		t.Fatal(err)

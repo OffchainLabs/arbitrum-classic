@@ -50,7 +50,7 @@ func TestWhitelist(t *testing.T) {
 	ownerAuth, err := bind.NewKeyedTransactorWithChainID(ownerKey, backend.chainID)
 	test.FailIfError(t, err)
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	_, _, simple, err := arbostestcontracts.DeploySimple(senderAuth, client)
 	test.FailIfError(t, err)

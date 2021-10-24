@@ -21,6 +21,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -44,7 +45,7 @@ func TestOutOfGas(t *testing.T) {
 	auth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
 	test.FailIfError(t, err)
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	// Basic Tx
 	_, _, transfer, err := arbostestcontracts.DeployTransfer(auth, client)

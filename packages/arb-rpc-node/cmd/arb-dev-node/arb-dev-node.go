@@ -285,7 +285,10 @@ func startup() error {
 	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
 
 	if deleteDir {
-		client := web3.NewEthClient(srv, true)
+		client, err := web3.NewEthClient(srv, true)
+		if err != nil {
+			return err
+		}
 		arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 		if err != nil {
 			return err
