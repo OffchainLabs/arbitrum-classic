@@ -274,10 +274,10 @@ func (im InboxMessage) ToBytes() []byte {
 	var data []byte
 	data = append(data, uint8(im.Kind))
 	data = append(data, im.Sender[:]...)
-	data = append(data, math.U256Bytes(im.ChainTime.BlockNum.AsInt())...)
-	data = append(data, math.U256Bytes(im.ChainTime.Timestamp)...)
-	data = append(data, math.U256Bytes(im.InboxSeqNum)...)
-	data = append(data, math.U256Bytes(im.GasPrice)...)
+	data = append(data, math.U256Bytes(new(big.Int).Set(im.ChainTime.BlockNum.AsInt()))...)
+	data = append(data, math.U256Bytes(new(big.Int).Set(im.ChainTime.Timestamp))...)
+	data = append(data, math.U256Bytes(new(big.Int).Set(im.InboxSeqNum))...)
+	data = append(data, math.U256Bytes(new(big.Int).Set(im.GasPrice))...)
 	data = append(data, im.Data...)
 	return data
 }
