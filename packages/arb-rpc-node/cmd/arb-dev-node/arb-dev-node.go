@@ -17,7 +17,6 @@
 package main
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
@@ -27,7 +26,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
 
 	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -88,6 +86,9 @@ func main() {
 }
 
 func startup() error {
+	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
@@ -158,8 +159,6 @@ func startup() error {
 		*dbDir = tmpDir
 		deleteDir = true
 	}
-
-	ctx := context.Background()
 
 	rollupAddress := common.RandAddress()
 	if *rollupStr != "" {
@@ -334,23 +333,18 @@ func startup() error {
 	}
 	fmt.Println("")
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
+	defer func() {
 		if *saveMessages != "" {
 			data, err := backend.ExportData()
 			if err != nil {
-				errChan <- errors.Wrap(err, "error exporting data from backend")
+				logger.Error().Err(err).Msg("error saving exported data")
 				return
 			}
 
 			if err := ioutil.WriteFile(*saveMessages, data, 777); err != nil {
-				errChan <- errors.Wrap(err, "error saving exported data")
-				return
+				logger.Error().Err(err).Msg("error saving exported data")
 			}
 		}
-		errChan <- nil
 	}()
 
 	plugins := make(map[string]interface{})
@@ -375,6 +369,10 @@ func startup() error {
 		errChan <- rpc.LaunchPublicServer(ctx, web3Server, rpcConfig, wsConfig)
 	}()
 
-	err = <-errChan
-	return err
+	select {
+	case <-cancelChan:
+		return nil
+	case err = <-errChan:
+		return err
+	}
 }
