@@ -28,7 +28,7 @@
 struct RawTuple {
     HashPreImage cachedPreImage;
     std::vector<value> data;
-    bool deferredHashing = true;
+    std::atomic<bool> deferredHashing = true;
 
     RawTuple() : cachedPreImage({}, 0), deferredHashing(true) {}
     RawTuple(const RawTuple&) = delete;

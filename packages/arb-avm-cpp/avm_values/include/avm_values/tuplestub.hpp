@@ -34,6 +34,7 @@ class HashPreImage {
         firstHash = _firstHash;
         valueSize = _valueSize;
     }
+    void writeAtomic(const HashPreImage& other);
     std::array<unsigned char, 32> getFirstHash() const { return firstHash; }
     uint256_t getSize() const { return valueSize; }
     void marshal(std::vector<unsigned char>& buf) const;
