@@ -73,6 +73,7 @@ func WrapCMachine(cMachine unsafe.Pointer) *Machine {
 }
 
 func (m *Machine) Hash() (ret common.Hash) {
+	defer runtime.KeepAlive(m)
 	success := C.machineHash(m.c, unsafe.Pointer(&ret[0]))
 	if success == 0 {
 		// This should never occur
@@ -82,11 +83,13 @@ func (m *Machine) Hash() (ret common.Hash) {
 }
 
 func (m *Machine) CodePointHash() (ret common.Hash) {
+	defer runtime.KeepAlive(m)
 	C.machineCodePointHash(m.c, unsafe.Pointer(&ret[0]))
 	return
 }
 
 func (m *Machine) Clone() machine.Machine {
+	defer runtime.KeepAlive(m)
 	cMachine := C.machineClone(m.c)
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
@@ -94,6 +97,7 @@ func (m *Machine) Clone() machine.Machine {
 }
 
 func (m *Machine) CurrentStatus() machine.Status {
+	defer runtime.KeepAlive(m)
 	cStatus := C.machineCurrentStatus(m.c)
 	switch cStatus {
 	case C.STATUS_EXTENSIVE:
@@ -109,6 +113,7 @@ func (m *Machine) CurrentStatus() machine.Status {
 }
 
 func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
+	defer runtime.KeepAlive(m)
 	newMessagesInt := 0
 	if newMessages {
 		newMessagesInt = 1
@@ -131,6 +136,7 @@ func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
 }
 
 func (m *Machine) String() string {
+	defer runtime.KeepAlive(m)
 	cStr := C.machineInfo(m.c)
 	defer C.free(unsafe.Pointer(cStr))
 	return C.GoString(cStr)
@@ -159,6 +165,7 @@ func (m *Machine) ExecuteAssertion(
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
+	defer runtime.KeepAlive(m)
 	return m.ExecuteAssertionAdvanced(
 		maxGas,
 		goOverGas,
@@ -185,6 +192,7 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	sideloads []inbox.InboxMessage,
 	stopOnSideload bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
+	defer runtime.KeepAlive(m)
 	conf := C.machineExecutionConfigCreate()
 
 	goOverGasInt := C.int(0)
@@ -218,11 +226,13 @@ func (m *Machine) ExecuteAssertionAdvanced(
 }
 
 func (m *Machine) MarshalForProof() ([]byte, []byte, error) {
+	defer runtime.KeepAlive(m)
 	rawProof := C.machineMarshallForProof(m.c)
 	return receiveByteSlice(rawProof.standard_proof), receiveByteSlice(rawProof.buffer_proof), nil
 }
 
 func (m *Machine) MarshalState() ([]byte, error) {
+	defer runtime.KeepAlive(m)
 	stateData := C.machineMarshallState(m.c)
 	return receiveByteSlice(stateData), nil
 }
