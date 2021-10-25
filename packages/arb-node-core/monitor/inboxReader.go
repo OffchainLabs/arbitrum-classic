@@ -454,10 +454,6 @@ func (ir *InboxReader) getPrevBlockForReorg(from *big.Int) (*big.Int, error) {
 }
 
 func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []ethbridge.SequencerBatchRef, deliveredDelayedMessages []*ethbridge.DeliveredInboxMessage) (bool, error) {
-	coreDelayedCount, err := ir.db.GetDelayedMessageCount()
-	if err != nil {
-		return false, err
-	}
 	var seqBatchItems []inbox.SequencerBatchItem
 	for _, ref := range sequencerBatchRefs {
 		batch, err := ir.sequencerInbox.ResolveBatchRef(ctx, ref)
@@ -468,10 +464,21 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		if err != nil {
 			return false, err
 		}
-		for _, item := range items {
-			if len(deliveredDelayedMessages) == 0 && item.TotalDelayedCount.Cmp(coreDelayedCount) > 0 {
-				// Batch item references a delayed message we don't have, we need to go backwards
-				return true, nil
+		if len(deliveredDelayedMessages) == 0 {
+			// Check that the delayed inbox ArbCore has matches the batch's delayed accumulator
+			maxDelayed := big.NewInt(0)
+			for _, item := range items {
+				if item.TotalDelayedCount.Cmp(maxDelayed) > 0 {
+					maxDelayed = item.TotalDelayedCount
+				}
+			}
+			if maxDelayed.Sign() > 0 {
+				seqNum := new(big.Int).Sub(maxDelayed, big.NewInt(1))
+				acc, err := ir.db.GetDelayedInboxAcc(seqNum)
+				if err != nil || acc != batch.DelayedAcc {
+					// missing or incorrect accumulator
+					return true, nil
+				}
 			}
 		}
 		seqBatchItems = append(seqBatchItems, items...)
@@ -494,7 +501,7 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 	if len(delayedMessages) > 0 {
 		logger.Debug().Str("acc", delayedMessages[len(delayedMessages)-1].DelayedAccumulator.String()).Int("count", len(delayedMessages)).Msg("delivering delayed inbox messages")
 	}
-	err = core.DeliverMessagesAndWait(ir.db, beforeCount, beforeAcc, seqBatchItems, delayedMessages, nil)
+	err := core.DeliverMessagesAndWait(ir.db, beforeCount, beforeAcc, seqBatchItems, delayedMessages, nil)
 	if err != nil {
 		return false, err
 	}
