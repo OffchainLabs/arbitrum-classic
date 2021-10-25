@@ -477,15 +477,13 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		if err != nil {
 			return false, err
 		}
-		if len(deliveredDelayedMessages) == 0 && delayedInfo != nil {
+		if len(deliveredDelayedMessages) == 0 && delayedInfo != nil && delayedInfo.Count.Sign() > 0 {
 			// Check that the delayed inbox ArbCore has matches the batch's delayed accumulator
-			if delayedInfo.Count.Sign() > 0 {
-				seqNum := new(big.Int).Sub(delayedInfo.Count, big.NewInt(1))
-				acc, err := ir.db.GetDelayedInboxAcc(seqNum)
-				if err != nil || acc != delayedInfo.Accumulator {
-					// missing or incorrect accumulator
-					return true, nil
-				}
+			seqNum := new(big.Int).Sub(delayedInfo.Count, big.NewInt(1))
+			acc, err := ir.db.GetDelayedInboxAcc(seqNum)
+			if err != nil || acc != delayedInfo.Accumulator {
+				// missing or incorrect accumulator
+				return true, nil
 			}
 		}
 		seqBatchItems = append(seqBatchItems, items...)
