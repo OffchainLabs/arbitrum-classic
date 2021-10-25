@@ -94,6 +94,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 }
 
 func (s *ArbStorage) Initialize(contractPath string) error {
+	defer runtime.KeepAlive(s)
 	cContractPath := C.CString(contractPath)
 	defer C.free(unsafe.Pointer(cContractPath))
 	success := C.initializeArbStorage(s.c, cContractPath)
@@ -105,10 +106,12 @@ func (s *ArbStorage) Initialize(contractPath string) error {
 }
 
 func (s *ArbStorage) Initialized() bool {
+	defer runtime.KeepAlive(s)
 	return C.arbStorageInitialized(s.c) == 1
 }
 
 func (s *ArbStorage) CloseArbStorage() bool {
+	defer runtime.KeepAlive(s)
 	return C.closeArbStorage(s.c) == 1
 }
 
@@ -117,11 +120,13 @@ func cDestroyArbStorage(cArbStorage *ArbStorage) {
 }
 
 func (s *ArbStorage) GetArbCore() core.ArbCore {
+	defer runtime.KeepAlive(s)
 	ac := C.createArbCore(s.c)
 	return NewArbCore(ac, s)
 }
 
 func (s *ArbStorage) GetNodeStore() machine.NodeStore {
+	defer runtime.KeepAlive(s)
 	as := C.createAggregatorStore(s.c)
 	return NewNodeStore(as)
 }
