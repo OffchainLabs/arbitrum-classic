@@ -506,7 +506,7 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-		if blockData.BlockLog < totalLogCount {
+		if blockData != nil && blockData.BlockLog < totalLogCount {
 			return blockData, nil
 		}
 		blockCount--

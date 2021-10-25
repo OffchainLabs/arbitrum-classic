@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface ISequencerInboxInterface extends ethers.utils.Interface {
   functions: {
@@ -113,6 +113,62 @@ interface ISequencerInboxInterface extends ethers.utils.Interface {
     nameOrSignatureOrTopic: 'SequencerBatchDeliveredFromOrigin'
   ): EventFragment
 }
+
+export type DelayedInboxForcedEvent = TypedEvent<
+  [BigNumber, string, BigNumber, BigNumber, [string, string], BigNumber] & {
+    firstMessageNum: BigNumber
+    beforeAcc: string
+    newMessageCount: BigNumber
+    totalDelayedMessagesRead: BigNumber
+    afterAccAndDelayed: [string, string]
+    seqBatchIndex: BigNumber
+  }
+>
+
+export type IsSequencerUpdatedEvent = TypedEvent<
+  [string, boolean] & { addr: string; isSequencer: boolean }
+>
+
+export type MaxDelayUpdatedEvent = TypedEvent<
+  [BigNumber, BigNumber] & {
+    newMaxDelayBlocks: BigNumber
+    newMaxDelaySeconds: BigNumber
+  }
+>
+
+export type SequencerBatchDeliveredEvent = TypedEvent<
+  [
+    BigNumber,
+    string,
+    BigNumber,
+    string,
+    string,
+    BigNumber[],
+    BigNumber[],
+    BigNumber,
+    string
+  ] & {
+    firstMessageNum: BigNumber
+    beforeAcc: string
+    newMessageCount: BigNumber
+    afterAcc: string
+    transactions: string
+    lengths: BigNumber[]
+    sectionsMetadata: BigNumber[]
+    seqBatchIndex: BigNumber
+    sequencer: string
+  }
+>
+
+export type SequencerBatchDeliveredFromOriginEvent = TypedEvent<
+  [BigNumber, string, BigNumber, string, BigNumber] & {
+    firstMessageNum: BigNumber
+    beforeAcc: string
+    newMessageCount: BigNumber
+    afterAcc: string
+    seqBatchIndex: BigNumber
+  }
+>
 
 export class ISequencerInbox extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -258,6 +314,25 @@ export class ISequencerInbox extends BaseContract {
   }
 
   filters: {
+    'DelayedInboxForced(uint256,bytes32,uint256,uint256,bytes32[2],uint256)'(
+      firstMessageNum?: BigNumberish | null,
+      beforeAcc?: BytesLike | null,
+      newMessageCount?: null,
+      totalDelayedMessagesRead?: null,
+      afterAccAndDelayed?: null,
+      seqBatchIndex?: null
+    ): TypedEventFilter<
+      [BigNumber, string, BigNumber, BigNumber, [string, string], BigNumber],
+      {
+        firstMessageNum: BigNumber
+        beforeAcc: string
+        newMessageCount: BigNumber
+        totalDelayedMessagesRead: BigNumber
+        afterAccAndDelayed: [string, string]
+        seqBatchIndex: BigNumber
+      }
+    >
+
     DelayedInboxForced(
       firstMessageNum?: BigNumberish | null,
       beforeAcc?: BytesLike | null,
@@ -277,6 +352,14 @@ export class ISequencerInbox extends BaseContract {
       }
     >
 
+    'IsSequencerUpdated(address,bool)'(
+      addr?: null,
+      isSequencer?: null
+    ): TypedEventFilter<
+      [string, boolean],
+      { addr: string; isSequencer: boolean }
+    >
+
     IsSequencerUpdated(
       addr?: null,
       isSequencer?: null
@@ -285,12 +368,55 @@ export class ISequencerInbox extends BaseContract {
       { addr: string; isSequencer: boolean }
     >
 
+    'MaxDelayUpdated(uint256,uint256)'(
+      newMaxDelayBlocks?: null,
+      newMaxDelaySeconds?: null
+    ): TypedEventFilter<
+      [BigNumber, BigNumber],
+      { newMaxDelayBlocks: BigNumber; newMaxDelaySeconds: BigNumber }
+    >
+
     MaxDelayUpdated(
       newMaxDelayBlocks?: null,
       newMaxDelaySeconds?: null
     ): TypedEventFilter<
       [BigNumber, BigNumber],
       { newMaxDelayBlocks: BigNumber; newMaxDelaySeconds: BigNumber }
+    >
+
+    'SequencerBatchDelivered(uint256,bytes32,uint256,bytes32,bytes,uint256[],uint256[],uint256,address)'(
+      firstMessageNum?: BigNumberish | null,
+      beforeAcc?: BytesLike | null,
+      newMessageCount?: null,
+      afterAcc?: null,
+      transactions?: null,
+      lengths?: null,
+      sectionsMetadata?: null,
+      seqBatchIndex?: null,
+      sequencer?: null
+    ): TypedEventFilter<
+      [
+        BigNumber,
+        string,
+        BigNumber,
+        string,
+        string,
+        BigNumber[],
+        BigNumber[],
+        BigNumber,
+        string
+      ],
+      {
+        firstMessageNum: BigNumber
+        beforeAcc: string
+        newMessageCount: BigNumber
+        afterAcc: string
+        transactions: string
+        lengths: BigNumber[]
+        sectionsMetadata: BigNumber[]
+        seqBatchIndex: BigNumber
+        sequencer: string
+      }
     >
 
     SequencerBatchDelivered(
@@ -325,6 +451,23 @@ export class ISequencerInbox extends BaseContract {
         sectionsMetadata: BigNumber[]
         seqBatchIndex: BigNumber
         sequencer: string
+      }
+    >
+
+    'SequencerBatchDeliveredFromOrigin(uint256,bytes32,uint256,bytes32,uint256)'(
+      firstMessageNum?: BigNumberish | null,
+      beforeAcc?: BytesLike | null,
+      newMessageCount?: null,
+      afterAcc?: null,
+      seqBatchIndex?: null
+    ): TypedEventFilter<
+      [BigNumber, string, BigNumber, string, BigNumber],
+      {
+        firstMessageNum: BigNumber
+        beforeAcc: string
+        newMessageCount: BigNumber
+        afterAcc: string
+        seqBatchIndex: BigNumber
       }
     >
 
