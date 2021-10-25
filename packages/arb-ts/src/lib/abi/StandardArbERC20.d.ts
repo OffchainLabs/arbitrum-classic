@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface StandardArbERC20Interface extends ethers.utils.Interface {
   functions: {
@@ -158,6 +158,27 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'Approval'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Transfer'): EventFragment
 }
+
+export type ApprovalEvent = TypedEvent<
+  [string, string, BigNumber] & {
+    owner: string
+    spender: string
+    value: BigNumber
+  }
+>
+
+export type Transfer_address_address_uint256_bytes_Event = TypedEvent<
+  [string, string, BigNumber, string] & {
+    from: string
+    to: string
+    value: BigNumber
+    data: string
+  }
+>
+
+export type Transfer_address_address_uint256_Event = TypedEvent<
+  [string, string, BigNumber] & { from: string; to: string; value: BigNumber }
+>
 
 export class StandardArbERC20 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -486,6 +507,15 @@ export class StandardArbERC20 extends BaseContract {
   }
 
   filters: {
+    'Approval(address,address,uint256)'(
+      owner?: string | null,
+      spender?: string | null,
+      value?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { owner: string; spender: string; value: BigNumber }
+    >
+
     Approval(
       owner?: string | null,
       spender?: string | null,
@@ -495,7 +525,7 @@ export class StandardArbERC20 extends BaseContract {
       { owner: string; spender: string; value: BigNumber }
     >
 
-    Transfer(
+    'Transfer(address,address,uint256,bytes)'(
       from?: string | null,
       to?: string | null,
       value?: null,
@@ -503,6 +533,15 @@ export class StandardArbERC20 extends BaseContract {
     ): TypedEventFilter<
       [string, string, BigNumber, string],
       { from: string; to: string; value: BigNumber; data: string }
+    >
+
+    'Transfer(address,address,uint256)'(
+      from?: string | null,
+      to?: string | null,
+      value?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { from: string; to: string; value: BigNumber }
     >
   }
 

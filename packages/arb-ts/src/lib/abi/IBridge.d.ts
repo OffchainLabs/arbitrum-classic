@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface IBridgeInterface extends ethers.utils.Interface {
   functions: {
@@ -107,6 +107,34 @@ interface IBridgeInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'MessageDelivered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboxToggle'): EventFragment
 }
+
+export type BridgeCallTriggeredEvent = TypedEvent<
+  [string, string, BigNumber, string] & {
+    outbox: string
+    destAddr: string
+    amount: BigNumber
+    data: string
+  }
+>
+
+export type InboxToggleEvent = TypedEvent<
+  [string, boolean] & { inbox: string; enabled: boolean }
+>
+
+export type MessageDeliveredEvent = TypedEvent<
+  [BigNumber, string, string, number, string, string] & {
+    messageIndex: BigNumber
+    beforeInboxAcc: string
+    inbox: string
+    kind: number
+    sender: string
+    messageDataHash: string
+  }
+>
+
+export type OutboxToggleEvent = TypedEvent<
+  [string, boolean] & { outbox: string; enabled: boolean }
+>
 
 export class IBridge extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -267,6 +295,16 @@ export class IBridge extends BaseContract {
   }
 
   filters: {
+    'BridgeCallTriggered(address,address,uint256,bytes)'(
+      outbox?: string | null,
+      destAddr?: string | null,
+      amount?: null,
+      data?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string],
+      { outbox: string; destAddr: string; amount: BigNumber; data: string }
+    >
+
     BridgeCallTriggered(
       outbox?: string | null,
       destAddr?: string | null,
@@ -277,10 +315,34 @@ export class IBridge extends BaseContract {
       { outbox: string; destAddr: string; amount: BigNumber; data: string }
     >
 
+    'InboxToggle(address,bool)'(
+      inbox?: string | null,
+      enabled?: null
+    ): TypedEventFilter<[string, boolean], { inbox: string; enabled: boolean }>
+
     InboxToggle(
       inbox?: string | null,
       enabled?: null
     ): TypedEventFilter<[string, boolean], { inbox: string; enabled: boolean }>
+
+    'MessageDelivered(uint256,bytes32,address,uint8,address,bytes32)'(
+      messageIndex?: BigNumberish | null,
+      beforeInboxAcc?: BytesLike | null,
+      inbox?: null,
+      kind?: null,
+      sender?: null,
+      messageDataHash?: null
+    ): TypedEventFilter<
+      [BigNumber, string, string, number, string, string],
+      {
+        messageIndex: BigNumber
+        beforeInboxAcc: string
+        inbox: string
+        kind: number
+        sender: string
+        messageDataHash: string
+      }
+    >
 
     MessageDelivered(
       messageIndex?: BigNumberish | null,
@@ -300,6 +362,11 @@ export class IBridge extends BaseContract {
         messageDataHash: string
       }
     >
+
+    'OutboxToggle(address,bool)'(
+      outbox?: string | null,
+      enabled?: null
+    ): TypedEventFilter<[string, boolean], { outbox: string; enabled: boolean }>
 
     OutboxToggle(
       outbox?: string | null,

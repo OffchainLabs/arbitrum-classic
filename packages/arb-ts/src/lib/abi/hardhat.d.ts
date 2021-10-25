@@ -105,6 +105,14 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ArbSys__factory>
     getContractFactory(
+      name: 'ArbMulticall2',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ArbMulticall2__factory>
+    getContractFactory(
+      name: 'Multicall2',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Multicall2__factory>
+    getContractFactory(
       name: 'NodeInterface',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.NodeInterface__factory>
@@ -253,6 +261,10 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.L1CustomGatewayTester__factory>
     getContractFactory(
+      name: 'L1GatewayRouterTester',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.L1GatewayRouterTester__factory>
+    getContractFactory(
       name: 'L1GatewayTester',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.L1GatewayTester__factory>
@@ -268,6 +280,10 @@ declare module 'hardhat/types/runtime' {
       name: 'L2CustomGatewayTester',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.L2CustomGatewayTester__factory>
+    getContractFactory(
+      name: 'L2GatewayRouterTester',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.L2GatewayRouterTester__factory>
     getContractFactory(
       name: 'L2GatewayTester',
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -301,6 +317,387 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestWETH9__factory>
 
+    getContractAt(
+      name: 'ERC20PermitUpgradeable',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC20PermitUpgradeable>
+    getContractAt(
+      name: 'IERC20PermitUpgradeable',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20PermitUpgradeable>
+    getContractAt(
+      name: 'ERC20Upgradeable',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC20Upgradeable>
+    getContractAt(
+      name: 'IERC20Upgradeable',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20Upgradeable>
+    getContractAt(
+      name: 'Ownable',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Ownable>
+    getContractAt(
+      name: 'BeaconProxy',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.BeaconProxy>
+    getContractAt(
+      name: 'IBeacon',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IBeacon>
+    getContractAt(
+      name: 'Proxy',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Proxy>
+    getContractAt(
+      name: 'ProxyAdmin',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ProxyAdmin>
+    getContractAt(
+      name: 'TransparentUpgradeableProxy',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TransparentUpgradeableProxy>
+    getContractAt(
+      name: 'UpgradeableBeacon',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.UpgradeableBeacon>
+    getContractAt(
+      name: 'UpgradeableProxy',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.UpgradeableProxy>
+    getContractAt(
+      name: 'ERC20',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC20>
+    getContractAt(
+      name: 'IERC20',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20>
+    getContractAt(
+      name: 'IBridge',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IBridge>
+    getContractAt(
+      name: 'IInbox',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IInbox>
+    getContractAt(
+      name: 'IMessageProvider',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IMessageProvider>
+    getContractAt(
+      name: 'IOutbox',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IOutbox>
+    getContractAt(
+      name: 'Cloneable',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Cloneable>
+    getContractAt(
+      name: 'ICloneable',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ICloneable>
+    getContractAt(
+      name: 'Whitelist',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Whitelist>
+    getContractAt(
+      name: 'WhitelistConsumer',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.WhitelistConsumer>
+    getContractAt(
+      name: 'ArbSys',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ArbSys>
+    getContractAt(
+      name: 'ArbMulticall2',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ArbMulticall2>
+    getContractAt(
+      name: 'Multicall2',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Multicall2>
+    getContractAt(
+      name: 'NodeInterface',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.NodeInterface>
+    getContractAt(
+      name: 'RetryableTicketCreator',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.RetryableTicketCreator>
+    getContractAt(
+      name: 'L2ArbitrumGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2ArbitrumGateway>
+    getContractAt(
+      name: 'L2CustomGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2CustomGateway>
+    getContractAt(
+      name: 'L2ERC20Gateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2ERC20Gateway>
+    getContractAt(
+      name: 'L2GatewayRouter',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2GatewayRouter>
+    getContractAt(
+      name: 'L2WethGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2WethGateway>
+    getContractAt(
+      name: 'IArbToken',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IArbToken>
+    getContractAt(
+      name: 'L2ArbitrumMessenger',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2ArbitrumMessenger>
+    getContractAt(
+      name: 'StandardArbERC20',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.StandardArbERC20>
+    getContractAt(
+      name: 'ITradeableExitReceiver',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ITradeableExitReceiver>
+    getContractAt(
+      name: 'L1ArbitrumExtendedGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1ArbitrumExtendedGateway>
+    getContractAt(
+      name: 'L1ArbitrumGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1ArbitrumGateway>
+    getContractAt(
+      name: 'L1CustomGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1CustomGateway>
+    getContractAt(
+      name: 'L1ERC20Gateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1ERC20Gateway>
+    getContractAt(
+      name: 'L1GatewayRouter',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1GatewayRouter>
+    getContractAt(
+      name: 'L1WethGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1WethGateway>
+    getContractAt(
+      name: 'ArbitrumEnabledToken',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ArbitrumEnabledToken>
+    getContractAt(
+      name: 'ICustomToken',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ICustomToken>
+    getContractAt(
+      name: 'L1ArbitrumMessenger',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1ArbitrumMessenger>
+    getContractAt(
+      name: 'AeERC20',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.AeERC20>
+    getContractAt(
+      name: 'AeWETH',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.AeWETH>
+    getContractAt(
+      name: 'BeaconProxyFactory',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.BeaconProxyFactory>
+    getContractAt(
+      name: 'ClonableBeaconProxy',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ClonableBeaconProxy>
+    getContractAt(
+      name: 'ProxySetter',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ProxySetter>
+    getContractAt(
+      name: 'GatewayRouter',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.GatewayRouter>
+    getContractAt(
+      name: 'ICustomGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ICustomGateway>
+    getContractAt(
+      name: 'ITokenGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ITokenGateway>
+    getContractAt(
+      name: 'TokenGateway',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TokenGateway>
+    getContractAt(
+      name: 'ITransferAndCall',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ITransferAndCall>
+    getContractAt(
+      name: 'ITransferAndCallReceiver',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ITransferAndCallReceiver>
+    getContractAt(
+      name: 'IWETH9',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IWETH9>
+    getContractAt(
+      name: 'L2GatewayToken',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2GatewayToken>
+    getContractAt(
+      name: 'TransferAndCallToken',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TransferAndCallToken>
+    getContractAt(
+      name: 'AddressMappingTest',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.AddressMappingTest>
+    getContractAt(
+      name: 'L1ArbitrumTestMessenger',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1ArbitrumTestMessenger>
+    getContractAt(
+      name: 'L1CustomGatewayTester',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1CustomGatewayTester>
+    getContractAt(
+      name: 'L1GatewayRouterTester',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1GatewayRouterTester>
+    getContractAt(
+      name: 'L1GatewayTester',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1GatewayTester>
+    getContractAt(
+      name: 'L1WethGatewayTester',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L1WethGatewayTester>
+    getContractAt(
+      name: 'L2ArbitrumTestMessenger',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2ArbitrumTestMessenger>
+    getContractAt(
+      name: 'L2CustomGatewayTester',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2CustomGatewayTester>
+    getContractAt(
+      name: 'L2GatewayRouterTester',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2GatewayRouterTester>
+    getContractAt(
+      name: 'L2GatewayTester',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2GatewayTester>
+    getContractAt(
+      name: 'L2WethGatewayTester',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2WethGatewayTester>
+    getContractAt(
+      name: 'InboxMock',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.InboxMock>
+    getContractAt(
+      name: 'TestArbCustomToken',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TestArbCustomToken>
+    getContractAt(
+      name: 'TestCustomTokenL1',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TestCustomTokenL1>
+    getContractAt(
+      name: 'TestERC20',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TestERC20>
+    getContractAt(
+      name: 'L2Called',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.L2Called>
+    getContractAt(
+      name: 'TestWETH9',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TestWETH9>
+
     // default types
     getContractFactory(
       name: string,
@@ -311,5 +708,10 @@ declare module 'hardhat/types/runtime' {
       bytecode: ethers.utils.BytesLike,
       signer?: ethers.Signer
     ): Promise<ethers.ContractFactory>
+    getContractAt(
+      nameOrAbi: string | any[],
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<ethers.Contract>
   }
 }

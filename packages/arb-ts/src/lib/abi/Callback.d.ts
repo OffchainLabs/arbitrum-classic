@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface CallbackInterface extends ethers.utils.Interface {
   functions: {
@@ -40,6 +40,14 @@ interface CallbackInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'DummyEvent'): EventFragment
 }
+
+export type DummyEventEvent = TypedEvent<
+  [BigNumber, BigNumber, BigNumber] & {
+    a: BigNumber
+    b: BigNumber
+    c: BigNumber
+  }
+>
 
 export class Callback extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -109,6 +117,15 @@ export class Callback extends BaseContract {
   }
 
   filters: {
+    'DummyEvent(uint256,uint256,uint256)'(
+      a?: BigNumberish | null,
+      b?: null,
+      c?: null
+    ): TypedEventFilter<
+      [BigNumber, BigNumber, BigNumber],
+      { a: BigNumber; b: BigNumber; c: BigNumber }
+    >
+
     DummyEvent(
       a?: BigNumberish | null,
       b?: null,

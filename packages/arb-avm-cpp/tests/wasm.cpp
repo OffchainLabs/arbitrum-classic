@@ -48,7 +48,7 @@ MachineState mkWasmMachine(WasmResult res, std::string fname) {
     return mkWasmMachine(res, getFile(fname));
 }
 
-TEST_CASE("Wasm") {
+TEST_CASE("Wasm compiler") {
     SECTION("Making compiler machine") {
         RunWasm runner(wasm_compile_path);
         auto buf = getFile(wasm_compile_path);
@@ -84,7 +84,11 @@ TEST_CASE("Wasm") {
         REQUIRE(hash_value(m.stack[3]) == hash_value(cres.stub));
 
     }
-    /* This test has problems because signal handling conflict with the test library.
+}
+
+
+// This test has problems because signal handling conflict with the test library.
+TEST_CASE("wasm_env") {
     SECTION("Test env functions") {
         for (int i = 0; i < 11; i++) {
             RunWasm runner(wasm_compile_path);
@@ -98,7 +102,6 @@ TEST_CASE("Wasm") {
             }
 
             auto m = mkWasmMachine(res, test_buf);
-            // std::cerr << "Running machine " << "\n";
             auto start = std::chrono::system_clock::now();
             runWasmMachine(m);
             auto end = std::chrono::system_clock::now();
@@ -106,15 +109,11 @@ TEST_CASE("Wasm") {
             uint256_t err_code = intx::from_string<uint256_t>("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 
             bool err = false;
-            // std::cerr << "Result stack " << m.stack[0] << "\n";
             if (m.stack[0] == value(err_code)) {
-                // std::cerr << "Error at test " << i << "\n";
                 err = true;
             }
 
             std::chrono::duration<double> elapsed_seconds = end-start;
-
-            // std::cerr << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
             std::vector<uint8_t> b1 = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
             std::vector<uint8_t> b2 = {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2};
@@ -134,7 +133,4 @@ TEST_CASE("Wasm") {
 
         }
     }
-        */
-
 }
-

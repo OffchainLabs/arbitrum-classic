@@ -18,11 +18,13 @@
 
 pragma solidity ^0.6.11;
 
+import "../ethereum/gateway/L1GatewayRouter.sol";
 import "../ethereum/gateway/L1WethGateway.sol";
 import "../ethereum/gateway/L1CustomGateway.sol";
 import "../ethereum/gateway/L1ERC20Gateway.sol";
 import "../ethereum/L1ArbitrumMessenger.sol";
 
+import "../arbitrum/gateway/L2GatewayRouter.sol";
 import "../arbitrum/gateway/L2WethGateway.sol";
 import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
@@ -299,5 +301,63 @@ contract L2WethGatewayTester is L2ArbitrumTestMessenger, L2WethGateway {
 
     function setL2WethAddress(address _l2Weth) external {
         L2WethGateway.l2Weth = _l2Weth;
+    }
+}
+
+contract L1GatewayRouterTester is L1ArbitrumTestMessenger, L1GatewayRouter {
+    function sendTxToL2(
+        address _inbox,
+        address _to,
+        address _user,
+        uint256 _l1CallValue,
+        uint256 _l2CallValue,
+        uint256 _maxSubmissionCost,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes memory _data
+    ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
+        return
+            L1ArbitrumTestMessenger.sendTxToL2(
+                _inbox,
+                _to,
+                _user,
+                _l1CallValue,
+                _l2CallValue,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
+    }
+
+    function getL2ToL1Sender(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (address)
+    {
+        return L1ArbitrumTestMessenger.getL2ToL1Sender(_inbox);
+    }
+
+    function getBridge(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (IBridge)
+    {
+        return L1ArbitrumTestMessenger.getBridge(_inbox);
+    }
+}
+
+contract L2GatewayRouterTester is L2ArbitrumTestMessenger, L2GatewayRouter {
+    function sendTxToL1(
+        uint256 _l1CallValue,
+        address _from,
+        address _to,
+        bytes memory _data
+    ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
+        return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
     }
 }

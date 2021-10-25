@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface OneStepProofTesterInterface extends ethers.utils.Interface {
   functions: {
@@ -48,6 +48,14 @@ interface OneStepProofTesterInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'OneStepProofResult'): EventFragment
 }
+
+export type OneStepProofResultEvent = TypedEvent<
+  [BigNumber, BigNumber, [string, string, string, string]] & {
+    gas: BigNumber
+    totalMessagesRead: BigNumber
+    fields: [string, string, string, string]
+  }
+>
 
 export class OneStepProofTester extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -130,6 +138,19 @@ export class OneStepProofTester extends BaseContract {
   }
 
   filters: {
+    'OneStepProofResult(uint64,uint256,bytes32[4])'(
+      gas?: null,
+      totalMessagesRead?: null,
+      fields?: null
+    ): TypedEventFilter<
+      [BigNumber, BigNumber, [string, string, string, string]],
+      {
+        gas: BigNumber
+        totalMessagesRead: BigNumber
+        fields: [string, string, string, string]
+      }
+    >
+
     OneStepProofResult(
       gas?: null,
       totalMessagesRead?: null,
