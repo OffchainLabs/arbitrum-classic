@@ -175,14 +175,15 @@ type Forwarder struct {
 }
 
 type Node struct {
-	Aggregator Aggregator `koanf:"aggregator"`
-	Cache      NodeCache  `koanf:"cache"`
-	ChainID    uint64     `koanf:"chain-id"`
-	Forwarder  Forwarder  `koanf:"forwarder"`
-	RPC        RPC        `koanf:"rpc"`
-	Sequencer  Sequencer  `koanf:"sequencer"`
-	Type       string     `koanf:"type"`
-	WS         WS         `koanf:"ws"`
+	Aggregator          Aggregator `koanf:"aggregator"`
+	Cache               NodeCache  `koanf:"cache"`
+	ChainID             uint64     `koanf:"chain-id"`
+	Forwarder           Forwarder  `koanf:"forwarder"`
+	RPC                 RPC        `koanf:"rpc"`
+	Sequencer           Sequencer  `koanf:"sequencer"`
+	Type                string     `koanf:"type"`
+	WS                  WS         `koanf:"ws"`
+	ParanoidInboxReader bool       `koanf:"paranoid-inbox-reader"`
 }
 
 type NodeCache struct {
@@ -350,6 +351,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
+	f.Bool("node.paranoid-inbox-reader", false, "if enabled, check for reorgs before searching for messages")
 
 	return ParseNonRelay(ctx, f, "rpc-wallet")
 }
