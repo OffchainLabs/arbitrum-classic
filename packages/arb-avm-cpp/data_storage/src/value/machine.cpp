@@ -257,7 +257,6 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
     }
 
     auto status = saveMachineState(transaction, machine);
-
     if (!status.ok()) {
         return {0, status};
     }

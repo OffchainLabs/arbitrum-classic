@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"math/big"
 
-	// 	"github.com/docker/docker/daemon/logger"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 
@@ -23,9 +22,6 @@ var unreachableCut common.Hash
 
 func getCutRaw(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, gasTarget *big.Int) (*core.ExecutionState, bool, *big.Int, error) {
 	state, steps, err := execTracker.GetExecutionState(gasTarget)
-	// mach, err := execTracker.GetMachine(gasTarget)
-	// mach_hash, err := mach.Hash()
-	// fmt.Printf("got cut %v gas target %v machine %v\n", state, gasTarget, mach_hash)
 	if err != nil {
 		return nil, false, nil, err
 	}

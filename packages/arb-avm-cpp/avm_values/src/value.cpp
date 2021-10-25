@@ -276,7 +276,6 @@ struct GetSize {
 
     uint256_t operator()(const Tuple& val) const { return val.getSize(); }
 
-    // uint256_t operator()(const WasmCodePoint& val) const { return val.data->getSize(); }
     uint256_t operator()(const WasmCodePoint&) const { return 1; }
 
     uint256_t operator()(const Buffer&) const { return 1; }

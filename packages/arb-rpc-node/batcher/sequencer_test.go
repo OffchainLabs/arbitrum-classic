@@ -19,7 +19,6 @@ package batcher
 import (
 	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -304,7 +303,6 @@ func TestSequencerBatcher(t *testing.T) {
 	txs := generateTxs(t, 10, 10, l2ChainId)
 	totalDelayedCount := big.NewInt(1)
 	for i, tx := range txs {
-		fmt.Println("goint to send")
 		if err := batcher.SendTransaction(ctx, tx); err != nil {
 			t.Fatal(err)
 		}

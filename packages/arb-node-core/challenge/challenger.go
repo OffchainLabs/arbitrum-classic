@@ -200,7 +200,6 @@ func (c *Challenger) handleChallenge(
 			storage.InitializeForWasm((*machine).(cmachine.ExtendedMachine))
 			arbCore := storage.GetArbCore()
 			arbCore.StartThread()
-			// c.lookup = arbCore
 			c.lookup = c.lookup.SubLookup(arbCore)
 			return move, err
 		}

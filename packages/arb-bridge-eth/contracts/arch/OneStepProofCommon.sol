@@ -216,7 +216,6 @@ abstract contract OneStepProofCommon is IOneStepProof {
             bytes32[7] memory fields
         )
     {
-        // require(context.startState != 0, "returning???????");
         return (
             context.gas,
             context.totalMessagesRead,

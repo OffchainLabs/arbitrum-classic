@@ -78,9 +78,6 @@ func executeChallenge(
 
 	var moves []Move
 
-	// challenger := NewChallenger(challengerChallengeCon, falseLookup, challengedNode, challengerWallet.Address())
-	// asserter := NewChallenger(asserterChallengeCon, correctLookup, challengedNode, asserterWallet.Address())
-
 	turn := ethbridge.CHALLENGER_TURN
 	rounds := 0
 	for {

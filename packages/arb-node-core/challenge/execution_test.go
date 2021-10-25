@@ -101,8 +101,6 @@ func TestWasmRunChallenge(t *testing.T) {
 		asserterWallet,
 		challengerWallet,
 	)
-	// fmt.Printf("moves %v\n", moves)
-	// test.FailIfError(t, asserterErr)
 	saveChallengeData(t, challengedAssertion, messages, moves, asserterErr)
 }
 
@@ -132,8 +130,6 @@ func TestWasmRun2Challenge(t *testing.T) {
 		asserterWallet,
 		challengerWallet,
 	)
-	// fmt.Printf("moves %v\n", moves)
-	// test.FailIfError(t, asserterErr)
 	saveChallengeData(t, challengedAssertion, messages, moves, asserterErr)
 }
 

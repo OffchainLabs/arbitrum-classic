@@ -249,9 +249,7 @@ func shouldIncludeTxResult(txRes *evm.TxResult) bool {
 func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) {
 	resMap := make(map[common.Hash]*evm.TxResult)
 	for _, log := range logs {
-		fmt.Printf("got log %v\n", log)
 		res, err := evm.NewResultFromValue(log)
-		fmt.Printf("result %v\n", res)
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +257,6 @@ func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) 
 		if !ok {
 			continue
 		}
-		fmt.Printf("result hmm %v\n", txRes.IncomingRequest.MessageID)
 		resMap[txRes.IncomingRequest.MessageID] = txRes
 	}
 	return resMap, nil
@@ -268,7 +265,6 @@ func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) 
 const maxTxDataSize int = 100_000
 
 func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.Transaction) error {
-	fmt.Println("here")
 	_, err := types.Sender(b.signer, startTx)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error processing user transaction")
@@ -305,7 +301,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		seenOwnTx := false
 		emptiedQueue := true
 		// This pattern is safe as we acquired a lock so we are the exclusive reader
-		fmt.Println("looping")
 		for len(b.txQueue) > 0 {
 			queueItem := <-b.txQueue
 			if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
@@ -361,7 +356,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			return errors.New("chain not yet initialized")
 		}
 
-		fmt.Println("new batch")
 		batch, err := message.NewTransactionBatchFromMessages(l2BatchContents)
 		if err != nil {
 			return err
@@ -375,12 +369,10 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		}
 
 		txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
-		fmt.Println("deliver here")
 		err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return err
 		}
-		fmt.Println("delivered here")
 		core.WaitForMachineIdle(b.db)
 
 		var sequencedTxs []*types.Transaction
@@ -411,7 +403,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			}
 		}
 
-		fmt.Printf("Success %v\n", successCount)
 		if successCount == len(batchTxs) {
 			sequencedTxs = batchTxs
 			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
@@ -498,7 +489,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 
 		newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
 		sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
-		fmt.Println("deliver messages")
 		err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return err

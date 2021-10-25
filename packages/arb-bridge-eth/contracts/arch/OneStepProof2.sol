@@ -361,17 +361,17 @@ contract OneStepProof2 is OneStepProofCommon {
         bytes32 nword = get(buf, offset / 32, proof.proof1);
         if ((offset % 32) + 8 > 32) {
             for (uint256 i = 0; i < 8 - ((offset % 32) + 8 - 32); i++) {
-                nword = setByte(nword, (offset + i) % 32, arr[i+24]);
+                nword = setByte(nword, (offset + i) % 32, arr[i + 24]);
             }
             buf = set(buf, offset / 32, nword, proof.proof1, proof.nproof1);
             bytes32 nword2 = get(buf, offset / 32 + 1, proof.proof2);
             for (uint256 i = 8 - ((offset % 32) + 8 - 32); i < 8; i++) {
-                nword2 = setByte(nword2, (offset + i) % 32, arr[i+24]);
+                nword2 = setByte(nword2, (offset + i) % 32, arr[i + 24]);
             }
             buf = set(buf, offset / 32 + 1, nword2, proof.proof2, proof.nproof2);
         } else {
             for (uint256 i = 0; i < 8; i++) {
-                nword = setByte(nword, (offset % 32) + i, arr[i+24]);
+                nword = setByte(nword, (offset % 32) + i, arr[i + 24]);
             }
             buf = set(buf, offset / 32, nword, proof.proof1, proof.nproof1);
         }
@@ -663,12 +663,6 @@ contract OneStepProof2 is OneStepProofCommon {
          uint256 len,
          /* uint256 offset*/ ) = decodeWasmData(context.bufProof);
         require(stackVals.length >= 5, "Not enough wasm stack returns");
-        // Buffer, len
-        // require(stackVals[1].isInt(), "stack top not int");
-        // require(stackVals[0].isBuffer(), "stack next not buf");
-        // pushVal(context.stack, mkPair(stackVals[3], stackVals[4]));
-        // Value.Data memory codept = stackVals[3];
-        // Value.Data memory table = stackVals[4];
         pushVal(context.stack, Value.newWasmCode(stackVals[3].hash(), stackVals[4].hash(), stackVals[4].sizeOf(), val1.hash(), val1.sizeOf()));
 
         context.startState = Machine.hash(initialMachine);
@@ -677,10 +671,6 @@ contract OneStepProof2 is OneStepProofCommon {
     }
 
     function executeWasmRun(AssertionContext memory context) internal pure {
-
-        // return;
-        // require(Machine.hash(context.startMachine) == bytes32(uint256(0xfe8e1da832fb54a394dcb7ac6cdfdb3e7223c4e42b1432bf3c7c4804d7994f30)), "init hash?");
-
         Value.Data memory val4 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val1 = popVal(context.stack);
@@ -726,17 +716,12 @@ contract OneStepProof2 is OneStepProofCommon {
         require(stackVals[3].isInt(), "stack top not int");
         require(stackVals[2].isBuffer(), "stack next not buf");
         require(stackVals[1].isInt(), "stack gas not int");
-        // require(stackVals[0].hash() == 0x0b179c33f802237faf5553da8854df679313390e8155a46bc8699f6d1d1e9bd2, "wrong buffer");
         pushVal(context.stack, mkPair(stackVals[3], stackVals[2]));
         uint64 gas = uint64(stackVals[1].intVal);
-        require(gas == 500000, "wrong gas");
-        require(stackVals[3].intVal == 67, "wrong length");
         context.gas -= gas;
         context.afterMachine.avmGasRemaining += gas;
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
-        // require(context.startState == 0xd71c80de4c79fa65f83c1149092a08a3f9793b69d15f63cd1410a81089f54e0a, "first state bad");
-        // require(context.endState == 0x51ed09ad2653c0c7bdde6f2ae7fbcaed24f44eed800c8ba4581ef09993f7228d, "end state bad");
         context.nextLength = len;
     }
 

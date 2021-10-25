@@ -156,7 +156,7 @@ struct MachineState {
     MachineOutput output;
 
     AssertionContext context;
-    RunWasm *compile = 0; // {wasm_compiler_path};
+    RunWasm *compile = 0;
 
     static MachineState loadFromFile(const std::string& executable_filename);
 
@@ -218,7 +218,7 @@ CodeResult wasmAvmToCode(WasmResult &res);
 WasmCodePoint wasmAvmToCodePoint(WasmResult& wres, std::vector<uint8_t>& wasm_module);
 
 MachineState makeWasmMachine(WasmResult &wres, uint64_t len, Buffer buf, value arg);
-uint256_t runWasmMachine(MachineState &machine_state);
+uint256_t runWasmMachine(MachineState &machine_state, bool debug = false);
 value make_table(std::vector<value> tab);
 
 #endif /* machinestate_hpp */

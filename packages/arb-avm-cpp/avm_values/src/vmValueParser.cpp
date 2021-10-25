@@ -42,16 +42,7 @@ uint256_t int_value_from_json(const nlohmann::json& value_json) {
 }
 
 Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
-    if (buffer_json.contains("root")) {
-        std::vector<uint8_t> bytes;
-        auto& arr = buffer_json["root"];
-        for (auto it = arr.begin(); it != arr.end(); ++it) {
-            bytes.push_back(*it);
-        }
-        return Buffer::fromData(bytes);
-    }
     if (!buffer_json.is_string()) {
-        // return Buffer();
         throw std::runtime_error("buffer must be hex");
     }
     auto hexstr = buffer_json.get<std::string>();
@@ -158,22 +149,6 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
         }
     }
     return assembleValueFromDeserialized(std::move(values));
-}
-
-Operation simple_operation_from_json(const nlohmann::json& op_json) {
-    auto opcode_json = op_json.at(OPCODE_LABEL);
-    if (opcode_json.contains(OPCODE_SUB_LABEL)) {
-        opcode_json = opcode_json.at(OPCODE_SUB_LABEL);
-    }
-    if (!opcode_json.is_number_integer()) {
-        std::cerr << "Invalid opcode " << opcode_json << "\n";
-    }
-    auto opcode = opcode_json.get<OpCode>();
-    auto& imm = op_json.at(IMMEDIATE_LABEL);
-    if (imm.is_null()) {
-        return {opcode};
-    }
-    return {opcode, simple_value_from_json(imm)};
 }
 
 std::vector<uint8_t> send_from_json(const nlohmann::json& val) {

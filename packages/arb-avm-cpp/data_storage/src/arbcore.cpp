@@ -303,7 +303,7 @@ rocksdb::Status ArbCore::initializeFromState(MachineState state) {
         return status;
     }
 
-    code = state.code; // ->addSegment(executable.code);
+    code = state.code;
     machine = std::make_unique<MachineThread>(state);
 
     last_machine = std::make_unique<Machine>(*machine);
@@ -418,7 +418,6 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     if (!status.ok()) {
         return status;
     }
-    // std::cerr << "save machine " << intx::to_string(*machine->hash(), 16) << " used gas " << machine->machine_state.output.arb_gas_used << "\n";
 
     std::vector<unsigned char> key;
     marshal_uint256_t(state.output.arb_gas_used, key);
@@ -1799,7 +1798,6 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     uint256_t total_gas_used) {
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {
-        // std::cerr << "get exec cursor " << total_gas_used << "\n";
         ReadSnapshotTransaction tx(data_storage);
 
         auto closest_checkpoint =

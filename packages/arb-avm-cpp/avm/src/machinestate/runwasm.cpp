@@ -594,7 +594,6 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len, value v) {
 
     bool error = false;
     if (wasm_func_call(run, &args_vec, &results_vec)) {
-        // std::cerr << "Error running wasm\n";
         error = true;
     }
 

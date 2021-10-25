@@ -366,10 +366,6 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
 const int LEVEL = 5;
 
 value table_to_tuple2(std::vector<value> tab, int prefix, int shift, int level, int limit) {
-    /*
-    if (limit < prefix) {
-        return 0;
-    }*/
     if (level == 0) {
         std::vector<value> v;
         for (int i = 0; i < 8; i++) {
@@ -446,12 +442,11 @@ MachineState makeWasmMachine(WasmResult &wres, uint64_t len, Buffer buf, value a
     return state;
 }
 
-uint256_t runWasmMachine(MachineState &machine_state) {
+uint256_t runWasmMachine(MachineState &machine_state, bool debug) {
     uint256_t start_gas = machine_state.arb_gas_remaining;
 
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
-    // uint64_t counter = 0;
     while (true) {
         if (has_gas_limit) {
             if (!machine_state.context.go_over_gas) {
@@ -468,16 +463,14 @@ uint256_t runWasmMachine(MachineState &machine_state) {
             }
         }
 
-        /*
-        auto op = machine_state.loadCurrentInstruction();
-        if (machine_state.stack.stacksize() > 0 && !std::get_if<Tuple>(&machine_state.stack[0])) {
-            std::cerr << "stack top " << machine_state.stack[0] << "\n";
+        if (debug) {
+            auto op = machine_state.loadCurrentInstruction();
+            if (machine_state.stack.stacksize() > 0 && !std::get_if<Tuple>(&machine_state.stack[0])) {
+                std::cerr << "stack top " << machine_state.stack[0] << "\n";
+            }
+            std::cerr << "op " << op << " state " << int(machine_state.state) << "\n";
         }
-        std::cerr << "op " << op << " state " << int(machine_state.state) << "\n";
-       if (counter++ % 1000000 == 0) {
-           std::cerr << "step " << counter << "\n";
-       }
-*/
+
         auto& op2 = machine_state.loadCurrentOperation();
 
         if (op2.opcode == OpCode::HALT) {
@@ -691,8 +684,6 @@ OneStepProof MachineState::marshalForProof() const {
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
 
     if (current_op.opcode == OpCode::WASM_RUN) {
-
-        // std::cerr << "machine state before wasm run " << *this;
         auto state = initialWasmMachine();
 
         uint256_t gasUsed = runWasmMachine(state);
@@ -781,8 +772,6 @@ BlockReason MachineState::runOne() {
     // save stack size for stack cleanup in case of error
     uint64_t start_stack_size = stack.stacksize();
     uint64_t start_auxstack_size = auxstack.stacksize();
-
-    // std::cerr << "Inst " << op.opcode << " gas used " << output.arb_gas_used << "\n";
 
     bool is_valid_instruction =
         instructionValidity()[static_cast<size_t>(op.opcode)];

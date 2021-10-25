@@ -1018,7 +1018,6 @@ void wasm_run(MachineState& m) {
     auto res = wasmcp.runner->run_wasm(md, len, arg);
     m.arb_gas_remaining += res.gas_left;
     m.output.arb_gas_used -= res.gas_left;
-    // std::cerr << "Gas left: " << res.gas_left << " res len " << res.buffer_len << " arg " << arg << "\n";
     Tuple tpl = Tuple(res.buffer_len, res.buffer);
     m.stack.popClear();
     m.stack.popClear();
@@ -1118,7 +1117,6 @@ void setbuffer64(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     for (int i = 0; i < 8; i++) {
-        // std::cerr << "set buf " << offset + 7 - i << ": " << (val & 0xffU) << "\n";
         res = res.set(offset + 7 - i, val & 0xffU);
         val = val >> 8U;
     }

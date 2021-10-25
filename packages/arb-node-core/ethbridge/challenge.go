@@ -129,10 +129,9 @@ func (c *Challenge) OneStepProveExecution(
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
 	var prover uint8
-	if (opcode >= 0xa1 && opcode <= 0xa8) || opcode == 0x70 || opcode == 0xf1 {
+	if (opcode >= 0xa1 && opcode <= 0xa8) || opcode == 0x70 {
 		// OSP2 (covers buffer related stuff)
 		prover = 1
-		// fmt.Printf("Buffer proof len %v\n", len(bufferProof))
 	} else if opcode >= 0x20 && opcode <= 0x24 {
 		// OSPHash
 		prover = 2
@@ -140,9 +139,6 @@ func (c *Challenge) OneStepProveExecution(
 		// OSP
 		prover = 0
 	}
-	// prevCutHashes[segmentToChallenge+1][10] = 0
-	// fmt.Printf("Old end hash %v\n", prevCutHashes[segmentToChallenge+1])
-	// fmt.Printf("segment start %v length %v\n", challengedSegment.Start, challengedSegment.Length)
 	_, err := c.builderCon.OneStepProveExecution(
 		authWithContext(ctx, c.builderAuth),
 		nodes,
@@ -161,7 +157,6 @@ func (c *Challenge) OneStepProveExecution(
 		bufferProof,
 		prover,
 	)
-	// fmt.Printf("Error %v\n", err)
 	return errors.WithStack(err)
 }
 
