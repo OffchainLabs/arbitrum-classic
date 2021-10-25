@@ -63,6 +63,7 @@ func NewExecutionCursor(c unsafe.Pointer) (*ExecutionCursor, error) {
 }
 
 func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
+	defer runtime.KeepAlive(ec)
 	newEc := &ExecutionCursor{
 		c:                 C.executionCursorClone(ec.c),
 		machineHash:       ec.machineHash,
@@ -80,6 +81,7 @@ func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
 }
 
 func (ec *ExecutionCursor) updateValues() error {
+	defer runtime.KeepAlive(ec)
 	status := C.executionCursorMachineHash(ec.c, unsafe.Pointer(&ec.machineHash[0]))
 	if status == 0 {
 		return errors.New("failed to load machine hash")
