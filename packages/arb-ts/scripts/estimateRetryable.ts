@@ -28,6 +28,10 @@ import { NodeInterface__factory } from '../src/lib/abi/factories/NodeInterface__
         )
       )
     }
-    await Promise.all(promises)
+    try {
+      await Promise.all(promises)
+    } catch (e) {
+      // do nothing
+    }
   }
 })()
