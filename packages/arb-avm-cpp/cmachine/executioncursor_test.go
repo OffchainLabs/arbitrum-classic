@@ -1,5 +1,5 @@
 /*
-* Copyright 2019, Offchain Labs, Inc.
+* Copyright 2019-2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,11 +17,12 @@
 package cmachine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"math/big"
 	"os"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 func TestExecutionCursor(t *testing.T) {
@@ -37,7 +38,7 @@ func TestExecutionCursor(t *testing.T) {
 		}
 	}()
 
-	coreConfig := configuration.DefaultCoreSettings()
+	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 	arbStorage, err := NewArbStorage(dePath, coreConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +50,7 @@ func TestExecutionCursor(t *testing.T) {
 	defer arbStorage.CloseArbStorage()
 
 	lookup := arbStorage.GetArbCore()
-	cursor, err := lookup.GetExecutionCursor(big.NewInt(0))
+	cursor, err := lookup.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +64,7 @@ func TestExecutionCursor(t *testing.T) {
 		t.Error("log acc isn't zero at beginning")
 	}
 
-	err = lookup.AdvanceExecutionCursor(cursor, big.NewInt(10000), true)
+	err = lookup.AdvanceExecutionCursor(cursor, big.NewInt(10000), true, true)
 	if err != nil {
 		t.Fatal(err)
 	}

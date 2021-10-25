@@ -415,7 +415,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 func calculateGasToFirstInbox(t *testing.T) *big.Int {
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
-	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000))
+	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000), true)
 	test.FailIfError(t, err)
 	inboxGas := new(big.Int).Add(cursor.TotalGasConsumed(), big.NewInt(1))
 	t.Logf("Found first inbox instruction starting at %v", inboxGas)

@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     auto arbospath = std::string(argv[2]);
     ArbCoreConfig coreConfig{};
 
-    coreConfig.profile_reset_db_except_inbox = clearDb;
+    coreConfig.test_reset_db_except_inbox = clearDb;
 
     std::cout << "Loading db\n";
     ArbStorage storage{dbpath, coreConfig};

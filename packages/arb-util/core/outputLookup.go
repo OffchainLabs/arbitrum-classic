@@ -29,7 +29,7 @@ import (
 
 type ArbOutputLookup interface {
 	GetLogCount() (*big.Int, error)
-	GetLogs(startIndex, count *big.Int) ([]value.Value, error)
+	GetLogs(startIndex, count *big.Int) ([]ValueAndInbox, error)
 
 	GetSendCount() (*big.Int, error)
 	GetSends(startIndex, count *big.Int) ([][]byte, error)
@@ -42,7 +42,7 @@ type ArbOutputLookup interface {
 	GetDelayedMessageCount() (*big.Int, error)
 	GetTotalDelayedMessagesSequenced() (*big.Int, error)
 
-	GetMachineForSideload(uint64, bool) (machine.Machine, error)
+	GetMachineAtBlock(uint64, bool) (machine.Machine, error)
 }
 
 type InMemoryOutputLookup struct {

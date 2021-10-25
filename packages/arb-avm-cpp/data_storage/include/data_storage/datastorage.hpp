@@ -54,6 +54,7 @@ class DataStorage {
     std::vector<rocksdb::ColumnFamilyHandle*> column_handles;
     rocksdb::FlushOptions flush_options;
     size_t next_column_to_flush{0};
+    std::vector<uint8_t> secret_hash_seed;
 
     explicit DataStorage(const std::string& db_path);
 
@@ -62,6 +63,8 @@ class DataStorage {
     rocksdb::Status clearDBExceptInbox();
 
    private:
+    rocksdb::Status updateSecretHashSeed();
+
     [[nodiscard]] std::unique_ptr<rocksdb::Transaction> beginTransaction()
         const {
         return std::unique_ptr<rocksdb::Transaction>{

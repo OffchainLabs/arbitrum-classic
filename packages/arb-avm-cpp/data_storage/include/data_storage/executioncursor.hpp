@@ -31,11 +31,13 @@ class ExecutionCursor {
     std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
    public:
-    explicit ExecutionCursor(MachineStateKeys machine_)
-        : machine(std::move(machine_)) {}
+    explicit ExecutionCursor(MachineStateKeys machine_) : machine(machine_) {}
 
     explicit ExecutionCursor(std::unique_ptr<Machine> machine_)
         : machine(std::move(machine_)) {}
+
+    ExecutionCursor(ExecutionCursor&& rhs) noexcept
+        : machine{std::move(rhs.machine)} {}
 
     ~ExecutionCursor() = default;
 
@@ -56,6 +58,11 @@ class ExecutionCursor {
         } else {
             machine = std::get<MachineStateKeys>(rhs.machine);
         }
+        return *this;
+    }
+
+    ExecutionCursor& operator=(ExecutionCursor&& rhs) noexcept {
+        machine = std::move(rhs.machine);
         return *this;
     }
 

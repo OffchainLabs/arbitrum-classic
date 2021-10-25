@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,4 +14,19 @@
  * limitations under the License.
  */
 
-#include <avm_values/code.hpp>
+#ifndef unloadedvalue_hpp
+#define unloadedvalue_hpp
+
+#include <avm_values/valuetype.hpp>
+
+struct UnloadedValue {
+    ValueTypes type;
+    uint256_t hash;
+    uint256_t value_size;
+};
+
+inline uint256_t hash(const UnloadedValue& uv) {
+    return uv.hash;
+}
+
+#endif /* unloadedvalue_hpp */

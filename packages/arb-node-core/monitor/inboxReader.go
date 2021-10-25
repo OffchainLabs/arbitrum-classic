@@ -143,6 +143,10 @@ func (ir *InboxReader) WaitToCatchUp(ctx context.Context) {
 
 }
 
+func (ir *InboxReader) GetSequencerInboxWatcher() *ethbridge.SequencerInboxWatcher {
+	return ir.sequencerInbox
+}
+
 const inboxReaderDelay int64 = 4
 
 func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool) error {
@@ -469,22 +473,16 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		if err != nil {
 			return false, err
 		}
-		items, err := batch.GetItems()
+		items, delayedInfo, err := batch.GetItems()
 		if err != nil {
 			return false, err
 		}
-		if len(deliveredDelayedMessages) == 0 && batch.DelayedAcc != (common.Hash{}) {
+		if len(deliveredDelayedMessages) == 0 && delayedInfo != nil {
 			// Check that the delayed inbox ArbCore has matches the batch's delayed accumulator
-			maxDelayed := big.NewInt(0)
-			for _, item := range items {
-				if item.TotalDelayedCount.Cmp(maxDelayed) > 0 {
-					maxDelayed = item.TotalDelayedCount
-				}
-			}
-			if maxDelayed.Sign() > 0 {
-				seqNum := new(big.Int).Sub(maxDelayed, big.NewInt(1))
+			if delayedInfo.Count.Sign() > 0 {
+				seqNum := new(big.Int).Sub(delayedInfo.Count, big.NewInt(1))
 				acc, err := ir.db.GetDelayedInboxAcc(seqNum)
-				if err != nil || acc != batch.DelayedAcc {
+				if err != nil || acc != delayedInfo.Accumulator {
 					// missing or incorrect accumulator
 					return true, nil
 				}

@@ -75,9 +75,13 @@ TEST_CASE("Value marshaling") {
             marshal_value(val, buf);
             auto valptr = (const char*)&buf[0];
             auto newval = deserialize_value(valptr);
-            auto valsEqual = val == newval;
-            REQUIRE(valsEqual);
-            // REQUIRE(val == newval); junit output broken with map::at error
+            REQUIRE(values_equal(val, newval));
         }
     }
+}
+
+TEST_CASE("UnloadedValue equality") {
+    Tuple tup;
+    UnloadedValue uv{TUPLE, ::hash(tup), tup.getSize()};
+    REQUIRE(values_equal(value(tup), value(uv)));
 }
