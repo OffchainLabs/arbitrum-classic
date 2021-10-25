@@ -464,7 +464,7 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		if err != nil {
 			return false, err
 		}
-		if len(deliveredDelayedMessages) == 0 {
+		if len(deliveredDelayedMessages) == 0 && batch.DelayedAcc != (common.Hash{}) {
 			// Check that the delayed inbox ArbCore has matches the batch's delayed accumulator
 			maxDelayed := big.NewInt(0)
 			for _, item := range items {
