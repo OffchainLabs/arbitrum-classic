@@ -75,8 +75,66 @@ func runExecutionTest(t *testing.T, startGas *big.Int, endGas *big.Int, faultCon
 	return len(moves)
 }
 
-func TestChallengeToOSP(t *testing.T) {
-	runExecutionTest(t, big.NewInt(0), big.NewInt(400*2), FaultConfig{DistortMachineAtGas: big.NewInt(1)}, false)
+func TestWasmRunChallenge(t *testing.T) {
+	startGas := big.NewInt(0)
+	endGas := big.NewInt(602212)
+	mon, shutdown := monitor.PrepareArbCoreWithMexe(t, "../../../wasm-run.mexe")
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge, messages := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
+	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(300000)}
+	defer shutdown()
+	faultyCore := NewFaultyCore(mon.Core, faultConfig)
+
+	challengedAssertion, err := initializeChallengeData(t, faultyCore, startGas, endGas)
+	if err != nil {
+		t.Fatal("Error with initializeChallengeData")
+	}
+
+	startChallenge(challengedAssertion)
+	moves, asserterErr := executeChallenge(
+		t,
+		challengedAssertion,
+		mon.Core,
+		faultyCore,
+		client,
+		tester,
+		seqInboxAddr,
+		asserterWallet,
+		challengerWallet,
+	)
+	saveChallengeData(t, challengedAssertion, messages, moves, asserterErr)
+}
+
+func TestWasmRun2Challenge(t *testing.T) {
+	startGas := big.NewInt(0)
+	endGas := big.NewInt(602212000)
+	mon, shutdown := monitor.PrepareArbCoreWithMexe(t, "../../../wasm-run.mexe")
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge, messages := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
+	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(300000)}
+	defer shutdown()
+	faultyCore := NewFaultyCore(mon.Core, faultConfig)
+
+	challengedAssertion, err := initializeChallengeData(t, faultyCore, startGas, endGas)
+	if err != nil {
+		t.Fatal("Error with initializeChallengeData")
+	}
+
+	startChallenge(challengedAssertion)
+	moves, asserterErr := executeChallenge(
+		t,
+		challengedAssertion,
+		mon.Core,
+		faultyCore,
+		client,
+		tester,
+		seqInboxAddr,
+		asserterWallet,
+		challengerWallet,
+	)
+	saveChallengeData(t, challengedAssertion, messages, moves, asserterErr)
+}
+
+func TestChallengeToOSP2(t *testing.T) {
+	runExecutionTest(t, big.NewInt(0), big.NewInt(400000), FaultConfig{DistortMachineAtGas: big.NewInt(1000)}, true)
 }
 
 func makeInit() message.Init {

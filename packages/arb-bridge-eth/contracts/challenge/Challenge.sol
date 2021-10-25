@@ -46,6 +46,11 @@ contract Challenge is Cloneable, IChallenge {
     event AsserterTimedOut();
     event ChallengerTimedOut();
     event OneStepProofCompleted();
+    event OneStepProofContinue(
+        bytes32 indexed challengeRoot,
+        uint256 challengedSegmentStart,
+        uint256 challengedSegmentLength
+    );
     event ContinuedExecutionProven();
 
     // Can only initialize once
@@ -245,6 +250,13 @@ contract Challenge is Cloneable, IChallenge {
         _currentWin();
     }
 
+    struct ReturnContext {
+        bytes32 rootHash;
+        bytes32 startState;
+        bytes32 endState;
+        uint256 continueLength;
+    }
+
     // machineFields
     //  initialInbox
     //  initialMessageAcc
@@ -266,9 +278,9 @@ contract Challenge is Cloneable, IChallenge {
         bytes memory _bufferProof,
         uint8 prover
     ) external onlyOnTurn {
-        bytes32 rootHash;
+        ReturnContext memory context = ReturnContext(0,0,0,0);
         {
-            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) = executors[
+            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[7] memory proofFields) = executors[
                 prover
             ].executeStep(
                     bridges,
@@ -277,6 +289,9 @@ contract Challenge is Cloneable, IChallenge {
                     _executionProof,
                     _bufferProof
                 );
+            context.startState = proofFields[4];
+            context.endState = proofFields[5];
+            context.continueLength = uint256(proofFields[6]);
 
             require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
 
@@ -304,7 +319,7 @@ contract Challenge is Cloneable, IChallenge {
                 "WRONG_END"
             );
 
-            rootHash = ChallengeLib.bisectionChunkHash(
+            context.rootHash = ChallengeLib.bisectionChunkHash(
                 _challengedSegmentStart,
                 _challengedSegmentLength,
                 oneStepProofExecutionBefore(
@@ -316,15 +331,21 @@ contract Challenge is Cloneable, IChallenge {
                 ),
                 _oldEndHash
             );
+
         }
 
         require(
-            ChallengeLib.verifySegmentProof(challengeState, rootHash, _merkleNodes, _merkleRoute),
+            ChallengeLib.verifySegmentProof(challengeState, context.rootHash, _merkleNodes, _merkleRoute),
             BIS_PREV
         );
 
-        emit OneStepProofCompleted();
-        _currentWin();
+        if (context.endState == 0 && context.startState == 0) {
+            emit OneStepProofCompleted();
+            _currentWin();
+        } else {
+            updateNewRoot(context.startState, context.endState, context.continueLength);
+            emit OneStepProofContinue(challengeState, _challengedSegmentStart, _challengedSegmentLength);
+        }
     }
 
     function timeout() external override {
@@ -358,6 +379,49 @@ contract Challenge is Cloneable, IChallenge {
         } else {
             require(false, "NO_TURN");
         }
+    }
+
+    function simpleCutHash(bytes32 machineHash, uint256 consumedGas) private pure returns (bytes32) {
+        bytes32 restHash = ChallengeLib.assertionRestHash(0, machineHash, 0, 0, 0, 0);
+        return ChallengeLib.assertionHash(consumedGas, restHash);
+    }
+
+    function updateNewRoot(bytes32 startHash, bytes32 endHash, uint256 length) private {
+        bytes32[] memory hashes = new bytes32[](2);
+        hashes[0] = simpleCutHash(startHash, 0);
+        hashes[1] = simpleCutHash(endHash, length);
+        updateBisectionRoot(hashes, 0, length);
+
+        emit Bisected(challengeState, 0, length, hashes);
+    }
+
+    function updateBisectionRoot(
+        bytes32[] memory _chainHashes,
+        uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength
+    ) private returns (bytes32) {
+        uint256 bisectionCount = _chainHashes.length - 1;
+        bytes32[] memory hashes = new bytes32[](bisectionCount);
+        uint256 chunkSize = ChallengeLib.firstSegmentSize(_challengedSegmentLength, bisectionCount);
+        uint256 segmentStart = _challengedSegmentStart;
+        hashes[0] = ChallengeLib.bisectionChunkHash(
+            segmentStart,
+            chunkSize,
+            _chainHashes[0],
+            _chainHashes[1]
+        );
+        segmentStart = segmentStart.add(chunkSize);
+        chunkSize = ChallengeLib.otherSegmentSize(_challengedSegmentLength, bisectionCount);
+        for (uint256 i = 1; i < bisectionCount; i++) {
+            hashes[i] = ChallengeLib.bisectionChunkHash(
+                segmentStart,
+                chunkSize,
+                _chainHashes[i],
+                _chainHashes[i + 1]
+            );
+            segmentStart = segmentStart.add(chunkSize);
+        }
+        challengeState = MerkleLib.generateRoot(hashes);
     }
 
     function clearChallenge() external override {
@@ -410,7 +474,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _initialSendAcc,
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
-        bytes32[4] memory proofFields
+        bytes32[7] memory proofFields
     ) private pure returns (bytes32) {
         return
             ChallengeLib.assertionHash(
@@ -432,7 +496,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256[3] memory _initialState,
         uint64 gasUsed,
         uint256 totalMessagesRead,
-        bytes32[4] memory proofFields
+        bytes32[7] memory proofFields
     ) private pure returns (bytes32) {
         uint256 newSendCount = _initialState[1].add((_initialSendAcc == proofFields[2] ? 0 : 1));
         uint256 newLogCount = _initialState[2].add((_initialLogAcc == proofFields[3] ? 0 : 1));

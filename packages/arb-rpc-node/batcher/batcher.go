@@ -19,6 +19,7 @@ package batcher
 import (
 	"container/list"
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -336,6 +337,8 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	m.Lock()
 	defer m.Unlock()
 
+	fmt.Println("Validate")
+
 	action, err := m.pendingBatch.validateTx(tx)
 	if action == REMOVE {
 		return err
@@ -345,10 +348,12 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return err
 	}
 
+	fmt.Println("add tx")
 	if err := m.queuedTxes.addTransaction(tx, sender); err != nil {
 		return err
 	}
 
+	fmt.Println("send")
 	m.newTxFeed.Send(core.NewTxsEvent{Txs: []*types.Transaction{tx}})
 
 	logItem := logger.Info().

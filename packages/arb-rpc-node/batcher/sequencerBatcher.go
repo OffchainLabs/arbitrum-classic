@@ -402,6 +402,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				successCount++
 			}
 		}
+
 		if successCount == len(batchTxs) {
 			sequencedTxs = batchTxs
 			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))

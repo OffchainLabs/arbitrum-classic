@@ -140,6 +140,10 @@ abstract contract OneStepProofCommon is IOneStepProof {
     uint8 internal constant OP_SETBUFFER64 = 0xa5;
     uint8 internal constant OP_SETBUFFER256 = 0xa6;
 
+    uint8 internal constant OP_WASMCOMPILE = 0xa7;
+    uint8 internal constant OP_WASMRUN = 0xa8;
+    uint8 internal constant OP_WASMTEST = 0xf1;
+
     uint8 internal constant CODE_POINT_TYPECODE = 1;
     bytes32 internal constant CODE_POINT_ERROR =
         keccak256(abi.encodePacked(CODE_POINT_TYPECODE, uint8(0), bytes32(0)));
@@ -160,7 +164,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         returns (
             uint64 gas,
             uint256 afterMessagesRead,
-            bytes32[4] memory fields
+            bytes32[7] memory fields
         )
     {
         AssertionContext memory context = initializeExecutionContext(
@@ -209,7 +213,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         returns (
             uint64 gas,
             uint256 afterMessagesRead,
-            bytes32[4] memory fields
+            bytes32[7] memory fields
         )
     {
         return (
@@ -219,7 +223,10 @@ abstract contract OneStepProofCommon is IOneStepProof {
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
                 context.sendAcc,
-                context.logAcc
+                context.logAcc,
+                context.startState,
+                context.endState,
+                bytes32(context.nextLength)
             ]
         );
     }
@@ -257,6 +264,9 @@ abstract contract OneStepProofCommon is IOneStepProof {
         uint256 offset;
         // merkle proofs for buffer
         bytes bufProof;
+        bytes32 startState;
+        bytes32 endState;
+        uint256 nextLength;
         bool errorOccurred;
     }
 
@@ -336,6 +346,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
             cp = Value.newCodePoint(uint8(opCode), context.startMachine.instructionStackHash);
         } else {
             // If we have an immediate, there must be at least one stack value
+            // TODO: we should check that the immediate is not a wasm codepoint
             require(stackVals.length > 0, NO_IMM);
             cp = Value.newCodePoint(
                 uint8(opCode),

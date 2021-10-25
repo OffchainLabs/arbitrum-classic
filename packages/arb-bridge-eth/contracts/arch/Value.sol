@@ -24,8 +24,9 @@ library Value {
     uint8 internal constant HASH_PRE_IMAGE_TYPECODE = 2;
     uint8 internal constant TUPLE_TYPECODE = 3;
     uint8 internal constant BUFFER_TYPECODE = TUPLE_TYPECODE + 9;
+    uint8 internal constant WASM_TYPECODE = TUPLE_TYPECODE + 11;
     // All values received from clients will have type codes less than the VALUE_TYPE_COUNT
-    uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 10;
+    uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 12;
 
     // The following types do not show up in the marshalled format and is
     // only used for internal tracking purposes
@@ -37,11 +38,20 @@ library Value {
         Data[] immediate;
     }
 
+    struct WasmCodePoint {
+        bytes32 codept;
+        bytes32 table;
+        uint256 tableSize;
+        bytes32 buffer;
+        uint256 bufferSize;
+    }
+
     struct Data {
         uint256 intVal;
         CodePoint cpVal;
         Data[] tupleVal;
         bytes32 bufferHash;
+        WasmCodePoint wasmVal;
         uint8 typeCode;
         uint256 size;
     }
@@ -64,6 +74,10 @@ library Value {
 
     function codePointTypeCode() internal pure returns (uint8) {
         return CODE_POINT_TYPECODE;
+    }
+
+    function wasmTypeCode() internal pure returns (uint8) {
+        return WASM_TYPECODE;
     }
 
     function valueTypeCode() internal pure returns (uint8) {
@@ -114,6 +128,10 @@ library Value {
         return val.typeCode == BUFFER_TYPECODE;
     }
 
+    function isWasm(Data memory val) internal pure returns (bool) {
+        return val.typeCode == WASM_TYPECODE;
+    }
+
     function newEmptyTuple() internal pure returns (Data memory) {
         return newTuple(new Data[](0));
     }
@@ -126,9 +144,13 @@ library Value {
         }
     }
 
+    function emptyWasmCode() internal pure returns (WasmCodePoint memory) {
+        return WasmCodePoint(0,0,0,0,0);
+    }
+
     function newInt(uint256 _val) internal pure returns (Data memory) {
         return
-            Data(_val, CodePoint(0, 0, new Data[](0)), new Data[](0), 0, INT_TYPECODE, uint256(1));
+            Data(_val, CodePoint(0, 0, new Data[](0)), new Data[](0), 0, emptyWasmCode(), INT_TYPECODE, uint256(1));
     }
 
     function newHashedValue(bytes32 valueHash, uint256 valueSize)
@@ -142,6 +164,7 @@ library Value {
                 CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
                 0,
+                emptyWasmCode(),
                 HASH_ONLY,
                 valueSize
             );
@@ -155,7 +178,7 @@ library Value {
             size += _val[i].size;
         }
 
-        return Data(0, CodePoint(0, 0, new Data[](0)), _val, 0, TUPLE_TYPECODE, size);
+        return Data(0, CodePoint(0, 0, new Data[](0)), _val, 0, emptyWasmCode(), TUPLE_TYPECODE, size);
     }
 
     function newTuplePreImage(bytes32 preImageHash, uint256 size)
@@ -169,6 +192,7 @@ library Value {
                 CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
                 0,
+                emptyWasmCode(), 
                 HASH_PRE_IMAGE_TYPECODE,
                 size
             );
@@ -189,7 +213,7 @@ library Value {
     }
 
     function newCodePoint(CodePoint memory _val) private pure returns (Data memory) {
-        return Data(0, _val, new Data[](0), 0, CODE_POINT_TYPECODE, uint256(1));
+        return Data(0, _val, new Data[](0), 0, emptyWasmCode(), CODE_POINT_TYPECODE, uint256(1));
     }
 
     function newBuffer(bytes32 bufHash) internal pure returns (Data memory) {
@@ -199,7 +223,21 @@ library Value {
                 CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
                 bufHash,
+                emptyWasmCode(), 
                 BUFFER_TYPECODE,
+                uint256(1)
+            );
+    }
+
+    function newWasmCode(bytes32 codept, bytes32 table, uint256 tableSize, bytes32 buf, uint256 bufSize) internal pure returns (Data memory) {
+        return
+            Data(
+                uint256(0),
+                CodePoint(0, 0, new Data[](0)),
+                new Data[](0),
+                0,
+                WasmCodePoint(codept, table, tableSize, buf, bufSize), 
+                WASM_TYPECODE,
                 uint256(1)
             );
     }

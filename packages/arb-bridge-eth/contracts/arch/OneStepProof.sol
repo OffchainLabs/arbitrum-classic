@@ -950,7 +950,7 @@ contract OneStepProof is OneStepProofCommon {
             return (0, 0, 1, executeNewBuffer);
         } else if (opCode >= OP_HASH && opCode <= OP_SHA256_F) {
             revert("use another contract to handle hashing opcodes");
-        } else if ((opCode >= OP_GETBUFFER8 && opCode <= OP_SETBUFFER256) || opCode == OP_SEND) {
+        } else if ((opCode >= OP_GETBUFFER8 && opCode <= OP_WASMRUN) || opCode == OP_SEND) {
             revert("use another contract to handle buffer opcodes");
         } else {
             return (0, 0, ERROR_GAS_COST, executeErrorInsn);

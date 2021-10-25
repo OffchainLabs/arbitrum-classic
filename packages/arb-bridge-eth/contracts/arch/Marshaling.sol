@@ -90,6 +90,29 @@ library Marshaling {
         return (offset, Value.newCodePoint(opCode, nextHash));
     }
 
+    function deserializeWasm(bytes memory data, uint256 startOffset)
+        internal
+        pure
+        returns (
+            uint256, // offset
+            Value.Data memory // val
+        )
+    {
+        uint256 offset = startOffset;
+        bytes32 codept;
+        bytes32 table;
+        uint256 tableSize;
+        bytes32 extra;
+        uint256 extraSz;
+
+        (offset, codept) = extractBytes32(data, offset);
+        (offset, table) = extractBytes32(data, offset);
+        (offset, tableSize) = deserializeInt(data, offset);
+        (offset, extra) = extractBytes32(data, offset);
+        (offset, extraSz) = deserializeInt(data, offset);
+        return (offset, Value.newWasmCode(codept, table, tableSize, extra, extraSz));
+    }
+
     function deserializeTuple(
         uint8 memberCount,
         bytes memory data,
@@ -126,6 +149,8 @@ library Marshaling {
             return (offset, Value.newInt(intVal));
         } else if (valType == Value.codePointTypeCode()) {
             return deserializeCodePoint(data, offset);
+        } else if (valType == Value.wasmTypeCode()) {
+            return deserializeWasm(data, offset);
         } else if (valType == Value.bufferTypeCode()) {
             bytes32 hashVal;
             (offset, hashVal) = deserializeBytes32(data, offset);

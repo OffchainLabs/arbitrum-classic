@@ -17,6 +17,7 @@
 #define carbstorage_h
 
 #include "ctypes.h"
+#include "cmachine.h"
 
 #include <stdint.h>
 
@@ -48,6 +49,8 @@ int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);
 int closeArbStorage(CArbStorage* storage_ptr);
+
+int initializeArbStorageForWasm(CArbStorage* storage_ptr, CMachine *machine);
 
 CArbCore* createArbCore(CArbStorage* storage_ptr);
 CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr);

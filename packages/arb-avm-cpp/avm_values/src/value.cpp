@@ -134,6 +134,11 @@ struct Marshaller {
         }
     }
 
+    void operator()(const WasmCodePoint& cp) const {
+        buf.push_back(WASM_CODE_POINT);
+        values.push_back(*cp.data);
+    }
+
     void operator()(const Buffer& val) const {
         buf.push_back(BUFFER);
         auto data = val.toFlatVector();
@@ -162,6 +167,15 @@ void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
         std::visit(marshaller, val);
     }
 }
+
+void marshalWasmCodePoint(const WasmCodePoint& val, std::vector<unsigned char>& buf) {
+    marshal_uint256_t(hash_value(val.data->get_element(0)), buf);
+    marshal_uint256_t(hash_value(val.data->get_element(1)), buf);
+    marshal_uint256_t(getSize(val.data->get_element(1)), buf);
+    marshal_uint256_t(hash_value(val.data->get_element(2)), buf);
+    marshal_uint256_t(hash_value(val.data->get_element(3)), buf);
+}
+
 
 namespace {
 void marshalForProof(const HashPreImage& val,
@@ -230,6 +244,14 @@ void marshalForProof(const Buffer& val,
     marshal_uint256_t(val.hash(), buf);
 }
 
+void marshalForProof(const WasmCodePoint& val,
+                     size_t,
+                     std::vector<unsigned char>& buf,
+                     const Code&) {
+    buf.push_back(WASM_CODE_POINT);
+    marshalWasmCodePoint(val, buf);
+}
+
 }  // namespace
 
 void marshalForProof(const value& val,
@@ -253,6 +275,8 @@ struct GetSize {
     }
 
     uint256_t operator()(const Tuple& val) const { return val.getSize(); }
+
+    uint256_t operator()(const WasmCodePoint&) const { return 1; }
 
     uint256_t operator()(const Buffer&) const { return 1; }
 
@@ -288,6 +312,11 @@ struct ValuePrinter {
 
     std::ostream* operator()(const Tuple& val) const {
         os << val;
+        return &os;
+    }
+
+    std::ostream* operator()(const WasmCodePoint& val) const {
+        os << "WasmPoint(" << *val.data << ")";
         return &os;
     }
 

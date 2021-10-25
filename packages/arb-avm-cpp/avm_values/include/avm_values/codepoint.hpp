@@ -17,9 +17,9 @@
 #ifndef codepoint_hpp
 #define codepoint_hpp
 
+#include <avm_values/tuple.hpp>
 #include <avm_values/buffer.hpp>
 #include <avm_values/opcodes.hpp>
-#include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 
 #include <optional>

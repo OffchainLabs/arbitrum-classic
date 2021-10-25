@@ -94,6 +94,15 @@ func (s *ArbStorage) Initialize(contractPath string) error {
 	return nil
 }
 
+func (s *ArbStorage) InitializeForWasm(machine ExtendedMachine) error {
+	success := C.initializeArbStorageForWasm(s.c, machine.UnsafePointer())
+
+	if success == 0 {
+		return errors.New("failed to initialize storage")
+	}
+	return nil
+}
+
 func (s *ArbStorage) Initialized() bool {
 	return C.arbStorageInitialized(s.c) == 1
 }

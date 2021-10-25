@@ -354,6 +354,10 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	return cursor.updateValues()
 }
 
+func (ac *ArbCore) SubLookup(lookup core.ArbCore) core.ArbCoreLookup {
+	return lookup
+}
+
 func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {
 	cMachine := C.arbCoreGetLastMachine(ac.c)
 	if cMachine == nil {

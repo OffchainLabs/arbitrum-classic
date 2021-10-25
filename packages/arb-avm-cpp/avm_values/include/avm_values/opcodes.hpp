@@ -117,6 +117,8 @@ enum class OpCode : uint8_t {
     SET_BUFFER8,
     SET_BUFFER64,
     SET_BUFFER256,
+    WASM_COMPILE,
+    WASM_RUN,
 };
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
@@ -202,6 +204,9 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::SET_BUFFER8, "setbuffer8"},
     {OpCode::SET_BUFFER64, "setbuffer64"},
     {OpCode::SET_BUFFER256, "setbuffer256"},
+
+    {OpCode::WASM_COMPILE, "wasm_compile"},
+    {OpCode::WASM_RUN, "wasm_run"},
 
     {OpCode::ECRECOVER, "ecrecover"},
     {OpCode::ECADD, "ecadd"},
@@ -294,6 +299,8 @@ const std::unordered_map<OpCode, std::vector<size_t>> InstructionStackPops = {
     {OpCode::SET_BUFFER8, {1, 1, 1}},
     {OpCode::SET_BUFFER64, {1, 1, 1}},
     {OpCode::SET_BUFFER256, {1, 1, 1}},
+    {OpCode::WASM_COMPILE, {1, 1}},
+    {OpCode::WASM_RUN, {1, 1, 1, 1}},
 
     {OpCode::ECRECOVER, {1, 1, 1, 1}},
     {OpCode::ECADD, {1, 1, 1, 1}},
@@ -384,6 +391,8 @@ const std::unordered_map<OpCode, std::vector<size_t>> InstructionAuxStackPops =
      {OpCode::SET_BUFFER8, {}},
      {OpCode::SET_BUFFER64, {}},
      {OpCode::SET_BUFFER256, {}},
+     {OpCode::WASM_COMPILE, {}},
+     {OpCode::WASM_RUN, {}},
      {OpCode::ECRECOVER, {}},
      {OpCode::ECADD, {}},
      {OpCode::ECMUL, {}},
@@ -472,6 +481,10 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::SET_BUFFER8, 100},
     {OpCode::SET_BUFFER64, 100},
     {OpCode::SET_BUFFER256, 100},
+
+    {OpCode::WASM_COMPILE, 100},
+    {OpCode::WASM_RUN, 1000100},
+//    {OpCode::WASM_RUN, 100},
 
     {OpCode::ECRECOVER, 20000},
     {OpCode::ECADD, 3500},

@@ -252,6 +252,105 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     return rocksdb::Status::OK();
 }
 
+rocksdb::Status ArbCore::initializeFromState(MachineState state) {
+    // Use latest existing checkpoint
+    ValueCache cache{1, 0};
+
+    {
+        ReadTransaction tx(data_storage);
+        auto schema_result = schemaVersion(tx);
+        if (schema_result.status.ok() && schema_result.data > 0) {
+            std::cerr << "Error: cannot use new database schema" << std::endl;
+            return rocksdb::Status::Aborted();
+        }
+    }
+
+    if (coreConfig.profile_reset_db_except_inbox) {
+        {
+            ReadWriteTransaction tx(data_storage);
+            saveNextSegmentID(tx, 0);
+            auto s = tx.commit();
+            if (!s.ok()) {
+                std::cerr << "Error resetting segment: " << s.ToString()
+                          << std::endl;
+                return s;
+            }
+        }
+        {
+            auto s = data_storage->clearDBExceptInbox();
+            if (!s.ok()) {
+                std::cerr << "Error deleting columns: " << s.ToString()
+                          << std::endl;
+                return s;
+            }
+        }
+    }
+
+    rocksdb::Status status;
+    if (coreConfig.profile_reorg_to != 0) {
+        status = reorgToMessageCountOrBefore(coreConfig.profile_reorg_to, false,
+                                             cache);
+    } else {
+        status = reorgToMessageCountOrBefore(0, true, cache);
+    }
+    if (status.ok()) {
+        return status;
+    }
+
+    if (!status.IsNotFound()) {
+        std::cerr << "Error with initial reorg: " << status.ToString()
+                  << std::endl;
+        return status;
+    }
+
+    code = state.code;
+    machine = std::make_unique<MachineThread>(state);
+
+    last_machine = std::make_unique<Machine>(*machine);
+
+    ReadWriteTransaction tx(data_storage);
+    // Need to initialize database from scratch
+
+    status = saveCheckpoint(tx);
+    if (!status.ok()) {
+        std::cerr << "failed to save initial checkpoint into db: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
+
+    status = updateLogInsertedCount(tx, 0);
+    if (!status.ok()) {
+        std::cerr << "failed to initialize log inserted count: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
+    status = updateSendInsertedCount(tx, 0);
+    if (!status.ok()) {
+        std::cerr << "failed to initialize send inserted count: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
+
+    for (size_t i = 0; i < logs_cursors.size(); i++) {
+        status = logsCursorSaveCurrentTotalCount(tx, i, 0);
+        if (!status.ok()) {
+            std::cerr << "failed to initialize logscursor counts: "
+                      << status.ToString() << std::endl;
+            return status;
+        }
+    }
+
+    status = tx.commit();
+    if (!status.ok()) {
+        std::cerr << "failed to commit initial state into db: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
+
+    return rocksdb::Status::OK();
+}
+
+
 bool ArbCore::initialized() const {
     ReadTransaction tx(data_storage);
     std::vector<unsigned char> key;
@@ -904,6 +1003,7 @@ void ArbCore::operator()() {
             }
 
             status = tx.commit();
+            machine_idle = true;
             if (!status.ok()) {
                 core_error_string = status.ToString();
                 machine_error = true;

@@ -148,10 +148,7 @@ func (m *BisectMove) MarshalJSON() ([]byte, error) {
 }
 
 func (m *BisectMove) execute(ctx context.Context, challenge *ethbridge.Challenge) error {
-	logger.Info().
-		Str("start", m.inconsistentSegment.Start.String()).
-		Str("end", m.inconsistentSegment.GetEnd().String()).
-		Msg("Bisecting challenge")
+	logger.Info().Str("start", m.inconsistentSegment.Start.String()).Str("end", m.inconsistentSegment.GetEnd().String()).Msg("Bisecting challenge")
 	return challenge.BisectExecution(
 		ctx,
 		m.prevBisection,
@@ -221,15 +218,15 @@ func NewOneStepProofMove(
 	challengedSegment *core.ChallengeSegment,
 	sequencerInbox *ethbridge.SequencerInboxWatcher,
 	lookup core.ArbCoreLookup,
-) (*OneStepProofMove, error) {
+) (byte, *machine.Machine, *OneStepProofMove, error) {
 	previousCut, previousMachine, err := getSegmentStartInfo(lookup, assertion, challengedSegment)
 	if err != nil {
-		return nil, err
+		return 0, nil, nil, err
 	}
 
 	proofData, bufferProofData, err := previousMachine.MarshalForProof()
 	if err != nil {
-		return nil, err
+		return 0, nil, nil, err
 	}
 
 	opcode := proofData[0]
@@ -238,19 +235,19 @@ func NewOneStepProofMove(
 		seqNum := previousCut.TotalMessagesRead
 		batch, err := LookupBatchContaining(ctx, lookup, sequencerInbox, seqNum)
 		if err != nil {
-			return nil, err
+			return 0, nil, nil, err
 		}
 		if batch == nil {
-			return nil, errors.New("Failed to lookup batch containing message")
+			return 0, nil, nil, errors.New("Failed to lookup batch containing message")
 		}
 		inboxProof, err := lookup.GenInboxProof(seqNum, batch.GetBatchIndex(), batch.GetAfterCount())
 		if err != nil {
-			return nil, err
+			return 0, nil, nil, err
 		}
 		proofData = append(proofData, inboxProof...)
 	}
 
-	return &OneStepProofMove{
+	return opcode, &previousMachine, &OneStepProofMove{
 		assertion:          assertion,
 		prevBisection:      prevBisection,
 		segmentToChallenge: segmentToChallenge,
@@ -297,6 +294,52 @@ func (m *OneStepProofMove) execute(ctx context.Context, challenge *ethbridge.Cha
 		m.bufferProofData,
 		opcode,
 	)
+}
+
+func OneStepProofMachine(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	lookup core.ArbCoreLookup,
+	assertion *core.Assertion,
+	challengedSegment *core.ChallengeSegment,
+) (byte, machine.Machine, error) {
+	_, previousMachine, err := getSegmentStartInfo(lookup, assertion, challengedSegment)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	proofData, _, err := previousMachine.MarshalForProof()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	opcode := proofData[0]
+
+	return opcode, previousMachine, nil
+}
+
+func OneStepProofInfo(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	lookup core.ArbCoreLookup,
+	assertion *core.Assertion,
+	prevBisection *core.Bisection,
+	segmentToChallenge int,
+	challengedSegment *core.ChallengeSegment,
+) (byte, machine.Machine, error) {
+	_, previousMachine, err := getSegmentStartInfo(lookup, assertion, challengedSegment)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	proofData, _, err := previousMachine.MarshalForProof()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	opcode := proofData[0]
+
+	return opcode, previousMachine, nil
 }
 
 type TimeoutMove struct {

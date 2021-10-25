@@ -20,6 +20,22 @@
 
 #include <iostream>
 
+uint256_t WasmCodePoint::hash() const {
+    std::array<unsigned char, 1+32*4> valData;
+    valData[0] = WASM_CODE_POINT;
+    auto hash0 = hash_value(data->get_element(0));
+    auto hash1 = hash_value(data->get_element(1));
+    auto hash2 = hash_value(data->get_element(2));
+    auto hash3 = hash_value(data->get_element(3));
+    auto it = valData.begin() + 1;
+    it = to_big_endian(hash0, it);
+    it = to_big_endian(hash1, it);
+    it = to_big_endian(hash2, it);
+    it = to_big_endian(hash3, it);
+    auto hash_val = ethash::keccak256(valData.data(), valData.size());
+    return intx::be::load<uint256_t>(hash_val);
+}
+
 Tuple Tuple::createSizedTuple(const size_t size) {
     if (size == 0) {
         return {};

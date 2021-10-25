@@ -21,6 +21,8 @@
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/status.hpp>
+#include <avm/machinestate/runwasm.hpp>
+#include <avm/machinestate/config.hpp>
 
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
@@ -154,6 +156,7 @@ struct MachineState {
     MachineOutput output;
 
     AssertionContext context;
+    RunWasm *compile = 0;
 
     static MachineState loadFromFile(const std::string& executable_filename);
 
@@ -190,9 +193,32 @@ struct MachineState {
     void addProcessedSend(std::vector<uint8_t> data);
     void addProcessedLog(value log_val);
 
+    void marshalWasmProof(OneStepProof& proof) const;
+    void marshalWasmCompileProof(OneStepProof& proof) const;
+
+    MachineState initialWasmMachine() const;
+    MachineState finalWasmMachine() const;
+
    private:
     void marshalBufferProof(OneStepProof& proof) const;
+    value getStackOrImmed(uint64_t num, Operation op) const;
+    WasmCodePoint compiledWasmCodePoint() const;
     uint256_t gasCost(const Operation& op) const;
 };
+
+struct CodeResult {
+    std::shared_ptr<Code> code;
+    value table;
+    CodePointStub stub;
+};
+
+
+CodeResult wasmAvmToCode(WasmResult &res);
+
+WasmCodePoint wasmAvmToCodePoint(WasmResult& wres, std::vector<uint8_t>& wasm_module);
+
+MachineState makeWasmMachine(WasmResult &wres, uint64_t len, Buffer buf, value arg);
+uint256_t runWasmMachine(MachineState &machine_state, bool debug = false);
+value make_table(std::vector<value> tab);
 
 #endif /* machinestate_hpp */

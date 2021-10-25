@@ -23,6 +23,9 @@ set(ARB_OS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../arb-os)
 set(ARB_OS_PATH ${ARB_OS_DIR}/arb_os/arbos.mexe)
 set(ARB_OS_TEST_CASES_PATH ${ARB_OS_DIR}/replayTests)
 set(MACHINE_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/machine-cases)
+set(WASM_TEST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../test.wasm)
+set(WASM_COMPILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../compiler.wasm)
+set(WASM_ENV_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../test-env.wasm)
 
 configure_file (
     "${CMAKE_CURRENT_SOURCE_DIR}/config.hpp.in"
@@ -47,7 +50,8 @@ add_executable(
         messagestore.cpp
 		opcodes.cpp
 		value.cpp
-        valuecache.cpp)
+        valuecache.cpp
+		wasm.cpp)
 
 target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)

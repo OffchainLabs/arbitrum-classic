@@ -26,7 +26,8 @@ enum ValueTypes {
     HASH_PRE_IMAGE,
     TUPLE,
     BUFFER = 12,
-    CODE_POINT_STUB = 13
+    CODE_POINT_STUB = 13,
+    WASM_CODE_POINT = 14
 };
 
 #endif /* valuetype_h */

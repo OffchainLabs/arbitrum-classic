@@ -43,6 +43,7 @@ class ArbStorage {
     bool closeArbStorage();
     rocksdb::Status initialize(const LoadedExecutable& executable);
     rocksdb::Status initialize(const std::string& executable_path);
+    rocksdb::Status initialize(MachineState state);
     [[nodiscard]] bool initialized() const;
 
     [[nodiscard]] std::unique_ptr<AggregatorStore> getAggregatorStore() const;

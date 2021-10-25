@@ -81,6 +81,8 @@ type ArbCoreLookup interface {
 	// TakeMachine takes ownership of machine such that ExecutionCursor will
 	// no longer be able to advance.
 	TakeMachine(executionCursor ExecutionCursor) (machine.Machine, error)
+
+	SubLookup(lookup ArbCore) ArbCoreLookup
 }
 
 type ArbCoreInbox interface {

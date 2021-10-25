@@ -40,6 +40,10 @@ rocksdb::Status ArbStorage::initialize(const LoadedExecutable& executable) {
     return arb_core->initialize(executable);
 }
 
+rocksdb::Status ArbStorage::initialize(MachineState executable) {
+    return arb_core->initializeFromState(executable);
+}
+
 bool ArbStorage::initialized() const {
     return arb_core->initialized();
 }

@@ -213,6 +213,8 @@ class ArbCore {
 
     ~ArbCore() { abortThread(); }
     rocksdb::Status initialize(const LoadedExecutable& executable);
+    rocksdb::Status initializeFromState(MachineState state);
+    
     [[nodiscard]] bool initialized() const;
     void operator()();
 

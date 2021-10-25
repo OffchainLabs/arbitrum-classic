@@ -188,4 +188,20 @@ inline bool operator!=(const Buffer& val1, const Buffer& val2) {
     return val1.hash() != val2.hash();
 }
 
+inline std::vector<uint8_t> buf2vec(Buffer &buf, uint64_t sz) {
+    std::vector<uint8_t> res;
+    for (uint64_t i = 0; i < sz; i++) {
+        res.push_back(buf.get(i));
+    }
+    return res;
+}
+
+inline Buffer vec2buf(std::vector<uint8_t> &v) {
+    Buffer res;
+    for (uint64_t i = 0; i < v.size(); i++) {
+        res = res.set(i, v[i]);
+    }
+    return res;
+}
+
 #endif /* buffer_hpp */

@@ -113,6 +113,19 @@ library Hashing {
         return keccak256(abi.encodePacked(val));
     }
 
+    function hashWasm(Value.WasmCodePoint memory cp) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    Value.wasmTypeCode(),
+                    cp.codept,
+                    cp.table,
+                    cp.buffer,
+                    cp.bufferSize
+                )
+            );
+    }
+
     function hashCodePoint(Value.CodePoint memory cp) internal pure returns (bytes32) {
         assert(cp.immediate.length < 2);
         if (cp.immediate.length == 0) {
@@ -152,6 +165,29 @@ library Hashing {
             return bytes32(val.intVal);
         } else if (val.typeCode == Value.bufferTypeCode()) {
             return keccak256(abi.encodePacked(uint256(123), val.bufferHash));
+        } else if (val.typeCode == Value.wasmTypeCode()) {
+            return hashWasm(val.wasmVal);
+        } else {
+            require(false, "Invalid type code");
+        }
+    }
+
+    function sizeOf(Value.Data memory val) internal pure returns (uint256) {
+        if (val.typeCode == Value.intTypeCode()) {
+            return 1;
+        } else if (val.typeCode == Value.codePointTypeCode()) {
+            return 1;
+        } else if (val.typeCode == Value.tuplePreImageTypeCode()) {
+            return val.size;
+        } else if (val.typeCode == Value.tupleTypeCode()) {
+            Value.Data memory preImage = getTuplePreImage(val.tupleVal);
+            return preImage.sizeOf();
+        } else if (val.typeCode == Value.hashOnlyTypeCode()) {
+            return val.size;
+        } else if (val.typeCode == Value.bufferTypeCode()) {
+            return 1;
+        } else if (val.typeCode == Value.wasmTypeCode()) {
+            return 1;
         } else {
             require(false, "Invalid type code");
         }

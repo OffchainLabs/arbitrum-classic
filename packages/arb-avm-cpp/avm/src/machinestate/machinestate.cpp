@@ -18,6 +18,7 @@
 
 #include <avm/machine.hpp>
 #include <avm/machinestate/machineoperation.hpp>
+#include <avm/machinestate/config.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/vmValueParser.hpp>
 #include <utility>
@@ -25,6 +26,7 @@
 #include <ethash/keccak.hpp>
 
 #include <iostream>
+#include <fstream>
 
 namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
@@ -230,6 +232,12 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
     }
 }
 
+value MachineState::getStackOrImmed(uint64_t num, Operation op) const {
+    if (num == 0 && op.immediate) return *op.immediate;
+    if (op.immediate) num = num - 1;
+    return stack[num];
+}
+
 void MachineState::marshalBufferProof(OneStepProof& proof) const {
     auto& op = loadCurrentOperation();
     auto opcode = op.opcode;
@@ -355,6 +363,270 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
     }
 }
 
+const int LEVEL = 5;
+
+value table_to_tuple2(std::vector<value> tab, int prefix, int shift, int level, int limit) {
+    if (level == 0) {
+        std::vector<value> v;
+        for (int i = 0; i < 8; i++) {
+            uint64_t idx = prefix + (i << shift);
+            if (idx < tab.size()) {
+                v.push_back(tab[idx]);
+            } else {
+                v.push_back(0);
+            }
+        }
+        return Tuple::createTuple(v);
+    }
+    std::vector<value> v;
+    for (int i = 0; i < 8; i++) {
+        v.push_back(table_to_tuple2(tab, prefix + (i << shift), shift + 3, level - 1, limit));
+    }
+    return Tuple::createTuple(v);
+}
+
+value make_table(std::vector<value> tab) {
+    return table_to_tuple2(tab, 0, 0, LEVEL-1, tab.size());
+}
+
+value get_int_value(std::vector<uint8_t> &bytes, uint64_t offset) {
+    uint256_t acc = 0;
+    for (int i = 0; i < 32; i++) {
+        acc = acc*256;
+        acc += bytes[offset+i];
+    }
+    return acc;
+}
+
+CodeResult wasmAvmToCode(WasmResult &res) {
+    auto code = std::make_shared<Code>(0);
+    CodePointStub stub = code->addSegment();
+
+    std::vector<CodePointStub> points;
+    std::vector<value> tab_lst;
+
+    for (uint64_t i = 0; i < res.insn->size(); i++) {
+        points.push_back(stub);
+        stub = code->addOperation(stub.pc, (*res.insn)[i]);
+    }
+
+    for (uint64_t i = 0; i < res.table.size(); i++) {
+        auto offset = res.table[i].first;
+        if (offset >= tab_lst.size()) {
+            tab_lst.resize(offset+1);
+        }
+        tab_lst[offset] = points[res.table[i].second];
+    }
+    auto table = make_table(tab_lst);
+
+    return {code, table, stub};
+}
+
+WasmCodePoint wasmAvmToCodePoint(WasmResult &wres, std::vector<uint8_t>& wasm_module) {
+    auto res = wasmAvmToCode(wres);
+    std::shared_ptr<Tuple> tpl = std::make_shared<Tuple>(res.stub, res.table, vec2buf(wasm_module), wasm_module.size());
+    std::shared_ptr<WasmRunner> runner = std::make_shared<RunWasm>(wasm_module);
+    return {std::move(tpl), std::move(runner)};
+}
+
+MachineState makeWasmMachine(WasmResult &wres, uint64_t len, Buffer buf, value arg) {
+    auto res = wasmAvmToCode(wres);
+    MachineState state(res.code, 0);
+    state.stack.push(len);
+    state.stack.push(buf);
+    state.stack.push(std::move(res.table));
+    state.stack.push(std::move(arg));
+    state.arb_gas_remaining = 1000000000000;
+    state.output.arb_gas_used = 0;
+
+    return state;
+}
+
+uint256_t runWasmMachine(MachineState &machine_state, bool debug) {
+    uint256_t start_gas = machine_state.arb_gas_remaining;
+
+    bool has_gas_limit = machine_state.context.max_gas != 0;
+    BlockReason block_reason = NotBlocked{};
+    while (true) {
+        if (has_gas_limit) {
+            if (!machine_state.context.go_over_gas) {
+                if (machine_state.nextGasCost() +
+                        machine_state.output.arb_gas_used >
+                    machine_state.context.max_gas) {
+                    // Next step would go over gas limit
+                    break;
+                }
+            } else if (machine_state.output.arb_gas_used >=
+                       machine_state.context.max_gas) {
+                // Last step reached or went over gas limit
+                break;
+            }
+        }
+
+        if (debug) {
+            auto op = machine_state.loadCurrentInstruction();
+            if (machine_state.stack.stacksize() > 0 && !std::get_if<Tuple>(&machine_state.stack[0])) {
+                std::cerr << "stack top " << machine_state.stack[0] << "\n";
+            }
+            std::cerr << "op " << op << " state " << int(machine_state.state) << "\n";
+        }
+
+        auto& op2 = machine_state.loadCurrentOperation();
+
+        if (op2.opcode == OpCode::HALT) {
+            break;
+        }
+        block_reason = machine_state.runOne();
+        
+
+        if (!std::get_if<NotBlocked>(&block_reason)) {
+            break;
+        }
+    }    
+    return start_gas - machine_state.arb_gas_remaining;
+}
+
+void MachineState::marshalWasmProof(OneStepProof &proof) const {
+    auto currentInstruction = loadCurrentInstruction();
+    auto& current_op = currentInstruction.op;
+
+    std::vector<size_t> stackPops = { 1, 1, 1, 1 };
+
+    std::vector<size_t> auxStackPops;
+
+    size_t immediateMarshalLevel = 0;
+    if (current_op.immediate && !stackPops.empty()) {
+        immediateMarshalLevel = stackPops[0];
+        stackPops = { 1, 1, 1 };
+    }
+
+    auto stackProof = stack.marshalForProof(stackPops, *code);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
+
+    proof.buffer_proof.push_back(static_cast<uint8_t>(current_op.opcode));
+    proof.buffer_proof.push_back(stackProof.count +
+                                   (current_op.immediate ? 1 : 0));
+    proof.buffer_proof.push_back(auxStackProof.count);
+
+    proof.buffer_proof.insert(proof.buffer_proof.cend(),
+                                stackProof.data.begin(), stackProof.data.end());
+    if (current_op.immediate) {
+        ::marshalForProof(*current_op.immediate, immediateMarshalLevel,
+                          proof.buffer_proof, *code);
+    }
+    proof.buffer_proof.insert(proof.buffer_proof.cend(),
+                                auxStackProof.data.begin(),
+                                auxStackProof.data.end());
+    ::marshalState(proof.buffer_proof, *code, currentInstruction.nextHash,
+                   stackProof.bottom, auxStackProof.bottom, registerVal,
+                   static_val, arb_gas_remaining, errpc);
+
+    proof.buffer_proof.push_back(current_op.immediate ? 1 : 0);
+
+}
+
+void MachineState::marshalWasmCompileProof(OneStepProof &proof) const {
+    auto currentInstruction = loadCurrentInstruction();
+    auto& current_op = currentInstruction.op;
+
+    std::vector<size_t> stackPops = {
+        1,
+        1,
+        1,
+        1,
+        1,
+    };
+
+    std::vector<size_t> auxStackPops;
+
+    size_t immediateMarshalLevel = 0;
+    if (current_op.immediate && !stackPops.empty()) {
+        immediateMarshalLevel = stackPops[0];
+        stackPops.erase(stackPops.cbegin());
+    }
+
+    auto stackProof = stack.marshalForProof(stackPops, *code);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
+
+    proof.buffer_proof.push_back(static_cast<uint8_t>(current_op.opcode));
+    proof.buffer_proof.push_back(stackProof.count +
+                                   (current_op.immediate ? 1 : 0));
+    proof.buffer_proof.push_back(auxStackProof.count);
+
+    proof.buffer_proof.insert(proof.buffer_proof.cend(),
+                                stackProof.data.begin(), stackProof.data.end());
+    if (current_op.immediate) {
+        ::marshalForProof(*current_op.immediate, immediateMarshalLevel,
+                          proof.buffer_proof, *code);
+    }
+    proof.buffer_proof.insert(proof.buffer_proof.cend(),
+                                auxStackProof.data.begin(),
+                                auxStackProof.data.end());
+    ::marshalState(proof.buffer_proof, *code, currentInstruction.nextHash,
+                   stackProof.bottom, auxStackProof.bottom, registerVal,
+                   static_val, arb_gas_remaining, errpc);
+
+    proof.buffer_proof.push_back(current_op.immediate ? 1 : 0);
+
+}
+
+MachineState MachineState::initialWasmMachine() const {
+    auto currentInstruction = loadCurrentInstruction();
+    auto& op = currentInstruction.op;
+    if (op.opcode == OpCode::WASM_RUN) {
+        auto elem_arg = getStackOrImmed(0, op);
+        auto elem0 = getStackOrImmed(1, op);
+        auto elem1 = getStackOrImmed(2, op);
+        auto elem2 = getStackOrImmed(3, op);
+        uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
+        Buffer buf = *std::get_if<Buffer>(&elem1);
+        WasmCodePoint cp = *std::get_if<WasmCodePoint>(&elem2);
+
+        auto tpl3 = cp.data->get_element(3);
+        auto tpl2 = cp.data->get_element(2);
+        // Looks like the table and jump point are useless, need to recreate them for the "submachine"
+        uint64_t code_len = static_cast<uint64_t>(*std::get_if<uint256_t>(&tpl3));
+        Buffer code_buffer = *std::get_if<Buffer>(&tpl2);
+        auto res = compile->run_wasm(code_buffer, code_len);
+
+        return makeWasmMachine(res, len, buf, elem_arg);
+    } else if (op.opcode == OpCode::WASM_COMPILE) {
+        auto elem0 = getStackOrImmed(0, op);
+        auto elem1 = getStackOrImmed(1, op);
+        uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
+        Buffer buf = *std::get_if<Buffer>(&elem1);
+
+        std::ifstream input(wasm_compiler_path, std::ios::binary);
+        std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
+        input.close();
+
+        auto res = compile->run_wasm(vec2buf(bytes), bytes.size());
+
+        return makeWasmMachine(res, len, buf, 0);
+    } else {
+        throw std::runtime_error("Not a wasm instruction");
+    }
+}
+
+WasmCodePoint MachineState::compiledWasmCodePoint() const {
+    auto currentInstruction = loadCurrentInstruction();
+    auto& op = currentInstruction.op;
+    auto elem0 = getStackOrImmed(0, op);
+    auto elem1 = getStackOrImmed(1, op);
+    uint64_t code_len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
+    Buffer code_buf = *std::get_if<Buffer>(&elem1);
+    auto res = compile->run_wasm(code_buf, code_len);
+    auto bytes = buf2vec(res.buffer, res.buffer_len);
+    auto wasm_bytes = buf2vec(code_buf, code_len);
+    return wasmAvmToCodePoint(res, wasm_bytes);
+}
+
+MachineState MachineState::finalWasmMachine() const {
+    auto state = initialWasmMachine();
+    runWasmMachine(state);
+    return state;
+}
+
 OneStepProof MachineState::marshalForProof() const {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
@@ -411,7 +683,22 @@ OneStepProof MachineState::marshalForProof() const {
 
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
 
-    if (!underflowed) {
+    if (current_op.opcode == OpCode::WASM_RUN) {
+        auto state = initialWasmMachine();
+
+        uint256_t gasUsed = runWasmMachine(state);
+
+        state.marshalWasmProof(proof);
+        marshal_uint256_t(gasUsed, proof.buffer_proof);
+    } else if (current_op.opcode == OpCode::WASM_COMPILE) {
+
+        auto state = initialWasmMachine();
+
+        uint256_t gasUsed = runWasmMachine(state);
+
+        state.marshalWasmCompileProof(proof);
+        marshal_uint256_t(gasUsed, proof.buffer_proof);
+    } else if (!underflowed) {
         // Don't need a buffer proof if we're underflowing
         marshalBufferProof(proof);
     }
@@ -832,6 +1119,12 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::SET_BUFFER256:
             machineoperation::setbuffer256(*this);
+            break;
+        case OpCode::WASM_COMPILE:
+            machineoperation::wasm_compile(*this);
+            break;
+        case OpCode::WASM_RUN:
+            machineoperation::wasm_run(*this);
             break;
         /*****************/
         /*  Precompiles  */

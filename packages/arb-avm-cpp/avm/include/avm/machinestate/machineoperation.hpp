@@ -97,6 +97,9 @@ void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
 BlockReason sideload(MachineState& m);
 
+void wasm_compile(MachineState& m);
+void wasm_run(MachineState& m);
+
 void newbuffer(MachineState& m);
 void getbuffer8(MachineState& m);
 void getbuffer64(MachineState& m);

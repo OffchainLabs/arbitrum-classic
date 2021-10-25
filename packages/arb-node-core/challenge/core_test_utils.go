@@ -74,6 +74,13 @@ func NewFaultyCore(core core.ArbCore, config FaultConfig) FaultyCore {
 	}
 }
 
+func (c FaultyCore) SubLookup(lookup core.ArbCore) core.ArbCoreLookup {
+	return FaultyCore{
+		config:  c.config,
+		ArbCore: lookup,
+	}
+}
+
 func (c FaultyCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {
 	cursor, err := c.ArbCore.GetExecutionCursor(totalGasUsed)
 	if err != nil {

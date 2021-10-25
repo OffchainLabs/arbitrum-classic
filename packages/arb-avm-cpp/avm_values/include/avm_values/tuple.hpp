@@ -29,6 +29,41 @@ HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
 
+struct WasmResult {
+    uint64_t buffer_len;
+    Buffer buffer;
+    std::vector<uint8_t> extra;
+    uint64_t gas_left;
+    std::shared_ptr<value> immed;
+    std::shared_ptr<std::vector<Operation>> insn;
+    std::vector<std::pair<uint64_t, uint64_t>> table;
+    bool error;
+};
+
+class WasmRunner {
+   public:
+    virtual WasmResult run_wasm(Buffer buf, uint64_t len) = 0;
+    virtual WasmResult run_wasm(Buffer buf, uint64_t len, value v) = 0;
+};
+
+struct WasmCodePoint {
+    std::shared_ptr<Tuple> data;
+    std::shared_ptr<WasmRunner> runner;
+    uint256_t hash() const;
+};
+
+inline uint256_t hash(const WasmCodePoint& hv) {
+    return hv.hash();
+}
+
+inline bool operator==(const WasmCodePoint& val1, const WasmCodePoint& val2) {
+    return val1.hash() == val2.hash();
+}
+
+inline bool operator!=(const WasmCodePoint& val1, const WasmCodePoint& val2) {
+    return val1.hash() != val2.hash();
+}
+
 class Tuple {
    private:
     std::shared_ptr<RawTuple> tpl;

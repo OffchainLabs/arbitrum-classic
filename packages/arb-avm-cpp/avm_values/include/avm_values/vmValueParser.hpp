@@ -30,6 +30,7 @@ struct LoadedExecutable {
         : code(std::move(code_)), static_val(std::move(static_val_)) {}
 };
 
+Operation simple_operation_from_json(const nlohmann::json& value_json);
 value simple_value_from_json(const nlohmann::json& value_json);
 std::vector<uint8_t> send_from_json(const nlohmann::json& val);
 

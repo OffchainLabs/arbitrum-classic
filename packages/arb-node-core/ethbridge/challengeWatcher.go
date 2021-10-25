@@ -34,6 +34,7 @@ import (
 )
 
 var bisectedID ethcommon.Hash
+var continueID ethcommon.Hash
 
 func init() {
 	parsedChallenge, err := abi.JSON(strings.NewReader(ethbridgecontracts.ChallengeABI))
@@ -41,6 +42,7 @@ func init() {
 		panic(err)
 	}
 	bisectedID = parsedChallenge.Events["Bisected"].ID
+	continueID = parsedChallenge.Events["OneStepProofContinue"].ID
 }
 
 type ChallengeTurn uint8
@@ -176,5 +178,34 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 	return &core.Bisection{
 		ChallengedSegment: challengeSegment,
 		Cuts:              cuts,
+	}, nil
+}
+
+func (c *ChallengeWatcher) LookupContinue(ctx context.Context, challengeState common.Hash) (*core.ChallengeSegment, error) {
+	var query = ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: big.NewInt(0),
+		ToBlock:   nil,
+		Addresses: []ethcommon.Address{c.address},
+		Topics:    [][]ethcommon.Hash{{continueID}, {challengeState.ToEthHash()}},
+	}
+	logs, err := c.client.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if len(logs) == 0 {
+		return nil, nil
+	}
+	if len(logs) > 1 {
+		return nil, errors.New("too many matching obligations")
+	}
+
+	parsedLog, err := c.con.ParseOneStepProofContinue(logs[0])
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &core.ChallengeSegment{
+		Start:  parsedLog.ChallengedSegmentStart,
+		Length: parsedLog.ChallengedSegmentLength,
 	}, nil
 }

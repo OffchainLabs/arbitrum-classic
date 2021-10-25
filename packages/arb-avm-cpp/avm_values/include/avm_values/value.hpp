@@ -31,12 +31,14 @@ class HashPreImage;
 class Code;
 struct CodePointStub;
 struct CodePointRef;
+struct WasmCodePoint;
 
 using value = std::variant<Tuple,
                            uint256_t,
                            CodePointStub,
                            std::shared_ptr<HashPreImage>,
-                           Buffer>;
+                           Buffer,
+                           WasmCodePoint>;
 
 struct TuplePlaceholder {
     uint8_t values;
@@ -55,6 +57,7 @@ value deserialize_value(const char*& srccode);
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf);
 
 void marshal_value(const value& val, std::vector<unsigned char>& buf);
+void marshalWasmCodePoint(const WasmCodePoint& val, std::vector<unsigned char>& buf);
 
 void marshalForProof(const value& val,
                      size_t marshal_level,

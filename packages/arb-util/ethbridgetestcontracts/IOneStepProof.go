@@ -30,7 +30,7 @@ var (
 
 // IOneStepProofMetaData contains all meta data concerning the IOneStepProof contract.
 var IOneStepProofMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address[2]\",\"name\":\"bridges\",\"type\":\"address[2]\"},{\"internalType\":\"uint256\",\"name\":\"initialMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"bproof\",\"type\":\"bytes\"}],\"name\":\"executeStep\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"gas\",\"type\":\"uint64\"},{\"internalType\":\"uint256\",\"name\":\"afterMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[4]\",\"name\":\"fields\",\"type\":\"bytes32[4]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[2]\",\"name\":\"bridges\",\"type\":\"address[2]\"},{\"internalType\":\"uint256\",\"name\":\"initialMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"bproof\",\"type\":\"bytes\"}],\"name\":\"executeStepDebug\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"startMachine\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"afterMachine\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address[2]\",\"name\":\"bridges\",\"type\":\"address[2]\"},{\"internalType\":\"uint256\",\"name\":\"initialMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"bproof\",\"type\":\"bytes\"}],\"name\":\"executeStep\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"gas\",\"type\":\"uint64\"},{\"internalType\":\"uint256\",\"name\":\"afterMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[7]\",\"name\":\"fields\",\"type\":\"bytes32[7]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[2]\",\"name\":\"bridges\",\"type\":\"address[2]\"},{\"internalType\":\"uint256\",\"name\":\"initialMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"bproof\",\"type\":\"bytes\"}],\"name\":\"executeStepDebug\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"startMachine\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"afterMachine\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // IOneStepProofABI is the input ABI used to generate the binding from.
@@ -181,11 +181,11 @@ func (_IOneStepProof *IOneStepProofTransactorRaw) Transact(opts *bind.TransactOp
 
 // ExecuteStep is a free data retrieval call binding the contract method 0x47dda1d6.
 //
-// Solidity: function executeStep(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 afterMessagesRead, bytes32[4] fields)
+// Solidity: function executeStep(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 afterMessagesRead, bytes32[7] fields)
 func (_IOneStepProof *IOneStepProofCaller) ExecuteStep(opts *bind.CallOpts, bridges [2]common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
 	Gas               uint64
 	AfterMessagesRead *big.Int
-	Fields            [4][32]byte
+	Fields            [7][32]byte
 }, error) {
 	var out []interface{}
 	err := _IOneStepProof.contract.Call(opts, &out, "executeStep", bridges, initialMessagesRead, accs, proof, bproof)
@@ -193,7 +193,7 @@ func (_IOneStepProof *IOneStepProofCaller) ExecuteStep(opts *bind.CallOpts, brid
 	outstruct := new(struct {
 		Gas               uint64
 		AfterMessagesRead *big.Int
-		Fields            [4][32]byte
+		Fields            [7][32]byte
 	})
 	if err != nil {
 		return *outstruct, err
@@ -201,7 +201,7 @@ func (_IOneStepProof *IOneStepProofCaller) ExecuteStep(opts *bind.CallOpts, brid
 
 	outstruct.Gas = *abi.ConvertType(out[0], new(uint64)).(*uint64)
 	outstruct.AfterMessagesRead = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-	outstruct.Fields = *abi.ConvertType(out[2], new([4][32]byte)).(*[4][32]byte)
+	outstruct.Fields = *abi.ConvertType(out[2], new([7][32]byte)).(*[7][32]byte)
 
 	return *outstruct, err
 
@@ -209,22 +209,22 @@ func (_IOneStepProof *IOneStepProofCaller) ExecuteStep(opts *bind.CallOpts, brid
 
 // ExecuteStep is a free data retrieval call binding the contract method 0x47dda1d6.
 //
-// Solidity: function executeStep(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 afterMessagesRead, bytes32[4] fields)
+// Solidity: function executeStep(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 afterMessagesRead, bytes32[7] fields)
 func (_IOneStepProof *IOneStepProofSession) ExecuteStep(bridges [2]common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
 	Gas               uint64
 	AfterMessagesRead *big.Int
-	Fields            [4][32]byte
+	Fields            [7][32]byte
 }, error) {
 	return _IOneStepProof.Contract.ExecuteStep(&_IOneStepProof.CallOpts, bridges, initialMessagesRead, accs, proof, bproof)
 }
 
 // ExecuteStep is a free data retrieval call binding the contract method 0x47dda1d6.
 //
-// Solidity: function executeStep(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 afterMessagesRead, bytes32[4] fields)
+// Solidity: function executeStep(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 afterMessagesRead, bytes32[7] fields)
 func (_IOneStepProof *IOneStepProofCallerSession) ExecuteStep(bridges [2]common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
 	Gas               uint64
 	AfterMessagesRead *big.Int
-	Fields            [4][32]byte
+	Fields            [7][32]byte
 }, error) {
 	return _IOneStepProof.Contract.ExecuteStep(&_IOneStepProof.CallOpts, bridges, initialMessagesRead, accs, proof, bproof)
 }

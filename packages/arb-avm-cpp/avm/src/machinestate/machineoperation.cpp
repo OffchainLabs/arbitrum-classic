@@ -18,6 +18,7 @@
 
 #include <avm/machinestate/ecops.hpp>
 #include <avm/machinestate/machinestate.hpp>
+#include <avm/machinestate/runwasm.hpp>
 
 #include <PicoSHA2/picosha2.h>
 #include <ethash/keccak.h>
@@ -90,6 +91,14 @@ Tuple& assumeTuple(value& val) {
 
 Buffer& assumeBuffer(value& val) {
     auto buf = std::get_if<Buffer>(&val);
+    if (!buf) {
+        throw bad_pop_type{};
+    }
+    return *buf;
+}
+
+WasmCodePoint& assumeWasm(value& val) {
+    auto buf = std::get_if<WasmCodePoint>(&val);
     if (!buf) {
         throw bad_pop_type{};
     }
@@ -404,6 +413,7 @@ struct ValueTypeVisitor {
     ValueTypes operator()(const uint256_t&) const { return NUM; }
     ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
     ValueTypes operator()(const Tuple&) const { return TUPLE; }
+    ValueTypes operator()(const WasmCodePoint&) const { return WASM_CODE_POINT; }
     ValueTypes operator()(const std::shared_ptr<HashPreImage>&) const {
         return TUPLE;
     }
@@ -869,6 +879,7 @@ void log(MachineState& m) {
 
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
+    // std::cerr << "Debug print: " << m.stack[0] << "\n";
     m.context.debug_prints.push_back(m.stack.pop());
     ++m.pc;
 }
@@ -977,6 +988,43 @@ BlockReason sideload(MachineState& m) {
     }
     ++m.pc;
     return NotBlocked{};
+}
+
+void wasm_compile(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto len = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
+    if (!m.compile) {
+        m.compile = new RunWasm(wasm_compiler_path);
+    }
+    auto res = m.compile->run_wasm(md, len);
+
+    auto bytes = buf2vec(res.buffer, res.buffer_len);
+    auto wasm_bytes = buf2vec(md, len);
+    auto wasmcp = wasmAvmToCodePoint(res, wasm_bytes);
+
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(wasmcp);
+    ++m.pc;
+}
+
+void wasm_run(MachineState& m) {
+    m.stack.prepForMod(4);
+    value arg = m.stack[0];
+    auto len = assumeInt64(assumeInt(m.stack[1]));
+    Buffer& md = assumeBuffer(m.stack[2]);
+    WasmCodePoint& wasmcp = assumeWasm(m.stack[3]);
+    auto res = wasmcp.runner->run_wasm(md, len, arg);
+    m.arb_gas_remaining += res.gas_left;
+    m.output.arb_gas_used -= res.gas_left;
+    Tuple tpl = Tuple(res.buffer_len, res.buffer);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(tpl);
+    ++m.pc;
 }
 
 void newbuffer(MachineState& m) {

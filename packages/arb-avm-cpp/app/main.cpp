@@ -123,6 +123,10 @@ int main(int argc, char* argv[]) {
     std::cout << "Ran " << assertion.stepCount << " steps in "
               << assertion.gasCount << " gas ending in state "
               << static_cast<int>(mach->currentStatus()) << "\n";
+    
+    if (mach->currentStatus() == Status::Halted) {
+        return 0;
+    }
 
     auto tx = storage.makeReadWriteTransaction();
     saveMachine(*tx, *mach);
