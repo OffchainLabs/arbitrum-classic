@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface ArbSysInterface extends ethers.utils.Interface {
   functions: {
@@ -90,6 +90,36 @@ interface ArbSysInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'EthWithdrawal'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'L2ToL1Transaction'): EventFragment
 }
+
+export type EthWithdrawalEvent = TypedEvent<
+  [string, BigNumber] & { destAddr: string; amount: BigNumber }
+>
+
+export type L2ToL1TransactionEvent = TypedEvent<
+  [
+    string,
+    string,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    string
+  ] & {
+    caller: string
+    destination: string
+    uniqueId: BigNumber
+    batchNumber: BigNumber
+    indexInBatch: BigNumber
+    arbBlockNum: BigNumber
+    ethBlockNum: BigNumber
+    timestamp: BigNumber
+    callvalue: BigNumber
+    data: string
+  }
+>
 
 export class ArbSys extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -229,12 +259,58 @@ export class ArbSys extends BaseContract {
   }
 
   filters: {
+    'EthWithdrawal(address,uint256)'(
+      destAddr?: string | null,
+      amount?: null
+    ): TypedEventFilter<
+      [string, BigNumber],
+      { destAddr: string; amount: BigNumber }
+    >
+
     EthWithdrawal(
       destAddr?: string | null,
       amount?: null
     ): TypedEventFilter<
       [string, BigNumber],
       { destAddr: string; amount: BigNumber }
+    >
+
+    'L2ToL1Transaction(address,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bytes)'(
+      caller?: null,
+      destination?: string | null,
+      uniqueId?: BigNumberish | null,
+      batchNumber?: BigNumberish | null,
+      indexInBatch?: null,
+      arbBlockNum?: null,
+      ethBlockNum?: null,
+      timestamp?: null,
+      callvalue?: null,
+      data?: null
+    ): TypedEventFilter<
+      [
+        string,
+        string,
+        BigNumber,
+        BigNumber,
+        BigNumber,
+        BigNumber,
+        BigNumber,
+        BigNumber,
+        BigNumber,
+        string
+      ],
+      {
+        caller: string
+        destination: string
+        uniqueId: BigNumber
+        batchNumber: BigNumber
+        indexInBatch: BigNumber
+        arbBlockNum: BigNumber
+        ethBlockNum: BigNumber
+        timestamp: BigNumber
+        callvalue: BigNumber
+        data: string
+      }
     >
 
     L2ToL1Transaction(

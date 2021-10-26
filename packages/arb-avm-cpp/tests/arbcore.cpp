@@ -74,12 +74,13 @@ void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
                      uint256_t prev_message_count,
                      uint256_t prev_inbox_acc,
                      uint256_t target_message_count,
-                     int send_count,
-                     int log_count) {
+                     uint256_t send_count,
+                     uint256_t log_count) {
     auto initial_count_res = arbCore->messageEntryInsertedCount();
     REQUIRE(initial_count_res.status.ok());
 
     std::vector<std::vector<unsigned char>> raw_seq_batch_items;
+    raw_seq_batch_items.reserve(seq_batch_items.size());
     for (const auto& batch_item : seq_batch_items) {
         raw_seq_batch_items.push_back(serializeForCore(batch_item));
     }
@@ -178,7 +179,7 @@ TEST_CASE("ArbCore tests") {
         REQUIRE(logsRes.status.ok());
         REQUIRE(logsRes.data.size() == logs.size());
         for (size_t k = 0; k < logs.size(); ++k) {
-            REQUIRE(logsRes.data[k] == logs[k]);
+            REQUIRE(values_equal(logsRes.data[k].val, logs[k]));
         }
 
         auto sendsRes = arbCore->getSends(0, sends.size());
@@ -204,7 +205,8 @@ TEST_CASE("ArbCore tests") {
                     REQUIRE(result.data.logs.size() <=
                             logs.size() - logs_count);
                     for (uint64_t k = 0; k < result.data.logs.size(); ++k) {
-                        REQUIRE(result.data.logs[k] == logs[logs_count + k]);
+                        REQUIRE(values_equal(result.data.logs[k].val,
+                                             logs[logs_count + k]));
                     }
                     logs_count += result.data.logs.size();
                     REQUIRE(arbCore->logsCursorConfirmReceived(0));
@@ -220,20 +222,45 @@ TEST_CASE("ArbCore tests") {
         }
         REQUIRE(logs_count == logs.size());
 
-        auto cursor = arbCore->getExecutionCursor(0);
+        auto cursor = arbCore->getExecutionCursor(0, true);
         REQUIRE(cursor.status.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used == 0);
 
         auto advanceStatus =
-            arbCore->advanceExecutionCursor(*cursor.data, 100, false);
+            arbCore->advanceExecutionCursor(*cursor.data, 100, false, true);
         REQUIRE(advanceStatus.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
 
-        //        auto before_sideload = arbCore->getMachineForSideload(
+        //        auto before_sideload = arbCore->getMachineAtBlock(
         //            inbox_messages.back().block_number, value_cache);
         //        REQUIRE(before_sideload.status.ok());
         //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
         //                    .op.opcode == OpCode::SIDELOAD);
+
+        auto final_output = arbCore->getLastMachineOutput();
+
+        // Create a new arbCore and verify it gets to the same point
+        storage.closeArbStorage();
+        storage = ArbStorage(dbpath, coreConfig);
+        REQUIRE(storage.initialize(arb_os_path).ok());
+        arbCore = storage.getArbCore();
+        logs_count = uint64_t(arbCore->getLastMachineOutput().log_count);
+        if (!sends.empty()) {
+            // If there were sends, the block must have ended, so there should
+            // be a checkpoint present
+            REQUIRE(
+                arbCore->getLastMachineOutput().fully_processed_inbox.count >
+                0);
+        }
+        REQUIRE(arbCore->startThread());
+
+        int n = 0;
+        while (arbCore->getLastMachineOutput().arb_gas_used <
+               final_output.arb_gas_used) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            REQUIRE(n++ < 100);
+        }
+        REQUIRE(arbCore->getLastMachineOutput() == final_output);
     }
 }
 
@@ -295,7 +322,7 @@ TEST_CASE("ArbCore inbox") {
     auto position = arbCore->getSideloadPosition(*tx, 1);
     REQUIRE(position.status.ok());
 
-    auto cursor = arbCore->getExecutionCursor(position.data);
+    auto cursor = arbCore->getExecutionCursor(position.data, true);
     REQUIRE(cursor.status.ok());
     REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
     REQUIRE(cursor.data->getOutput().arb_gas_used <= position.data);
@@ -303,8 +330,7 @@ TEST_CASE("ArbCore inbox") {
     auto cursor_machine_hash = cursor.data->machineHash();
     REQUIRE(cursor_machine_hash.has_value());
 
-    auto cursor_machine =
-        arbCore->takeExecutionCursorMachine(*cursor.data.get());
+    auto cursor_machine = arbCore->takeExecutionCursorMachine(*cursor.data);
     REQUIRE(cursor_machine);
     REQUIRE(cursor_machine_hash.value() == cursor_machine->hash());
 
@@ -327,8 +353,8 @@ TEST_CASE("ArbCore backwards reorg") {
     waitForDelivery(arbCore);
     REQUIRE(arbCore->messageEntryInsertedCount().data == 0);
 
-    auto maxGas = std::numeric_limits<uint256_t>::max();
-    auto initialState = arbCore->getExecutionCursor(maxGas);
+    auto maxGas = 1'000'000'000;
+    auto initialState = arbCore->getExecutionCursor(maxGas, true);
     REQUIRE(initialState.status.ok());
     REQUIRE(initialState.data->getTotalMessagesRead() == 0);
 
@@ -344,7 +370,7 @@ TEST_CASE("ArbCore backwards reorg") {
                                      std::nullopt));
     waitForDelivery(arbCore);
 
-    auto newState = arbCore->getExecutionCursor(maxGas);
+    auto newState = arbCore->getExecutionCursor(maxGas, true);
     REQUIRE(newState.status.ok());
     REQUIRE(newState.data->getTotalMessagesRead() == 1);
 
@@ -353,10 +379,70 @@ TEST_CASE("ArbCore backwards reorg") {
         std::vector<std::vector<unsigned char>>(), 0));
     waitForDelivery(arbCore);
 
-    auto reorgState = arbCore->getExecutionCursor(maxGas);
+    auto reorgState = arbCore->getExecutionCursor(maxGas, true);
     REQUIRE(reorgState.status.ok());
     REQUIRE(reorgState.data->getTotalMessagesRead() == 0);
     REQUIRE(reorgState.data->machineHash() == initialState.data->machineHash());
     REQUIRE(arbCore->getLastMachine()
                 ->machine_state.output.fully_processed_inbox.count == 0);
+}
+
+TEST_CASE("ArbCore duplicate code segments") {
+    DBDeleter deleter;
+
+    ArbCoreConfig coreConfig{};
+    coreConfig.checkpoint_gas_frequency = 1;
+    ArbStorage storage(dbpath, coreConfig);
+    REQUIRE(storage
+                .initialize(std::string{machine_test_cases_path} +
+                            "/dupsegments.mexe")
+                .ok());
+    auto arbCore = storage.getArbCore();
+    REQUIRE(arbCore->startThread());
+
+    constexpr int CHECKPOINTS = 2;
+
+    std::vector<InboxMessage> messages;
+    for (int i = 0; i < CHECKPOINTS; i++) {
+        messages.push_back(InboxMessage(0, {}, 0, 0, i, 0, {}));
+    }
+    auto batch = buildBatch(messages);
+    REQUIRE(batch.size() == CHECKPOINTS);
+
+    uint256_t last_acc = 0;
+    for (int i = 0; i < CHECKPOINTS; i++) {
+        auto batch_item = batch[i];
+        std::vector<std::vector<unsigned char>> rawSeqBatchItems(
+            1, serializeForCore(batch_item));
+
+        REQUIRE(arbCore->deliverMessages(
+            i, last_acc, rawSeqBatchItems,
+            std::vector<std::vector<unsigned char>>(), std::nullopt));
+        waitForDelivery(arbCore);
+        last_acc = batch_item.accumulator;
+
+        int j = 0;
+        while (arbCore->getLastMachineOutput().last_sideload != i ||
+               !arbCore->machineIdle()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            REQUIRE(j++ < 10);
+        }
+
+        if (i == 0) {
+            // Restart ArbCore
+            storage.closeArbStorage();
+            storage = ArbStorage(dbpath, coreConfig);
+            REQUIRE(storage
+                        .initialize(std::string{machine_test_cases_path} +
+                                    "/dupsegments.mexe")
+                        .ok());
+            arbCore = storage.getArbCore();
+            REQUIRE(arbCore->startThread());
+        }
+    }
+
+    auto cursor = arbCore->getExecutionCursor(1'000'000'000, true);
+    REQUIRE(cursor.status.ok());
+    REQUIRE(std::get<std::unique_ptr<Machine>>(cursor.data->machine)
+                ->currentStatus() == Status::Halted);
 }

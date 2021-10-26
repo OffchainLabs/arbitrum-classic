@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -228,12 +227,12 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	cursor := stakerInfo.latestExecutionCursor
 	if cursor == nil || startState.TotalGasConsumed.Cmp(cursor.TotalGasConsumed()) < 0 {
-		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
+		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed, true)
 		if err != nil {
 			return nil, false, err
 		}
 	} else {
-		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false)
+		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false, true)
 		if err != nil {
 			return nil, false, err
 		}
@@ -327,7 +326,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 					number: nd.NodeNum,
 					hash:   nd.NodeHash,
 				}
-				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed)
+				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed, true)
 				if err != nil {
 					return nil, false, err
 				}
@@ -354,7 +353,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	if err != nil {
 		return nil, false, err
 	}
-	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget)
+	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget, true)
 	if err != nil {
 		return nil, false, err
 	}
@@ -384,7 +383,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	var seqBatchProof []byte
 	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
-		batch, err := challenge.LookupBatchContaining(ctx, v.lookup, v.sequencerInbox, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+		batch, err := v.sequencerInbox.LookupBatchContaining(ctx, v.lookup, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
 		if err != nil {
 			return nil, false, err
 		}

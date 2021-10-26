@@ -234,6 +234,7 @@ func TestSequencerBatcher(t *testing.T) {
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		nil,
 		dummySequencerFeed,
+		false,
 	)
 	test.FailIfError(t, err)
 
@@ -245,6 +246,7 @@ func TestSequencerBatcher(t *testing.T) {
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		nil,
 		dummySequencerFeed,
+		false,
 	)
 	test.FailIfError(t, err)
 

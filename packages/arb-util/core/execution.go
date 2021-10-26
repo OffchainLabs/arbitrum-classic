@@ -88,7 +88,7 @@ func (e *ExecutionTracker) fillInCursors(max int) error {
 				e.initialCursor = nil
 			}
 		} else {
-			nextCursor, err = e.lookup.GetExecutionCursor(e.sortedStopPoints[i])
+			nextCursor, err = e.lookup.GetExecutionCursor(e.sortedStopPoints[i], true)
 			// Note: we still might need to advance since we can't set goOverGas here
 		}
 		if err != nil {
@@ -97,7 +97,7 @@ func (e *ExecutionTracker) fillInCursors(max int) error {
 		nextStopPoint := e.sortedStopPoints[i]
 		if nextStopPoint.Cmp(nextCursor.TotalGasConsumed()) > 0 {
 			gasToExecute := new(big.Int).Sub(nextStopPoint, nextCursor.TotalGasConsumed())
-			err = e.lookup.AdvanceExecutionCursor(nextCursor, gasToExecute, e.goOverGas)
+			err = e.lookup.AdvanceExecutionCursor(nextCursor, gasToExecute, e.goOverGas, true)
 		}
 		if err != nil {
 			return err
@@ -110,7 +110,7 @@ func (e *ExecutionTracker) fillInCursors(max int) error {
 // Note: do not mutate this cursor if you plan on using the execution tracker in the future!
 // If you need to do both, clone the result of this function.
 // This function may also return nil if keepOldCursors is false and we've executed past it.
-func (e *ExecutionTracker) GetExecutionCursor(gasUsed *big.Int) (ExecutionCursor, error) {
+func (e *ExecutionTracker) GetExecutionCursor(gasUsed *big.Int, _ bool) (ExecutionCursor, error) {
 	index, ok := e.stopPointIndex[string(gasUsed.Bytes())]
 	if !ok {
 		return nil, errors.New("invalid gas used")
@@ -123,7 +123,7 @@ func (e *ExecutionTracker) GetExecutionCursor(gasUsed *big.Int) (ExecutionCursor
 }
 
 func (e *ExecutionTracker) GetExecutionState(gasUsed *big.Int) (*ExecutionState, *big.Int, error) {
-	cursor, err := e.GetExecutionCursor(gasUsed)
+	cursor, err := e.GetExecutionCursor(gasUsed, true)
 	if err != nil {
 		return nil, nil, err
 	}

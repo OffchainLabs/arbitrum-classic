@@ -48,7 +48,12 @@ const _abi = [
       },
       {
         internalType: 'uint256',
-        name: 'maxSubmissionCost',
+        name: 'maxSubmissionCostForCustomBridge',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxSubmissionCostForRouter',
         type: 'uint256',
       },
       {

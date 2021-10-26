@@ -5,16 +5,19 @@ pragma solidity ^0.6.11;
 import "../libraries/aeERC20.sol";
 import "../ethereum/ICustomToken.sol";
 import "../ethereum/gateway/L1CustomGateway.sol";
+import "../ethereum/gateway/L1GatewayRouter.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract TestCustomTokenL1 is aeERC20, ICustomToken {
     address public bridge;
+    address public router;
     bool private shouldRegisterGateway;
 
-    constructor(address _bridge) public {
+    constructor(address _bridge, address _router) public {
         bridge = _bridge;
+        router = _router;
         aeERC20._initialize("TestCustomToken", "CARB", uint8(18));
     }
 
@@ -47,7 +50,8 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
 
     function registerTokenOnL2(
         address l2CustomTokenAddress,
-        uint256 maxSubmissionCost,
+        uint256 maxSubmissionCostForCustomBridge,
+        uint256 maxSubmissionCostForRouter,
         uint256 maxGas,
         uint256 gasPriceBid,
         address creditBackAddress
@@ -60,7 +64,15 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
             l2CustomTokenAddress,
             maxGas,
             gasPriceBid,
-            maxSubmissionCost,
+            maxSubmissionCostForCustomBridge,
+            creditBackAddress
+        );
+
+        L1GatewayRouter(router).setGateway(
+            bridge,
+            maxGas,
+            gasPriceBid,
+            maxSubmissionCostForRouter,
             creditBackAddress
         );
 

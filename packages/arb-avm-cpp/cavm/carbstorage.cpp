@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,20 +37,36 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.message_process_count = arb_core_config.message_process_count;
     coreConfig.checkpoint_load_gas_cost =
         arb_core_config.checkpoint_load_gas_cost;
-    coreConfig.min_gas_checkpoint_frequency =
-        arb_core_config.min_gas_checkpoint_frequency;
+    coreConfig.checkpoint_load_gas_factor =
+        arb_core_config.checkpoint_load_gas_factor;
+    coreConfig.checkpoint_max_execution_gas =
+        arb_core_config.checkpoint_max_execution_gas;
+    coreConfig.checkpoint_gas_frequency =
+        arb_core_config.checkpoint_gas_frequency;
+    coreConfig.basic_machine_cache_interval =
+        arb_core_config.basic_cache_interval;
+    coreConfig.basic_machine_cache_size = arb_core_config.basic_cache_size;
+    coreConfig.lru_machine_cache_size = arb_core_config.lru_cache_size;
     coreConfig.timed_cache_expiration_seconds =
         arb_core_config.cache_expiration_seconds;
-    coreConfig.lru_sideload_cache_size = arb_core_config.lru_cache_size;
+    coreConfig.idle_sleep_milliseconds =
+        arb_core_config.idle_sleep_milliseconds;
+    coreConfig.seed_cache_on_startup = arb_core_config.seed_cache_on_startup;
     coreConfig.debug = arb_core_config.debug;
     coreConfig.save_rocksdb_interval = arb_core_config.save_rocksdb_interval;
     coreConfig.save_rocksdb_path = string_save_rocksdb_path;
-    coreConfig.profile_reorg_to = arb_core_config.profile_reorg_to;
-    coreConfig.profile_run_until = arb_core_config.profile_run_until;
-    coreConfig.profile_load_count = arb_core_config.profile_load_count;
-    coreConfig.profile_reset_db_except_inbox =
-        arb_core_config.profile_reset_db_except_inbox;
-    coreConfig.profile_just_metadata = arb_core_config.profile_just_metadata;
+    coreConfig.lazy_load_core_machine = arb_core_config.lazy_load_core_machine;
+    coreConfig.lazy_load_archive_queries =
+        arb_core_config.lazy_load_archive_queries;
+    coreConfig.test_reorg_to_l1_block = arb_core_config.test_reorg_to_l1_block;
+    coreConfig.test_reorg_to_l2_block = arb_core_config.test_reorg_to_l2_block;
+    coreConfig.test_reorg_to_log = arb_core_config.test_reorg_to_log;
+    coreConfig.test_reorg_to_message = arb_core_config.test_reorg_to_message;
+    coreConfig.test_run_until = arb_core_config.test_run_until;
+    coreConfig.test_load_count = arb_core_config.test_load_count;
+    coreConfig.test_reset_db_except_inbox =
+        arb_core_config.test_reset_db_except_inbox;
+    coreConfig.test_just_metadata = arb_core_config.test_just_metadata;
 
     try {
         auto storage = new ArbStorage(string_filename, coreConfig);

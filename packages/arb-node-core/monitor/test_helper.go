@@ -36,7 +36,7 @@ func PrepareArbCore(t *testing.T) (*Monitor, func()) {
 }
 
 func PrepareArbCoreWithMexe(t *testing.T, mexe string) (*Monitor, func()) {
-	coreConfig := configuration.DefaultCoreSettings()
+	coreConfig := configuration.DefaultCoreSettingsNoMaxExecution()
 	monitor, err := NewMonitor(t.TempDir(), mexe, coreConfig)
 	test.FailIfError(t, err)
 

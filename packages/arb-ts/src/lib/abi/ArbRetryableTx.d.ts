@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface ArbRetryableTxInterface extends ethers.utils.Interface {
   functions: {
@@ -86,6 +86,16 @@ interface ArbRetryableTxInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'Redeemed'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TicketCreated'): EventFragment
 }
+
+export type CanceledEvent = TypedEvent<[string] & { ticketId: string }>
+
+export type LifetimeExtendedEvent = TypedEvent<
+  [string, BigNumber] & { ticketId: string; newTimeout: BigNumber }
+>
+
+export type RedeemedEvent = TypedEvent<[string] & { ticketId: string }>
+
+export type TicketCreatedEvent = TypedEvent<[string] & { ticketId: string }>
 
 export class ArbRetryableTx extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -237,9 +247,21 @@ export class ArbRetryableTx extends BaseContract {
   }
 
   filters: {
+    'Canceled(bytes32)'(
+      ticketId?: BytesLike | null
+    ): TypedEventFilter<[string], { ticketId: string }>
+
     Canceled(
       ticketId?: BytesLike | null
     ): TypedEventFilter<[string], { ticketId: string }>
+
+    'LifetimeExtended(bytes32,uint256)'(
+      ticketId?: BytesLike | null,
+      newTimeout?: null
+    ): TypedEventFilter<
+      [string, BigNumber],
+      { ticketId: string; newTimeout: BigNumber }
+    >
 
     LifetimeExtended(
       ticketId?: BytesLike | null,
@@ -249,7 +271,15 @@ export class ArbRetryableTx extends BaseContract {
       { ticketId: string; newTimeout: BigNumber }
     >
 
+    'Redeemed(bytes32)'(
+      ticketId?: BytesLike | null
+    ): TypedEventFilter<[string], { ticketId: string }>
+
     Redeemed(
+      ticketId?: BytesLike | null
+    ): TypedEventFilter<[string], { ticketId: string }>
+
+    'TicketCreated(bytes32)'(
       ticketId?: BytesLike | null
     ): TypedEventFilter<[string], { ticketId: string }>
 
