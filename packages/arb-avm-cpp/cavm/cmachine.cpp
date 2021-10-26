@@ -208,21 +208,21 @@ RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
         std::vector<unsigned char> sendData;
         for (const auto& send : assertion.sends) {
             auto big_size = boost::endian::native_to_big(
-                static_cast<uint64_t>(send.size()));
+                static_cast<uint64_t>(send.val.size()));
             auto big_size_ptr = reinterpret_cast<const char*>(&big_size);
             sendData.insert(sendData.end(), big_size_ptr,
                             big_size_ptr + sizeof(big_size));
-            sendData.insert(sendData.end(), send.begin(), send.end());
+            sendData.insert(sendData.end(), send.val.begin(), send.val.end());
         }
 
         std::vector<unsigned char> logData;
         for (const auto& log : assertion.logs) {
-            marshal_value(log, logData);
+            marshal_value(log.val, logData);
         }
 
         std::vector<unsigned char> debugPrintData;
-        for (const auto& debugPrint : assertion.debugPrints) {
-            marshal_value(debugPrint, debugPrintData);
+        for (const auto& debugPrint : assertion.debug_prints) {
+            marshal_value(debugPrint.val, debugPrintData);
         }
 
         // TODO extend usage of uint256
@@ -232,9 +232,9 @@ RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
                 returnCharVector(logData),
                 static_cast<int>(assertion.logs.size()),
                 returnCharVector(debugPrintData),
-                static_cast<int>(assertion.debugPrints.size()),
-                intx::narrow_cast<uint64_t>(assertion.stepCount),
-                intx::narrow_cast<uint64_t>(assertion.gasCount)};
+                static_cast<int>(assertion.debug_prints.size()),
+                intx::narrow_cast<uint64_t>(assertion.step_count),
+                intx::narrow_cast<uint64_t>(assertion.gas_count)};
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";
         return makeEmptyAssertion();

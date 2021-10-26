@@ -53,22 +53,32 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	defer C.free(unsafe.Pointer(cSaveRocksdbPath))
 
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
+	sleepMilliseconds := int(coreConfig.IdleSleep.Milliseconds())
 	saveRocksdbIntervalSeconds := int(coreConfig.SaveRocksdbInterval.Seconds())
 	cConfig := C.CArbCoreConfig{
-		message_process_count:         C.int(coreConfig.MessageProcessCount),
-		checkpoint_load_gas_cost:      C.int(coreConfig.CheckpointLoadGasCost),
-		min_gas_checkpoint_frequency:  C.int(coreConfig.GasCheckpointFrequency),
-		cache_expiration_seconds:      C.int(cacheExpirationSeconds),
-		lru_cache_size:                C.int(coreConfig.Cache.LRUSize),
-		debug:                         boolToCInt(coreConfig.Debug),
-		save_rocksdb_interval:         C.int(saveRocksdbIntervalSeconds),
-		save_rocksdb_path:             cSaveRocksdbPath,
-		lazy_load_core_machine:        boolToCInt(coreConfig.LazyLoadCoreMachine),
-		lazy_load_archive_queries:     boolToCInt(coreConfig.LazyLoadArchiveQueries),
-		profile_reorg_to:              C.int(coreConfig.Profile.ReorgTo),
-		profile_run_until:             C.int(coreConfig.Profile.RunUntil),
-		profile_load_count:            C.int(coreConfig.Profile.LoadCount),
-		profile_reset_db_except_inbox: boolToCInt(coreConfig.Profile.ResetAllExceptInbox),
+		message_process_count:        C.int(coreConfig.MessageProcessCount),
+		checkpoint_load_gas_cost:     C.int(coreConfig.CheckpointLoadGasCost),
+		checkpoint_load_gas_factor:   C.int(coreConfig.CheckpointLoadGasFactor),
+		checkpoint_max_execution_gas: C.int(coreConfig.CheckpointMaxExecutionGas),
+		checkpoint_gas_frequency:     C.int(coreConfig.CheckpointGasFrequency),
+		basic_cache_interval:         C.int(coreConfig.Cache.BasicInterval),
+		basic_cache_size:             C.int(coreConfig.Cache.BasicSize),
+		lru_cache_size:               C.int(coreConfig.Cache.LRUSize),
+		cache_expiration_seconds:     C.int(cacheExpirationSeconds),
+		idle_sleep_milliseconds:      C.int(sleepMilliseconds),
+		seed_cache_on_startup:        boolToCInt(coreConfig.Cache.SeedOnStartup),
+		debug:                        boolToCInt(coreConfig.Debug),
+		save_rocksdb_interval:        C.int(saveRocksdbIntervalSeconds),
+		save_rocksdb_path:            cSaveRocksdbPath,
+		lazy_load_core_machine:       boolToCInt(coreConfig.LazyLoadCoreMachine),
+		lazy_load_archive_queries:    boolToCInt(coreConfig.LazyLoadArchiveQueries),
+		test_reorg_to_l1_block:       C.int(coreConfig.Test.ReorgTo.L1Block),
+		test_reorg_to_l2_block:       C.int(coreConfig.Test.ReorgTo.L2Block),
+		test_reorg_to_log:            C.int(coreConfig.Test.ReorgTo.Log),
+		test_reorg_to_message:        C.int(coreConfig.Test.ReorgTo.Message),
+		test_run_until:               C.int(coreConfig.Test.RunUntil),
+		test_load_count:              C.int(coreConfig.Test.LoadCount),
+		test_reset_db_except_inbox:   boolToCInt(coreConfig.Test.ResetAllExceptInbox),
 	}
 
 	cArbStorage := C.createArbStorage(cDbPath, cConfig)
@@ -84,6 +94,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 }
 
 func (s *ArbStorage) Initialize(contractPath string) error {
+	defer runtime.KeepAlive(s)
 	cContractPath := C.CString(contractPath)
 	defer C.free(unsafe.Pointer(cContractPath))
 	success := C.initializeArbStorage(s.c, cContractPath)
@@ -95,10 +106,12 @@ func (s *ArbStorage) Initialize(contractPath string) error {
 }
 
 func (s *ArbStorage) Initialized() bool {
+	defer runtime.KeepAlive(s)
 	return C.arbStorageInitialized(s.c) == 1
 }
 
 func (s *ArbStorage) CloseArbStorage() bool {
+	defer runtime.KeepAlive(s)
 	return C.closeArbStorage(s.c) == 1
 }
 
@@ -107,11 +120,13 @@ func cDestroyArbStorage(cArbStorage *ArbStorage) {
 }
 
 func (s *ArbStorage) GetArbCore() core.ArbCore {
+	defer runtime.KeepAlive(s)
 	ac := C.createArbCore(s.c)
 	return NewArbCore(ac, s)
 }
 
 func (s *ArbStorage) GetNodeStore() machine.NodeStore {
+	defer runtime.KeepAlive(s)
 	as := C.createAggregatorStore(s.c)
 	return NewNodeStore(as)
 }

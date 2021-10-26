@@ -96,7 +96,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		t.Fatal(err)
 	}
 
-	web3Server := web3.NewServer(srv, true)
+	web3Server := web3.NewServer(srv, true, nil)
 
 	client := web3.NewEthClient(srv, true)
 
@@ -283,7 +283,7 @@ func TestFees(t *testing.T) {
 
 func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 	t.Helper()
-	arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 	t.Log("Gas used:", arbRes.CalcGasUsed().Uint64())
 	used := new(big.Rat).SetFrac(arbRes.CalcGasUsed(), new(big.Int).SetUint64(tx.Gas()))
@@ -366,7 +366,7 @@ func TestRetryableFee(t *testing.T) {
 	test.FailIfError(t, err)
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
-	res, err := backend.db.GetRequest(redeemId)
+	res, _, err := backend.db.GetRequest(redeemId)
 	test.FailIfError(t, err)
 
 	if new(big.Int).Mul(res.GasPrice, big.NewInt(2)).Cmp(gasPriceEstimate) != 0 {
@@ -411,7 +411,7 @@ func TestDeposit(t *testing.T) {
 		t.Fatal("expected 1 tx in block")
 	}
 
-	arbRes, err := backend.db.GetRequest(txHash)
+	arbRes, _, err := backend.db.GetRequest(txHash)
 	test.FailIfError(t, err)
 
 	t.Log("arbRes", arbRes.IncomingRequest.Kind)
@@ -442,7 +442,7 @@ func TestDeploy(t *testing.T) {
 	tx, err = auth.Signer(auth.From, tx)
 	err = client.SendTransaction(ctx, tx)
 	test.FailIfError(t, err)
-	arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 	t.Log(arbRes)
 }

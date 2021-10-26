@@ -116,7 +116,7 @@ func startup() error {
 	}
 	if config.Node.ChainID == 0 {
 		badConfig = true
-		fmt.Println("Missing --rollup.chain-id")
+		fmt.Println("Missing --node.chain-id")
 	}
 	if config.Rollup.Machine.Filename == "" {
 		badConfig = true
@@ -224,7 +224,7 @@ func startup() error {
 	}
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), healthChan, sequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), healthChan, sequencerFeed, config.Node.ParanoidInboxReader)
 		if err == nil {
 			break
 		}
@@ -284,7 +284,7 @@ func startup() error {
 	nodeStore := mon.Storage.GetNodeStore()
 	metricsConfig.RegisterNodeStoreMetrics(nodeStore)
 	metricsConfig.RegisterArbCoreMetrics(mon.Core)
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond, &config.Node.Cache)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, &config.Node)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
@@ -333,8 +333,13 @@ func startup() error {
 		}
 	}
 
+	var web3InboxReaderRef *monitor.InboxReader
+	if config.Node.RPC.EnableL1Calls {
+		web3InboxReaderRef = inboxReader
+	}
+
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil, web3InboxReaderRef)
 	if err != nil {
 		return err
 	}
