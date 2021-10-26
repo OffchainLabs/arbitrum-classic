@@ -66,7 +66,14 @@ export const instantiateBridge = async (
     : network
   const l2Network = networks[l1Network.partnerChainID]
 
+  if (!l1Network.rpcURL) {
+    throw new Error('L1 rpc url not set (see .env.sample or networks.ts)')
+  }
+  if (!l2Network.rpcURL) {
+    throw new Error('L2 rpc url not set (see .env.sample or networks.ts)')
+  }
   const ethProvider = new JsonRpcProvider(l1Network.rpcURL)
+
   const arbProvider = new JsonRpcProvider(l2Network.rpcURL)
 
   const l1Signer = (() => {
