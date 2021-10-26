@@ -29,6 +29,8 @@ HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
 
+const static std::vector<value> empty_value_vector;
+
 class Tuple {
    private:
     std::shared_ptr<RawTuple> tpl;
@@ -125,6 +127,30 @@ class Tuple {
         return tpl->data[pos];
     }
 
+    [[nodiscard]] std::vector<value>::const_iterator begin() const {
+        if (tpl == nullptr) {
+            return empty_value_vector.begin();
+        }
+        return tpl->data.begin();
+    }
+
+    [[nodiscard]] std::vector<value>::const_iterator end() const {
+        if (tpl == nullptr) {
+            return empty_value_vector.end();
+        }
+        return tpl->data.end();
+    }
+
+    [[nodiscard]] std::reverse_iterator<std::vector<value>::const_iterator>
+    rbegin() const {
+        return std::reverse_iterator(end());
+    }
+
+    [[nodiscard]] std::reverse_iterator<std::vector<value>::const_iterator>
+    rend() const {
+        return std::reverse_iterator(begin());
+    }
+
     [[nodiscard]] const value& get_element_unsafe(const uint64_t pos) const {
         return tpl->data[pos];
     }
@@ -162,5 +188,16 @@ inline bool operator!=(const Tuple& val1, const Tuple& val2) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Tuple& val);
+
+struct ValueTypeVisitor {
+    ValueTypes operator()(const uint256_t&) const { return NUM; }
+    ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
+    ValueTypes operator()(const Tuple&) const { return TUPLE; }
+    ValueTypes operator()(const std::shared_ptr<HashPreImage>&) const {
+        return TUPLE;
+    }
+    ValueTypes operator()(const Buffer&) const { return BUFFER; }
+    ValueTypes operator()(const UnloadedValue& val) const { return val.type; }
+};
 
 #endif /* tuple_hpp */

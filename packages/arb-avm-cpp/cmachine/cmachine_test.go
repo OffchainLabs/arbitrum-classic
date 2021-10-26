@@ -1,5 +1,5 @@
 /*
-* Copyright 2019, Offchain Labs, Inc.
+* Copyright 2019-2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,10 +17,11 @@
 package cmachine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"math/big"
 	"os"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 func TestMachineCreation(t *testing.T) {
@@ -41,7 +42,7 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	coreConfig := configuration.DefaultCoreSettings()
+	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 	arbStorage, err := NewArbStorage(dePath, coreConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -51,7 +52,7 @@ func TestMachineCreation(t *testing.T) {
 	}
 	defer arbStorage.CloseArbStorage()
 	core := arbStorage.GetArbCore()
-	cursor, err := core.GetExecutionCursor(big.NewInt(0))
+	cursor, err := core.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
 		t.Fatal(err)
 	}

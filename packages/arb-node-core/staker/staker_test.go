@@ -291,7 +291,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	// Make a dummy feed for now
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed, false)
 	test.FailIfError(t, err)
 
 	for i := 1; i <= 10; i++ {
@@ -415,7 +415,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 func calculateGasToFirstInbox(t *testing.T) *big.Int {
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
-	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000))
+	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000), true)
 	test.FailIfError(t, err)
 	inboxGas := new(big.Int).Add(cursor.TotalGasConsumed(), big.NewInt(1))
 	t.Logf("Found first inbox instruction starting at %v", inboxGas)
@@ -428,7 +428,7 @@ func TestChallengeToOSP(t *testing.T) {
 
 func TestChallengeToInboxOSP(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(7*400 - 10), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(7*400-10), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {
