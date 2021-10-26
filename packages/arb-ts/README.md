@@ -46,6 +46,8 @@ Bridging new a token to L2 (i.e., deploying a new token contract) through the st
 
 1. Set `PRIVKEY` environmental variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
 
+1. Set MAINNET_RPC environmental variable to L1 RPC endpoint (i.e., https://mainnet.infura.io/v3/my-infura-key)
+
 1. `yarn bridgeStandardToken`
 
 Required CL params:
