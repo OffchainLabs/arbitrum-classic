@@ -25,7 +25,7 @@ import prompts from 'prompts'
 
 const l2Txn = args.txid
 
-if (l2Txn) {
+if (!l2Txn) {
   throw new Error('Include l2 txid (--txid 0xmytxid)')
 }
 
