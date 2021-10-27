@@ -61,7 +61,8 @@ import {
   ERC20__factory,
   ERC20,
 } from './abi'
-import { Result } from '@ethersproject/abi'
+import { BlockTag } from '@ethersproject/providers'
+
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
   maxGas?: BigNumber
@@ -673,8 +674,9 @@ export class Bridge {
    */
   public async getTokenWithdrawEventData(
     l1TokenAddress: string,
-    fromAddress?: string,
-    filter?: Filter
+    fromBlock: BlockTag,
+    toBlock: BlockTag,
+    fromAddress?: string
   ): Promise<WithdrawalInitiated[]> {
     const gatewayAddress = await this.l2Bridge.l2GatewayRouter.getGateway(
       l1TokenAddress
@@ -683,9 +685,10 @@ export class Bridge {
     return BridgeHelper.getTokenWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
+      fromBlock,
+      toBlock,
       l1TokenAddress,
-      fromAddress,
-      filter
+      fromAddress
     )
   }
 
@@ -695,23 +698,31 @@ export class Bridge {
 
   public async getGatewayWithdrawEventData(
     gatewayAddress: string,
-    fromAddress?: string,
-    filter?: Filter
+    fromBlock: BlockTag,
+    toBlock: BlockTag,
+    fromAddress?: string
   ): Promise<WithdrawalInitiated[]> {
     return BridgeHelper.getTokenWithdrawEventData(
       this.l2Provider,
       gatewayAddress,
+      fromBlock,
+      toBlock,
       undefined,
-      fromAddress,
-      filter
+      fromAddress
     )
   }
 
   public async getL2ToL1EventData(
     fromAddress: string,
-    filter?: Filter
+    fromBlock: BlockTag,
+    toBlock: BlockTag
   ): Promise<L2ToL1EventResult[]> {
-    return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider, filter)
+    return BridgeHelper.getL2ToL1EventData(
+      fromAddress,
+      this.l2Provider,
+      fromBlock,
+      toBlock
+    )
   }
 
   public async getOutboxAddressByBatchNum(
@@ -827,6 +838,8 @@ export class Bridge {
     )
   }
   public async getL1GatewaySetEventData(
+    fromBlock: BlockTag,
+    toBlock: BlockTag,
     _l1GatewayRouterAddress?: string
   ): Promise<GatewaySet[]> {
     if (this.isCustomNetwork && !_l1GatewayRouterAddress)
@@ -840,11 +853,15 @@ export class Bridge {
 
     return BridgeHelper.getGatewaySetEventData(
       l1GatewayRouterAddress,
-      this.l1Provider
+      this.l1Provider,
+      fromBlock,
+      toBlock
     )
   }
 
   public async getL2GatewaySetEventData(
+    fromBlock: BlockTag,
+    toBlock: BlockTag,
     _l2GatewayRouterAddress?: string
   ): Promise<GatewaySet[]> {
     if (this.isCustomNetwork && !_l2GatewayRouterAddress)
@@ -858,7 +875,9 @@ export class Bridge {
 
     return BridgeHelper.getGatewaySetEventData(
       l2GatewayRouterAddress,
-      this.l2Provider
+      this.l2Provider,
+      fromBlock,
+      toBlock
     )
   }
 

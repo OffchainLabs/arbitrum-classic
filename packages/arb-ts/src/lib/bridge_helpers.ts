@@ -26,6 +26,7 @@ import {
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import { concat, zeroPad, hexZeroPad } from '@ethersproject/bytes'
+import { BlockTag } from '@ethersproject/providers'
 
 import { ContractTransaction } from '@ethersproject/contracts'
 import { keccak256 } from '@ethersproject/keccak256'
@@ -270,15 +271,16 @@ export class BridgeHelper {
   static async getTokenWithdrawEventData(
     l2Provider: Provider,
     gatewayAddress: string,
+    fromBlock: BlockTag,
+    toBlock: BlockTag,
     l1TokenAddress?: string,
-    fromAddress?: string,
-    filter?: Filter
+    fromAddress?: string
   ): Promise<WithdrawalInitiated[]> {
     const iface = L2ArbitrumGateway__factory.createInterface()
 
     const logs = await l2Provider.getLogs({
-      fromBlock: filter?.fromBlock,
-      toBlock: filter?.toBlock,
+      fromBlock,
+      toBlock,
       address: gatewayAddress,
       topics: [
         // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
@@ -308,13 +310,15 @@ export class BridgeHelper {
 
   static getGatewaySetEventData = async (
     gatewayRouterAddress: string,
-    provider: Provider
+    provider: Provider,
+    fromBlock: BlockTag,
+    toBlock: BlockTag
   ): Promise<GatewaySet[]> => {
     const iface = L1GatewayRouter__factory.createInterface()
 
     const logs = await provider.getLogs({
-      fromBlock: 0,
-      toBlock: 'latest',
+      fromBlock,
+      toBlock,
       address: gatewayRouterAddress,
       topics: [
         // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
@@ -605,13 +609,14 @@ export class BridgeHelper {
   static getL2ToL1EventData = async (
     fromAddress: string,
     l2Provider: Provider,
-    filter?: Filter
+    fromBlock: BlockTag,
+    toBlock: BlockTag
   ): Promise<L2ToL1EventResult[]> => {
     const iface = ArbSys__factory.createInterface()
 
     const logs = await l2Provider.getLogs({
-      fromBlock: filter?.fromBlock,
-      toBlock: filter?.toBlock,
+      fromBlock,
+      toBlock,
       address: ARB_SYS_ADDRESS,
       topics: [
         // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
@@ -631,12 +636,14 @@ export class BridgeHelper {
   static assertionIsConfirmed = async (
     nodeNum: BigNumber,
     rollupAddress: string,
-    l1Provider: Provider
+    l1Provider: Provider,
+    fromBlock: BlockTag,
+    toBlock: BlockTag
   ): Promise<boolean> => {
     const iface = Rollup__factory.createInterface()
     const logs = await l1Provider.getLogs({
-      fromBlock: 0,
-      toBlock: 'latest',
+      fromBlock,
+      toBlock,
       address: rollupAddress,
       topics: [
         // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
@@ -649,12 +656,14 @@ export class BridgeHelper {
 
   static getNodeCreatedEvents = (
     rollupAddress: string,
-    l1Provider: Provider
+    l1Provider: Provider,
+    fromBlock: BlockTag,
+    toBlock: BlockTag
   ): Promise<Log[]> => {
     const iface = Rollup__factory.createInterface()
     return l1Provider.getLogs({
-      fromBlock: 0,
-      toBlock: 'latest',
+      fromBlock,
+      toBlock,
       address: rollupAddress,
       topics: [
         // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
@@ -666,13 +675,15 @@ export class BridgeHelper {
   static getOutgoingMessage = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
-    l2Provider: Provider
+    l2Provider: Provider,
+    fromBlock: BlockTag,
+    toBlock: BlockTag
   ): Promise<L2ToL1EventResult[]> => {
     const iface = ArbSys__factory.createInterface()
 
     const logs = await l2Provider.getLogs({
-      fromBlock: 0,
-      toBlock: 'latest',
+      fromBlock,
+      toBlock,
       address: ARB_SYS_ADDRESS,
       topics: [
         // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
@@ -708,13 +719,15 @@ export class BridgeHelper {
     batchNumber: BigNumber,
     path: BigNumber,
     outboxAddress: string,
-    l1Provider: Provider
+    l1Provider: Provider,
+    fromBlock: BlockTag,
+    toBlock: BlockTag
   ): Promise<boolean> => {
     const iface = Outbox__factory.createInterface()
 
     const logs = await l1Provider.getLogs({
-      fromBlock: 0,
-      toBlock: 'latest',
+      fromBlock,
+      toBlock,
       address: outboxAddress,
       topics: [
         // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
