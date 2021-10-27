@@ -276,15 +276,19 @@ export class BridgeHelper {
   ): Promise<WithdrawalInitiated[]> {
     const iface = L2ArbitrumGateway__factory.createInterface()
 
-    const topics = [null, fromAddress ? hexZeroPad(fromAddress, 32) : null]
-    const logs = await BridgeHelper.getEventLogs(
-      'WithdrawalInitiated',
-      l2Provider,
-      iface,
-      gatewayAddress,
-      topics,
-      filter
-    )
+    const logs = await l2Provider.getLogs({
+      fromBlock: filter?.fromBlock,
+      toBlock: filter?.toBlock,
+      address: gatewayAddress,
+      topics: [
+        // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
+        iface.getEventTopic('WithdrawalInitiated'),
+        null,
+        // TODO: this is searching on the `to` address topic
+        fromAddress ? hexZeroPad(fromAddress, 32) : null,
+      ],
+    })
+
     const parsedLogs = logs.map(log => {
       const data = {
         ...iface.parseLog(log).args,
@@ -302,39 +306,22 @@ export class BridgeHelper {
       : parsedLogs
   }
 
-  public static getEventLogs = <T extends Interface>(
-    eventName: string,
-    provider: Provider,
-    iface: T,
-    contractAddress: string,
-    topics: (string | string[] | null)[] = [],
-    filter: Filter = {}
-  ): Promise<Log[]> => {
-    // TODO: can we make eventName typesafe?
-    const event = iface.getEvent(eventName)
-    const eventTopic = iface.getEventTopic(event)
-
-    if (!filter.fromBlock && !filter.toBlock)
-      console.warn('Attempting to query from 0 to block latest')
-    return provider.getLogs({
-      address: contractAddress,
-      topics: [eventTopic, ...topics],
-      fromBlock: filter.fromBlock || 0,
-      toBlock: filter.toBlock || 'latest',
-    })
-  }
-
   static getGatewaySetEventData = async (
     gatewayRouterAddress: string,
     provider: Provider
   ): Promise<GatewaySet[]> => {
     const iface = L1GatewayRouter__factory.createInterface()
-    const logs = await BridgeHelper.getEventLogs(
-      'GatewaySet',
-      provider,
-      iface,
-      gatewayRouterAddress
-    )
+
+    const logs = await provider.getLogs({
+      fromBlock: 0,
+      toBlock: 'latest',
+      address: gatewayRouterAddress,
+      topics: [
+        // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
+        iface.getEventTopic('GatewaySet'),
+      ],
+    })
+
     return logs.map(log => iface.parseLog(log).args as unknown as GatewaySet)
   }
 
@@ -621,14 +608,17 @@ export class BridgeHelper {
     filter?: Filter
   ): Promise<L2ToL1EventResult[]> => {
     const iface = ArbSys__factory.createInterface()
-    const logs = await BridgeHelper.getEventLogs(
-      'L2ToL1Transaction',
-      l2Provider,
-      iface,
-      ARB_SYS_ADDRESS,
-      [hexZeroPad(fromAddress, 32)],
-      filter
-    )
+
+    const logs = await l2Provider.getLogs({
+      fromBlock: filter?.fromBlock,
+      toBlock: filter?.toBlock,
+      address: ARB_SYS_ADDRESS,
+      topics: [
+        // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
+        iface.getEventTopic('L2ToL1Transaction'),
+        hexZeroPad(fromAddress, 32),
+      ],
+    })
 
     return logs.map(
       log => iface.parseLog(log).args as unknown as L2ToL1EventResult
@@ -644,13 +634,16 @@ export class BridgeHelper {
     l1Provider: Provider
   ): Promise<boolean> => {
     const iface = Rollup__factory.createInterface()
-    const logs = await BridgeHelper.getEventLogs(
-      'NodeConfirmed',
-      l1Provider,
-      iface,
-      rollupAddress,
-      [hexZeroPad(nodeNum.toHexString(), 32)]
-    )
+    const logs = await l1Provider.getLogs({
+      fromBlock: 0,
+      toBlock: 'latest',
+      address: rollupAddress,
+      topics: [
+        // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
+        iface.getEventTopic('NodeConfirmed'),
+        hexZeroPad(nodeNum.toHexString(), 32),
+      ],
+    })
     return logs.length === 1
   }
 
@@ -659,12 +652,15 @@ export class BridgeHelper {
     l1Provider: Provider
   ): Promise<Log[]> => {
     const iface = Rollup__factory.createInterface()
-    return BridgeHelper.getEventLogs(
-      'NodeCreated',
-      l1Provider,
-      iface,
-      rollupAddress
-    )
+    return l1Provider.getLogs({
+      fromBlock: 0,
+      toBlock: 'latest',
+      address: rollupAddress,
+      topics: [
+        // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
+        iface.getEventTopic('NodeCreated'),
+      ],
+    })
   }
 
   static getOutgoingMessage = async (
@@ -674,15 +670,18 @@ export class BridgeHelper {
   ): Promise<L2ToL1EventResult[]> => {
     const iface = ArbSys__factory.createInterface()
 
-    const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
-
-    const logs = await BridgeHelper.getEventLogs(
-      'L2ToL1Transaction',
-      l2Provider,
-      iface,
-      ARB_SYS_ADDRESS,
-      topics
-    )
+    const logs = await l2Provider.getLogs({
+      fromBlock: 0,
+      toBlock: 'latest',
+      address: ARB_SYS_ADDRESS,
+      topics: [
+        // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
+        iface.getEventTopic('L2ToL1Transaction'),
+        null, // destination
+        null, // unique id
+        hexZeroPad(batchNumber.toHexString(), 32),
+      ],
+    })
 
     const parsedData = logs.map(
       log => iface.parseLog(log).args as unknown as L2ToL1EventResult
@@ -712,14 +711,20 @@ export class BridgeHelper {
     l1Provider: Provider
   ): Promise<boolean> => {
     const iface = Outbox__factory.createInterface()
-    const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
-    const logs = await BridgeHelper.getEventLogs(
-      'OutBoxTransactionExecuted',
-      l1Provider,
-      iface,
-      outboxAddress,
-      topics
-    )
+
+    const logs = await l1Provider.getLogs({
+      fromBlock: 0,
+      toBlock: 'latest',
+      address: outboxAddress,
+      topics: [
+        // TODO: can we get this typesafe during compile time? ie is GatewaySet a valid event?
+        iface.getEventTopic('OutBoxTransactionExecuted'),
+        null, // destination
+        null, // l2 sender
+        hexZeroPad(batchNumber.toHexString(), 32), // outboxEntryIndex
+      ],
+    })
+
     const parsedData = logs.map(
       log => iface.parseLog(log).args as unknown as OutBoxTransactionExecuted
     )
