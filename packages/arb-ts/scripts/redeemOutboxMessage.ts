@@ -23,14 +23,10 @@ import args from './getCLargs'
 import { OutgoingMessageState } from '../src/lib/bridge_helpers'
 import prompts from 'prompts'
 
-if (!args.txid) {
-  throw new Error('Include txid (--txid 0xmytxid)')
-}
+const l2Txn = args.txid
 
-const l2Txn: string | ContractReceipt = args.txid as string
-
-if (!l2Txn) {
-  throw new Error('Need to set l1 txn hash')
+if (l2Txn) {
+  throw new Error('Include l2 txid (--txid 0xmytxid)')
 }
 
 ;(async () => {
