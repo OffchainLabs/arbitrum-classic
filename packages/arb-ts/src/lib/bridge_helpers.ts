@@ -536,6 +536,8 @@ export class BridgeHelper {
     outboxAddress: string,
     l2Provider: Provider,
     l1Signer: Signer,
+    fromBlock: BlockTag,
+    toBlock: BlockTag,
     singleAttempt = false
   ): Promise<ContractTransaction> => {
     const l1Provider = l1Signer.provider
@@ -560,7 +562,9 @@ export class BridgeHelper {
         indexInBatch,
         outboxAddress,
         l1Provider,
-        l2Provider
+        l2Provider,
+        fromBlock,
+        toBlock
       )
 
       const infoString = `batchNumber: ${batchNumber.toNumber()} indexInBatch: ${indexInBatch.toNumber()}`
@@ -753,7 +757,9 @@ export class BridgeHelper {
     indexInBatch: BigNumber,
     outBoxAddress: string,
     l1Provider: Provider,
-    l2Provider: Provider
+    l2Provider: Provider,
+    fromBlock: BlockTag,
+    toBlock: BlockTag
   ): Promise<OutgoingMessageState> => {
     try {
       const proofData = await BridgeHelper.tryGetProofOnce(
@@ -770,7 +776,9 @@ export class BridgeHelper {
         batchNumber,
         proofData.path,
         outBoxAddress,
-        l1Provider
+        l1Provider,
+        fromBlock,
+        toBlock
       )
       if (messageExecuted) {
         return OutgoingMessageState.EXECUTED

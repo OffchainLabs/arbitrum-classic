@@ -576,6 +576,8 @@ export class Bridge {
   public async triggerL2ToL1Transaction(
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
+    fromBlock: BlockTag,
+    toBlock: BlockTag,
     singleAttempt = false
   ): Promise<ContractTransaction> {
     const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
@@ -585,6 +587,8 @@ export class Bridge {
       outboxAddress,
       this.l2Provider,
       this.l1Signer,
+      fromBlock,
+      toBlock,
       singleAttempt
     )
   }
@@ -759,7 +763,9 @@ export class Bridge {
    */
   public async getOutGoingMessageState(
     batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    indexInBatch: BigNumber,
+    fromBlock: BlockTag,
+    toBlock: BlockTag
   ): Promise<OutgoingMessageState> {
     const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
     return BridgeHelper.getOutGoingMessageState(
@@ -767,7 +773,9 @@ export class Bridge {
       indexInBatch,
       outboxAddress,
       this.l1Provider,
-      this.l2Provider
+      this.l2Provider,
+      fromBlock,
+      toBlock
     )
   }
 
