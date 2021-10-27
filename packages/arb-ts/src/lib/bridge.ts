@@ -884,4 +884,31 @@ export class Bridge {
       balance: bal ? (bal as ExpectedReturnType)[0] : undefined,
     }))
   }
+
+  public async getOutGoingMessageDataFromL2Transaction(
+    l2TxnReceiptOrHash: TransactionReceipt | string
+  ) {
+    const l2Txn =
+      typeof l2TxnReceiptOrHash === 'string'
+        ? await this.getL2Transaction(l2TxnReceiptOrHash)
+        : l2TxnReceiptOrHash
+    const outgoingMessages = this.getWithdrawalsInL2Transaction(l2Txn)
+    if (outgoingMessages.length === 0)
+      throw new Error(`No outgoing messages in ${l2Txn.transactionHash}`)
+    if (outgoingMessages.length > 1)
+      throw new Error(
+        `${l2Txn.transactionHash} initates multiple outgoing messages`
+      )
+
+    const { batchNumber, indexInBatch } = outgoingMessages[0]
+    const outGoingMessageState = await this.getOutGoingMessageState(
+      batchNumber,
+      indexInBatch
+    )
+    return {
+      outGoingMessageState,
+      batchNumber,
+      indexInBatch,
+    }
+  }
 }
