@@ -182,7 +182,7 @@ struct MachineState {
     MachineState(MachineOutput output_,
                  CodePointRef pc_,
                  std::shared_ptr<Code> code_,
-                 const ValueLoader& value_loader_,
+                 ValueLoader value_loader_,
                  value register_val_,
                  value static_val,
                  Datastack stack_,
