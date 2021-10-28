@@ -17,9 +17,9 @@
     },
     "L1CustomGateway": {
       "proxyAddress": "0x917dc9a69F65dC3082D518192cd3725E1Fa96cA2",
-      "implAddress": "0x32b09F849d9cA53f70BAEF00c522630Eaf1787a0",
-      "implDeploymentTxn": "0xb17a37ab189e65c09af56e632a56eb6d6b403163d1c44f6bb00aca8888437405",
-      "implArbitrumCommitHash": "5c06d89daf8fa6088bcdba292ffa6ed0c72afab2",
+      "implAddress": "0x5b8A1381dF036f3Bb23398BB62d4f16E8B11d04F",
+      "implDeploymentTxn": "0xe0cadd03e8e865cade31002d376fae0c85b869926aab9f42b9d4a78d9e3d31ef",
+      "implArbitrumCommitHash": "7cce402117417c73f2a17eb17011e0d09a304d2f",
       "implBuildInfo": ""
     },
     "L1WethGateway": {
