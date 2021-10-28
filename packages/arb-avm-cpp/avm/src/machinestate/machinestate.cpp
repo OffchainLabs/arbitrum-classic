@@ -84,14 +84,14 @@ void MachineState::addProcessedSend(std::vector<uint8_t> data) {
     output.send_count = output.send_count + 1;
     output.send_acc = ::hash(output.send_acc, ::hash(data));
     context.sends.push_back(MachineEmission<std::vector<uint8_t>>{
-        std::move(data), output.fully_processed_inbox});
+        std::move(data), output.fully_processed_inbox, output.log_count});
 }
 
 void MachineState::addProcessedLog(value log_val) {
     output.log_count = output.log_count + 1;
     output.log_acc = ::hash(output.log_acc, hash_value(log_val));
     context.logs.push_back(MachineEmission<value>{
-        std::move(log_val), output.fully_processed_inbox});
+        std::move(log_val), output.fully_processed_inbox, output.log_count});
 }
 
 MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
@@ -105,7 +105,7 @@ MachineState::MachineState(std::shared_ptr<CoreCode> code_, value static_val_)
 MachineState::MachineState(MachineOutput output_,
                            CodePointRef pc_,
                            std::shared_ptr<Code> code_,
-                           ValueLoader value_loader_,
+                           const ValueLoader& value_loader_,
                            value register_val_,
                            value static_val_,
                            Datastack stack_,
@@ -116,7 +116,7 @@ MachineState::MachineState(MachineOutput output_,
     : output(output_),
       pc(pc_),
       code(std::move(code_)),
-      value_loader(std::move(value_loader_)),
+      value_loader(value_loader_),
       registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
       stack(std::move(stack_)),

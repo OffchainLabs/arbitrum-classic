@@ -50,6 +50,7 @@ template <typename T>
 struct MachineEmission {
     T val;
     InboxState inbox;
+    uint256_t log_count;
 };
 
 struct AssertionContext {
@@ -181,7 +182,7 @@ struct MachineState {
     MachineState(MachineOutput output_,
                  CodePointRef pc_,
                  std::shared_ptr<Code> code_,
-                 ValueLoader value_loader_,
+                 const ValueLoader& value_loader_,
                  value register_val_,
                  value static_val,
                  Datastack stack_,

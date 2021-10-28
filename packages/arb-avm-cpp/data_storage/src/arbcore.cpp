@@ -1458,6 +1458,8 @@ ValueResult<std::vector<MachineEmission<value>>> ArbCore::getLogsNoLock(
     it->SeekToFirst();
     std::vector<MachineEmission<value>> logs;
     while (it->Valid()) {
+        auto key = it->key().data();
+        auto current_log_index = extractUint256(key);
         auto info = it->value().data();
         auto hash = extractUint256(info);
         auto val_result = getValue(tx, hash, valueCache, false);
@@ -1468,7 +1470,7 @@ ValueResult<std::vector<MachineEmission<value>>> ArbCore::getLogsNoLock(
         auto inbox_accumulator = extractUint256(info);
         auto inbox = InboxState{inbox_count, inbox_accumulator};
         auto val = std::move(std::get<CountedData<value>>(val_result).data);
-        logs.push_back(MachineEmission<value>{val, inbox});
+        logs.push_back(MachineEmission<value>{val, inbox, current_log_index});
         it->Next();
     }
 
