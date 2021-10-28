@@ -705,6 +705,41 @@ export class BridgeHelper {
   /**
    * Check if given outbox message has already been executed
    */
+  static messageHasExecutedV2 = async (
+    batchNumber: BigNumber,
+    outboxProofData: MessageBatchProofInfo,
+    outboxAddress: string,
+    l1Provider: Provider
+  ): Promise<boolean> => {
+    const outbox = Outbox__factory.connect(outboxAddress, l1Provider)
+    try {
+      const outboxExecute = await outbox.callStatic.executeTransaction(
+        batchNumber,
+        outboxProofData.proof,
+        outboxProofData.path,
+        outboxProofData.l2Sender,
+        outboxProofData.l1Dest,
+        outboxProofData.l2Block,
+        outboxProofData.l1Block,
+        outboxProofData.timestamp,
+        outboxProofData.amount,
+        outboxProofData.calldataForL1
+      )
+      return false
+    } catch (e: any) {
+      if (e && e.message && e.message.toString().includes('ALREADY_SPENT')) {
+        return true
+      }
+      if (e && e.message && e.message.toString().includes('NO_OUTBOX_ENTRY')) {
+        return false
+      }
+      throw e
+    }
+  }
+
+  /**
+   * @deprecated The method should not be used
+   */
   static messageHasExecuted = async (
     batchNumber: BigNumber,
     path: BigNumber,
@@ -748,9 +783,9 @@ export class BridgeHelper {
         return OutgoingMessageState.UNCONFIRMED
       }
 
-      const messageExecuted = await BridgeHelper.messageHasExecuted(
+      const messageExecuted = await BridgeHelper.messageHasExecutedV2(
         batchNumber,
-        proofData.path,
+        proofData,
         outBoxAddress,
         l1Provider
       )
