@@ -15,7 +15,7 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.8.0
 	github.com/offchainlabs/go-solidity-sha3 v0.1.2
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.24.0
+	github.com/rs/zerolog v1.25.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 )
