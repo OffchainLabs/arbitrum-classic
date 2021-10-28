@@ -1,8 +1,1 @@
-{
-  "L1CustomGateway": {
-    "address": "0x5b8A1381dF036f3Bb23398BB62d4f16E8B11d04F",
-    "deployTxn": "0xe0cadd03e8e865cade31002d376fae0c85b869926aab9f42b9d4a78d9e3d31ef",
-    "arbitrumCommitHash": "7cce402117417c73f2a17eb17011e0d09a304d2f",
-    "buildInfo": ""
-  }
-}
+{}
