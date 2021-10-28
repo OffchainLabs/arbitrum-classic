@@ -153,8 +153,8 @@ bool ArbCore::deliverMessages(
 }
 
 ValueLoader ArbCore::makeValueLoader() const {
-    return {std::make_unique<CoreValueLoader>(data_storage, core_code,
-                                              ValueCache{1, 0})};
+    return ValueLoader{std::make_unique<CoreValueLoader>(
+        CoreValueLoader(data_storage, core_code, ValueCache{1, 0}))};
 }
 
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
