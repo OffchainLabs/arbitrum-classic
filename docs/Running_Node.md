@@ -22,12 +22,13 @@
   - Will default to `https://arb1.arbitrum.io/feed` or `https://rinkeby.arbitrum.io/feed` depending on chain ID reported by ethereum node provided. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
 - `--forward-url=<sequencer RPC>`
   - Will default to `https://arb1.arbitrum.io/rpc` or `https://rinkeby.arbitrum.io/rpc` depending on chain ID reported by ethereum node provided.
-- `--node.cache.allow-slow-lookup`
-  - Enable archive support, will load old blocks from disk if not in memory cache
 - `--core.cache.timed-expire`
   - Defaults to `20m`, or 20 minutes. Age of oldest blocks to hold in cache so that disk lookups are not required
+- `--node.cache.allow-slow-lookup`
+  - When enabled, will load old blocks from disk if not in memory cache
 - `--core.checkpoint-gas-frequency`
   - Defaults to `1000000000`. Amount of gas between saving checkpoints to disk. When making archive queries node has to load closest previous checkpoint and then execute up to the requested block. The farther apart the checkpoints, the longer potential execution required. However, saving checkpoints more often slows down the node in general.
+- If archive support is desired, recommend using `--node.cache.allow-slow-lookup --core.checkpoint-gas-frequency=156250000`
 
 ### Important ports
 
