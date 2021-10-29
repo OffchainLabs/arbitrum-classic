@@ -1,12 +1,5 @@
 ## Running full node for Arbitrum One
 
-### Hardware requirements
-
-- Storage volume must have very high IOPs, preferably a fast NVMe drive.
-- Recommend a minimum of 100GB available disk space
-- Recommend at least 50GB of free RAM available for node to use
-- Recommend using a cluster of nodes such that each node handles a maximum of 15-30 requests per second
-
 ### Required Artifacts
 
 - Latest Docker Image: offchainlabs/arb-validator:v1.0.0-2b628f8
@@ -15,20 +8,6 @@
 
 - `--l1.url=<Layer 1 Ethereum RPC URL>`
   - Must provide standard Ethereum node RPC endpoint.
-
-### Optional parameters
-
-- `--feed.url=<feed address>`
-  - Will default to `https://arb1.arbitrum.io/feed` or `https://rinkeby.arbitrum.io/feed` depending on chain ID reported by ethereum node provided. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
-- `--forward-url=<sequencer RPC>`
-  - Will default to `https://arb1.arbitrum.io/rpc` or `https://rinkeby.arbitrum.io/rpc` depending on chain ID reported by ethereum node provided.
-- `--core.cache.timed-expire`
-  - Defaults to `20m`, or 20 minutes. Age of oldest blocks to hold in cache so that disk lookups are not required
-- `--node.cache.allow-slow-lookup`
-  - When enabled, will load old blocks from disk if not in memory cache
-- `--core.checkpoint-gas-frequency`
-  - Defaults to `1000000000`. Amount of gas between saving checkpoints to disk. When making archive queries node has to load closest previous checkpoint and then execute up to the requested block. The farther apart the checkpoints, the longer potential execution required. However, saving checkpoints more often slows down the node in general.
-- If archive support is desired, recommend using `--node.cache.allow-slow-lookup --core.checkpoint-gas-frequency=156250000`
 
 ### Important ports
 
@@ -47,6 +26,20 @@
   ```
   docker run --rm -it  -v /some/local/path/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-rinkeby-node:8545
   ```
+
+### Optional parameters
+
+- `--feed.url=<feed address>`
+  - Will default to `https://arb1.arbitrum.io/feed` or `https://rinkeby.arbitrum.io/feed` depending on chain ID reported by ethereum node provided. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
+- `--forward-url=<sequencer RPC>`
+  - Will default to `https://arb1.arbitrum.io/rpc` or `https://rinkeby.arbitrum.io/rpc` depending on chain ID reported by ethereum node provided.
+- `--core.cache.timed-expire`
+  - Defaults to `20m`, or 20 minutes. Age of oldest blocks to hold in cache so that disk lookups are not required
+- `--node.cache.allow-slow-lookup`
+  - When enabled, will load old blocks from disk if not in memory cache
+- `--core.checkpoint-gas-frequency`
+  - Defaults to `1000000000`. Amount of gas between saving checkpoints to disk. When making archive queries node has to load closest previous checkpoint and then execute up to the requested block. The farther apart the checkpoints, the longer potential execution required. However, saving checkpoints more often slows down the node in general.
+- If archive support is desired, recommend using `--node.cache.allow-slow-lookup --core.checkpoint-gas-frequency=156250000`
 
 ### Arb-Relay
 
