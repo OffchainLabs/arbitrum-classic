@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "license": "Apache-2.0",
   "scripts": {
+    "postinstall": "$npm_execpath run clean:build",
+    "clean:build": "hardhat clean && hardhat compile",
+    "build": "hardhat compile",
     "test:e2e": "hardhat test test/*.e2e.ts",
     "test:l1": "hardhat test test/*.l1.ts",
     "test:l2": "hardhat test test/*.l2.ts --network arbitrum",
@@ -20,7 +23,8 @@
   "dependencies": {
     "arbos-precompiles": "^1.0.1",
     "@openzeppelin/contracts": "3.4.0",
-    "@openzeppelin/contracts-upgradeable": "3.4.0"
+    "@openzeppelin/contracts-upgradeable": "3.4.0",
+    "arb-bridge-eth": "0.7.2"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
