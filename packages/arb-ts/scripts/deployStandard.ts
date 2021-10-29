@@ -46,7 +46,7 @@ const main = async () => {
       'https://raw.githubusercontent.com/OffchainLabs/arb-token-lists/master/src/WarningList/warningTokens.json'
     )
   ).data
-  const warningToken = warningTokens[l1TokenAddress]
+  const warningToken = warningTokens[l1TokenAddress.toLowerCase()]
   if (warningToken) {
     const description = (() => {
       switch (warningToken.type) {
