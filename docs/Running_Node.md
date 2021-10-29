@@ -1,0 +1,61 @@
+## Running full node for Arbitrum One
+
+### Hardware requirements
+
+- Storage volume must have very high IOPs, preferably a fast NVMe drive.
+- Recommend a minimum of 100GB available disk space
+- Recommend at least 50GB of free RAM available for node to use
+- Recommend using a cluster of nodes such that each node handles a maximum of 15-30 requests per second
+
+### Required Artifacts
+
+- Latest Docker Image: offchainlabs/arb-validator:v1.0.0-2b628f8
+
+### Required parameter
+
+- `--l1.url=<Layer 1 Ethereum RPC URL>`
+  - Must provide standard Ethereum node RPC endpoint.
+
+### Optional parameters
+
+- `--feed.url=<feed address>`
+  - Will default to `https://arb1.arbitrum.io/feed` or `https://rinkeby.arbitrum.io/feed` depending on chain ID reported by ethereum node provided. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
+- `--forward-url=<sequencer RPC>`
+  - Will default to `https://arb1.arbitrum.io/rpc` or `https://rinkeby.arbitrum.io/rpc` depending on chain ID reported by ethereum node provided.
+- `--node.cache.allow-slow-lookup`
+  - Enable archive support, will load old blocks from disk if not in memory cache
+- `--core.cache.timed-expire`
+  - Defaults to `20m`, or 20 minutes. Age of oldest blocks to hold in cache so that disk lookups are not required
+- `--core.checkpoint-gas-frequency`
+  - Defaults to `1000000000`. Amount of gas between saving checkpoints to disk. When making archive queries node has to load closest previous checkpoint and then execute up to the requested block. The farther apart the checkpoints, the longer potential execution required. However, saving checkpoints more often slows down the node in general.
+
+### Important ports
+
+- RPC: `8547`
+- WebSocket: `8548`
+- Sequencer Feed: `9642`
+
+### Putting it all together
+
+- When running docker image, an external volume should be mounted to persist the database across restarts. The mount point should be `/home/user/.arbitrum/mainnet` or `/home/user/.arbitrum/rinkeby` depending on what chain you are connecting to.
+- Here is an example of how to run arb-node for mainnet:
+  ```
+  docker run --rm -it  -v /some/local/path/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545
+  ```
+- Here is an example of how to run arb-node for rinkeby:
+  ```
+  docker run --rm -it  -v /some/local/path/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-rinkeby-node:8545
+  ```
+
+### Arb-Relay
+
+- When running more than one node, you want to run a single arb-relay which can provide a feed for all your nodes.
+  The arb-relay is in the same docker image.
+- Here is an example of how to run arb-relay for mainnet:
+  ```
+  docker run --rm -it  -v /some/local/path/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:9642:9642 --entrypoint /home/user/go/bin/arb-relay offchainlabs/arb-node:v1.0.0-2b628f8 --feed.input.url wss://arb1.arbitrum.io/feed
+  ```
+- Here is an example of how to run arb-node for mainnet with custom relay:
+  ```
+  docker run --rm -it  -v /some/local/path/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545 --feed.input.url ws://<local-relay-address>:9642
+  ```
