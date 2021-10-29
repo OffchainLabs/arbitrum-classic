@@ -1243,6 +1243,13 @@
   dependencies:
     antlr4ts "^0.5.0-alpha.4"
 
+"@solidity-parser/parser@^0.14.0":
+  version "0.14.0"
+  resolved "https://registry.yarnpkg.com/@solidity-parser/parser/-/parser-0.14.0.tgz#d51f074efb0acce0e953ec48133561ed710cebc0"
+  integrity sha512-cX0JJRcmPtNUJpzD2K7FdA7qQsTOk1UZnFx2k7qAg9ZRvuaH5NBe5IEdBMXGlmf2+FmjhqbygJ26H8l2SV7aKQ==
+  dependencies:
+    antlr4ts "^0.5.0-alpha.4"
+
 "@szmarczak/http-timer@^1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@szmarczak/http-timer/-/http-timer-1.1.2.tgz#b1665e2c461a2cd92f4c1bbf50d5454de0d4b421"
@@ -1313,6 +1320,14 @@
   version "7.0.1"
   resolved "https://registry.yarnpkg.com/@typechain/ethers-v5/-/ethers-v5-7.0.1.tgz#f9ae60ae5bd9e8ea8a996f66244147e8e74034ae"
   integrity sha512-mXEJ7LG0pOYO+MRPkHtbf30Ey9X2KAsU0wkeoVvjQIn7iAY6tB3k3s+82bbmJAUMyENbQ04RDOZit36CgSG6Gg==
+
+"@typechain/ethers-v5@^7.2.0":
+  version "7.2.0"
+  resolved "https://registry.yarnpkg.com/@typechain/ethers-v5/-/ethers-v5-7.2.0.tgz#d559cffe0efe6bdbc20e644b817f6fa8add5e8f8"
+  integrity sha512-jfcmlTvaaJjng63QsT49MT6R1HFhtO/TBMWbyzPFSzMmVIqb2tL6prnKBs4ZJrSvmgIXWy+ttSjpaxCTq8D/Tw==
+  dependencies:
+    lodash "^4.17.15"
+    ts-essentials "^7.0.1"
 
 "@typechain/hardhat@^2.3.0":
   version "2.3.0"
@@ -6293,9 +6308,9 @@ hardhat@^2.6.1:
     ws "^7.4.6"
 
 hardhat@^2.6.4:
-  version "2.6.5"
-  resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.6.5.tgz#61d3e22da34e1b175bbe599f77396b32f9788b58"
-  integrity sha512-sBhREWZjQTtR/KMMp2F3ySuDqL0norjNq68geR3nlXRHXYKuNKeL7xqVsmldekt3sVB5Wh1WX7xDX79kvUr+fA==
+  version "2.6.7"
+  resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.6.7.tgz#f9949e58f019439f0c5299b24e7f91d6c6a5ff29"
+  integrity sha512-Mua01f6ZN1feQLktHSH2p5A5LCdA+Wf7+O2lJDH6wClvWPtI2eqKNNY2gxBwYXoQ28GZrT3K6mqQOZeRWAca6Q==
   dependencies:
     "@ethereumjs/block" "^3.4.0"
     "@ethereumjs/blockchain" "^5.4.0"
@@ -6304,7 +6319,7 @@ hardhat@^2.6.4:
     "@ethereumjs/vm" "^5.5.2"
     "@ethersproject/abi" "^5.1.2"
     "@sentry/node" "^5.18.1"
-    "@solidity-parser/parser" "^0.11.0"
+    "@solidity-parser/parser" "^0.14.0"
     "@types/bn.js" "^5.1.0"
     "@types/lru-cache" "^5.1.0"
     abort-controller "^3.0.0"
