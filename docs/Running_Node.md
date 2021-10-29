@@ -57,5 +57,5 @@
   ```
 - Here is an example of how to run arb-node for mainnet with custom relay:
   ```
-  docker run --rm -it  -v /some/local/path/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545 --feed.input.url ws://<local-relay-address>:9642
+  docker run --rm -it  -v /some/local/path/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545 --feed.input.url ws://local-relay-address:9642
   ```
