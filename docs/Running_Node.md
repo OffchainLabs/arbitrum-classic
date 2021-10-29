@@ -1,4 +1,8 @@
-## Running full node for Arbitrum One
+---
+id: Running_Node
+title: Running full node for Arbitrum One
+sidebar_label: Running a Node
+---
 
 ### Required Artifacts
 
