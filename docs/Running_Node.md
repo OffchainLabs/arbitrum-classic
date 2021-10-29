@@ -34,10 +34,14 @@ sidebar_label: Running a Node
 ### Note on permissions
 
 - The Docker image is configured to run as non-root UID 1000. This means if you are running in Linux and you are getting permission errors when trying to run the docker image, run this command to allow all users to update the persistent folders
-
-```
-chmod -fR 777 /some/local/dir/arbitrum-mainnet /some/local/dir/arbitrum-rinkeby
-```
+  ```
+  mkdir /some/local/dir/arbitrum-mainnet
+  chmod -fR 777 /some/local/dir/arbitrum-mainnet
+  ```
+  ```
+  mkdir /some/local/dir/arbitrum-rinkeby
+  chmod -fR 777 /some/local/dir/arbitrum-rinkeby
+  ```
 
 ### Optional parameters
 
