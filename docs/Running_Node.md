@@ -24,12 +24,20 @@ sidebar_label: Running a Node
 - When running docker image, an external volume should be mounted to persist the database across restarts. The mount point should be `/home/user/.arbitrum/mainnet` or `/home/user/.arbitrum/rinkeby` depending on what chain you are connecting to.
 - Here is an example of how to run arb-node for mainnet:
   ```
-  docker run --rm -it  -v /some/local/path/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545
+  docker run --rm -it  -v /tmp/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545
   ```
 - Here is an example of how to run arb-node for rinkeby:
   ```
-  docker run --rm -it  -v /some/local/path/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-rinkeby-node:8545
+  docker run --rm -it  -v /tmp/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-rinkeby-node:8545
   ```
+
+### Note on permissions
+
+- The Docker image is configured to run as non-root UID 1000. This means if you are running in Linux and you are getting permission errors when trying to run the docker image, run this command to allow all users to update the persistent folders
+
+```
+chmod -fR 777 /tmp/arbitrum-mainnet /tmp/arbitrum-rinkeby
+```
 
 ### Optional parameters
 
@@ -51,9 +59,9 @@ sidebar_label: Running a Node
   The arb-relay is in the same docker image.
 - Here is an example of how to run arb-relay for mainnet:
   ```
-  docker run --rm -it  -v /some/local/path/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:9642:9642 --entrypoint /home/user/go/bin/arb-relay offchainlabs/arb-node:v1.0.0-2b628f8 --feed.input.url wss://arb1.arbitrum.io/feed
+  docker run --rm -it  -v /tmp/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:9642:9642 --entrypoint /home/user/go/bin/arb-relay offchainlabs/arb-node:v1.0.0-2b628f8 --feed.input.url wss://arb1.arbitrum.io/feed
   ```
 - Here is an example of how to run arb-node for mainnet with custom relay:
   ```
-  docker run --rm -it  -v /some/local/path/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545 --feed.input.url ws://local-relay-address:9642
+  docker run --rm -it  -v /tmp/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545 --feed.input.url ws://local-relay-address:9642
   ```
