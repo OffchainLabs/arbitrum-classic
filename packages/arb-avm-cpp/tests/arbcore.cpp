@@ -323,7 +323,7 @@ TEST_CASE("ArbCore inbox") {
             inbox_acc = batch_item.accumulator;
         }
         auto tx = storage.makeReadTransaction();
-        auto position = arbCore->getGasAtBlock(*tx, 1);
+        auto position = arbCore->getSideloadPosition(*tx, 1);
         REQUIRE(position.status.ok());
 
         auto cursor = arbCore->getExecutionCursor(position.data, true);
