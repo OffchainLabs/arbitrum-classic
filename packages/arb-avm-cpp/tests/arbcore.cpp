@@ -136,9 +136,9 @@ TEST_CASE("ArbCore tests") {
     for (const auto& filename : files) {
         INFO("Testing " << filename);
 
-        ArbStorage storage(dbpath, coreConfig);
-        REQUIRE(storage.initialize(arb_os_path).ok());
-        auto arbCore = storage.getArbCore();
+        ArbStorage storage1(dbpath, coreConfig);
+        REQUIRE(storage1.initialize(arb_os_path).ok());
+        auto arbCore = storage1.getArbCore();
         REQUIRE(arbCore->startThread());
 
         auto test_file =
@@ -240,10 +240,10 @@ TEST_CASE("ArbCore tests") {
         auto final_output = arbCore->getLastMachineOutput();
 
         // Create a new arbCore and verify it gets to the same point
-        storage.closeArbStorage();
-        storage = ArbStorage(dbpath, coreConfig);
-        REQUIRE(storage.initialize(arb_os_path).ok());
-        arbCore = storage.getArbCore();
+        storage1.closeArbStorage();
+        auto storage2 = ArbStorage(dbpath, coreConfig);
+        REQUIRE(storage2.initialize(arb_os_path).ok());
+        arbCore = storage2.getArbCore();
         logs_count = uint64_t(arbCore->getLastMachineOutput().log_count);
         if (!sends.empty()) {
             // If there were sends, the block must have ended, so there should
