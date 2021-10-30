@@ -79,6 +79,7 @@ TEST_CASE("Code works correctly") {
     auto mach = storage.getInitialMachine();
     generateTestMachine(mach);
     checkRun(*mach);
+    storage.closeArbStorage();
 }
 
 TEST_CASE("Code serialization") {
@@ -91,53 +92,56 @@ TEST_CASE("Code serialization") {
 
     auto mach = storage.getInitialMachine();
     generateTestMachine(mach);
-    auto tx = storage.makeReadWriteTransaction();
+    {
+        auto tx = storage.makeReadWriteTransaction();
 
-    SECTION("Save and load") {
-        auto save_ret = saveTestMachine(*tx, *mach);
-        REQUIRE(save_ret.status.ok());
-        REQUIRE(tx->commit().ok());
-        auto mach2 = storage.getMachine(mach->hash(), value_cache);
-        checkRun(*mach2);
-    }
-
-    SECTION("Save different and load") {
-        auto save_ret = saveTestMachine(*tx, *mach);
-        REQUIRE(save_ret.status.ok());
-
-        auto mach2 = *mach;
-        MachineExecutionConfig execConfig;
-        execConfig.max_gas = 7;
-        mach2.machine_state.context = AssertionContext(execConfig);
-        mach2.run();
-        save_ret = saveTestMachine(*tx, mach2);
-        REQUIRE(save_ret.status.ok());
-
-        SECTION("Delete first") {
-            auto del_ret = deleteMachine(*tx, mach->hash());
-            REQUIRE(del_ret.status.ok());
+        SECTION("Save and load") {
+            auto save_ret = saveTestMachine(*tx, *mach);
+            REQUIRE(save_ret.status.ok());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(mach2.hash(), value_cache);
-            checkRun(*mach3);
+            auto mach2 = storage.getMachine(mach->hash(), value_cache);
+            checkRun(*mach2);
         }
 
-        SECTION("Delete second") {
-            auto del_ret = deleteMachine(*tx, mach2.hash());
-            REQUIRE(del_ret.status.ok());
+        SECTION("Save different and load") {
+            auto save_ret = saveTestMachine(*tx, *mach);
+            REQUIRE(save_ret.status.ok());
+
+            auto mach2 = *mach;
+            MachineExecutionConfig execConfig;
+            execConfig.max_gas = 7;
+            mach2.machine_state.context = AssertionContext(execConfig);
+            mach2.run();
+            save_ret = saveTestMachine(*tx, mach2);
+            REQUIRE(save_ret.status.ok());
+
+            SECTION("Delete first") {
+                auto del_ret = deleteMachine(*tx, mach->hash());
+                REQUIRE(del_ret.status.ok());
+                REQUIRE(tx->commit().ok());
+                auto mach3 = storage.getMachine(mach2.hash(), value_cache);
+                checkRun(*mach3);
+            }
+
+            SECTION("Delete second") {
+                auto del_ret = deleteMachine(*tx, mach2.hash());
+                REQUIRE(del_ret.status.ok());
+                REQUIRE(tx->commit().ok());
+                auto mach3 = storage.getMachine(mach->hash(), value_cache);
+                checkRun(*mach3);
+            }
+        }
+
+        SECTION("Save twice, delete and load") {
+            saveTestMachine(*tx, *mach);
+            saveTestMachine(*tx, *mach);
+            deleteMachine(*tx, mach->hash());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(mach->hash(), value_cache);
-            checkRun(*mach3);
+            auto mach2 = storage.getMachine(mach->hash(), value_cache);
+            checkRun(*mach2);
         }
     }
-
-    SECTION("Save twice, delete and load") {
-        saveTestMachine(*tx, *mach);
-        saveTestMachine(*tx, *mach);
-        deleteMachine(*tx, mach->hash());
-        REQUIRE(tx->commit().ok());
-        auto mach2 = storage.getMachine(mach->hash(), value_cache);
-        checkRun(*mach2);
-    }
+    storage.closeArbStorage();
 }
 
 TEST_CASE("Code forks are identical to original") {

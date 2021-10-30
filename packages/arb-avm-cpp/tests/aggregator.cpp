@@ -75,4 +75,5 @@ TEST_CASE("Aggregator tests") {
             }
         }
     */
+    storage->closeDb();
 }

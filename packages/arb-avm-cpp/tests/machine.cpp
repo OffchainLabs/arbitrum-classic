@@ -89,6 +89,7 @@ TEST_CASE("Checkpoint State") {
         auto machine2 = storage.getMachine(machine->hash(), value_cache);
         REQUIRE(machine2->hash() == machine->hash());
     }
+    storage.closeArbStorage();
 }
 
 TEST_CASE("Delete machine checkpoint") {
@@ -112,6 +113,7 @@ TEST_CASE("Delete machine checkpoint") {
         deleteCheckpoint(*transaction, *machine);
         REQUIRE(transaction->commit().ok());
     }
+    storage.closeArbStorage();
 }
 
 TEST_CASE("Restore checkpoint") {
@@ -129,6 +131,7 @@ TEST_CASE("Restore checkpoint") {
         REQUIRE(transaction->commit().ok());
         restoreCheckpoint(storage, *machine, value_cache);
     }
+    storage.closeArbStorage();
 }
 
 TEST_CASE("Proof") {

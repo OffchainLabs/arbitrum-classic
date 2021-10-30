@@ -64,30 +64,36 @@ void initializeDatastack(const ReadTransaction& transaction,
 void saveDataStack(const Datastack& data_stack) {
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    std::vector<CodePoint> code;
-    auto transaction = storage.makeReadWriteTransaction();
+    {
+        std::vector<CodePoint> code;
+        auto transaction = storage.makeReadWriteTransaction();
 
-    auto tuple_ret = data_stack.getTupleRepresentation();
-    auto results = saveValue(*transaction, tuple_ret);
+        auto tuple_ret = data_stack.getTupleRepresentation();
+        auto results = saveValue(*transaction, tuple_ret);
 
-    REQUIRE(transaction->commit().ok());
-    REQUIRE(results.status.ok());
-    REQUIRE(results.reference_count == 1);
+        REQUIRE(transaction->commit().ok());
+        REQUIRE(results.status.ok());
+        REQUIRE(results.reference_count == 1);
+    }
+    storage.closeArbStorage();
 }
 
 void saveDataStackTwice(const Datastack& data_stack) {
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    std::vector<CodePoint> code;
-    auto transaction = storage.makeReadWriteTransaction();
+    {
+        std::vector<CodePoint> code;
+        auto transaction = storage.makeReadWriteTransaction();
 
-    auto tuple_ret = data_stack.getTupleRepresentation();
-    auto results = saveValue(*transaction, tuple_ret);
-    auto results2 = saveValue(*transaction, tuple_ret);
+        auto tuple_ret = data_stack.getTupleRepresentation();
+        auto results = saveValue(*transaction, tuple_ret);
+        auto results2 = saveValue(*transaction, tuple_ret);
 
-    REQUIRE(transaction->commit().ok());
-    REQUIRE(results2.status.ok());
-    REQUIRE(results2.reference_count == 2);
+        REQUIRE(transaction->commit().ok());
+        REQUIRE(results2.status.ok());
+        REQUIRE(results2.reference_count == 2);
+    }
+    storage.closeArbStorage();
 }
 
 void saveAndGetDataStack(ReadWriteTransaction& transaction,
@@ -122,49 +128,52 @@ TEST_CASE("Initialize datastack") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    auto transaction = storage.makeReadWriteTransaction();
-    Datastack data_stack;
+    {
+        auto transaction = storage.makeReadWriteTransaction();
+        Datastack data_stack;
 
-    SECTION("default") {
-        auto tuple_ret = data_stack.getTupleRepresentation();
-        auto results = saveValue(*transaction, tuple_ret);
-        transaction->commit();
-        initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
-                            0);
+        SECTION("default") {
+            auto tuple_ret = data_stack.getTupleRepresentation();
+            auto results = saveValue(*transaction, tuple_ret);
+            transaction->commit();
+            initializeDatastack(*transaction, hash(tuple_ret),
+                                data_stack.hash(), 0);
+        }
+        SECTION("push empty tuple") {
+            Tuple tuple;
+            data_stack.push(tuple);
+            auto tuple_ret = data_stack.getTupleRepresentation();
+            auto results = saveValue(*transaction, tuple_ret);
+            transaction->commit();
+            initializeDatastack(*transaction, hash(tuple_ret),
+                                data_stack.hash(), 1);
+        }
+        SECTION("push num, tuple") {
+            CodePointStub code_point_stub{{0, 0}, 3452345};
+            uint256_t num = 1;
+            auto tuple = Tuple::createTuple(code_point_stub);
+            data_stack.push(num);
+            data_stack.push(tuple);
+            auto tuple_ret = data_stack.getTupleRepresentation();
+            auto results = saveValue(*transaction, tuple_ret);
+            transaction->commit();
+            initializeDatastack(*transaction, hash(tuple_ret),
+                                data_stack.hash(), 2);
+        }
+        SECTION("push codepoint, tuple") {
+            CodePointStub code_point_stub{{0, 0}, 3452345};
+            uint256_t num = 1;
+            auto tuple = Tuple::createTuple(num);
+            data_stack.push(code_point_stub);
+            data_stack.push(tuple);
+            auto tuple_ret = data_stack.getTupleRepresentation();
+            auto results = saveValue(*transaction, tuple_ret);
+            transaction->commit();
+            initializeDatastack(*transaction, hash(tuple_ret),
+                                data_stack.hash(), 2);
+        }
     }
-    SECTION("push empty tuple") {
-        Tuple tuple;
-        data_stack.push(tuple);
-        auto tuple_ret = data_stack.getTupleRepresentation();
-        auto results = saveValue(*transaction, tuple_ret);
-        transaction->commit();
-        initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
-                            1);
-    }
-    SECTION("push num, tuple") {
-        CodePointStub code_point_stub{{0, 0}, 3452345};
-        uint256_t num = 1;
-        auto tuple = Tuple::createTuple(code_point_stub);
-        data_stack.push(num);
-        data_stack.push(tuple);
-        auto tuple_ret = data_stack.getTupleRepresentation();
-        auto results = saveValue(*transaction, tuple_ret);
-        transaction->commit();
-        initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
-                            2);
-    }
-    SECTION("push codepoint, tuple") {
-        CodePointStub code_point_stub{{0, 0}, 3452345};
-        uint256_t num = 1;
-        auto tuple = Tuple::createTuple(num);
-        data_stack.push(code_point_stub);
-        data_stack.push(tuple);
-        auto tuple_ret = data_stack.getTupleRepresentation();
-        auto results = saveValue(*transaction, tuple_ret);
-        transaction->commit();
-        initializeDatastack(*transaction, hash(tuple_ret), data_stack.hash(),
-                            2);
-    }
+    storage.closeArbStorage();
 }
 
 TEST_CASE("Save datastack") {
@@ -227,6 +236,7 @@ TEST_CASE("Save and get datastack") {
         auto tup_rep = Tuple(tuple, tup1);
         saveTwiceAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
+    storage.closeArbStorage();
 }
 
 TEST_CASE("Initial VM Values") {

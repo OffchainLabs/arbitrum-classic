@@ -449,19 +449,19 @@ void encodeKeccakState(const Tuple& tup, uint64_t* state) {
 }
 
 Tuple decodeKeccakState(const uint64_t* state) {
-    return Tuple(bswap(intx::be::unsafe::load<uint256_t>(
-                     reinterpret_cast<const uint8_t*>(&state[0]))),
-                 bswap(intx::be::unsafe::load<uint256_t>(
-                     reinterpret_cast<const uint8_t*>(&state[4]))),
-                 bswap(intx::be::unsafe::load<uint256_t>(
-                     reinterpret_cast<const uint8_t*>(&state[8]))),
-                 bswap(intx::be::unsafe::load<uint256_t>(
-                     reinterpret_cast<const uint8_t*>(&state[12]))),
-                 bswap(intx::be::unsafe::load<uint256_t>(
-                     reinterpret_cast<const uint8_t*>(&state[16]))),
-                 bswap(intx::be::unsafe::load<uint256_t>(
-                     reinterpret_cast<const uint8_t*>(&state[20]))),
-                 uint256_t{state[24]});
+    return {bswap(intx::be::unsafe::load<uint256_t>(
+                reinterpret_cast<const uint8_t*>(&state[0]))),
+            bswap(intx::be::unsafe::load<uint256_t>(
+                reinterpret_cast<const uint8_t*>(&state[4]))),
+            bswap(intx::be::unsafe::load<uint256_t>(
+                reinterpret_cast<const uint8_t*>(&state[8]))),
+            bswap(intx::be::unsafe::load<uint256_t>(
+                reinterpret_cast<const uint8_t*>(&state[12]))),
+            bswap(intx::be::unsafe::load<uint256_t>(
+                reinterpret_cast<const uint8_t*>(&state[16]))),
+            bswap(intx::be::unsafe::load<uint256_t>(
+                reinterpret_cast<const uint8_t*>(&state[20]))),
+            uint256_t{state[24]}};
 }
 }  // namespace internal
 
@@ -871,8 +871,8 @@ void log(MachineState& m) {
 
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.debug_prints.push_back(
-        MachineEmission<value>{m.stack.pop(), m.output.fully_processed_inbox});
+    m.context.debug_prints.push_back(MachineEmission<value>{
+        m.stack.pop(), m.output.fully_processed_inbox, 0});
     ++m.pc;
 }
 
@@ -1097,9 +1097,11 @@ void setbuffer256(MachineState& m) {
 
     if ((offset + 31) % ALIGN < offset % ALIGN) {
         auto data1 = std::vector<uint8_t>(
-            buf.begin(), buf.begin() + (ALIGN - (offset % ALIGN)));
+            buf.begin(),
+            buf.begin() + static_cast<long>(ALIGN - (offset % ALIGN)));
         auto data2 = std::vector<uint8_t>(
-            buf.begin() + (ALIGN - (offset % ALIGN)), buf.end());
+            buf.begin() + static_cast<long>(ALIGN - (offset % ALIGN)),
+            buf.end());
         res = res.set_many(offset, data1);
         res = res.set_many(offset + ALIGN - (offset % ALIGN), data2);
     } else {

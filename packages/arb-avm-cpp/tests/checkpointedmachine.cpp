@@ -25,18 +25,22 @@ TEST_CASE("CheckpointedMachine tests") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
     auto storage = std::make_shared<DataStorage>(dbpath);
-    auto arbcore = std::make_unique<ArbCore>(storage, coreConfig);
-    auto executable = loadExecutable(test_contract_path);
-    arbcore->initialize(executable);
+    {
+        auto arbcore = std::make_unique<ArbCore>(storage, coreConfig);
+        auto executable = loadExecutable(test_contract_path);
+        arbcore->initialize(executable);
 
-    SECTION("CheckpointedMachine basic") {
-        ReadWriteTransaction tx(storage);
-        REQUIRE(arbcore->initialized());
-        REQUIRE(arbcore->startThread());
-        REQUIRE(arbcore->maxCheckpointGas() == 0);
+        SECTION("CheckpointedMachine basic") {
+            ReadWriteTransaction tx(storage);
+            REQUIRE(arbcore->initialized());
+            REQUIRE(arbcore->startThread());
+            REQUIRE(arbcore->maxCheckpointGas() == 0);
 
-        REQUIRE(arbcore->triggerSaveCheckpoint().ok());
-        REQUIRE(!arbcore->isCheckpointsEmpty(tx));
-        REQUIRE(arbcore->maxCheckpointGas() == 0);
+            REQUIRE(arbcore->triggerSaveCheckpoint().ok());
+            REQUIRE(!arbcore->isCheckpointsEmpty(tx));
+            REQUIRE(arbcore->maxCheckpointGas() == 0);
+        }
     }
+
+    storage->closeDb();
 }

@@ -121,6 +121,7 @@ TEST_CASE("ARBOS test vectors") {
                 deleteMachine(*tx, mach->hash());
                 tx->commit();
             }
+            storage2.closeArbStorage();
         }
     }
 }

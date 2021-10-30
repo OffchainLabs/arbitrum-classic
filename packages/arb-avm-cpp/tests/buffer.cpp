@@ -210,6 +210,7 @@ TEST_CASE("Buffer Serialization") {
     checkBuffer(storage, buf);
     buf = buf.set(1UL << 63UL, 13);
     checkBuffer(storage, buf);
+    storage.closeArbStorage();
 }
 
 TEST_CASE("Buffer Hash Failure") {
@@ -225,6 +226,7 @@ TEST_CASE("Buffer Hash Failure") {
     buf = buf.set(14721, 100);
     buf2 = buf2.set(14721, 100);
     REQUIRE(buf.hash() == buf2.hash());
+    storage.closeArbStorage();
 }
 
 std::vector<uint256_t> splitProof(std::vector<unsigned char> data) {

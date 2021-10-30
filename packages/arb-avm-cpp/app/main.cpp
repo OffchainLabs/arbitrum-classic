@@ -136,5 +136,6 @@ int main(int argc, char* argv[]) {
     execConfig.inbox_messages = std::vector<MachineMessage>();
     mach2->machine_state.context = AssertionContext{execConfig};
     mach2->run();
+    storage.closeArbStorage();
     return 0;
 }

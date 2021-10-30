@@ -261,6 +261,7 @@ TEST_CASE("ArbCore tests") {
             REQUIRE(n++ < 100);
         }
         REQUIRE(arbCore->getLastMachineOutput() == final_output);
+        storage.closeArbStorage();
     }
 }
 
@@ -298,44 +299,49 @@ TEST_CASE("ArbCore inbox") {
 
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    REQUIRE(
-        storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
-            .ok());
-    auto arbCore = storage.getArbCore();
-    REQUIRE(arbCore->startThread());
+    {
+        REQUIRE(storage
+                    .initialize(std::string{machine_test_cases_path} +
+                                "/inbox.mexe")
+                    .ok());
+        auto arbCore = storage.getArbCore();
+        REQUIRE(arbCore->startThread());
 
-    std::vector<InboxMessage> inbox_messages;
-    for (int i = 0; i < 5; i++) {
-        auto message = InboxMessage(0, {}, i, 0, i, 0, {});
-        inbox_messages.push_back(message);
+        std::vector<InboxMessage> inbox_messages;
+        for (int i = 0; i < 5; i++) {
+            auto message = InboxMessage(0, {}, i, 0, i, 0, {});
+            inbox_messages.push_back(message);
+        }
+        auto items = buildBatch(inbox_messages);
+
+        uint256_t inbox_acc = 0;
+        for (int i = 0; i < 5; i++) {
+            auto batch_item = items[i];
+            INFO("RUN " << i);
+            runCheckArbCore(arbCore, {batch_item}, i, inbox_acc, i + 1, 0,
+                            i + 1);
+            inbox_acc = batch_item.accumulator;
+        }
+        auto tx = storage.makeReadTransaction();
+        auto position = arbCore->getGasAtBlock(*tx, 1);
+        REQUIRE(position.status.ok());
+
+        auto cursor = arbCore->getExecutionCursor(position.data, true);
+        REQUIRE(cursor.status.ok());
+        REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
+        REQUIRE(cursor.data->getOutput().arb_gas_used <= position.data);
+
+        auto cursor_machine_hash = cursor.data->machineHash();
+        REQUIRE(cursor_machine_hash.has_value());
+
+        auto cursor_machine = arbCore->takeExecutionCursorMachine(*cursor.data);
+        REQUIRE(cursor_machine);
+        REQUIRE(cursor_machine_hash.value() == cursor_machine->hash());
+
+        auto machine = arbCore->getLastMachine();
+        REQUIRE(machine);
     }
-    auto items = buildBatch(inbox_messages);
-
-    uint256_t inbox_acc = 0;
-    for (int i = 0; i < 5; i++) {
-        auto batch_item = items[i];
-        INFO("RUN " << i);
-        runCheckArbCore(arbCore, {batch_item}, i, inbox_acc, i + 1, 0, i + 1);
-        inbox_acc = batch_item.accumulator;
-    }
-    auto tx = storage.makeReadTransaction();
-    auto position = arbCore->getSideloadPosition(*tx, 1);
-    REQUIRE(position.status.ok());
-
-    auto cursor = arbCore->getExecutionCursor(position.data, true);
-    REQUIRE(cursor.status.ok());
-    REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
-    REQUIRE(cursor.data->getOutput().arb_gas_used <= position.data);
-
-    auto cursor_machine_hash = cursor.data->machineHash();
-    REQUIRE(cursor_machine_hash.has_value());
-
-    auto cursor_machine = arbCore->takeExecutionCursorMachine(*cursor.data);
-    REQUIRE(cursor_machine);
-    REQUIRE(cursor_machine_hash.value() == cursor_machine->hash());
-
-    auto machine = arbCore->getLastMachine();
-    REQUIRE(machine);
+    storage.closeArbStorage();
 }
 
 TEST_CASE("ArbCore backwards reorg") {
@@ -385,6 +391,7 @@ TEST_CASE("ArbCore backwards reorg") {
     REQUIRE(reorgState.data->machineHash() == initialState.data->machineHash());
     REQUIRE(arbCore->getLastMachine()
                 ->machine_state.output.fully_processed_inbox.count == 0);
+    storage.closeArbStorage();
 }
 
 TEST_CASE("ArbCore duplicate code segments") {
@@ -445,4 +452,5 @@ TEST_CASE("ArbCore duplicate code segments") {
     REQUIRE(cursor.status.ok());
     REQUIRE(std::get<std::unique_ptr<Machine>>(cursor.data->machine)
                 ->currentStatus() == Status::Halted);
+    storage.closeArbStorage();
 }

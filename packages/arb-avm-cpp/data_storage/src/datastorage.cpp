@@ -121,8 +121,13 @@ rocksdb::Status DataStorage::flushNextColumn() {
 }
 
 rocksdb::Status DataStorage::closeDb() {
-    column_handles.clear();
     if (txn_db) {
+        for (auto handle : column_handles) {
+            auto status = txn_db->DestroyColumnFamilyHandle(handle);
+            if (!status.ok()) {
+                return status;
+            }
+        }
         auto s = txn_db->Close();
         txn_db.reset();
         return s;

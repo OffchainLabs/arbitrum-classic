@@ -946,9 +946,9 @@ uint256_t& assumeInt(value& val) {
 }
 
 TEST_CASE("OPCODE: ecrecover opcode is correct") {
-    std::array<unsigned char, 32> msg;
+    std::array<unsigned char, 32> msg{};
     std::generate(msg.begin(), msg.end(), std::rand);
-    std::array<unsigned char, 32> seckey;
+    std::array<unsigned char, 32> seckey{};
     std::generate(seckey.begin(), seckey.end(), std::rand);
 
     auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
@@ -956,7 +956,7 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
     secp256k1_ecdsa_recoverable_signature sig;
     secp256k1_pubkey pubkey;
     REQUIRE(secp256k1_ec_pubkey_create(ctx, &pubkey, seckey.data()) == 1);
-    std::array<unsigned char, 65> pubkey_raw;
+    std::array<unsigned char, 65> pubkey_raw{};
     size_t output_length = 65;
     REQUIRE(secp256k1_ec_pubkey_serialize(ctx, pubkey_raw.data(),
                                           &output_length, &pubkey,
@@ -966,10 +966,12 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
     REQUIRE(secp256k1_ecdsa_sign_recoverable(
                 ctx, &sig, msg.data(), seckey.data(), nullptr, nullptr) == 1);
 
-    std::array<unsigned char, 64> sig_raw;
+    std::array<unsigned char, 64> sig_raw{};
     int recovery_id;
     REQUIRE(secp256k1_ecdsa_recoverable_signature_serialize_compact(
                 ctx, sig_raw.data(), &recovery_id, &sig) == 1);
+
+    secp256k1_context_destroy(ctx);
 
     MachineState s;
     s.stack.push(intx::be::unsafe::load<uint256_t>(msg.begin()));

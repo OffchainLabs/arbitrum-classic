@@ -59,5 +59,6 @@ int main(int argc, char* argv[]) {
     core->startThread();
     std::cout << "Log count: " << log_count.data << "\n";
     sleep();
+    storage.closeArbStorage();
     return 0;
 }
