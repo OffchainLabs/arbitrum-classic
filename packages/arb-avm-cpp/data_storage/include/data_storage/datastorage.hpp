@@ -55,6 +55,7 @@ class DataStorage {
     rocksdb::FlushOptions flush_options;
     size_t next_column_to_flush{0};
     std::vector<uint8_t> secret_hash_seed;
+    bool secret_hash_seed_initialized{false};
 
     explicit DataStorage(const std::string& db_path);
 
