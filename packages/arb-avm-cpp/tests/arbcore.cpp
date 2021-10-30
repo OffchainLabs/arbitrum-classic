@@ -403,6 +403,7 @@ TEST_CASE("ArbCore duplicate code segments") {
     constexpr int CHECKPOINTS = 2;
 
     std::vector<InboxMessage> messages;
+    messages.reserve(CHECKPOINTS);
     for (int i = 0; i < CHECKPOINTS; i++) {
         messages.push_back(InboxMessage(0, {}, 0, 0, i, 0, {}));
     }
