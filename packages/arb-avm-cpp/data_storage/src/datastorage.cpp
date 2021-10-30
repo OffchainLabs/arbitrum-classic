@@ -152,11 +152,6 @@ rocksdb::Status DataStorage::clearDBExceptInbox() {
 }
 
 rocksdb::Status DataStorage::updateSecretHashSeed() {
-    if (secret_hash_seed_initialized) {
-        return rocksdb::Status::OK();
-    }
-    secret_hash_seed_initialized = true;
-
     std::string key("secretHashSeed");
     rocksdb::PinnableSlice value;
     rocksdb::ReadOptions read_opts;
