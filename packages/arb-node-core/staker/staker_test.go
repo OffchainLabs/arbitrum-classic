@@ -269,7 +269,14 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	faultyCore := challenge.NewFaultyCore(mon.Core, faultConfig)
 
-	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, val2Auth, configuration.Validator{})
+	faultsExist := faultConfig != challenge.FaultConfig{}
+	t.Log("faultsExist:", faultsExist)
+	faultyStrategy := MakeNodesStrategy
+	if faultsExist {
+		faultyStrategy = DefensiveStrategy
+	}
+
+	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), faultyStrategy, bind.CallOpts{}, val2Auth, configuration.Validator{})
 	test.FailIfError(t, err)
 
 	faultyStaker.Validator.GasThreshold = big.NewInt(0)
@@ -308,9 +315,6 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 		}
 		<-time.After(time.Second * 1)
 	}
-
-	faultsExist := faultConfig != challenge.FaultConfig{}
-	t.Log("faultsExist:", faultsExist)
 
 	var targetNode *big.Int
 	if faultsExist {

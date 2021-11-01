@@ -47,16 +47,23 @@ const (
 	MakeNodesStrategy
 )
 
+type nodeAndHash struct {
+	id   core.NodeID
+	hash common.Hash
+}
+
 type Staker struct {
 	*Validator
-	activeChallenge     *challenge.Challenger
-	strategy            Strategy
-	fromBlock           int64
-	baseCallOpts        bind.CallOpts
-	auth                transactauth.TransactAuth
-	config              configuration.Validator
-	highGasBlocksBuffer *big.Int
-	lastActCalledBlock  *big.Int
+	activeChallenge         *challenge.Challenger
+	strategy                Strategy
+	fromBlock               int64
+	baseCallOpts            bind.CallOpts
+	auth                    transactauth.TransactAuth
+	config                  configuration.Validator
+	highGasBlocksBuffer     *big.Int
+	lastActCalledBlock      *big.Int
+	inactiveLastCheckedNode *nodeAndHash
+	bringActiveUntilNode    core.NodeID
 }
 
 func NewStaker(
@@ -101,7 +108,7 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 				_, err = transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.auth)
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
-					logger.Info().Str("hash", arbTx.Hash().String()).Msg("Successfully executed transaction")
+					logger.Info().Str("hash", arbTx.Hash().String()).Msg("successfully executed transaction")
 				}
 			}
 			if err != nil {
@@ -210,10 +217,27 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 		return nil, err
 	}
 	if !nodesLinear {
-		logger.Warn().Msg("Fork detected")
+		logger.Warn().Msg("fork detected")
 		if effectiveStrategy == DefensiveStrategy {
 			effectiveStrategy = StakeLatestStrategy
 		}
+		s.inactiveLastCheckedNode = nil
+	}
+	if s.bringActiveUntilNode != nil {
+		if info.LatestStakedNode.Cmp(s.bringActiveUntilNode) < 0 {
+			if effectiveStrategy == DefensiveStrategy {
+				effectiveStrategy = StakeLatestStrategy
+			}
+			s.inactiveLastCheckedNode = nil
+		} else {
+			logger.Info().Msg("defensive validator staked past incorrect node; waiting here")
+			s.bringActiveUntilNode = nil
+			s.inactiveLastCheckedNode = nil
+		}
+	}
+	if effectiveStrategy <= DefensiveStrategy && s.inactiveLastCheckedNode != nil {
+		info.LatestStakedNode = s.inactiveLastCheckedNode.id
+		info.LatestStakedNodeHash = s.inactiveLastCheckedNode.hash
 	}
 
 	// Resolve nodes if either we're on the make nodes strategy,
@@ -277,7 +301,7 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 		return nil, nil
 	}
 	if creatingNewStake {
-		logger.Info().Msg("Staking to execute transactions")
+		logger.Info().Msg("staking to execute transactions")
 	}
 	return s.wallet.ExecuteTransactions(ctx, s.builder)
 }
@@ -289,7 +313,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 	}
 
 	if s.activeChallenge == nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
-		logger.Warn().Str("challenge", info.CurrentChallenge.String()).Msg("Entered challenge")
+		logger.Warn().Str("challenge", info.CurrentChallenge.String()).Msg("entered challenge")
 
 		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.fromBlock, s.client, s.builder, s.baseCallOpts)
 		if err != nil {
@@ -329,13 +353,15 @@ func (s *Staker) newStake(ctx context.Context) error {
 }
 
 func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiveStrategy Strategy) error {
-	active := effectiveStrategy > WatchtowerStrategy
+	active := effectiveStrategy >= StakeLatestStrategy
 	action, wrongNodesExist, err := s.generateNodeAction(ctx, info, effectiveStrategy, s.fromBlock)
 	if err != nil {
 		return err
 	}
-	// TODO raise an alert if wrongNodesExist (esp for watchtower strategy)
-	if action == nil || !active {
+	if wrongNodesExist && effectiveStrategy == WatchtowerStrategy {
+		logger.Error().Msg("found incorrect assertion in watchtower mode")
+	}
+	if action == nil {
 		info.CanProgress = false
 		return nil
 	}
@@ -346,15 +372,36 @@ func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiv
 			logger.Error().Msg("refusing to challenge assertion as config disables challenges")
 			return nil
 		}
+		if !active {
+			if wrongNodesExist && effectiveStrategy >= DefensiveStrategy {
+				logger.Warn().Msg("bringing defensive validator online because of incorrect assertion")
+				s.bringActiveUntilNode = new(big.Int).Add(info.LatestStakedNode, big.NewInt(1))
+			}
+			info.CanProgress = false
+			return nil
+		}
 		// Details are already logged with more details in generateNodeAction
 		info.CanProgress = false
 		info.LatestStakedNode = nil
 		info.LatestStakedNodeHash = action.hash
 		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount, action.sequencerBatchProof)
 	case existingNodeAction:
-		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
 		info.LatestStakedNode = action.number
 		info.LatestStakedNodeHash = action.hash
+		if !active {
+			if wrongNodesExist && effectiveStrategy >= DefensiveStrategy {
+				logger.Warn().Msg("bringing defensive validator online because of incorrect assertion")
+				s.bringActiveUntilNode = action.number
+				info.CanProgress = false
+			} else {
+				s.inactiveLastCheckedNode = &nodeAndHash{
+					id:   action.number,
+					hash: action.hash,
+				}
+			}
+			return nil
+		}
+		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("staking on existing node")
 		return s.rollup.StakeOnExistingNode(ctx, action.number, action.hash)
 	default:
 		panic("invalid action type")
@@ -408,7 +455,7 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		if err != nil {
 			return err
 		}
-		logger.Warn().Int("ourNode", int(node1.Int64())).Int("otherNode", int(node2.Int64())).Str("otherStaker", staker2.String()).Msg("Creating challenge")
+		logger.Warn().Int("ourNode", int(node1.Int64())).Int("otherNode", int(node2.Int64())).Str("otherStaker", staker2.String()).Msg("creating challenge")
 		return s.rollup.CreateChallenge(
 			ctx,
 			staker1,
