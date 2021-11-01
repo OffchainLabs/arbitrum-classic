@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.1",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -35,7 +35,8 @@
     "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
     "setStandard": "ts-node scripts/setStandardGateways.ts",
     "setCustom": "ts-node scripts/setArbCustomGateways.ts",
-    "cancelRetryable": "ts-node scripts/cancelRetryable.ts"
+    "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
+    "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
@@ -54,6 +55,8 @@
     "@ethersproject/bignumber": "^5.1.1"
   },
   "devDependencies": {
+    "prompts": "^2.4.2",
+    "@types/prompts": "^2.0.14",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^4.29.0",

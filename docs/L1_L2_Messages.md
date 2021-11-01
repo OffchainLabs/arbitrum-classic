@@ -80,7 +80,8 @@ In a future release, the base submission fee will be calculated using the 1559 `
 When a retryable ticket is initiated from the L1, the following things take place:
 
 - DepositValue is credited to the sender’s account on L2.
-  - If DepositValue is less than MaxSubmissionCost + Callvalue, the Retryable Ticket fails.
+  - If the L2 account's balance (which now includes the DepositValue) is less than MaxSubmissionCost + Callvalue, the Retryable Ticket creation fails.
+  - If MaxSubmissionCost is less than the submission fee, the Retryable Ticket creation fails.
 - Submission fee is collected: submission fee is deducted from the sender’s L2 account; MaxSubmissionCost - submission fee is credited to Credit-Back Address.
 
 - Callvalue is deducted from sender’s L2 account and a Retryable Ticket is successfully created.

@@ -237,7 +237,9 @@ jobs:
             cmake --build . -j 2
       - run:
           name: Test
-          command: ./bin/avm_tests
+          command: |
+            echo 'race:rocksdb::Slice::compare' > /tmp/tsan-suppressions
+            TSAN_OPTIONS=suppressions=/tmp/tsan-suppressions ./bin/avm_tests
           working_directory: /home/user/project/packages/arb-avm-cpp/debug-tsan
       - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
@@ -309,6 +311,10 @@ jobs:
           name: test arb-rpc-node
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-rpc-node
+      - run:
+          name: test arb-rpc-node/dev upgrade
+          command: gotestsum --format short-verbose -- -upgrade -race -run TestFees TestEthCall -timeout 15m
+          working_directory: /home/user/project/packages/arb-rpc-node/dev/
       - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
           path: *test-path

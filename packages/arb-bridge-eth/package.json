@@ -43,9 +43,9 @@
   },
   "dependencies": {
     "hardhat": "^2.6.1",
-    "@openzeppelin/contracts": "3.4.0",
-    "@openzeppelin/contracts-0.8": "npm:@openzeppelin/contracts@^4.3.1",
-    "@openzeppelin/contracts-upgradeable": "3.4.0"
+    "@openzeppelin/contracts": "3.4.2",
+    "@openzeppelin/contracts-0.8": "npm:@openzeppelin/contracts@^4.3.2",
+    "@openzeppelin/contracts-upgradeable": "3.4.2"
   },
   "devDependencies": {
     "dotenv": "^10.0.0",

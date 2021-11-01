@@ -48,20 +48,11 @@ bool operator==(const Operation& val1, const Operation& val2) {
     if (!val1.immediate || !val2.immediate) {
         return false;
     }
-    return *val1.immediate == *val2.immediate;
+    return values_equal(*val1.immediate, *val2.immediate);
 }
 
 bool operator!=(const Operation& val1, const Operation& val2) {
-    if (val1.opcode != val2.opcode) {
-        return true;
-    }
-    if (!val1.immediate && !val2.immediate) {
-        return false;
-    }
-    if (!val1.immediate || !val2.immediate) {
-        return true;
-    }
-    return *val1.immediate != *val2.immediate;
+    return !(val1 == val2);
 }
 
 uint64_t pc_default = -1;

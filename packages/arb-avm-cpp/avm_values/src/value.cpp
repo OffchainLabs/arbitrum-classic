@@ -150,6 +150,10 @@ struct Marshaller {
         buf.push_back(CODE_POINT_STUB);
         val.marshal(buf);
     }
+
+    void operator()(const UnloadedValue&) const {
+        throw std::runtime_error("Cannot marshal unloaded value");
+    }
 };
 }  // namespace
 
@@ -247,6 +251,10 @@ uint256_t hash_value(const value& value) {
     return std::visit([](const auto& val) { return hash(val); }, value);
 }
 
+bool values_equal(const value& a, const value& b) {
+    return hash_value(a) == hash_value(b);
+}
+
 struct GetSize {
     uint256_t operator()(const std::shared_ptr<HashPreImage>& val) const {
         return val->getSize();
@@ -259,6 +267,10 @@ struct GetSize {
     uint256_t operator()(const uint256_t&) const { return 1; }
 
     uint256_t operator()(const CodePointStub&) const { return 1; }
+
+    uint256_t operator()(const UnloadedValue& val) const {
+        return val.value_size;
+    }
 };
 
 uint256_t getSize(const value& val) {
@@ -304,6 +316,11 @@ struct ValuePrinter {
     std::ostream* operator()(const CodePointStub& val) const {
         //        std::printf("in CodePoint ostream operator\n");
         os << "CodePointStub(" << val.pc.pc << ")";
+        return &os;
+    }
+
+    std::ostream* operator()(const UnloadedValue& val) const {
+        os << "UnloadedValue(type " << val.type << ", hash " << val.hash << ")";
         return &os;
     }
 };

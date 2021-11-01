@@ -374,4 +374,11 @@ export class L1Bridge {
 
     return BridgeHelper.getMulticallTryAggregate(functionCalls, multicall)
   }
+
+  public async tokenIsDisabled(l1TokenAddress: string): Promise<boolean> {
+    return (
+      (await this.l1GatewayRouter.l1TokenToGateway(l1TokenAddress)) ===
+      '0x0000000000000000000000000000000000000001'
+    )
+  }
 }
