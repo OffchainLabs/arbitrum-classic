@@ -64,6 +64,7 @@ type Staker struct {
 	lastActCalledBlock      *big.Int
 	inactiveLastCheckedNode *nodeAndHash
 	bringActiveUntilNode    core.NodeID
+	withdrawDestination     common.Address
 }
 
 func NewStaker(
@@ -82,6 +83,10 @@ func NewStaker(
 	if err != nil {
 		return nil, nil, err
 	}
+	withdrawDestination := wallet.From()
+	if len(config.WithdrawDestination) > 0 {
+		withdrawDestination = common.HexToAddress(config.WithdrawDestination)
+	}
 	return &Staker{
 		Validator:           val,
 		strategy:            strategy,
@@ -91,6 +96,7 @@ func NewStaker(
 		config:              config,
 		highGasBlocksBuffer: big.NewInt(config.L1PostingStrategy.HighGasDelayBlocks),
 		lastActCalledBlock:  nil,
+		withdrawDestination: withdrawDestination,
 	}, val.delayedBridge, nil
 }
 
@@ -267,7 +273,7 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 
 	// Don't attempt to create a new stake if we're resolving a node,
 	// as that might affect the current required stake.
-	creatingNewStake := rawInfo == nil && s.builder.TransactionCount() == 0
+	creatingNewStake := rawInfo == nil && s.builder.TransactionCount() == 0 && effectiveStrategy >= StakeLatestStrategy
 	if creatingNewStake {
 		if err := s.newStake(ctx); err != nil {
 			return nil, err
@@ -289,6 +295,16 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 	}
 	if rawInfo != nil && s.builder.TransactionCount() == 0 {
 		if err := s.createConflict(ctx, rawInfo); err != nil {
+			return nil, err
+		}
+	}
+	withdrawable, err := s.rollup.WithdrawableFunds(ctx, s.wallet.Address())
+	if err != nil {
+		return nil, err
+	}
+	if withdrawable.Sign() > 0 && s.withdrawDestination != (common.Address{}) {
+		err = s.rollup.WithdrawFunds(ctx, s.withdrawDestination)
+		if err != nil {
 			return nil, err
 		}
 	}
