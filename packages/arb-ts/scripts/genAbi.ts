@@ -20,15 +20,9 @@ async function main() {
   console.log('Done compiling')
 
   const allFiles = glob(cwd, [
-    `${getPackagePath(
-      'arbos-precompiles'
-    )}/artifacts/!(build-info)/**/builtin/**/+([a-zA-Z0-9_]).json`,
-    `${getPackagePath(
-      `arb-bridge-eth`
-    )}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
-    `${getPackagePath(
-      `arb-bridge-peripherals`
-    )}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${arbosPath}/artifacts/!(build-info)/**/builtin/**/+([a-zA-Z0-9_]).json`,
+    `${ethBridgePath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
   const result = await runTypeChain({
