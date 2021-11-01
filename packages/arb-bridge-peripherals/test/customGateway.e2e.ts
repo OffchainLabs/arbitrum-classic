@@ -107,6 +107,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       0,
       0,
       0,
+      0,
       accounts[0].address
     )
 

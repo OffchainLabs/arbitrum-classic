@@ -52,7 +52,8 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
         address l2CustomTokenAddress,
         uint256 maxSubmissionCostForCustomBridge,
         uint256 maxSubmissionCostForRouter,
-        uint256 maxGas,
+        uint256 maxGasForCustomBridge,
+        uint256 maxGasForRouter,
         uint256 gasPriceBid,
         address creditBackAddress
     ) public override {
@@ -62,7 +63,7 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
 
         L1CustomGateway(bridge).registerTokenToL2(
             l2CustomTokenAddress,
-            maxGas,
+            maxGasForCustomBridge,
             gasPriceBid,
             maxSubmissionCostForCustomBridge,
             creditBackAddress
@@ -70,7 +71,7 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
 
         L1GatewayRouter(router).setGateway(
             bridge,
-            maxGas,
+            maxGasForRouter,
             gasPriceBid,
             maxSubmissionCostForRouter,
             creditBackAddress

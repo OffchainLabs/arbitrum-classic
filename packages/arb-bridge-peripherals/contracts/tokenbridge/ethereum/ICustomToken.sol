@@ -34,7 +34,8 @@ interface ICustomToken is ArbitrumEnabledToken {
         address l2CustomTokenAddress,
         uint256 maxSubmissionCostForCustomBridge,
         uint256 maxSubmissionCostForRouter,
-        uint256 maxGas,
+        uint256 maxGasForCustomBridge,
+        uint256 maxGasForRouter,
         uint256 gasPriceBid,
         address creditBackAddress
     ) external;
