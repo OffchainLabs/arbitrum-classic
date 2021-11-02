@@ -104,9 +104,9 @@ func (m *Server) LatestBlockHeader() (*types.Header, error) {
 	return latest.Header, nil
 }
 
-// GetMessageResult returns the value output by the VM in response to the
+// GetRequestResult returns the value output by the VM in response to the
 // l2message with the given hash
-func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, core.InboxState, error) {
+func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, core.InboxState, *big.Int, error) {
 	return m.db.GetRequest(requestId)
 }
 
@@ -172,8 +172,8 @@ func (m *Server) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, ma
 	return m.db.Lookup.AdvanceExecutionCursor(executionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
-func (m *Server) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error) {
-	return m.db.Lookup.AdvanceExecutionCursorWithTracing(executionCursor, maxGas, goOverGas, allowSlowLookup)
+func (m *Server) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error) {
+	return m.db.Lookup.AdvanceExecutionCursorWithTracing(executionCursor, maxGas, goOverGas, allowSlowLookup, logNumber)
 }
 
 func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {

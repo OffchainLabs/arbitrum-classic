@@ -108,12 +108,12 @@ func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor,
 	return c.ArbCore.AdvanceExecutionCursor(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
-func (c FaultyCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error) {
+func (c FaultyCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error) {
 	faultyCursor, maxGas, err, done := c.prepareCursor(executionCursor, maxGas)
 	if done {
 		return nil, err
 	}
-	return c.ArbCore.AdvanceExecutionCursorWithTracing(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup)
+	return c.ArbCore.AdvanceExecutionCursorWithTracing(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup, logNumber)
 }
 
 func (c FaultyCore) GetLastMachine() (machine.Machine, error) {

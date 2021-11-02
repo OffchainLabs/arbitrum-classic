@@ -336,7 +336,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return err
 	}
 	txHash := common.NewHashFromEth(tx.Hash())
-	res, _, err := b.db.GetRequest(txHash)
+	res, _, _, err := b.db.GetRequest(txHash)
 	if err != nil {
 		return err
 	}

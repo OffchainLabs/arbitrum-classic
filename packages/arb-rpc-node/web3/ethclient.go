@@ -163,7 +163,7 @@ func (c *EthClient) SubscribeFilterLogs(_ context.Context, query ethereum.Filter
 }
 
 func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*types.Receipt, error) {
-	res, block, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
+	res, block, _, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*
 }
 
 func (c *EthClient) TransactionByHash(_ context.Context, txHash common.Hash) (*types.Transaction, bool, error) {
-	res, _, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
+	res, _, _, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
 	if err != nil || res == nil {
 		return nil, false, err
 	}

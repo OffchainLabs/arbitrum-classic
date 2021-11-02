@@ -550,13 +550,16 @@ ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     CExecutionCursor* execution_cursor_ptr,
     const void* max_gas_ptr,
     int go_over_gas,
-    int allow_slow_lookup) {
+    int allow_slow_lookup,
+    const void* log_number_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     auto max_gas = receiveUint256(max_gas_ptr);
+    auto log_number = receiveUint256(log_number_ptr);
     try {
         auto result = arbCore->advanceExecutionCursorWithTracing(
-            *executionCursor, max_gas, go_over_gas, allow_slow_lookup);
+            *executionCursor, max_gas, go_over_gas, allow_slow_lookup,
+            log_number);
         if (!result.status.ok()) {
             return {{}, false};
         }

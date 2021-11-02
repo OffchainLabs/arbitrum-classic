@@ -377,14 +377,15 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	return cursor.updateValues()
 }
 
-func (ac *ArbCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) ([]value.Value, error) {
+func (ac *ArbCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error) {
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
 	}
 	maxGasData := math.U256Bytes(maxGas)
+	logNumberData := math.U256Bytes(logNumber)
 
-	result := C.arbCoreAdvanceExecutionCursorWithTracing(ac.c, cursor.c, unsafeDataPointer(maxGasData), boolToCInt(goOverGas), boolToCInt(allowSlowLookup))
+	result := C.arbCoreAdvanceExecutionCursorWithTracing(ac.c, cursor.c, unsafeDataPointer(maxGasData), boolToCInt(goOverGas), boolToCInt(allowSlowLookup), unsafeDataPointer(logNumberData))
 	if result.found == 0 {
 		return nil, errors.New("failed to advance")
 	}

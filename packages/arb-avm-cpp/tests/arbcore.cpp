@@ -128,7 +128,8 @@ TEST_CASE("ArbCore tests") {
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
-        "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
+        "evm_test_arbsys", "evm_xcontract_call_with_constructors",
+        "evm_test_create"};
 
     uint64_t logs_count = 0;
     ArbCoreConfig coreConfig{};
@@ -230,6 +231,17 @@ TEST_CASE("ArbCore tests") {
             arbCore->advanceExecutionCursor(*cursor.data, 100, false, true);
         REQUIRE(advanceStatus.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
+
+        uint32_t log_number = 3;
+        auto advanceResult = arbCore->advanceExecutionCursorWithTracing(
+            *cursor.data, 30000000, true, true, log_number);
+        REQUIRE(advanceResult.status.ok());
+        if (logs.size() >= log_number) {
+            REQUIRE(!advanceResult.data.empty());
+            REQUIRE(advanceResult.data[0].log_count == log_number - 1);
+        } else {
+            REQUIRE(advanceResult.data.empty());
+        }
 
         //        auto before_sideload = arbCore->getMachineAtBlock(
         //            inbox_messages.back().block_number, value_cache);

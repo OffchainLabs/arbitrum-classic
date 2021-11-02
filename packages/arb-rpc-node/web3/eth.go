@@ -340,22 +340,22 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 	return s.getBlock(info, includeTxData)
 }
 
-func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, core.InboxState, error) {
+func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, core.InboxState, *big.Int, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
-	res, inbox, err := s.srv.GetRequestResult(requestId)
+	res, inbox, logNumber, err := s.srv.GetRequestResult(requestId)
 	if err != nil || res == nil {
-		return nil, nil, core.InboxState{}, err
+		return nil, nil, core.InboxState{}, nil, err
 	}
 	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
-		return nil, nil, core.InboxState{}, err
+		return nil, nil, core.InboxState{}, nil, err
 	}
-	return res, info, inbox, nil
+	return res, info, inbox, logNumber, nil
 }
 
 func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
-	res, info, _, err := s.getTransactionInfoByHash(txHash)
+	res, info, _, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -395,36 +395,20 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 }
 
 func (s *Server) TraceTransaction(txHash hexutil.Bytes) (interface{}, error) {
-	res, info, _, err := s.getTransactionInfoByHash(txHash)
+	res, _, _, logNumber, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
 
-	receipt := res.ToEthReceipt(arbcommon.NewHashFromEth(info.Header.Hash()))
-	_ = receipt
-
-	cursor, err := s.srv.GetExecutionCursorAtBlock(receipt.BlockNumber.Uint64(), true)
+	blockNumber := res.IncomingRequest.L2BlockNumber.Uint64()
+	cursor, err := s.srv.GetExecutionCursorAtBlock(blockNumber, true)
 	if err != nil {
 		return nil, err
 	}
 
-	gasBefore := receipt.CumulativeGasUsed - receipt.GasUsed
-	err = s.srv.AdvanceExecutionCursor(cursor, big.NewInt(int64(gasBefore)), false, true)
+	debugPrints, err := s.srv.AdvanceExecutionCursorWithTracing(cursor, big.NewInt(100000000000), true, true, logNumber)
 	if err != nil {
 		return nil, err
-	}
-
-	debugPrints, err := s.srv.AdvanceExecutionCursorWithTracing(cursor, res.GasUsed, false, true)
-	if err != nil {
-		return nil, err
-	}
-	if cursor.TotalGasConsumed().Cmp(res.CumulativeGas) != 0 {
-		logger.
-			Error().
-			Uint64("gasafter", res.CumulativeGas.Uint64()).
-			Uint64("cursorgasconsumed", cursor.TotalGasConsumed().Uint64()).
-			Msg("cursor after trace used too much gas")
-		return nil, errors.New("cursor after trace used too much gas")
 	}
 
 	trace, err := evm.GetTrace(debugPrints)
@@ -434,7 +418,7 @@ func (s *Server) TraceTransaction(txHash hexutil.Bytes) (interface{}, error) {
 }
 
 func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes, opts *ArbGetTxReceiptOpts) (*GetTransactionReceiptResult, error) {
-	res, info, inboxState, err := s.getTransactionInfoByHash(txHash)
+	res, info, inboxState, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
