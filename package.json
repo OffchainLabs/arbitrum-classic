@@ -66,6 +66,7 @@
   },
   "resolutions": {
     "eth-sig-util/ethereumjs-abi": "^0.6.8-1",
-    "typechain/web3-v1/web3": "^1.0.0"
+    "typechain/web3-v1/web3": "^1.0.0",
+    "ansi-regex": "^5.0.1"
   }
 }
