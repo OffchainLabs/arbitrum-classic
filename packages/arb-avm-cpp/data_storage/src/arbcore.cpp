@@ -592,6 +592,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         // Need to run machine until caught up with current checkpoint
         MachineExecutionConfig execConfig;
         execConfig.stop_on_sideload = cache_sideloads;
+        execConfig.max_gas = target_output.arb_gas_used;
 
         // Add messages and run machine
         auto success = runMachineWithMessages(
@@ -631,8 +632,10 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         }
     }
 
-    if (core_machine->machine_state.output.arb_gas_used !=
-        target_output.arb_gas_used) {
+    // Ensure future continueRunningMachine calls don't use the set gas limit.
+    core_machine->machine_state.context.max_gas = 0;
+
+    if (core_machine->machine_state.output != target_output) {
         // Machine in unexpected state, data corruption might have occurred
         std::cerr << "Error catching up: machine in unexpected state"
                   << "\n";
