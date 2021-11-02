@@ -10,6 +10,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y curl cmake git gcc g++ libboost-dev libboost-filesystem-dev \
     lcov make libgmp-dev libssl-dev libusb-dev sudo netcat-openbsd nodejs \
     autotools-dev dh-autoreconf pkg-config libjemalloc-dev \
+    procps \
     libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev && \
     curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v6.20.3.tar.gz --output rocksdb-6.20.3.tar.gz && \
     tar xf rocksdb-6.20.3.tar.gz && \
