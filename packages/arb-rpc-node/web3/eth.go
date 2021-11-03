@@ -394,29 +394,6 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 	return s.getTransactionByBlockAndIndex(info, index)
 }
 
-func (s *Server) TraceTransaction(txHash hexutil.Bytes) (interface{}, error) {
-	res, _, _, logNumber, err := s.getTransactionInfoByHash(txHash)
-	if err != nil || res == nil {
-		return nil, err
-	}
-
-	blockNumber := res.IncomingRequest.L2BlockNumber.Uint64()
-	cursor, err := s.srv.GetExecutionCursorAtBlock(blockNumber, true)
-	if err != nil {
-		return nil, err
-	}
-
-	debugPrints, err := s.srv.AdvanceExecutionCursorWithTracing(cursor, big.NewInt(100000000000), true, true, logNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	trace, err := evm.GetTrace(debugPrints)
-	_ = trace
-
-	return nil, nil
-}
-
 func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes, opts *ArbGetTxReceiptOpts) (*GetTransactionReceiptResult, error) {
 	res, info, inboxState, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {

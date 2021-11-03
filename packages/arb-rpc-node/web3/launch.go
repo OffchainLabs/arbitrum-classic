@@ -53,13 +53,6 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 	ethServer := NewServer(server, config.Mode == GanacheMode, sequencerInboxWatcher)
 	forwarderServer := NewForwarderServer(server, ethServer, config.Mode)
 
-	if config.Tracing {
-		tracer := NewTracer(ethServer)
-		if err := s.RegisterName("trace", tracer); err != nil {
-			return nil, err
-		}
-	}
-
 	if err := s.RegisterName("eth", forwarderServer); err != nil {
 		return nil, err
 	}
@@ -79,6 +72,16 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 
 		if err := s.RegisterName("arb", &Arb{srv: server}); err != nil {
 			return nil, err
+		}
+
+		if config.Tracing {
+			tracer := NewTracer(ethServer)
+			if err := s.RegisterName("trace", tracer); err != nil {
+				return nil, err
+			}
+			if err := s.RegisterName("debug", &Debug{srv: ethServer}); err != nil {
+				return nil, err
+			}
 		}
 
 		if len(privateKeys) > 0 {
