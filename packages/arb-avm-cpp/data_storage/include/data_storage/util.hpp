@@ -90,6 +90,9 @@ struct ArbCoreConfig {
     // Exit after printing out metadata from database
     bool test_just_metadata{false};
 
+    // Whether to lazy load the core machine during initialization
+    bool lazy_load_initialization{false};
+
     // Whether to lazy load the core machine
     bool lazy_load_core_machine{false};
 

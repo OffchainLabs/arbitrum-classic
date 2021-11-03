@@ -39,8 +39,8 @@
 
 #ifdef __linux__
 #include <execinfo.h>
-#include <signal.h>
 #include <sys/prctl.h>
+#include <csignal>
 #endif
 
 namespace {
@@ -206,25 +206,35 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     rocksdb::Status status = rocksdb::Status::OK();
     if (coreConfig.test_reorg_to_l1_block != 0) {
         // Reset database for profile testing
-        status =
-            reorgToL1Block(coreConfig.test_reorg_to_l1_block, false, cache);
+        status = reorgToL1Block(coreConfig.test_reorg_to_l1_block, false, cache,
+                                coreConfig.lazy_load_initialization ||
+                                    coreConfig.lazy_load_core_machine);
     } else if (coreConfig.test_reorg_to_l1_block != 0) {
         // Reset database for profile testing
-        status =
-            reorgToL2Block(coreConfig.test_reorg_to_l2_block, false, cache);
+        status = reorgToL2Block(coreConfig.test_reorg_to_l2_block, false, cache,
+                                coreConfig.lazy_load_initialization ||
+                                    coreConfig.lazy_load_core_machine);
     } else if (coreConfig.test_reorg_to_log != 0) {
         // Reset database for profile testing
         status =
-            reorgToLogCountOrBefore(coreConfig.test_reorg_to_log, false, cache);
+            reorgToLogCountOrBefore(coreConfig.test_reorg_to_log, false, cache,
+                                    coreConfig.lazy_load_initialization ||
+                                        coreConfig.lazy_load_core_machine);
     } else if (coreConfig.test_reorg_to_message != 0) {
         // Reset database for profile testing
-        status = reorgToMessageCountOrBefore(coreConfig.test_reorg_to_message,
-                                             false, cache);
+        status = reorgToMessageCountOrBefore(
+            coreConfig.test_reorg_to_message, false, cache,
+            coreConfig.lazy_load_initialization ||
+                coreConfig.lazy_load_core_machine);
     } else if (coreConfig.seed_cache_on_startup) {
         status = reorgToTimestampOrBefore(
-            combined_machine_cache.currentTimeExpired(), true, cache);
+            combined_machine_cache.currentTimeExpired(), true, cache,
+            coreConfig.lazy_load_initialization ||
+                coreConfig.lazy_load_core_machine);
     } else {
-        status = reorgToLastMessage(cache);
+        status =
+            reorgToLastMessage(cache, coreConfig.lazy_load_initialization ||
+                                          coreConfig.lazy_load_core_machine);
     }
 
     if (status.ok()) {
@@ -438,17 +448,18 @@ rocksdb::Status ArbCore::saveAssertion(ReadWriteTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-rocksdb::Status ArbCore::reorgToLastMessage(ValueCache& cache) {
+rocksdb::Status ArbCore::reorgToLastMessage(ValueCache& cache, bool lazy_load) {
     std::cerr << "Reloading chain to the last message saved"
               << "\n";
 
     return reorgCheckpoints([&](const MachineOutput&) { return true; }, true,
-                            cache);
+                            cache, lazy_load);
 }
 
 rocksdb::Status ArbCore::reorgToL1Block(const uint256_t& l1_block_number,
                                         bool initial_start,
-                                        ValueCache& cache) {
+                                        ValueCache& cache,
+                                        bool lazy_load) {
     if (initial_start) {
         std::cerr << "Reloading chain starting L1 block " << l1_block_number
                   << "\n";
@@ -460,12 +471,13 @@ rocksdb::Status ArbCore::reorgToL1Block(const uint256_t& l1_block_number,
         [&](const MachineOutput& output) {
             return output.l1_block_number <= l1_block_number;
         },
-        initial_start, cache);
+        initial_start, cache, lazy_load);
 }
 
 rocksdb::Status ArbCore::reorgToL2Block(const uint256_t& l2_block_number,
                                         bool initial_start,
-                                        ValueCache& cache) {
+                                        ValueCache& cache,
+                                        bool lazy_load) {
     if (initial_start) {
         std::cerr << "Reloading chain starting L2 block " << l2_block_number
                   << "\n";
@@ -477,12 +489,13 @@ rocksdb::Status ArbCore::reorgToL2Block(const uint256_t& l2_block_number,
         [&](const MachineOutput& output) {
             return output.l2_block_number <= l2_block_number;
         },
-        initial_start, cache);
+        initial_start, cache, lazy_load);
 }
 
 rocksdb::Status ArbCore::reorgToLogCountOrBefore(const uint256_t& log_count,
                                                  bool initial_start,
-                                                 ValueCache& cache) {
+                                                 ValueCache& cache,
+                                                 bool lazy_load) {
     if (initial_start) {
         std::cerr << "Reloading chain starting with log " << log_count << "\n";
     } else {
@@ -493,13 +506,14 @@ rocksdb::Status ArbCore::reorgToLogCountOrBefore(const uint256_t& log_count,
         [&](const MachineOutput& output) {
             return output.log_count <= log_count;
         },
-        initial_start, cache);
+        initial_start, cache, lazy_load);
 }
 
 rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     const uint256_t& message_count,
     bool initial_start,
-    ValueCache& cache) {
+    ValueCache& cache,
+    bool lazy_load) {
     if (initial_start) {
         std::cerr << "Reloading chain starting with message " << message_count
                   << "\n";
@@ -511,12 +525,13 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
         [&](const MachineOutput& output) {
             return output.fully_processed_inbox.count <= message_count;
         },
-        initial_start, cache);
+        initial_start, cache, lazy_load);
 }
 
 rocksdb::Status ArbCore::reorgToTimestampOrBefore(const uint256_t& timestamp,
                                                   bool initial_start,
-                                                  ValueCache& cache) {
+                                                  ValueCache& cache,
+                                                  bool lazy_load) {
     if (initial_start) {
         std::cerr << "Reloading chain starting with timestamp " << timestamp
                   << "\n";
@@ -528,7 +543,7 @@ rocksdb::Status ArbCore::reorgToTimestampOrBefore(const uint256_t& timestamp,
         [&](const MachineOutput& output) {
             return output.last_inbox_timestamp <= timestamp;
         },
-        initial_start, cache);
+        initial_start, cache, lazy_load);
 }
 
 // reorgToMachineOutput resets database entries to match the state when the
@@ -705,7 +720,8 @@ ArbCore::reorgToFirstMatchingMachineCheckpoint(
     const std::function<bool(const MachineOutput&)>& check_output,
     ReadWriteTransaction& tx,
     std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
-    ValueCache& value_cache) {
+    ValueCache& value_cache,
+    bool lazy_load) {
     while (checkpoint_it->Valid()) {
         std::vector<unsigned char> checkpoint_vector(
             checkpoint_it->value().data(),
@@ -734,7 +750,7 @@ ArbCore::reorgToFirstMatchingMachineCheckpoint(
         try {
             // Load machine from database
             return getMachineUsingStateKeys<MachineThread>(
-                tx, checkpoint, value_cache, coreConfig.lazy_load_core_machine);
+                tx, checkpoint, value_cache, lazy_load);
         } catch (const std::exception& e) {
             std::cerr << "Error loading machine with gas: "
                       << checkpoint.output.arb_gas_used
@@ -760,7 +776,8 @@ ArbCore::reorgToFirstMatchingMachineCheckpoint(
 rocksdb::Status ArbCore::reorgCheckpoints(
     const std::function<bool(const MachineOutput&)>& check_output,
     bool initial_start,
-    ValueCache& value_cache) {
+    ValueCache& value_cache,
+    bool lazy_load) {
     if (initial_start) {
         std::cerr << "Seeding cache" << std::endl;
     } else {
@@ -800,7 +817,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         }
         auto nearest_machine_or_status = reorgToFirstMatchingMachineCheckpoint(
             selected_machine_output, check_output, tx, checkpoint_it,
-            value_cache);
+            value_cache, lazy_load);
         if (std::holds_alternative<rocksdb::Status>(
                 nearest_machine_or_status)) {
             return std::get<rocksdb::Status>(nearest_machine_or_status);
@@ -1082,7 +1099,8 @@ void ArbCore::operator()() {
                 << "Core thread operating on invalid machine. Rolling back."
                 << std::endl;
             assert(false);
-            auto status = reorgToMessageCountOrBefore(0, false, cache);
+            auto status = reorgToMessageCountOrBefore(
+                0, false, cache, coreConfig.lazy_load_core_machine);
             if (!status.ok()) {
                 std::cerr << "Error in core thread calling "
                              "reorgCheckpoints: "
@@ -2813,7 +2831,8 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
     }
     if (reorging_to_count.has_value()) {
         auto status =
-            reorgToMessageCountOrBefore(*reorging_to_count, false, cache);
+            reorgToMessageCountOrBefore(*reorging_to_count, false, cache,
+                                        coreConfig.lazy_load_core_machine);
         if (!status.ok()) {
             return {status, std::nullopt};
         }

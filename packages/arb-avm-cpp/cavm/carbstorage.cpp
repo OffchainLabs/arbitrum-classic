@@ -55,6 +55,8 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.debug = arb_core_config.debug;
     coreConfig.save_rocksdb_interval = arb_core_config.save_rocksdb_interval;
     coreConfig.save_rocksdb_path = string_save_rocksdb_path;
+    coreConfig.lazy_load_initialization =
+        arb_core_config.lazy_load_initialization;
     coreConfig.lazy_load_core_machine = arb_core_config.lazy_load_core_machine;
     coreConfig.lazy_load_archive_queries =
         arb_core_config.lazy_load_archive_queries;

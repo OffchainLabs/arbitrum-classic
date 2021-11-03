@@ -180,26 +180,32 @@ class ArbCore {
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas);
-    rocksdb::Status reorgToLastMessage(ValueCache& cache);
+    rocksdb::Status reorgToLastMessage(ValueCache& cache, bool lazy_load);
     rocksdb::Status reorgToL1Block(const uint256_t& l1_block_number,
                                    bool initial_start,
-                                   ValueCache& cache);
+                                   ValueCache& cache,
+                                   bool lazy_load);
     rocksdb::Status reorgToL2Block(const uint256_t& l2_block_number,
                                    bool initial_start,
-                                   ValueCache& cache);
+                                   ValueCache& cache,
+                                   bool lazy_load);
     rocksdb::Status reorgToLogCountOrBefore(const uint256_t& log_count,
                                             bool initial_start,
-                                            ValueCache& cache);
+                                            ValueCache& cache,
+                                            bool lazy_load);
     rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
                                                 bool initial_start,
-                                                ValueCache& cache);
+                                                ValueCache& cache,
+                                                bool lazy_load);
     rocksdb::Status reorgToTimestampOrBefore(const uint256_t& timestamp,
                                              bool initial_start,
-                                             ValueCache& cache);
+                                             ValueCache& cache,
+                                             bool lazy_load);
     rocksdb::Status reorgCheckpoints(
         const std::function<bool(const MachineOutput&)>& check_output,
         bool initial_start,
-        ValueCache& value_cache);
+        ValueCache& value_cache,
+        bool lazy_load);
 
     rocksdb::Status reorgToMachineOutput(const MachineOutput& output,
                                          ValueCache& value_cache);
@@ -215,7 +221,8 @@ class ArbCore {
         const std::function<bool(const MachineOutput&)>& check_output,
         ReadWriteTransaction& tx,
         std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
-        ValueCache& value_cache);
+        ValueCache& value_cache,
+        bool lazy_load);
 
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(

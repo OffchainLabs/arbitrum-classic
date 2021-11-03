@@ -39,6 +39,7 @@ typedef struct {
     int32_t debug;
     int32_t save_rocksdb_interval;
     const char* save_rocksdb_path;
+    int32_t lazy_load_initialization;
     int32_t lazy_load_core_machine;
     int32_t lazy_load_archive_queries;
     int32_t test_reorg_to_l1_block;

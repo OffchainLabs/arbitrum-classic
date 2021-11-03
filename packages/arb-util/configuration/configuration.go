@@ -65,8 +65,9 @@ type Core struct {
 	Test                      CoreTest      `koanf:"test"`
 	Debug                     bool          `koanf:"debug"`
 	IdleSleep                 time.Duration `koanf:"idle-sleep"`
-	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
 	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
+	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadInitialization    bool          `koanf:"lazy-load-initialization"`
 	MessageProcessCount       int           `koanf:"message-process-count"`
 	SaveRocksdbInterval       time.Duration `koanf:"save-rocksdb-interval"`
 	SaveRocksdbPath           string        `koanf:"save-rocksdb-path"`
@@ -474,8 +475,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 	f.Duration("core.idle-sleep", 5*time.Millisecond, "how long core thread should sleep when idle")
 
-	f.Bool("core.lazy-load-core-machine", false, "if the core machine should be loaded as it's run")
 	f.Bool("core.lazy-load-archive-queries", true, "if the archive queries should be loaded as they're run")
+	f.Bool("core.lazy-load-core-machine", false, "if the core machine should be loaded as it's run")
+	f.Bool("core.lazy-load-initialization", true, "if the initial core machine should be loaded as it's run")
 
 	f.Int("core.message-process-count", 100, "maximum number of messages to process at a time")
 
