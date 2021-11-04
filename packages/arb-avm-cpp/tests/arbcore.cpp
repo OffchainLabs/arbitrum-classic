@@ -236,9 +236,9 @@ TEST_CASE("ArbCore tests") {
         auto advanceResult = arbCore->advanceExecutionCursorWithTracing(
             *cursor.data, 30000000, true, true, log_number);
         REQUIRE(advanceResult.status.ok());
-        if (logs.size() >= log_number) {
+        if (logs.size() > log_number) {
             REQUIRE(!advanceResult.data.empty());
-            REQUIRE(advanceResult.data[0].log_count == log_number - 1);
+            REQUIRE(advanceResult.data[0].log_count == log_number);
         } else {
             REQUIRE(advanceResult.data.empty());
         }
