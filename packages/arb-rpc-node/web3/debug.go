@@ -26,6 +26,8 @@ type Debug struct {
 	srv *Server
 }
 
+const TraceBlockLookback = 4
+
 func (d *Debug) TraceTransaction(txHash hexutil.Bytes) (interface{}, error) {
 	res, _, _, logNumber, err := d.srv.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
@@ -33,7 +35,7 @@ func (d *Debug) TraceTransaction(txHash hexutil.Bytes) (interface{}, error) {
 	}
 
 	blockNumber := res.IncomingRequest.L2BlockNumber.Uint64()
-	cursor, err := d.srv.srv.GetExecutionCursorAtBlock(blockNumber, true)
+	cursor, err := d.srv.srv.GetExecutionCursorAtBlock(blockNumber-TraceBlockLookback, true)
 	if err != nil {
 		return nil, err
 	}

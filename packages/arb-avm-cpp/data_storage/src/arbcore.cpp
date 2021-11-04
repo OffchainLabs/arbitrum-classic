@@ -2262,11 +2262,14 @@ ArbCore::advanceExecutionCursorImpl(ExecutionCursor& execution_cursor,
             auto assertion = mach->run();
             if (save_debug_prints) {
                 auto done = false;
+                auto desired_log_count = debug_prints_log_number + 1;
+                // Debug print is output before log_count is updated, so
+                // get debug prints annotated with previous log count but before
+                // desired log count.
                 for (const auto& debug_print : assertion.debug_prints) {
-                    if (debug_print.log_count == debug_prints_log_number - 1) {
+                    if (debug_print.log_count == desired_log_count - 1) {
                         debug_prints.push_back(debug_print);
-                    } else if (debug_print.log_count >=
-                               debug_prints_log_number) {
+                    } else if (debug_print.log_count >= desired_log_count) {
                         // All debug prints have been collected
                         done = true;
                     }
