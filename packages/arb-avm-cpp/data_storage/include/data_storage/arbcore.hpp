@@ -415,14 +415,9 @@ class ArbCore {
 
     [[nodiscard]] bool isValid(const ReadTransaction& tx,
                                const InboxState& fully_processed_inbox) const;
-    std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionCursor(
+    std::variant<rocksdb::Status, ExecutionCursor> findCloserExecutionCursor(
         ReadTransaction& tx,
-        uint256_t& total_gas_used,
-        bool allow_slow_lookup);
-    rocksdb::Status findCloserExecutionCursor(
-        ReadTransaction& tx,
-        ExecutionCursor& execution_cursor,
-        std::optional<uint256_t> current_gas,
+        std::optional<ExecutionCursor> execution_cursor,
         uint256_t& total_gas_used,
         bool allow_slow_lookup);
 

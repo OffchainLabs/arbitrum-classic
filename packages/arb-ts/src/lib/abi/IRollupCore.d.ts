@@ -16,7 +16,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface IRollupCoreInterface extends ethers.utils.Interface {
   functions: {
@@ -173,6 +173,75 @@ interface IRollupCoreInterface extends ethers.utils.Interface {
     nameOrSignatureOrTopic: 'UserWithdrawableFundsUpdated'
   ): EventFragment
 }
+
+export type NodeConfirmedEvent = TypedEvent<
+  [BigNumber, string, BigNumber, string, BigNumber] & {
+    nodeNum: BigNumber
+    afterSendAcc: string
+    afterSendCount: BigNumber
+    afterLogAcc: string
+    afterLogCount: BigNumber
+  }
+>
+
+export type NodeCreatedEvent = TypedEvent<
+  [
+    BigNumber,
+    string,
+    string,
+    string,
+    BigNumber,
+    BigNumber,
+    string,
+    [[string, string, string], [string, string, string]],
+    [
+      [BigNumber, BigNumber, BigNumber, BigNumber],
+      [BigNumber, BigNumber, BigNumber, BigNumber]
+    ]
+  ] & {
+    nodeNum: BigNumber
+    parentNodeHash: string
+    nodeHash: string
+    executionHash: string
+    inboxMaxCount: BigNumber
+    afterInboxBatchEndCount: BigNumber
+    afterInboxBatchAcc: string
+    assertionBytes32Fields: [[string, string, string], [string, string, string]]
+    assertionIntFields: [
+      [BigNumber, BigNumber, BigNumber, BigNumber],
+      [BigNumber, BigNumber, BigNumber, BigNumber]
+    ]
+  }
+>
+
+export type NodeRejectedEvent = TypedEvent<[BigNumber] & { nodeNum: BigNumber }>
+
+export type RollupChallengeStartedEvent = TypedEvent<
+  [string, string, string, BigNumber] & {
+    challengeContract: string
+    asserter: string
+    challenger: string
+    challengedNode: BigNumber
+  }
+>
+
+export type RollupCreatedEvent = TypedEvent<[string] & { machineHash: string }>
+
+export type UserStakeUpdatedEvent = TypedEvent<
+  [string, BigNumber, BigNumber] & {
+    user: string
+    initialBalance: BigNumber
+    finalBalance: BigNumber
+  }
+>
+
+export type UserWithdrawableFundsUpdatedEvent = TypedEvent<
+  [string, BigNumber, BigNumber] & {
+    user: string
+    initialBalance: BigNumber
+    finalBalance: BigNumber
+  }
+>
 
 export class IRollupCore extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -393,6 +462,23 @@ export class IRollupCore extends BaseContract {
   }
 
   filters: {
+    'NodeConfirmed(uint256,bytes32,uint256,bytes32,uint256)'(
+      nodeNum?: BigNumberish | null,
+      afterSendAcc?: null,
+      afterSendCount?: null,
+      afterLogAcc?: null,
+      afterLogCount?: null
+    ): TypedEventFilter<
+      [BigNumber, string, BigNumber, string, BigNumber],
+      {
+        nodeNum: BigNumber
+        afterSendAcc: string
+        afterSendCount: BigNumber
+        afterLogAcc: string
+        afterLogCount: BigNumber
+      }
+    >
+
     NodeConfirmed(
       nodeNum?: BigNumberish | null,
       afterSendAcc?: null,
@@ -407,6 +493,50 @@ export class IRollupCore extends BaseContract {
         afterSendCount: BigNumber
         afterLogAcc: string
         afterLogCount: BigNumber
+      }
+    >
+
+    'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,uint256,bytes32,bytes32[3][2],uint256[4][2])'(
+      nodeNum?: BigNumberish | null,
+      parentNodeHash?: BytesLike | null,
+      nodeHash?: null,
+      executionHash?: null,
+      inboxMaxCount?: null,
+      afterInboxBatchEndCount?: null,
+      afterInboxBatchAcc?: null,
+      assertionBytes32Fields?: null,
+      assertionIntFields?: null
+    ): TypedEventFilter<
+      [
+        BigNumber,
+        string,
+        string,
+        string,
+        BigNumber,
+        BigNumber,
+        string,
+        [[string, string, string], [string, string, string]],
+        [
+          [BigNumber, BigNumber, BigNumber, BigNumber],
+          [BigNumber, BigNumber, BigNumber, BigNumber]
+        ]
+      ],
+      {
+        nodeNum: BigNumber
+        parentNodeHash: string
+        nodeHash: string
+        executionHash: string
+        inboxMaxCount: BigNumber
+        afterInboxBatchEndCount: BigNumber
+        afterInboxBatchAcc: string
+        assertionBytes32Fields: [
+          [string, string, string],
+          [string, string, string]
+        ]
+        assertionIntFields: [
+          [BigNumber, BigNumber, BigNumber, BigNumber],
+          [BigNumber, BigNumber, BigNumber, BigNumber]
+        ]
       }
     >
 
@@ -454,9 +584,28 @@ export class IRollupCore extends BaseContract {
       }
     >
 
+    'NodeRejected(uint256)'(
+      nodeNum?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { nodeNum: BigNumber }>
+
     NodeRejected(
       nodeNum?: BigNumberish | null
     ): TypedEventFilter<[BigNumber], { nodeNum: BigNumber }>
+
+    'RollupChallengeStarted(address,address,address,uint256)'(
+      challengeContract?: string | null,
+      asserter?: null,
+      challenger?: null,
+      challengedNode?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber],
+      {
+        challengeContract: string
+        asserter: string
+        challenger: string
+        challengedNode: BigNumber
+      }
+    >
 
     RollupChallengeStarted(
       challengeContract?: string | null,
@@ -473,11 +622,33 @@ export class IRollupCore extends BaseContract {
       }
     >
 
+    'RollupCreated(bytes32)'(
+      machineHash?: null
+    ): TypedEventFilter<[string], { machineHash: string }>
+
     RollupCreated(
       machineHash?: null
     ): TypedEventFilter<[string], { machineHash: string }>
 
+    'UserStakeUpdated(address,uint256,uint256)'(
+      user?: string | null,
+      initialBalance?: null,
+      finalBalance?: null
+    ): TypedEventFilter<
+      [string, BigNumber, BigNumber],
+      { user: string; initialBalance: BigNumber; finalBalance: BigNumber }
+    >
+
     UserStakeUpdated(
+      user?: string | null,
+      initialBalance?: null,
+      finalBalance?: null
+    ): TypedEventFilter<
+      [string, BigNumber, BigNumber],
+      { user: string; initialBalance: BigNumber; finalBalance: BigNumber }
+    >
+
+    'UserWithdrawableFundsUpdated(address,uint256,uint256)'(
       user?: string | null,
       initialBalance?: null,
       finalBalance?: null

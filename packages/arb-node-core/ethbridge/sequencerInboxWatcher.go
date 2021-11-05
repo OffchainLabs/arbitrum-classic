@@ -157,7 +157,12 @@ type sectionMetadata struct {
 	newDelayedAcc           common.Hash
 }
 
-func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
+type DelayedInfo struct {
+	Count       *big.Int
+	Accumulator common.Hash
+}
+
+func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, *DelayedInfo, error) {
 	sectionsMetadata := make([]sectionMetadata, 0, len(b.sectionsMetadata)/5)
 	for i := 0; i+5 <= len(b.sectionsMetadata); i += 5 {
 		chainTime := inbox.ChainTime{
@@ -175,7 +180,7 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 	}
 	if len(sectionsMetadata) == 0 {
 		logger.Warn().Msg("encountered sequencer batch with no batch items")
-		return []inbox.SequencerBatchItem{}, nil
+		return []inbox.SequencerBatchItem{}, nil, nil
 	}
 	unaccountedTransactions := new(big.Int).Sub(b.AfterCount, b.BeforeCount)
 	// Iterate backwards through all but the first section metadata
@@ -198,7 +203,7 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 		// Account for the end-of-block message
 		unaccountedTransactions.Sub(unaccountedTransactions, big.NewInt(1))
 	} else if unaccountedTransactions.Sign() < 0 {
-		return nil, errors.New("found a negative amount of unaccounted transactions")
+		return nil, nil, errors.New("found a negative amount of unaccounted transactions")
 	}
 	// Any remaining unaccounted transactions are delayed messages in the first batch
 	runningTotalDelayedMessages := new(big.Int).Sub(firstSectionMeta.newTotalDelayedMessages, unaccountedTransactions)
@@ -208,6 +213,7 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 	nextSeqNum := new(big.Int).Set(b.BeforeCount)
 	dataOffset := 0
 	lengthsOffset := 0
+	var delayedAcc common.Hash
 	for _, meta := range sectionsMetadata {
 		for j := 0; int64(j) < meta.numItems.Int64(); j++ {
 			// Sequencer batch items
@@ -241,6 +247,7 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 			item := inbox.NewDelayedItem(lastSeqNum, meta.newTotalDelayedMessages, lastAcc, runningTotalDelayedMessages, meta.newDelayedAcc)
 			lastAcc = item.Accumulator
 			runningTotalDelayedMessages = meta.newTotalDelayedMessages
+			delayedAcc = meta.newDelayedAcc
 			ret = append(ret, item)
 
 			endBlockMessage := inbox.InboxMessage{
@@ -259,14 +266,22 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 	}
 
 	if nextSeqNum.Cmp(b.AfterCount) != 0 {
-		return nil, errors.New("computed unexpected batch end count")
+		return nil, nil, errors.New("computed unexpected batch end count")
 	}
 
 	if !lastAcc.Equals(b.AfterAcc) {
-		return nil, errors.New("computed unexpected batch end accumulator")
+		return nil, nil, errors.New("computed unexpected batch end accumulator")
 	}
 
-	return ret, nil
+	var delayedInfo *DelayedInfo
+	if delayedAcc != (common.Hash{}) {
+		delayedInfo = &DelayedInfo{
+			Count:       runningTotalDelayedMessages,
+			Accumulator: delayedAcc,
+		}
+	}
+
+	return ret, delayedInfo, nil
 }
 
 type sequencerBatchOriginRef struct {

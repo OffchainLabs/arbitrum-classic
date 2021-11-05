@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface RollupEventBridgeInterface extends ethers.utils.Interface {
   functions: {
@@ -86,6 +86,14 @@ interface RollupEventBridgeInterface extends ethers.utils.Interface {
     nameOrSignatureOrTopic: 'InboxMessageDeliveredFromOrigin'
   ): EventFragment
 }
+
+export type InboxMessageDeliveredEvent = TypedEvent<
+  [BigNumber, string] & { messageNum: BigNumber; data: string }
+>
+
+export type InboxMessageDeliveredFromOriginEvent = TypedEvent<
+  [BigNumber] & { messageNum: BigNumber }
+>
 
 export class RollupEventBridge extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -255,6 +263,14 @@ export class RollupEventBridge extends BaseContract {
   }
 
   filters: {
+    'InboxMessageDelivered(uint256,bytes)'(
+      messageNum?: BigNumberish | null,
+      data?: null
+    ): TypedEventFilter<
+      [BigNumber, string],
+      { messageNum: BigNumber; data: string }
+    >
+
     InboxMessageDelivered(
       messageNum?: BigNumberish | null,
       data?: null
@@ -262,6 +278,10 @@ export class RollupEventBridge extends BaseContract {
       [BigNumber, string],
       { messageNum: BigNumber; data: string }
     >
+
+    'InboxMessageDeliveredFromOrigin(uint256)'(
+      messageNum?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { messageNum: BigNumber }>
 
     InboxMessageDeliveredFromOrigin(
       messageNum?: BigNumberish | null

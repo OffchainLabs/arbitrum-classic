@@ -194,16 +194,17 @@ type Forwarder struct {
 }
 
 type Node struct {
-	Aggregator      Aggregator    `koanf:"aggregator"`
-	Cache           NodeCache     `koanf:"cache"`
-	ChainID         uint64        `koanf:"chain-id"`
-	Forwarder       Forwarder     `koanf:"forwarder"`
-	LogProcessCount int           `koanf:"log-process-count"`
-	LogIdleSleep    time.Duration `koanf:"log-idle-sleep"`
-	RPC             RPC           `koanf:"rpc"`
-	Sequencer       Sequencer     `koanf:"sequencer"`
-	Type            string        `koanf:"type"`
-	WS              WS            `koanf:"ws"`
+	Aggregator          Aggregator    `koanf:"aggregator"`
+	Cache               NodeCache     `koanf:"cache"`
+	ChainID             uint64        `koanf:"chain-id"`
+	Forwarder           Forwarder     `koanf:"forwarder"`
+	LogProcessCount     int           `koanf:"log-process-count"`
+	LogIdleSleep        time.Duration `koanf:"log-idle-sleep"`
+	RPC                 RPC           `koanf:"rpc"`
+	Sequencer           Sequencer     `koanf:"sequencer"`
+	Type                string        `koanf:"type"`
+	WS                  WS            `koanf:"ws"`
+	ParanoidInboxReader bool          `koanf:"paranoid-inbox-reader"`
 }
 
 type NodeCache struct {
@@ -436,6 +437,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
+	f.Bool("node.paranoid-inbox-reader", false, "if enabled, check for reorgs before searching for messages")
 
 	return ParseNonRelay(ctx, f, "rpc-wallet", 250_000_000)
 }
@@ -489,7 +491,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Int("core.test.reorg-to.log", 0, "reorg to snapshot with given log or before, zero to disable")
 	f.Int("core.test.reorg-to.message", 0, "reorg to snapshot with given message or before, zero to disable")
 	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
-	f.Int("core.test.run-until", 0, "run until gas is reacheck for profile test, zero to disable")
+	f.Int("core.test.run-until", 0, "run until gas is reached for profile test, zero to disable")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 

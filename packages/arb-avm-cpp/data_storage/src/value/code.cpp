@@ -169,6 +169,7 @@ struct RawCodeSegmentData {
 
 RawCodeSegmentData prepareToSaveCodeSegment(
     ReadWriteTransaction& tx,
+    const CodeSnapshot& code,
     const CodeSegmentSnapshot& snapshot,
     std::map<uint64_t, uint64_t>& segment_counts) {
     uint64_t segment_id = snapshot.segmentID();
@@ -195,8 +196,8 @@ RawCodeSegmentData prepareToSaveCodeSegment(
         op_data.push_back(static_cast<unsigned char>(op.opcode));
         if (op.immediate) {
             auto imm_cp = std::get_if<CodePointStub>(op.immediate.get());
-            if (imm_cp && segment_counts.find(imm_cp->pc.segment) ==
-                              segment_counts.end()) {
+            if (imm_cp &&
+                code.segments.find(imm_cp->pc.segment) == code.segments.end()) {
                 // Attempt to canonicalize the codepoint
                 ValueCache cache{1, 0};
                 auto canonical = getValue(tx, ::hash(*imm_cp), cache, false);
@@ -496,7 +497,8 @@ rocksdb::Status saveCode(ReadWriteTransaction& tx,
                 uint64_t current_segment_count =
                     next_segment_counts[segment_id];
                 code_segments_to_save[segment_id] = prepareToSaveCodeSegment(
-                    tx, snapshots.segments[segment_id], next_segment_counts);
+                    tx, snapshots, snapshots.segments[segment_id],
+                    next_segment_counts);
                 // Ignore internal references to this segment
                 next_segment_counts[segment_id] = current_segment_count;
                 return true;

@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface L2CalledInterface extends ethers.utils.Interface {
   functions: {
@@ -49,6 +49,8 @@ interface L2CalledInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'Called'): EventFragment
 }
+
+export type CalledEvent = TypedEvent<[BigNumber] & { num: BigNumber }>
 
 export class L2Called extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -131,6 +133,10 @@ export class L2Called extends BaseContract {
   }
 
   filters: {
+    'Called(uint256)'(
+      num?: null
+    ): TypedEventFilter<[BigNumber], { num: BigNumber }>
+
     Called(num?: null): TypedEventFilter<[BigNumber], { num: BigNumber }>
   }
 

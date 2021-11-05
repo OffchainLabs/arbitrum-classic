@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
   functions: {
@@ -112,6 +112,35 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
 }
+
+export type DepositInitiatedEvent = TypedEvent<
+  [string, string, string, BigNumber, BigNumber] & {
+    l1Token: string
+    _from: string
+    _to: string
+    _sequenceNumber: BigNumber
+    _amount: BigNumber
+  }
+>
+
+export type TxToL2Event = TypedEvent<
+  [string, string, BigNumber, string] & {
+    _from: string
+    _to: string
+    _seqNum: BigNumber
+    _data: string
+  }
+>
+
+export type WithdrawalFinalizedEvent = TypedEvent<
+  [string, string, string, BigNumber, BigNumber] & {
+    l1Token: string
+    _from: string
+    _to: string
+    _exitNum: BigNumber
+    _amount: BigNumber
+  }
+>
 
 export class L1ArbitrumGateway extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -309,6 +338,23 @@ export class L1ArbitrumGateway extends BaseContract {
   }
 
   filters: {
+    'DepositInitiated(address,address,address,uint256,uint256)'(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _sequenceNumber?: BigNumberish | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _sequenceNumber: BigNumber
+        _amount: BigNumber
+      }
+    >
+
     DepositInitiated(
       l1Token?: null,
       _from?: string | null,
@@ -326,6 +372,16 @@ export class L1ArbitrumGateway extends BaseContract {
       }
     >
 
+    'TxToL2(address,address,uint256,bytes)'(
+      _from?: string | null,
+      _to?: string | null,
+      _seqNum?: BigNumberish | null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string],
+      { _from: string; _to: string; _seqNum: BigNumber; _data: string }
+    >
+
     TxToL2(
       _from?: string | null,
       _to?: string | null,
@@ -334,6 +390,23 @@ export class L1ArbitrumGateway extends BaseContract {
     ): TypedEventFilter<
       [string, string, BigNumber, string],
       { _from: string; _to: string; _seqNum: BigNumber; _data: string }
+    >
+
+    'WithdrawalFinalized(address,address,address,uint256,uint256)'(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _exitNum?: BigNumberish | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _exitNum: BigNumber
+        _amount: BigNumber
+      }
     >
 
     WithdrawalFinalized(

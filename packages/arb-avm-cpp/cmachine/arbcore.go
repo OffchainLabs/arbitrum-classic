@@ -55,24 +55,29 @@ func NewArbCore(c unsafe.Pointer, storage *ArbStorage) *ArbCore {
 }
 
 func (ac *ArbCore) StartThread() bool {
+	defer runtime.KeepAlive(ac)
 	status := C.arbCoreStartThread(ac.c)
 	return status == 1
 }
 
 func (ac *ArbCore) StopThread() {
+	defer runtime.KeepAlive(ac)
 	C.arbCoreAbortThread(ac.c)
 }
 
 func (ac *ArbCore) MachineIdle() bool {
+	defer runtime.KeepAlive(ac)
 	status := C.arbCoreMachineIdle(ac.c)
 	return status == 1
 }
 
 func (ac *ArbCore) MachineMessagesRead() *big.Int {
+	defer runtime.KeepAlive(ac)
 	return receiveBigInt(C.arbCoreMachineMessagesRead(ac.c))
 }
 
 func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
+	defer runtime.KeepAlive(ac)
 	statusRaw := C.arbCoreMessagesStatus(ac.c)
 	status := core.MessageStatus(int(statusRaw))
 	if status == core.MessagesError {
@@ -84,6 +89,7 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 }
 
 func (ac *ArbCore) PrintCoreThreadBacktrace() {
+	defer runtime.KeepAlive(ac)
 	C.arbCorePrintCoreThreadBacktrace(ac.c)
 }
 
@@ -104,6 +110,7 @@ func u256ArrayToByteSliceArray(nums []*big.Int) C.struct_ByteSliceArrayStruct {
 }
 
 func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool {
+	defer runtime.KeepAlive(ac)
 	previousMessageCountPtr := unsafeDataPointer(math.U256Bytes(previousMessageCount))
 	previousSeqBatchAccPtr := unsafeDataPointer(previousSeqBatchAcc.Bytes())
 	seqBatchItemsSlice := sequencerBatchItemsToByteSliceArray(seqBatchItems)
@@ -120,6 +127,7 @@ func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBat
 }
 
 func (ac *ArbCore) GetSendCount() (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
 	result := C.arbCoreGetSendCount(ac.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to load send count")
@@ -129,6 +137,7 @@ func (ac *ArbCore) GetSendCount() (*big.Int, error) {
 }
 
 func (ac *ArbCore) GetLogCount() (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
 	result := C.arbCoreGetLogCount(ac.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to load log count")
@@ -138,6 +147,7 @@ func (ac *ArbCore) GetLogCount() (*big.Int, error) {
 }
 
 func (ac *ArbCore) GetMessageCount() (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
 	result := C.arbCoreGetMessageCount(ac.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to load send count")
@@ -147,6 +157,7 @@ func (ac *ArbCore) GetMessageCount() (*big.Int, error) {
 }
 
 func (ac *ArbCore) GetDelayedMessageCount() (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
 	result := C.arbCoreGetDelayedMessageCount(ac.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to load send count")
@@ -156,6 +167,7 @@ func (ac *ArbCore) GetDelayedMessageCount() (*big.Int, error) {
 }
 
 func (ac *ArbCore) GetTotalDelayedMessagesSequenced() (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
 	result := C.arbCoreGetTotalDelayedMessagesSequenced(ac.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to load send count")
@@ -165,6 +177,7 @@ func (ac *ArbCore) GetTotalDelayedMessagesSequenced() (*big.Int, error) {
 }
 
 func (ac *ArbCore) GetDelayedMessagesToSequence(maxBlock *big.Int) (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
 	maxBlockData := math.U256Bytes(maxBlock)
 	result := C.arbCoreGetDelayedMessagesToSequence(ac.c, unsafeDataPointer(maxBlockData))
 	if result.found == 0 {
@@ -175,6 +188,7 @@ func (ac *ArbCore) GetDelayedMessagesToSequence(maxBlock *big.Int) (*big.Int, er
 }
 
 func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error) {
+	defer runtime.KeepAlive(ac)
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
 	result := C.arbCoreGetSends(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
@@ -211,6 +225,7 @@ func unmarshalLog(marshaled []byte) (core.ValueAndInbox, error) {
 }
 
 func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]core.ValueAndInbox, error) {
+	defer runtime.KeepAlive(ac)
 	if count.Cmp(big.NewInt(0)) == 0 {
 		return nil, nil
 	}
@@ -234,6 +249,7 @@ func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]core.ValueAnd
 }
 
 func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.InboxMessage, error) {
+	defer runtime.KeepAlive(ac)
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
 
@@ -256,6 +272,7 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 }
 
 func (ac *ArbCore) GetSequencerBatchItems(startIndex *big.Int) ([]inbox.SequencerBatchItem, error) {
+	defer runtime.KeepAlive(ac)
 	startIndexData := math.U256Bytes(startIndex)
 
 	result := C.arbCoreGetSequencerBatchItems(ac.c, unsafeDataPointer(startIndexData))
@@ -277,6 +294,7 @@ func (ac *ArbCore) GetSequencerBatchItems(startIndex *big.Int) ([]inbox.Sequence
 }
 
 func (ac *ArbCore) GetSequencerBlockNumberAt(index *big.Int) (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
 	indexData := math.U256Bytes(index)
 
 	res := C.arbCoreGetSequencerBlockNumberAt(ac.c, unsafeDataPointer(indexData))
@@ -288,6 +306,7 @@ func (ac *ArbCore) GetSequencerBlockNumberAt(index *big.Int) (*big.Int, error) {
 }
 
 func (ac *ArbCore) GenInboxProof(seqNum *big.Int, batchIndex *big.Int, batchEndCount *big.Int) ([]byte, error) {
+	defer runtime.KeepAlive(ac)
 	seqNumData := math.U256Bytes(seqNum)
 	batchEndCountData := math.U256Bytes(batchEndCount)
 	batchIndexData := math.U256Bytes(batchIndex)
@@ -301,6 +320,7 @@ func (ac *ArbCore) GenInboxProof(seqNum *big.Int, batchIndex *big.Int, batchEndC
 }
 
 func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
+	defer runtime.KeepAlive(ac)
 	startIndexData := math.U256Bytes(index)
 
 	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
@@ -312,6 +332,7 @@ func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 }
 
 func (ac *ArbCore) GetDelayedInboxAcc(index *big.Int) (ret common.Hash, err error) {
+	defer runtime.KeepAlive(ac)
 	startIndexData := math.U256Bytes(index)
 
 	status := C.arbCoreGetDelayedInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
@@ -323,6 +344,7 @@ func (ac *ArbCore) GetDelayedInboxAcc(index *big.Int) (ret common.Hash, err erro
 }
 
 func (ac *ArbCore) GetInboxAccPair(index1 *big.Int, index2 *big.Int) (ret1 common.Hash, ret2 common.Hash, err error) {
+	defer runtime.KeepAlive(ac)
 	startIndex1Data := math.U256Bytes(index1)
 	startIndex2Data := math.U256Bytes(index2)
 
@@ -335,6 +357,7 @@ func (ac *ArbCore) GetInboxAccPair(index1 *big.Int, index2 *big.Int) (ret1 commo
 }
 
 func (ac *ArbCore) CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.Hash) (ret int, err error) {
+	defer runtime.KeepAlive(ac)
 	if len(lastSeqNums) != len(accs) {
 		return -1, errors.New("mismatching lengths when counting matching batches")
 	}
@@ -352,6 +375,7 @@ func (ac *ArbCore) CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.
 }
 
 func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (core.ExecutionCursor, error) {
+	defer runtime.KeepAlive(ac)
 	totalGasUsedData := math.U256Bytes(totalGasUsed)
 
 	cExecutionCursor := C.arbCoreGetExecutionCursor(ac.c, unsafeDataPointer(totalGasUsedData), boolToCInt(allowSlowLookup))
@@ -363,6 +387,7 @@ func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup boo
 }
 
 func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
+	defer runtime.KeepAlive(ac)
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return errors.Errorf("unsupported execution cursor type %T", executionCursor)
@@ -394,6 +419,7 @@ func (ac *ArbCore) AdvanceExecutionCursorWithTracing(executionCursor core.Execut
 }
 
 func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {
+	defer runtime.KeepAlive(ac)
 	cMachine := C.arbCoreGetLastMachine(ac.c)
 	if cMachine == nil {
 		return nil, errors.Errorf("error getting last machine")
@@ -405,6 +431,7 @@ func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {
 }
 
 func (ac *ArbCore) GetLastMachineTotalGas() (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
 	result := C.arbCoreGetLastMachineTotalGas(ac.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to get last machine total gas")
@@ -414,6 +441,7 @@ func (ac *ArbCore) GetLastMachineTotalGas() (*big.Int, error) {
 }
 
 func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
+	defer runtime.KeepAlive(ac)
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
@@ -429,6 +457,7 @@ func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Ma
 }
 
 func (ac *ArbCore) LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetPosition(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
@@ -439,6 +468,7 @@ func (ac *ArbCore) LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error) {
 }
 
 func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error {
+	defer runtime.KeepAlive(ac)
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	countData := math.U256Bytes(count)
 
@@ -456,6 +486,7 @@ func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 }
 
 func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []core.ValueAndInbox, []core.ValueAndInbox, error) {
+	defer runtime.KeepAlive(ac)
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
@@ -497,6 +528,7 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []core.Val
 }
 
 func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) error {
+	defer runtime.KeepAlive(ac)
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	status := C.arbCoreLogsCursorCheckError(ac.c, unsafeDataPointer(cursorIndexData))
 	if status == 0 {
@@ -513,6 +545,7 @@ func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) error {
 }
 
 func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error) {
+	defer runtime.KeepAlive(ac)
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	status := C.arbCoreLogsCursorConfirmReceived(ac.c, unsafeDataPointer(cursorIndexData))
 	if status == 0 {
@@ -529,6 +562,7 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 }
 
 func (ac *ArbCore) GetExecutionCursorAtEndOfBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
+	defer runtime.KeepAlive(ac)
 	cExecutionCursorResult := C.arbCoreGetExecutionCursorAtEndOfBlock(ac.c, C.uint64_t(blockNumber), boolToCInt(allowSlowLookup))
 
 	if cExecutionCursorResult.slow_error == 1 {

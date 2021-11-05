@@ -291,7 +291,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	// Make a dummy feed for now
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed, false)
 	test.FailIfError(t, err)
 
 	for i := 1; i <= 10; i++ {

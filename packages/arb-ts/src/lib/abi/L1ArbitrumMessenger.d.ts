@@ -15,7 +15,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface L1ArbitrumMessengerInterface extends ethers.utils.Interface {
   functions: {}
@@ -26,6 +26,15 @@ interface L1ArbitrumMessengerInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
 }
+
+export type TxToL2Event = TypedEvent<
+  [string, string, BigNumber, string] & {
+    _from: string
+    _to: string
+    _seqNum: BigNumber
+    _data: string
+  }
+>
 
 export class L1ArbitrumMessenger extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -75,6 +84,16 @@ export class L1ArbitrumMessenger extends BaseContract {
   callStatic: {}
 
   filters: {
+    'TxToL2(address,address,uint256,bytes)'(
+      _from?: string | null,
+      _to?: string | null,
+      _seqNum?: BigNumberish | null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string],
+      { _from: string; _to: string; _seqNum: BigNumber; _data: string }
+    >
+
     TxToL2(
       _from?: string | null,
       _to?: string | null,
