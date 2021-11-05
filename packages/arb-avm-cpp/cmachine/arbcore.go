@@ -528,8 +528,8 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	return true, nil
 }
 
-func (ac *ArbCore) GetExecutionCursorAtBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
-	cExecutionCursorResult := C.arbCoreGetExecutionCursorAtBlock(ac.c, C.uint64_t(blockNumber), boolToCInt(allowSlowLookup))
+func (ac *ArbCore) GetExecutionCursorAtEndOfBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
+	cExecutionCursorResult := C.arbCoreGetExecutionCursorAtEndOfBlock(ac.c, C.uint64_t(blockNumber), boolToCInt(allowSlowLookup))
 
 	if cExecutionCursorResult.slow_error == 1 {
 		return nil, errors.Errorf(slowLookupErrorString)

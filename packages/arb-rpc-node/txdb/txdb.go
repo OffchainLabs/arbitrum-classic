@@ -526,7 +526,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if cachedSnap != nil {
 		return cachedSnap, nil
 	}
-	cursor, err := db.Lookup.GetExecutionCursorAtBlock(info.Header.Number.Uint64(), db.allowSlowLookup)
+	cursor, err := db.Lookup.GetExecutionCursorAtEndOfBlock(info.Header.Number.Uint64(), db.allowSlowLookup)
 	if err != nil {
 		return nil, err
 	}

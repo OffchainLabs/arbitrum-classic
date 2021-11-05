@@ -603,14 +603,15 @@ void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr) {
     arb_core->printCoreThreadBacktrace();
 }
 
-CExecutionCursorResult arbCoreGetExecutionCursorAtBlock(CArbCore* arbcore_ptr,
-                                                        uint64_t block_number,
-                                                        int allow_slow_lookup) {
+CExecutionCursorResult arbCoreGetExecutionCursorAtEndOfBlock(
+    CArbCore* arbcore_ptr,
+    uint64_t block_number,
+    int allow_slow_lookup) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
 
     try {
-        auto cursor =
-            arbcore->getExecutionCursorAtBlock(block_number, allow_slow_lookup);
+        auto cursor = arbcore->getExecutionCursorAtEndOfBlock(
+            block_number, allow_slow_lookup);
         if (std::holds_alternative<rocksdb::Status>(cursor)) {
             auto status = std::get<rocksdb::Status>(cursor);
             if (status.IsNotFound() && !allow_slow_lookup) {

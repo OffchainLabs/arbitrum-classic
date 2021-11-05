@@ -164,8 +164,8 @@ func (m *Server) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool)
 	return m.db.Lookup.GetExecutionCursor(totalGasUsed, allowSlowLookup)
 }
 
-func (m *Server) GetExecutionCursorAtBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
-	return m.db.Lookup.GetExecutionCursorAtBlock(blockNumber, allowSlowLookup)
+func (m *Server) GetExecutionCursorAtEndOfBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
+	return m.db.Lookup.GetExecutionCursorAtEndOfBlock(blockNumber, allowSlowLookup)
 }
 
 func (m *Server) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {

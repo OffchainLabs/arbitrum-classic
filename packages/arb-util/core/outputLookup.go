@@ -41,7 +41,7 @@ type ArbOutputLookup interface {
 	GetDelayedMessageCount() (*big.Int, error)
 	GetTotalDelayedMessagesSequenced() (*big.Int, error)
 
-	GetExecutionCursorAtBlock(uint64, bool) (ExecutionCursor, error)
+	GetExecutionCursorAtEndOfBlock(uint64, bool) (ExecutionCursor, error)
 }
 
 type InMemoryOutputLookup struct {

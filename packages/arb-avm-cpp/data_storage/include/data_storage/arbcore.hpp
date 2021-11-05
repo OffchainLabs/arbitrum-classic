@@ -436,9 +436,9 @@ class ArbCore {
 
    public:
     // Public sideload interaction
-    std::variant<rocksdb::Status, ExecutionCursor> getExecutionCursorAtBlock(
-        const uint256_t& block_number,
-        bool allow_slow_lookup);
+    std::variant<rocksdb::Status, ExecutionCursor>
+    getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
+                                   bool allow_slow_lookup);
 
     ValueResult<uint256_t> getGasAtBlock(ReadTransaction& tx,
                                          const uint256_t& block_number);

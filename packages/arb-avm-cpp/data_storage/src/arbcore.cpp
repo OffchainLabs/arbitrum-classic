@@ -2372,8 +2372,8 @@ rocksdb::Status ArbCore::findCloserExecutionCursor(
 }
 
 std::variant<rocksdb::Status, ExecutionCursor>
-ArbCore::getExecutionCursorAtBlock(const uint256_t& block_number,
-                                   bool allow_slow_lookup) {
+ArbCore::getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
+                                        bool allow_slow_lookup) {
     uint256_t gas_target;
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {
