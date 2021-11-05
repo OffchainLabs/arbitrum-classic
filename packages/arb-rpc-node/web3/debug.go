@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"math/big"
-	"runtime"
 )
 
 type Debug struct {
@@ -28,7 +27,6 @@ type Debug struct {
 }
 
 func (d *Debug) TraceTransaction(txHash hexutil.Bytes) (interface{}, error) {
-	defer runtime.KeepAlive(d)
 	res, _, _, logNumber, err := d.srv.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
