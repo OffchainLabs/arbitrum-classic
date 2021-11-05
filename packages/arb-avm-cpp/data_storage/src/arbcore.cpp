@@ -208,7 +208,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         // Reset database for profile testing
         status =
             reorgToL1Block(coreConfig.test_reorg_to_l1_block, false, cache);
-    } else if (coreConfig.test_reorg_to_l1_block != 0) {
+    } else if (coreConfig.test_reorg_to_l2_block != 0) {
         // Reset database for profile testing
         status =
             reorgToL2Block(coreConfig.test_reorg_to_l2_block, false, cache);
