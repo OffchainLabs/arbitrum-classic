@@ -19,6 +19,7 @@ package speedtest
 import (
 	"io/ioutil"
 	"math/big"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -62,6 +63,7 @@ func runExecutableFile(b *testing.B, filePath string) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	defer runtime.KeepAlive(cursor)
 	mach, err := core.TakeMachine(cursor)
 	if err != nil {
 		b.Fatal(err)

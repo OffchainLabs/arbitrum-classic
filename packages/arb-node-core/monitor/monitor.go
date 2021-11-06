@@ -19,6 +19,7 @@ package monitor
 import (
 	"context"
 	"math/big"
+	"runtime"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -102,6 +103,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, errors.Wrap(err, "error loading initial ArbCore machine")
 	}
+	defer runtime.KeepAlive(initialExecutionCursor)
 	initialMachineHash := initialExecutionCursor.MachineHash()
 	if initialMachineHash != creationEvent.MachineHash {
 		return nil, errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(creationEvent.MachineHash[:]), initialMachineHash)

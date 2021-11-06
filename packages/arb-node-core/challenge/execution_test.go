@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -112,6 +113,7 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 	defer shutdown()
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000), true)
 	test.FailIfError(t, err)
+	defer runtime.KeepAlive(cursor)
 	inboxGas := new(big.Int).Add(cursor.TotalGasConsumed(), big.NewInt(1))
 	t.Logf("Found first inbox instruction starting at %v", inboxGas)
 	return inboxGas
@@ -123,6 +125,7 @@ func TestChallengeToUnreachableSmall(t *testing.T) {
 	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge, messages := initializeChallengeTest(t, big.NewInt(10), big.NewInt(10), mon.Core)
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(1<<30), true)
 	test.FailIfError(t, err)
+	defer runtime.KeepAlive(cursor)
 	startGas := cursor.TotalGasConsumed()
 	endGas := new(big.Int).Add(startGas, big.NewInt(1))
 
