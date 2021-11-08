@@ -69,7 +69,7 @@ func TestUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	test.FailIfError(t, err)

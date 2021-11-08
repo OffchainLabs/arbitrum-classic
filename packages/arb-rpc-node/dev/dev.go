@@ -445,7 +445,10 @@ func (b *L1Emulator) IncreaseTime(amount int64) {
 }
 
 func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator ethcommon.Address) error {
-	client := web3.NewEthClient(srv, true)
+	client, err := web3.NewEthClient(srv, true)
+	if err != nil {
+		return errors.Wrap(err, "error connecting to server")
+	}
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
 		return errors.Wrap(err, "error connecting to arb owner")

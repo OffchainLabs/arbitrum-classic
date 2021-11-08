@@ -132,7 +132,7 @@ func TestTransfer(t *testing.T) {
 	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
 	test.FailIfError(t, err)
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	ethTransferCon, _ := setupTransferTest(t, ethAuths[0], ethBackend)
 	arbTransferCon, arbTransferConAddr := setupTransferTest(t, senderAuth, client)

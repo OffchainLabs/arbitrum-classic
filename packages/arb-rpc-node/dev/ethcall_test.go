@@ -45,7 +45,7 @@ func TestEthCall(t *testing.T) {
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, auth)
-		enableRewrites(t, backend, srv, auth)
+		enableRewrites(t, srv, auth)
 	}
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
@@ -53,7 +53,7 @@ func TestEthCall(t *testing.T) {
 
 	ethServer := web3.NewServer(srv, false, nil)
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	testerAddr, _, _, err := arbostestcontracts.DeployEthCallTester(senderAuth, client)
 	test.FailIfError(t, err)

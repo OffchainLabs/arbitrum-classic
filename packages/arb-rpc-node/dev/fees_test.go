@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
@@ -42,7 +43,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
-func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, common.Address, func()) {
+func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *ethclient.Client, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, common.Address, func()) {
 	skipBelowVersion(t, 25)
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
@@ -98,7 +99,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 
 	web3Server := web3.NewServer(srv, true, nil)
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewTestEthClient(t, srv, true)
 
 	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
 	test.FailIfError(t, err)
@@ -124,7 +125,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 
 	if doUpgrade {
 		UpgradeTestDevNode(t, backend, srv, auth)
-		enableRewrites(t, backend, srv, auth)
+		enableRewrites(t, srv, auth)
 	}
 
 	senders, err := arbOwner.GetAllFairGasPriceSenders(&bind.CallOpts{})
