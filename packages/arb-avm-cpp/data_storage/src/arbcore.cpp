@@ -2284,11 +2284,10 @@ ArbCore::findCloserExecutionCursor(
     auto mach = combined_machine_cache.atOrBeforeGas(
         total_gas_used, existing_gas_used, database_gas, true);
 
-    mach.machine->machine_state.code =
-        std::make_shared<RunningCode>(mach.machine->machine_state.code);
-
     switch (mach.status) {
         case CombinedMachineCache::Success:
+            mach.machine->machine_state.code =
+                std::make_shared<RunningCode>(mach.machine->machine_state.code);
             return ExecutionCursor(std::move(mach.machine));
         case CombinedMachineCache::UseDatabase:
             return ExecutionCursor(database_machine_state_keys.value());
