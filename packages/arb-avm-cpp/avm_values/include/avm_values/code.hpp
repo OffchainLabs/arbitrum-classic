@@ -449,6 +449,11 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
         auto it = segment_counts.lower_bound(impl->first_segment);
         auto end = segment_counts.end();
         for (; it != end; ++it) {
+            // Skip segments not included here
+            if (it->first < impl->first_segment ||
+                it->first >= impl->first_segment + impl->segment_list.size()) {
+                continue;
+            }
             auto inserted = parent_segments.segments->insert(
                 std::make_pair(it->first, impl->getSegment(it->first)));
             // Verify that the element didn't exist previously
@@ -458,10 +463,12 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
                     "code segment id collision when filling in code");
             }
         }
-        *parent_segments.next_segment_num = impl->nextSegmentNum();
+        if (impl->nextSegmentNum() > *parent_segments.next_segment_num) {
+            *parent_segments.next_segment_num = impl->nextSegmentNum();
+        }
     }
 
-    std::shared_ptr<Code> getParent() const { return parent; }
+    const std::shared_ptr<Code>& getParent() const { return parent; }
 
     uint64_t initialSegmentForChildCode() const override {
         const std::lock_guard<std::mutex> lock(mutex);
