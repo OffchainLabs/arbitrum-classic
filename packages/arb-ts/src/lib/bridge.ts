@@ -95,6 +95,13 @@ const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
 const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
 const MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
 
+interface RetryableParamsOptions {
+  maxSubmissionFeePercentIncrease?: BigNumber
+  maxGasPercentIncrease?: BigNumber
+  maxGasPricePercentIncrease?: BigNumber
+  includeL2Callvalue?: boolean
+}
+
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
  */
@@ -245,6 +252,75 @@ export class Bridge {
       } else {
         throw err
       }
+    }
+  }
+
+  public async getRetryableTxnParams(
+    callDataHex: string,
+    sender: string,
+    destinationAddress: string,
+    _l2CallValue?: BigNumber,
+    options: RetryableParamsOptions = {}
+  ) {
+    const maxGasPriceIncrease =
+      options.maxGasPricePercentIncrease || BigNumber.from(0)
+    const maxGasIncrease = options.maxGasPercentIncrease || BigNumber.from(0)
+    const maxSubmissionFeeIncrease =
+      options.maxSubmissionFeePercentIncrease ||
+      DEFAULT_SUBMISSION_PERCENT_INCREASE
+    const l2CallValue = _l2CallValue || BigNumber.from(0)
+
+    const includeL2Callvalue =
+      typeof options.includeL2Callvalue === 'boolean'
+        ? options.includeL2Callvalue
+        : true
+
+    const gasPriceBid = BridgeHelper.percentIncrease(
+      await this.l2Provider.getGasPrice(),
+      maxGasPriceIncrease
+    )
+
+    const submissionPrice = (
+      await this.l2Bridge.getTxnSubmissionPrice(callDataHex.length - 2)
+    )[0]
+    const submissionPriceBid = BridgeHelper.percentIncrease(
+      submissionPrice,
+      maxSubmissionFeeIncrease
+    )
+
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      this.l2Provider
+    )
+
+    const maxGas = (
+      await nodeInterface.estimateRetryableTicket(
+        sender,
+        parseEther('1').add(
+          l2CallValue
+        ) /** we add a 1 ether "deposit" buffer to pay for execution in the gas estimation  */,
+        destinationAddress,
+        l2CallValue,
+        submissionPriceBid,
+        sender,
+        sender,
+        0,
+        gasPriceBid,
+        callDataHex
+      )
+    )[0]
+
+    const maxGasBid = BridgeHelper.percentIncrease(maxGas, maxGasIncrease)
+
+    let totalDepositValue = submissionPriceBid.add(gasPriceBid.mul(maxGas))
+    if (includeL2Callvalue) {
+      totalDepositValue = totalDepositValue.add(l2CallValue)
+    }
+    return {
+      gasPriceBid,
+      submissionPriceBid,
+      maxGasBid,
+      totalDepositValue,
     }
   }
 
