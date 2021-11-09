@@ -64,6 +64,8 @@ void* machineClone(CMachine* m) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     auto cloneMach = new Machine(*mach);
+    cloneMach->machine_state.code =
+        std::make_shared<RunningCode>(cloneMach->machine_state.code);
     return static_cast<void*>(cloneMach);
 }
 
