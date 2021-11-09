@@ -31,6 +31,7 @@ import {
 import { Logger } from '@ethersproject/logger'
 import { Zero } from '@ethersproject/constants'
 import { parseEther } from '@ethersproject/units'
+import { utils } from 'ethers'
 
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
@@ -281,7 +282,9 @@ export class Bridge {
     )
 
     const submissionPrice = (
-      await this.l2Bridge.getTxnSubmissionPrice(callDataHex.length - 2)
+      await this.l2Bridge.getTxnSubmissionPrice(
+        utils.hexDataLength(callDataHex)
+      )
     )[0]
     const submissionPriceBid = BridgeHelper.percentIncrease(
       submissionPrice,
