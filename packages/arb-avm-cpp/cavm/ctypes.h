@@ -17,7 +17,7 @@
 #ifndef ctypes_h
 #define ctypes_h
 
-#include <stdint.h>
+#include <cstdint>
 
 #ifdef __cplusplus
 extern "C" {

@@ -17,7 +17,7 @@
 #ifndef cmachine_h
 #define cmachine_h
 
-#include <stdint.h>
+#include <cstdint>
 #include "carbstorage.h"
 
 #ifdef __cplusplus
