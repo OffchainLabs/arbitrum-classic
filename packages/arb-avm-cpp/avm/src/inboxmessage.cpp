@@ -190,6 +190,5 @@ MachineMessage extractMachineMessageImpl(
     std::vector<unsigned char>::const_iterator current_iter,
     const std::vector<unsigned char>::const_iterator end) {
     uint256_t accumulator = extractUint256(current_iter);
-    InboxMessage message = extractInboxMessageImpl(current_iter, end);
-    return {message, accumulator};
+    return {extractInboxMessageImpl(current_iter, end), accumulator};
 }
