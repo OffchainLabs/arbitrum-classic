@@ -2347,7 +2347,7 @@ ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
     for (auto& raw_message : raw_result.data) {
         auto message = extractInboxMessage(raw_message.message);
         message.inbox_sequence_number = raw_message.sequence_number;
-        messages.emplace_back(message, raw_message.accumulator);
+        messages.emplace_back(std::move(message), raw_message.accumulator);
     }
 
     return {rocksdb::Status::OK(), messages};
