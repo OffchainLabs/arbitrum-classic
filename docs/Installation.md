@@ -101,6 +101,16 @@ make -j 16 shared_lib
 sudo make install-shared
 ```
 
+#### Fedora 35
+```bash
+sudo dnf install automake cmake boost-devel bzip2-devel clang-tools-extra gflags-devel gmp-devel golang-bin jemalloc-devel libatomic libtool libusb libzstd-devel lz4-devel openssl-devel snappy-devel zlib-devel
+
+git clone -b v6.11.4 https://github.com/facebook/rocksdb
+cd rocksdb
+make -j 16 shared_lib
+sudo make install-shared
+```
+
 ## Install Arbitrum
 
 With the dependencies installed, you can now install Arbitrum locally with
