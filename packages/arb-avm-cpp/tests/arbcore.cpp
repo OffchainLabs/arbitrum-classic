@@ -258,7 +258,7 @@ TEST_CASE("ArbCore tests") {
         while (arbCore2->getLastMachineOutput().arb_gas_used <
                final_output.arb_gas_used) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            REQUIRE(n++ < 100);
+            REQUIRE(n++ < 1000);
         }
         REQUIRE(arbCore2->getLastMachineOutput() == final_output);
     }
