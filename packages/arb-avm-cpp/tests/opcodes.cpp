@@ -971,6 +971,8 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
     REQUIRE(secp256k1_ecdsa_recoverable_signature_serialize_compact(
                 ctx, sig_raw.data(), &recovery_id, &sig) == 1);
 
+    secp256k1_context_destroy(ctx);
+
     MachineState s;
     s.stack.push(intx::be::unsafe::load<uint256_t>(msg.begin()));
     s.stack.push(uint256_t{recovery_id});
