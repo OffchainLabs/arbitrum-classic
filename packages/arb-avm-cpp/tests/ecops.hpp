@@ -83,6 +83,7 @@ inline std::vector<ECMulTestCase> prepareECMulCases() {
     mpz_init(smpz);
     mpz_import(smpz, 32, 1, 1, 1, 0, sbytes);
     bigint<BIG_INT_FOR_UINT256> s(smpz);
+    mpz_clear(smpz);
 
     auto P = toG1ArbPoint(Pff);
 
