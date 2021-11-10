@@ -50,6 +50,9 @@ TimedMachineCache::atOrBeforeGas(uint256_t gas_used) {
 }
 
 void TimedMachineCache::reorg(uint256_t next_gas_used) {
+    if (cache.empty()) {
+        return;
+    }
     if (next_gas_used <= cache.begin()->first) {
         // Remove everything
         cache.clear();

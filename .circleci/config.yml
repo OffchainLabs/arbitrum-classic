@@ -210,7 +210,7 @@ jobs:
       - run:
           name: Test
           command: |
-            ASAN_OPTIONS=detect_leaks=0 ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
