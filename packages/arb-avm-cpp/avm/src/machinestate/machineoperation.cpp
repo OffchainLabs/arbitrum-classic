@@ -955,7 +955,8 @@ void pushinsn(MachineState& m) {
     auto target = assumeCodePoint(m, m.stack[1]);
     auto& op_int = assumeInt(m.stack[0]);
     auto op = static_cast<uint8_t>(op_int);
-    m.stack[1] = m.code->addOperation(target.pc, {static_cast<OpCode>(op)});
+    m.stack[1] =
+        m.code->addOperation(target.pc, Operation{static_cast<OpCode>(op)});
     m.stack.popClear();
     ++m.pc;
 }

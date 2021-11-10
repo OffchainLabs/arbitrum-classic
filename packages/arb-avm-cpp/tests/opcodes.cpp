@@ -637,8 +637,8 @@ TEST_CASE("OPCODE: AUXSTACKEMPTY opcode is correct") {
 MachineState createTestMachineState(OpCode op) {
     auto code = std::make_shared<CoreCode>();
     auto stub = code->addSegment();
-    stub = code->addOperation(stub.pc, {OpCode::HALT});
-    code->addOperation(stub.pc, {op});
+    stub = code->addOperation(stub.pc, Operation{OpCode::HALT});
+    code->addOperation(stub.pc, Operation{op});
     return {std::move(code), Tuple()};
 }
 
@@ -946,9 +946,9 @@ uint256_t& assumeInt(value& val) {
 }
 
 TEST_CASE("OPCODE: ecrecover opcode is correct") {
-    std::array<unsigned char, 32> msg;
+    std::array<unsigned char, 32> msg{};
     std::generate(msg.begin(), msg.end(), std::rand);
-    std::array<unsigned char, 32> seckey;
+    std::array<unsigned char, 32> seckey{};
     std::generate(seckey.begin(), seckey.end(), std::rand);
 
     auto ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
@@ -1199,7 +1199,7 @@ TEST_CASE("OPCODE: SHA256F opcode is correct") {
     uint256_t initial_hash_state = hexToInt(
         "6a09e667bb67ae853c6ef372a54ff53a510e527f9b05688c1f83d9ab5be0cd19");
     struct Sha256Case {
-        std::vector<unsigned char> raw_input_data;
+        std::vector<unsigned char> raw_input_data{};
         uint256_t input_first;
         uint256_t input_second;
         uint256_t output_digest;
@@ -1278,7 +1278,7 @@ TEST_CASE("OPCODE: SHA256F opcode is correct") {
 }
 
 TEST_CASE("OPCODE: Stack underflow") {
-    for (uint8_t op = static_cast<uint8_t>(OpCode::ADD);
+    for (auto op = static_cast<uint8_t>(OpCode::ADD);
          op <= static_cast<uint8_t>(OpCode::ECRECOVER); ++op) {
         auto code = std::make_shared<CoreCode>();
         auto stub = code->addSegment();

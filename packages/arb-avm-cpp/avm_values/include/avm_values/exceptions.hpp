@@ -23,22 +23,22 @@ class avm_exception : public std::exception {};
 
 class bad_tuple_index : public avm_exception {
    public:
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 };
 
 class bad_pop_type : public avm_exception {
    public:
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 };
 
 class int_out_of_bounds : public avm_exception {
    public:
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 };
 
 class stack_too_small : public avm_exception {
    public:
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 };
 
 #endif /* exceptions_hpp */
