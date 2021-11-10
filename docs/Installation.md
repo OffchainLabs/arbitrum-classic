@@ -107,7 +107,7 @@ sudo dnf install automake cmake boost-devel bzip2-devel clang-tools-extra gflags
 
 git clone -b v6.11.4 https://github.com/facebook/rocksdb
 cd rocksdb
-make -j 16 shared_lib
+DISABLE_WARNING_AS_ERROR=1 make -j 16 shared_lib
 sudo make install-shared
 ```
 
