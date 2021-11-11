@@ -86,7 +86,7 @@ endif (ENABLE_JEMALLOC)
 # On macOS, search Homebrew for keg-only versions of OpenSSL
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     execute_process(
-        COMMAND brew --prefix OpenSSL
+        COMMAND brew --prefix OpenSSL@1.1
         RESULT_VARIABLE BREW_OPENSSL
         OUTPUT_VARIABLE BREW_OPENSSL_PREFIX
         OUTPUT_STRIP_TRAILING_WHITESPACE

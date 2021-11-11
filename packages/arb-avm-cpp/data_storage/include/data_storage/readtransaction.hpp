@@ -126,7 +126,7 @@ class ReadTransaction {
 
 class ReadConsistentTransaction : public ReadTransaction {
    protected:
-    ReadConsistentTransaction(std::shared_ptr<DataStorage> store)
+    explicit ReadConsistentTransaction(std::shared_ptr<DataStorage> store)
         : ReadTransaction(std::move(store)) {}
 };
 

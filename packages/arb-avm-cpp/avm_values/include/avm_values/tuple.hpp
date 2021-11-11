@@ -58,7 +58,7 @@ class Tuple {
         return getHashPreImage().getSize();
     }
 
-    static Tuple createSizedTuple(const size_t size);
+    static Tuple createSizedTuple(size_t size);
 
     static Tuple createTuple(std::vector<value> values);
 

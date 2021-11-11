@@ -19,6 +19,7 @@ package dev
 import (
 	"context"
 	"errors"
+	"math"
 	"math/big"
 	"testing"
 
@@ -168,7 +169,7 @@ func TestTransfer(t *testing.T) {
 				Payment:     big.NewInt(0),
 				Data:        transferABI.Methods["send3"].ID,
 			},
-		}, common.NewAddressFromEth(senderAuth.From))
+		}, common.NewAddressFromEth(senderAuth.From), math.MaxUint64)
 		test.FailIfError(t, err)
 		trace, err := getEVMTrace(debugPrints)
 		test.FailIfError(t, err)

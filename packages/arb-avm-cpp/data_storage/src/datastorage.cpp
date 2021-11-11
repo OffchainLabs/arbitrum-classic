@@ -115,19 +115,31 @@ DataStorage::DataStorage(const std::string& db_path) {
     }
 }
 
+DataStorage::~DataStorage() {
+    auto status = closeDb();
+    if (!status.ok()) {
+        std::cerr << "error closing DataStorage: " << status.ToString()
+                  << std::endl;
+    }
+}
+
 rocksdb::Status DataStorage::flushNextColumn() {
     next_column_to_flush = (next_column_to_flush + 1) % column_handles.size();
     return txn_db->Flush(flush_options, column_handles[next_column_to_flush]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
-    column_handles.clear();
     if (txn_db) {
+        for (auto handle : column_handles) {
+            auto status = txn_db->DestroyColumnFamilyHandle(handle);
+            if (!status.ok()) {
+                return status;
+            }
+        }
         auto s = txn_db->Close();
         txn_db.reset();
         return s;
     }
-
     return rocksdb::Status::OK();
 }
 
@@ -159,7 +171,8 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
         txn_db->Get(read_opts, column_handles[STATE_COLUMN], key, &value);
     if (status.IsNotFound()) {
         secret_hash_seed.resize(32);
-        RAND_bytes(secret_hash_seed.data(), secret_hash_seed.size());
+        RAND_bytes(secret_hash_seed.data(),
+                   static_cast<int>(secret_hash_seed.size()));
         rocksdb::WriteOptions write_opts;
         rocksdb::Slice value_slice(
             reinterpret_cast<const char*>(secret_hash_seed.data()),
