@@ -35,6 +35,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var logger zerolog.Logger
@@ -51,6 +55,13 @@ func init() {
 	http.DefaultServeMux = http.NewServeMux()
 }
 
+var (
+	liveWsConnections = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "feed_live_ws_connections",
+		Help: "The number of live websocket client connections to this relay",
+	})
+)
+
 func main() {
 	// Enable line numbers in logging
 	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
@@ -62,6 +73,9 @@ func main() {
 
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
+
+	http.Handle("/metrics", promhttp.Handler())
+	go http.ListenAndServe(":2112", nil)
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running relay")
@@ -151,6 +165,7 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 		}()
 		recentFeedItemsCleanup := time.NewTicker(RECENT_FEED_ITEM_TTL)
 		defer recentFeedItemsCleanup.Stop()
+		metricsUpdateTimer := time.NewTicker(time.Second * 5)
 		for {
 			select {
 			case <-ctx.Done():
@@ -180,6 +195,8 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 						delete(recentFeedItems, acc)
 					}
 				}
+			case <-metricsUpdateTimer.C:
+				liveWsConnections.Set(float64(ar.broadcaster.ClientCount()))
 			}
 		}
 	}()
