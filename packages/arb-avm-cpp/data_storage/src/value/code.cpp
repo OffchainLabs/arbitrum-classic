@@ -102,7 +102,8 @@ struct CodeSegmentMetadata {
         return {ref_count, op_count, hash_count, chunk_count};
     }
 
-    std::array<unsigned char, metadata_value_size> toData() const {
+    [[nodiscard]] std::array<unsigned char, metadata_value_size> toData()
+        const {
         std::array<unsigned char, metadata_value_size> value{};
         auto it = value.begin();
 
@@ -162,7 +163,7 @@ void extractRawHashes(std::vector<uint256_t>& hashes, const char*& ptr) {
 }
 
 struct RawCodeSegmentData {
-    CodeSegmentMetadata metadata;
+    CodeSegmentMetadata metadata{};
     std::vector<unsigned char> op_data;
     std::vector<unsigned char> hash_data;
 };
@@ -175,11 +176,11 @@ RawCodeSegmentData prepareToSaveCodeSegment(
     uint64_t segment_id = snapshot.segmentID();
     auto key = segment_metadata_key(segment_id);
     CodeSegmentMetadata metadata{};
-    rocksdb::PinnableSlice val;
-    auto s = tx.refCountedGet(vecToSlice(key), &val);
+    rocksdb::PinnableSlice slice;
+    auto s = tx.refCountedGet(vecToSlice(key), &slice);
     if (s.ok()) {
-        metadata = CodeSegmentMetadata::load(val);
-        val.Reset();
+        metadata = CodeSegmentMetadata::load(slice);
+        slice.Reset();
     }
 
     if (metadata.op_count >= snapshot.op_count) {
@@ -447,7 +448,7 @@ rocksdb::Status deleteCode(ReadWriteTransaction& tx,
             }
             for (uint64_t i = 0; i < metadata.chunk_count; i++) {
                 auto chunk_op_key = segment_op_chunk_key(item.first, i);
-                auto s = tx.refCountedDelete(vecToSlice(chunk_op_key));
+                s = tx.refCountedDelete(vecToSlice(chunk_op_key));
                 if (!s.ok()) {
                     return s;
                 }

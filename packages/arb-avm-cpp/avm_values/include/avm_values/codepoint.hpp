@@ -28,7 +28,7 @@ struct Operation {
     OpCode opcode;
     std::unique_ptr<value> immediate;
 
-    Operation(OpCode opcode_) : opcode(opcode_) {}
+    explicit Operation(OpCode opcode_) : opcode(opcode_) {}
     Operation(OpCode opcode_, value val);
 
     Operation(const Operation& op) : opcode(op.opcode) {
@@ -49,8 +49,6 @@ bool operator!=(const Operation& val1, const Operation& val2);
 
 std::ostream& operator<<(std::ostream& os, const Operation& val);
 
-extern uint64_t pc_default;
-
 struct CodePoint {
     Operation op;
     uint256_t nextHash;
@@ -58,7 +56,7 @@ struct CodePoint {
     CodePoint(Operation op_, uint256_t nextHash_)
         : op(std::move(op_)), nextHash(nextHash_) {}
 
-    bool isError() const {
+    [[nodiscard]] bool isError() const {
         return nextHash == 0 && op == Operation{static_cast<OpCode>(0)};
     }
 };

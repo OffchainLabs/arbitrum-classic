@@ -68,7 +68,7 @@ T parseBuffer(const char* buf, int& len) {
     buf += 1;
     if (depth == 0) {
         len += RawBuffer::leaf_size;
-        const unsigned char* data = reinterpret_cast<const unsigned char*>(buf);
+        const auto* data = reinterpret_cast<const unsigned char*>(buf);
         RawBuffer::LeafData leaf;
         std::copy(data, data + RawBuffer::leaf_size, leaf.begin());
         return Buffer{leaf};
@@ -133,8 +133,7 @@ ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
                         "can't get tuple value with invalid type");
                 }
                 // Before continuing with the parent, fill in this tuple first
-                tuple_stack.push_back(
-                    std::make_pair(ParsedTupValVector(), inner_count));
+                tuple_stack.emplace_back(ParsedTupValVector(), inner_count);
                 // Don't attempt to put a value in this tuple yet
                 continue;
             }
@@ -336,7 +335,7 @@ GetResults processVal(const ReadTransaction& tx,
                       const UnloadedValue& val_info,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>& segment_ids,
-                      const uint32_t,
+                      uint32_t,
                       ValueCache& val_cache,
                       bool lazy_load);
 
@@ -344,13 +343,13 @@ GetResults processVal(const ReadTransaction& tx,
                       const ParsedBuffer& val,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
-                      const uint32_t reference_count,
+                      uint32_t reference_count,
                       ValueCache& val_cache,
                       bool lazy_load);
 
 GetResults getStoredValue(const ReadTransaction& tx,
                           const UnloadedValue& val_info) {
-    std::array<unsigned char, 32> hash_key;
+    std::array<unsigned char, 32> hash_key{};
     marshal_uint256_t(val_info.hash, hash_key);
     auto key = vecToSlice(hash_key);
     auto results = getRefCountedData(tx, key);
@@ -416,10 +415,11 @@ Buffer processBuffer(const ReadTransaction& tx,
         if (!results.status.ok()) {
             std::cerr << "Error loading buffer record "
                       << static_cast<uint64_t>(val_hash.hash) << std::endl;
-            return Buffer();
+            return {};
         }
-        auto buf = reinterpret_cast<const char*>(results.stored_value.data());
-        auto record = parseRecord(buf);
+        auto record_string =
+            reinterpret_cast<const char*>(results.stored_value.data());
+        auto record = parseRecord(record_string);
 
         if (std::holds_alternative<Buffer>(record)) {
             Buffer buf = std::get<Buffer>(record);
@@ -433,7 +433,7 @@ Buffer processBuffer(const ReadTransaction& tx,
             vec.push_back(buf);
         } else {
             std::cerr << "Error loading buffer from record" << std::endl;
-            return Buffer();
+            return {};
         }
     }
 

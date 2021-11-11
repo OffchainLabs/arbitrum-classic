@@ -26,8 +26,16 @@ type EthClient struct {
 }
 
 func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
+	mode := NormalMode
+	if ganacheMode {
+		mode = GanacheMode
+	}
+	config := ServerConfig{
+		Mode:          mode,
+		MaxCallAVMGas: DefaultMaxAVMGas,
+	}
 	return &EthClient{
-		srv:    NewServer(srv, ganacheMode, nil),
+		srv:    NewServer(srv, config, nil),
 		events: filters.NewEventSystem(srv, false),
 		filter: filters.NewPublicFilterAPI(srv, false, 2*time.Minute),
 	}
