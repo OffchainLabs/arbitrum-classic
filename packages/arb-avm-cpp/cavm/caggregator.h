@@ -19,7 +19,7 @@
 
 #include "ctypes.h"
 
-#include <cstdio>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {

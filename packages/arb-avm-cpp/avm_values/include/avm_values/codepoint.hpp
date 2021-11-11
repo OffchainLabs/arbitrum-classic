@@ -29,7 +29,7 @@ struct Operation {
     std::unique_ptr<value> immediate;
 
     explicit Operation(OpCode opcode_) : opcode(opcode_) {}
-    Operation(OpCode opcode_, const value& val);
+    Operation(OpCode opcode_, value val);
 
     Operation(const Operation& op) : opcode(op.opcode) {
         if (op.immediate) {
