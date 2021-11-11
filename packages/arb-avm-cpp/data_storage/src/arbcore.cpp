@@ -39,8 +39,8 @@
 
 #ifdef __linux__
 #include <execinfo.h>
-#include <signal.h>
 #include <sys/prctl.h>
+#include <csignal>
 #endif
 
 namespace {
@@ -1542,7 +1542,6 @@ ValueResult<uint256_t> ArbCore::getSequencerBlockNumberAt(
     auto it = tx.sequencerBatchItemGetIterator(&first_key_slice);
     it->Seek(first_key_slice);
 
-    std::vector<std::vector<unsigned char>> ret;
     while (it->Valid()) {
         auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
         auto value_ptr =

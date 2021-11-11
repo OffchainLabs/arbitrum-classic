@@ -34,8 +34,8 @@ struct CodePointRef {
         return *this;
     }
 
-    CodePointRef operator+(uint64_t i) { return {segment, pc - i}; }
-    CodePointRef operator-(uint64_t i) { return {segment, pc + i}; }
+    CodePointRef operator+(uint64_t i) const { return {segment, pc - i}; }
+    CodePointRef operator-(uint64_t i) const { return {segment, pc + i}; }
 
     friend bool operator==(CodePointRef val1, CodePointRef val2) {
         return std::tie(val1.segment, val1.pc) ==
@@ -66,7 +66,7 @@ struct CodePointStub {
 
     void marshal(std::vector<unsigned char>& buf) const;
 
-    bool is_error() const;
+    [[nodiscard]] bool is_error() const;
 };
 
 inline uint256_t hash(const CodePointStub& cp) {
