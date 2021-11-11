@@ -39,8 +39,8 @@
 
 #ifdef __linux__
 #include <execinfo.h>
-#include <signal.h>
 #include <sys/prctl.h>
+#include <csignal>
 #endif
 
 namespace {
@@ -208,7 +208,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         // Reset database for profile testing
         status =
             reorgToL1Block(coreConfig.test_reorg_to_l1_block, false, cache);
-    } else if (coreConfig.test_reorg_to_l1_block != 0) {
+    } else if (coreConfig.test_reorg_to_l2_block != 0) {
         // Reset database for profile testing
         status =
             reorgToL2Block(coreConfig.test_reorg_to_l2_block, false, cache);
@@ -1542,7 +1542,6 @@ ValueResult<uint256_t> ArbCore::getSequencerBlockNumberAt(
     auto it = tx.sequencerBatchItemGetIterator(&first_key_slice);
     it->Seek(first_key_slice);
 
-    std::vector<std::vector<unsigned char>> ret;
     while (it->Valid()) {
         auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
         auto value_ptr =
@@ -2348,7 +2347,7 @@ ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
     for (auto& raw_message : raw_result.data) {
         auto message = extractInboxMessage(raw_message.message);
         message.inbox_sequence_number = raw_message.sequence_number;
-        messages.emplace_back(message, raw_message.accumulator);
+        messages.emplace_back(std::move(message), raw_message.accumulator);
     }
 
     return {rocksdb::Status::OK(), messages};

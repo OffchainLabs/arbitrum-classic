@@ -339,7 +339,11 @@ func startup() error {
 	}
 
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, rpcMode, nil, web3InboxReaderRef)
+	serverConfig := web3.ServerConfig{
+		Mode:          rpcMode,
+		MaxCallAVMGas: config.Node.RPC.MaxCallGas * 100, // Multiply by 100 for arb gas to avm gas conversion
+	}
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, nil, web3InboxReaderRef)
 	if err != nil {
 		return err
 	}

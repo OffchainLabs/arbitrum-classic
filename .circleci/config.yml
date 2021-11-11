@@ -190,7 +190,7 @@ jobs:
             - ./project/packages/arb-avm-cpp/build/*
   cpp-avm-asan:
     docker:
-      - image: offchainlabs/cpp-base:0.3.6
+      - image: offchainlabs/cpp-asan-base:0.3.6
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -210,7 +210,7 @@ jobs:
       - run:
           name: Test
           command: |
-            ASAN_OPTIONS=detect_leaks=0 ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
@@ -218,7 +218,7 @@ jobs:
 
   cpp-avm-tsan:
     docker:
-      - image: offchainlabs/cpp-base:0.3.6
+      - image: offchainlabs/cpp-tsan-base:0.3.6
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -238,8 +238,7 @@ jobs:
       - run:
           name: Test
           command: |
-            echo 'race:rocksdb::Slice::compare' > /tmp/tsan-suppressions
-            TSAN_OPTIONS=suppressions=/tmp/tsan-suppressions ./bin/avm_tests
+            ./bin/avm_tests
           working_directory: /home/user/project/packages/arb-avm-cpp/debug-tsan
       - run: codecovbash -R /home/user/project -c -F unit
       - store_test_results:
