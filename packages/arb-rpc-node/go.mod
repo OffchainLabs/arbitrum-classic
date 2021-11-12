@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/c-bata/go-prompt v0.2.6
-	github.com/ethereum/go-ethereum v1.10.12
+	github.com/ethereum/go-ethereum v1.10.13-0.20211112145008-abc74a5ffeb7
 	github.com/ethersphere/bee v0.6.2
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/gorilla/handlers v1.5.1
