@@ -363,11 +363,12 @@ func startup() error {
 	}()
 
 	if config.Node.Forwarder.Target != "" {
-		clnt, err := ethclient.DialContext(ctx, config.Node.Forwarder.Target)
-		if err != nil {
-			return err
-		}
 		go func() {
+			clnt, err := ethclient.DialContext(ctx, config.Node.Forwarder.Target)
+			if err != nil {
+				log.Warn().Err(err).Msg("failed to connect to forward target")
+				clnt = nil
+			}
 			failCount := 0
 			for {
 				var logFunc *zerolog.Event
