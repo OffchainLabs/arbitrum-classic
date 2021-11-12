@@ -382,6 +382,7 @@ func startup() error {
 					clnt, err = ethclient.DialContext(ctx, config.Node.Forwarder.Target)
 					if err != nil {
 						log.Warn().Err(err).Msg("failed to connect to forward target")
+						clnt = nil
 					}
 				} else {
 					if !valid {
@@ -407,6 +408,9 @@ func startup() error {
 }
 
 func checkBlockHash(ctx context.Context, clnt *ethclient.Client, db *txdb.TxDB, logFunc *zerolog.Event) (bool, error) {
+	if clnt == nil {
+		return false, errors.New("need a client to check block hash")
+	}
 	blockCount, err := db.BlockCount()
 	if err != nil {
 		return false, err
