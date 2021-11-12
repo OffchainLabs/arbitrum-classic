@@ -67,7 +67,7 @@ struct MachineMessage {
     uint256_t accumulator;
 
     MachineMessage() = default;
-    MachineMessage(InboxMessage message_, uint256_t accumulator_)
+    MachineMessage(InboxMessage&& message_, uint256_t accumulator_)
         : message(std::move(message_)), accumulator(accumulator_) {}
 
     void serializeImpl(std::vector<unsigned char>& state_data_vector) const;

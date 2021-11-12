@@ -21,8 +21,8 @@
 
 struct UnloadedValue {
     ValueTypes type;
-    uint256_t hash;
-    uint256_t value_size;
+    uint256_t hash{};
+    uint256_t value_size{};
 };
 
 inline uint256_t hash(const UnloadedValue& uv) {
