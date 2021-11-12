@@ -3,7 +3,7 @@ module github.com/offchainlabs/arbitrum/packages/arb-node-core
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.10.12
+	github.com/ethereum/go-ethereum v1.10.13-0.20211112145008-abc74a5ffeb7
 	github.com/heptiolabs/healthcheck v0.0.0-20180807145615-6ff867650f40
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.8.0
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.8.0
