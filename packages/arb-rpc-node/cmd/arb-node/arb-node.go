@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	golog "log"
 	"math/big"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -53,6 +55,12 @@ var logger zerolog.Logger
 var pprofMux *http.ServeMux
 
 const largeChannelBuffer = 200
+
+const (
+	failLimit            = 6
+	checkFrequency       = time.Second * 30
+	blockCheckCountDelay = 5
+)
 
 func init() {
 	pprofMux = http.DefaultServeMux
@@ -354,6 +362,36 @@ func startup() error {
 		}
 	}()
 
+	if config.Node.Forwarder.Target != "" {
+		clnt, err := ethclient.DialContext(ctx, config.Node.Forwarder.Target)
+		if err != nil {
+			return err
+		}
+		go func() {
+			failCount := 0
+			for {
+				var logFunc *zerolog.Event
+				if failCount >= failLimit {
+					logFunc = logger.Fatal()
+				} else {
+					logFunc = logger.Warn()
+				}
+				valid, err := checkBlockHash(ctx, clnt, db, logFunc)
+				if err != nil {
+					log.Warn().Err(err).Msg("failed to lookup blockhash for consistency check")
+				} else {
+					if !valid {
+						failCount++
+					} else {
+						failCount = 0
+					}
+				}
+				time.Sleep(checkFrequency)
+			}
+		}()
+
+	}
+
 	select {
 	case err := <-txDBErrChan:
 		return err
@@ -362,4 +400,31 @@ func startup() error {
 	case <-cancelChan:
 		return nil
 	}
+}
+
+func checkBlockHash(ctx context.Context, clnt *ethclient.Client, db *txdb.TxDB, logFunc *zerolog.Event) (bool, error) {
+	blockCount, err := db.BlockCount()
+	if err != nil {
+		return false, err
+	}
+	if blockCount < blockCheckCountDelay {
+		return true, nil
+	}
+	// Use a small block delay here in case the upstream node isn't full caught up
+	block, err := db.GetBlock(blockCount - blockCheckCountDelay)
+	if err != nil {
+		return false, err
+	}
+	remoteHeader, err := clnt.HeaderByNumber(ctx, block.Header.Number)
+	if err != nil {
+		return false, err
+	}
+	if remoteHeader.Hash() == block.Header.Hash() {
+		return true, nil
+	}
+	logFunc.
+		Str("remote", remoteHeader.Hash().Hex()).
+		Str("local", block.Header.Hash().Hex()).
+		Msg("mismatched block header")
+	return false, nil
 }
