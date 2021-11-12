@@ -111,9 +111,15 @@ type FeedOutput struct {
 	Workers       int           `koanf:"workers"`
 }
 
+type FeedMetrics struct {
+	Enabled bool `koanf:"enabled"`
+	Port    int  `koanf:"port"`
+}
+
 type Feed struct {
-	Input  FeedInput  `koanf:"input"`
-	Output FeedOutput `koanf:"output"`
+	Input   FeedInput   `koanf:"input"`
+	Output  FeedOutput  `koanf:"output"`
+	Metrics FeedMetrics `koanf:"metrics"`
 }
 
 type Healthcheck struct {
@@ -712,6 +718,8 @@ func AddFeedOutputOptions(f *flag.FlagSet) {
 	f.Duration("feed.output.ping", 5*time.Second, "duration for ping interval")
 	f.Duration("feed.output.client-timeout", 15*time.Second, "duraction to wait before timing out connections to client")
 	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
+	f.Bool("feed.metrics.enabled", true, "Enable the Prometheus metrics http server.")
+	f.Int("feed.metrics.port", 9090, "Port to bind the Prometheus metrics server to.")
 }
 
 func AddForwarderTarget(f *flag.FlagSet) {

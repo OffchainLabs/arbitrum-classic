@@ -21,6 +21,7 @@ import (
 	"fmt"
 	golog "log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,9 +75,6 @@ func main() {
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
 
-	http.Handle("/metrics", promhttp.Handler())
-	go http.ListenAndServe(":2112", nil)
-
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running relay")
 	}
@@ -108,6 +106,14 @@ func startup() error {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
+		}()
+	}
+
+	if config.Feed.Metrics.Enabled {
+		http.Handle("/metrics", promhttp.Handler())
+		go func() {
+			err := http.ListenAndServe(":"+strconv.Itoa(config.Feed.Metrics.Port), nil)
+			log.Error().Err(err).Msg("metrics server failed")
 		}()
 	}
 
@@ -143,6 +149,7 @@ func NewArbRelay(settings configuration.Feed) *ArbRelay {
 }
 
 const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
+const FEED_METRICS_PUBLISH_INTERVAL time.Duration = time.Second * 5
 
 func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 	done := make(chan bool)
@@ -165,7 +172,7 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 		}()
 		recentFeedItemsCleanup := time.NewTicker(RECENT_FEED_ITEM_TTL)
 		defer recentFeedItemsCleanup.Stop()
-		metricsUpdateTimer := time.NewTicker(time.Second * 5)
+		metricsUpdateTimer := time.NewTicker(FEED_METRICS_PUBLISH_INTERVAL)
 		for {
 			select {
 			case <-ctx.Done():
