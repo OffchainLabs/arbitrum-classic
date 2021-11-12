@@ -79,12 +79,6 @@ struct AssertionContext {
         return inbox_messages[inbox_messages_consumed++];
     }
 
-    // peekInbox assumes that the number of messages already consumed is less
-    // than the number of messages in the inbox
-    [[nodiscard]] const MachineMessage& peekInbox() const {
-        return inbox_messages[inbox_messages_consumed];
-    }
-
     [[nodiscard]] bool inboxEmpty() const {
         return inbox_messages_consumed >= inbox_messages.size();
     }

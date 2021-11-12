@@ -77,9 +77,9 @@ func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.Bloc
 	if err != nil {
 		return nil, err
 	}
-	from, msg := buildCallMsg(callArgs, t.s.maxCallGas)
+	from, msg := buildCallMsg(callArgs)
 
-	callRes, debugPrints, err := snap.Call(msg, from)
+	callRes, debugPrints, err := snap.Call(msg, from, t.s.maxAVMGas)
 	if err != nil {
 		return nil, err
 	}

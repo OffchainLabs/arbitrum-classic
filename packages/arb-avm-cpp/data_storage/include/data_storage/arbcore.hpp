@@ -224,7 +224,7 @@ class ArbCore {
         ValueCache& value_cache,
         bool lazy_load) const;
 
-    ValueLoader makeValueLoader() const;
+    [[nodiscard]] ValueLoader makeValueLoader() const;
 
    public:
     // To be deprecated, use checkpoints instead

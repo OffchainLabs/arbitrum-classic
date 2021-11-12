@@ -356,7 +356,9 @@ func startup() error {
 	plugins := make(map[string]interface{})
 	plugins["evm"] = dev.NewEVM(backend)
 
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, web3.ServerConfig{Mode: web3.GanacheMode}, plugins, nil)
+	rpcConfig := web3.DefaultConfig
+	rpcConfig.Mode = web3.GanacheMode
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, rpcConfig, plugins, nil)
 	if err != nil {
 		return err
 	}

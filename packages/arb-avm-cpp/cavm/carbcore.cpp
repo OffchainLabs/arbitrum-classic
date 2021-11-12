@@ -350,7 +350,7 @@ int arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr, ByteSlice data) {
         if (!result.status.ok()) {
             return -1;
         }
-        return static_cast<int64_t>(result.data);
+        return static_cast<int>(result.data);
     } catch (const std::exception& e) {
         return -1;
     }

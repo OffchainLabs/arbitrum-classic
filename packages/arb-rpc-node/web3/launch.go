@@ -38,8 +38,9 @@ const (
 )
 
 type ServerConfig struct {
-	Mode    RpcMode
-	Tracing bool
+	Mode          RpcMode
+	MaxCallAVMGas uint64
+	Tracing       bool
 }
 
 func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, config ServerConfig, plugins map[string]interface{}, inboxReader *monitor.InboxReader) (*rpc.Server, error) {
@@ -50,7 +51,7 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		sequencerInboxWatcher = inboxReader.GetSequencerInboxWatcher()
 	}
 
-	ethServer := NewServer(server, config.Mode == GanacheMode, sequencerInboxWatcher)
+	ethServer := NewServer(server, config, sequencerInboxWatcher)
 	forwarderServer := NewForwarderServer(server, ethServer, config.Mode)
 
 	if err := s.RegisterName("eth", forwarderServer); err != nil {

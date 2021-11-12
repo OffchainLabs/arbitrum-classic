@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"crypto/ecdsa"
+	"math"
 	"math/big"
 	"strings"
 	"testing"
@@ -148,7 +149,7 @@ func TestCallTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(7)) != 0 {
 		t.Errorf("Storage was updated %X", callRes.ReturnData)
@@ -162,7 +163,7 @@ func TestCallTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(call2Res.ReturnData).Cmp(big.NewInt(5)) != 0 {
 		t.Errorf("Storage was updated")
@@ -176,7 +177,7 @@ func TestCallTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode(arbostestcontracts.SimpleBin),
 		},
-	}, sender)
+	}, sender, math.MaxUint64)
 	failIfError(t, err)
 }
 
@@ -220,7 +221,7 @@ func TestContractTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(6)) != 0 {
 		t.Errorf("Storage wasn't updated %X", callRes.ReturnData)
@@ -234,7 +235,7 @@ func TestContractTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes2.ReturnData).Cmp(big.NewInt(8)) != 0 {
 		t.Errorf("Storage wasn't updated")
