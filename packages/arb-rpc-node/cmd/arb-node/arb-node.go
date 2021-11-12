@@ -379,6 +379,10 @@ func startup() error {
 				valid, err := checkBlockHash(ctx, clnt, db, logFunc)
 				if err != nil {
 					log.Warn().Err(err).Msg("failed to lookup blockhash for consistency check")
+					clnt, err = ethclient.DialContext(ctx, config.Node.Forwarder.Target)
+					if err != nil {
+						log.Warn().Err(err).Msg("failed to connect to forward target")
+					}
 				} else {
 					if !valid {
 						failCount++
