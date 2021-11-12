@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface ValidatorWalletCreatorInterface extends ethers.utils.Interface {
   functions: {
@@ -71,6 +71,20 @@ interface ValidatorWalletCreatorInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TemplateUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WalletCreated'): EventFragment
 }
+
+export type OwnershipTransferredEvent = TypedEvent<
+  [string, string] & { previousOwner: string; newOwner: string }
+>
+
+export type TemplateUpdatedEvent = TypedEvent<[] & {}>
+
+export type WalletCreatedEvent = TypedEvent<
+  [string, string, string] & {
+    walletAddress: string
+    userAddress: string
+    adminProxy: string
+  }
+>
 
 export class ValidatorWalletCreator extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -179,6 +193,14 @@ export class ValidatorWalletCreator extends BaseContract {
   }
 
   filters: {
+    'OwnershipTransferred(address,address)'(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >
+
     OwnershipTransferred(
       previousOwner?: string | null,
       newOwner?: string | null
@@ -187,7 +209,18 @@ export class ValidatorWalletCreator extends BaseContract {
       { previousOwner: string; newOwner: string }
     >
 
+    'TemplateUpdated()'(): TypedEventFilter<[], {}>
+
     TemplateUpdated(): TypedEventFilter<[], {}>
+
+    'WalletCreated(address,address,address)'(
+      walletAddress?: string | null,
+      userAddress?: string | null,
+      adminProxy?: null
+    ): TypedEventFilter<
+      [string, string, string],
+      { walletAddress: string; userAddress: string; adminProxy: string }
+    >
 
     WalletCreated(
       walletAddress?: string | null,

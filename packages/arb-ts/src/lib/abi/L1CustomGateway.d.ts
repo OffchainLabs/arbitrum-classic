@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface L1CustomGatewayInterface extends ethers.utils.Interface {
   functions: {
@@ -177,6 +177,50 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'WithdrawalFinalized'): EventFragment
 }
 
+export type DepositInitiatedEvent = TypedEvent<
+  [string, string, string, BigNumber, BigNumber] & {
+    l1Token: string
+    _from: string
+    _to: string
+    _sequenceNumber: BigNumber
+    _amount: BigNumber
+  }
+>
+
+export type TokenSetEvent = TypedEvent<
+  [string, string] & { l1Address: string; l2Address: string }
+>
+
+export type TxToL2Event = TypedEvent<
+  [string, string, BigNumber, string] & {
+    _from: string
+    _to: string
+    _seqNum: BigNumber
+    _data: string
+  }
+>
+
+export type WithdrawRedirectedEvent = TypedEvent<
+  [string, string, BigNumber, string, string, boolean] & {
+    from: string
+    to: string
+    exitNum: BigNumber
+    newData: string
+    data: string
+    madeExternalCall: boolean
+  }
+>
+
+export type WithdrawalFinalizedEvent = TypedEvent<
+  [string, string, string, BigNumber, BigNumber] & {
+    l1Token: string
+    _from: string
+    _to: string
+    _exitNum: BigNumber
+    _amount: BigNumber
+  }
+>
+
 export class L1CustomGateway extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
@@ -308,11 +352,11 @@ export class L1CustomGateway extends BaseContract {
     >
 
     'registerTokenToL2(address,uint256,uint256,uint256,address)'(
-      arg0: string,
-      arg1: BigNumberish,
-      arg2: BigNumberish,
-      arg3: BigNumberish,
-      arg4: string,
+      _l2Address: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -425,11 +469,11 @@ export class L1CustomGateway extends BaseContract {
   >
 
   'registerTokenToL2(address,uint256,uint256,uint256,address)'(
-    arg0: string,
-    arg1: BigNumberish,
-    arg2: BigNumberish,
-    arg3: BigNumberish,
-    arg4: string,
+    _l2Address: string,
+    _maxGas: BigNumberish,
+    _gasPriceBid: BigNumberish,
+    _maxSubmissionCost: BigNumberish,
+    _creditBackAddress: string,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -540,11 +584,11 @@ export class L1CustomGateway extends BaseContract {
     >
 
     'registerTokenToL2(address,uint256,uint256,uint256,address)'(
-      arg0: string,
-      arg1: BigNumberish,
-      arg2: BigNumberish,
-      arg3: BigNumberish,
-      arg4: string,
+      _l2Address: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -571,6 +615,23 @@ export class L1CustomGateway extends BaseContract {
   }
 
   filters: {
+    'DepositInitiated(address,address,address,uint256,uint256)'(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _sequenceNumber?: BigNumberish | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _sequenceNumber: BigNumber
+        _amount: BigNumber
+      }
+    >
+
     DepositInitiated(
       l1Token?: null,
       _from?: string | null,
@@ -588,12 +649,30 @@ export class L1CustomGateway extends BaseContract {
       }
     >
 
+    'TokenSet(address,address)'(
+      l1Address?: string | null,
+      l2Address?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { l1Address: string; l2Address: string }
+    >
+
     TokenSet(
       l1Address?: string | null,
       l2Address?: string | null
     ): TypedEventFilter<
       [string, string],
       { l1Address: string; l2Address: string }
+    >
+
+    'TxToL2(address,address,uint256,bytes)'(
+      _from?: string | null,
+      _to?: string | null,
+      _seqNum?: BigNumberish | null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string],
+      { _from: string; _to: string; _seqNum: BigNumber; _data: string }
     >
 
     TxToL2(
@@ -604,6 +683,25 @@ export class L1CustomGateway extends BaseContract {
     ): TypedEventFilter<
       [string, string, BigNumber, string],
       { _from: string; _to: string; _seqNum: BigNumber; _data: string }
+    >
+
+    'WithdrawRedirected(address,address,uint256,bytes,bytes,bool)'(
+      from?: string | null,
+      to?: string | null,
+      exitNum?: BigNumberish | null,
+      newData?: null,
+      data?: null,
+      madeExternalCall?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string, string, boolean],
+      {
+        from: string
+        to: string
+        exitNum: BigNumber
+        newData: string
+        data: string
+        madeExternalCall: boolean
+      }
     >
 
     WithdrawRedirected(
@@ -622,6 +720,23 @@ export class L1CustomGateway extends BaseContract {
         newData: string
         data: string
         madeExternalCall: boolean
+      }
+    >
+
+    'WithdrawalFinalized(address,address,address,uint256,uint256)'(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _exitNum?: BigNumberish | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _exitNum: BigNumber
+        _amount: BigNumber
       }
     >
 
@@ -725,11 +840,11 @@ export class L1CustomGateway extends BaseContract {
     ): Promise<BigNumber>
 
     'registerTokenToL2(address,uint256,uint256,uint256,address)'(
-      arg0: string,
-      arg1: BigNumberish,
-      arg2: BigNumberish,
-      arg3: BigNumberish,
-      arg4: string,
+      _l2Address: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -840,11 +955,11 @@ export class L1CustomGateway extends BaseContract {
     ): Promise<PopulatedTransaction>
 
     'registerTokenToL2(address,uint256,uint256,uint256,address)'(
-      arg0: string,
-      arg1: BigNumberish,
-      arg2: BigNumberish,
-      arg3: BigNumberish,
-      arg4: string,
+      _l2Address: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 

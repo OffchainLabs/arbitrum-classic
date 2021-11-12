@@ -3,10 +3,10 @@ package challenge
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func distortHash(hash common.Hash) common.Hash {
@@ -86,7 +86,7 @@ func (c FaultyCore) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bo
 	}, nil
 }
 
-func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
+func (c FaultyCore) prepareCursor(executionCursor core.ExecutionCursor, maxGas *big.Int) (FaultyExecutionCursor, *big.Int, error, bool) {
 	faultyCursor := executionCursor.(FaultyExecutionCursor)
 	targetGas := new(big.Int).Add(executionCursor.TotalGasConsumed(), maxGas)
 	if c.config.StallMachineAt != nil && targetGas.Cmp(c.config.StallMachineAt) > 0 {
@@ -94,10 +94,26 @@ func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor,
 		maxGas = new(big.Int).Sub(targetGas, phantomGas)
 		faultyCursor.phantomGas.Set(phantomGas)
 		if maxGas.Cmp(big.NewInt(0)) <= 0 {
-			return nil
+			return FaultyExecutionCursor{}, nil, nil, true
 		}
 	}
+	return faultyCursor, maxGas, nil, false
+}
+
+func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
+	faultyCursor, maxGas, err, done := c.prepareCursor(executionCursor, maxGas)
+	if done {
+		return err
+	}
 	return c.ArbCore.AdvanceExecutionCursor(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup)
+}
+
+func (c FaultyCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error) {
+	faultyCursor, maxGas, err, done := c.prepareCursor(executionCursor, maxGas)
+	if done {
+		return nil, err
+	}
+	return c.ArbCore.AdvanceExecutionCursorWithTracing(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup, logNumber)
 }
 
 func (c FaultyCore) GetLastMachine() (machine.Machine, error) {

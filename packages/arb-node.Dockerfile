@@ -1,6 +1,6 @@
 ### --------------------------------------------------------------------
 ### Dockerfile
-### arb-validator
+### arb-node
 ### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ RUN cd arb-avm-cpp/build && \
     cmake .. && \
     cmake --build . -j $(nproc)
 
-FROM offchainlabs/backend-base:0.3.6 as arb-validator-builder
+FROM offchainlabs/backend-base:0.3.6 as arb-node-builder
 
 # Build dependencies
 COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
@@ -63,14 +63,14 @@ COPY --from=arb-avm-cpp /home/user/arb-avm-cpp/build/lib /home/user/arb-avm-cpp/
 COPY --from=arb-avm-cpp /home/user/arb-avm-cpp/cmachine/flags.go /home/user/arb-avm-cpp/cmachine/
 COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
 
-# Build arb-validator
+# Build arb-node
 RUN cd arb-node-core && go install -v ./cmd/arb-validator && go install -v ./cmd/arb-relay && \
     cd ../arb-rpc-node && go install -v ./cmd/arb-node && go install -v ./cmd/arb-dev-node
 
-FROM offchainlabs/cpp-base:0.3.6 as arb-validator
+FROM offchainlabs/dist-base:0.3.7 as arb-node
 # Export binary
 
-COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
+COPY --chown=user --from=arb-node-builder /home/user/go/bin /home/user/go/bin
 COPY --chown=user arb-os/arb_os/arbos.mexe /home/user/arb-os/arb_os/
 RUN mkdir -p /home/user/.arbitrum && \
     chown 1000:1000 /home/user/.arbitrum && \

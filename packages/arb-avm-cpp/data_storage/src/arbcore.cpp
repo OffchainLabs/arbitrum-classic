@@ -153,8 +153,8 @@ bool ArbCore::deliverMessages(
 }
 
 ValueLoader ArbCore::makeValueLoader() const {
-    return {std::make_unique<CoreValueLoader>(data_storage, core_code,
-                                              ValueCache{1, 0})};
+    return ValueLoader{std::make_unique<CoreValueLoader>(
+        data_storage, core_code, ValueCache{1, 0})};
 }
 
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
@@ -1255,8 +1255,8 @@ void ArbCore::operator()() {
                         last_machine->machine_state.output.arb_gas_used;
                     for (uint64_t i = 0; i < coreConfig.test_load_count; i++) {
                         std::cerr << "Loading machine " << i << std::endl;
-                        auto current_execution =
-                            getClosestExecutionCursor(tx, target_gas, true);
+                        auto current_execution = findCloserExecutionCursor(
+                            tx, std::nullopt, target_gas, true);
                         if (std::holds_alternative<rocksdb::Status>(
                                 current_execution)) {
                             std::cerr
@@ -1458,6 +1458,8 @@ ValueResult<std::vector<MachineEmission<value>>> ArbCore::getLogsNoLock(
     it->SeekToFirst();
     std::vector<MachineEmission<value>> logs;
     while (it->Valid()) {
+        auto key = it->key().data();
+        auto current_log_index = extractUint256(key);
         auto info = it->value().data();
         auto hash = extractUint256(info);
         auto val_result = getValue(tx, hash, valueCache, false);
@@ -1468,7 +1470,7 @@ ValueResult<std::vector<MachineEmission<value>>> ArbCore::getLogsNoLock(
         auto inbox_accumulator = extractUint256(info);
         auto inbox = InboxState{inbox_count, inbox_accumulator};
         auto val = std::move(std::get<CountedData<value>>(val_result).data);
-        logs.push_back(MachineEmission<value>{val, inbox});
+        logs.push_back(MachineEmission<value>{val, inbox, current_log_index});
         it->Next();
     }
 
@@ -2064,8 +2066,8 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     {
         ReadSnapshotTransaction tx(data_storage);
 
-        auto closest_checkpoint =
-            getClosestExecutionCursor(tx, total_gas_used, allow_slow_lookup);
+        auto closest_checkpoint = findCloserExecutionCursor(
+            tx, std::nullopt, total_gas_used, allow_slow_lookup);
         if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
             std::cerr << "No execution machine available" << std::endl;
             return {std::get<rocksdb::Status>(closest_checkpoint), nullptr};
@@ -2075,15 +2077,20 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
             std::get<ExecutionCursor>(closest_checkpoint));
     }
 
-    auto status = advanceExecutionCursorImpl(
+    auto result = advanceExecutionCursorImpl(
         *execution_cursor, total_gas_used, false,
-        coreConfig.message_process_count, allow_slow_lookup);
+        coreConfig.message_process_count, allow_slow_lookup, false, 0);
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        auto status = std::get<rocksdb::Status>(result);
+        if (!status.ok()) {
+            std::cerr << "Couldn't advance execution machine: "
+                      << status.ToString() << std::endl;
 
-    if (!status.ok()) {
-        std::cerr << "Couldn't advance execution machine" << std::endl;
+            return {status, nullptr};
+        }
     }
 
-    return {status, std::move(execution_cursor)};
+    return {rocksdb::Status::OK(), std::move(execution_cursor)};
 }
 
 rocksdb::Status ArbCore::advanceExecutionCursor(
@@ -2095,17 +2102,45 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     auto total_gas_used = current_gas + max_gas;
     {
         ReadSnapshotTransaction tx(data_storage);
-        auto status =
-            findCloserExecutionCursor(tx, execution_cursor, current_gas,
-                                      total_gas_used, allow_slow_lookup);
-        if (!status.ok()) {
-            return status;
+        auto result = findCloserExecutionCursor(
+            tx, std::move(execution_cursor), total_gas_used, allow_slow_lookup);
+        if (std::holds_alternative<rocksdb::Status>(result)) {
+            return std::get<rocksdb::Status>(result);
         }
+
+        execution_cursor = std::get<ExecutionCursor>(result);
     }
 
-    return advanceExecutionCursorImpl(
+    auto result = advanceExecutionCursorImpl(
         execution_cursor, total_gas_used, go_over_gas,
-        coreConfig.message_process_count, allow_slow_lookup);
+        coreConfig.message_process_count, allow_slow_lookup, false, 0);
+
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        return std::get<rocksdb::Status>(result);
+    }
+
+    return rocksdb::Status::OK();
+}
+
+ValueResult<std::vector<MachineEmission<value>>>
+ArbCore::advanceExecutionCursorWithTracing(ExecutionCursor& execution_cursor,
+                                           uint256_t max_gas,
+                                           bool go_over_gas,
+                                           bool allow_slow_lookup,
+                                           uint256_t log_number) {
+    auto current_gas = execution_cursor.getOutput().arb_gas_used;
+    auto total_gas_used = current_gas + max_gas;
+
+    auto result = advanceExecutionCursorImpl(
+        execution_cursor, total_gas_used, go_over_gas,
+        coreConfig.message_process_count, allow_slow_lookup, true, log_number);
+
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        return {std::get<rocksdb::Status>(result), {}};
+    }
+
+    return {rocksdb::Status::OK(),
+            std::get<std::vector<MachineEmission<value>>>(result)};
 }
 
 MachineState& resolveExecutionVariant(std::unique_ptr<Machine>& mach) {
@@ -2145,14 +2180,22 @@ std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachine(
     return takeExecutionCursorMachineImpl(tx, execution_cursor);
 }
 
-rocksdb::Status ArbCore::advanceExecutionCursorImpl(
-    ExecutionCursor& execution_cursor,
-    uint256_t total_gas_used,
-    bool go_over_gas,
-    size_t message_group_size,
-    bool allow_slow_lookup) {
+std::variant<rocksdb::Status, std::vector<MachineEmission<value>>>
+ArbCore::advanceExecutionCursorImpl(ExecutionCursor& execution_cursor,
+                                    uint256_t total_gas_used,
+                                    bool go_over_gas,
+                                    size_t message_group_size,
+                                    bool allow_slow_lookup,
+                                    bool save_debug_prints,
+                                    uint256_t debug_prints_log_number) {
+    if (save_debug_prints && debug_prints_log_number < 1) {
+        // Not valid
+        std::cerr << "Error: debug print 0 requested" << std::endl;
+        return rocksdb::Status::NotFound();
+    }
     auto handle_reorg = true;
     size_t reorg_attempts = 0;
+    std::vector<MachineEmission<value>> debug_prints;
     while (handle_reorg) {
         handle_reorg = false;
         if (reorg_attempts > 0) {
@@ -2218,6 +2261,25 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
             mach->machine_state.context = AssertionContext(execConfig);
             auto assertion = mach->run();
+            if (save_debug_prints) {
+                auto done = false;
+                auto desired_log_count = debug_prints_log_number + 1;
+                // Debug print is output before log_count is updated, so
+                // get debug prints annotated with previous log count but before
+                // desired log count.
+                for (const auto& debug_print : assertion.debug_prints) {
+                    if (debug_print.log_count == desired_log_count - 1) {
+                        debug_prints.push_back(debug_print);
+                    } else if (debug_print.log_count >= desired_log_count) {
+                        // All debug prints have been collected
+                        done = true;
+                    }
+                }
+
+                if (done) {
+                    break;
+                }
+            }
             if (assertion.gas_count == 0) {
                 break;
             }
@@ -2226,50 +2288,47 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
         if (handle_reorg) {
             ReadSnapshotTransaction tx(data_storage);
 
-            auto closest_checkpoint = getClosestExecutionCursor(
-                tx, total_gas_used, allow_slow_lookup);
+            auto closest_checkpoint = findCloserExecutionCursor(
+                tx, std::nullopt, total_gas_used, allow_slow_lookup);
             if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
                 std::cerr << "No execution machine available" << std::endl;
                 return std::get<rocksdb::Status>(closest_checkpoint);
             }
             execution_cursor =
                 std::move(std::get<ExecutionCursor>(closest_checkpoint));
+            debug_prints.clear();
         }
     }
 
     if (std::holds_alternative<std::unique_ptr<Machine>>(
             execution_cursor.machine)) {
+        // Add current machine to cache
         auto& mach =
             std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
         combined_machine_cache.lru_add(std::make_unique<Machine>(*mach));
+    }
+
+    if (save_debug_prints) {
+        return debug_prints;
     }
 
     return rocksdb::Status::OK();
 }
 
 std::variant<rocksdb::Status, ExecutionCursor>
-ArbCore::getClosestExecutionCursor(ReadTransaction& tx,
-                                   uint256_t& total_gas_used,
-                                   bool allow_slow_lookup) {
-    ExecutionCursor execution_cursor{nullptr};
-    auto status = findCloserExecutionCursor(tx, execution_cursor, std::nullopt,
-                                            total_gas_used, allow_slow_lookup);
-    if (!status.ok()) {
-        return status;
-    }
-
-    return execution_cursor;
-}
-
-rocksdb::Status ArbCore::findCloserExecutionCursor(
+ArbCore::findCloserExecutionCursor(
     ReadTransaction& tx,
-    ExecutionCursor& execution_cursor,
-    std::optional<uint256_t> current_gas,
+    std::optional<ExecutionCursor> execution_cursor,
     uint256_t& total_gas_used,
     bool allow_slow_lookup) {
-    if (current_gas == total_gas_used) {
-        // Nothing needs to be done
-        return rocksdb::Status::OK();
+    std::optional<uint256_t> existing_gas_used;
+    if (execution_cursor.has_value()) {
+        existing_gas_used = execution_cursor.value().getOutput().arb_gas_used;
+
+        if (existing_gas_used.value() == total_gas_used) {
+            // Nothing needs to be done
+            return execution_cursor.value();
+        }
     }
 
     std::optional<MachineStateKeys> database_machine_state_keys;
@@ -2288,37 +2347,42 @@ rocksdb::Status ArbCore::findCloserExecutionCursor(
     }
 
     auto mach = combined_machine_cache.atOrBeforeGas(
-        total_gas_used, current_gas, database_gas, true);
+        total_gas_used, existing_gas_used, database_gas, true);
 
-    if (mach.machine != nullptr) {
-        // Use checkpoint from cache
-        execution_cursor = ExecutionCursor(std::move(mach.machine));
-    } else if (mach.status == CombinedMachineCache::UseDatabase) {
-        // Use checkpoint from database
-        execution_cursor = ExecutionCursor(database_machine_state_keys.value());
-    } else if (mach.status == CombinedMachineCache::TooMuchExecution) {
-        // Too much execution required to get to requested gas amount
+    switch (mach.status) {
+        case CombinedMachineCache::Success:
+            return ExecutionCursor(std::move(mach.machine));
+        case CombinedMachineCache::UseDatabase:
+            return ExecutionCursor(database_machine_state_keys.value());
+        case CombinedMachineCache::TooMuchExecution:
+            return rocksdb::Status::NotFound();
+        case CombinedMachineCache::UseExisting:
+        case CombinedMachineCache::NotFound:
+            break;
+    }
+
+    if (!execution_cursor.has_value()) {
         return rocksdb::Status::NotFound();
     }
 
-    return rocksdb::Status::OK();
+    return execution_cursor.value();
 }
 
 std::variant<rocksdb::Status, ExecutionCursor>
-ArbCore::getExecutionCursorAtBlock(const uint256_t& block_number,
-                                   bool allow_slow_lookup) {
+ArbCore::getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
+                                        bool allow_slow_lookup) {
     uint256_t gas_target;
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {
         ReadSnapshotTransaction tx(data_storage);
-        auto gas_used_result = getSideloadPosition(tx, block_number);
+        auto gas_used_result = getGasAtBlock(tx, block_number);
         if (!gas_used_result.status.ok()) {
             return gas_used_result.status;
         }
         gas_target = gas_used_result.data;
 
-        auto closest_checkpoint =
-            getClosestExecutionCursor(tx, gas_target, allow_slow_lookup);
+        auto closest_checkpoint = findCloserExecutionCursor(
+            tx, std::nullopt, gas_target, allow_slow_lookup);
         if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
             return std::get<rocksdb::Status>(closest_checkpoint);
         }
@@ -2327,11 +2391,19 @@ ArbCore::getExecutionCursorAtBlock(const uint256_t& block_number,
             std::get<ExecutionCursor>(closest_checkpoint));
     }
 
-    auto status = advanceExecutionCursorImpl(
+    auto result = advanceExecutionCursorImpl(
         *execution_cursor, gas_target, false, coreConfig.message_process_count,
-        allow_slow_lookup);
+        allow_slow_lookup, false, 0);
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        auto status = std::get<rocksdb::Status>(result);
+        if (!status.ok()) {
+            std::cerr << "Couldn't advance execution machine: "
+                      << status.ToString() << std::endl;
 
-    ReadSnapshotTransaction tx(data_storage);
+            return status;
+        }
+    }
+
     return *execution_cursor;
 }
 
@@ -3200,9 +3272,8 @@ rocksdb::Status ArbCore::saveSideloadPosition(ReadWriteTransaction& tx,
     return tx.sideloadPut(key_slice, value_slice);
 }
 
-ValueResult<uint256_t> ArbCore::getSideloadPosition(
-    ReadTransaction& tx,
-    const uint256_t& block_number) {
+ValueResult<uint256_t> ArbCore::getGasAtBlock(ReadTransaction& tx,
+                                              const uint256_t& block_number) {
     std::vector<unsigned char> key;
     marshal_uint256_t(block_number, key);
     auto key_slice = vecToSlice(key);
@@ -3247,19 +3318,6 @@ rocksdb::Status ArbCore::deleteSideloadsStartingAt(
         s = rocksdb::Status::OK();
     }
     return s;
-}
-
-ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineAtBlock(
-    const uint256_t& block_number,
-    bool allow_slow_lookup) {
-    auto cursor = getExecutionCursorAtBlock(block_number, allow_slow_lookup);
-    if (std::holds_alternative<rocksdb::Status>(cursor)) {
-        return {std::get<rocksdb::Status>(cursor), nullptr};
-    }
-
-    ReadSnapshotTransaction tx(data_storage);
-    return {rocksdb::Status::OK(), takeExecutionCursorMachineImpl(
-                                       tx, std::get<ExecutionCursor>(cursor))};
 }
 
 uint64_t seconds_since_epoch() {

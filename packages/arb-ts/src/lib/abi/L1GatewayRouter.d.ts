@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface L1GatewayRouterInterface extends ethers.utils.Interface {
   functions: {
@@ -174,6 +174,36 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
 }
 
+export type DefaultGatewayUpdatedEvent = TypedEvent<
+  [string] & { newDefaultGateway: string }
+>
+
+export type GatewaySetEvent = TypedEvent<
+  [string, string] & { l1Token: string; gateway: string }
+>
+
+export type TransferRoutedEvent = TypedEvent<
+  [string, string, string, string] & {
+    token: string
+    _userFrom: string
+    _userTo: string
+    gateway: string
+  }
+>
+
+export type TxToL2Event = TypedEvent<
+  [string, string, BigNumber, string] & {
+    _from: string
+    _to: string
+    _seqNum: BigNumber
+    _data: string
+  }
+>
+
+export type WhitelistSourceUpdatedEvent = TypedEvent<
+  [string] & { newSource: string }
+>
+
 export class L1GatewayRouter extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
@@ -290,11 +320,11 @@ export class L1GatewayRouter extends BaseContract {
     ): Promise<ContractTransaction>
 
     'setGateway(address,uint256,uint256,uint256,address)'(
-      arg0: string,
-      arg1: BigNumberish,
-      arg2: BigNumberish,
-      arg3: BigNumberish,
-      arg4: string,
+      _gateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -397,11 +427,11 @@ export class L1GatewayRouter extends BaseContract {
   ): Promise<ContractTransaction>
 
   'setGateway(address,uint256,uint256,uint256,address)'(
-    arg0: string,
-    arg1: BigNumberish,
-    arg2: BigNumberish,
-    arg3: BigNumberish,
-    arg4: string,
+    _gateway: string,
+    _maxGas: BigNumberish,
+    _gasPriceBid: BigNumberish,
+    _maxSubmissionCost: BigNumberish,
+    _creditBackAddress: string,
     overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -502,11 +532,11 @@ export class L1GatewayRouter extends BaseContract {
     ): Promise<BigNumber>
 
     'setGateway(address,uint256,uint256,uint256,address)'(
-      arg0: string,
-      arg1: BigNumberish,
-      arg2: BigNumberish,
-      arg3: BigNumberish,
-      arg4: string,
+      _gateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -538,14 +568,33 @@ export class L1GatewayRouter extends BaseContract {
   }
 
   filters: {
+    'DefaultGatewayUpdated(address)'(
+      newDefaultGateway?: null
+    ): TypedEventFilter<[string], { newDefaultGateway: string }>
+
     DefaultGatewayUpdated(
       newDefaultGateway?: null
     ): TypedEventFilter<[string], { newDefaultGateway: string }>
+
+    'GatewaySet(address,address)'(
+      l1Token?: string | null,
+      gateway?: string | null
+    ): TypedEventFilter<[string, string], { l1Token: string; gateway: string }>
 
     GatewaySet(
       l1Token?: string | null,
       gateway?: string | null
     ): TypedEventFilter<[string, string], { l1Token: string; gateway: string }>
+
+    'TransferRouted(address,address,address,address)'(
+      token?: string | null,
+      _userFrom?: string | null,
+      _userTo?: string | null,
+      gateway?: null
+    ): TypedEventFilter<
+      [string, string, string, string],
+      { token: string; _userFrom: string; _userTo: string; gateway: string }
+    >
 
     TransferRouted(
       token?: string | null,
@@ -557,6 +606,16 @@ export class L1GatewayRouter extends BaseContract {
       { token: string; _userFrom: string; _userTo: string; gateway: string }
     >
 
+    'TxToL2(address,address,uint256,bytes)'(
+      _from?: string | null,
+      _to?: string | null,
+      _seqNum?: BigNumberish | null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string],
+      { _from: string; _to: string; _seqNum: BigNumber; _data: string }
+    >
+
     TxToL2(
       _from?: string | null,
       _to?: string | null,
@@ -566,6 +625,10 @@ export class L1GatewayRouter extends BaseContract {
       [string, string, BigNumber, string],
       { _from: string; _to: string; _seqNum: BigNumber; _data: string }
     >
+
+    'WhitelistSourceUpdated(address)'(
+      newSource?: null
+    ): TypedEventFilter<[string], { newSource: string }>
 
     WhitelistSourceUpdated(
       newSource?: null
@@ -645,11 +708,11 @@ export class L1GatewayRouter extends BaseContract {
     ): Promise<BigNumber>
 
     'setGateway(address,uint256,uint256,uint256,address)'(
-      arg0: string,
-      arg1: BigNumberish,
-      arg2: BigNumberish,
-      arg3: BigNumberish,
-      arg4: string,
+      _gateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -759,11 +822,11 @@ export class L1GatewayRouter extends BaseContract {
     ): Promise<PopulatedTransaction>
 
     'setGateway(address,uint256,uint256,uint256,address)'(
-      arg0: string,
-      arg1: BigNumberish,
-      arg2: BigNumberish,
-      arg3: BigNumberish,
-      arg4: string,
+      _gateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      _creditBackAddress: string,
       overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 

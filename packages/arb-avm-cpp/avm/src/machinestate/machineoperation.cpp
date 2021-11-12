@@ -871,8 +871,8 @@ void log(MachineState& m) {
 
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.debug_prints.push_back(
-        MachineEmission<value>{m.stack.pop(), m.output.fully_processed_inbox});
+    m.context.debug_prints.push_back(MachineEmission<value>{
+        m.stack.pop(), m.output.fully_processed_inbox, m.output.log_count});
     ++m.pc;
 }
 

@@ -224,7 +224,7 @@ func startup() error {
 	}
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), healthChan, sequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), healthChan, sequencerFeed, config.Node.ParanoidInboxReader)
 		if err == nil {
 			break
 		}
@@ -339,7 +339,7 @@ func startup() error {
 	}
 
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.ServerConfig{Mode: rpcMode, Tracing: config.Node.EnableTracing}, nil, web3InboxReaderRef)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.ServerConfig{Mode: rpcMode, Tracing: config.Node.RPC.EnableTracing}, nil, web3InboxReaderRef)
 	if err != nil {
 		return err
 	}

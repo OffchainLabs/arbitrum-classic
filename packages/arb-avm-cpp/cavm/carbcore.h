@@ -105,13 +105,21 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   const void* max_gas_ptr,
                                   int go_over_gas,
                                   int allow_slow_lookup);
+ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
+    CArbCore* arbcore_ptr,
+    CExecutionCursor* execution_cursor_ptr,
+    const void* max_gas_ptr,
+    int go_over_gas,
+    int allow_slow_lookup,
+    const void* log_number_ptr);
 CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr);
 Uint256Result arbCoreGetLastMachineTotalGas(CArbCore* arbcore_ptr);
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr);
-CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
-                                        uint64_t block_number,
-                                        int allow_slow_lookup);
+CExecutionCursorResult arbCoreGetExecutionCursorAtEndOfBlock(
+    CArbCore* arbcore_ptr,
+    uint64_t block_number,
+    int allow_slow_lookup);
 
 void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr);
 

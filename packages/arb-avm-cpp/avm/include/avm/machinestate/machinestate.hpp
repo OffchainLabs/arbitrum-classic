@@ -50,6 +50,7 @@ template <typename T>
 struct MachineEmission {
     T val;
     InboxState inbox;
+    uint256_t log_count;
 };
 
 struct AssertionContext {

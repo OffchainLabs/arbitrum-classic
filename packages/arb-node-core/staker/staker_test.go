@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -291,7 +292,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	// Make a dummy feed for now
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed, false)
 	test.FailIfError(t, err)
 
 	for i := 1; i <= 10; i++ {
@@ -417,6 +418,7 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 	defer shutdown()
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000), true)
 	test.FailIfError(t, err)
+	defer runtime.KeepAlive(cursor)
 	inboxGas := new(big.Int).Add(cursor.TotalGasConsumed(), big.NewInt(1))
 	t.Logf("Found first inbox instruction starting at %v", inboxGas)
 	return inboxGas

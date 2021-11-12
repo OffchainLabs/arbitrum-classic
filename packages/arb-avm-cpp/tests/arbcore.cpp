@@ -128,7 +128,8 @@ TEST_CASE("ArbCore tests") {
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
-        "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
+        "evm_test_arbsys", "evm_xcontract_call_with_constructors",
+        "evm_test_create"};
 
     uint64_t logs_count = 0;
     ArbCoreConfig coreConfig{};
@@ -136,10 +137,10 @@ TEST_CASE("ArbCore tests") {
     for (const auto& filename : files) {
         INFO("Testing " << filename);
 
-        ArbStorage storage(dbpath, coreConfig);
-        REQUIRE(storage.initialize(arb_os_path).ok());
-        auto arbCore = storage.getArbCore();
-        REQUIRE(arbCore->startThread());
+        ArbStorage storage1(dbpath, coreConfig);
+        REQUIRE(storage1.initialize(arb_os_path).ok());
+        auto arbCore1 = storage1.getArbCore();
+        REQUIRE(arbCore1->startThread());
 
         auto test_file =
             std::string{arb_os_test_cases_path} + "/" + filename + ".aoslog";
@@ -172,17 +173,17 @@ TEST_CASE("ArbCore tests") {
             sends.push_back(send_from_json(send_json));
         }
 
-        runCheckArbCore(arbCore, buildBatch(inbox_messages), 0, 0,
+        runCheckArbCore(arbCore1, buildBatch(inbox_messages), 0, 0,
                         inbox_messages.size(), sends.size(), logs.size());
 
-        auto logsRes = arbCore->getLogs(0, logs.size(), value_cache);
+        auto logsRes = arbCore1->getLogs(0, logs.size(), value_cache);
         REQUIRE(logsRes.status.ok());
         REQUIRE(logsRes.data.size() == logs.size());
         for (size_t k = 0; k < logs.size(); ++k) {
             REQUIRE(values_equal(logsRes.data[k].val, logs[k]));
         }
 
-        auto sendsRes = arbCore->getSends(0, sends.size());
+        auto sendsRes = arbCore1->getSends(0, sends.size());
         REQUIRE(sendsRes.status.ok());
         REQUIRE(sendsRes.data.size() == sends.size());
         for (size_t k = 0; k < sends.size(); ++k) {
@@ -193,11 +194,11 @@ TEST_CASE("ArbCore tests") {
         bool done = false;
         while (!done) {
             auto log_request_count = 3;
-            REQUIRE(arbCore->logsCursorRequest(0, log_request_count));
+            REQUIRE(arbCore1->logsCursorRequest(0, log_request_count));
             while (true) {
-                auto result = arbCore->logsCursorGetLogs(0);
+                auto result = arbCore1->logsCursorGetLogs(0);
                 REQUIRE((result.status.ok() || result.status.IsTryAgain()));
-                REQUIRE(!arbCore->logsCursorCheckError(0));
+                REQUIRE(!arbCore1->logsCursorCheckError(0));
                 if (result.status.ok()) {
                     REQUIRE(result.data.deleted_logs.size() <= logs_count);
                     logs_count -= result.data.deleted_logs.size();
@@ -209,7 +210,7 @@ TEST_CASE("ArbCore tests") {
                                              logs[logs_count + k]));
                     }
                     logs_count += result.data.logs.size();
-                    REQUIRE(arbCore->logsCursorConfirmReceived(0));
+                    REQUIRE(arbCore1->logsCursorConfirmReceived(0));
                     if (logs_count == logs.size()) {
                         done = true;
                     }
@@ -222,14 +223,25 @@ TEST_CASE("ArbCore tests") {
         }
         REQUIRE(logs_count == logs.size());
 
-        auto cursor = arbCore->getExecutionCursor(0, true);
+        auto cursor = arbCore1->getExecutionCursor(0, true);
         REQUIRE(cursor.status.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used == 0);
 
         auto advanceStatus =
-            arbCore->advanceExecutionCursor(*cursor.data, 100, false, true);
+            arbCore1->advanceExecutionCursor(*cursor.data, 100, false, true);
         REQUIRE(advanceStatus.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
+
+        uint32_t log_number = 3;
+        auto advanceResult = arbCore1->advanceExecutionCursorWithTracing(
+            *cursor.data, 30000000, true, true, log_number);
+        REQUIRE(advanceResult.status.ok());
+        if (logs.size() > log_number) {
+            REQUIRE(!advanceResult.data.empty());
+            REQUIRE(advanceResult.data[0].log_count == log_number);
+        } else {
+            REQUIRE(advanceResult.data.empty());
+        }
 
         //        auto before_sideload = arbCore->getMachineAtBlock(
         //            inbox_messages.back().block_number, value_cache);
@@ -237,30 +249,30 @@ TEST_CASE("ArbCore tests") {
         //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
         //                    .op.opcode == OpCode::SIDELOAD);
 
-        auto final_output = arbCore->getLastMachineOutput();
+        auto final_output = arbCore1->getLastMachineOutput();
 
         // Create a new arbCore and verify it gets to the same point
-        storage.closeArbStorage();
-        storage = ArbStorage(dbpath, coreConfig);
-        REQUIRE(storage.initialize(arb_os_path).ok());
-        arbCore = storage.getArbCore();
-        logs_count = uint64_t(arbCore->getLastMachineOutput().log_count);
+        storage1.closeArbStorage();
+        ArbStorage storage2(dbpath, coreConfig);
+        REQUIRE(storage2.initialize(arb_os_path).ok());
+        auto arbCore2 = storage2.getArbCore();
+        logs_count = uint64_t(arbCore2->getLastMachineOutput().log_count);
         if (!sends.empty()) {
             // If there were sends, the block must have ended, so there should
             // be a checkpoint present
             REQUIRE(
-                arbCore->getLastMachineOutput().fully_processed_inbox.count >
+                arbCore2->getLastMachineOutput().fully_processed_inbox.count >
                 0);
         }
-        REQUIRE(arbCore->startThread());
+        REQUIRE(arbCore2->startThread());
 
         int n = 0;
-        while (arbCore->getLastMachineOutput().arb_gas_used <
+        while (arbCore2->getLastMachineOutput().arb_gas_used <
                final_output.arb_gas_used) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             REQUIRE(n++ < 100);
         }
-        REQUIRE(arbCore->getLastMachineOutput() == final_output);
+        REQUIRE(arbCore2->getLastMachineOutput() == final_output);
     }
 }
 
@@ -319,7 +331,7 @@ TEST_CASE("ArbCore inbox") {
         inbox_acc = batch_item.accumulator;
     }
     auto tx = storage.makeReadTransaction();
-    auto position = arbCore->getSideloadPosition(*tx, 1);
+    auto position = arbCore->getGasAtBlock(*tx, 1);
     REQUIRE(position.status.ok());
 
     auto cursor = arbCore->getExecutionCursor(position.data, true);
@@ -403,6 +415,7 @@ TEST_CASE("ArbCore duplicate code segments") {
     constexpr int CHECKPOINTS = 2;
 
     std::vector<InboxMessage> messages;
+    messages.reserve(CHECKPOINTS);
     for (int i = 0; i < CHECKPOINTS; i++) {
         messages.push_back(InboxMessage(0, {}, 0, 0, i, 0, {}));
     }

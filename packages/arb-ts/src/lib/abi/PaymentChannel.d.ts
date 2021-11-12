@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface PaymentChannelInterface extends ethers.utils.Interface {
   functions: {
@@ -63,6 +63,18 @@ interface PaymentChannelInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'Transfer'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Withdrawn'): EventFragment
 }
+
+export type DepositedEvent = TypedEvent<
+  [string, BigNumber] & { payee: string; weiAmount: BigNumber }
+>
+
+export type TransferEvent = TypedEvent<
+  [string, string, BigNumber] & { from: string; to: string; value: BigNumber }
+>
+
+export type WithdrawnEvent = TypedEvent<
+  [string, BigNumber] & { payee: string; weiAmount: BigNumber }
+>
 
 export class PaymentChannel extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -186,12 +198,29 @@ export class PaymentChannel extends BaseContract {
   }
 
   filters: {
+    'Deposited(address,uint256)'(
+      payee?: string | null,
+      weiAmount?: null
+    ): TypedEventFilter<
+      [string, BigNumber],
+      { payee: string; weiAmount: BigNumber }
+    >
+
     Deposited(
       payee?: string | null,
       weiAmount?: null
     ): TypedEventFilter<
       [string, BigNumber],
       { payee: string; weiAmount: BigNumber }
+    >
+
+    'Transfer(address,address,uint256)'(
+      from?: string | null,
+      to?: string | null,
+      value?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { from: string; to: string; value: BigNumber }
     >
 
     Transfer(
@@ -201,6 +230,14 @@ export class PaymentChannel extends BaseContract {
     ): TypedEventFilter<
       [string, string, BigNumber],
       { from: string; to: string; value: BigNumber }
+    >
+
+    'Withdrawn(address,uint256)'(
+      payee?: string | null,
+      weiAmount?: null
+    ): TypedEventFilter<
+      [string, BigNumber],
+      { payee: string; weiAmount: BigNumber }
     >
 
     Withdrawn(

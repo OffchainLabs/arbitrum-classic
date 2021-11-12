@@ -296,18 +296,26 @@ class ArbCore {
                                            uint256_t max_gas,
                                            bool go_over_gas,
                                            bool allow_slow_lookup);
+    ValueResult<std::vector<MachineEmission<value>>>
+    advanceExecutionCursorWithTracing(ExecutionCursor& execution_cursor,
+                                      uint256_t max_gas,
+                                      bool go_over_gas,
+                                      bool allow_slow_lookup,
+                                      uint256_t log_number);
 
     std::unique_ptr<Machine> takeExecutionCursorMachine(
         ExecutionCursor& execution_cursor);
 
    private:
     // Execution cursor internal functions
-    rocksdb::Status advanceExecutionCursorImpl(
-        ExecutionCursor& execution_cursor,
-        uint256_t total_gas_used,
-        bool go_over_gas,
-        size_t message_group_size,
-        bool allow_slow_lookup);
+    std::variant<rocksdb::Status, std::vector<MachineEmission<value>>>
+    advanceExecutionCursorImpl(ExecutionCursor& execution_cursor,
+                               uint256_t total_gas_used,
+                               bool go_over_gas,
+                               size_t message_group_size,
+                               bool allow_slow_lookup,
+                               bool save_debug_prints,
+                               uint256_t debug_print_log_number);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,
@@ -407,17 +415,9 @@ class ArbCore {
 
     [[nodiscard]] bool isValid(const ReadTransaction& tx,
                                const InboxState& fully_processed_inbox) const;
-    std::variant<rocksdb::Status, ExecutionCursor> getExecutionCursorAtBlock(
-        const uint256_t& block_number,
-        bool allow_slow_lookup);
-    std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionCursor(
+    std::variant<rocksdb::Status, ExecutionCursor> findCloserExecutionCursor(
         ReadTransaction& tx,
-        uint256_t& total_gas_used,
-        bool allow_slow_lookup);
-    rocksdb::Status findCloserExecutionCursor(
-        ReadTransaction& tx,
-        ExecutionCursor& execution_cursor,
-        std::optional<uint256_t> current_gas,
+        std::optional<ExecutionCursor> execution_cursor,
         uint256_t& total_gas_used,
         bool allow_slow_lookup);
 
@@ -431,12 +431,12 @@ class ArbCore {
 
    public:
     // Public sideload interaction
-    ValueResult<std::unique_ptr<Machine>> getMachineAtBlock(
-        const uint256_t& block_number,
-        bool allow_slow_lookup);
+    std::variant<rocksdb::Status, ExecutionCursor>
+    getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
+                                   bool allow_slow_lookup);
 
-    ValueResult<uint256_t> getSideloadPosition(ReadTransaction& tx,
-                                               const uint256_t& block_number);
+    ValueResult<uint256_t> getGasAtBlock(ReadTransaction& tx,
+                                         const uint256_t& block_number);
 
    private:
     // Private sideload interaction

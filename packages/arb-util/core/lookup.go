@@ -78,6 +78,9 @@ type ArbCoreLookup interface {
 	// optionally until it reaches or goes over maxGas
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error
 
+	// AdvanceExecutionCursorWithTracing executes machine to get tracing debugprint for given log number
+	AdvanceExecutionCursorWithTracing(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error)
+
 	// TakeMachine takes ownership of machine such that ExecutionCursor will
 	// no longer be able to advance.
 	TakeMachine(executionCursor ExecutionCursor) (machine.Machine, error)

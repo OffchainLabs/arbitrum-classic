@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface WhitelistConsumerInterface extends ethers.utils.Interface {
   functions: {
@@ -43,6 +43,10 @@ interface WhitelistConsumerInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
 }
+
+export type WhitelistSourceUpdatedEvent = TypedEvent<
+  [string] & { newSource: string }
+>
 
 export class WhitelistConsumer extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -113,6 +117,10 @@ export class WhitelistConsumer extends BaseContract {
   }
 
   filters: {
+    'WhitelistSourceUpdated(address)'(
+      newSource?: null
+    ): TypedEventFilter<[string], { newSource: string }>
+
     WhitelistSourceUpdated(
       newSource?: null
     ): TypedEventFilter<[string], { newSource: string }>

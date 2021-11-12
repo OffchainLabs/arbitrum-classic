@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface RollupCreatorInterface extends ethers.utils.Interface {
   functions: {
@@ -137,6 +137,20 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TemplatesUpdated'): EventFragment
 }
+
+export type OwnershipTransferredEvent = TypedEvent<
+  [string, string] & { previousOwner: string; newOwner: string }
+>
+
+export type RollupCreatedEvent = TypedEvent<
+  [string, string, string] & {
+    rollupAddress: string
+    inboxAddress: string
+    adminProxy: string
+  }
+>
+
+export type TemplatesUpdatedEvent = TypedEvent<[] & {}>
 
 export class RollupCreator extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -328,12 +342,29 @@ export class RollupCreator extends BaseContract {
   }
 
   filters: {
+    'OwnershipTransferred(address,address)'(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { previousOwner: string; newOwner: string }
+    >
+
     OwnershipTransferred(
       previousOwner?: string | null,
       newOwner?: string | null
     ): TypedEventFilter<
       [string, string],
       { previousOwner: string; newOwner: string }
+    >
+
+    'RollupCreated(address,address,address)'(
+      rollupAddress?: string | null,
+      inboxAddress?: null,
+      adminProxy?: null
+    ): TypedEventFilter<
+      [string, string, string],
+      { rollupAddress: string; inboxAddress: string; adminProxy: string }
     >
 
     RollupCreated(
@@ -344,6 +375,8 @@ export class RollupCreator extends BaseContract {
       [string, string, string],
       { rollupAddress: string; inboxAddress: string; adminProxy: string }
     >
+
+    'TemplatesUpdated()'(): TypedEventFilter<[], {}>
 
     TemplatesUpdated(): TypedEventFilter<[], {}>
   }

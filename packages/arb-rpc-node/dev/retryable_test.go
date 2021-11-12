@@ -133,7 +133,7 @@ func TestRetryableRedeem(t *testing.T) {
 	retryableTx, requestId := setupTicket(t, backend, sender, common.NewAddressFromEth(dest), simpleABI.Methods["exists"].ID, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
-	redeemRequestResult, _, err := srv.GetRequestResult(requestId)
+	redeemRequestResult, _, _, err := srv.GetRequestResult(requestId)
 	test.FailIfError(t, err)
 
 	if redeemRequestResult.IncomingRequest.Sender != sender {
@@ -220,14 +220,14 @@ func TestRetryableRedeem(t *testing.T) {
 		t.Fatal("final tx failed")
 	}
 
-	finalRequestResult, _, err := srv.GetRequestResult(ticketId)
+	finalRequestResult, _, _, err := srv.GetRequestResult(ticketId)
 	test.FailIfError(t, err)
 
 	if finalRequestResult.IncomingRequest.Sender != sender {
 		t.Error("incorrect final request redeem sender. Got", finalRequestResult.IncomingRequest.Sender.String(), "but expected", sender.String())
 	}
 
-	redeemRequest, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	redeemRequest, _, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 
 	if len(redeemRequest.ReturnData) != 0 {
@@ -242,7 +242,7 @@ func TestRetryableRedeem(t *testing.T) {
 	} else {
 		txLogs = finalReceipt.Logs
 
-		finalRequest, _, err := backend.db.GetRequest(ticketId)
+		finalRequest, _, _, err := backend.db.GetRequest(ticketId)
 		test.FailIfError(t, err)
 
 		if len(finalRequest.ReturnData) != 32 {
@@ -526,10 +526,10 @@ func TestRetryableWithReturnData(t *testing.T) {
 	tx, err := retryable.Redeem(otherAuth, ticketId)
 	test.FailIfError(t, err)
 
-	res, _, err := backend.db.GetRequest(ticketId)
+	res, _, _, err := backend.db.GetRequest(ticketId)
 	test.FailIfError(t, err)
 
-	res2, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	res2, _, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 
 	if len(res.ReturnData) != 32 {
@@ -584,7 +584,7 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 	checkRetryableExecution(t, client, srv, retryableTx, requestId, retryableTx.MaxGas.Uint64(), retryableTx.GasPriceBid, true, sender)
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-	ticketResult, _, err := backend.db.GetRequest(ticketId)
+	ticketResult, _, _, err := backend.db.GetRequest(ticketId)
 	test.FailIfError(t, err)
 	t.Log("Ticket result", ticketResult.IncomingRequest)
 	test.FailIfError(t, err)
@@ -639,7 +639,7 @@ func TestRetryableImmediateNoGas(t *testing.T) {
 	}
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-	ticketResult, _, err := backend.db.GetRequest(ticketId)
+	ticketResult, _, _, err := backend.db.GetRequest(ticketId)
 	test.FailIfError(t, err)
 	if ticketResult != nil {
 		t.Fatal("expected no result because redeem failed")
@@ -725,7 +725,7 @@ func TestRetryableEmptyDest(t *testing.T) {
 	checkRetryableExecution(t, client, srv, retryableTx, requestId, retryableTx.MaxGas.Uint64(), retryableTx.GasPriceBid, false, sender)
 
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-	ticketResult, _, err := backend.db.GetRequest(ticketId)
+	ticketResult, _, _, err := backend.db.GetRequest(ticketId)
 	test.FailIfError(t, err)
 	t.Log("Ticket result", ticketResult.IncomingRequest)
 	test.FailIfError(t, err)
@@ -903,7 +903,7 @@ func checkRetryableExecution(t *testing.T, client *web3.EthClient, srv *aggregat
 		t.Error("unexpected nonce", ticketTransaction.Nonce())
 	}
 
-	redeemRequestResult, _, err := srv.GetRequestResult(requestId)
+	redeemRequestResult, _, _, err := srv.GetRequestResult(requestId)
 	test.FailIfError(t, err)
 
 	if redeemRequestResult.IncomingRequest.Sender != l2Sender {

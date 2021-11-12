@@ -20,11 +20,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -37,8 +32,13 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
@@ -104,9 +104,9 @@ func (m *Server) LatestBlockHeader() (*types.Header, error) {
 	return latest.Header, nil
 }
 
-// GetMessageResult returns the value output by the VM in response to the
+// GetRequestResult returns the value output by the VM in response to the
 // l2message with the given hash
-func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, core.InboxState, error) {
+func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, core.InboxState, *big.Int, error) {
 	return m.db.GetRequest(requestId)
 }
 
@@ -158,6 +158,22 @@ func (m *Server) GetTxInBlockAtIndexResults(res *machine.BlockInfo, index uint64
 		return nil, nil
 	}
 	return evmRes, nil
+}
+
+func (m *Server) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (core.ExecutionCursor, error) {
+	return m.db.Lookup.GetExecutionCursor(totalGasUsed, allowSlowLookup)
+}
+
+func (m *Server) GetExecutionCursorAtEndOfBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
+	return m.db.Lookup.GetExecutionCursorAtEndOfBlock(blockNumber, allowSlowLookup)
+}
+
+func (m *Server) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
+	return m.db.Lookup.AdvanceExecutionCursor(executionCursor, maxGas, goOverGas, allowSlowLookup)
+}
+
+func (m *Server) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error) {
+	return m.db.Lookup.AdvanceExecutionCursorWithTracing(executionCursor, maxGas, goOverGas, allowSlowLookup, logNumber)
 }
 
 func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {

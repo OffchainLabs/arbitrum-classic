@@ -362,7 +362,7 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 		// && txRes.ResultCode != evm.RevertCode
 		if txRes.ResultCode != evm.ReturnCode {
 			// If this log was for an invalid transaction, only save the request if it hasn't been saved before
-			orig, _, err := db.GetRequest(txRes.IncomingRequest.MessageID)
+			orig, _, _, err := db.GetRequest(txRes.IncomingRequest.MessageID)
 			if err != nil {
 				return err
 			}
@@ -435,27 +435,28 @@ func (db *TxDB) GetBlockWithHash(blockHash common.Hash) (*machine.BlockInfo, err
 	return info, err
 }
 
-func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, core.InboxState, error) {
+func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, core.InboxState, *big.Int, error) {
 	requestCandidate := db.as.GetPossibleRequestInfo(requestId)
 	if requestCandidate == nil {
-		return nil, core.InboxState{}, nil
+		return nil, core.InboxState{}, nil, nil
 	}
-	logVal, err := core.GetZeroOrOneLog(db.Lookup, new(big.Int).SetUint64(*requestCandidate))
+	logNumber := new(big.Int).SetUint64(*requestCandidate)
+	logVal, err := core.GetZeroOrOneLog(db.Lookup, logNumber)
 	if err != nil || logVal.Value == nil {
-		return nil, core.InboxState{}, err
+		return nil, core.InboxState{}, nil, err
 	}
 	res, err := evm.NewResultFromValue(logVal.Value)
 	if err != nil {
-		return nil, core.InboxState{}, err
+		return nil, core.InboxState{}, nil, err
 	}
 	txRes, ok := res.(*evm.TxResult)
 	if !ok {
-		return nil, core.InboxState{}, nil
+		return nil, core.InboxState{}, nil, nil
 	}
 	if txRes.IncomingRequest.MessageID != requestId {
-		return nil, core.InboxState{}, nil
+		return nil, core.InboxState{}, nil, nil
 	}
-	return txRes, logVal.Inbox, nil
+	return txRes, logVal.Inbox, logNumber, nil
 }
 
 func (db *TxDB) GetL2Block(block *machine.BlockInfo) (*evm.BlockInfo, error) {
@@ -506,7 +507,7 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-		if blockData.BlockLog < totalLogCount {
+		if blockData != nil && blockData.BlockLog < totalLogCount {
 			return blockData, nil
 		}
 		blockCount--
@@ -525,10 +526,15 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if cachedSnap != nil {
 		return cachedSnap, nil
 	}
-	mach, err := db.Lookup.GetMachineAtBlock(info.Header.Number.Uint64(), db.allowSlowLookup)
-	if err != nil || mach == nil {
+	cursor, err := db.Lookup.GetExecutionCursorAtEndOfBlock(info.Header.Number.Uint64(), db.allowSlowLookup)
+	if err != nil {
 		return nil, err
 	}
+	mach, err := db.Lookup.TakeMachine(cursor)
+	if err != nil {
+		return nil, err
+	}
+
 	currentTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(info.Header.Number)),
 		Timestamp: new(big.Int).SetUint64(info.Header.Time),

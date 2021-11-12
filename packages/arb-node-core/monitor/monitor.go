@@ -19,6 +19,7 @@ package monitor
 import (
 	"context"
 	"math/big"
+	"runtime"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -88,6 +89,7 @@ func (m *Monitor) StartInboxReader(
 	bridgeUtilsAddress common.Address,
 	healthChan chan nodehealth.Log,
 	sequencerFeed chan broadcaster.BroadcastFeedMessage,
+	paranoid bool,
 ) (*InboxReader, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), fromBlock, ethClient, bind.CallOpts{})
 	if err != nil {
@@ -101,6 +103,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, errors.Wrap(err, "error loading initial ArbCore machine")
 	}
+	defer runtime.KeepAlive(initialExecutionCursor)
 	initialMachineHash := initialExecutionCursor.MachineHash()
 	if initialMachineHash != creationEvent.MachineHash {
 		return nil, errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(creationEvent.MachineHash[:]), initialMachineHash)
@@ -126,7 +129,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, bridgeUtils, m.Core, healthChan, sequencerFeed)
+	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, bridgeUtils, m.Core, healthChan, sequencerFeed, paranoid)
 	if err != nil {
 		return nil, err
 	}

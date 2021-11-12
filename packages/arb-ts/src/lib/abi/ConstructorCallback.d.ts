@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface ConstructorCallbackInterface extends ethers.utils.Interface {
   functions: {
@@ -36,6 +36,10 @@ interface ConstructorCallbackInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TestEvent'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TestEvent2'): EventFragment
 }
+
+export type TestEventEvent = TypedEvent<[BigNumber] & { dataLength: BigNumber }>
+
+export type TestEvent2Event = TypedEvent<[string] & { dataLength: string }>
 
 export class ConstructorCallback extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -97,9 +101,17 @@ export class ConstructorCallback extends BaseContract {
   }
 
   filters: {
+    'TestEvent(uint256)'(
+      dataLength?: null
+    ): TypedEventFilter<[BigNumber], { dataLength: BigNumber }>
+
     TestEvent(
       dataLength?: null
     ): TypedEventFilter<[BigNumber], { dataLength: BigNumber }>
+
+    'TestEvent2(address)'(
+      dataLength?: null
+    ): TypedEventFilter<[string], { dataLength: string }>
 
     TestEvent2(
       dataLength?: null

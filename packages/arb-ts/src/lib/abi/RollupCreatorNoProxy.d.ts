@@ -15,7 +15,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface RollupCreatorNoProxyInterface extends ethers.utils.Interface {
   functions: {}
@@ -26,6 +26,10 @@ interface RollupCreatorNoProxyInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
 }
+
+export type RollupCreatedEvent = TypedEvent<
+  [string, string] & { rollupAddress: string; inbox: string }
+>
 
 export class RollupCreatorNoProxy extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -75,6 +79,14 @@ export class RollupCreatorNoProxy extends BaseContract {
   callStatic: {}
 
   filters: {
+    'RollupCreated(address,address)'(
+      rollupAddress?: null,
+      inbox?: null
+    ): TypedEventFilter<
+      [string, string],
+      { rollupAddress: string; inbox: string }
+    >
+
     RollupCreated(
       rollupAddress?: null,
       inbox?: null

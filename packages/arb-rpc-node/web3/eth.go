@@ -340,22 +340,22 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 	return s.getBlock(info, includeTxData)
 }
 
-func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, core.InboxState, error) {
+func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, core.InboxState, *big.Int, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
-	res, inbox, err := s.srv.GetRequestResult(requestId)
+	res, inbox, logNumber, err := s.srv.GetRequestResult(requestId)
 	if err != nil || res == nil {
-		return nil, nil, core.InboxState{}, err
+		return nil, nil, core.InboxState{}, nil, err
 	}
 	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
-		return nil, nil, core.InboxState{}, err
+		return nil, nil, core.InboxState{}, nil, err
 	}
-	return res, info, inbox, nil
+	return res, info, inbox, logNumber, nil
 }
 
 func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
-	res, info, _, err := s.getTransactionInfoByHash(txHash)
+	res, info, _, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -395,7 +395,7 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 }
 
 func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes, opts *ArbGetTxReceiptOpts) (*GetTransactionReceiptResult, error) {
-	res, info, inboxState, err := s.getTransactionInfoByHash(txHash)
+	res, info, inboxState, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
