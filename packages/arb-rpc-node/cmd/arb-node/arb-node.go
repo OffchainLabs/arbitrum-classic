@@ -371,13 +371,7 @@ func startup() error {
 			}
 			failCount := 0
 			for {
-				var logFunc *zerolog.Event
-				if failCount >= failLimit {
-					logFunc = logger.Fatal()
-				} else {
-					logFunc = logger.Warn()
-				}
-				valid, err := checkBlockHash(ctx, clnt, db, logFunc)
+				valid, err := checkBlockHash(ctx, clnt, db)
 				if err != nil {
 					log.Warn().Err(err).Msg("failed to lookup blockhash for consistency check")
 					clnt, err = ethclient.DialContext(ctx, config.Node.Forwarder.Target)
@@ -392,6 +386,12 @@ func startup() error {
 						failCount = 0
 					}
 				}
+				if failCount >= failLimit {
+					log.Error().Msg("exiting due to repeated block hash mismatches")
+					cancelFunc()
+					return
+				}
+
 				time.Sleep(checkFrequency)
 			}
 		}()
@@ -408,7 +408,7 @@ func startup() error {
 	}
 }
 
-func checkBlockHash(ctx context.Context, clnt *ethclient.Client, db *txdb.TxDB, logFunc *zerolog.Event) (bool, error) {
+func checkBlockHash(ctx context.Context, clnt *ethclient.Client, db *txdb.TxDB) (bool, error) {
 	if clnt == nil {
 		return false, errors.New("need a client to check block hash")
 	}
@@ -431,7 +431,7 @@ func checkBlockHash(ctx context.Context, clnt *ethclient.Client, db *txdb.TxDB, 
 	if remoteHeader.Hash() == block.Header.Hash() {
 		return true, nil
 	}
-	logFunc.
+	logger.Warn().
 		Str("remote", remoteHeader.Hash().Hex()).
 		Str("local", block.Header.Hash().Hex()).
 		Msg("mismatched block header")
