@@ -696,6 +696,16 @@ void tlen(MachineState& m) {
     ++m.pc;
 }
 
+struct Secp256k1Context {
+    secp256k1_context* context;
+
+    Secp256k1Context()
+        : context(secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
+                                           SECP256K1_CONTEXT_VERIFY)) {}
+
+    ~Secp256k1Context() { secp256k1_context_destroy(context); }
+};
+
 namespace {
 uint256_t parseSignature(MachineState& m) {
     std::array<unsigned char, 64> sig_raw{};
@@ -708,25 +718,25 @@ uint256_t parseSignature(MachineState& m) {
         return 0;
     }
 
-    static secp256k1_context* context = secp256k1_context_create(
-        SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+    static Secp256k1Context context;
 
     secp256k1_ecdsa_recoverable_signature sig;
     int parsed_sig = secp256k1_ecdsa_recoverable_signature_parse_compact(
-        context, &sig, sig_raw.data(), static_cast<int>(recovery_int));
+        context.context, &sig, sig_raw.data(), static_cast<int>(recovery_int));
     if (!parsed_sig) {
         return 0;
     }
 
     secp256k1_pubkey pubkey;
-    if (!secp256k1_ecdsa_recover(context, &pubkey, &sig, message.bytes)) {
+    if (!secp256k1_ecdsa_recover(context.context, &pubkey, &sig,
+                                 message.bytes)) {
         return 0;
     }
 
     std::array<unsigned char, 65> pubkey_raw{};
     size_t output_length = pubkey_raw.size();
     int serialized_pubkey = secp256k1_ec_pubkey_serialize(
-        context, pubkey_raw.data(), &output_length, &pubkey,
+        context.context, pubkey_raw.data(), &output_length, &pubkey,
         SECP256K1_EC_UNCOMPRESSED);
     if (!serialized_pubkey) {
         return 0;
@@ -945,7 +955,8 @@ void pushinsn(MachineState& m) {
     auto target = assumeCodePoint(m, m.stack[1]);
     auto& op_int = assumeInt(m.stack[0]);
     auto op = static_cast<uint8_t>(op_int);
-    m.stack[1] = m.code->addOperation(target.pc, {static_cast<OpCode>(op)});
+    m.stack[1] =
+        m.code->addOperation(target.pc, Operation{static_cast<OpCode>(op)});
     m.stack.popClear();
     ++m.pc;
 }

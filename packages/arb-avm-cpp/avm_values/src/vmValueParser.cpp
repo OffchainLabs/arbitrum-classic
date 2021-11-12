@@ -114,7 +114,7 @@ Operation operation_from_json(const nlohmann::json& op_json,
     auto opcode = opcode_json.get<OpCode>();
     auto& imm = op_json.at(IMMEDIATE_LABEL);
     if (imm.is_null()) {
-        return {opcode};
+        return Operation{opcode};
     }
     return {opcode, value_from_json(imm, op_count, code)};
 }
@@ -125,7 +125,7 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
     std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
         full_value_json};
     while (!json_values.empty()) {
-        auto value_json = std::move(json_values.back());
+        auto value_json = json_values.back();
         json_values.pop_back();
 
         if (value_json.get().contains(INT_VAL_LABEL)) {
@@ -181,7 +181,7 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
     for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
         segment->addOperation(operation_from_json(*it, op_count, *segment));
     }
-    value static_val = value_from_json(
-        std::move(executable_json.at(STATIC_LABEL)), op_count, *segment);
+    value static_val =
+        value_from_json(executable_json.at(STATIC_LABEL), op_count, *segment);
     return {std::move(segment), std::move(static_val)};
 }
