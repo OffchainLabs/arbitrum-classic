@@ -22,7 +22,9 @@
 CoreValueLoader::CoreValueLoader(std::shared_ptr<DataStorage> data_storage_,
                                  std::shared_ptr<CoreCode> core_code_,
                                  ValueCache cache_)
-    : data_storage(data_storage_), core_code(core_code_), cache(cache_) {}
+    : data_storage(std::move(data_storage_)),
+      core_code(std::move(core_code_)),
+      cache(std::move(cache_)) {}
 
 value CoreValueLoader::loadValue(const uint256_t& hash) {
     ReadTransaction tx(data_storage);
