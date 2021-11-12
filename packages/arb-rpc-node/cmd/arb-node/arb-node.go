@@ -371,6 +371,9 @@ func startup() error {
 			}
 			failCount := 0
 			for {
+				if ctx.Err() != nil {
+					return
+				}
 				valid, err := checkBlockHash(ctx, clnt, db)
 				if err != nil {
 					log.Warn().Err(err).Msg("failed to lookup blockhash for consistency check")
