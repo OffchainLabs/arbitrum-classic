@@ -23,7 +23,8 @@
 #include <iostream>
 
 Operation::Operation(OpCode opcode_, value immediate_)
-    : opcode(opcode_), immediate(std::make_unique<value>(immediate_)) {}
+    : opcode(opcode_),
+      immediate(std::make_unique<value>(std::move(immediate_))) {}
 
 void Operation::marshalForProof(std::vector<unsigned char>& buf,
                                 size_t marshal_level,
@@ -55,8 +56,6 @@ bool operator!=(const Operation& val1, const Operation& val2) {
     return !(val1 == val2);
 }
 
-uint64_t pc_default = -1;
-
 bool operator==(const CodePoint& val1, const CodePoint& val2) {
     if (hash(val1) != hash(val2)) {
         return false;
@@ -67,7 +66,7 @@ bool operator==(const CodePoint& val1, const CodePoint& val2) {
 
 uint256_t hash(const CodePoint& cp) {
     if (cp.op.immediate) {
-        std::array<unsigned char, 66> valData;
+        std::array<unsigned char, 66> valData{};
         valData[0] = CODEPT;
         valData[1] = static_cast<unsigned char>(cp.op.opcode);
         auto immHash = hash_value(*cp.op.immediate);
@@ -77,7 +76,7 @@ uint256_t hash(const CodePoint& cp) {
         auto hash_val = ethash::keccak256(valData.data(), valData.size());
         return intx::be::load<uint256_t>(hash_val);
     } else {
-        std::array<unsigned char, 34> valData;
+        std::array<unsigned char, 34> valData{};
         valData[0] = CODEPT;
         valData[1] = static_cast<unsigned char>(cp.op.opcode);
         to_big_endian(cp.nextHash, valData.begin() + 2);
@@ -116,7 +115,7 @@ const Operation& getErrOperation() {
 }
 
 const CodePoint& getErrCodePoint() {
-    CodePoint static errcp({static_cast<OpCode>(0)}, 0);
+    CodePoint static errcp(Operation{static_cast<OpCode>(0)}, 0);
     return errcp;
 }
 

@@ -18,8 +18,6 @@
 
 #include <iostream>
 
-constexpr BlockType InboxBlocked::type;
-
 std::ostream& operator<<(std::ostream& os, const NotBlocked&) {
     return os << "NotBlocked";
 }

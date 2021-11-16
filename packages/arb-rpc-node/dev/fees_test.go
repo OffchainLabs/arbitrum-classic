@@ -96,7 +96,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		t.Fatal(err)
 	}
 
-	web3Server := web3.NewServer(srv, true, nil)
+	web3Server := web3.NewServer(srv, web3.DefaultConfig, nil)
 
 	client := web3.NewEthClient(srv, true)
 

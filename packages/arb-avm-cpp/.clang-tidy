@@ -1,0 +1,4 @@
+---
+Checks: '-*,performance-*'
+WarningsAsErrors: '*'
+FormatStyle: file
