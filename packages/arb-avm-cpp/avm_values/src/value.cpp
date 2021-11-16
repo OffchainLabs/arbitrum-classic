@@ -252,6 +252,30 @@ uint256_t hash_value(const value& value) {
 }
 
 bool values_equal(const value& a, const value& b) {
+    // Fast path: if the values are both ints, compare them directly
+    {
+        const uint256_t* a_int = std::get_if<uint256_t>(&a);
+        const uint256_t* b_int = std::get_if<uint256_t>(&b);
+        if (a_int && b_int) {
+            return *a_int == *b_int;
+        }
+    }
+    // Fast path: if the values are tuples of different sizes, return false
+    {
+        const Tuple* a_tup = std::get_if<Tuple>(&a);
+        const Tuple* b_tup = std::get_if<Tuple>(&b);
+        if (a_tup && b_tup && a_tup->tuple_size() != b_tup->tuple_size()) {
+            return false;
+        }
+    }
+    // Fast path: if the values are of different types, return false
+    // Note: ValueTypeVisitor correctly sees through unloaded values
+    if (std::visit(ValueTypeVisitor{}, a) !=
+        std::visit(ValueTypeVisitor{}, b)) {
+        return false;
+    }
+    // Slow path: the preconditions for the fast paths weren't met
+    // Check if the hashes are equal
     return hash_value(a) == hash_value(b);
 }
 
