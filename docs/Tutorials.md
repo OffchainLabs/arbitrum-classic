@@ -12,7 +12,10 @@ It includes:
 
 - ✅ [Depositing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-deposit) and [Withdrawing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-withdraw) tokens
 
+- ✅ [Bridging](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/custom-token-bridging) custom tokens
+
 - ✅ [Depositing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/eth-deposit) and [Withdrawing](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/eth-withdraw) Ether
+
 
 - ✅ [L1 to L2 messaging](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/greeter)
 - ✅ [L2 to L1 messaging](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/outbox-execute)

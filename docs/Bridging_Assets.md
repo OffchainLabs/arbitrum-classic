@@ -147,7 +147,7 @@ No matter the complexity of a particular token's bridging needs, a gateway can i
 
 ### Demos
 
-See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-withdraw) for demos of interacting with the bridge architecture via [arb-ts](https://arb-ts-docs.netlify.app/).
+See our [custom-token-bridging](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/custom-token-bridging) demo for bridging custom tokens to Arbitrum via Custom-Generic token gateway.  [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-withdraw) demos show how to interact with the bridge architecture via [arb-ts](https://arb-ts-docs.netlify.app/).
 
 #### A Word of Caution on Bridges (aka, "I've Got a Bridge To Sell You")
 
