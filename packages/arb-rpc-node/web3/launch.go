@@ -89,5 +89,11 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		}
 	}
 
+	if config.DevopsStubs {
+		if err := registerDevopsStubs(s); err != nil {
+			return nil, err
+		}
+	}
+
 	return s, nil
 }

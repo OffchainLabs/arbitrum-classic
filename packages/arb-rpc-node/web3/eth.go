@@ -47,6 +47,7 @@ const maxGas = 1<<31 - 1
 type ServerConfig struct {
 	Mode          RpcMode
 	MaxCallAVMGas uint64
+	DevopsStubs   bool
 }
 
 type Server struct {
