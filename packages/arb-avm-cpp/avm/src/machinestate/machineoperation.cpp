@@ -61,7 +61,8 @@ CodePointStub assumeCodePoint(MachineState& m, value& val) {
     if (!cp) {
         throw bad_pop_type{};
     }
-    if (!m.code->containsSegment(cp->pc.segment)) {
+    auto segment = cp->pc.segment;
+    if (segment != m.pc.segment && !m.code->containsSegment(segment)) {
         return std::get<CodePointStub>(
             m.value_loader.loadValue(hash_value(*cp)));
     }

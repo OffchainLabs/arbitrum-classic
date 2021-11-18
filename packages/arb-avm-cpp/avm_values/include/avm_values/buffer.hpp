@@ -83,7 +83,7 @@ class Buffer : private std::shared_ptr<RawBuffer> {
     // Sets bytes at a given offset, growing or shrinking as needed. The bytes
     // set must be within a single 32 byte chunk.
     [[nodiscard]] Buffer set_many(uint64_t offset,
-                                  std::vector<uint8_t> arr) const;
+                                  const std::vector<uint8_t>& arr) const;
 
     // Gets the byte at a given offset
     [[nodiscard]] uint8_t get(uint64_t pos) const;
@@ -150,7 +150,7 @@ class RawBuffer {
     // Sets bytes at a given offset, growing or shrinking as needed. The bytes
     // set must be within a single 32 byte chunk.
     [[nodiscard]] RawBuffer set_many(uint64_t offset,
-                                     std::vector<uint8_t> arr) const;
+                                     const std::vector<uint8_t>& arr) const;
 
     // Creates a buffer representing the given bytes
     static RawBuffer fromData(const std::vector<uint8_t>& data);

@@ -41,6 +41,7 @@ type ServerConfig struct {
 	Mode          RpcMode
 	MaxCallAVMGas uint64
 	Tracing       bool
+	DevopsStubs   bool
 }
 
 func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, config ServerConfig, plugins map[string]interface{}, inboxReader *monitor.InboxReader) (*rpc.Server, error) {
@@ -103,6 +104,12 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 
 	for name, val := range plugins {
 		if err := s.RegisterName(name, val); err != nil {
+			return nil, err
+		}
+	}
+
+	if config.DevopsStubs {
+		if err := registerDevopsStubs(s); err != nil {
 			return nil, err
 		}
 	}

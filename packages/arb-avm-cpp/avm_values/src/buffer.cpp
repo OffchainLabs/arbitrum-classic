@@ -48,7 +48,8 @@ const std::vector<Buffer> zero_buffers_of_depth = []() -> std::vector<Buffer> {
 RawBuffer::RawBuffer(LeafData bytes) : depth(0), components(bytes) {}
 
 RawBuffer::RawBuffer(Buffer left, Buffer right)
-    : depth(left->depth + 1), components(std::make_pair(left, right)) {
+    : depth(left->depth + 1),
+      components(std::make_pair(std::move(left), std::move(right))) {
     auto children = get_children_const();
     if (children->first->depth != children->second->depth) {
         throw new std::runtime_error("Attempted to create uneven buffer");
@@ -238,7 +239,8 @@ uint256_t Buffer::data_length() const {
     return (*this)->packed_size();
 }
 
-RawBuffer RawBuffer::set_many(uint64_t offset, std::vector<uint8_t> arr) const {
+RawBuffer RawBuffer::set_many(uint64_t offset,
+                              const std::vector<uint8_t>& arr) const {
     RawBuffer ret(*this);
     if (uint256_t(offset) + arr.size() > ret.size()) {
         ret = ret.grow(needed_depth(uint256_t(offset) + arr.size()));
@@ -393,14 +395,15 @@ std::vector<Buffer> Buffer::serialize(
 }
 
 Buffer::Buffer(RawBuffer raw)
-    : std::shared_ptr<RawBuffer>(std::make_shared<RawBuffer>(raw)) {}
+    : std::shared_ptr<RawBuffer>(std::make_shared<RawBuffer>(std::move(raw))) {}
 
 Buffer::Buffer() : Buffer(RawBuffer()) {}
 
 Buffer::Buffer(std::array<unsigned char, 32> bytes)
     : Buffer(RawBuffer(bytes)) {}
 
-Buffer::Buffer(Buffer left, Buffer right) : Buffer(RawBuffer(left, right)) {}
+Buffer::Buffer(Buffer left, Buffer right)
+    : Buffer(RawBuffer(std::move(left), std::move(right))) {}
 
 Buffer Buffer::fromData(const std::vector<uint8_t>& data) {
     return Buffer(RawBuffer::fromData(data));
@@ -410,6 +413,7 @@ uint256_t Buffer::hash() const {
     return (*this)->hash();
 }
 
-Buffer Buffer::set_many(uint64_t offset, std::vector<uint8_t> arr) const {
+Buffer Buffer::set_many(uint64_t offset,
+                        const std::vector<uint8_t>& arr) const {
     return Buffer((*this)->set_many(offset, arr));
 }
