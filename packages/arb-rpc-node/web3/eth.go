@@ -47,6 +47,7 @@ const maxGas = 1<<31 - 1
 type ServerConfig struct {
 	Mode          RpcMode
 	MaxCallAVMGas uint64
+	DevopsStubs   bool
 }
 
 type Server struct {
@@ -69,10 +70,14 @@ func NewServer(
 	config ServerConfig,
 	sequencerInboxWatcher *ethbridge.SequencerInboxWatcher,
 ) *Server {
+	maxGas := config.MaxCallAVMGas
+	if maxGas == 0 {
+		maxGas = math.MaxUint64
+	}
 	return &Server{
 		srv:                   srv,
 		ganacheMode:           config.Mode == GanacheMode,
-		maxAVMGas:             config.MaxCallAVMGas,
+		maxAVMGas:             maxGas,
 		aggregator:            srv.Aggregator(),
 		sequencerInboxWatcher: sequencerInboxWatcher,
 	}
@@ -261,7 +266,9 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overr
 	from, msg := buildCallMsg(callArgs)
 
 	res, _, err := snap.Call(msg, from, s.maxAVMGas)
-
+	if err != nil {
+		return nil, err
+	}
 	if res.ResultCode != evm.ReturnCode {
 		return nil, evm.HandleCallError(res, s.ganacheMode)
 	}
