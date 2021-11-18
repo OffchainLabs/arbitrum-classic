@@ -148,7 +148,11 @@ func (cm *ClientManager) ClientCount() int32 {
 }
 
 func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
-	logger.Debug().Hex("acc", accumulator.Bytes()).Msg("confirming accumulator")
+	logger.
+		Debug().
+		Hex("prevAcc", cm.prevConfirmedAcc.Bytes()).
+		Hex("newAcc", accumulator.Bytes()).
+		Msg("confirming previous accumulator")
 
 	var emptyHash common.Hash
 	if cm.prevConfirmedAcc != emptyHash {
@@ -156,7 +160,7 @@ func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
 			Version: 1,
 			ConfirmedAccumulator: ConfirmedAccumulator{
 				IsConfirmed: true,
-				Accumulator: accumulator,
+				Accumulator: cm.prevConfirmedAcc,
 			},
 		}
 
