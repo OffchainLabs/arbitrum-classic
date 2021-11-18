@@ -374,7 +374,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		}
 		core.WaitForMachineIdle(b.db)
 
-		var sequencedTxs []*types.Transaction
 		var sequencedBatchItems []inbox.SequencerBatchItem
 
 		newLogCount, err := b.db.GetLogCount()
@@ -402,7 +401,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			}
 		}
 		if successCount == len(batchTxs) {
-			sequencedTxs = batchTxs
 			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
 			prevAcc = txBatchItem.Accumulator
 			sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
@@ -469,7 +467,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
 				prevAcc = txBatchItem.Accumulator
 				sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
-				sequencedTxs = append(sequencedTxs, tx)
 				postingCostEstimate := gasCostPerMessage + gasCostPerMessageByte*len(seqMsg.Data)
 				atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 				logCount = newLogCount

@@ -46,11 +46,13 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	skipBelowVersion(t, 25)
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
-	auth := bind.NewKeyedTransactor(privkey)
+	auth, err := bind.NewKeyedTransactorWithChainID(privkey, testChainId)
+	test.FailIfError(t, err)
 
 	privkey2, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
-	aggAuth := bind.NewKeyedTransactor(privkey2)
+	aggAuth, err := bind.NewKeyedTransactorWithChainID(privkey2, testChainId)
+	test.FailIfError(t, err)
 
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
@@ -440,6 +442,7 @@ func TestDeploy(t *testing.T) {
 		Data:     hexutil.MustDecode(conData),
 	})
 	tx, err = auth.Signer(auth.From, tx)
+	test.FailIfError(t, err)
 	err = client.SendTransaction(ctx, tx)
 	test.FailIfError(t, err)
 	arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))

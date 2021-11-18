@@ -158,14 +158,6 @@ type OpenEthereumPeer struct {
 	Id string `json:"id"`
 }
 
-//OpenEthereum result peer network field struct for json parsing
-type OpenEthereumPeerNetwork struct {
-	//Peer local IP address
-	localAddress string
-	//Peer remote IP address
-	remoteAddress string
-}
-
 //Log structure for passing messages on healthChan to logger
 type Log struct {
 	//Different message types we could be sent
@@ -728,7 +720,7 @@ func checkInboxReader(config *configStruct, state *healthState) healthcheck.Chec
 		defer state.mu.Unlock()
 
 		//Check if the database is still loading
-		if state.inboxReader.loadingDatabase == true {
+		if state.inboxReader.loadingDatabase {
 			return errors.New("loading database snapshot")
 		}
 
@@ -894,7 +886,5 @@ func StartNodeHealthCheck(ctx context.Context, logMsgChan <-chan Log, registry m
 	go logger(ctx, config, state, logMsgChan)
 
 	//Start the node healthcheck
-	err := startHealthCheck(ctx, config, state)
-
-	return err
+	return startHealthCheck(ctx, config, state)
 }

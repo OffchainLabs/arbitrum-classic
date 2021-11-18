@@ -372,7 +372,10 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 				}
 				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
 				if len(ir.BroadcastFeed) == 0 {
-					ir.deliverQueueItems()
+					err = ir.deliverQueueItems()
+					if err != nil {
+						logger.Warn().Err(err).Msg("error delivering broadcast feed items")
+					}
 				}
 			case <-sleepChan:
 				break FeedReadLoop

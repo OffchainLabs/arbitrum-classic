@@ -121,20 +121,6 @@ func processDebugPrints(t *testing.T, debugPrints []value.Value) []evm.EVMLogLin
 	return results
 }
 
-func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
-	t.Helper()
-	results := processResults(t, logs)
-	txResults := make([]*evm.TxResult, 0, len(results))
-	for _, res := range results {
-		txRes, ok := res.(*evm.TxResult)
-		if !ok {
-			t.Fatalf("expected result to be tx result but got %T", res)
-		}
-		txResults = append(txResults, txRes)
-	}
-	return txResults
-}
-
 func extractTxResults(t *testing.T, results []evm.Result) []*evm.TxResult {
 	t.Helper()
 	txResults := make([]*evm.TxResult, 0, len(results))

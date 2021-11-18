@@ -35,7 +35,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
@@ -232,7 +231,6 @@ func (m *Batcher) maybeSubmitBatch(ctx context.Context, maxBatchTime time.Durati
 	if !full && !(len(txes) > 0 && !moreTxesWaiting && time.Since(lastBatch) > maxBatchTime) {
 		return false, nil
 	}
-	lastBatch = time.Now()
 	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
 	for _, tx := range txes {
 		batchTxes = append(batchTxes, message.NewCompressedECDSAFromEth(tx))
@@ -248,11 +246,6 @@ func (m *Batcher) maybeSubmitBatch(ctx context.Context, maxBatchTime time.Durati
 	if err != nil {
 		return false, errors.Wrap(err, "error calling SendL2MessageFromOrigin")
 	}
-
-	for _, l2tx := range txes {
-		monitor.GlobalMonitor.IncludedInBatch(common.NewHashFromEth(l2tx.Hash()), common.NewHashFromEth(l2tx.Hash()))
-	}
-	monitor.GlobalMonitor.SubmittedBatch(common.NewHashFromEth(tx.Hash()))
 
 	m.Lock()
 	m.pendingBatch = m.pendingBatch.newFromExisting()
@@ -285,8 +278,6 @@ func (m *Batcher) checkForNextBatch(ctx context.Context, receiptFetcher transact
 		m.Lock()
 		return errFailedBatch
 	}
-
-	monitor.GlobalMonitor.BatchAccepted(common.NewHashFromEth(receipt.TxHash))
 
 	logger.Info().
 		Str("hash", receipt.TxHash.Hex()).
@@ -330,8 +321,6 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		logger.Warn().Err(err).Msg("error processing user transaction")
 		return err
 	}
-
-	monitor.GlobalMonitor.GotTransactionFromUser(common.NewHashFromEth(tx.Hash()))
 
 	m.Lock()
 	defer m.Unlock()

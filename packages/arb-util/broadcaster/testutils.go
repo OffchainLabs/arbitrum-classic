@@ -92,7 +92,6 @@ type RandomMessageGenerator struct {
 	cancelFunc       context.CancelFunc
 	count            int
 	intervalDuration time.Duration
-	workerStarted    bool
 }
 
 // NewRandomMessageGenerator creates a new test message generator

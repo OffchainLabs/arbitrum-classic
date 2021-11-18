@@ -52,14 +52,11 @@ func TestL2ToL1Tx(t *testing.T) {
 
 	client := web3.NewEthClient(srv, true)
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.FailIfError(t, err)
 	privkey, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	auth := bind.NewKeyedTransactor(privkey)
+	test.FailIfError(t, err)
+	auth, err := bind.NewKeyedTransactorWithChainID(privkey, testChainId)
+	test.FailIfError(t, err)
 
 	clnt, auths := test.SimulatedBackend(t)
 	ethAuth := auths[0]

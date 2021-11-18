@@ -31,7 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/pkg/errors"
@@ -40,7 +40,7 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "cmdhelp").Logger()
 
 func readPass() (string, error) {
-	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return "", err
 	}

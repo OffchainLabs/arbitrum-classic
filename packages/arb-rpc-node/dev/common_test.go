@@ -48,6 +48,8 @@ var arbosfile *string
 var arbosVersion int
 var doUpgrade bool
 
+var testChainId = big.NewInt(421615)
+
 type ArbOSExec struct {
 	Version *int `json:"arbos_version"`
 }
@@ -100,7 +102,7 @@ func NewTestDevNode(
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
 	agg := common.RandAddress()
-	chainId := big.NewInt(42161)
+	chainId := testChainId
 	for i := range config {
 		opt := config[len(config)-1-i]
 		if aggConfig, ok := opt.(message.DefaultAggConfig); ok {
@@ -255,13 +257,12 @@ func UpgradeTestDevNode(t *testing.T, backend *Backend, srv *aggregator.Server, 
 func OwnerAuthPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, common.Address) {
 	if key == nil {
 		random, err := crypto.GenerateKey()
-		if err != nil {
-			t.Fatal(err)
-		}
+		test.FailIfError(t, err)
 		key = random
 	}
 
-	auth := bind.NewKeyedTransactor(key)
+	auth, err := bind.NewKeyedTransactorWithChainID(key, testChainId)
+	test.FailIfError(t, err)
 	address := common.NewAddressFromEth(auth.From)
 	return auth, address
 }

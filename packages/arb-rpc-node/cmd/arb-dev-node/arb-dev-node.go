@@ -345,7 +345,7 @@ func startup() error {
 				return
 			}
 
-			if err := ioutil.WriteFile(*saveMessages, data, 777); err != nil {
+			if err := ioutil.WriteFile(*saveMessages, data, 0777); err != nil {
 				errChan <- errors.Wrap(err, "error saving exported data")
 				return
 			}

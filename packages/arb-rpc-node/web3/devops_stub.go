@@ -13,7 +13,6 @@ func (eth *DevopsEth) Syncing() bool {
 }
 
 type DevopsNet struct {
-	chainId uint64
 }
 
 func (net *DevopsNet) PeerCount() hexutil.Uint {

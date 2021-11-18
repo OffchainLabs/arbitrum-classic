@@ -923,6 +923,9 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 			"wallet.local.password":                     "",
 			"wallet.local.private-key":                  "",
 		}, "."), nil)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "unable to clear private config variables")
+		}
 
 		c, err := k.Marshal(json.Parser())
 		if err != nil {

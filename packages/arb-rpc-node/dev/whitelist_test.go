@@ -38,6 +38,7 @@ func TestWhitelist(t *testing.T) {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 	senderKey, err := crypto.GenerateKey()
+	test.FailIfError(t, err)
 	ownerKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)

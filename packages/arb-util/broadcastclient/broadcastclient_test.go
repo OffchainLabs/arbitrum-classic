@@ -18,10 +18,11 @@ package broadcastclient
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 )
@@ -134,6 +135,9 @@ func TestServerClientDisconnect(t *testing.T) {
 	newBroadcastMessage := broadcaster.SequencedMessages()
 	hash1, feedItem1, signature1 := newBroadcastMessage()
 	err = b.BroadcastSingle(hash1, feedItem1.BatchItem, signature1.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Wait for client to receive batch to ensure it is connected
 	select {

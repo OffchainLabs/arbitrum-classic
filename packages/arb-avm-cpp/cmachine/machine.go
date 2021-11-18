@@ -175,9 +175,7 @@ func bytesArrayToByteSliceArray(bytes [][]byte) C.struct_ByteSliceArrayStruct {
 	byteSlices := encodeByteSliceList(bytes)
 	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
 	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
-	for i, data := range byteSlices {
-		sliceArray[i] = data
-	}
+	copy(sliceArray, byteSlices)
 	return C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
 }
 

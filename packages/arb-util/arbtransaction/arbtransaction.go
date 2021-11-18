@@ -19,9 +19,10 @@ package arbtransaction
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"math/big"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -48,10 +49,7 @@ func NewFireblocksArbTransaction(tx *types.Transaction, details *fireblocks.Tran
 	if len(details.TxHash) == 0 {
 		return nil, errors.New("missing txHash")
 	}
-	hashString := details.TxHash
-	if strings.HasPrefix(hashString, "0x") {
-		hashString = hashString[2:]
-	}
+	hashString := strings.TrimPrefix(details.TxHash, "0x")
 	if len(hashString) != 64 {
 		return nil, errors.New("txHash wrong size")
 	}

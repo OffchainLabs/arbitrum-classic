@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -39,7 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-var delayedBridgeABI abi.ABI
 var messageDeliveredID ethcommon.Hash
 var inboxMessageDeliveredID ethcommon.Hash
 var inboxMessageFromOriginID ethcommon.Hash
@@ -50,7 +48,6 @@ func init() {
 		panic(err)
 	}
 	messageDeliveredID = parsedBridgeABI.Events["MessageDelivered"].ID
-	delayedBridgeABI = parsedBridgeABI
 
 	parsedInboxABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.InboxABI))
 	if err != nil {
@@ -115,9 +112,6 @@ func (r *DelayedBridgeWatcher) LookupMessagesInRange(ctx context.Context, from, 
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
 		return nil, errors.WithStack(err)
-	}
-	for _, evmLog := range logs {
-		monitor.GlobalMonitor.ReaderGotBatch(common.NewHashFromEth(evmLog.TxHash))
 	}
 	return r.logsToDeliveredMessages(ctx, logs)
 }

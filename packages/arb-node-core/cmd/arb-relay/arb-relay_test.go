@@ -82,7 +82,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := 0; i < 1; i++ {
 		wg.Add(1)
-		go makeRelayClient(t, 10, &wg)
+		makeRelayClient(t, 10, &wg)
 	}
 
 	errChan := tmb.Start(ctx)
@@ -107,18 +107,20 @@ func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for {
-		select {
-		case receivedMsg := <-messageReceiver:
-			t.Logf("Received Message, Sequence Message: %v\n", receivedMsg.FeedItem.BatchItem.SequencerMessage)
-			messageCount++
+	go func() {
+		for {
+			select {
+			case receivedMsg := <-messageReceiver:
+				t.Logf("Received Message, Sequence Message: %v\n", receivedMsg.FeedItem.BatchItem.SequencerMessage)
+				messageCount++
 
-			if messageCount == expectedCount {
-				broadcastClient.Close()
-				return
+				if messageCount == expectedCount {
+					broadcastClient.Close()
+					return
+				}
+			case confirmedAccumulator := <-broadcastClient.ConfirmedAccumulatorListener:
+				t.Logf("Received confirmedAccumulator, Sequence Message: %v\n", confirmedAccumulator.ShortString())
 			}
-		case confirmedAccumulator := <-broadcastClient.ConfirmedAccumulatorListener:
-			t.Logf("Received confirmedAccumulator, Sequence Message: %v\n", confirmedAccumulator.ShortString())
 		}
-	}
+	}()
 }

@@ -18,10 +18,10 @@ package arbostest
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -78,12 +78,11 @@ type txTemplate struct {
 	Data     []byte
 
 	// Data to verify tx
-	resultType         []evm.ResultType
-	nonzeroComputation []bool
-	correctStorageUsed int
+	resultType             []evm.ResultType
+	nonzeroComputation     []bool
+	correctStorageUsed     int
 	correctStorageEstimate int
-	calldata           int
-	ranOutOfFunds      bool
+	calldata               int
 }
 
 func TestArbOSFees(t *testing.T) {
@@ -140,9 +139,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     conDataSuccess,
 
-			resultType:         []evm.ResultType{evm.ReturnCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: (conDeployedLength + 31) / 32,
+			resultType:             []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     (conDeployedLength + 31) / 32,
 			correctStorageEstimate: (conDeployedLength + 31) / 32,
 		},
 		// Successful call to method without storage
@@ -153,9 +152,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     makeFuncData(t, gasUsedABI.Methods["noop"]),
 
-			resultType:         []evm.ResultType{evm.ReturnCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 0,
 		},
 		// Successful call to storage allocating method
@@ -166,9 +165,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     makeFuncData(t, gasUsedABI.Methods["sstore"]),
 
-			resultType:         []evm.ResultType{evm.ReturnCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: 1,
+			resultType:             []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     1,
 			correctStorageEstimate: 1,
 		},
 		// Successful eth transfer to EOA
@@ -178,9 +177,9 @@ func TestArbOSFees(t *testing.T) {
 			To:       &eoaDest,
 			Value:    big.NewInt(100000),
 
-			resultType:         []evm.ResultType{evm.ReturnCode},
-			nonzeroComputation: []bool{false},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation:     []bool{false},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 0,
 		},
 		// Reverted constructor
@@ -190,9 +189,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     conDataFailure,
 
-			resultType:         []evm.ResultType{evm.RevertCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.RevertCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 0,
 		},
 		// Reverted storage allocating function call
@@ -203,9 +202,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     makeFuncData(t, gasUsedABI.Methods["fail"]),
 
-			resultType:         []evm.ResultType{evm.RevertCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.RevertCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 1,
 		},
 		// Reverted since insufficient funds
@@ -216,18 +215,18 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     common.RandBytes(100000),
 
-			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode},
-			nonzeroComputation: []bool{true, false, false, false},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode},
+			nonzeroComputation:     []bool{true, false, false, false},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 0,
 		},
 	}
 
 	if arbosVersion == 43 || arbosVersion == 44 {
 		// We charge for storage even when reverting in these versions
-		rawTxes[5].correctStorageUsed = 1;
+		rawTxes[5].correctStorageUsed = 1
 	}
-	
+
 	valueTransfered := big.NewInt(0)
 	for _, tx := range rawTxes {
 		valueTransfered = valueTransfered.Add(valueTransfered, tx.Value)
@@ -777,13 +776,13 @@ func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, call
 		}
 	}
 
-	var correctStorage int64;
+	var correctStorage int64
 	if estimationCase {
-		correctStorage = int64(correct.correctStorageEstimate);
+		correctStorage = int64(correct.correctStorageEstimate)
 	} else {
-		correctStorage = int64(correct.correctStorageUsed);
+		correctStorage = int64(correct.correctStorageUsed)
 	}
-	
+
 	if unitsUsed.L2Storage.Cmp(big.NewInt(correctStorage)) != 0 {
 		t.Error("wrong storage count used got", unitsUsed.L2Storage, "but expected", correct.correctStorageUsed, "for test", debugMessage)
 	}

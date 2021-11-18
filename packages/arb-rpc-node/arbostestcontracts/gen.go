@@ -32,6 +32,9 @@ func RunBindingGen() error {
 		if filepath.Ext(path) != ".sol" {
 			return nil
 		}
+		if err != nil {
+			return err
+		}
 		code, err := binding.GenerateBindingFromSolidity(path, "arbostestcontracts")
 		if err != nil {
 			return err

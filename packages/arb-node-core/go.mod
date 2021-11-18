@@ -11,7 +11,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0 // indirect
 	github.com/rs/zerolog v1.26.0
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
 )
 

@@ -29,6 +29,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/heptiolabs/healthcheck"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 type testConfigStruct struct {
@@ -79,7 +81,7 @@ func newTestConfig() *testConfigStruct {
 	return &testConfig
 }
 
-func startTestingServerFail(testConfig *testConfigStruct) {
+func startTestingServerFail(t *testing.T, testConfig *testConfigStruct) {
 	health := healthcheck.NewHandler()
 	httpMux := http.NewServeMux()
 
@@ -91,10 +93,11 @@ func startTestingServerFail(testConfig *testConfigStruct) {
 	//Create an endpoint to serve the readiness check
 	httpMux.HandleFunc("/ready", health.ReadyEndpoint)
 
-	http.ListenAndServe("127.0.0.1:"+testConfig.failServerPort, httpMux)
+	err := http.ListenAndServe("127.0.0.1:"+testConfig.failServerPort, httpMux)
+	test.FailIfError(t, err)
 }
 
-func startTestingServerPass(testConfig *testConfigStruct) {
+func startTestingServerPass(t *testing.T, testConfig *testConfigStruct) {
 	health := healthcheck.NewHandler()
 	httpMux := http.NewServeMux()
 
@@ -106,7 +109,8 @@ func startTestingServerPass(testConfig *testConfigStruct) {
 	//Create an endpoint to serve the readiness check
 	httpMux.HandleFunc("/ready", health.ReadyEndpoint)
 
-	http.ListenAndServe("127.0.0.1:"+testConfig.passServerPort, httpMux)
+	err := http.ListenAndServe("127.0.0.1:"+testConfig.passServerPort, httpMux)
+	test.FailIfError(t, err)
 }
 
 func setOpenEthereumEndpoint(healthChan chan Log) {
@@ -663,14 +667,19 @@ func TestNodeHealth(t *testing.T) {
 	healthChan := make(chan Log, testConfig.bufferSize)
 
 	//Generate sample servers for testing
-	go startTestingServerFail(testConfig)
-	go startTestingServerPass(testConfig)
+	go startTestingServerFail(t, testConfig)
+	go startTestingServerPass(t, testConfig)
 
 	//Start the healthcheck server with a background context for testing
 	ctx, cancel := context.WithCancel(context.Background())
 
 	registry := metrics.NewRegistry()
-	go StartNodeHealthCheck(ctx, healthChan, registry)
+	go func() {
+		err := StartNodeHealthCheck(ctx, healthChan, registry)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	//Test the startup delay works properly
 	err := startUpDelayTest(testConfig, healthChan)
@@ -688,7 +697,12 @@ func TestNodeHealth(t *testing.T) {
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
 	registry = metrics.NewRegistry()
-	go StartNodeHealthCheck(ctx, healthChan, registry)
+	go func() {
+		err := StartNodeHealthCheck(ctx, healthChan, registry)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	//Test the server doesn't bind when the healthcheck is disabled
 	err = disableHealthcheckTest(testConfig, healthChan)
@@ -702,7 +716,12 @@ func TestNodeHealth(t *testing.T) {
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
 	registry = metrics.NewRegistry()
-	go StartNodeHealthCheck(ctx, healthChan, registry)
+	go func() {
+		err := StartNodeHealthCheck(ctx, healthChan, registry)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	//Test the server removes the primary healthcheck when it is disabled
 	err = disablePrimaryCheckTest(testConfig, healthChan)
@@ -716,7 +735,12 @@ func TestNodeHealth(t *testing.T) {
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
 	registry = metrics.NewRegistry()
-	go StartNodeHealthCheck(ctx, healthChan, registry)
+	go func() {
+		err := StartNodeHealthCheck(ctx, healthChan, registry)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	//Test the server removes the OpenEthereum healthcheck when it is disabled
 	err = disableOpenEthereumCheckTest(testConfig, healthChan)
@@ -730,7 +754,12 @@ func TestNodeHealth(t *testing.T) {
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
 	registry = metrics.NewRegistry()
-	go StartNodeHealthCheck(ctx, healthChan, registry)
+	go func() {
+		err := StartNodeHealthCheck(ctx, healthChan, registry)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	//Test the healthcheck can disable both OpenEthereum and primary check
 	err = disableOpenEthereumPrimaryCheckTest(testConfig, healthChan)
@@ -750,7 +779,12 @@ func TestNodeHealth(t *testing.T) {
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
 	registry = metrics.NewRegistry()
-	go StartNodeHealthCheck(ctx, healthChan, registry)
+	go func() {
+		err := StartNodeHealthCheck(ctx, healthChan, registry)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	//OpenEthereum failure test
 	err = openethereumFailureTest(testConfig, healthChan)
@@ -764,7 +798,12 @@ func TestNodeHealth(t *testing.T) {
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
 	registry = metrics.NewRegistry()
-	go StartNodeHealthCheck(ctx, healthChan, registry)
+	go func() {
+		err := StartNodeHealthCheck(ctx, healthChan, registry)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	//Primary failure test
 	err = primaryFailureTest(testConfig, healthChan)
@@ -778,7 +817,12 @@ func TestNodeHealth(t *testing.T) {
 	ctx = context.Background()
 	healthChan = make(chan Log, testConfig.bufferSize)
 	registry = metrics.NewRegistry()
-	go StartNodeHealthCheck(ctx, healthChan, registry)
+	go func() {
+		err := StartNodeHealthCheck(ctx, healthChan, registry)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	//Test InboxReader catch up status
 	err = inboxReaderCatchUpTest(testConfig, healthChan)

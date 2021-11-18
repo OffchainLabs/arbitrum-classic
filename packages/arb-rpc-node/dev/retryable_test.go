@@ -75,11 +75,13 @@ func setupTest(t *testing.T) (
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
-	otherAuth := bind.NewKeyedTransactor(privkey)
+	otherAuth, err := bind.NewKeyedTransactorWithChainID(privkey, testChainId)
+	test.FailIfError(t, err)
 
 	privkey2, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
-	beneficiaryAuth := bind.NewKeyedTransactor(privkey2)
+	beneficiaryAuth, err := bind.NewKeyedTransactorWithChainID(privkey2, testChainId)
+	test.FailIfError(t, err)
 
 	sender := common.RandAddress()
 

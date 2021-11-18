@@ -41,7 +41,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
@@ -261,7 +260,6 @@ func (db *TxDB) HandleLog(logIndex uint64, avmLog core.ValueAndInbox) error {
 	case *evm.MerkleRootResult:
 		return db.as.SaveMessageBatch(res.BatchNumber, logIndex)
 	case *evm.TxResult:
-		monitor.GlobalMonitor.GotLog(res.IncomingRequest.MessageID)
 		tx, err := evm.GetTransaction(res)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error pulling transaction from receipt")
@@ -300,13 +298,11 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 
 	processedResults := evm.FilterEthTxResults(txResults)
 
-	var results []*evm.TxResult
 	ethTxes := make([]*types.Transaction, 0, len(txResults))
 	ethReceipts := make([]*types.Receipt, 0, len(txResults))
 	for _, res := range processedResults {
 		ethTxes = append(ethTxes, res.Tx)
 		ethReceipts = append(ethReceipts, res.Result.ToEthReceipt(common.Hash{}))
-		results = append(results, res.Result)
 
 		logger.Debug().
 			Hex("hash", res.Result.IncomingRequest.MessageID.Bytes()).

@@ -19,13 +19,11 @@ package ethbridge
 import (
 	"context"
 	"math/big"
-	"strings"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -45,7 +43,7 @@ var delayedInboxForcedID ethcommon.Hash
 var addSequencerL2BatchFromOriginABI abi.Method
 
 func init() {
-	parsedBridgeABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.SequencerInboxABI))
+	parsedBridgeABI, err := ethbridgecontracts.SequencerInboxMetaData.GetAbi()
 	if err != nil {
 		panic(err)
 	}
@@ -106,9 +104,6 @@ func (r *SequencerInboxWatcher) LookupBatchesInRange(ctx context.Context, from, 
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
 		return nil, errors.WithStack(err)
-	}
-	for _, evmLog := range logs {
-		monitor.GlobalMonitor.ReaderGotBatch(common.NewHashFromEth(evmLog.TxHash))
 	}
 	return r.logsToBatchRefs(ctx, logs)
 }
@@ -291,7 +286,6 @@ type sequencerBatchOriginRef struct {
 	beforeAcc   common.Hash
 	afterCount  *big.Int
 	afterAcc    common.Hash
-	delayedAcc  common.Hash
 }
 
 func (b sequencerBatchOriginRef) GetRawLog() types.Log {

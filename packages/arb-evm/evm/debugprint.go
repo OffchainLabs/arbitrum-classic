@@ -234,7 +234,7 @@ type ErrorHandlerError struct {
 }
 
 func (e *ErrorHandlerError) String() string {
-	return fmt.Sprintf("ErrorHandlerError{error_in_error_handler}")
+	return "ErrorHandlerError{error_in_error_handler}"
 }
 
 func (e *ErrorHandlerError) MarshalZerologObject(event *zerolog.Event) {

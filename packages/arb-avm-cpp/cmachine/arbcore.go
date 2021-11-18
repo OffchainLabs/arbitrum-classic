@@ -98,14 +98,6 @@ func delayedMessagesToByteSliceArray(delayedMessages []inbox.DelayedMessage) C.s
 	return bytesArrayToByteSliceArray(encodeDelayedMessages(delayedMessages))
 }
 
-func u256ArrayToByteSliceArray(nums []*big.Int) C.struct_ByteSliceArrayStruct {
-	var data [][]byte
-	for _, num := range nums {
-		data = append(data, math.U256Bytes(num))
-	}
-	return bytesArrayToByteSliceArray(data)
-}
-
 func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool {
 	defer runtime.KeepAlive(ac)
 	previousMessageCountPtr := unsafeDataPointer(math.U256Bytes(previousMessageCount))

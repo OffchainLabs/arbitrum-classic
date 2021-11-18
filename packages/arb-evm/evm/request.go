@@ -127,11 +127,6 @@ func NewAggregatorInfoFromOptionalValue(val value.Value) (*AggregatorInfo, error
 	}, nil
 }
 
-func newEmptyOptional() value.Value {
-	tup, _ := value.NewTupleFromSlice([]value.Value{value.NewInt64Value(0)})
-	return tup
-}
-
 func newOptional(val value.Value) value.Value {
 	if val == nil {
 		tup, _ := value.NewTupleFromSlice([]value.Value{value.NewInt64Value(0)})
@@ -149,11 +144,11 @@ func (a *AggregatorInfo) AsOptionalValue() value.Value {
 			aggVal = inbox.NewIntFromAddress(*a.Aggregator)
 		}
 
-		val := value.NewTuple2(
+		nestedVal := value.NewTuple2(
 			newOptional(aggVal),
 			value.NewIntValue(a.CalldataBytes),
 		)
-		tup, _ := value.NewTupleFromSlice([]value.Value{val})
+		tup, _ := value.NewTupleFromSlice([]value.Value{nestedVal})
 		val = tup
 	}
 	return newOptional(val)

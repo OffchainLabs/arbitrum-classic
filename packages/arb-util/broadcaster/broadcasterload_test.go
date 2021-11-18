@@ -26,6 +26,7 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
@@ -83,8 +84,6 @@ func startReceiveMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 			err := conn.Close()
 			if err != nil {
 				t.Errorf("%d can not close: %v\n", i, err)
-			} else {
-				//t.Logf("%d closed\n", i)
 			}
 		}(conn)
 

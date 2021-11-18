@@ -27,7 +27,6 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -232,8 +231,6 @@ type Backend struct {
 	currentAggregator common.Address
 	chainAggregator   common.Address
 	l1GasPrice        *big.Int
-
-	newTxFeed event.Feed
 }
 
 func NewBackend(ctx context.Context, core *BackendCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int) *Backend {
