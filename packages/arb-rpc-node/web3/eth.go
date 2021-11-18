@@ -77,7 +77,7 @@ func NewServer(
 	return &Server{
 		srv:                   srv,
 		ganacheMode:           config.Mode == GanacheMode,
-		maxAVMGas:             config.MaxCallAVMGas,
+		maxAVMGas:             maxGas,
 		aggregator:            srv.Aggregator(),
 		sequencerInboxWatcher: sequencerInboxWatcher,
 	}
