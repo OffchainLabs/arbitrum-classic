@@ -46,6 +46,8 @@ type ClientManager struct {
 	broadcastChan     chan BroadcastMessage
 	clientAction      chan ClientConnectionAction
 	settings          configuration.FeedOutput
+	confirmedAcc      common.Hash
+	prevConfirmedAcc  common.Hash
 }
 
 type ClientConnectionAction struct {
@@ -149,15 +151,21 @@ func (cm *ClientManager) ClientCount() int32 {
 func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
 	logger.Debug().Hex("acc", accumulator.Bytes()).Msg("confirming accumulator")
 
-	bm := BroadcastMessage{
-		Version: 1,
-		ConfirmedAccumulator: ConfirmedAccumulator{
-			IsConfirmed: true,
-			Accumulator: accumulator,
-		},
+	var emptyHash common.Hash
+	if cm.prevConfirmedAcc != emptyHash {
+		bm := BroadcastMessage{
+			Version: 1,
+			ConfirmedAccumulator: ConfirmedAccumulator{
+				IsConfirmed: true,
+				Accumulator: accumulator,
+			},
+		}
+
+		cm.broadcastChan <- bm
 	}
 
-	cm.broadcastChan <- bm
+	cm.prevConfirmedAcc = cm.confirmedAcc
+	cm.confirmedAcc = accumulator
 }
 
 // Broadcast sends batch item to all clients.
