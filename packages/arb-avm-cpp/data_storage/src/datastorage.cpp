@@ -140,10 +140,31 @@ rocksdb::Status DataStorage::closeDb() {
         }
         txn_db->SyncWAL();
         auto s = txn_db->Close();
-        for (auto i = 0; s.IsAborted() && i < 10; i++) {
-            std::cerr << "waiting for rocksdb snapshots to be freed"
-                      << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        // Normally, the database will shutdown cleanly very quickly.  However,
+        // if database is under heavy load, it could take a while to finish
+        // pending requests and close all snapshots so that database can be
+        // closed cleanly.
+        for (std::chrono::seconds seconds_left = std::chrono::minutes(30);
+             s.IsAborted() && seconds_left.count() > 0;
+             seconds_left -= std::chrono::seconds(1)) {
+            // Try to close database once a second for 30 minutes
+            if (seconds_left.count() % 10 == 0) {
+                // Print message every 10 seconds
+                auto output_minutes =
+                    std::chrono::duration_cast<std::chrono::minutes>(
+                        seconds_left)
+                        .count();
+                auto output_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>(
+                        seconds_left % std::chrono::minutes(1))
+                        .count();
+                std::cerr << "waiting up to " << output_minutes << " minutes, "
+                          << output_seconds
+                          << " seconds for rocksdb snapshots to be freed"
+                          << std::endl;
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             s = txn_db->Close();
         }
         if (s.IsAborted()) {
