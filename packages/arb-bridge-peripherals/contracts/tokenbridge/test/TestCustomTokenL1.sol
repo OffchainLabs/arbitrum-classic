@@ -52,25 +52,30 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
         address l2CustomTokenAddress,
         uint256 maxSubmissionCostForCustomBridge,
         uint256 maxSubmissionCostForRouter,
-        uint256 maxGas,
+        uint256 maxGasForCustomBridge,
+        uint256 maxGasForRouter,
         uint256 gasPriceBid,
+        uint256 valueForGateway,
+        uint256 valueForRouter,
         address creditBackAddress
-    ) public override {
+    ) public payable override {
         // we temporarily set `shouldRegisterGateway` to true for the callback in registerTokenToL2 to succeed
         bool prev = shouldRegisterGateway;
         shouldRegisterGateway = true;
 
+        // L1CustomGateway(bridge).registerTokenToL2{value: valueForGateway}(
         L1CustomGateway(bridge).registerTokenToL2(
             l2CustomTokenAddress,
-            maxGas,
+            maxGasForCustomBridge,
             gasPriceBid,
             maxSubmissionCostForCustomBridge,
             creditBackAddress
         );
 
+        // L1GatewayRouter(router).setGateway{value: valueForRouter}(
         L1GatewayRouter(router).setGateway(
             bridge,
-            maxGas,
+            maxGasForRouter,
             gasPriceBid,
             maxSubmissionCostForRouter,
             creditBackAddress
