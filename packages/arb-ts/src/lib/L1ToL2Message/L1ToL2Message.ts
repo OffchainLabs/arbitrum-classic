@@ -7,6 +7,7 @@ import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../precompile_addresses'
+import { constants } from 'ethers'
 import {
   getMessageNumbers,
   calculateRetryableTicketCreationHash,
@@ -19,7 +20,7 @@ export enum L1ToL2MessageStatus {
   CREATION_FAILED,
   NOT_YET_REDEEMED, // i.e., autoredeem failed
   REDEEMED,
-  CANCELLED,
+  EXPIRED, // canceled or timed out
 }
 
 export interface L1ToL2MessageReceipt {
@@ -31,7 +32,7 @@ export interface L1ToL2MessageReceipt {
 
 export class L1ToL2Message extends MultiChainConnector {
   messgeNumber: BigNumber
-  l1ToL2MessageManager: L1ToL2MessageManager
+  arbRetryableActions: ArbRetryableActions
   l1TxnHash: string
   constructor(
     signersAndProviders: SignersAndProviders,
@@ -61,7 +62,7 @@ export class L1ToL2Message extends MultiChainConnector {
       )
 
     this.messgeNumber = messageNumbers[messageNumberIndex || 0]
-    this.l1ToL2MessageManager = new L1ToL2MessageManager(signersAndProviders)
+    this.arbRetryableActions = new ArbRetryableActions(signersAndProviders)
   }
 
   static async initFromTL1xHash(
@@ -115,12 +116,12 @@ export class L1ToL2Message extends MultiChainConnector {
     if (!this.l2Signer || !this.l2Network) throw new Error('need l2 signer')
 
     // explicitely check if already redeemed / do a getStatus?
-    return this.l1ToL2MessageManager.redeem(this.userTxnHash)
+    return this.arbRetryableActions.redeem(this.userTxnHash)
   }
 
   public async cancel(): Promise<ContractTransaction> {
-    if (!this.l2Signer || !this.l2Provider) throw new Error('need l2 provider')
-    return this.l1ToL2MessageManager.cancel(this.userTxnHash)
+    if (!this.l2Signer) throw new Error('need l2 provider')
+    return this.arbRetryableActions.cancel(this.userTxnHash)
   }
 
   public async wait(
@@ -146,7 +147,10 @@ export class L1ToL2Message extends MultiChainConnector {
       ticketCreationReceipt,
       autoRedeemReceipt,
       userTxnReceipt,
-      status: this.receiptsToStatus(ticketCreationReceipt, userTxnReceipt),
+      status: await this.receiptsToStatus(
+        ticketCreationReceipt,
+        userTxnReceipt
+      ),
     }
   }
 
@@ -163,10 +167,16 @@ export class L1ToL2Message extends MultiChainConnector {
     return this.receiptsToStatus(userTxnReceipt, ticketCreationReceipt)
   }
 
-  receiptsToStatus(
+  public async isExpired(): Promise<boolean> {
+    return (await this.arbRetryableActions.getTimeout(this.userTxnHash)).eq(
+      constants.Zero
+    )
+  }
+
+  private async receiptsToStatus(
     ticketCreationReceipt: TransactionReceipt,
     userTxnReceipt: TransactionReceipt
-  ): L1ToL2MessageStatus {
+  ): Promise<L1ToL2MessageStatus> {
     if (userTxnReceipt && userTxnReceipt.status === 1) {
       return L1ToL2MessageStatus.REDEEMED
     }
@@ -177,12 +187,15 @@ export class L1ToL2Message extends MultiChainConnector {
     if (ticketCreationReceipt.status === 0) {
       return L1ToL2MessageStatus.CREATION_FAILED
     }
+    if (await this.isExpired()) {
+      return L1ToL2MessageStatus.EXPIRED
+    }
     // we could sanity check that autoredeem failed, but we don't need to
     return L1ToL2MessageStatus.NOT_YET_REDEEMED
   }
 }
 
-export class L1ToL2MessageManager extends MultiChainConnector {
+export class ArbRetryableActions extends MultiChainConnector {
   constructor(signersAndProviders: SignersAndProviders) {
     super()
     this.initSignorsAndProviders(signersAndProviders)
@@ -205,6 +218,16 @@ export class L1ToL2MessageManager extends MultiChainConnector {
       this.l2Signer
     )
     return arbRetryableTx.cancel(userL2TxnHash)
+  }
+
+  public getTimeout(userL2TxnHash: string): Promise<BigNumber> {
+    if (!this.l2Provider) throw new Error('Must have l2Provider')
+
+    const arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      this.l2Provider
+    )
+    return arbRetryableTx.getTimeout(userL2TxnHash)
   }
   // keep alive etc.
 }
