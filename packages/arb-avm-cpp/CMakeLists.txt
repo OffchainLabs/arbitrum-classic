@@ -86,7 +86,7 @@ endif (ENABLE_JEMALLOC)
 # On macOS, search Homebrew for keg-only versions of OpenSSL
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     execute_process(
-        COMMAND brew --prefix OpenSSL
+        COMMAND brew --prefix OpenSSL@1.1
         RESULT_VARIABLE BREW_OPENSSL
         OUTPUT_VARIABLE BREW_OPENSSL_PREFIX
         OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -189,6 +189,10 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm" AND NOT AVM_FUZZER)
             " $<TARGET_LINKER_FILE:secp256k1>"
             " ${JEMALLOC_LINK_LIBRARIES}"
             " $<TARGET_LINKER_FILE:OpenSSL::Crypto>"
+            " $<TARGET_LINKER_FILE:RocksDB::RocksDB>"
+            " $<TARGET_LINKER_FILE:ethash::keccak>"
+            " ${GMP_LIBRARY}"
+            " ${GMPXX_LIBRARY}"
         )
         configure_file( ${INFILE} ${MIDDLEFILE} )
         file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})

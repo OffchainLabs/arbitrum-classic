@@ -22,6 +22,18 @@ docker build -t cpp-base cpp-base
 docker tag cpp-base:latest offchainlabs/cpp-base:0.1.0
 docker push offchainlabs/cpp-base:0.1.0
 
+docker build -t cpp-tsan-base cpp-tsan-base
+docker tag cpp-tsan-base:latest offchainlabs/cpp-tsan-base:0.1.0
+docker push offchainlabs/cpp-tsan-base:0.1.0
+
+docker build -t cpp-asan-base cpp-asan-base
+docker tag cpp-asan-base:latest offchainlabs/cpp-asan-base:0.1.0
+docker push offchainlabs/cpp-asan-base:0.1.0
+
+docker build -t dist-base dist-base
+docker tag dist-base:latest offchainlabs/dist-base:0.1.0
+docker push offchainlabs/dist-base:0.1.0
+
 docker build -t ethbridge-base ethbridge-base
 docker tag ethbridge-base:latest offchainlabs/ethbridge-base:0.1.0
 docker push offchainlabs/ethbridge-base:0.1.0

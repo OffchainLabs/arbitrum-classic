@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/pkg/errors"
@@ -75,7 +76,7 @@ func NewSnapshot(mach machine.Machine, time inbox.ChainTime, lastInboxSeq *big.I
 		}
 		// Note: this .Call actually uses arbosRemappingEnabled which isn't set yet,
 		// but that's fine because the zero address is never rewritten regardless.
-		arbOwnerRes, _, err := snap.Call(arbOwnerMsg, common.Address{})
+		arbOwnerRes, _, err := snap.Call(arbOwnerMsg, common.Address{}, math.MaxUint64)
 		if err != nil {
 			return nil, err
 		}
@@ -162,7 +163,7 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 				Data:        tx.Data(),
 			},
 		}
-		return s.Call(msg, sender)
+		return s.Call(msg, sender, maxAVMGas)
 	} else {
 		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, big.NewInt(0), message.NewCompressedECDSAFromEth(tx))
 		if err != nil {
@@ -268,7 +269,7 @@ func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.A
 	return res2, debugPrints, err
 }
 
-func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
 	var targetHash common.Hash
 	if s.chainId != nil {
 		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
@@ -276,12 +277,12 @@ func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) 
 	if s.arbosRemappingEnabled {
 		sender = message.L1RemapAccount(sender)
 	}
-	return s.tryTx(message.NewSafeL2Message(msg), sender, targetHash, 100000000000)
+	return s.tryTx(message.NewSafeL2Message(msg), sender, targetHash, maxAVMGas)
 }
 
-func (s *Snapshot) tryTx(msg message.Message, sender common.Address, targetHash common.Hash, maxGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) tryTx(msg message.Message, sender common.Address, targetHash common.Hash, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
-	res, debugPrints, err := runTx(s.mach.Clone(), inboxMsg, maxGas)
+	res, debugPrints, err := runTx(s.mach.Clone(), inboxMsg, maxAVMGas)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -316,7 +317,7 @@ func (s *Snapshot) basicCall(data []byte, dest common.Address) (*evm.TxResult, e
 			Data:        data,
 		},
 	}
-	res, _, err := s.Call(msg, common.Address{})
+	res, _, err := s.Call(msg, common.Address{}, math.MaxUint64)
 	return res, err
 }
 
@@ -452,8 +453,8 @@ func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
 	return arbos.ParseGetPricesInWeiResult(res.ReturnData)
 }
 
-func runTx(mach machine.Machine, msg inbox.InboxMessage, maxGas uint64) (*evm.TxResult, []value.Value, error) {
-	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(maxGas, false, nil, []inbox.InboxMessage{msg}, true)
+func runTx(mach machine.Machine, msg inbox.InboxMessage, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(maxAVMGas, false, nil, []inbox.InboxMessage{msg}, true)
 	if err != nil {
 		return nil, nil, err
 	}

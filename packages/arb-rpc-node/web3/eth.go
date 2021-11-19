@@ -39,29 +39,45 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "web3").Logger()
 var gasPriceFactor = big.NewInt(2)
 var gasEstimationCushion = 10
+
+const maxGas = 1<<31 - 1
+
+type ServerConfig struct {
+	Mode          RpcMode
+	MaxCallAVMGas uint64
+	DevopsStubs   bool
+}
 
 type Server struct {
 	srv                   *aggregator.Server
 	ganacheMode           bool
-	maxCallGas            uint64
 	maxAVMGas             uint64
 	aggregator            *arbcommon.Address
 	sequencerInboxWatcher *ethbridge.SequencerInboxWatcher
 }
 
+const DefaultMaxAVMGas = 500000000
+
+var DefaultConfig = ServerConfig{
+	Mode:          NormalMode,
+	MaxCallAVMGas: DefaultMaxAVMGas,
+}
+
 func NewServer(
 	srv *aggregator.Server,
-	ganacheMode bool,
+	config ServerConfig,
 	sequencerInboxWatcher *ethbridge.SequencerInboxWatcher,
 ) *Server {
+	maxGas := config.MaxCallAVMGas
+	if maxGas == 0 {
+		maxGas = math.MaxUint64
+	}
 	return &Server{
 		srv:                   srv,
-		ganacheMode:           ganacheMode,
-		maxCallGas:            1<<31 - 1,
-		maxAVMGas:             500000000,
+		ganacheMode:           config.Mode == GanacheMode,
+		maxAVMGas:             maxGas,
 		aggregator:            srv.Aggregator(),
 		sequencerInboxWatcher: sequencerInboxWatcher,
 	}
@@ -247,10 +263,12 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overr
 		}
 	}
 
-	from, msg := buildCallMsg(callArgs, s.maxCallGas)
+	from, msg := buildCallMsg(callArgs)
 
-	res, _, err := snap.Call(msg, from)
-
+	res, _, err := snap.Call(msg, from, s.maxAVMGas)
+	if err != nil {
+		return nil, err
+	}
 	if res.ResultCode != evm.ReturnCode {
 		return nil, evm.HandleCallError(res, s.ganacheMode)
 	}
@@ -620,17 +638,6 @@ func buildTransactionForEstimation(args CallTxArgs) (arbcommon.Address, *types.T
 	return buildTransactionImpl(args, gas)
 }
 
-func buildTransactionForCall(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types.Transaction) {
-	gas := uint64(0)
-	if args.Gas != nil {
-		gas = uint64(*args.Gas)
-	}
-	if gas == 0 || gas > maxGas {
-		gas = maxGas
-	}
-	return buildTransactionImpl(args, gas)
-}
-
 func buildTransactionImpl(args CallTxArgs, gas uint64) (arbcommon.Address, *types.Transaction) {
 	var from arbcommon.Address
 	if args.From != nil {
@@ -659,8 +666,15 @@ func buildTransactionImpl(args CallTxArgs, gas uint64) (arbcommon.Address, *type
 	})
 }
 
-func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.ContractTransaction) {
-	from, tx := buildTransactionForCall(args, maxGas)
+func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransaction) {
+	gas := uint64(0)
+	if args.Gas != nil {
+		gas = uint64(*args.Gas)
+	}
+	if gas == 0 || gas > maxGas {
+		gas = maxGas
+	}
+	from, tx := buildTransactionImpl(args, gas)
 	var dest arbcommon.Address
 	if tx.To() != nil {
 		dest = arbcommon.NewAddressFromEth(*tx.To())

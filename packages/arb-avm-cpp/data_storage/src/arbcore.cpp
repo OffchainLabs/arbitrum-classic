@@ -39,8 +39,8 @@
 
 #ifdef __linux__
 #include <execinfo.h>
-#include <signal.h>
 #include <sys/prctl.h>
+#include <csignal>
 #endif
 
 namespace {
@@ -153,8 +153,8 @@ bool ArbCore::deliverMessages(
 }
 
 ValueLoader ArbCore::makeValueLoader() const {
-    return {std::make_unique<CoreValueLoader>(data_storage, core_code,
-                                              ValueCache{1, 0})};
+    return ValueLoader{std::make_unique<CoreValueLoader>(
+        data_storage, core_code, ValueCache{1, 0})};
 }
 
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
@@ -208,7 +208,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         // Reset database for profile testing
         status =
             reorgToL1Block(coreConfig.test_reorg_to_l1_block, false, cache);
-    } else if (coreConfig.test_reorg_to_l1_block != 0) {
+    } else if (coreConfig.test_reorg_to_l2_block != 0) {
         // Reset database for profile testing
         status =
             reorgToL2Block(coreConfig.test_reorg_to_l2_block, false, cache);
@@ -376,11 +376,7 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
         return save_res.first;
     }
 
-    auto machine_code =
-        dynamic_cast<RunningCode*>(core_machine->machine_state.code.get());
-    assert(machine_code != nullptr);
-    machine_code->commitCodeToParent(save_res.second);
-    core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
+    saveCodeToCore(*core_machine, save_res.second);
 
     std::vector<unsigned char> key;
     marshal_uint256_t(state.output.arb_gas_used, key);
@@ -592,6 +588,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         // Need to run machine until caught up with current checkpoint
         MachineExecutionConfig execConfig;
         execConfig.stop_on_sideload = cache_sideloads;
+        execConfig.max_gas = target_output.arb_gas_used;
 
         // Add messages and run machine
         auto success = runMachineWithMessages(
@@ -631,8 +628,10 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         }
     }
 
-    if (core_machine->machine_state.output.arb_gas_used !=
-        target_output.arb_gas_used) {
+    // Ensure future continueRunningMachine calls don't use the set gas limit.
+    core_machine->machine_state.context.max_gas = 0;
+
+    if (core_machine->machine_state.output != target_output) {
         // Machine in unexpected state, data corruption might have occurred
         std::cerr << "Error catching up: machine in unexpected state"
                   << "\n";
@@ -1542,7 +1541,6 @@ ValueResult<uint256_t> ArbCore::getSequencerBlockNumberAt(
     auto it = tx.sequencerBatchItemGetIterator(&first_key_slice);
     it->Seek(first_key_slice);
 
-    std::vector<std::vector<unsigned char>> ret;
     while (it->Valid()) {
         auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
         auto value_ptr =
@@ -2284,6 +2282,8 @@ ArbCore::findCloserExecutionCursor(
 
     switch (mach.status) {
         case CombinedMachineCache::Success:
+            mach.machine->machine_state.code =
+                std::make_shared<RunningCode>(mach.machine->machine_state.code);
             return ExecutionCursor(std::move(mach.machine));
         case CombinedMachineCache::UseDatabase:
             return ExecutionCursor(database_machine_state_keys.value());
@@ -2348,7 +2348,7 @@ ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
     for (auto& raw_message : raw_result.data) {
         auto message = extractInboxMessage(raw_message.message);
         message.inbox_sequence_number = raw_message.sequence_number;
-        messages.emplace_back(message, raw_message.accumulator);
+        messages.emplace_back(std::move(message), raw_message.accumulator);
     }
 
     return {rocksdb::Status::OK(), messages};

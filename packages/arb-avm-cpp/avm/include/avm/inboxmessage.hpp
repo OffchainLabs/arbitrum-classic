@@ -67,8 +67,8 @@ struct MachineMessage {
     uint256_t accumulator;
 
     MachineMessage() = default;
-    MachineMessage(InboxMessage message_, uint256_t accumulator_)
-        : message(message_), accumulator(accumulator_) {}
+    MachineMessage(InboxMessage&& message_, uint256_t accumulator_)
+        : message(std::move(message_)), accumulator(accumulator_) {}
 
     void serializeImpl(std::vector<unsigned char>& state_data_vector) const;
 };
@@ -80,10 +80,10 @@ InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state);
 InboxMessage extractInboxMessageImpl(
     std::vector<unsigned char>::const_iterator current_iter,
-    const std::vector<unsigned char>::const_iterator end);
+    std::vector<unsigned char>::const_iterator end);
 MachineMessage extractMachineMessageImpl(
     std::vector<unsigned char>::const_iterator current_iter,
-    const std::vector<unsigned char>::const_iterator end);
+    std::vector<unsigned char>::const_iterator end);
 
 // An efficient version of extractInboxMessage that ignores everything except
 // the block number

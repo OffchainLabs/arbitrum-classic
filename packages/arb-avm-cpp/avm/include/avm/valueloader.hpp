@@ -27,7 +27,8 @@ class AbstractValueLoader {
     // Throws an exception if the tuple cannot be loaded
     virtual value loadValue(const uint256_t& hash) = 0;
 
-    virtual std::unique_ptr<AbstractValueLoader> clone() const = 0;
+    [[nodiscard]] virtual std::unique_ptr<AbstractValueLoader> clone()
+        const = 0;
 };
 
 class ValueLoader : public AbstractValueLoader {
@@ -36,9 +37,11 @@ class ValueLoader : public AbstractValueLoader {
 
    public:
     ValueLoader() : impl(nullptr) {}
-    ValueLoader(std::unique_ptr<AbstractValueLoader> impl_)
+    explicit ValueLoader(std::unique_ptr<AbstractValueLoader> impl_)
         : impl(std::move(impl_)) {}
     ValueLoader(const ValueLoader& other) : impl(other.clone()) {}
+    ValueLoader(ValueLoader&& other) = default;
+    ValueLoader& operator=(ValueLoader&& other) = default;
 
     ValueLoader& operator=(const ValueLoader& other) {
         impl = other.clone();
@@ -52,7 +55,7 @@ class ValueLoader : public AbstractValueLoader {
         return impl->loadValue(hash);
     }
 
-    std::unique_ptr<AbstractValueLoader> clone() const override {
+    [[nodiscard]] std::unique_ptr<AbstractValueLoader> clone() const override {
         if (impl) {
             return impl->clone();
         } else {

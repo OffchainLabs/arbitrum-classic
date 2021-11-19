@@ -50,7 +50,7 @@ class Datastack {
         hashes.reserve(lazyCount);
     }
 
-    Datastack(Tuple tuple_rep);
+    explicit Datastack(Tuple tuple_rep);
 
     Tuple getTupleRepresentation() const;
 
