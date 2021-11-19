@@ -197,7 +197,9 @@ struct ValueTypeVisitor {
         return TUPLE;
     }
     ValueTypes operator()(const Buffer&) const { return BUFFER; }
-    ValueTypes operator()(const UnloadedValue& val) const { return val.type; }
+    ValueTypes operator()(const UnloadedValue& val) const {
+        return val.unpack().type;
+    }
 };
 
 #endif /* tuple_hpp */

@@ -256,7 +256,8 @@ void deleteParsedValue(std::vector<ParsedTupVal> tup,
         // and don't reference anything else
         if (std::holds_alternative<UnloadedValue>(val)) {
             // Delete the referenced hash in a later pass
-            vals_to_delete.push_back(std::get<UnloadedValue>(val).hash);
+            vals_to_delete.push_back(
+                std::get<UnloadedValue>(val).unpack().hash);
         } else if (std::holds_alternative<ParsedBuffer>(val)) {
             // Delete any buffer nodes in a later pass
             auto parsed = std::get<ParsedBuffer>(val);
@@ -350,7 +351,7 @@ GetResults processVal(const ReadTransaction& tx,
 GetResults getStoredValue(const ReadTransaction& tx,
                           const UnloadedValue& val_info) {
     std::array<unsigned char, 32> hash_key{};
-    marshal_uint256_t(val_info.hash, hash_key);
+    marshal_uint256_t(val_info.unpack().hash, hash_key);
     auto key = vecToSlice(hash_key);
     auto results = getRefCountedData(tx, key);
     return results;
@@ -409,12 +410,12 @@ Buffer processBuffer(const ReadTransaction& tx,
             vec.push_back(std::get<Buffer>(cached_val.value()));
             continue;
         }
-        auto val_hash = UnloadedValue{BUFFER, node_hash, 1};
+        auto unloaded_val = UnloadedValue(BUFFER, node_hash, 1);
         // Value not in cache, so need to load from database
-        auto results = getStoredValue(tx, val_hash);
+        auto results = getStoredValue(tx, unloaded_val);
         if (!results.status.ok()) {
             std::cerr << "Error loading buffer record "
-                      << static_cast<uint64_t>(val_hash.hash) << std::endl;
+                      << static_cast<uint64_t>(node_hash) << std::endl;
             return {};
         }
         auto record_string =
@@ -522,12 +523,12 @@ GetResults processVal(const ReadTransaction& tx,
                       const uint32_t,
                       ValueCache& val_cache,
                       bool lazy_load) {
-    if (auto val = val_cache.loadIfExists(val_info.hash)) {
+    if (auto val = val_cache.loadIfExists(val_info.unpack().hash)) {
         // Use cached value
         return applyValue(std::move(*val), 0, val_stack);
     }
 
-    if (lazy_load && val_info.type == TUPLE) {
+    if (lazy_load && val_info.unpack().type == TUPLE) {
         // Don't load value immediately; load on demand
         return applyValue(val_info, 0, val_stack);
     }
@@ -555,7 +556,7 @@ GetResults processFirstVal(const ReadTransaction& tx,
                            std::set<uint64_t>& segment_ids,
                            const uint32_t,
                            ValueCache& val_cache) {
-    if (auto val = val_cache.loadIfExists(val_info.hash)) {
+    if (auto val = val_cache.loadIfExists(val_info.unpack().hash)) {
         // Use cached value
         val_stack.emplace_back(std::move(*val), 0);
         return GetResults{0, rocksdb::Status::OK(), {}};
@@ -653,8 +654,9 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
     std::vector<ValueBeingParsed> val_stack{};
 
     // Initialize val_stack with first value from database
+    // Note: only the hash field of this UnloadedValue is relevant
     auto result =
-        processFirstVal(tx, UnloadedValue{HASH_PRE_IMAGE, value_hash, 0},
+        processFirstVal(tx, UnloadedValue(HASH_PRE_IMAGE, value_hash, 1),
                         val_stack, segment_ids, 0, value_cache);
     if (!result.status.ok()) {
         return result.status;

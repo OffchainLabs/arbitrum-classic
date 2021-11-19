@@ -19,14 +19,70 @@
 
 #include <avm_values/valuetype.hpp>
 
-struct UnloadedValue {
+#include <cassert>
+
+struct BigUnloadedValue {
     ValueTypes type;
     uint256_t hash{};
     uint256_t value_size{};
 };
 
+struct InlineUnloadedTuple {
+    uint256_t hash{};
+    uint64_t value_size{};
+};
+
+struct InlineUnloadedNonTuple {
+    ValueTypes type;
+    uint256_t hash{};
+};
+
+using unloadedValue = std::variant<InlineUnloadedTuple,
+                                   InlineUnloadedNonTuple,
+                                   std::shared_ptr<BigUnloadedValue>>;
+
+struct UnloadedValueUnpacker {
+    BigUnloadedValue operator()(const InlineUnloadedTuple& val) {
+        return BigUnloadedValue{ValueTypes::TUPLE, val.hash, val.value_size};
+    }
+    BigUnloadedValue operator()(const InlineUnloadedNonTuple& val) {
+        return BigUnloadedValue{val.type, val.hash, 1};
+    }
+    BigUnloadedValue operator()(const std::shared_ptr<BigUnloadedValue>& val) {
+        return *val;
+    }
+};
+
+class UnloadedValue {
+   private:
+    unloadedValue inner;
+
+    UnloadedValue(unloadedValue inner_) : inner(inner_) {}
+
+   public:
+    UnloadedValue(ValueTypes ty, uint256_t hash, uint256_t size) {
+        assert(size > 0);
+        if (ty == ValueTypes::TUPLE) {
+            uint64_t small_size(size);
+            if (uint256_t(small_size) == size) {
+                inner = InlineUnloadedTuple{hash, small_size};
+            } else {
+                inner = std::make_shared<BigUnloadedValue>(
+                    BigUnloadedValue{ty, hash, size});
+            }
+        } else {
+            assert(size == 1);
+            inner = InlineUnloadedNonTuple{ty, hash};
+        }
+    }
+
+    BigUnloadedValue unpack() const {
+        return std::visit(UnloadedValueUnpacker{}, inner);
+    }
+};
+
 inline uint256_t hash(const UnloadedValue& uv) {
-    return uv.hash;
+    return uv.unpack().hash;
 }
 
 #endif /* unloadedvalue_hpp */
