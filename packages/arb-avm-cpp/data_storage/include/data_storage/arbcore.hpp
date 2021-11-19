@@ -308,14 +308,14 @@ class ArbCore {
 
    private:
     // Execution cursor internal functions
-    std::variant<rocksdb::Status, std::vector<MachineEmission<value>>>
-    advanceExecutionCursorImpl(ExecutionCursor& execution_cursor,
-                               uint256_t total_gas_used,
-                               bool go_over_gas,
-                               size_t message_group_size,
-                               bool allow_slow_lookup,
-                               bool save_debug_prints,
-                               uint256_t debug_print_log_number);
+    ValueResult<std::vector<MachineEmission<value>>> advanceExecutionCursorImpl(
+        ExecutionCursor& execution_cursor,
+        uint256_t total_gas_used,
+        bool go_over_gas,
+        size_t message_group_size,
+        bool allow_slow_lookup,
+        bool save_debug_prints,
+        uint256_t debug_print_log_number);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,

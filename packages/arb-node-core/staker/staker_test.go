@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -418,7 +417,6 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 	defer shutdown()
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000), true)
 	test.FailIfError(t, err)
-	defer runtime.KeepAlive(cursor)
 	inboxGas := new(big.Int).Add(cursor.TotalGasConsumed(), big.NewInt(1))
 	t.Logf("Found first inbox instruction starting at %v", inboxGas)
 	return inboxGas

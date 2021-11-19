@@ -20,7 +20,6 @@ import (
 	"context"
 	"math/big"
 	"math/rand"
-	"runtime"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -166,7 +165,6 @@ func checkChallengeCompleted(t *testing.T, tester *ethbridgetestcontracts.Challe
 func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *big.Int, endGas *big.Int) (*core.Assertion, error) {
 	cursor, err := lookup.GetExecutionCursor(startGas, true)
 	test.FailIfError(t, err)
-	defer runtime.KeepAlive(cursor)
 	inboxMaxCount, err := lookup.GetMessageCount()
 	test.FailIfError(t, err)
 	prevExecState, err := core.NewExecutionState(cursor)

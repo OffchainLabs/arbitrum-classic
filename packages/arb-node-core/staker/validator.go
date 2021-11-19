@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"math/big"
-	"runtime"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -238,7 +237,6 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 			return nil, false, err
 		}
 	}
-	defer runtime.KeepAlive(cursor)
 	cursorHash := cursor.MachineHash()
 	if err != nil {
 		return nil, false, err

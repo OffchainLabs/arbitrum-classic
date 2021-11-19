@@ -415,6 +415,7 @@ func (ac *ArbCore) AdvanceExecutionCursorWithTracing(executionCursor core.Execut
 	if result.found == 0 {
 		return nil, errors.New("failed to advance")
 	}
+	runtime.KeepAlive(cursor)
 
 	return protocol.BytesArrayToVals(receiveByteSlice(result.data.slice), uint64(result.data.count))
 }
