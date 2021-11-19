@@ -376,11 +376,7 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
         return save_res.first;
     }
 
-    auto machine_code =
-        dynamic_cast<RunningCode*>(core_machine->machine_state.code.get());
-    assert(machine_code != nullptr);
-    machine_code->commitCodeToParent(save_res.second);
-    core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
+    saveCodeToCore(*core_machine, save_res.second);
 
     std::vector<unsigned char> key;
     marshal_uint256_t(state.output.arb_gas_used, key);
@@ -2286,6 +2282,8 @@ ArbCore::findCloserExecutionCursor(
 
     switch (mach.status) {
         case CombinedMachineCache::Success:
+            mach.machine->machine_state.code =
+                std::make_shared<RunningCode>(mach.machine->machine_state.code);
             return ExecutionCursor(std::move(mach.machine));
         case CombinedMachineCache::UseDatabase:
             return ExecutionCursor(database_machine_state_keys.value());
