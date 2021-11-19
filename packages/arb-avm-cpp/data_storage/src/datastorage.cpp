@@ -24,6 +24,7 @@
 
 #include <iostream>
 #include <string>
+#include <thread>
 
 DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::TransactionDBOptions txn_options{};
@@ -130,14 +131,26 @@ rocksdb::Status DataStorage::flushNextColumn() {
 
 rocksdb::Status DataStorage::closeDb() {
     if (txn_db) {
+        std::cerr << "closing ArbStorage" << std::endl;
         for (auto handle : column_handles) {
             auto status = txn_db->DestroyColumnFamilyHandle(handle);
             if (!status.ok()) {
                 return status;
             }
         }
+        txn_db->SyncWAL();
         auto s = txn_db->Close();
+        for (auto i = 0; s.IsAborted() && i < 10; i++) {
+            std::cerr << "waiting for rocksdb snapshots to be freed"
+                      << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            s = txn_db->Close();
+        }
+        if (s.IsAborted()) {
+            std::cerr << "rocksdb snapshots not freed" << std::endl;
+        }
         txn_db.reset();
+        std::cerr << "closed ArbStorage" << std::endl;
         return s;
     }
     return rocksdb::Status::OK();
