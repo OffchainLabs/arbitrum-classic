@@ -39,21 +39,23 @@
 constexpr uint8_t value_tagged_bit = uint64_t(1) << 7;
 constexpr uint8_t value_unloaded_bit = uint64_t(1) << 6;
 
-constexpr uint8_t value_uint256_tag = value_tagged_bit | 0;
+constexpr uint8_t value_num_tag = value_tagged_bit | 0;
 constexpr uint8_t value_tuple_tag = value_tagged_bit | 1;
 constexpr uint8_t value_hash_pre_image_tag = value_tagged_bit | 2;
 constexpr uint8_t value_buffer_tag = value_tagged_bit | 3;
 
 union TaggedValueContents {
-    uint256_t uint256;
+    uint256_t num;
     Tuple tuple;
     std::shared_ptr<HashPreImage> hash_pre_image;
     Buffer buffer;
+    ~TaggedValueContents() {}
 };
 
 struct TaggedValue {
     uint8_t tag;
     TaggedValueContents inner;
+    ~TaggedValue() {}
 };
 
 class Value {
@@ -62,14 +64,19 @@ class Value {
         TaggedValue tagged;
         CodePointStub code_point;
         UnloadedValue unloaded;
-        ~ValueUnion();
+        ~ValueUnion() {}
     };
 
     ValueUnion inner;
 
+    inline bool isTagged() const {
+        return __builtin_expect(!!(inner.tagged.tag & value_tagged_bit), 1);
+    }
+
    public:
     Value();
     Value(Tuple);
+    Value(uint64_t);
     Value(uint256_t);
     Value(CodePointStub);
     explicit Value(std::shared_ptr<HashPreImage>);
@@ -84,11 +91,10 @@ class Value {
 
     template <typename T>
     decltype(auto) visit(T visitor) const {
-        if (__builtin_expect(!!(inner.tagged.tag & value_tagged_bit), 1))
-            [[likely]] {
+        if (isTagged()) [[likely]] {
             switch (inner.tagged.tag) {
-                case value_uint256_tag:
-                    return visitor(inner.tagged.inner.uint256);
+                case value_num_tag:
+                    return visitor(inner.tagged.inner.num);
                 case value_tuple_tag:
                     return visitor(inner.tagged.inner.tuple);
                 case value_hash_pre_image_tag:
@@ -109,11 +115,10 @@ class Value {
 
     template <typename T>
     decltype(auto) visit(T visitor) {
-        if (__builtin_expect(!!(inner.tagged.tag & value_tagged_bit), 1))
-            [[likely]] {
+        if (isTagged()) [[likely]] {
             switch (inner.tagged.tag) {
-                case value_uint256_tag:
-                    return visitor(inner.tagged.inner.uint256);
+                case value_num_tag:
+                    return visitor(inner.tagged.inner.num);
                 case value_tuple_tag:
                     return visitor(inner.tagged.inner.tuple);
                 case value_hash_pre_image_tag:
@@ -132,6 +137,9 @@ class Value {
         }
     }
 };
+
+// Make sure we notice if we increase the size of a Value
+static_assert(sizeof(Value) == 48);
 
 template <typename T>
 bool holds_alternative(const Value&);

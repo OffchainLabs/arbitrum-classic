@@ -25,6 +25,149 @@
 #include <iomanip>
 #include <ostream>
 
+Value::Value() : Value(Tuple()) {}
+Value::Value(Tuple tup) : Value(0) {
+    inner.tagged.tag = value_tuple_tag;
+    inner.tagged.inner.tuple = std::move(tup);
+}
+Value::Value(uint64_t num) : Value(uint256_t(num)) {}
+Value::Value(uint256_t num)
+    : inner{TaggedValue{value_num_tag, TaggedValueContents{num}}} {}
+Value::Value(CodePointStub code_point) : Value(0) {
+    inner.code_point = std::move(code_point);
+    assert(!(inner.tagged.tag & value_tagged_bit));
+    assert(!(inner.tagged.tag & value_unloaded_bit));
+}
+Value::Value(std::shared_ptr<HashPreImage> hash_pre_image) : Value(0) {
+    inner.tagged.tag = value_hash_pre_image_tag;
+    inner.tagged.inner.hash_pre_image = std::move(hash_pre_image);
+}
+Value::Value(Buffer buffer) : Value(0) {
+    inner.tagged.tag = value_buffer_tag;
+    inner.tagged.inner.buffer = std::move(buffer);
+}
+Value::Value(UnloadedValue uv) : Value(0) {
+    inner.unloaded = uv;
+    assert(!(inner.tagged.tag & value_tagged_bit));
+    assert(inner.tagged.tag & value_unloaded_bit);
+}
+
+Value::~Value() {
+    if (isTagged()) [[likely]] {
+        // No need to destruct a uint256. Select for the other tags.
+        switch (inner.tagged.tag) {
+            case value_tuple_tag:
+                inner.tagged.inner.tuple.~Tuple();
+                break;
+            case value_hash_pre_image_tag:
+                inner.tagged.inner.hash_pre_image.~shared_ptr();
+                break;
+            case value_buffer_tag:
+                inner.tagged.inner.buffer.~Buffer();
+                break;
+        }
+    } else if (inner.tagged.tag & value_unloaded_bit) {
+        inner.unloaded.~UnloadedValue();
+    } else {
+        inner.code_point.~CodePointStub();
+    }
+}
+
+Value::Value(const Value& other) : Value(0) {
+    if (other.isTagged()) [[likely]] {
+        switch (inner.tagged.tag) {
+            case value_num_tag:
+                inner.tagged.inner.num = other.inner.tagged.inner.num;
+                break;
+            case value_tuple_tag:
+                inner.tagged.inner.tuple = other.inner.tagged.inner.tuple;
+                break;
+            case value_hash_pre_image_tag:
+                inner.tagged.inner.hash_pre_image =
+                    other.inner.tagged.inner.hash_pre_image;
+                break;
+            case value_buffer_tag:
+                inner.tagged.inner.buffer = other.inner.tagged.inner.buffer;
+                break;
+            default:
+                assert(0);
+                __builtin_unreachable();
+                throw std::runtime_error("Unknown value tag");
+        }
+    } else if (inner.tagged.tag & value_unloaded_bit) {
+        inner.unloaded = other.inner.unloaded;
+    } else {
+        inner.code_point = other.inner.code_point;
+    }
+}
+
+Value& Value::operator=(const Value& other) {
+    *this = Value(other);
+    return *this;
+}
+
+Value::Value(Value&& other) : Value(0) {
+    if (other.isTagged()) [[likely]] {
+        switch (inner.tagged.tag) {
+            case value_num_tag:
+                inner.tagged.inner.num =
+                    std::move(other.inner.tagged.inner.num);
+                break;
+            case value_tuple_tag:
+                inner.tagged.inner.tuple =
+                    std::move(other.inner.tagged.inner.tuple);
+                break;
+            case value_hash_pre_image_tag:
+                inner.tagged.inner.hash_pre_image =
+                    std::move(other.inner.tagged.inner.hash_pre_image);
+                break;
+            case value_buffer_tag:
+                inner.tagged.inner.buffer =
+                    std::move(other.inner.tagged.inner.buffer);
+                break;
+            default:
+                assert(0);
+                __builtin_unreachable();
+                throw std::runtime_error("Unknown value tag");
+        }
+    } else if (inner.tagged.tag & value_unloaded_bit) {
+        inner.unloaded = std::move(other.inner.unloaded);
+    } else {
+        inner.code_point = std::move(other.inner.code_point);
+    }
+}
+
+Value& Value::operator=(Value&& other) {
+    if (other.isTagged()) [[likely]] {
+        switch (inner.tagged.tag) {
+            case value_num_tag:
+                std::swap(inner.tagged.inner.num, other.inner.tagged.inner.num);
+                break;
+            case value_tuple_tag:
+                std::swap(inner.tagged.inner.tuple,
+                          other.inner.tagged.inner.tuple);
+                break;
+            case value_hash_pre_image_tag:
+                std::swap(inner.tagged.inner.hash_pre_image,
+                          other.inner.tagged.inner.hash_pre_image);
+                break;
+            case value_buffer_tag:
+                std::swap(inner.tagged.inner.buffer,
+                          other.inner.tagged.inner.buffer);
+                break;
+            default:
+                assert(0);
+                __builtin_unreachable();
+                throw std::runtime_error("Unknown value tag");
+        }
+    } else if (inner.tagged.tag & value_unloaded_bit) {
+        std::swap(inner.unloaded, other.inner.unloaded);
+    } else {
+        std::swap(inner.code_point, other.inner.code_point);
+    }
+    return *this;
+}
+
 uint64_t deserialize_uint64_t(const char*& bufptr) {
     auto val = intx::be::unsafe::load<uint64_t>(
         reinterpret_cast<const unsigned char*>(bufptr));
