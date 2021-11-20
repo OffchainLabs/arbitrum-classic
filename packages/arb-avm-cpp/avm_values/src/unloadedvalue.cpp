@@ -38,7 +38,7 @@ UnloadedValue::UnloadedValue(BigUnloadedValue big)
         }
     }
 
-    // We can't inline this, put it in a shared_ptr
+    // We can't inline this; put it in a shared_ptr
     impl.heaped_value.zero = 0;
     impl.heaped_value.type = big.type;
     impl.heaped_value.ptr = std::make_shared<HeapedUnloadedValueInfo>(
