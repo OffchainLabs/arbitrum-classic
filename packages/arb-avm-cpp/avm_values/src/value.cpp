@@ -51,7 +51,7 @@ uint256_t deserializeUint256t(const char*& bufptr) {
     return ret;
 }
 
-value deserialize_value(const char*& bufptr) {
+Value deserialize_value(const char*& bufptr) {
     // Iteratively read all values leaving placeholder for the tuples
     std::vector<DeserializedValue> values;
     uint64_t values_to_read = 1;
@@ -62,11 +62,11 @@ value deserialize_value(const char*& bufptr) {
         --values_to_read;
         switch (valType) {
             case NUM: {
-                values.push_back(value{deserializeUint256t(bufptr)});
+                values.push_back(Value{deserializeUint256t(bufptr)});
                 break;
             }
             case CODEPT: {
-                values.push_back(value{deserializeCodePointStub(bufptr)});
+                values.push_back(Value{deserializeCodePointStub(bufptr)});
                 break;
             }
             default: {
@@ -87,7 +87,7 @@ value deserialize_value(const char*& bufptr) {
     return assembleValueFromDeserialized(std::move(values));
 }
 
-value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
+Value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
     // Next form the full value out of the interleaved values and placeholders
     size_t total_values_size = values.size();
     for (size_t i = 0; i < total_values_size; ++i) {
@@ -100,13 +100,13 @@ value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
         Tuple tup = Tuple::createSizedTuple(holder.values);
         for (uint8_t j = 0; j < holder.values; ++j) {
             tup.set_element(
-                j, std::move(std::get<value>(values[val_pos + 1 + j])));
+                j, std::move(std::get<Value>(values[val_pos + 1 + j])));
         }
         values.erase(values.begin() + val_pos + 1,
                      values.begin() + val_pos + 1 + holder.values);
         values[val_pos] = std::move(tup);
     }
-    return std::get<value>(values.back());
+    return std::get<Value>(values.back());
 }
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
@@ -117,7 +117,7 @@ void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
 
 namespace {
 struct Marshaller {
-    std::vector<value>& values;
+    std::vector<Value>& values;
     std::vector<unsigned char>& buf;
 
     void operator()(const std::shared_ptr<HashPreImage>& val) const {
@@ -157,8 +157,8 @@ struct Marshaller {
 };
 }  // namespace
 
-void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
-    std::vector<value> values{full_val};
+void marshal_value(const Value& full_val, std::vector<unsigned char>& buf) {
+    std::vector<Value> values{full_val};
     Marshaller marshaller{values, buf};
     while (!values.empty()) {
         const auto val = std::move(values.back());
@@ -236,7 +236,7 @@ void marshalForProof(const Buffer& val,
 
 }  // namespace
 
-void marshalForProof(const value& val,
+void marshalForProof(const Value& val,
                      size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
@@ -247,11 +247,11 @@ void marshalForProof(const value& val,
         val);
 }
 
-uint256_t hash_value(const value& value) {
+uint256_t hash_value(const Value& value) {
     return std::visit([](const auto& val) { return hash(val); }, value);
 }
 
-bool values_equal(const value& a, const value& b) {
+bool values_equal(const Value& a, const Value& b) {
     // Fast path: if the values are both ints, compare them directly
     {
         const uint256_t* a_int = std::get_if<uint256_t>(&a);
@@ -297,7 +297,7 @@ struct GetSize {
     }
 };
 
-uint256_t getSize(const value& val) {
+uint256_t getSize(const Value& val) {
     return std::visit(GetSize{}, val);
 }
 
@@ -350,6 +350,6 @@ struct ValuePrinter {
     }
 };
 
-std::ostream& operator<<(std::ostream& os, const value& val) {
+std::ostream& operator<<(std::ostream& os, const Value& val) {
     return *std::visit(ValuePrinter{os}, val);
 }

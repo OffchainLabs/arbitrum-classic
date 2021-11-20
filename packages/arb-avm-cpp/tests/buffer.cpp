@@ -170,10 +170,10 @@ Buffer checkBuffer(ArbStorage& storage, Buffer& buf) {
 
     auto transaction = storage.makeReadTransaction();
     auto res = getValue(*transaction, hash_value(buf), value_cache, false);
-    REQUIRE(std::holds_alternative<CountedData<value>>(res));
-    REQUIRE(hash_value(std::get<CountedData<value>>(res).data) ==
+    REQUIRE(std::holds_alternative<CountedData<Value>>(res));
+    REQUIRE(hash_value(std::get<CountedData<Value>>(res).data) ==
             hash_value(buf));
-    return std::get<Buffer>(std::get<CountedData<value>>(res).data);
+    return std::get<Buffer>(std::get<CountedData<Value>>(res).data);
 }
 
 TEST_CASE("Buffer Serialization") {

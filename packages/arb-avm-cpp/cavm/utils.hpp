@@ -128,13 +128,13 @@ inline Uint64Result returnUint64Result(const ValueResult<uint64_t>& val) {
     return {val.data, true};
 }
 
-inline ByteSlice returnValueResult(const DbResult<value>& res) {
+inline ByteSlice returnValueResult(const DbResult<Value>& res) {
     if (std::holds_alternative<rocksdb::Status>(res)) {
         return {nullptr, 0};
     }
 
     std::vector<unsigned char> serialized_value;
-    marshal_value(std::get<CountedData<value>>(res).data, serialized_value);
+    marshal_value(std::get<CountedData<Value>>(res).data, serialized_value);
 
     auto value_data =
         reinterpret_cast<unsigned char*>(malloc(serialized_value.size()));

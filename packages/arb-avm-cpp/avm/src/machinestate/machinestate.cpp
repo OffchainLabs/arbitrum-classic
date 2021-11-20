@@ -87,16 +87,16 @@ void MachineState::addProcessedSend(std::vector<uint8_t> data) {
         std::move(data), output.fully_processed_inbox});
 }
 
-void MachineState::addProcessedLog(value log_val) {
+void MachineState::addProcessedLog(Value log_val) {
     output.log_count = output.log_count + 1;
     output.log_acc = ::hash(output.log_acc, hash_value(log_val));
-    context.logs.push_back(MachineEmission<value>{
+    context.logs.push_back(MachineEmission<Value>{
         std::move(log_val), output.fully_processed_inbox});
 }
 
 MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
 
-MachineState::MachineState(std::shared_ptr<CoreCode> code_, value static_val_)
+MachineState::MachineState(std::shared_ptr<CoreCode> code_, Value static_val_)
     : pc(code_->initialCodePointRef()),
       code(std::move(code_)),
       static_val(std::move(static_val_)),
@@ -106,8 +106,8 @@ MachineState::MachineState(MachineOutput output_,
                            CodePointRef pc_,
                            std::shared_ptr<Code> code_,
                            ValueLoader value_loader_,
-                           value register_val_,
-                           value static_val_,
+                           Value register_val_,
+                           Value static_val_,
                            Datastack stack_,
                            Datastack auxstack_,
                            uint256_t arb_gas_remaining_,
@@ -150,8 +150,8 @@ void marshalState(std::vector<unsigned char>& buf,
                   uint256_t next_codepoint_hash,
                   HashPreImage stackPreImage,
                   HashPreImage auxStackPreImage,
-                  const value& registerVal,
-                  const value& staticVal,
+                  const Value& registerVal,
+                  const Value& staticVal,
                   uint256_t arb_gas_remaining,
                   CodePointStub errpc) {
     marshal_uint256_t(next_codepoint_hash, buf);

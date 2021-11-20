@@ -30,22 +30,22 @@ struct SaveResults;
 class Transaction;
 
 SaveResults saveValueImpl(ReadWriteTransaction& transaction,
-                          const value& val,
+                          const Value& val,
                           std::map<uint64_t, uint64_t>& segment_counts);
 DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
                               const uint256_t& value_hash,
                               std::map<uint64_t, uint64_t>& segment_counts);
-DbResult<value> getValueImpl(const ReadTransaction& tx,
+DbResult<Value> getValueImpl(const ReadTransaction& tx,
                              uint256_t value_hash,
                              std::set<uint64_t>& segment_ids,
                              ValueCache& value_cache,
                              bool lazy_load);
 
-DbResult<value> getValue(const ReadTransaction& tx,
+DbResult<Value> getValue(const ReadTransaction& tx,
                          uint256_t value_hash,
                          ValueCache& value_cache,
                          bool lazy_load);
-SaveResults saveValue(ReadWriteTransaction& tx, const value& val);
+SaveResults saveValue(ReadWriteTransaction& tx, const Value& val);
 DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash);
 
 struct ParsedBuffer {
@@ -71,17 +71,17 @@ using ParsedSerializedVal = std::variant<std::vector<ParsedTupVal>,
                                          Buffer,
                                          ParsedBuffer>;
 
-bool shouldInlineValue(const value& tuple,
+bool shouldInlineValue(const Value& tuple,
                        const std::vector<unsigned char>& seed);
 
-DbResult<value> getValueRecord(const ReadTransaction& tx,
+DbResult<Value> getValueRecord(const ReadTransaction& tx,
                                const ParsedSerializedVal& record,
                                std::set<uint64_t>& segment_ids,
                                ValueCache& value_cache,
                                bool lazy_load);
 ParsedSerializedVal parseRecord(const char*& buf);
-std::vector<value> serializeValue(const std::vector<unsigned char>& seed,
-                                  const value& val,
+std::vector<Value> serializeValue(const std::vector<unsigned char>& seed,
+                                  const Value& val,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>& segment_counts);
 DeleteResults deleteValueRecord(ReadWriteTransaction& tx,

@@ -34,7 +34,7 @@ struct CodePointStub;
 struct CodePointRef;
 struct UnloadedValue;
 
-using value = std::variant<Tuple,
+using Value = std::variant<Tuple,
                            uint256_t,
                            CodePointStub,
                            std::shared_ptr<HashPreImage>,
@@ -44,29 +44,29 @@ using value = std::variant<Tuple,
 struct TuplePlaceholder {
     uint8_t values;
 };
-using DeserializedValue = std::variant<TuplePlaceholder, value>;
+using DeserializedValue = std::variant<TuplePlaceholder, Value>;
 
-std::ostream& operator<<(std::ostream& os, const value& val);
-uint256_t hash_value(const value& value);
-bool values_equal(const value& a, const value& b);
+std::ostream& operator<<(std::ostream& os, const Value& val);
+uint256_t hash_value(const Value& value);
+bool values_equal(const Value& a, const Value& b);
 
 uint64_t deserialize_uint64_t(const char*& bufptr);
 CodePointRef deserializeCodePointRef(const char*& bufptr);
 CodePointStub deserializeCodePointStub(const char*& bufptr);
 uint256_t deserializeUint256t(const char*& srccode);
-value deserialize_value(const char*& srccode);
+Value deserialize_value(const char*& srccode);
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf);
 
-void marshal_value(const value& val, std::vector<unsigned char>& buf);
+void marshal_value(const Value& val, std::vector<unsigned char>& buf);
 
-void marshalForProof(const value& val,
+void marshalForProof(const Value& val,
                      size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code);
 
-uint256_t getSize(const value& val);
+uint256_t getSize(const Value& val);
 
-value assembleValueFromDeserialized(std::vector<DeserializedValue> values);
+Value assembleValueFromDeserialized(std::vector<DeserializedValue> values);
 
 #endif /* value_hpp */

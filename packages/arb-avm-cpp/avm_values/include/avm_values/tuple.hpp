@@ -29,7 +29,7 @@ HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
 
-const static std::vector<value> empty_value_vector;
+const static std::vector<Value> empty_value_vector;
 
 class Tuple {
    private:
@@ -39,7 +39,7 @@ class Tuple {
 
     void calculateHashPreImage() const;
 
-    void unsafe_set_element(uint64_t pos, value&& newval) {
+    void unsafe_set_element(uint64_t pos, Value&& newval) {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
@@ -60,41 +60,41 @@ class Tuple {
 
     static Tuple createSizedTuple(size_t size);
 
-    static Tuple createTuple(std::vector<value> values);
+    static Tuple createTuple(std::vector<Value> values);
 
-    static Tuple createTuple(value val);
+    static Tuple createTuple(Value val);
 
-    Tuple(value val1, value val2);
+    Tuple(Value val1, Value val2);
 
-    Tuple(value val1, value val2, value val3);
+    Tuple(Value val1, Value val2, Value val3);
 
-    Tuple(value val1, value val2, value val3, value val4);
+    Tuple(Value val1, Value val2, Value val3, Value val4);
 
-    Tuple(value val1, value val2, value val3, value val4, value val5);
+    Tuple(Value val1, Value val2, Value val3, Value val4, Value val5);
 
-    Tuple(value val1,
-          value val2,
-          value val3,
-          value val4,
-          value val5,
-          value val6);
+    Tuple(Value val1,
+          Value val2,
+          Value val3,
+          Value val4,
+          Value val5,
+          Value val6);
 
-    Tuple(value val1,
-          value val2,
-          value val3,
-          value val4,
-          value val5,
-          value val6,
-          value val7);
+    Tuple(Value val1,
+          Value val2,
+          Value val3,
+          Value val4,
+          Value val5,
+          Value val6,
+          Value val7);
 
-    Tuple(value val1,
-          value val2,
-          value val3,
-          value val4,
-          value val5,
-          value val6,
-          value val7,
-          value val8);
+    Tuple(Value val1,
+          Value val2,
+          Value val3,
+          Value val4,
+          Value val5,
+          Value val6,
+          Value val7,
+          Value val8);
 
     [[nodiscard]] uint64_t tuple_size() const {
         if (tpl) {
@@ -104,7 +104,7 @@ class Tuple {
         }
     }
 
-    void set_element(const uint64_t pos, value newval) {
+    void set_element(const uint64_t pos, Value newval) {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
@@ -120,42 +120,42 @@ class Tuple {
         tpl = std::move(tmp);
     }
 
-    [[nodiscard]] value get_element(const uint64_t pos) const {
+    [[nodiscard]] Value get_element(const uint64_t pos) const {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
         return tpl->data[pos];
     }
 
-    [[nodiscard]] std::vector<value>::const_iterator begin() const {
+    [[nodiscard]] std::vector<Value>::const_iterator begin() const {
         if (tpl == nullptr) {
             return empty_value_vector.begin();
         }
         return tpl->data.begin();
     }
 
-    [[nodiscard]] std::vector<value>::const_iterator end() const {
+    [[nodiscard]] std::vector<Value>::const_iterator end() const {
         if (tpl == nullptr) {
             return empty_value_vector.end();
         }
         return tpl->data.end();
     }
 
-    [[nodiscard]] std::reverse_iterator<std::vector<value>::const_iterator>
+    [[nodiscard]] std::reverse_iterator<std::vector<Value>::const_iterator>
     rbegin() const {
         return std::reverse_iterator(end());
     }
 
-    [[nodiscard]] std::reverse_iterator<std::vector<value>::const_iterator>
+    [[nodiscard]] std::reverse_iterator<std::vector<Value>::const_iterator>
     rend() const {
         return std::reverse_iterator(begin());
     }
 
-    [[nodiscard]] const value& get_element_unsafe(const uint64_t pos) const {
+    [[nodiscard]] const Value& get_element_unsafe(const uint64_t pos) const {
         return tpl->data[pos];
     }
 
-    [[nodiscard]] value& get_element_mutable_unsafe(const uint64_t pos) const {
+    [[nodiscard]] Value& get_element_mutable_unsafe(const uint64_t pos) const {
         tpl->deferredHashing = true;
         return tpl->data[pos];
     }

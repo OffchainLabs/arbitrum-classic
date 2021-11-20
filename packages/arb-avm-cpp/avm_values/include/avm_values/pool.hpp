@@ -27,7 +27,7 @@
 
 struct RawTuple {
     HashPreImage cachedPreImage;
-    std::vector<value> data;
+    std::vector<Value> data;
     bool deferredHashing = true;
 
     RawTuple() : cachedPreImage({}, 0), deferredHashing(true) {}

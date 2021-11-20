@@ -40,7 +40,7 @@ static T shrink(uint256_t i) {
 
 namespace machineoperation {
 
-uint256_t& assumeInt(value& val) {
+uint256_t& assumeInt(Value& val) {
     auto aNum = std::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
@@ -48,7 +48,7 @@ uint256_t& assumeInt(value& val) {
     return *aNum;
 }
 
-const uint256_t& assumeInt(const value& val) {
+const uint256_t& assumeInt(const Value& val) {
     auto aNum = std::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
@@ -56,7 +56,7 @@ const uint256_t& assumeInt(const value& val) {
     return *aNum;
 }
 
-CodePointStub assumeCodePoint(MachineState& m, value& val) {
+CodePointStub assumeCodePoint(MachineState& m, Value& val) {
     auto cp = std::get_if<CodePointStub>(&val);
     if (!cp) {
         throw bad_pop_type{};
@@ -77,7 +77,7 @@ uint64_t assumeInt64(uint256_t& val) {
     return static_cast<uint64_t>(val);
 }
 
-Tuple assumeTuple(MachineState& m, const value& val) {
+Tuple assumeTuple(MachineState& m, const Value& val) {
     auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
         auto uv = std::get_if<UnloadedValue>(&val);
@@ -89,7 +89,7 @@ Tuple assumeTuple(MachineState& m, const value& val) {
     return *tup;
 }
 
-Tuple assumeTuple(MachineState& m, value& val) {
+Tuple assumeTuple(MachineState& m, Value& val) {
     auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
         auto uv = std::get_if<UnloadedValue>(&val);
@@ -101,7 +101,7 @@ Tuple assumeTuple(MachineState& m, value& val) {
     return *tup;
 }
 
-Buffer& assumeBuffer(value& val) {
+Buffer& assumeBuffer(Value& val) {
     auto buf = std::get_if<Buffer>(&val);
     if (!buf) {
         throw bad_pop_type{};
@@ -525,13 +525,13 @@ void pop(MachineState& m) {
 }
 
 void spush(MachineState& m) {
-    value copiedStatic = m.static_val;
+    Value copiedStatic = m.static_val;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
 
 void rpush(MachineState& m) {
-    value copiedRegister = m.registerVal;
+    Value copiedRegister = m.registerVal;
     m.stack.push(std::move(copiedRegister));
     ++m.pc;
 }
@@ -618,19 +618,19 @@ void errSet(MachineState& m) {
 }
 
 void dup0(MachineState& m) {
-    value valACopy = m.stack[0];
+    Value valACopy = m.stack[0];
     m.stack.push(std::move(valACopy));
     ++m.pc;
 }
 
 void dup1(MachineState& m) {
-    value valBCopy = m.stack[1];
+    Value valBCopy = m.stack[1];
     m.stack.push(std::move(valBCopy));
     ++m.pc;
 }
 
 void dup2(MachineState& m) {
-    value valCCopy = m.stack[2];
+    Value valCCopy = m.stack[2];
     m.stack.push(std::move(valCCopy));
     ++m.pc;
 }
@@ -850,7 +850,7 @@ uint64_t ec_pairing_variable_gas_cost(MachineState& m) {
         return gas_cost;
     }
     try {
-        const value* val = &m.stack[0];
+        const Value* val = &m.stack[0];
         for (int i = 0; i < max_ec_pairing_points; i++) {
             auto tup = assumeTuple(m, *val);
             if (tup.tuple_size() == 0) {
@@ -883,7 +883,7 @@ void log(MachineState& m) {
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
     m.context.debug_prints.push_back(
-        MachineEmission<value>{m.stack.pop(), m.output.fully_processed_inbox});
+        MachineEmission<Value>{m.stack.pop(), m.output.fully_processed_inbox});
     ++m.pc;
 }
 

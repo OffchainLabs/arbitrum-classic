@@ -83,7 +83,7 @@ TEST_CASE("Value marshaling") {
 TEST_CASE("UnloadedValue equality") {
     Tuple tup;
     UnloadedValue uv(BigUnloadedValue{TUPLE, ::hash(tup), tup.getSize()});
-    REQUIRE(values_equal(value(tup), value(uv)));
+    REQUIRE(values_equal(Value(tup), Value(uv)));
 }
 
 void checkUvIntegrity(BigUnloadedValue big, bool shouldHeap) {

@@ -29,14 +29,14 @@
 #include <vector>
 
 struct ValueBeingParsed {
-    value val;
+    Value val;
     uint32_t reference_count;
     std::vector<ParsedTupVal> raw_vals;
 
-    ValueBeingParsed(value&& v, uint32_t count)
+    ValueBeingParsed(Value&& v, uint32_t count)
         : val{std::move(v)}, reference_count{count}, raw_vals{} {}
 
-    void setTupleElement(uint64_t pos, value&& newval) {
+    void setTupleElement(uint64_t pos, Value&& newval) {
         if (std::holds_alternative<Tuple>(val)) {
             std::get<Tuple>(val).unsafe_set_element(pos, std::move(newval));
         }
@@ -45,7 +45,7 @@ struct ValueBeingParsed {
 
 constexpr uint64_t tupleInlineNumerator = 0;
 constexpr uint64_t tupleInlineDenominator = 100;
-bool shouldInlineValue(const value& val,
+bool shouldInlineValue(const Value& val,
                        const std::vector<unsigned char>& secret_hash_seed) {
     if (auto tuple = std::get_if<Tuple>(&val)) {
         auto hash = tuple->getHashPreImage().secretHash(secret_hash_seed);
@@ -144,7 +144,7 @@ ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
     }
 }
 
-std::vector<value> serializeValue(const std::vector<unsigned char>&,
+std::vector<Value> serializeValue(const std::vector<unsigned char>&,
                                   const uint256_t& val,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
@@ -152,7 +152,7 @@ std::vector<value> serializeValue(const std::vector<unsigned char>&,
     marshal_uint256_t(val, value_vector);
     return {};
 }
-std::vector<value> serializeValue(
+std::vector<Value> serializeValue(
     const std::vector<unsigned char>&,
     const CodePointStub& val,
     std::vector<unsigned char>& value_vector,
@@ -162,18 +162,18 @@ std::vector<value> serializeValue(
     ++segment_counts[val.pc.segment];
     return {};
 }
-std::vector<value> serializeValue(
+std::vector<Value> serializeValue(
     const std::vector<unsigned char>& secret_hash_seed,
     const Tuple& root,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>& segment_counts) {
-    std::vector<value> ret{};
+    std::vector<Value> ret{};
     value_vector.push_back(TUPLE + root.tuple_size());
     // `to_serialize` is a stack, so we populate it in reverse order
-    std::vector<value> to_serialize(root.rbegin(), root.rend());
+    std::vector<Value> to_serialize(root.rbegin(), root.rend());
     while (!to_serialize.empty()) {
         // Pull from the end of `to_serialize` as its contents are reversed
-        value nested = std::move(to_serialize.back());
+        Value nested = std::move(to_serialize.back());
         to_serialize.pop_back();
         if (shouldInlineValue(nested, secret_hash_seed)) {
             if (const auto& nested_tup = std::get_if<Tuple>(&nested)) {
@@ -200,25 +200,25 @@ std::vector<value> serializeValue(
     }
     return ret;
 }
-std::vector<value> serializeValue(const std::vector<unsigned char>&,
+std::vector<Value> serializeValue(const std::vector<unsigned char>&,
                                   const std::shared_ptr<HashPreImage>&,
                                   std::vector<unsigned char>&,
                                   std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
 }
-std::vector<value> serializeValue(const std::vector<unsigned char>&,
+std::vector<Value> serializeValue(const std::vector<unsigned char>&,
                                   const UnloadedValue&,
                                   std::vector<unsigned char>&,
                                   std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize unloaded value in db");
 }
-std::vector<value> serializeValue(const std::vector<unsigned char>&,
+std::vector<Value> serializeValue(const std::vector<unsigned char>&,
                                   const Buffer& b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
     std::vector<Buffer> res = b.serialize(value_vector);
-    std::vector<value> ret{};
+    std::vector<Value> ret{};
     ret.reserve(res.size());
     for (auto& re : res) {
         ret.emplace_back(Buffer(re));
@@ -301,9 +301,9 @@ ParsedSerializedVal parseRecord(const char*& buf) {
     }
 }
 
-std::vector<value> serializeValue(
+std::vector<Value> serializeValue(
     const std::vector<unsigned char>& secret_hash_seed,
-    const value& val,
+    const Value& val,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>& segment_counts) {
     return std::visit(
@@ -314,7 +314,7 @@ std::vector<value> serializeValue(
         val);
 }
 
-GetResults applyValue(value&& val,
+GetResults applyValue(Value&& val,
                       const uint32_t reference_count,
                       std::vector<ValueBeingParsed>& val_stack) {
     auto& current = val_stack.back();
@@ -577,7 +577,7 @@ GetResults processFirstVal(const ReadTransaction& tx,
         record);
 }
 
-DbResult<value> getValueInternal(const ReadTransaction& tx,
+DbResult<Value> getValueInternal(const ReadTransaction& tx,
                                  std::vector<ValueBeingParsed> val_stack,
                                  std::set<uint64_t>& segment_ids,
                                  ValueCache& value_cache,
@@ -585,7 +585,7 @@ DbResult<value> getValueInternal(const ReadTransaction& tx,
     if (val_stack[0].raw_vals.empty()) {
         // First value has no child values, so just return single value without
         // populating cache
-        return CountedData<value>{val_stack[0].reference_count,
+        return CountedData<Value>{val_stack[0].reference_count,
                                   std::move(val_stack[0].val)};
     }
 
@@ -615,7 +615,7 @@ DbResult<value> getValueInternal(const ReadTransaction& tx,
             if (val_stack.empty()) {
                 // All values resolved
                 value_cache.maybeSave(val);
-                return CountedData<value>{reference_count, std::move(val)};
+                return CountedData<Value>{reference_count, std::move(val)};
             }
 
             if (reference_count > 1) {
@@ -629,7 +629,7 @@ DbResult<value> getValueInternal(const ReadTransaction& tx,
     throw std::runtime_error("val_stack loop should never finish");
 }
 
-DbResult<value> getValueRecord(const ReadTransaction& tx,
+DbResult<Value> getValueRecord(const ReadTransaction& tx,
                                const ParsedSerializedVal& record,
                                std::set<uint64_t>& segment_ids,
                                ValueCache& value_cache,
@@ -645,7 +645,7 @@ DbResult<value> getValueRecord(const ReadTransaction& tx,
                             lazy_load);
 }
 
-DbResult<value> getValueImpl(const ReadTransaction& tx,
+DbResult<Value> getValueImpl(const ReadTransaction& tx,
                              const uint256_t value_hash,
                              std::set<uint64_t>& segment_ids,
                              ValueCache& value_cache,
@@ -665,7 +665,7 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
     if (std::holds_alternative<rocksdb::Status>(res)) {
         return res;
     }
-    auto& val = std::get<CountedData<value>>(res).data;
+    auto& val = std::get<CountedData<Value>>(res).data;
     if (std::holds_alternative<UnloadedValue>(val)) {
         throw std::runtime_error(
             "attempting to get value resulted in unloaded value");
@@ -674,7 +674,7 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
     return res;
 }
 
-DbResult<value> getValue(const ReadTransaction& tx,
+DbResult<Value> getValue(const ReadTransaction& tx,
                          const uint256_t value_hash,
                          ValueCache& value_cache,
                          bool lazy_load) {
@@ -683,11 +683,11 @@ DbResult<value> getValue(const ReadTransaction& tx,
 }
 
 SaveResults saveValueImpl(ReadWriteTransaction& tx,
-                          const value& val,
+                          const Value& val,
                           std::map<uint64_t, uint64_t>& segment_counts) {
     bool first = true;
     SaveResults ret{};
-    std::vector<value> items_to_save{val};
+    std::vector<Value> items_to_save{val};
     while (!items_to_save.empty()) {
         auto next_item = std::move(items_to_save.back());
         items_to_save.pop_back();
@@ -720,7 +720,7 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
     return ret;
 }
 
-SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
+SaveResults saveValue(ReadWriteTransaction& tx, const Value& val) {
     std::map<uint64_t, uint64_t> segment_counts{};
     return saveValueImpl(tx, val, segment_counts);
 }

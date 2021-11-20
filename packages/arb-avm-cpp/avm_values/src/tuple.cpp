@@ -31,7 +31,7 @@ Tuple Tuple::createSizedTuple(const size_t size) {
     return Tuple(std::move(tpl));
 }
 
-Tuple Tuple::createTuple(std::vector<value> values) {
+Tuple Tuple::createTuple(std::vector<Value> values) {
     if (!values.empty() && values.size() > 8) {
         return {};
     }
@@ -42,27 +42,27 @@ Tuple Tuple::createTuple(std::vector<value> values) {
     return Tuple(std::move(tpl));
 }
 
-Tuple Tuple::createTuple(value val) {
+Tuple Tuple::createTuple(Value val) {
     auto tpl = TuplePool::get_impl().getResource(1);
     tpl->data.emplace_back(std::move(val));
 
     return Tuple(std::move(tpl));
 }
 
-Tuple::Tuple(value val1, value val2)
+Tuple::Tuple(Value val1, Value val2)
     : tpl(TuplePool::get_impl().getResource(2)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
 }
 
-Tuple::Tuple(value val1, value val2, value val3)
+Tuple::Tuple(Value val1, Value val2, Value val3)
     : tpl(TuplePool::get_impl().getResource(3)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
 }
 
-Tuple::Tuple(value val1, value val2, value val3, value val4)
+Tuple::Tuple(Value val1, Value val2, Value val3, Value val4)
     : tpl(TuplePool::get_impl().getResource(4)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -70,7 +70,7 @@ Tuple::Tuple(value val1, value val2, value val3, value val4)
     tpl->data.push_back(std::move(val4));
 }
 
-Tuple::Tuple(value val1, value val2, value val3, value val4, value val5)
+Tuple::Tuple(Value val1, Value val2, Value val3, Value val4, Value val5)
     : tpl(TuplePool::get_impl().getResource(5)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -79,12 +79,12 @@ Tuple::Tuple(value val1, value val2, value val3, value val4, value val5)
     tpl->data.push_back(std::move(val5));
 }
 
-Tuple::Tuple(value val1,
-             value val2,
-             value val3,
-             value val4,
-             value val5,
-             value val6)
+Tuple::Tuple(Value val1,
+             Value val2,
+             Value val3,
+             Value val4,
+             Value val5,
+             Value val6)
     : tpl(TuplePool::get_impl().getResource(6)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -94,13 +94,13 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val6));
 }
 
-Tuple::Tuple(value val1,
-             value val2,
-             value val3,
-             value val4,
-             value val5,
-             value val6,
-             value val7)
+Tuple::Tuple(Value val1,
+             Value val2,
+             Value val3,
+             Value val4,
+             Value val5,
+             Value val6,
+             Value val7)
     : tpl(TuplePool::get_impl().getResource(7)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -111,14 +111,14 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val7));
 }
 
-Tuple::Tuple(value val1,
-             value val2,
-             value val3,
-             value val4,
-             value val5,
-             value val6,
-             value val7,
-             value val8)
+Tuple::Tuple(Value val1,
+             Value val2,
+             Value val3,
+             Value val4,
+             Value val5,
+             Value val6,
+             Value val7,
+             Value val8)
     : tpl(TuplePool::get_impl().getResource(8)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -136,7 +136,7 @@ constexpr uint64_t hash_size = 32;
 // recursion. All non-tuple values or tuples with a cached hash are
 // basic. Tuples that haven't been hashed yet are not
 struct BasicValChecker {
-    bool operator()(const value& val) const { return std::visit(*this, val); }
+    bool operator()(const Value& val) const { return std::visit(*this, val); }
     bool operator()(const Tuple& tup) const {
         return !tup.tpl || !tup.tpl->deferredHashing;
     }

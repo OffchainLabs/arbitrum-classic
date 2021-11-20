@@ -161,7 +161,7 @@ TEST_CASE("ArbCore tests") {
         }
 
         auto logs_json = j.at("logs");
-        std::vector<value> logs;
+        std::vector<Value> logs;
         for (auto& log_json : logs_json) {
             logs.push_back(simple_value_from_json(log_json));
         }

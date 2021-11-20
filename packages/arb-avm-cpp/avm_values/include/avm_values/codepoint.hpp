@@ -26,14 +26,14 @@
 
 struct Operation {
     OpCode opcode;
-    std::unique_ptr<value> immediate;
+    std::unique_ptr<Value> immediate;
 
     explicit Operation(OpCode opcode_) : opcode(opcode_) {}
-    Operation(OpCode opcode_, value val);
+    Operation(OpCode opcode_, Value val);
 
     Operation(const Operation& op) : opcode(op.opcode) {
         if (op.immediate) {
-            immediate = std::make_unique<value>(*op.immediate);
+            immediate = std::make_unique<Value>(*op.immediate);
         }
     }
 
