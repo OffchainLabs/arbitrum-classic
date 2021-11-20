@@ -18,12 +18,13 @@
 #define pool_hpp
 
 #include <avm_values/tuplestub.hpp>
-#include <avm_values/value.hpp>
 
 #include <array>
 #include <deque>
 #include <memory>
 #include <vector>
+
+class Value;
 
 struct RawTuple {
     HashPreImage cachedPreImage;

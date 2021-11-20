@@ -20,9 +20,11 @@
 #include <avm_values/buffer.hpp>
 #include <avm_values/opcodes.hpp>
 #include <avm_values/tuple.hpp>
-#include <avm_values/value.hpp>
 
 #include <optional>
+
+class Value;
+class Code;
 
 struct Operation {
     OpCode opcode;

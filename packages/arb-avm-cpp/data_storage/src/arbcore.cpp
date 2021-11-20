@@ -960,7 +960,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     auto stack_results = ::getValueImpl(transaction, state_data.datastack_hash,
                                         segment_ids, value_cache, false);
     if (std::holds_alternative<rocksdb::Status>(stack_results) ||
-        !std::holds_alternative<Tuple>(
+        !holds_alternative<Tuple>(
             std::get<CountedData<Value>>(stack_results).data)) {
         std::cerr << "failed to load machine stack" << std::endl;
         throw std::runtime_error("failed to load machine stack");
@@ -972,7 +972,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         std::cerr << "failed to load machine auxstack" << std::endl;
         throw std::runtime_error("failed to load machine auxstack");
     }
-    if (!std::holds_alternative<Tuple>(
+    if (!holds_alternative<Tuple>(
             std::get<CountedData<Value>>(auxstack_results).data)) {
         std::cerr << "failed to load machine auxstack because of format error"
                   << std::endl;
@@ -993,10 +993,9 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         makeValueLoader(),
         std::move(std::get<CountedData<Value>>(register_results).data),
         std::move(std::get<CountedData<Value>>(static_results).data),
+        Datastack(get<Tuple>(std::get<CountedData<Value>>(stack_results).data)),
         Datastack(
-            std::get<Tuple>(std::get<CountedData<Value>>(stack_results).data)),
-        Datastack(std::get<Tuple>(
-            std::get<CountedData<Value>>(auxstack_results).data)),
+            get<Tuple>(std::get<CountedData<Value>>(auxstack_results).data)),
         state_data.arb_gas_remaining,
         state_data.state,
         state_data.err_pc};

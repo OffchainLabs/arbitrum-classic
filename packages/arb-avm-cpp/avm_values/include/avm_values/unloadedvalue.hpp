@@ -17,16 +17,13 @@
 #ifndef unloadedvalue_hpp
 #define unloadedvalue_hpp
 
-#include <avm_values/value.hpp>
+#include <avm_values/bigint.hpp>
 #include <avm_values/valuetype.hpp>
+#include <memory>
 
 #include <cassert>
 
-#ifndef __GNUC__
-#ifndef __builtin_expect
-#define __builtin_expect(x, y) (x)
-#endif /* __builtin_expect */
-#endif /* __GNU_C__ */
+constexpr uint64_t unloaded_value_fixed_bit = uint64_t(1) << 62;
 
 struct BigUnloadedValue {
     ValueTypes type;
@@ -49,8 +46,6 @@ struct HeapedUnloadedValue {
     ValueTypes type;
     std::shared_ptr<HeapedUnloadedValueInfo> ptr;
 };
-
-constexpr uint64_t uv_flag = uint64_t(1) << 63;
 
 class UnloadedValue {
    private:
@@ -77,7 +72,8 @@ class UnloadedValue {
     UnloadedValue& operator=(UnloadedValue&&);
 
     inline bool isHeaped() const {
-        return __builtin_expect(impl.heaped_value.uv_flag == uv_flag, 0);
+        return __builtin_expect(
+            impl.heaped_value.uv_flag == unloaded_value_fixed_bit, 0);
     }
 
     // Provide methods to access fields

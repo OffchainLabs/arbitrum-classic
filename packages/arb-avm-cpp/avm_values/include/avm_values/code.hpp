@@ -18,6 +18,7 @@
 #define code_hpp
 
 #include <avm_values/codepoint.hpp>
+#include <avm_values/value.hpp>
 
 #include <cassert>
 #include <map>
@@ -514,8 +515,8 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
         std::unique_lock<std::shared_mutex> lock(mutex, std::defer_lock);
         if (ref.segment < impl->first_segment) {
             auto add_var = parent->tryAddOperation(ref, std::move(op));
-            if (std::holds_alternative<CodePointStub>(add_var)) {
-                return std::get<CodePointStub>(add_var);
+            if (holds_alternative<CodePointStub>(add_var)) {
+                return get<CodePointStub>(add_var);
             } else {
                 lock.lock();
                 auto& added = std::get<CodeSegmentData>(add_var);

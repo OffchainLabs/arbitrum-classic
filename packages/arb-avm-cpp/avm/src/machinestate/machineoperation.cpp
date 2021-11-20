@@ -41,7 +41,7 @@ static T shrink(uint256_t i) {
 namespace machineoperation {
 
 uint256_t& assumeInt(Value& val) {
-    auto aNum = std::get_if<uint256_t>(&val);
+    auto aNum = get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -49,7 +49,7 @@ uint256_t& assumeInt(Value& val) {
 }
 
 const uint256_t& assumeInt(const Value& val) {
-    auto aNum = std::get_if<uint256_t>(&val);
+    auto aNum = get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -57,14 +57,13 @@ const uint256_t& assumeInt(const Value& val) {
 }
 
 CodePointStub assumeCodePoint(MachineState& m, Value& val) {
-    auto cp = std::get_if<CodePointStub>(&val);
+    auto cp = get_if<CodePointStub>(&val);
     if (!cp) {
         throw bad_pop_type{};
     }
     auto segment = cp->pc.segment;
     if (segment != m.pc.segment && !m.code->containsSegment(segment)) {
-        return std::get<CodePointStub>(
-            m.value_loader.loadValue(hash_value(*cp)));
+        return get<CodePointStub>(m.value_loader.loadValue(hash_value(*cp)));
     }
     return *cp;
 }
@@ -78,11 +77,11 @@ uint64_t assumeInt64(uint256_t& val) {
 }
 
 Tuple assumeTuple(MachineState& m, const Value& val) {
-    auto tup = std::get_if<Tuple>(&val);
+    auto tup = get_if<Tuple>(&val);
     if (!tup) {
-        auto uv = std::get_if<UnloadedValue>(&val);
+        auto uv = get_if<UnloadedValue>(&val);
         if (uv && uv->type() == TUPLE) {
-            return std::get<Tuple>(m.value_loader.loadValue(uv->hash()));
+            return get<Tuple>(m.value_loader.loadValue(uv->hash()));
         }
         throw bad_pop_type{};
     }
@@ -90,11 +89,11 @@ Tuple assumeTuple(MachineState& m, const Value& val) {
 }
 
 Tuple assumeTuple(MachineState& m, Value& val) {
-    auto tup = std::get_if<Tuple>(&val);
+    auto tup = get_if<Tuple>(&val);
     if (!tup) {
-        auto uv = std::get_if<UnloadedValue>(&val);
+        auto uv = get_if<UnloadedValue>(&val);
         if (uv && uv->type() == TUPLE) {
-            return std::get<Tuple>(m.value_loader.loadValue(uv->hash()));
+            return get<Tuple>(m.value_loader.loadValue(uv->hash()));
         }
         throw bad_pop_type{};
     }
@@ -102,7 +101,7 @@ Tuple assumeTuple(MachineState& m, Value& val) {
 }
 
 Buffer& assumeBuffer(Value& val) {
-    auto buf = std::get_if<Buffer>(&val);
+    auto buf = get_if<Buffer>(&val);
     if (!buf) {
         throw bad_pop_type{};
     }
@@ -415,7 +414,7 @@ void hashOp(MachineState& m) {
 
 void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
-    m.stack[0] = std::visit(ValueTypeVisitor{}, m.stack[0]);
+    m.stack[0] = visit(ValueTypeVisitor{}, m.stack[0]);
     ++m.pc;
 }
 
@@ -607,7 +606,7 @@ void errPush(MachineState& m) {
 
 void errSet(MachineState& m) {
     m.stack.prepForMod(1);
-    auto codePointVal = std::get_if<CodePointStub>(&m.stack[0]);
+    auto codePointVal = get_if<CodePointStub>(&m.stack[0]);
     if (!codePointVal) {
         m.state = Status::Error;
     } else {

@@ -17,6 +17,7 @@
 #include <avm_values/codepoint.hpp>
 
 #include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 #include <ethash/keccak.hpp>
 

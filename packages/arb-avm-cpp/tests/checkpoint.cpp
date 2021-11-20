@@ -62,12 +62,11 @@ void getTuple(const ReadTransaction& transaction,
               ValueCache& value_cache) {
     auto res = getValue(transaction, val, expected_ref_count, expected_status,
                         value_cache);
-    const auto& tuple = std::get<Tuple>(val);
+    const auto& tuple = get<Tuple>(val);
     if (expected_status) {
-        REQUIRE(std::holds_alternative<Tuple>(
-            std::get<CountedData<Value>>(res).data));
-        REQUIRE(std::get<Tuple>(std::get<CountedData<Value>>(res).data) ==
-                tuple);
+        REQUIRE(
+            holds_alternative<Tuple>(std::get<CountedData<Value>>(res).data));
+        REQUIRE(get<Tuple>(std::get<CountedData<Value>>(res).data) == tuple);
     }
 }
 
@@ -78,8 +77,8 @@ void getTupleValues(const ReadTransaction& transaction,
     auto results = getValue(transaction, tuple_hash, value_cache, false);
     REQUIRE(std::holds_alternative<CountedData<Value>>(results));
     auto val = std::get<CountedData<Value>>(results).data;
-    REQUIRE(std::holds_alternative<Tuple>(val));
-    auto tuple = std::get<Tuple>(val);
+    REQUIRE(holds_alternative<Tuple>(val));
+    auto tuple = get<Tuple>(val);
     REQUIRE(tuple.tuple_size() == value_hashes.size());
 
     for (size_t i = 0; i < value_hashes.size(); i++) {

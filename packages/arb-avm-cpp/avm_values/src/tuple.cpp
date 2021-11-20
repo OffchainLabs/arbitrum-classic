@@ -15,6 +15,7 @@
  */
 
 #include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 #include <ethash/keccak.hpp>
 
@@ -130,13 +131,54 @@ Tuple::Tuple(Value val1,
     tpl->data.push_back(std::move(val8));
 }
 
+void Tuple::unsafe_set_element(uint64_t pos, Value&& newval) {
+    if (pos >= tuple_size()) {
+        throw bad_tuple_index{};
+    }
+    tpl->data[pos] = std::move(newval);
+    tpl->deferredHashing = true;
+}
+
+void Tuple::set_element(const uint64_t pos, Value newval) {
+    if (pos >= tuple_size()) {
+        throw bad_tuple_index{};
+    }
+    std::shared_ptr<RawTuple> tmp =
+        TuplePool::get_impl().getResource(tuple_size());
+    for (uint64_t i = 0; i < tuple_size(); i++) {
+        if (i == pos) {
+            tmp->data.emplace_back(std::move(newval));
+        } else {
+            tmp->data.emplace_back(tpl->data[i]);
+        }
+    }
+    tpl = std::move(tmp);
+}
+
+Value Tuple::get_element(const uint64_t pos) const {
+    if (pos >= tuple_size()) {
+        throw bad_tuple_index{};
+    }
+    return tpl->data[pos];
+}
+
+[[nodiscard]] const Value& Tuple::get_element_unsafe(const uint64_t pos) const {
+    return tpl->data[pos];
+}
+
+[[nodiscard]] Value& Tuple::get_element_mutable_unsafe(
+    const uint64_t pos) const {
+    tpl->deferredHashing = true;
+    return tpl->data[pos];
+}
+
 constexpr uint64_t hash_size = 32;
 
 // BasicValChecker checks to see whether a value can be hashed without
 // recursion. All non-tuple values or tuples with a cached hash are
 // basic. Tuples that haven't been hashed yet are not
 struct BasicValChecker {
-    bool operator()(const Value& val) const { return std::visit(*this, val); }
+    bool operator()(const Value& val) const { return visit(*this, val); }
     bool operator()(const Tuple& tup) const {
         return !tup.tpl || !tup.tpl->deferredHashing;
     }
@@ -183,7 +225,7 @@ void Tuple::calculateHashPreImage() const {
                 auto& elem = tup.get_element_unsafe(i);
                 if (!BasicValChecker{}(elem)) {
                     found_complex = true;
-                    tups.push_back(std::get<Tuple>(tup.get_element(i)));
+                    tups.push_back(get<Tuple>(tup.get_element(i)));
                 }
             }
             if (!found_complex) {

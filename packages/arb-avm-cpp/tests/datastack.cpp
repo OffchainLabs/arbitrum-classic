@@ -36,8 +36,7 @@ void checkGetTupleResult(const DbResult<Value>& res,
                          uint256_t expected_count,
                          uint256_t expected_hash) {
     REQUIRE(std::holds_alternative<CountedData<Value>>(res));
-    REQUIRE(
-        std::holds_alternative<Tuple>(std::get<CountedData<Value>>(res).data));
+    REQUIRE(holds_alternative<Tuple>(std::get<CountedData<Value>>(res).data));
     REQUIRE(std::get<CountedData<Value>>(res).reference_count ==
             expected_count);
     REQUIRE(hash_value(std::get<CountedData<Value>>(res).data) ==
@@ -51,11 +50,11 @@ void initializeDatastack(const ReadTransaction& transaction,
     ValueCache value_cache{1, 0};
     auto results = ::getValue(transaction, tuple_hash, value_cache, false);
     REQUIRE(std::holds_alternative<CountedData<Value>>(results));
-    REQUIRE(std::holds_alternative<Tuple>(
-        std::get<CountedData<Value>>(results).data));
+    REQUIRE(
+        holds_alternative<Tuple>(std::get<CountedData<Value>>(results).data));
 
     Datastack data_stack(
-        std::get<Tuple>(std::get<CountedData<Value>>(results).data));
+        get<Tuple>(std::get<CountedData<Value>>(results).data));
 
     REQUIRE(data_stack.hash() == expected_hash);
     REQUIRE(data_stack.stacksize() == expected_size);

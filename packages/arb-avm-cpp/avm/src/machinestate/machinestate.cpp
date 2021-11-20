@@ -242,14 +242,14 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
         return;
     }
     if (opcode == OpCode::SEND) {
-        auto buffer = op.immediate ? std::get_if<Buffer>(&stack[0])
-                                   : std::get_if<Buffer>(&stack[1]);
+        auto buffer = op.immediate ? get_if<Buffer>(&stack[0])
+                                   : get_if<Buffer>(&stack[1]);
         if (!buffer) {
             return;
         }
         // Also need the offset
-        auto size = op.immediate ? std::get_if<uint256_t>(&*op.immediate)
-                                 : std::get_if<uint256_t>(&stack[0]);
+        auto size = op.immediate ? get_if<uint256_t>(&*op.immediate)
+                                 : get_if<uint256_t>(&stack[0]);
         if (!size) {
             return;
         }
@@ -274,15 +274,15 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
     if (opcode == OpCode::GET_BUFFER8 || opcode == OpCode::GET_BUFFER64 ||
         opcode == OpCode::GET_BUFFER256) {
         // Find the buffer
-        auto buffer = op.immediate ? std::get_if<Buffer>(&stack[0])
-                                   : std::get_if<Buffer>(&stack[1]);
+        auto buffer = op.immediate ? get_if<Buffer>(&stack[0])
+                                   : get_if<Buffer>(&stack[1]);
         if (!buffer) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
         }
         // Also need the offset
-        auto offset = op.immediate ? std::get_if<uint256_t>(&*op.immediate)
-                                   : std::get_if<uint256_t>(&stack[0]);
+        auto offset = op.immediate ? get_if<uint256_t>(&*op.immediate)
+                                   : get_if<uint256_t>(&stack[0]);
         if (!offset) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
@@ -317,15 +317,15 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
                                       buf_proof2.begin(), buf_proof2.end());
         }
     } else {
-        auto buffer = op.immediate ? std::get_if<Buffer>(&stack[1])
-                                   : std::get_if<Buffer>(&stack[2]);
+        auto buffer = op.immediate ? get_if<Buffer>(&stack[1])
+                                   : get_if<Buffer>(&stack[2]);
         if (!buffer) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
         }
         // Also need the offset
-        auto offset = op.immediate ? std::get_if<uint256_t>(&*op.immediate)
-                                   : std::get_if<uint256_t>(&stack[0]);
+        auto offset = op.immediate ? get_if<uint256_t>(&*op.immediate)
+                                   : get_if<uint256_t>(&stack[0]);
         if (!offset) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
@@ -334,8 +334,8 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;
         }
-        auto val = op.immediate ? std::get_if<uint256_t>(&stack[0])
-                                : std::get_if<uint256_t>(&stack[1]);
+        auto val = op.immediate ? get_if<uint256_t>(&stack[0])
+                                : get_if<uint256_t>(&stack[1]);
         if (!val) {
             insertSizes(proof.buffer_proof, 0, 0, 0, 0);
             return;

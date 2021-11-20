@@ -37,8 +37,8 @@ struct ValueBeingParsed {
         : val{std::move(v)}, reference_count{count}, raw_vals{} {}
 
     void setTupleElement(uint64_t pos, Value&& newval) {
-        if (std::holds_alternative<Tuple>(val)) {
-            std::get<Tuple>(val).unsafe_set_element(pos, std::move(newval));
+        if (holds_alternative<Tuple>(val)) {
+            get<Tuple>(val).unsafe_set_element(pos, std::move(newval));
         }
     }
 };
@@ -47,12 +47,12 @@ constexpr uint64_t tupleInlineNumerator = 0;
 constexpr uint64_t tupleInlineDenominator = 100;
 bool shouldInlineValue(const Value& val,
                        const std::vector<unsigned char>& secret_hash_seed) {
-    if (auto tuple = std::get_if<Tuple>(&val)) {
+    if (auto tuple = get_if<Tuple>(&val)) {
         auto hash = tuple->getHashPreImage().secretHash(secret_hash_seed);
         return tuple->tuple_size() == 0 ||
                (hash % tupleInlineDenominator) < tupleInlineNumerator;
-    } else if (std::holds_alternative<CodePointStub>(val) ||
-               std::holds_alternative<UnloadedValue>(val)) {
+    } else if (holds_alternative<CodePointStub>(val) ||
+               holds_alternative<UnloadedValue>(val)) {
         return false;
     } else {
         return true;
@@ -176,7 +176,7 @@ std::vector<Value> serializeValue(
         Value nested = std::move(to_serialize.back());
         to_serialize.pop_back();
         if (shouldInlineValue(nested, secret_hash_seed)) {
-            if (const auto& nested_tup = std::get_if<Tuple>(&nested)) {
+            if (const auto& nested_tup = get_if<Tuple>(&nested)) {
                 // Write the tuple header, then add the tuple contents
                 // to the stack of values to serialize (again in reverse)
                 value_vector.push_back(TUPLE + nested_tup->tuple_size());
@@ -191,7 +191,7 @@ std::vector<Value> serializeValue(
             // Serialize reference to value
             value_vector.push_back(HASH_PRE_IMAGE);
             value_vector.push_back(
-                static_cast<uint8_t>(std::visit(ValueTypeVisitor{}, nested)));
+                static_cast<uint8_t>(visit(ValueTypeVisitor{}, nested)));
             marshal_uint256_t(hash_value(nested), value_vector);
             marshal_uint256_t(::getSize(nested), value_vector);
             // Mark value for separate saving
@@ -306,7 +306,7 @@ std::vector<Value> serializeValue(
     const Value& val,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>& segment_counts) {
-    return std::visit(
+    return visit(
         [&](const auto& val) {
             return serializeValue(secret_hash_seed, val, value_vector,
                                   segment_counts);
@@ -320,7 +320,7 @@ GetResults applyValue(Value&& val,
     auto& current = val_stack.back();
 
     // This function is only called when populating an existing tuple
-    auto tuple_size = std::get<Tuple>(current.val).tuple_size();
+    auto tuple_size = get<Tuple>(current.val).tuple_size();
     uint64_t tuple_index = tuple_size - current.raw_vals.size() - 1;
     if (tuple_index >= tuple_size) {
         throw std::runtime_error("Tuple and raw_vals size mismatch");
@@ -406,7 +406,7 @@ Buffer processBuffer(const ReadTransaction& tx,
     std::vector<Buffer> vec;
     for (const auto& node_hash : val.nodes) {
         if (auto cached_val = val_cache.loadIfExists(node_hash)) {
-            vec.push_back(std::get<Buffer>(cached_val.value()));
+            vec.push_back(get<Buffer>(cached_val.value()));
             continue;
         }
         auto unloaded_val = BigUnloadedValue{BUFFER, node_hash, 1};
@@ -421,8 +421,8 @@ Buffer processBuffer(const ReadTransaction& tx,
             reinterpret_cast<const char*>(results.stored_value.data());
         auto record = parseRecord(record_string);
 
-        if (std::holds_alternative<Buffer>(record)) {
-            Buffer buf = std::get<Buffer>(record);
+        if (holds_alternative<Buffer>(record)) {
+            Buffer buf = get<Buffer>(record);
             // Check that it has correct height
             val_cache.maybeSave(buf);
             vec.push_back(buf);
@@ -541,7 +541,7 @@ GetResults processVal(const ReadTransaction& tx,
     auto buf = reinterpret_cast<const char*>(results.stored_value.data());
     auto record = parseRecord(buf);
 
-    return std::visit(
+    return visit(
         [&](const auto& val) {
             return processVal(tx, val, val_stack, segment_ids,
                               results.reference_count, val_cache, lazy_load);
@@ -569,7 +569,7 @@ GetResults processFirstVal(const ReadTransaction& tx,
     auto buf = reinterpret_cast<const char*>(results.stored_value.data());
     auto record = parseRecord(buf);
 
-    return std::visit(
+    return visit(
         [&](const auto& val) {
             return processFirstVal(tx, val, val_stack, segment_ids,
                                    results.reference_count, val_cache);
@@ -597,7 +597,7 @@ DbResult<Value> getValueInternal(const ReadTransaction& tx,
             auto next = std::move(current.raw_vals.back());
             current.raw_vals.pop_back();
 
-            auto results = std::visit(
+            auto results = visit(
                 [&](const auto& val) {
                     return processVal(tx, val, val_stack, segment_ids, 0,
                                       value_cache, lazy_load);
@@ -635,7 +635,7 @@ DbResult<Value> getValueRecord(const ReadTransaction& tx,
                                ValueCache& value_cache,
                                bool lazy_load) {
     std::vector<ValueBeingParsed> val_stack{};
-    std::visit(
+    visit(
         [&](const auto& val) {
             return processFirstVal(tx, val, val_stack, segment_ids, 1,
                                    value_cache);
@@ -666,7 +666,7 @@ DbResult<Value> getValueImpl(const ReadTransaction& tx,
         return res;
     }
     auto& val = std::get<CountedData<Value>>(res).data;
-    if (std::holds_alternative<UnloadedValue>(val)) {
+    if (holds_alternative<UnloadedValue>(val)) {
         throw std::runtime_error(
             "attempting to get value resulted in unloaded value");
     }
@@ -697,7 +697,7 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
         auto key = vecToSlice(hash_key);
         SaveResults save_ret = incrementReference(tx, key);
         if (save_ret.status.IsNotFound()) {
-            if (std::holds_alternative<UnloadedValue>(next_item)) {
+            if (holds_alternative<UnloadedValue>(next_item)) {
                 throw std::runtime_error(
                     "Attempted to save unknown unloaded value");
             }
@@ -740,7 +740,7 @@ DeleteResults deleteValues(ReadWriteTransaction& tx,
         if (results.status.ok() && results.reference_count == 0) {
             auto buf =
                 reinterpret_cast<const char*>(results.stored_value.data());
-            std::visit(
+            visit(
                 [&](const auto& val) {
                     deleteParsedValue(val, items_to_delete, segment_counts);
                 },
@@ -765,7 +765,7 @@ DeleteResults deleteValueRecord(ReadWriteTransaction& tx,
                                 const ParsedSerializedVal& val,
                                 std::map<uint64_t, uint64_t>& segment_counts) {
     std::vector<uint256_t> items_to_delete{};
-    std::visit(
+    visit(
         [&](const auto& val) {
             deleteParsedValue(val, items_to_delete, segment_counts);
         },

@@ -17,10 +17,12 @@
 #ifndef tuple_hpp
 #define tuple_hpp
 
+#include <avm_values/buffer.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/pool.hpp>
-#include <avm_values/value.hpp>
+#include <avm_values/unloadedvalue.hpp>
+#include <avm_values/valuetype.hpp>
 #include <utility>
 
 #include <memory>
@@ -28,6 +30,8 @@
 HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
+
+class Value;
 
 const static std::vector<Value> empty_value_vector;
 
@@ -39,13 +43,7 @@ class Tuple {
 
     void calculateHashPreImage() const;
 
-    void unsafe_set_element(uint64_t pos, Value&& newval) {
-        if (pos >= tuple_size()) {
-            throw bad_tuple_index{};
-        }
-        tpl->data[pos] = std::move(newval);
-        tpl->deferredHashing = true;
-    }
+    void unsafe_set_element(uint64_t pos, Value&& newval);
 
     friend BasicValChecker;
     friend RawTuple;
@@ -104,28 +102,9 @@ class Tuple {
         }
     }
 
-    void set_element(const uint64_t pos, Value newval) {
-        if (pos >= tuple_size()) {
-            throw bad_tuple_index{};
-        }
-        std::shared_ptr<RawTuple> tmp =
-            TuplePool::get_impl().getResource(tuple_size());
-        for (uint64_t i = 0; i < tuple_size(); i++) {
-            if (i == pos) {
-                tmp->data.emplace_back(std::move(newval));
-            } else {
-                tmp->data.emplace_back(tpl->data[i]);
-            }
-        }
-        tpl = std::move(tmp);
-    }
+    void set_element(const uint64_t pos, Value newval);
 
-    [[nodiscard]] Value get_element(const uint64_t pos) const {
-        if (pos >= tuple_size()) {
-            throw bad_tuple_index{};
-        }
-        return tpl->data[pos];
-    }
+    [[nodiscard]] Value get_element(const uint64_t pos) const;
 
     [[nodiscard]] std::vector<Value>::const_iterator begin() const {
         if (tpl == nullptr) {
@@ -151,14 +130,9 @@ class Tuple {
         return std::reverse_iterator(begin());
     }
 
-    [[nodiscard]] const Value& get_element_unsafe(const uint64_t pos) const {
-        return tpl->data[pos];
-    }
+    [[nodiscard]] const Value& get_element_unsafe(const uint64_t pos) const;
 
-    [[nodiscard]] Value& get_element_mutable_unsafe(const uint64_t pos) const {
-        tpl->deferredHashing = true;
-        return tpl->data[pos];
-    }
+    [[nodiscard]] Value& get_element_mutable_unsafe(const uint64_t pos) const;
 
     [[nodiscard]] HashPreImage getHashPreImage() const {
         if (!tpl) {

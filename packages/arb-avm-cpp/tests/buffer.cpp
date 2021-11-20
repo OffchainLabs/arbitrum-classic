@@ -173,7 +173,7 @@ Buffer checkBuffer(ArbStorage& storage, Buffer& buf) {
     REQUIRE(std::holds_alternative<CountedData<Value>>(res));
     REQUIRE(hash_value(std::get<CountedData<Value>>(res).data) ==
             hash_value(buf));
-    return std::get<Buffer>(std::get<CountedData<Value>>(res).data);
+    return get<Buffer>(std::get<CountedData<Value>>(res).data);
 }
 
 TEST_CASE("Buffer Serialization") {

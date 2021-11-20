@@ -163,7 +163,7 @@ void marshal_value(const Value& full_val, std::vector<unsigned char>& buf) {
     while (!values.empty()) {
         const auto val = std::move(values.back());
         values.pop_back();
-        std::visit(marshaller, val);
+        visit(marshaller, val);
     }
 }
 
@@ -240,7 +240,7 @@ void marshalForProof(const Value& val,
                      size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    return std::visit(
+    return visit(
         [&](const auto& v) {
             return marshalForProof(v, marshal_level, buf, code);
         },
@@ -248,30 +248,29 @@ void marshalForProof(const Value& val,
 }
 
 uint256_t hash_value(const Value& value) {
-    return std::visit([](const auto& val) { return hash(val); }, value);
+    return visit([](const auto& val) { return hash(val); }, value);
 }
 
 bool values_equal(const Value& a, const Value& b) {
     // Fast path: if the values are both ints, compare them directly
     {
-        const uint256_t* a_int = std::get_if<uint256_t>(&a);
-        const uint256_t* b_int = std::get_if<uint256_t>(&b);
+        const uint256_t* a_int = get_if<uint256_t>(&a);
+        const uint256_t* b_int = get_if<uint256_t>(&b);
         if (a_int && b_int) {
             return *a_int == *b_int;
         }
     }
     // Fast path: if the values are tuples of different sizes, return false
     {
-        const Tuple* a_tup = std::get_if<Tuple>(&a);
-        const Tuple* b_tup = std::get_if<Tuple>(&b);
+        const Tuple* a_tup = get_if<Tuple>(&a);
+        const Tuple* b_tup = get_if<Tuple>(&b);
         if (a_tup && b_tup && a_tup->tuple_size() != b_tup->tuple_size()) {
             return false;
         }
     }
     // Fast path: if the values are of different types, return false
     // Note: ValueTypeVisitor correctly sees through unloaded values
-    if (std::visit(ValueTypeVisitor{}, a) !=
-        std::visit(ValueTypeVisitor{}, b)) {
+    if (visit(ValueTypeVisitor{}, a) != visit(ValueTypeVisitor{}, b)) {
         return false;
     }
     // Slow path: the preconditions for the fast paths weren't met
@@ -298,7 +297,7 @@ struct GetSize {
 };
 
 uint256_t getSize(const Value& val) {
-    return std::visit(GetSize{}, val);
+    return visit(GetSize{}, val);
 }
 
 struct ValuePrinter {
@@ -351,5 +350,5 @@ struct ValuePrinter {
 };
 
 std::ostream& operator<<(std::ostream& os, const Value& val) {
-    return *std::visit(ValuePrinter{os}, val);
+    return *visit(ValuePrinter{os}, val);
 }
