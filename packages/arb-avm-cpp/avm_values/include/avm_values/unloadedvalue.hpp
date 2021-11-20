@@ -22,6 +22,9 @@
 
 #include <cassert>
 
+static std::atomic<uint64_t> unloaded_value_inline_hit_count{};
+static std::atomic<uint64_t> unloaded_value_inline_miss_count{};
+
 struct BigUnloadedValue {
     ValueTypes type;
     uint256_t hash{};

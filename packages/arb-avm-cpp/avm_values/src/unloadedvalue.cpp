@@ -34,6 +34,7 @@ UnloadedValue::UnloadedValue(BigUnloadedValue big)
         if (uint256_t(small_size) == big.value_size && small_size > 0) {
             impl.inline_value.value_size = small_size;
             impl.inline_value.hash = big.hash;
+            unloaded_value_inline_hit_count.fetch_add(1);
             return;
         }
     }
@@ -43,6 +44,7 @@ UnloadedValue::UnloadedValue(BigUnloadedValue big)
     impl.heaped_value.type = big.type;
     impl.heaped_value.ptr = std::make_shared<HeapedUnloadedValueInfo>(
         HeapedUnloadedValueInfo{big.hash, big.value_size});
+    unloaded_value_inline_miss_count.fetch_add(1);
 }
 
 UnloadedValue::~UnloadedValue() {

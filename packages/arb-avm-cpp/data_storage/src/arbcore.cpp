@@ -119,6 +119,10 @@ bool ArbCore::startThread() {
 
 void ArbCore::abortThread() {
     std::cerr << "Aborting main ArbCore thread" << std::endl;
+    auto uv_inline_hits = unloaded_value_inline_hit_count.load();
+    auto uv_inline_misses = unloaded_value_inline_miss_count.load();
+    std::cerr << "Unloaded value inlining success: " << uv_inline_hits << "/"
+              << (uv_inline_hits + uv_inline_misses) << std::endl;
     if (core_thread) {
 #ifdef __linux__
         core_pthread = std::nullopt;
