@@ -45,10 +45,12 @@ struct HeapedUnloadedValueInfo {
 };
 
 struct HeapedUnloadedValue {
-    uint64_t zero{};
+    uint64_t uv_flag{};
     ValueTypes type;
     std::shared_ptr<HeapedUnloadedValueInfo> ptr;
 };
+
+constexpr uint64_t uv_flag = uint64_t(1) << 63;
 
 class UnloadedValue {
    private:
@@ -75,7 +77,7 @@ class UnloadedValue {
     UnloadedValue& operator=(UnloadedValue&&);
 
     inline bool isHeaped() const {
-        return __builtin_expect(impl.heaped_value.zero == 0, 0);
+        return __builtin_expect(impl.heaped_value.uv_flag == uv_flag, 0);
     }
 
     // Provide methods to access fields

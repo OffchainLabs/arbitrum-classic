@@ -26,16 +26,15 @@ UnloadedValue::UnloadedValue(BigUnloadedValue big)
     assert(big.value_size > 0);
     // Attempt to inline it
     if (big.type == ValueTypes::TUPLE) {
-        auto small_size = uint64_t(big.value_size);
-        if (uint256_t(small_size) == big.value_size && small_size > 0) {
-            impl.inline_value.value_size = small_size;
+        if (big.value_size < (uint256_t(1) << 63) && big.value_size > 0) {
+            impl.inline_value.value_size = uint64_t(big.value_size) | uv_flag;
             impl.inline_value.hash = big.hash;
             return;
         }
     }
 
     // We can't inline this; put it in a shared_ptr
-    impl.heaped_value.zero = 0;
+    impl.heaped_value.uv_flag = uv_flag;
     impl.heaped_value.type = big.type;
     impl.heaped_value.ptr = std::make_shared<HeapedUnloadedValueInfo>(
         HeapedUnloadedValueInfo{big.hash, big.value_size});
@@ -87,7 +86,7 @@ uint256_t UnloadedValue::value_size() const {
     if (isHeaped()) [[unlikely]] {
         return getHeaped().value_size;
     } else {
-        return impl.inline_value.value_size;
+        return impl.inline_value.value_size & ~uv_flag;
     }
 }
 
