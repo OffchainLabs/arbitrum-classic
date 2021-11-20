@@ -57,7 +57,7 @@ UnloadedValue::UnloadedValue(const UnloadedValue& other)
 }
 
 UnloadedValue& UnloadedValue::operator=(const UnloadedValue& other) {
-    *this = other;
+    *this = UnloadedValue(other);
     return *this;
 }
 
@@ -71,7 +71,11 @@ UnloadedValue::UnloadedValue(UnloadedValue&& other)
 }
 
 UnloadedValue& UnloadedValue::operator=(UnloadedValue&& other) {
-    *this = std::move(other);
+    if (other.isHeaped()) {
+        std::swap(impl.heaped_value, other.impl.heaped_value);
+    } else {
+        std::swap(impl.inline_value, other.impl.inline_value);
+    }
     return *this;
 }
 
