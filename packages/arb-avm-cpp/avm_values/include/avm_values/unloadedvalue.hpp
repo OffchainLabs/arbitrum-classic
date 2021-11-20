@@ -17,6 +17,7 @@
 #ifndef unloadedvalue_hpp
 #define unloadedvalue_hpp
 
+#include <avm_values/value.hpp>
 #include <avm_values/valuetype.hpp>
 
 #include <cassert>
@@ -27,62 +28,55 @@ struct BigUnloadedValue {
     uint256_t value_size{};
 };
 
-struct InlineUnloadedTuple {
-    uint256_t hash{};
-    uint64_t value_size{};
+struct InlineUnloadedValue {
+    uint64_t value_size;
+    uint256_t hash;
 };
 
-struct InlineUnloadedNonTuple {
+struct HeapedUnloadedValueInfo {
+    uint256_t hash;
+    uint256_t value_size;
+};
+
+struct HeapedUnloadedValue {
+    uint64_t zero{};
     ValueTypes type;
-    uint256_t hash{};
-};
-
-using unloadedValue = std::variant<InlineUnloadedTuple,
-                                   InlineUnloadedNonTuple,
-                                   std::shared_ptr<BigUnloadedValue>>;
-
-struct UnloadedValueUnpacker {
-    BigUnloadedValue operator()(const InlineUnloadedTuple& val) {
-        return BigUnloadedValue{ValueTypes::TUPLE, val.hash, val.value_size};
-    }
-    BigUnloadedValue operator()(const InlineUnloadedNonTuple& val) {
-        return BigUnloadedValue{val.type, val.hash, 1};
-    }
-    BigUnloadedValue operator()(const std::shared_ptr<BigUnloadedValue>& val) {
-        return *val;
-    }
+    std::shared_ptr<HeapedUnloadedValueInfo> ptr;
 };
 
 class UnloadedValue {
    private:
-    unloadedValue inner;
+    union UnloadedValueImpl {
+        InlineUnloadedValue inline_value;
+        HeapedUnloadedValue heaped_value;
+        ~UnloadedValueImpl() {}
+    };
 
-    UnloadedValue(unloadedValue inner_) : inner(inner_) {}
+    UnloadedValueImpl impl;
+
+    inline bool isHeaped() const;
+    inline const HeapedUnloadedValueInfo& getHeaped() const;
 
    public:
-    UnloadedValue(ValueTypes ty, uint256_t hash, uint256_t size) {
-        assert(size > 0);
-        if (ty == ValueTypes::TUPLE) {
-            uint64_t small_size(size);
-            if (uint256_t(small_size) == size) {
-                inner = InlineUnloadedTuple{hash, small_size};
-            } else {
-                inner = std::make_shared<BigUnloadedValue>(
-                    BigUnloadedValue{ty, hash, size});
-            }
-        } else {
-            assert(size == 1);
-            inner = InlineUnloadedNonTuple{ty, hash};
-        }
-    }
+    UnloadedValue(BigUnloadedValue);
 
-    BigUnloadedValue unpack() const {
-        return std::visit(UnloadedValueUnpacker{}, inner);
-    }
+    // Rule of 5: provide a destructor, copy-constructor, copy-assignment
+    // operator, move constructor, and move-assignment operator.
+    // These all forward to the shared_ptr impls if necessary.
+    ~UnloadedValue();
+    UnloadedValue(const UnloadedValue&);
+    UnloadedValue& operator=(const UnloadedValue&);
+    UnloadedValue(UnloadedValue&&);
+    UnloadedValue& operator=(UnloadedValue&&);
+
+    // Provide methods to access fields
+    uint256_t hash() const;
+    uint256_t value_size() const;
+    ValueTypes type() const;
 };
 
 inline uint256_t hash(const UnloadedValue& uv) {
-    return uv.unpack().hash;
+    return uv.hash();
 }
 
 #endif /* unloadedvalue_hpp */

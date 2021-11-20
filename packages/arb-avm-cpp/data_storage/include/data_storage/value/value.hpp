@@ -58,7 +58,7 @@ using ParsedTupVal = std::variant<ParsedTupValVector,
                                   uint256_t,
                                   CodePointStub,
                                   Buffer,
-                                  UnloadedValue,
+                                  BigUnloadedValue,
                                   ParsedBuffer>;
 
 class ParsedTupValVector : public std::vector<ParsedTupVal> {};

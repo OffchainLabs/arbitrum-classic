@@ -82,6 +82,6 @@ TEST_CASE("Value marshaling") {
 
 TEST_CASE("UnloadedValue equality") {
     Tuple tup;
-    UnloadedValue uv{TUPLE, ::hash(tup), tup.getSize()};
+    UnloadedValue uv(BigUnloadedValue{TUPLE, ::hash(tup), tup.getSize()});
     REQUIRE(values_equal(value(tup), value(uv)));
 }

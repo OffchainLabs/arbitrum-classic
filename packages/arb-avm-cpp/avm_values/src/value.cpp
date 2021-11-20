@@ -293,7 +293,7 @@ struct GetSize {
     uint256_t operator()(const CodePointStub&) const { return 1; }
 
     uint256_t operator()(const UnloadedValue& val) const {
-        return val.unpack().value_size;
+        return val.value_size();
     }
 };
 
@@ -344,8 +344,8 @@ struct ValuePrinter {
     }
 
     std::ostream* operator()(const UnloadedValue& val) const {
-        os << "UnloadedValue(type " << val.unpack().type << ", hash "
-           << ::hash(val) << ")";
+        os << "UnloadedValue(type " << val.type() << ", hash " << ::hash(val)
+           << ")";
         return &os;
     }
 };

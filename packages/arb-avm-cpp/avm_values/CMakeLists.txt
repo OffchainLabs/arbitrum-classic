@@ -47,6 +47,7 @@ set(LIB_SOURCES
   src/tuplestub.cpp
   src/value.cpp
   src/vmValueParser.cpp
+  src/unloadedvalue.cpp
 )
 
 add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES})

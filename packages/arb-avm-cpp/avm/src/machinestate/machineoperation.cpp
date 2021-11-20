@@ -81,11 +81,8 @@ Tuple assumeTuple(MachineState& m, const value& val) {
     auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
         auto uv = std::get_if<UnloadedValue>(&val);
-        if (uv) {
-            auto unpacked = uv->unpack();
-            if (unpacked.type == TUPLE) {
-                return std::get<Tuple>(m.value_loader.loadValue(unpacked.hash));
-            }
+        if (uv && uv->type() == TUPLE) {
+            return std::get<Tuple>(m.value_loader.loadValue(uv->hash()));
         }
         throw bad_pop_type{};
     }
@@ -96,11 +93,8 @@ Tuple assumeTuple(MachineState& m, value& val) {
     auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
         auto uv = std::get_if<UnloadedValue>(&val);
-        if (uv) {
-            auto unpacked = uv->unpack();
-            if (unpacked.type == TUPLE) {
-                return std::get<Tuple>(m.value_loader.loadValue(unpacked.hash));
-            }
+        if (uv && uv->type() == TUPLE) {
+            return std::get<Tuple>(m.value_loader.loadValue(uv->hash()));
         }
         throw bad_pop_type{};
     }
