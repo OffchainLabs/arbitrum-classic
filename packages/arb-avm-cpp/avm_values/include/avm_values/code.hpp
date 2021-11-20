@@ -242,6 +242,9 @@ class CodeBase {
 
     CodePointStub addSegmentImpl() {
         uint64_t segment_num = impl->nextSegmentNum();
+        if (segment_num >= (uint64_t(1) << 62)) {
+            throw std::runtime_error("Exceeded limit of 2^62 segments");
+        }
         auto new_segment = std::make_shared<UnsafeCodeSegment>(segment_num);
         auto stub = new_segment->initialCodePointStub();
         impl->storeSegment(std::move(new_segment));
