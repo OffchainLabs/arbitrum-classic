@@ -86,29 +86,38 @@ TEST_CASE("UnloadedValue equality") {
     REQUIRE(values_equal(value(tup), value(uv)));
 }
 
+#define CHECK_UV_EQUALITY(uv, big)                  \
+    {                                               \
+        REQUIRE(uv.hash() == big.hash);             \
+        REQUIRE(uv.value_size() == big.value_size); \
+        REQUIRE(uv.type() == big.type);             \
+        REQUIRE(uv.isHeaped() == shouldHeap);       \
+    }
+
 void checkUvIntegrity(BigUnloadedValue big, bool shouldHeap) {
     UnloadedValue uv(big);
-    REQUIRE(uv.hash() == big.hash);
-    REQUIRE(uv.value_size() == big.value_size);
-    REQUIRE(uv.type() == big.type);
-    REQUIRE(uv.isHeaped() == shouldHeap);
+    CHECK_UV_EQUALITY(uv, big);
 
     UnloadedValue copy(uv);
-    REQUIRE(copy.hash() == big.hash);
-    REQUIRE(copy.value_size() == big.value_size);
-    REQUIRE(copy.type() == big.type);
-    REQUIRE(copy.isHeaped() == shouldHeap);
+    CHECK_UV_EQUALITY(copy, big);
 
     UnloadedValue move(std::move(copy));
-    REQUIRE(move.hash() == big.hash);
-    REQUIRE(move.value_size() == big.value_size);
-    REQUIRE(move.type() == big.type);
-    REQUIRE(move.isHeaped() == shouldHeap);
+    CHECK_UV_EQUALITY(move, big);
+
+    UnloadedValue copy_assign(BigUnloadedValue{ValueTypes::NUM, 0, 1});
+    copy_assign = uv;
+    CHECK_UV_EQUALITY(copy_assign, big);
+
+    UnloadedValue move_assign(BigUnloadedValue{ValueTypes::NUM, 0, 1});
+    move_assign = std::move(copy_assign);
+    CHECK_UV_EQUALITY(move_assign, big);
 
     // Make sure uv isn't moved (though C++ probably wouldn't allow that
     // anyways)
     REQUIRE(uv.hash() == big.hash);
 }
+
+#undef CHYECK_UV_EQUALITY
 
 TEST_CASE("UnloadedValue inlining") {
     Tuple tup;
