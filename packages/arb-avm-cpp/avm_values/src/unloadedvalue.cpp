@@ -16,12 +16,8 @@
 
 #include <avm_values/unloadedvalue.hpp>
 
-bool UnloadedValue::isHeaped() const {
-    return impl.heaped_value.zero == 0;
-}
-
-const HeapedUnloadedValueInfo& UnloadedValue::getHeaped() const {
-    assert(isHeaped() == 0);
+inline const HeapedUnloadedValueInfo& UnloadedValue::getHeaped() const {
+    assert(isHeaped());
     return *impl.heaped_value.ptr;
 }
 
@@ -54,12 +50,9 @@ UnloadedValue::~UnloadedValue() {
 UnloadedValue::UnloadedValue(const UnloadedValue& other)
     : impl{InlineUnloadedValue{}} {
     if (other.isHeaped()) [[unlikely]] {
-        impl.heaped_value.zero = 0;
-        impl.heaped_value.type = other.impl.heaped_value.type;
-        impl.heaped_value.ptr = other.impl.heaped_value.ptr;
+        impl.heaped_value = other.impl.heaped_value;
     } else {
-        impl.inline_value.value_size = other.impl.inline_value.value_size;
-        impl.inline_value.hash = other.impl.inline_value.hash;
+        impl.inline_value = other.impl.inline_value;
     }
 }
 
@@ -71,12 +64,9 @@ UnloadedValue& UnloadedValue::operator=(const UnloadedValue& other) {
 UnloadedValue::UnloadedValue(UnloadedValue&& other)
     : impl{InlineUnloadedValue{}} {
     if (other.isHeaped()) [[unlikely]] {
-        impl.heaped_value.zero = 0;
-        impl.heaped_value.type = other.impl.heaped_value.type;
-        impl.heaped_value.ptr = std::move(other.impl.heaped_value.ptr);
+        impl.heaped_value = std::move(other.impl.heaped_value);
     } else {
-        impl.inline_value.value_size = other.impl.inline_value.value_size;
-        impl.inline_value.hash = other.impl.inline_value.hash;
+        impl.inline_value = other.impl.inline_value;
     }
 }
 

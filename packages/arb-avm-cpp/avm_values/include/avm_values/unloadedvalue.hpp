@@ -22,6 +22,12 @@
 
 #include <cassert>
 
+#ifndef __GNUC__
+#ifndef __builtin_expect
+#define __builtin_expect(x, y) (x)
+#endif /* __builtin_expect */
+#endif /* __GNU_C__ */
+
 struct BigUnloadedValue {
     ValueTypes type;
     uint256_t hash{};
@@ -54,7 +60,6 @@ class UnloadedValue {
 
     UnloadedValueImpl impl;
 
-    inline bool isHeaped() const;
     inline const HeapedUnloadedValueInfo& getHeaped() const;
 
    public:
@@ -68,6 +73,10 @@ class UnloadedValue {
     UnloadedValue& operator=(const UnloadedValue&);
     UnloadedValue(UnloadedValue&&);
     UnloadedValue& operator=(UnloadedValue&&);
+
+    inline bool isHeaped() const {
+        return __builtin_expect(impl.heaped_value.zero == 0, 0);
+    }
 
     // Provide methods to access fields
     uint256_t hash() const;

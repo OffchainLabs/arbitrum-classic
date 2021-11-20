@@ -85,3 +85,34 @@ TEST_CASE("UnloadedValue equality") {
     UnloadedValue uv(BigUnloadedValue{TUPLE, ::hash(tup), tup.getSize()});
     REQUIRE(values_equal(value(tup), value(uv)));
 }
+
+void checkUvIntegrity(BigUnloadedValue big, bool shouldHeap) {
+    UnloadedValue uv(big);
+    REQUIRE(uv.hash() == big.hash);
+    REQUIRE(uv.value_size() == big.value_size);
+    REQUIRE(uv.type() == big.type);
+    REQUIRE(uv.isHeaped() == shouldHeap);
+
+    UnloadedValue copy(uv);
+    REQUIRE(copy.hash() == big.hash);
+    REQUIRE(copy.value_size() == big.value_size);
+    REQUIRE(copy.type() == big.type);
+    REQUIRE(copy.isHeaped() == shouldHeap);
+
+    UnloadedValue move(std::move(copy));
+    REQUIRE(move.hash() == big.hash);
+    REQUIRE(move.value_size() == big.value_size);
+    REQUIRE(move.type() == big.type);
+    REQUIRE(move.isHeaped() == shouldHeap);
+
+    // Make sure uv isn't moved (though C++ probably wouldn't allow that
+    // anyways)
+    REQUIRE(uv.hash() == big.hash);
+}
+
+TEST_CASE("UnloadedValue inlining") {
+    Tuple tup;
+    checkUvIntegrity({TUPLE, ::hash(tup), 8}, false);
+    checkUvIntegrity({HASH_PRE_IMAGE, ::hash(tup), 1}, true);
+    checkUvIntegrity({HASH_PRE_IMAGE, ::hash(tup), uint256_t(1) << 128}, true);
+}
