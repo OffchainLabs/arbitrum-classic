@@ -246,6 +246,9 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	// Confirmed Accumulator will also broadcast to the clients.
 	b.ConfirmedAccumulator(feedItem1.BatchItem.Accumulator) // remove the first message we generated
 
+	// Send next accumulator because only previous accumulator is sent to clients
+	b.ConfirmedAccumulator(feedItem2.BatchItem.Accumulator) // remove the first message we generated
+
 	updateTimeout := time.After(2 * time.Second)
 	for {
 		if b.MessageCacheCount() == 1 { // should have left the second message
@@ -259,7 +262,8 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 		}
 	}
 
-	b.ConfirmedAccumulator(feedItem2.BatchItem.Accumulator) // remove the second message we generated
+	// Send second accumulator again so that the previously added accumulator is sent
+	b.ConfirmedAccumulator(feedItem2.BatchItem.Accumulator)
 
 	updateTimeout = time.After(2 * time.Second)
 	for {

@@ -388,6 +388,7 @@ func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup boo
 
 func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
 	defer runtime.KeepAlive(ac)
+	defer runtime.KeepAlive(executionCursor)
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return errors.Errorf("unsupported execution cursor type %T", executionCursor)
@@ -444,6 +445,7 @@ func (ac *ArbCore) GetLastMachineTotalGas() (*big.Int, error) {
 
 func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
 	defer runtime.KeepAlive(ac)
+	defer runtime.KeepAlive(executionCursor)
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
