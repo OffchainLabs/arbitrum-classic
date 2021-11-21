@@ -61,7 +61,7 @@ UnloadedValue& UnloadedValue::operator=(const UnloadedValue& other) {
     return *this;
 }
 
-UnloadedValue::UnloadedValue(UnloadedValue&& other)
+UnloadedValue::UnloadedValue(UnloadedValue&& other) noexcept
     : impl{InlineUnloadedValue{}} {
     if (other.isHeaped()) {
         impl.heaped_value = std::move(other.impl.heaped_value);
@@ -70,7 +70,7 @@ UnloadedValue::UnloadedValue(UnloadedValue&& other)
     }
 }
 
-UnloadedValue& UnloadedValue::operator=(UnloadedValue&& other) {
+UnloadedValue& UnloadedValue::operator=(UnloadedValue&& other) noexcept {
     if (other.isHeaped()) {
         std::swap(impl.heaped_value, other.impl.heaped_value);
     } else {

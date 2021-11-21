@@ -31,10 +31,10 @@ Value::Value(Tuple tup) : Value(0) {
     inner.tagged.inner.tuple = std::move(tup);
 }
 Value::Value(uint64_t num) : Value(uint256_t(num)) {}
-Value::Value(uint256_t num)
+Value::Value(const uint256_t& num)
     : inner{TaggedValue{value_num_tag, TaggedValueContents{num}}} {}
-Value::Value(CodePointStub code_point) : Value(0) {
-    inner.code_point = std::move(code_point);
+Value::Value(const CodePointStub& code_point) : Value(0) {
+    inner.code_point = code_point;
     assert(!isTagged());
     assert(!(inner.tagged.tag & value_unloaded_bit));
 }
@@ -47,7 +47,7 @@ Value::Value(Buffer buffer) : Value(0) {
     inner.tagged.inner.buffer = std::move(buffer);
 }
 Value::Value(UnloadedValue uv) : Value(0) {
-    inner.unloaded = uv;
+    inner.unloaded = std::move(uv);
     assert(!isTagged());
     assert(inner.tagged.tag & value_unloaded_bit);
 }
@@ -107,7 +107,7 @@ Value& Value::operator=(const Value& other) {
     return *this;
 }
 
-Value::Value(Value&& other) : Value(0) {
+Value::Value(Value&& other) noexcept : Value(0) {
     if (other.isTagged()) {
         inner.tagged.tag = other.inner.tagged.tag;
         switch (other.inner.tagged.tag) {
@@ -130,7 +130,7 @@ Value::Value(Value&& other) : Value(0) {
             default:
                 assert(0);
                 __builtin_unreachable();
-                throw std::runtime_error("Unknown value tag");
+                std::terminate();
         }
     } else if (other.inner.tagged.tag & value_unloaded_bit) {
         inner.unloaded = std::move(other.inner.unloaded);
@@ -139,7 +139,7 @@ Value::Value(Value&& other) : Value(0) {
     }
 }
 
-Value& Value::operator=(Value&& other) {
+Value& Value::operator=(Value&& other) noexcept {
     if (other.isTagged()) {
         switch (other.inner.tagged.tag) {
             case value_num_tag:
@@ -160,7 +160,7 @@ Value& Value::operator=(Value&& other) {
             default:
                 assert(0);
                 __builtin_unreachable();
-                throw std::runtime_error("Unknown value tag");
+                std::terminate();
         }
         std::swap(inner.tagged.tag, other.inner.tagged.tag);
     } else if (other.inner.tagged.tag & value_unloaded_bit) {

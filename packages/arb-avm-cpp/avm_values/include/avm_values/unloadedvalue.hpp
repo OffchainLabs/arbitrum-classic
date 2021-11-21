@@ -68,10 +68,10 @@ class UnloadedValue {
     ~UnloadedValue();
     UnloadedValue(const UnloadedValue&);
     UnloadedValue& operator=(const UnloadedValue&);
-    UnloadedValue(UnloadedValue&&);
-    UnloadedValue& operator=(UnloadedValue&&);
+    UnloadedValue(UnloadedValue&&) noexcept;
+    UnloadedValue& operator=(UnloadedValue&&) noexcept;
 
-    inline bool isHeaped() const {
+    bool isHeaped() const {
         return __builtin_expect(
             impl.heaped_value.uv_flag == unloaded_value_fixed_bit, 0);
     }

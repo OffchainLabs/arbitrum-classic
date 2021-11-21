@@ -74,9 +74,9 @@ class Value {
     friend const T& get(const Value&);
 
     template <typename T>
-    friend decltype(auto) visit(T, const Value&);
+    friend decltype(auto) visit(T&&, const Value&);
     template <typename T>
-    friend decltype(auto) visit(T, Value&);
+    friend decltype(auto) visit(T&&, Value&);
 
    private:
     union ValueUnion {
@@ -88,7 +88,7 @@ class Value {
 
     ValueUnion inner;
 
-    inline bool isTagged() const {
+    bool isTagged() const {
         return __builtin_expect(!!(inner.tagged.tag & value_tagged_bit), 1);
     }
 
@@ -96,8 +96,8 @@ class Value {
     Value();
     Value(Tuple);
     Value(uint64_t);
-    Value(uint256_t);
-    Value(CodePointStub);
+    Value(const uint256_t&);
+    Value(const CodePointStub&);
     explicit Value(std::shared_ptr<HashPreImage>);
     Value(Buffer);
     Value(UnloadedValue);
@@ -105,35 +105,8 @@ class Value {
     ~Value();
     Value(const Value&);
     Value& operator=(const Value&);
-    Value(Value&&);
-    Value& operator=(Value&&);
-
-    template <typename T>
-    decltype(auto) visit(T visitor) const {}
-
-    template <typename T>
-    decltype(auto) visit(T visitor) {
-        if (isTagged()) {
-            switch (inner.tagged.tag) {
-                case value_num_tag:
-                    return visitor(inner.tagged.inner.num);
-                case value_tuple_tag:
-                    return visitor(inner.tagged.inner.tuple);
-                case value_hash_pre_image_tag:
-                    return visitor(inner.tagged.inner.hash_pre_image);
-                case value_buffer_tag:
-                    return visitor(inner.tagged.inner.buffer);
-                default:
-                    assert(0);
-                    __builtin_unreachable();
-                    throw std::runtime_error("Unknown value tag");
-            }
-        } else if (inner.tagged.tag & value_unloaded_bit) {
-            return visitor(inner.unloaded);
-        } else {
-            return visitor(inner.code_point);
-        }
-    }
+    Value(Value&&) noexcept;
+    Value& operator=(Value&&) noexcept;
 };
 
 // Make sure we notice if we increase the size of Value
@@ -317,50 +290,52 @@ inline const T* get_if(const Value* val) {
 }
 
 template <typename T>
-decltype(auto) visit(T visitor, const Value& val) {
+decltype(auto) visit(T&& visitor, const Value& val) {
     if (val.isTagged()) {
         switch (val.inner.tagged.tag) {
             case value_num_tag:
-                return visitor(val.inner.tagged.inner.num);
+                return std::forward<T>(visitor)(val.inner.tagged.inner.num);
             case value_tuple_tag:
-                return visitor(val.inner.tagged.inner.tuple);
+                return std::forward<T>(visitor)(val.inner.tagged.inner.tuple);
             case value_hash_pre_image_tag:
-                return visitor(val.inner.tagged.inner.hash_pre_image);
+                return std::forward<T>(visitor)(
+                    val.inner.tagged.inner.hash_pre_image);
             case value_buffer_tag:
-                return visitor(val.inner.tagged.inner.buffer);
+                return std::forward<T>(visitor)(val.inner.tagged.inner.buffer);
             default:
                 assert(0);
                 __builtin_unreachable();
                 throw std::runtime_error("Unknown value tag");
         }
     } else if (val.inner.tagged.tag & value_unloaded_bit) {
-        return visitor(val.inner.unloaded);
+        return std::forward<T>(visitor)(val.inner.unloaded);
     } else {
-        return visitor(val.inner.code_point);
+        return std::forward<T>(visitor)(val.inner.code_point);
     }
 }
 
 template <typename T>
-decltype(auto) visit(T visitor, Value& val) {
+decltype(auto) visit(T&& visitor, Value& val) {
     if (val.isTagged()) {
         switch (val.inner.tagged.tag) {
             case value_num_tag:
-                return visitor(val.inner.tagged.inner.num);
+                return std::forward<T>(visitor)(val.inner.tagged.inner.num);
             case value_tuple_tag:
-                return visitor(val.inner.tagged.inner.tuple);
+                return std::forward<T>(visitor)(val.inner.tagged.inner.tuple);
             case value_hash_pre_image_tag:
-                return visitor(val.inner.tagged.inner.hash_pre_image);
+                return std::forward<T>(visitor)(
+                    val.inner.tagged.inner.hash_pre_image);
             case value_buffer_tag:
-                return visitor(val.inner.tagged.inner.buffer);
+                return std::forward<T>(visitor)(val.inner.tagged.inner.buffer);
             default:
                 assert(0);
                 __builtin_unreachable();
                 throw std::runtime_error("Unknown value tag");
         }
     } else if (val.inner.tagged.tag & value_unloaded_bit) {
-        return visitor(val.inner.unloaded);
+        return std::forward<T>(visitor)(val.inner.unloaded);
     } else {
-        return visitor(val.inner.code_point);
+        return std::forward<T>(visitor)(val.inner.code_point);
     }
 }
 
