@@ -20,6 +20,8 @@
 #include <avm_values/bigint.hpp>
 #include <avm_values/opcodes.hpp>
 
+#include <cassert>
+
 struct CodePoint;
 
 struct CodePointRef {

@@ -141,7 +141,6 @@ Value::Value(Value&& other) : Value(0) {
 
 Value& Value::operator=(Value&& other) {
     if (other.isTagged()) [[likely]] {
-        inner.tagged.tag = other.inner.tagged.tag;
         switch (other.inner.tagged.tag) {
             case value_num_tag:
                 std::swap(inner.tagged.inner.num, other.inner.tagged.inner.num);
@@ -163,6 +162,7 @@ Value& Value::operator=(Value&& other) {
                 __builtin_unreachable();
                 throw std::runtime_error("Unknown value tag");
         }
+        std::swap(inner.tagged.tag, other.inner.tagged.tag);
     } else if (other.inner.tagged.tag & value_unloaded_bit) {
         std::swap(inner.unloaded, other.inner.unloaded);
     } else {
