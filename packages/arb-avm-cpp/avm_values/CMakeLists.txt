@@ -76,7 +76,7 @@ target_include_directories(avm_values PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm_values PUBLIC Threads::Threads nlohmann_json::nlohmann_json ethash::keccak intx::intx ${JEMALLOC_LIBRARIES} PRIVATE Boost::boost)
+target_link_libraries(avm_values PUBLIC Threads::Threads nlohmann_json::nlohmann_json ethash::keccak intx::intx ${arb_node_LINKER_LIBS} PRIVATE Boost::boost)
 
 target_code_coverage(avm_values AUTO ALL)
 
