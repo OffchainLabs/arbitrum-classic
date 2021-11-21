@@ -222,6 +222,8 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overr
 	}
 
 	if overrides != nil {
+		// We'll be mutating this scapshot so we need to make a copy
+		snap = snap.Clone()
 		for address, override := range *overrides {
 			account := arbcommon.NewAddressFromEth(address)
 			if override.Nonce != nil {
