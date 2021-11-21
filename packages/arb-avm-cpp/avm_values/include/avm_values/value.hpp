@@ -36,13 +36,14 @@
 #endif /* __builtin_unreachable */
 #endif /* __GNU_C__ */
 
-constexpr uint8_t value_tagged_bit = uint64_t(1) << 7;
-constexpr uint8_t value_unloaded_bit = uint64_t(1) << 6;
+constexpr uint64_t value_tagged_bit = uint64_t(1) << 63;
+constexpr uint64_t value_unloaded_bit = unloaded_value_fixed_bit;  // 1 << 62
+constexpr uint64_t value_tag_flag_bits = value_tagged_bit | value_unloaded_bit;
 
-constexpr uint8_t value_num_tag = value_tagged_bit | 0;
-constexpr uint8_t value_tuple_tag = value_tagged_bit | 1;
-constexpr uint8_t value_hash_pre_image_tag = value_tagged_bit | 2;
-constexpr uint8_t value_buffer_tag = value_tagged_bit | 3;
+constexpr uint64_t value_num_tag = value_tagged_bit | 0;
+constexpr uint64_t value_tuple_tag = value_tagged_bit | 1;
+constexpr uint64_t value_hash_pre_image_tag = value_tagged_bit | 2;
+constexpr uint64_t value_buffer_tag = value_tagged_bit | 3;
 
 union TaggedValueContents {
     uint256_t num;
@@ -53,14 +54,12 @@ union TaggedValueContents {
 };
 
 struct TaggedValue {
-    uint8_t tag;
+    uint64_t tag;
     TaggedValueContents inner;
     ~TaggedValue() {}
 };
 
 class Value {
-    template <typename T>
-    friend bool holds_alternative(Value&);
     template <typename T>
     friend bool holds_alternative(const Value&);
 
@@ -137,85 +136,185 @@ class Value {
     }
 };
 
-// Make sure we notice if we increase the size of a Value
+// Make sure we notice if we increase the size of Value
 static_assert(sizeof(Value) == 48);
 
 template <typename T>
 bool holds_alternative(const Value&);
 template <>
-bool holds_alternative<Tuple>(const Value&);
+inline bool holds_alternative<Tuple>(const Value& val) {
+    return val.inner.tagged.tag == value_tuple_tag;
+}
 template <>
-bool holds_alternative<uint256_t>(const Value&);
+inline bool holds_alternative<uint256_t>(const Value& val) {
+    return val.inner.tagged.tag == value_num_tag;
+}
 template <>
-bool holds_alternative<CodePointStub>(const Value&);
+inline bool holds_alternative<CodePointStub>(const Value& val) {
+    return (val.inner.tagged.tag & value_tag_flag_bits) == 0;
+}
 template <>
-bool holds_alternative<std::shared_ptr<HashPreImage>>(const Value&);
+inline bool holds_alternative<std::shared_ptr<HashPreImage>>(const Value& val) {
+    return val.inner.tagged.tag == value_hash_pre_image_tag;
+}
 template <>
-bool holds_alternative<Buffer>(const Value&);
+inline bool holds_alternative<Buffer>(const Value& val) {
+    return val.inner.tagged.tag == value_buffer_tag;
+}
 template <>
-bool holds_alternative<UnloadedValue>(const Value&);
-
-template <typename T>
-T* get_if(Value*);
-template <>
-Tuple* get_if<Tuple>(Value*);
-template <>
-uint256_t* get_if<uint256_t>(Value*);
-template <>
-CodePointStub* get_if<CodePointStub>(Value*);
-template <>
-std::shared_ptr<HashPreImage>* get_if<std::shared_ptr<HashPreImage>>(Value*);
-template <>
-Buffer* get_if<Buffer>(Value*);
-template <>
-UnloadedValue* get_if<UnloadedValue>(Value*);
-
-template <typename T>
-const T* get_if(const Value*);
-template <>
-const Tuple* get_if<Tuple>(const Value*);
-template <>
-const uint256_t* get_if<uint256_t>(const Value*);
-template <>
-const CodePointStub* get_if<CodePointStub>(const Value*);
-template <>
-const std::shared_ptr<HashPreImage>* get_if<std::shared_ptr<HashPreImage>>(
-    const Value*);
-template <>
-const Buffer* get_if<Buffer>(const Value*);
-template <>
-const UnloadedValue* get_if<UnloadedValue>(const Value*);
+inline bool holds_alternative<UnloadedValue>(const Value& val) {
+    return (val.inner.tagged.tag & value_tag_flag_bits) == value_unloaded_bit;
+}
 
 template <typename T>
 T& get(Value&);
 template <>
-Tuple& get<Tuple>(Value&);
+inline Tuple& get<Tuple>(Value& val) {
+    if (__builtin_expect(holds_alternative<Tuple>(val), 1)) [[likely]] {
+        return val.inner.tagged.inner.tuple;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<Tuple> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-uint256_t& get<uint256_t>(Value&);
+inline uint256_t& get<uint256_t>(Value& val) {
+    if (__builtin_expect(holds_alternative<uint256_t>(val), 1)) [[likely]] {
+        return val.inner.tagged.inner.num;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<uint256_t> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-CodePointStub& get<CodePointStub>(Value&);
+inline CodePointStub& get<CodePointStub>(Value& val) {
+    if (__builtin_expect(holds_alternative<CodePointStub>(val), 1)) [[likely]] {
+        return val.inner.code_point;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<CodePointStub> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-std::shared_ptr<HashPreImage>& get<std::shared_ptr<HashPreImage>>(Value&);
+inline std::shared_ptr<HashPreImage>& get<std::shared_ptr<HashPreImage>>(
+    Value& val) {
+    if (__builtin_expect(holds_alternative<std::shared_ptr<HashPreImage>>(val),
+                         1)) [[likely]] {
+        return val.inner.tagged.inner.hash_pre_image;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<std::shared_ptr<HashPreImage>> a "
+                        "Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-Buffer& get<Buffer>(Value&);
+inline Buffer& get<Buffer>(Value& val) {
+    if (__builtin_expect(holds_alternative<Buffer>(val), 1)) [[likely]] {
+        return val.inner.tagged.inner.buffer;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<Buffer> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-UnloadedValue& get<UnloadedValue>(Value&);
+inline UnloadedValue& get<UnloadedValue>(Value& val) {
+    if (__builtin_expect(holds_alternative<UnloadedValue>(val), 1)) [[likely]] {
+        return val.inner.unloaded;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<UnloadedValue> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 
 template <typename T>
 const T& get(const Value&);
 template <>
-const Tuple& get<Tuple>(const Value&);
+inline const Tuple& get<Tuple>(const Value& val) {
+    if (__builtin_expect(holds_alternative<Tuple>(val), 1)) [[likely]] {
+        return val.inner.tagged.inner.tuple;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<Tuple> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-const uint256_t& get<uint256_t>(const Value&);
+inline const uint256_t& get<uint256_t>(const Value& val) {
+    if (__builtin_expect(holds_alternative<uint256_t>(val), 1)) [[likely]] {
+        return val.inner.tagged.inner.num;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<uint256_t> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-const CodePointStub& get<CodePointStub>(const Value&);
+inline const CodePointStub& get<CodePointStub>(const Value& val) {
+    if (__builtin_expect(holds_alternative<CodePointStub>(val), 1)) [[likely]] {
+        return val.inner.code_point;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<CodePointStub> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-const std::shared_ptr<HashPreImage>& get<std::shared_ptr<HashPreImage>>(
-    const Value&);
+inline const std::shared_ptr<HashPreImage>& get<std::shared_ptr<HashPreImage>>(
+    const Value& val) {
+    if (__builtin_expect(holds_alternative<std::shared_ptr<HashPreImage>>(val),
+                         1)) [[likely]] {
+        return val.inner.tagged.inner.hash_pre_image;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<std::shared_ptr<HashPreImage>> a "
+                        "Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-const Buffer& get<Buffer>(const Value&);
+inline const Buffer& get<Buffer>(const Value& val) {
+    if (__builtin_expect(holds_alternative<Buffer>(val), 1)) [[likely]] {
+        return val.inner.tagged.inner.buffer;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<Buffer> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
 template <>
-const UnloadedValue& get<UnloadedValue>(const Value&);
+inline const UnloadedValue& get<UnloadedValue>(const Value& val) {
+    if (__builtin_expect(holds_alternative<UnloadedValue>(val), 1)) [[likely]] {
+        return val.inner.unloaded;
+    } else {
+        throw std::runtime_error(
+            std::string("Attempted to get<UnloadedValue> a Value with tag ") +
+            std::to_string(val.inner.tagged.tag));
+    }
+}
+
+template <typename T>
+inline T* get_if(Value* val) {
+    if (val && holds_alternative<T>(*val)) {
+        return &get<T>(*val);
+    } else {
+        return nullptr;
+    }
+}
+
+template <typename T>
+inline const T* get_if(const Value* val) {
+    if (val && holds_alternative<T>(*val)) {
+        return &get<T>(*val);
+    } else {
+        return nullptr;
+    }
+}
 
 template <typename T>
 decltype(auto) visit(T visitor, const Value& val) {
