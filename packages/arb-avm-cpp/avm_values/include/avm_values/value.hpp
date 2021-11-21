@@ -113,7 +113,7 @@ class Value {
 
     template <typename T>
     decltype(auto) visit(T visitor) {
-        if (isTagged()) [[likely]] {
+        if (isTagged()) {
             switch (inner.tagged.tag) {
                 case value_num_tag:
                     return visitor(inner.tagged.inner.num);
@@ -170,7 +170,7 @@ template <typename T>
 T& get(Value&);
 template <>
 inline Tuple& get<Tuple>(Value& val) {
-    if (__builtin_expect(holds_alternative<Tuple>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<Tuple>(val), 1)) {
         return val.inner.tagged.inner.tuple;
     } else {
         throw std::runtime_error(
@@ -180,7 +180,7 @@ inline Tuple& get<Tuple>(Value& val) {
 }
 template <>
 inline uint256_t& get<uint256_t>(Value& val) {
-    if (__builtin_expect(holds_alternative<uint256_t>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<uint256_t>(val), 1)) {
         return val.inner.tagged.inner.num;
     } else {
         throw std::runtime_error(
@@ -190,7 +190,7 @@ inline uint256_t& get<uint256_t>(Value& val) {
 }
 template <>
 inline CodePointStub& get<CodePointStub>(Value& val) {
-    if (__builtin_expect(holds_alternative<CodePointStub>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<CodePointStub>(val), 1)) {
         return val.inner.code_point;
     } else {
         throw std::runtime_error(
@@ -202,7 +202,7 @@ template <>
 inline std::shared_ptr<HashPreImage>& get<std::shared_ptr<HashPreImage>>(
     Value& val) {
     if (__builtin_expect(holds_alternative<std::shared_ptr<HashPreImage>>(val),
-                         1)) [[likely]] {
+                         1)) {
         return val.inner.tagged.inner.hash_pre_image;
     } else {
         throw std::runtime_error(
@@ -213,7 +213,7 @@ inline std::shared_ptr<HashPreImage>& get<std::shared_ptr<HashPreImage>>(
 }
 template <>
 inline Buffer& get<Buffer>(Value& val) {
-    if (__builtin_expect(holds_alternative<Buffer>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<Buffer>(val), 1)) {
         return val.inner.tagged.inner.buffer;
     } else {
         throw std::runtime_error(
@@ -223,7 +223,7 @@ inline Buffer& get<Buffer>(Value& val) {
 }
 template <>
 inline UnloadedValue& get<UnloadedValue>(Value& val) {
-    if (__builtin_expect(holds_alternative<UnloadedValue>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<UnloadedValue>(val), 1)) {
         return val.inner.unloaded;
     } else {
         throw std::runtime_error(
@@ -236,7 +236,7 @@ template <typename T>
 const T& get(const Value&);
 template <>
 inline const Tuple& get<Tuple>(const Value& val) {
-    if (__builtin_expect(holds_alternative<Tuple>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<Tuple>(val), 1)) {
         return val.inner.tagged.inner.tuple;
     } else {
         throw std::runtime_error(
@@ -246,7 +246,7 @@ inline const Tuple& get<Tuple>(const Value& val) {
 }
 template <>
 inline const uint256_t& get<uint256_t>(const Value& val) {
-    if (__builtin_expect(holds_alternative<uint256_t>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<uint256_t>(val), 1)) {
         return val.inner.tagged.inner.num;
     } else {
         throw std::runtime_error(
@@ -256,7 +256,7 @@ inline const uint256_t& get<uint256_t>(const Value& val) {
 }
 template <>
 inline const CodePointStub& get<CodePointStub>(const Value& val) {
-    if (__builtin_expect(holds_alternative<CodePointStub>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<CodePointStub>(val), 1)) {
         return val.inner.code_point;
     } else {
         throw std::runtime_error(
@@ -268,7 +268,7 @@ template <>
 inline const std::shared_ptr<HashPreImage>& get<std::shared_ptr<HashPreImage>>(
     const Value& val) {
     if (__builtin_expect(holds_alternative<std::shared_ptr<HashPreImage>>(val),
-                         1)) [[likely]] {
+                         1)) {
         return val.inner.tagged.inner.hash_pre_image;
     } else {
         throw std::runtime_error(
@@ -279,7 +279,7 @@ inline const std::shared_ptr<HashPreImage>& get<std::shared_ptr<HashPreImage>>(
 }
 template <>
 inline const Buffer& get<Buffer>(const Value& val) {
-    if (__builtin_expect(holds_alternative<Buffer>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<Buffer>(val), 1)) {
         return val.inner.tagged.inner.buffer;
     } else {
         throw std::runtime_error(
@@ -289,7 +289,7 @@ inline const Buffer& get<Buffer>(const Value& val) {
 }
 template <>
 inline const UnloadedValue& get<UnloadedValue>(const Value& val) {
-    if (__builtin_expect(holds_alternative<UnloadedValue>(val), 1)) [[likely]] {
+    if (__builtin_expect(holds_alternative<UnloadedValue>(val), 1)) {
         return val.inner.unloaded;
     } else {
         throw std::runtime_error(
@@ -318,7 +318,7 @@ inline const T* get_if(const Value* val) {
 
 template <typename T>
 decltype(auto) visit(T visitor, const Value& val) {
-    if (val.isTagged()) [[likely]] {
+    if (val.isTagged()) {
         switch (val.inner.tagged.tag) {
             case value_num_tag:
                 return visitor(val.inner.tagged.inner.num);
@@ -342,7 +342,7 @@ decltype(auto) visit(T visitor, const Value& val) {
 
 template <typename T>
 decltype(auto) visit(T visitor, Value& val) {
-    if (val.isTagged()) [[likely]] {
+    if (val.isTagged()) {
         switch (val.inner.tagged.tag) {
             case value_num_tag:
                 return visitor(val.inner.tagged.inner.num);

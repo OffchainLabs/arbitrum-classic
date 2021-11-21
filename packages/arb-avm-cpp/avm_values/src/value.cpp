@@ -53,7 +53,7 @@ Value::Value(UnloadedValue uv) : Value(0) {
 }
 
 Value::~Value() {
-    if (isTagged()) [[likely]] {
+    if (isTagged()) {
         // No need to destruct a uint256. Select for the other tags.
         switch (inner.tagged.tag) {
             case value_tuple_tag:
@@ -74,7 +74,7 @@ Value::~Value() {
 }
 
 Value::Value(const Value& other) : Value(0) {
-    if (other.isTagged()) [[likely]] {
+    if (other.isTagged()) {
         inner.tagged.tag = other.inner.tagged.tag;
         switch (other.inner.tagged.tag) {
             case value_num_tag:
@@ -108,7 +108,7 @@ Value& Value::operator=(const Value& other) {
 }
 
 Value::Value(Value&& other) : Value(0) {
-    if (other.isTagged()) [[likely]] {
+    if (other.isTagged()) {
         inner.tagged.tag = other.inner.tagged.tag;
         switch (other.inner.tagged.tag) {
             case value_num_tag:
@@ -140,7 +140,7 @@ Value::Value(Value&& other) : Value(0) {
 }
 
 Value& Value::operator=(Value&& other) {
-    if (other.isTagged()) [[likely]] {
+    if (other.isTagged()) {
         switch (other.inner.tagged.tag) {
             case value_num_tag:
                 std::swap(inner.tagged.inner.num, other.inner.tagged.inner.num);

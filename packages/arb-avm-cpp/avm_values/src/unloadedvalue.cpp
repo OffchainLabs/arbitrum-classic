@@ -42,14 +42,14 @@ UnloadedValue::UnloadedValue(BigUnloadedValue big)
 }
 
 UnloadedValue::~UnloadedValue() {
-    if (isHeaped()) [[unlikely]] {
+    if (isHeaped()) {
         impl.heaped_value.ptr.~shared_ptr();
     }
 }
 
 UnloadedValue::UnloadedValue(const UnloadedValue& other)
     : impl{InlineUnloadedValue{}} {
-    if (other.isHeaped()) [[unlikely]] {
+    if (other.isHeaped()) {
         impl.heaped_value = other.impl.heaped_value;
     } else {
         impl.inline_value = other.impl.inline_value;
@@ -63,7 +63,7 @@ UnloadedValue& UnloadedValue::operator=(const UnloadedValue& other) {
 
 UnloadedValue::UnloadedValue(UnloadedValue&& other)
     : impl{InlineUnloadedValue{}} {
-    if (other.isHeaped()) [[unlikely]] {
+    if (other.isHeaped()) {
         impl.heaped_value = std::move(other.impl.heaped_value);
     } else {
         impl.inline_value = other.impl.inline_value;
@@ -80,7 +80,7 @@ UnloadedValue& UnloadedValue::operator=(UnloadedValue&& other) {
 }
 
 uint256_t UnloadedValue::hash() const {
-    if (isHeaped()) [[unlikely]] {
+    if (isHeaped()) {
         return getHeaped().hash;
     } else {
         return impl.inline_value.hash;
@@ -88,7 +88,7 @@ uint256_t UnloadedValue::hash() const {
 }
 
 uint256_t UnloadedValue::value_size() const {
-    if (isHeaped()) [[unlikely]] {
+    if (isHeaped()) {
         return getHeaped().value_size;
     } else {
         return impl.inline_value.value_size & ~unloaded_value_fixed_bit;
@@ -96,7 +96,7 @@ uint256_t UnloadedValue::value_size() const {
 }
 
 ValueTypes UnloadedValue::type() const {
-    if (isHeaped()) [[unlikely]] {
+    if (isHeaped()) {
         return impl.heaped_value.type;
     } else {
         return ValueTypes::TUPLE;
