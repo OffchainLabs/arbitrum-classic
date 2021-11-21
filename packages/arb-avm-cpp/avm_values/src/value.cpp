@@ -35,7 +35,7 @@ Value::Value(uint256_t num)
     : inner{TaggedValue{value_num_tag, TaggedValueContents{num}}} {}
 Value::Value(CodePointStub code_point) : Value(0) {
     inner.code_point = std::move(code_point);
-    assert(!(inner.tagged.tag & value_tagged_bit));
+    assert(!isTagged());
     assert(!(inner.tagged.tag & value_unloaded_bit));
 }
 Value::Value(std::shared_ptr<HashPreImage> hash_pre_image) : Value(0) {
@@ -48,7 +48,7 @@ Value::Value(Buffer buffer) : Value(0) {
 }
 Value::Value(UnloadedValue uv) : Value(0) {
     inner.unloaded = uv;
-    assert(!(inner.tagged.tag & value_tagged_bit));
+    assert(!isTagged());
     assert(inner.tagged.tag & value_unloaded_bit);
 }
 
@@ -75,7 +75,8 @@ Value::~Value() {
 
 Value::Value(const Value& other) : Value(0) {
     if (other.isTagged()) [[likely]] {
-        switch (inner.tagged.tag) {
+        inner.tagged.tag = other.inner.tagged.tag;
+        switch (other.inner.tagged.tag) {
             case value_num_tag:
                 inner.tagged.inner.num = other.inner.tagged.inner.num;
                 break;
@@ -94,7 +95,7 @@ Value::Value(const Value& other) : Value(0) {
                 __builtin_unreachable();
                 throw std::runtime_error("Unknown value tag");
         }
-    } else if (inner.tagged.tag & value_unloaded_bit) {
+    } else if (other.inner.tagged.tag & value_unloaded_bit) {
         inner.unloaded = other.inner.unloaded;
     } else {
         inner.code_point = other.inner.code_point;
@@ -108,7 +109,8 @@ Value& Value::operator=(const Value& other) {
 
 Value::Value(Value&& other) : Value(0) {
     if (other.isTagged()) [[likely]] {
-        switch (inner.tagged.tag) {
+        inner.tagged.tag = other.inner.tagged.tag;
+        switch (other.inner.tagged.tag) {
             case value_num_tag:
                 inner.tagged.inner.num =
                     std::move(other.inner.tagged.inner.num);
@@ -130,7 +132,7 @@ Value::Value(Value&& other) : Value(0) {
                 __builtin_unreachable();
                 throw std::runtime_error("Unknown value tag");
         }
-    } else if (inner.tagged.tag & value_unloaded_bit) {
+    } else if (other.inner.tagged.tag & value_unloaded_bit) {
         inner.unloaded = std::move(other.inner.unloaded);
     } else {
         inner.code_point = std::move(other.inner.code_point);
@@ -139,7 +141,8 @@ Value::Value(Value&& other) : Value(0) {
 
 Value& Value::operator=(Value&& other) {
     if (other.isTagged()) [[likely]] {
-        switch (inner.tagged.tag) {
+        inner.tagged.tag = other.inner.tagged.tag;
+        switch (other.inner.tagged.tag) {
             case value_num_tag:
                 std::swap(inner.tagged.inner.num, other.inner.tagged.inner.num);
                 break;
@@ -160,7 +163,7 @@ Value& Value::operator=(Value&& other) {
                 __builtin_unreachable();
                 throw std::runtime_error("Unknown value tag");
         }
-    } else if (inner.tagged.tag & value_unloaded_bit) {
+    } else if (other.inner.tagged.tag & value_unloaded_bit) {
         std::swap(inner.unloaded, other.inner.unloaded);
     } else {
         std::swap(inner.code_point, other.inner.code_point);
