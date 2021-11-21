@@ -68,7 +68,8 @@ set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_P
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
-option(ENABLE_JEMALLOC "Enable jemalloc" OFF)
+option(ENABLE_GPERFTOOLS "Build with GPerfTools support (including TCMalloc)" OFF)
+option(ENABLE_JEMALLOC "Build with JEMalloc support" OFF)
 
 set(AVM_FUZZER "" CACHE STRING "Build fuzzing target for the requested fuzzer")
 
@@ -83,16 +84,58 @@ elseif (${AVM_FUZZER} MATCHES "honggfuzz")
     add_link_options(-fsanitize=address)
 endif ()
 
+if(NOT arb_node_LINKER_LIBS)
+    set(arb_node_LINKER_LIBS "")
+endif()
+
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
 
+set(ALT_MALLOC_FLAGS "-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
+
+if(ENABLE_GPROF)
+    message(STATUS "Using GPROF")
+endif()
+
+if (ENABLE_GPROF)
+    find_package(Gperftools)
+    if(GPERFTOOLS_FOUND)
+        message(STATUS "Using GPROF")
+        include_directories(${GPERFTOOLS_INCLUDE_DIR})
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS} -fno-omit-frame-pointer -g -pg")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS} -fno-omit-frame-pointer -g -pg")
+        set(arb_node_LINKER_LIBS ${arb_node_LINKER_LIBS} ${GPERFTOOLS_PROFILER})
+        set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg")
+        set(ENABLE_JEMALLOC 0)
+        set(ENABLE_TCMALLOC 1)
+    endif(GPERFTOOLS_FOUND)
+endif (ENABLE_GPROF)
+
+if (ENABLE_TCMALLOC)
+    find_package(Gperftools)
+    if(GPERFTOOLS_FOUND)
+        message(STATUS "Using tcmalloc")
+        include_directories(${GPERFTOOLS_INCLUDE_DIR})
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
+        set(arb_node_LINKER_LIBS ${arb_node_LINKER_LIBS} ${GPERFTOOLS_TCMALLOC})
+        set(ENABLE_JEMALLOC 0)
+    endif(GPERFTOOLS_FOUND)
+endif (ENABLE_TCMALLOC)
+
 if (ENABLE_JEMALLOC)
+    if(GPERFTOOLS_FOUND)
+        message(ERROR " Only one of ENABLE_JEMALLOC and ENABLE_GPERFTOOLS can be defined at once")
+    endif()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules (JEMALLOC REQUIRED jemalloc)
     message(STATUS "Building with jemalloc")
     include_directories(${JEMALLOC_INCLUDE_DIRS})
     link_directories(${JEMALLOC_LIBRARY_DIRS})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(arb_node_LINKER_LIBS ${arb_node_LINKER_LIBS} ${JEMALLOC_LINK_LIBRARIES})
 endif (ENABLE_JEMALLOC)
 
 # On macOS, search Homebrew for keg-only versions of OpenSSL
@@ -199,10 +242,10 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm" AND NOT AVM_FUZZER)
             " $<TARGET_LINKER_FILE:avm_values>"
             " $<TARGET_LINKER_FILE:ff>"
             " $<TARGET_LINKER_FILE:secp256k1>"
-            " ${JEMALLOC_LINK_LIBRARIES}"
             " $<TARGET_LINKER_FILE:OpenSSL::Crypto>"
             " $<TARGET_LINKER_FILE:RocksDB::RocksDB>"
             " $<TARGET_LINKER_FILE:ethash::keccak>"
+            " ${arb_node_LINKER_LIBS}"
             " ${GMP_LIBRARY}"
             " ${GMPXX_LIBRARY}"
         )

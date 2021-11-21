@@ -56,7 +56,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.3.6
+      - image: offchainlabs/backend-base:0.4.1
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -67,7 +67,7 @@ jobs:
       - save_cache: *save_go_cache
   arb-ts:
     docker:
-      - image: offchainlabs/frontend-base:0.3.0
+      - image: offchainlabs/frontend-base:0.4.0
     environment:
       TEST_RESULTS: *test-path
     steps:
@@ -95,7 +95,7 @@ jobs:
           path: *test-path
   ethbridge:
     docker:
-      - image: offchainlabs/frontend-base:0.3.0
+      - image: offchainlabs/frontend-base:0.4.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -131,7 +131,7 @@ jobs:
 
   ethbridge-coverage:
     docker:
-      - image: offchainlabs/frontend-base:0.3.0
+      - image: offchainlabs/frontend-base:0.4.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -166,7 +166,7 @@ jobs:
           path: *test-path
   cpp-avm-build:
     docker:
-      - image: offchainlabs/cpp-base:0.3.6
+      - image: offchainlabs/cpp-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -190,7 +190,7 @@ jobs:
             - ./project/packages/arb-avm-cpp/build/*
   cpp-avm-asan:
     docker:
-      - image: offchainlabs/cpp-asan-base:0.3.6
+      - image: offchainlabs/cpp-asan-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -218,7 +218,7 @@ jobs:
 
   cpp-avm-tsan:
     docker:
-      - image: offchainlabs/cpp-tsan-base:0.3.6
+      - image: offchainlabs/cpp-tsan-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -245,7 +245,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.3.6
+      - image: offchainlabs/backend-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -286,7 +286,7 @@ jobs:
 
   backend-rpc:
     docker:
-      - image: offchainlabs/backend-base:0.3.6
+      - image: offchainlabs/backend-base:0.4.1
     resource_class: large
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
@@ -320,7 +320,7 @@ jobs:
 
   arb-bridge-peripherals:
     docker:
-      - image: offchainlabs/integration-base:0.3.7
+      - image: offchainlabs/integration-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
