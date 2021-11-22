@@ -73,7 +73,7 @@ export interface L2Networks {
   [id: string]: L2Network
 }
 
-const mainnetBridge: TokenBridge = {
+const mainnetTokenBridge: TokenBridge = {
   l1GatewayRouter: '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef',
   l2GatewayRouter: '0x5288c571Fd7aD117beA99bF60FE0846C4E84F933',
   l1ERC20Gateway: '0xa3A7B6F88361F48403514059F1F16C8E78d60EeC',
@@ -92,7 +92,7 @@ const mainnetBridge: TokenBridge = {
   l2DaiGateway: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65',
 }
 
-const rinkebyBridge: TokenBridge = {
+const rinkebyTokenBridge: TokenBridge = {
   l1GatewayRouter: '0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380',
   l2GatewayRouter: '0x9413AD42910c1eA60c737dB5f58d1C504498a3cD',
   l1ERC20Gateway: '0x91169Dbb45e6804743F94609De50D511C437572E',
@@ -159,7 +159,7 @@ export const l2Networks: L2Networks = {
     explorerUrl: 'https://mainnet-arb-explorer.netlify.app',
     partnerChainID: '1',
     isArbitrum: true,
-    tokenBridge: mainnetBridge,
+    tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
@@ -170,70 +170,11 @@ export const l2Networks: L2Networks = {
     explorerUrl: 'https://rinkeby-explorer.arbitrum.io',
     partnerChainID: '4',
     isArbitrum: true,
-    tokenBridge: rinkebyBridge,
-    ethBridge: mainnetETHBridge,
+    tokenBridge: rinkebyTokenBridge,
+    ethBridge: rinkebyETHBridge,
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
   },
 }
-
-// export const networks: Networks = {
-//   '1': {
-//     chainID: '1',
-//     name: 'Mainnet',
-//     explorerUrl: 'https://etherscan.io',
-//     isArbitrum: false,
-//     partnerChainID: '42161',
-//     tokenBridge: mainnetBridge,
-//     ethBridge: mainnetETHBridge,
-//     blockTime: 15,
-//     rpcURL: process.env['MAINNET_RPC'] as string,
-//   },
-//   '1337': {
-//     chainID: '1337',
-//     name: 'Hardhat_Mainnet_Fork',
-//     explorerUrl: 'https://etherscan.io',
-//     isArbitrum: false,
-//     partnerChainID: '42161', // TODO: use sequencer fork ID
-//     tokenBridge: mainnetBridge,
-//     ethBridge: mainnetETHBridge,
-//     blockTime: 15,
-//     rpcURL: process.env['HARDHAT_RPC'] || 'http://127.0.0.1:8545/',
-//   },
-//   '42161': {
-//     chainID: '42161',
-//     name: 'Arbitrum One',
-//     explorerUrl: 'https://mainnet-arb-explorer.netlify.app',
-//     partnerChainID: '1',
-//     isArbitrum: true,
-//     tokenBridge: mainnetBridge,
-//     ethBridge: undefined,
-//     confirmPeriodBlocks: 45818,
-//     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
-//   },
-//   '4': {
-//     chainID: '4',
-//     name: 'Rinkeby',
-//     explorerUrl: 'https://rinkeby.etherscan.io',
-//     partnerChainID: '421611',
-//     isArbitrum: false,
-//     tokenBridge: rinkebyBridge,
-//     ethBridge: rinkebyETHBridge,
-//     confirmPeriodBlocks: 6545, // TODO
-//     blockTime: 15,
-//     rpcURL: process.env['RINKEBY_RPC'] as string,
-//   },
-//   '421611': {
-//     chainID: '421611',
-//     name: 'ArbRinkeby',
-//     explorerUrl: 'https://rinkeby-explorer.arbitrum.io',
-//     partnerChainID: '4',
-//     isArbitrum: true,
-//     tokenBridge: rinkebyBridge,
-//     ethBridge: undefined,
-//     confirmPeriodBlocks: 6545, // TODO
-//     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
-//   },
-// }
 
 export default { l1Networks, l2Networks }
