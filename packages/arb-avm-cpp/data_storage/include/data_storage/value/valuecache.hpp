@@ -35,7 +35,7 @@ class ValueCache {
     };
 
     // Treat as a ring buffer with first element currently being populated
-    std::vector<std::unordered_map<uint256_t, value, ValueCacheHasher>> caches;
+    std::vector<std::unordered_map<uint256_t, Value, ValueCacheHasher>> caches;
     size_t saving_cache_index{0};
     size_t max_cache_size{0};
 
@@ -43,8 +43,8 @@ class ValueCache {
     ValueCache() = delete;
     explicit ValueCache(size_t cache_count = 0, size_t max_cache_size = 0)
         : caches{cache_count}, max_cache_size{max_cache_size} {};
-    void maybeSave(value val);
-    std::optional<value> loadIfExists(const uint256_t& hash);
+    void maybeSave(Value val);
+    std::optional<Value> loadIfExists(const uint256_t& hash);
     void nextCache();
     // If this cache is empty, copy all values from other into the first slot of
     // this.

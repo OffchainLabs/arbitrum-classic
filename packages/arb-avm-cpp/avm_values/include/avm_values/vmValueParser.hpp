@@ -24,14 +24,14 @@
 
 struct LoadedExecutable {
     std::shared_ptr<UnsafeCodeSegment> code;
-    value static_val;
+    Value static_val;
 
     LoadedExecutable(std::shared_ptr<UnsafeCodeSegment> code_,
-                     value static_val_)
+                     Value static_val_)
         : code(std::move(code_)), static_val(std::move(static_val_)) {}
 };
 
-value simple_value_from_json(const nlohmann::json& value_json);
+Value simple_value_from_json(const nlohmann::json& value_json);
 std::vector<uint8_t> send_from_json(const nlohmann::json& val);
 
 LoadedExecutable loadExecutable(const std::string& executable_filename);
