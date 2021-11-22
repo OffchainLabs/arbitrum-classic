@@ -14,6 +14,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
@@ -36,7 +37,7 @@ func TestTrace(t *testing.T) {
 	test.FailIfError(t, err)
 
 	ethServer := web3.NewServer(srv, web3.DefaultConfig, nil)
-	tracer := web3.NewTracer(ethServer)
+	tracer := web3.NewTracer(ethServer, configuration.DefaultCoreSettingsMaxExecution())
 
 	client := web3.NewEthClient(srv, true)
 

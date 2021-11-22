@@ -26,6 +26,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -60,18 +61,19 @@ type TraceFrame struct {
 }
 
 type TraceResult struct {
-	Output    hexutil.Bytes
-	StateDiff *int         `json:"stateDiff"`
-	Trace     []TraceFrame `json:"trace"`
-	VmTrace   *int         `json:"vmTrace"`
+	Output    hexutil.Bytes `json:"output"`
+	StateDiff *int          `json:"stateDiff"`
+	Trace     []TraceFrame  `json:"trace"`
+	VmTrace   *int          `json:"vmTrace"`
 }
 
 type Trace struct {
-	s *Server
+	s          *Server
+	coreConfig *configuration.Core
 }
 
-func NewTracer(s *Server) *Trace {
-	return &Trace{s: s}
+func NewTracer(s *Server, coreConfig *configuration.Core) *Trace {
+	return &Trace{s: s, coreConfig: coreConfig}
 }
 
 func renderTrace(txRes *evm.TxResult, debugPrints []value.Value) (*TraceResult, error) {
@@ -215,7 +217,17 @@ func (t *Trace) RawTransaction(txHash hexutil.Bytes, traceTypes []string) (*Trac
 	if err != nil {
 		return nil, err
 	}
-	debugPrints, err := t.s.srv.AdvanceExecutionCursorWithTracing(cursor, big.NewInt(100000000000), true, true, logNumber)
+	maxGas := int64(t.coreConfig.CheckpointMaxExecutionGas)
+	if maxGas == 0 {
+		maxGas = 100000000000
+	}
+	debugPrints, err := t.s.srv.AdvanceExecutionCursorWithTracing(
+		cursor,
+		big.NewInt(maxGas),
+		true,
+		true,
+		logNumber,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -225,11 +237,11 @@ func (t *Trace) RawTransaction(txHash hexutil.Bytes, traceTypes []string) (*Trac
 	}
 	txIndex := res.TxIndex.Uint64()
 	blockHash := hexutil.Bytes(blockInfo.Header.Hash().Bytes())
-	for _, f := range trace.Trace {
-		f.TransactionHash = &txHash
-		f.TransactionPosition = &txIndex
-		f.BlockNumber = &blockNumber
-		f.BlockHash = &blockHash
+	for i := range trace.Trace {
+		trace.Trace[i].TransactionHash = &txHash
+		trace.Trace[i].TransactionPosition = &txIndex
+		trace.Trace[i].BlockNumber = &blockNumber
+		trace.Trace[i].BlockHash = &blockHash
 	}
 	return trace, nil
 }

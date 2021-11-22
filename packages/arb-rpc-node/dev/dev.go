@@ -50,25 +50,25 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
-func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
+func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, *monitor.Monitor, func(), <-chan error, error) {
 	nodeConfig := configuration.DefaultNodeSettings()
 	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 
 	mon, err := monitor.NewMonitor(dir, arbosPath, coreConfig)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}
 
 	backendCore, err := NewBackendCore(ctx, mon.Core, chainId)
 	if err != nil {
 		mon.Close()
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), nodeConfig)
 	if err != nil {
 		mon.Close()
-		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
 	}
 
 	cancel := func() {
@@ -79,7 +79,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.
 	l1 := NewL1Emulator(initialL1Height)
 	backend := NewBackend(ctx, backendCore, db, l1, signer, agg, big.NewInt(100000000000))
 
-	return backend, db, cancel, errChan, nil
+	return backend, db, mon, cancel, errChan, nil
 }
 
 type EVM struct {

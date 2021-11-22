@@ -112,7 +112,7 @@ func NewTestDevNode(
 			break
 		}
 	}
-	backend, db, cancelDevNode, txDBErrChan, err := NewDevNode(
+	backend, db, _, cancelDevNode, txDBErrChan, err := NewDevNode(
 		ctx,
 		t.TempDir(),
 		arbosPath,

@@ -177,7 +177,7 @@ func startup() error {
 		}
 		agg = common.NewAddressFromEth(accounts[1].Address)
 	}
-	backend, db, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
+	backend, db, mon, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
 		ctx,
 		*dbDir,
 		*arbosPath,
@@ -350,7 +350,7 @@ func startup() error {
 
 	rpcConfig := web3.DefaultConfig
 	rpcConfig.Mode = web3.GanacheMode
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, rpcConfig, plugins, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, rpcConfig, mon.CoreConfig, plugins, nil)
 	if err != nil {
 		return err
 	}

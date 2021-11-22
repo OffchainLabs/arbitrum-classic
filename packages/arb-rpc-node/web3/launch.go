@@ -26,6 +26,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 type RpcMode int
@@ -44,7 +45,7 @@ type ServerConfig struct {
 	DevopsStubs   bool
 }
 
-func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, config ServerConfig, plugins map[string]interface{}, inboxReader *monitor.InboxReader) (*rpc.Server, error) {
+func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, config ServerConfig, coreConfig *configuration.Core, plugins map[string]interface{}, inboxReader *monitor.InboxReader) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
 	var sequencerInboxWatcher *ethbridge.SequencerInboxWatcher
@@ -77,7 +78,7 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		}
 
 		if config.Tracing {
-			tracer := NewTracer(ethServer)
+			tracer := NewTracer(ethServer, coreConfig)
 			if err := s.RegisterName("trace", tracer); err != nil {
 				return nil, err
 			}

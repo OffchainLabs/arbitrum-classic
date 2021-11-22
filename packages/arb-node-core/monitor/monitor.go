@@ -40,9 +40,10 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "monitor").Logger()
 
 type Monitor struct {
-	Storage machine.ArbStorage
-	Core    core.ArbCore
-	Reader  *InboxReader
+	Storage    machine.ArbStorage
+	Core       core.ArbCore
+	Reader     *InboxReader
+	CoreConfig *configuration.Core
 }
 
 func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
@@ -67,8 +68,9 @@ func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Cor
 	}
 
 	return &Monitor{
-		Storage: storage,
-		Core:    arbCore,
+		Storage:    storage,
+		Core:       arbCore,
+		CoreConfig: coreConfig,
 	}, nil
 }
 

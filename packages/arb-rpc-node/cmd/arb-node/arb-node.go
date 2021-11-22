@@ -353,7 +353,7 @@ func startup() error {
 		Tracing:       config.Node.RPC.EnableTracing,
 		DevopsStubs:   config.Node.RPC.EnableDevopsStubs,
 	}
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, nil, web3InboxReaderRef)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, mon.CoreConfig, nil, web3InboxReaderRef)
 	if err != nil {
 		return err
 	}
