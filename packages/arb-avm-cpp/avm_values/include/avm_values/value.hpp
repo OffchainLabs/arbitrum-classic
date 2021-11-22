@@ -92,6 +92,10 @@ class Value {
         return __builtin_expect(!!(inner.tagged.tag & value_tagged_bit), 1);
     }
 
+    void assignCopy(const Value& other);
+    void assignMove(Value&& other);
+    void destroy();
+
    public:
     Value();
     Value(Tuple);
@@ -102,11 +106,23 @@ class Value {
     Value(Buffer);
     Value(UnloadedValue);
 
-    ~Value();
-    Value(const Value&);
-    Value& operator=(const Value&);
-    Value(Value&&) noexcept;
-    Value& operator=(Value&&) noexcept;
+    ~Value() { destroy(); }
+
+    Value(const Value& other) : Value(0) { assignCopy(other); }
+
+    Value& operator=(const Value& other) {
+        destroy();
+        assignCopy(other);
+        return *this;
+    }
+
+    Value(Value&& other) noexcept : Value(0) { assignMove(std::move(other)); }
+
+    Value& operator=(Value&& other) noexcept {
+        destroy();
+        assignMove(std::move(other));
+        return *this;
+    }
 };
 
 // Make sure we notice if we increase the size of Value

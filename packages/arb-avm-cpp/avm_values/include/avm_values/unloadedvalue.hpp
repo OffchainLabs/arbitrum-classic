@@ -59,17 +59,38 @@ class UnloadedValue {
 
     inline const HeapedUnloadedValueInfo& getHeaped() const;
 
+    void assignCopy(const UnloadedValue& other);
+    void assignMove(UnloadedValue&& other);
+    void destroy();
+
    public:
     UnloadedValue(BigUnloadedValue);
 
     // Rule of 5: provide a destructor, copy-constructor, copy-assignment
     // operator, move constructor, and move-assignment operator.
     // These all forward to the shared_ptr impls if necessary.
-    ~UnloadedValue();
-    UnloadedValue(const UnloadedValue&);
-    UnloadedValue& operator=(const UnloadedValue&);
-    UnloadedValue(UnloadedValue&&) noexcept;
-    UnloadedValue& operator=(UnloadedValue&&) noexcept;
+    ~UnloadedValue() { destroy(); }
+
+    UnloadedValue(const UnloadedValue& other) : impl{InlineUnloadedValue{}} {
+        assignCopy(other);
+    }
+
+    UnloadedValue& operator=(const UnloadedValue& other) {
+        destroy();
+        assignCopy(other);
+        return *this;
+    }
+
+    UnloadedValue(UnloadedValue&& other) noexcept
+        : impl{InlineUnloadedValue{}} {
+        assignMove(std::move(other));
+    }
+
+    UnloadedValue& operator=(UnloadedValue&& other) noexcept {
+        destroy();
+        assignMove(std::move(other));
+        return *this;
+    }
 
     bool isHeaped() const {
         return __builtin_expect(
