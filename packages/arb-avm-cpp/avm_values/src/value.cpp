@@ -28,7 +28,7 @@
 Value::Value() : Value(Tuple()) {}
 Value::Value(Tuple tup) : Value(0) {
     inner.tagged.tag = value_tuple_tag;
-    inner.tagged.inner.tuple = std::move(tup);
+    new (&inner.tagged.inner.tuple) Tuple{std::move(tup)};
 }
 Value::Value(uint64_t num) : Value(uint256_t(num)) {}
 Value::Value(const uint256_t& num)
@@ -40,19 +40,20 @@ Value::Value(const CodePointStub& code_point) : Value(0) {
 }
 Value::Value(std::shared_ptr<HashPreImage> hash_pre_image) : Value(0) {
     inner.tagged.tag = value_hash_pre_image_tag;
-    inner.tagged.inner.hash_pre_image = std::move(hash_pre_image);
+    new (&inner.tagged.inner.hash_pre_image)
+        std::shared_ptr<HashPreImage>{std::move(hash_pre_image)};
 }
 Value::Value(Buffer buffer) : Value(0) {
     inner.tagged.tag = value_buffer_tag;
-    inner.tagged.inner.buffer = std::move(buffer);
+    new (&inner.tagged.inner.buffer) Buffer{std::move(buffer)};
 }
 Value::Value(UnloadedValue uv) : Value(0) {
-    inner.unloaded = std::move(uv);
+    new (&inner.unloaded) UnloadedValue{std::move(uv)};
     assert(!isTagged());
     assert(inner.tagged.tag & value_unloaded_bit);
 }
 
-Value::~Value() {
+void Value::destroy() {
     if (isTagged()) {
         // No need to destruct a uint256. Select for the other tags.
         switch (inner.tagged.tag) {
@@ -68,27 +69,29 @@ Value::~Value() {
         }
     } else if (inner.tagged.tag & value_unloaded_bit) {
         inner.unloaded.~UnloadedValue();
-    } else {
-        inner.code_point.~CodePointStub();
     }
 }
 
-Value::Value(const Value& other) : Value(0) {
+void Value::assignCopy(const Value& other) {
     if (other.isTagged()) {
         inner.tagged.tag = other.inner.tagged.tag;
         switch (other.inner.tagged.tag) {
             case value_num_tag:
+                // Trivial copy
                 inner.tagged.inner.num = other.inner.tagged.inner.num;
                 break;
             case value_tuple_tag:
-                inner.tagged.inner.tuple = other.inner.tagged.inner.tuple;
+                new (&inner.tagged.inner.tuple)
+                    Tuple{other.inner.tagged.inner.tuple};
                 break;
             case value_hash_pre_image_tag:
-                inner.tagged.inner.hash_pre_image =
-                    other.inner.tagged.inner.hash_pre_image;
+                new (&inner.tagged.inner.hash_pre_image)
+                    std::shared_ptr<HashPreImage>{
+                        other.inner.tagged.inner.hash_pre_image};
                 break;
             case value_buffer_tag:
-                inner.tagged.inner.buffer = other.inner.tagged.inner.buffer;
+                new (&inner.tagged.inner.buffer)
+                    Buffer{other.inner.tagged.inner.buffer};
                 break;
             default:
                 assert(0);
@@ -96,66 +99,33 @@ Value::Value(const Value& other) : Value(0) {
                 throw std::runtime_error("Unknown value tag");
         }
     } else if (other.inner.tagged.tag & value_unloaded_bit) {
-        inner.unloaded = other.inner.unloaded;
+        new (&inner.unloaded) UnloadedValue{other.inner.unloaded};
     } else {
+        // Trivial copy
         inner.code_point = other.inner.code_point;
     }
 }
 
-Value& Value::operator=(const Value& other) {
-    *this = Value(other);
-    return *this;
-}
-
-Value::Value(Value&& other) noexcept : Value(0) {
+void Value::assignMove(Value&& other) {
     if (other.isTagged()) {
         inner.tagged.tag = other.inner.tagged.tag;
         switch (other.inner.tagged.tag) {
             case value_num_tag:
-                inner.tagged.inner.num =
-                    std::move(other.inner.tagged.inner.num);
+                // Trivial copy
+                inner.tagged.inner.num = other.inner.tagged.inner.num;
                 break;
             case value_tuple_tag:
-                inner.tagged.inner.tuple =
-                    std::move(other.inner.tagged.inner.tuple);
+                new (&inner.tagged.inner.tuple)
+                    Tuple{std::move(other.inner.tagged.inner.tuple)};
                 break;
             case value_hash_pre_image_tag:
-                inner.tagged.inner.hash_pre_image =
-                    std::move(other.inner.tagged.inner.hash_pre_image);
+                new (&inner.tagged.inner.hash_pre_image)
+                    std::shared_ptr<HashPreImage>{
+                        std::move(other.inner.tagged.inner.hash_pre_image)};
                 break;
             case value_buffer_tag:
-                inner.tagged.inner.buffer =
-                    std::move(other.inner.tagged.inner.buffer);
-                break;
-            default:
-                assert(0);
-                __builtin_unreachable();
-                std::terminate();
-        }
-    } else if (other.inner.tagged.tag & value_unloaded_bit) {
-        inner.unloaded = std::move(other.inner.unloaded);
-    } else {
-        inner.code_point = std::move(other.inner.code_point);
-    }
-}
-
-Value& Value::operator=(Value&& other) noexcept {
-    if (other.isTagged()) {
-        switch (other.inner.tagged.tag) {
-            case value_num_tag:
-                std::swap(inner.tagged.inner.num, other.inner.tagged.inner.num);
-                break;
-            case value_tuple_tag:
-                std::swap(inner.tagged.inner.tuple,
-                          other.inner.tagged.inner.tuple);
-                break;
-            case value_hash_pre_image_tag:
-                std::swap(inner.tagged.inner.hash_pre_image,
-                          other.inner.tagged.inner.hash_pre_image);
-                break;
-            case value_buffer_tag:
-                std::swap(inner.tagged.inner.buffer,
-                          other.inner.tagged.inner.buffer);
+                new (&inner.tagged.inner.buffer)
+                    Buffer{std::move(other.inner.tagged.inner.buffer)};
                 break;
             default:
                 assert(0);
@@ -164,11 +134,11 @@ Value& Value::operator=(Value&& other) noexcept {
         }
         std::swap(inner.tagged.tag, other.inner.tagged.tag);
     } else if (other.inner.tagged.tag & value_unloaded_bit) {
-        std::swap(inner.unloaded, other.inner.unloaded);
+        new (&inner.unloaded) UnloadedValue{std::move(other.inner.unloaded)};
     } else {
-        std::swap(inner.code_point, other.inner.code_point);
+        // Trivial copy
+        inner.code_point = other.inner.code_point;
     }
-    return *this;
 }
 
 uint64_t deserialize_uint64_t(const char*& bufptr) {

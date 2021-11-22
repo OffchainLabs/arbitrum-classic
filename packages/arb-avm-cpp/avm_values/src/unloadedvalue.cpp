@@ -41,42 +41,27 @@ UnloadedValue::UnloadedValue(BigUnloadedValue big)
         HeapedUnloadedValueInfo{big.hash, big.value_size});
 }
 
-UnloadedValue::~UnloadedValue() {
+void UnloadedValue::destroy() {
     if (isHeaped()) {
         impl.heaped_value.ptr.~shared_ptr();
     }
 }
 
-UnloadedValue::UnloadedValue(const UnloadedValue& other)
-    : impl{InlineUnloadedValue{}} {
+void UnloadedValue::assignCopy(const UnloadedValue& other) {
     if (other.isHeaped()) {
-        impl.heaped_value = other.impl.heaped_value;
+        new (&impl.heaped_value) HeapedUnloadedValue{other.impl.heaped_value};
     } else {
         impl.inline_value = other.impl.inline_value;
     }
 }
 
-UnloadedValue& UnloadedValue::operator=(const UnloadedValue& other) {
-    *this = UnloadedValue(other);
-    return *this;
-}
-
-UnloadedValue::UnloadedValue(UnloadedValue&& other) noexcept
-    : impl{InlineUnloadedValue{}} {
+void UnloadedValue::assignMove(UnloadedValue&& other) {
     if (other.isHeaped()) {
-        impl.heaped_value = std::move(other.impl.heaped_value);
+        new (&impl.heaped_value)
+            HeapedUnloadedValue{std::move(other.impl.heaped_value)};
     } else {
         impl.inline_value = other.impl.inline_value;
     }
-}
-
-UnloadedValue& UnloadedValue::operator=(UnloadedValue&& other) noexcept {
-    if (other.isHeaped()) {
-        std::swap(impl.heaped_value, other.impl.heaped_value);
-    } else {
-        std::swap(impl.inline_value, other.impl.inline_value);
-    }
-    return *this;
 }
 
 uint256_t UnloadedValue::hash() const {
