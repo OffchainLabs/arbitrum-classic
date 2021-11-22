@@ -108,6 +108,7 @@ void Value::assignCopy(const Value& other) {
 
 void Value::assignMove(Value&& other) {
     if (other.isTagged()) {
+        inner.tagged.tag = other.inner.tagged.tag;
         switch (other.inner.tagged.tag) {
             case value_num_tag:
                 // Trivial copy
