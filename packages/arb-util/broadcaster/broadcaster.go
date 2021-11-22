@@ -57,7 +57,26 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 }
 
 func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
-	return b.acceptor.clientManager.Broadcast(prevAcc, batchItem, signature)
+	var broadcastMessages []*BroadcastFeedMessage
+
+	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("sending batch Item")
+
+	msg := BroadcastFeedMessage{
+		FeedItem: SequencerFeedItem{
+			BatchItem: batchItem,
+			PrevAcc:   prevAcc,
+		},
+		Signature: signature,
+	}
+
+	broadcastMessages = append(broadcastMessages, &msg)
+
+	bm := BroadcastMessage{
+		Version:  1,
+		Messages: broadcastMessages,
+	}
+
+	return b.acceptor.clientManager.Broadcast(bm)
 }
 
 func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.SequencerBatchItem, dataSigner func([]byte) ([]byte, error)) error {
