@@ -196,14 +196,14 @@ RawCodeSegmentData prepareToSaveCodeSegment(
         op_data.push_back(op.immediate ? 1 : 0);
         op_data.push_back(static_cast<unsigned char>(op.opcode));
         if (op.immediate) {
-            auto imm_cp = std::get_if<CodePointStub>(op.immediate.get());
+            auto imm_cp = get_if<CodePointStub>(op.immediate.get());
             if (imm_cp &&
                 code.segments.find(imm_cp->pc.segment) == code.segments.end()) {
                 // Attempt to canonicalize the codepoint
                 ValueCache cache{1, 0};
                 auto canonical = getValue(tx, ::hash(*imm_cp), cache, false);
-                if (auto data = std::get_if<CountedData<value>>(&canonical)) {
-                    *imm_cp = std::get<CodePointStub>(data->data);
+                if (auto data = std::get_if<CountedData<Value>>(&canonical)) {
+                    *imm_cp = get<CodePointStub>(data->data);
                 } else {
                     auto status = std::get<rocksdb::Status>(canonical);
                     if (!status.IsNotFound()) {
@@ -329,7 +329,7 @@ std::shared_ptr<UnsafeCodeSegment> getCodeSegment(
                 throw std::runtime_error("failed to load immediate value");
             }
             ops.emplace_back(raw_op.opcode,
-                             std::get<CountedData<value>>(imm).data);
+                             std::get<CountedData<Value>>(imm).data);
         }
     }
 
