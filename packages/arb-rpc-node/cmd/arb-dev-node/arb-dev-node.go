@@ -28,6 +28,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"syscall"
 
 	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -88,6 +89,9 @@ func main() {
 }
 
 func startup() error {
+	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancelFunc()
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
@@ -158,8 +162,6 @@ func startup() error {
 		*dbDir = tmpDir
 		deleteDir = true
 	}
-
-	ctx := context.Background()
 
 	rollupAddress := common.RandAddress()
 	if *rollupStr != "" {
@@ -239,11 +241,6 @@ func startup() error {
 			return errors.Wrap(err, "error adding init message to inbox")
 		}
 	}
-
-	errChan := make(chan error, 10)
-	go func() {
-		errChan <- <-devNodeErrChan
-	}()
 
 	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
 	if !ok {
@@ -334,23 +331,18 @@ func startup() error {
 	}
 	fmt.Println("")
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
+	defer func() {
 		if *saveMessages != "" {
 			data, err := backend.ExportData()
 			if err != nil {
-				errChan <- errors.Wrap(err, "error exporting data from backend")
+				log.Error().Err(err).Msg("error exporting data from backend")
 				return
 			}
 
-			if err := ioutil.WriteFile(*saveMessages, data, 777); err != nil {
-				errChan <- errors.Wrap(err, "error saving exported data")
-				return
+			if err := ioutil.WriteFile(*saveMessages, data, 0777); err != nil {
+				log.Error().Err(err).Msg("error saving exported data")
 			}
 		}
-		errChan <- nil
 	}()
 
 	plugins := make(map[string]interface{})
@@ -363,6 +355,7 @@ func startup() error {
 		return err
 	}
 
+	errChan := make(chan error, 10)
 	go func() {
 		rpcConfig := configuration.RPC{
 			Addr: "0.0.0.0",
@@ -376,7 +369,15 @@ func startup() error {
 		}
 		errChan <- rpc.LaunchPublicServer(ctx, web3Server, rpcConfig, wsConfig)
 	}()
-
-	err = <-errChan
-	return err
+	select {
+	case err := <-errChan:
+		fmt.Println("Exit from err")
+		return err
+	case err := <-devNodeErrChan:
+		fmt.Println("Exit from dev err")
+		return err
+	case <-ctx.Done():
+		fmt.Println("Exit from done")
+		return nil
+	}
 }

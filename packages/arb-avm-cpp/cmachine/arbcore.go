@@ -24,10 +24,11 @@ package cmachine
 import "C"
 import (
 	"bytes"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"math/big"
 	"runtime"
 	"unsafe"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/common/math"
 
@@ -414,7 +415,7 @@ func (ac *ArbCore) AdvanceExecutionCursorWithTracing(executionCursor core.Execut
 
 	result := C.arbCoreAdvanceExecutionCursorWithTracing(ac.c, cursor.c, unsafeDataPointer(maxGasData), boolToCInt(goOverGas), boolToCInt(allowSlowLookup), unsafeDataPointer(logNumberData))
 	if result.found == 0 {
-		return nil, errors.New("failed to advance")
+		return nil, errors.New("failed to advance cursor with tracing")
 	}
 	runtime.KeepAlive(cursor)
 

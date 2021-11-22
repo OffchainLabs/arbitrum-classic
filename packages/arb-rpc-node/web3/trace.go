@@ -17,6 +17,8 @@
 package web3
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -24,6 +26,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type TraceAction struct {
@@ -44,12 +47,16 @@ type TraceCallResult struct {
 }
 
 type TraceFrame struct {
-	Action       TraceAction      `json:"action"`
-	Result       *TraceCallResult `json:"result,omitempty"`
-	Error        *string          `json:"error,omitempty"`
-	Subtraces    int              `json:"subtraces"`
-	TraceAddress []int            `json:"traceAddress"`
-	Type         string           `json:"type"`
+	Action              TraceAction      `json:"action"`
+	BlockHash           *hexutil.Bytes   `json:"blockHash,omitempty"`
+	BlockNumber         *uint64          `json:"blockNumber,omitempty"`
+	Result              *TraceCallResult `json:"result,omitempty"`
+	Error               *string          `json:"error,omitempty"`
+	Subtraces           int              `json:"subtraces"`
+	TraceAddress        []int            `json:"traceAddress"`
+	TransactionHash     *hexutil.Bytes   `json:"transactionHash,omitempty"`
+	TransactionPosition *uint64          `json:"transactionPosition,omitempty"`
+	Type                string           `json:"type"`
 }
 
 type TraceResult struct {
@@ -67,26 +74,8 @@ func NewTracer(s *Server) *Trace {
 	return &Trace{s: s}
 }
 
-func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.BlockNumberOrHash) (*TraceResult, error) {
-	for _, typ := range traceTypes {
-		if typ != "trace" {
-			return nil, errors.Errorf("unsupported trace type: %v", typ)
-		}
-	}
-	snap, err := t.s.getSnapshotForNumberOrHash(blockNum)
-	if err != nil {
-		return nil, err
-	}
-	from, msg := buildCallMsg(callArgs)
-
-	callRes, debugPrints, err := snap.Call(msg, from, t.s.maxAVMGas)
-	if err != nil {
-		return nil, err
-	}
-	if callRes.ResultCode != evm.ReturnCode {
-		return nil, evm.HandleCallError(callRes, t.s.ganacheMode)
-	}
-	receipt := callRes.ToEthReceipt(arbcommon.Hash{})
+func renderTrace(txRes *evm.TxResult, debugPrints []value.Value) (*TraceResult, error) {
+	receipt := txRes.ToEthReceipt(arbcommon.Hash{})
 	trace, err := evm.GetTrace(debugPrints)
 	if err != nil {
 		return nil, err
@@ -103,7 +92,7 @@ func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.Bloc
 
 	frames := []trackedFrame{{f: frame, traceAddress: make([]int, 0)}}
 	res := &TraceResult{
-		Output: callRes.ReturnData,
+		Output: txRes.ReturnData,
 	}
 	for len(frames) > 0 {
 		frame := frames[0]
@@ -177,4 +166,70 @@ func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.Bloc
 		}
 	}
 	return res, nil
+}
+
+func authenticateTraceType(traceTypes []string) error {
+	foundTrace := false
+	for _, typ := range traceTypes {
+		if typ != "trace" {
+			return errors.Errorf("unsupported trace type: %v", typ)
+		}
+		foundTrace = true
+	}
+	if !foundTrace {
+		return errors.New("must specify trace type as 'trace'")
+	}
+	return nil
+}
+
+func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.BlockNumberOrHash) (*TraceResult, error) {
+	if err := authenticateTraceType(traceTypes); err != nil {
+		return nil, err
+	}
+	snap, err := t.s.getSnapshotForNumberOrHash(blockNum)
+	if err != nil {
+		return nil, err
+	}
+	from, msg := buildCallMsg(callArgs)
+
+	callRes, debugPrints, err := snap.Call(msg, from, t.s.maxAVMGas)
+	if err != nil {
+		return nil, err
+	}
+	if callRes.ResultCode != evm.ReturnCode {
+		return nil, evm.HandleCallError(callRes, t.s.ganacheMode)
+	}
+	return renderTrace(callRes, debugPrints)
+}
+
+func (t *Trace) RawTransaction(txHash hexutil.Bytes, traceTypes []string) (*TraceResult, error) {
+	if err := authenticateTraceType(traceTypes); err != nil {
+		return nil, err
+	}
+	res, blockInfo, _, logNumber, err := t.s.getTransactionInfoByHash(txHash)
+	if err != nil || res == nil {
+		return nil, err
+	}
+	blockNumber := res.IncomingRequest.L2BlockNumber.Uint64()
+	cursor, err := t.s.srv.GetExecutionCursorAtEndOfBlock(blockNumber-1, true)
+	if err != nil {
+		return nil, err
+	}
+	debugPrints, err := t.s.srv.AdvanceExecutionCursorWithTracing(cursor, big.NewInt(100000000000), true, true, logNumber)
+	if err != nil {
+		return nil, err
+	}
+	trace, err := renderTrace(res, debugPrints)
+	if err != nil {
+		return nil, err
+	}
+	txIndex := res.TxIndex.Uint64()
+	blockHash := hexutil.Bytes(blockInfo.Header.Hash().Bytes())
+	for _, f := range trace.Trace {
+		f.TransactionHash = &txHash
+		f.TransactionPosition = &txIndex
+		f.BlockNumber = &blockNumber
+		f.BlockHash = &blockHash
+	}
+	return trace, nil
 }
