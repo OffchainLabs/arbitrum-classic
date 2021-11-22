@@ -4,6 +4,11 @@ import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { keccak256 } from '@ethersproject/keccak256'
 import { concat, zeroPad, hexZeroPad } from '@ethersproject/bytes'
 
+export enum L2TxnType {
+  USER_TXN = 0,
+  AUTO_REDEEM = 1,
+}
+
 const bitFlip = (num: BigNumber): BigNumber => {
   return num.or(BigNumber.from(1).shl(255))
 }
@@ -27,16 +32,14 @@ export const calculateRetryableTicketCreationHash = (
   return calculateL2TxnHash(messageNumber, l2ChainId)
 }
 
-const calculateL2MessageHashHelper = (
-  messageNumber: BigNumber,
-  l2ChainID: BigNumber,
-  txnType: 0 | 1
+export const calculateL2MessageFromTicketTxnHash = (
+  ticketCreationHash: string,
+  l2TxnType: L2TxnType
 ): string => {
-  const requestID = calculateL2TxnHash(messageNumber, l2ChainID)
   return keccak256(
     concat([
-      zeroPad(requestID, 32),
-      zeroPad(BigNumber.from(txnType).toHexString(), 32),
+      zeroPad(ticketCreationHash, 32),
+      zeroPad(BigNumber.from(l2TxnType).toHexString(), 32),
     ])
   )
 }
@@ -45,14 +48,22 @@ export const calculateRetryableAutoRedeemTxnHash = (
   messageNumber: BigNumber,
   l2ChainID: BigNumber
 ): string => {
-  return calculateL2MessageHashHelper(messageNumber, l2ChainID, 1)
+  const ticketCreationHash = calculateL2TxnHash(messageNumber, l2ChainID)
+  return calculateL2MessageFromTicketTxnHash(
+    ticketCreationHash,
+    L2TxnType.AUTO_REDEEM
+  )
 }
 
 export const calculateRetryableUserTxnHash = (
   messageNumber: BigNumber,
   l2ChainID: BigNumber
 ): string => {
-  return calculateL2MessageHashHelper(messageNumber, l2ChainID, 0)
+  const ticketCreationHash = calculateL2TxnHash(messageNumber, l2ChainID)
+  return calculateL2MessageFromTicketTxnHash(
+    ticketCreationHash,
+    L2TxnType.USER_TXN
+  )
 }
 
 export const getMessageNumbers = (

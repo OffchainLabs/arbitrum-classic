@@ -11,9 +11,11 @@ import { constants } from 'ethers'
 import {
   getMessageNumbers,
   calculateRetryableTicketCreationHash,
-  calculateRetryableUserTxnHash,
-  calculateRetryableAutoRedeemTxnHash,
+  calculateL2MessageFromTicketTxnHash,
+  L2TxnType,
 } from './lib'
+
+import { getTxnReceipt } from '../utils/lib'
 
 export enum L1ToL2MessageStatus {
   NOT_YET_CREATED,
@@ -31,19 +33,34 @@ export interface L1ToL2MessageReceipt {
 }
 
 export class L1ToL2Message extends MultiChainConnector {
-  messgeNumber: BigNumber
   arbRetryableActions: ArbRetryableActions
-  l1TxnHash: string
+  l2TicketCreationTxnHash: string
+  messageNumber?: BigNumber
+  l1TxnHash?: string
+
   constructor(
     signersAndProviders: SignersAndProviders,
-    l1TxnReceipt: TransactionReceipt,
-    messageNumberIndex?: number
+    l2TicketCreationTxnHash: string,
+    messageNumber?: BigNumber,
+    l1TxnHash?: string
   ) {
     super()
     this.initSignorsAndProviders(signersAndProviders)
-
-    const l1TxnHash = l1TxnReceipt.transactionHash
+    this.l2TicketCreationTxnHash = l2TicketCreationTxnHash
+    this.arbRetryableActions = new ArbRetryableActions(signersAndProviders)
+    this.messageNumber = messageNumber
     this.l1TxnHash = l1TxnHash
+  }
+  async initFromL1Txn(
+    signersAndProviders: SignersAndProviders,
+    l1Txn: string | TransactionReceipt,
+    messageNumberIndex?: number
+  ): Promise<L1ToL2Message> {
+    const l1TxnReceipt = await getTxnReceipt(
+      l1Txn,
+      signersAndProviders.l1Provider
+    )
+    const l1TxnHash = l1TxnReceipt.transactionHash
 
     const messageNumbers = getMessageNumbers(l1TxnReceipt)
     if (messageNumbers === undefined)
@@ -58,50 +75,82 @@ export class L1ToL2Message extends MultiChainConnector {
       )
     if (messageNumberIndex === undefined && messageNumbers.length > 1)
       throw new Error(
-        `${messageNumbers.length} L2 messages for ${l1TxnHash}; must provide messamessageNumberIndex`
+        `${messageNumbers.length} L2 messages for ${l1TxnHash}; must provide messamessageNumberIndex (or use initAllFromL1Txn)`
       )
-
-    this.messgeNumber = messageNumbers[messageNumberIndex || 0]
-    this.arbRetryableActions = new ArbRetryableActions(signersAndProviders)
+    const messageNumber = messageNumbers[messageNumberIndex || 0]
+    if (!signersAndProviders.l2Provider) throw new Error('need l2 prov')
+    const chainID = (
+      await signersAndProviders.l2Provider.getNetwork()
+    ).chainId.toString()
+    const ticketCreationHash = calculateRetryableTicketCreationHash(
+      messageNumber,
+      BigNumber.from(chainID)
+    )
+    return new L1ToL2Message(
+      signersAndProviders,
+      ticketCreationHash,
+      messageNumber,
+      l1TxnHash
+    )
   }
 
-  static async initFromTL1xHash(
+  public async initAllFromL1Txn(
     signersAndProviders: SignersAndProviders,
-    l1TxnHash: string,
-    messageNumberIndex?: number
-  ): Promise<L1ToL2Message> {
-    const l1Provider =
-      signersAndProviders.l1Provider || signersAndProviders.l1Signer?.provider
-    if (!l1Provider) throw new Error('Must provider an l1 provider')
-    const rec = await l1Provider.getTransactionReceipt(l1TxnHash)
-    return new L1ToL2Message(signersAndProviders, rec, messageNumberIndex)
+    l1Txn: string | TransactionReceipt
+  ): Promise<L1ToL2Message[]> {
+    const l1TxnReceipt = await getTxnReceipt(
+      l1Txn,
+      signersAndProviders.l1Provider
+    )
+    const l1TxnHash = l1TxnReceipt.transactionHash
+    this.l1TxnHash = l1TxnHash
+
+    if (!signersAndProviders.l2Provider) throw new Error('need l2 prov')
+    const chainID = (
+      await signersAndProviders.l2Provider.getNetwork()
+    ).chainId.toString()
+
+    const messageNumbers = getMessageNumbers(l1TxnReceipt)
+    if (!messageNumbers) throw new Error('no messages here')
+
+    return messageNumbers.map((msgNumber: BigNumber) => {
+      return new L1ToL2Message(
+        signersAndProviders,
+        calculateRetryableTicketCreationHash(msgNumber, BigNumber.from(chainID))
+      )
+    })
   }
 
-  get ticketCreationHash(): string {
-    if (!this.l2Network) throw new Error('need l2 signer')
-    const l2ChainID = BigNumber.from(this.l2Network.chainID)
-    return calculateRetryableTicketCreationHash(this.messgeNumber, l2ChainID)
+  initFromL2Txn(
+    signersAndProviders: SignersAndProviders,
+    l2TicketCreationHash: string
+  ): L1ToL2Message {
+    return new L1ToL2Message(signersAndProviders, l2TicketCreationHash)
   }
+
   get autoRedeemHash(): string {
-    if (!this.l2Network) throw new Error('need l2 signer')
-    const l2ChainID = BigNumber.from(this.l2Network.chainID)
-    return calculateRetryableAutoRedeemTxnHash(this.messgeNumber, l2ChainID)
+    return calculateL2MessageFromTicketTxnHash(
+      this.l2TicketCreationTxnHash,
+      L2TxnType.AUTO_REDEEM
+    )
   }
 
   get userTxnHash(): string {
-    if (!this.l2Network) throw new Error('need l2 provider')
-    const l2ChainID = BigNumber.from(this.l2Network.chainID)
-    return calculateRetryableUserTxnHash(this.messgeNumber, l2ChainID)
+    return calculateL2MessageFromTicketTxnHash(
+      this.l2TicketCreationTxnHash,
+      L2TxnType.USER_TXN
+    )
   }
 
   public getL1TxnReceipt(): Promise<TransactionReceipt> {
     if (!this.l1Provider) throw new Error('need l1 provier')
+    if (!this.l1TxnHash) throw new Error('need l1 txn hash')
     return this.l1Provider.getTransactionReceipt(this.l1TxnHash)
   }
 
   public getTicketCreationReceipt(): Promise<TransactionReceipt> {
     if (!this.l2Provider) throw new Error('need l2 provider')
-    return this.l2Provider.getTransactionReceipt(this.ticketCreationHash)
+    return this.l2Provider.getTransactionReceipt(this.l2TicketCreationTxnHash)
   }
   public getAutoRedeemReceipt(): Promise<TransactionReceipt> {
     if (!this.l2Provider) throw new Error('need l2 provider')
@@ -130,7 +179,7 @@ export class L1ToL2Message extends MultiChainConnector {
   ): Promise<L1ToL2MessageReceipt> {
     if (!this.l2Provider) throw new Error('need l2 provider')
     const ticketCreationReceipt = await this.l2Provider.waitForTransaction(
-      this.ticketCreationHash,
+      this.l2TicketCreationTxnHash,
       confirmations,
       timeout
     )
@@ -161,9 +210,7 @@ export class L1ToL2Message extends MultiChainConnector {
       this.userTxnHash
     )
 
-    const ticketCreationReceipt = await this.l2Provider.getTransactionReceipt(
-      this.ticketCreationHash
-    )
+    const ticketCreationReceipt = await this.getTicketCreationReceipt()
     return this.receiptsToStatus(userTxnReceipt, ticketCreationReceipt)
   }
 
