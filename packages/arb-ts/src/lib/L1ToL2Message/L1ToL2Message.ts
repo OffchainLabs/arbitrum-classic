@@ -168,17 +168,6 @@ export class L1ToL2Message extends MultiChainConnector {
     return this.l2Provider.getTransactionReceipt(this.userTxnHash)
   }
 
-  public async redeem(): Promise<ContractTransaction> {
-    if (!this.l2Signer) throw new Error('Missing required L2 signer')
-
-    return this.arbRetryableActions.redeem(this.userTxnHash)
-  }
-
-  public async cancel(): Promise<ContractTransaction> {
-    if (!this.l2Signer) throw new Error('Missing required L2 signer')
-    return this.arbRetryableActions.cancel(this.userTxnHash)
-  }
-
   public async wait(
     timeout = 900000,
     confirmations?: number
@@ -246,6 +235,25 @@ export class L1ToL2Message extends MultiChainConnector {
     // we could sanity check that autoredeem failed, but we don't need to
     return L1ToL2MessageStatus.NOT_YET_REDEEMED
   }
+
+  public async redeem(): Promise<ContractTransaction> {
+    if (!this.l2Signer) throw new Error('Missing required L2 signer')
+
+    return this.arbRetryableActions.redeem(this.userTxnHash)
+  }
+
+  public async cancel(): Promise<ContractTransaction> {
+    if (!this.l2Signer) throw new Error('Missing required L2 signer')
+    return this.arbRetryableActions.cancel(this.userTxnHash)
+  }
+
+  public async getTimeout(): Promise<BigNumber> {
+    return this.arbRetryableActions.getTimeout(this.userTxnHash)
+  }
+
+  public async getBeneficiary(): Promise<string> {
+    return this.arbRetryableActions.getBeneficiary(this.userTxnHash)
+  }
 }
 
 export class ArbRetryableActions extends MultiChainConnector {
@@ -282,6 +290,13 @@ export class ArbRetryableActions extends MultiChainConnector {
     )
     return arbRetryableTx.getTimeout(userL2TxnHash)
   }
-  // keep alive etc.
-  // estimated time til redemption?
+  public getBeneficiary(userL2TxnHash: string): Promise<string> {
+    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
+
+    const arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      this.l2Provider
+    )
+    return arbRetryableTx.getBeneficiary(userL2TxnHash)
+  }
 }
