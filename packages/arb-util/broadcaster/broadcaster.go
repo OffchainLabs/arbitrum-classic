@@ -18,7 +18,6 @@ package broadcaster
 
 import (
 	"context"
-	"sync"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
@@ -33,18 +32,15 @@ import (
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
 type Broadcaster struct {
-	startBroadcasterMutex *sync.Mutex
-	broadcasterStarted    bool
-	settings              configuration.FeedOutput
-	acceptor              *Acceptor
+	acceptor      *Acceptor
+	catchupBuffer CatchupBuffer
 }
 
 func NewBroadcaster(settings configuration.FeedOutput) *Broadcaster {
+	catchupBuffer := NewConfirmedAccumulatorCatchupBuffer()
 	return &Broadcaster{
-		startBroadcasterMutex: &sync.Mutex{},
-		settings:              settings,
-		broadcasterStarted:    false,
-		acceptor:              NewAcceptor(settings),
+		acceptor:      NewAcceptor(settings, catchupBuffer),
+		catchupBuffer: catchupBuffer,
 	}
 }
 
@@ -76,7 +72,8 @@ func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.Seque
 		Messages: broadcastMessages,
 	}
 
-	return b.acceptor.clientManager.Broadcast(bm)
+	b.acceptor.Broadcast(bm)
+	return nil
 }
 
 func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.SequencerBatchItem, dataSigner func([]byte) ([]byte, error)) error {
@@ -97,11 +94,21 @@ func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.Sequence
 }
 
 func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
-	b.acceptor.clientManager.confirmedAccumulator(accumulator)
+	logger.Debug().Hex("acc", accumulator.Bytes()).Msg("confirming accumulator")
+
+	bm := BroadcastMessage{
+		Version: 1,
+		ConfirmedAccumulator: ConfirmedAccumulator{
+			IsConfirmed: true,
+			Accumulator: accumulator,
+		},
+	}
+
+	b.acceptor.Broadcast(bm)
 }
 
 func (b *Broadcaster) MessageCacheCount() int {
-	return b.acceptor.clientManager.MessageCacheCount()
+	return b.catchupBuffer.getMessageCount()
 }
 
 func (b *Broadcaster) Stop() {

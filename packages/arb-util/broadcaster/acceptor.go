@@ -37,13 +37,15 @@ type Acceptor struct {
 	settings      configuration.FeedOutput
 	started       bool
 	clientManager *ClientManager
+	catchupBuffer CatchupBuffer
 }
 
-func NewAcceptor(settings configuration.FeedOutput) *Acceptor {
+func NewAcceptor(settings configuration.FeedOutput, catchupBuffer CatchupBuffer) *Acceptor {
 	return &Acceptor{
-		startMutex: &sync.Mutex{},
-		settings:   settings,
-		started:    false,
+		startMutex:    &sync.Mutex{},
+		settings:      settings,
+		started:       false,
+		catchupBuffer: catchupBuffer,
 	}
 }
 
@@ -63,8 +65,7 @@ func (a *Acceptor) Start(ctx context.Context) error {
 
 	// Make pool of X size, Y sized work queue and one pre-spawned
 	// goroutine.
-	var pool = gopool.NewPool(a.settings.Workers, a.settings.Queue, 1)
-	var clientManager = NewClientManager(pool, a.poller, a.settings)
+	var clientManager = NewClientManager(a.poller, a.settings, a.catchupBuffer)
 	clientManager.Start(ctx)
 
 	a.clientManager = clientManager // maintain the pointer in this instance... used for testing
@@ -121,7 +122,7 @@ func (a *Acceptor) Start(ctx context.Context) error {
 			}
 
 			// receive client messages, close on error
-			pool.Schedule(func() {
+			clientManager.pool.Schedule(func() {
 				// Ignore any messages sent from client
 				if _, _, err := client.Receive(ctx, a.settings.ClientTimeout); err != nil {
 					logger.Warn().Err(err).Str("connection_name", nameConn(safeConn)).Msg("receive error")
@@ -166,7 +167,7 @@ func (a *Acceptor) Start(ctx context.Context) error {
 		// busy. So if there are no free goroutines during 1ms we want to
 		// cooldown the server and do not receive connection for some short
 		// time.
-		err := pool.ScheduleTimeout(time.Millisecond, func() {
+		err := clientManager.pool.ScheduleTimeout(time.Millisecond, func() {
 			conn, err := ln.Accept()
 			if err != nil {
 				accept <- err
@@ -230,6 +231,11 @@ func (a *Acceptor) Stop() {
 
 	a.clientManager.Stop()
 	a.started = false
+}
+
+// Broadcast sends batch item to all clients.
+func (a *Acceptor) Broadcast(bm interface{}) {
+	a.clientManager.Broadcast(bm)
 }
 
 // deadliner is a wrapper around net.Conn that sets read/write deadlines before

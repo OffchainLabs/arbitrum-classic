@@ -20,112 +20,37 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"net"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/mailru/easygo/netpoll"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
-type UnconfirmedMessageQueue struct {
-	broadcastMessages []*BroadcastFeedMessage
-	cacheSize         int32
-}
-
-func NewUnconfirmedMessageQueue() *UnconfirmedMessageQueue {
-	return &UnconfirmedMessageQueue{}
-}
-
-func (q *UnconfirmedMessageQueue) registerClient(ctx context.Context, clientConnection *ClientConnection) error {
-	start := time.Now()
-	if len(q.broadcastMessages) > 0 {
-		// send the newly connected client all the messages we've got...
-		bm := BroadcastMessage{
-			Version:  1,
-			Messages: q.broadcastMessages,
-		}
-
-		err := clientConnection.write(bm)
-		if err != nil {
-			logger.Error().Err(err).Str("client", clientConnection.name).Str("elapsed", time.Since(start).String()).Msg("error sending client cached messages")
-			return err
-		}
-	}
-
-	logger.Info().Str("client", clientConnection.name).Str("elapsed", time.Since(start).String()).Msg("client registered")
-
-	return nil
-}
-
-func (q *UnconfirmedMessageQueue) doBroadcast(bmi interface{}) error {
-	bm := bmi.(BroadcastMessage)
-	if bm.ConfirmedAccumulator.IsConfirmed {
-		for i, msg := range q.broadcastMessages {
-			if msg.FeedItem.BatchItem.Accumulator == bm.ConfirmedAccumulator.Accumulator {
-				// This entry was confirmed, so this and all previous messages should be removed from cache
-				unconfirmedIndex := i + 1
-				if unconfirmedIndex >= len(q.broadcastMessages) {
-					//  Nothing newer, so clear entire cache
-					q.broadcastMessages = q.broadcastMessages[:0]
-				} else {
-					q.broadcastMessages = q.broadcastMessages[unconfirmedIndex:]
-				}
-				break
-			}
-		}
-	} else if len(bm.Messages) > 0 {
-		// Add to cache to send to new clients
-		if len(q.broadcastMessages) == 0 {
-			// Current list is empty
-			q.broadcastMessages = append(q.broadcastMessages, bm.Messages...)
-		} else if q.broadcastMessages[len(q.broadcastMessages)-1].FeedItem.BatchItem.Accumulator == bm.Messages[0].FeedItem.PrevAcc {
-			q.broadcastMessages = append(q.broadcastMessages, bm.Messages...)
-		} else {
-			// We need to do a re-org
-			logger.Debug().Hex("acc", bm.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("broadcaster reorg")
-			i := len(q.broadcastMessages) - 1
-			for ; i >= 0; i-- {
-				if q.broadcastMessages[i].FeedItem.BatchItem.Accumulator == bm.Messages[0].FeedItem.PrevAcc {
-					q.broadcastMessages = append(q.broadcastMessages[:i+1], bm.Messages...)
-					break
-				}
-			}
-
-			if i == -1 {
-				// All existing messages are out of date
-				q.broadcastMessages = append(q.broadcastMessages[:0], bm.Messages...)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (q *UnconfirmedMessageQueue) postSendCallback() {
-	atomic.StoreInt32(&q.cacheSize, int32(len(q.broadcastMessages)))
-}
-
-func (q *UnconfirmedMessageQueue) getBufferedMessageCount() int {
-	return int(atomic.LoadInt32(&q.cacheSize))
+/* Protocol-specific client catch-up logic can be injected using this interface. */
+type CatchupBuffer interface {
+	onRegisterClient(context.Context, *ClientConnection) error
+	onDoBroadcast(interface{}) error
+	getMessageCount() int
 }
 
 // ClientManager manages client connections
 type ClientManager struct {
-	cancelFunc              context.CancelFunc
-	clientPtrMap            map[*ClientConnection]bool
-	clientCount             int32
-	pool                    *gopool.Pool
-	poller                  netpoll.Poller
-	broadcastChan           chan interface{}
-	clientAction            chan ClientConnectionAction
-	settings                configuration.FeedOutput
-	unconfirmedMessageQueue *UnconfirmedMessageQueue
+	cancelFunc    context.CancelFunc
+	clientPtrMap  map[*ClientConnection]bool
+	clientCount   int32
+	pool          *gopool.Pool
+	poller        netpoll.Poller
+	broadcastChan chan interface{}
+	clientAction  chan ClientConnectionAction
+	settings      configuration.FeedOutput
+	catchupBuffer CatchupBuffer
 }
 
 type ClientConnectionAction struct {
@@ -133,20 +58,20 @@ type ClientConnectionAction struct {
 	create bool
 }
 
-func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings configuration.FeedOutput) *ClientManager {
+func NewClientManager(poller netpoll.Poller, settings configuration.FeedOutput, catchupBuffer CatchupBuffer) *ClientManager {
 	return &ClientManager{
-		poller:                  poller,
-		pool:                    pool,
-		clientPtrMap:            make(map[*ClientConnection]bool),
-		broadcastChan:           make(chan interface{}, 1),
-		clientAction:            make(chan ClientConnectionAction, 128),
-		settings:                settings,
-		unconfirmedMessageQueue: NewUnconfirmedMessageQueue(),
+		poller:        poller,
+		pool:          gopool.NewPool(settings.Workers, settings.Queue, 1),
+		clientPtrMap:  make(map[*ClientConnection]bool),
+		broadcastChan: make(chan interface{}, 1),
+		clientAction:  make(chan ClientConnectionAction, 128),
+		settings:      settings,
+		catchupBuffer: catchupBuffer,
 	}
 }
 
 func (cm *ClientManager) registerClient(ctx context.Context, clientConnection *ClientConnection) error {
-	if err := cm.unconfirmedMessageQueue.registerClient(ctx, clientConnection); err != nil {
+	if err := cm.catchupBuffer.onRegisterClient(ctx, clientConnection); err != nil {
 		return err
 	}
 
@@ -214,28 +139,13 @@ func (cm *ClientManager) ClientCount() int32 {
 	return atomic.LoadInt32(&cm.clientCount)
 }
 
-func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
-	logger.Debug().Hex("acc", accumulator.Bytes()).Msg("confirming accumulator")
-
-	bm := BroadcastMessage{
-		Version: 1,
-		ConfirmedAccumulator: ConfirmedAccumulator{
-			IsConfirmed: true,
-			Accumulator: accumulator,
-		},
-	}
-
-	cm.broadcastChan <- bm
-}
-
 // Broadcast sends batch item to all clients.
-func (cm *ClientManager) Broadcast(bm interface{}) error {
+func (cm *ClientManager) Broadcast(bm interface{}) {
 	cm.broadcastChan <- bm
-	return nil
 }
 
 func (cm *ClientManager) doBroadcast(bm interface{}) error {
-	if err := cm.unconfirmedMessageQueue.doBroadcast(bm); err != nil {
+	if err := cm.catchupBuffer.onDoBroadcast(bm); err != nil {
 		return err
 	}
 
@@ -328,7 +238,6 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 				if err != nil {
 					logger.Error().Err(err).Msg("failed to do broadcast")
 				}
-				cm.unconfirmedMessageQueue.postSendCallback()
 			case <-pingInterval.C:
 				cm.verifyClients()
 			}
@@ -337,5 +246,5 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 }
 
 func (cm *ClientManager) MessageCacheCount() int {
-	return cm.unconfirmedMessageQueue.getBufferedMessageCount()
+	return cm.catchupBuffer.getMessageCount()
 }
