@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -795,6 +796,36 @@ func getFairGasPriceSenders() error {
 //	return nil
 //}
 
+func getFeeRecipient() error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	networkDest, err := arbOwner.GetChainParameter(&bind.CallOpts{}, arbos.NetworkFeeRecipientParamId)
+	if err != nil {
+		return err
+	}
+	congestionDest, err := arbOwner.GetChainParameter(&bind.CallOpts{}, arbos.CongestionFeeRecipientParamId)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Network Dest", hexutil.Encode(math.U256Bytes(networkDest)))
+	fmt.Println("Congestion Dest", hexutil.Encode(math.U256Bytes(congestionDest)))
+	return nil
+}
+
+func setNetworkFeeRecipient(addr common.Address) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.SetChainParameter(config.auth, arbos.NetworkFeeRecipientParamId, new(big.Int).SetBytes(addr.Bytes()))
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "SetChainParameter")
+}
+
 func setL1GasPriceEstimate(estimate *big.Int) error {
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
 	if err != nil {
@@ -1136,6 +1167,8 @@ func handleCommand(fields []string) error {
 			}
 		}
 		return feeInfo(blockNum)
+	case "fee-recipient":
+		return getFeeRecipient()
 	case "upgrade":
 		if len(fields) != 3 && len(fields) != 4 {
 			return errors.New("Expected upgrade file and target mexe arguments")
