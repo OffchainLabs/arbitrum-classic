@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.9)
 
 set (CMAKE_CXX_STANDARD 17)
 
@@ -47,6 +47,7 @@ set(LIB_SOURCES
   src/tuplestub.cpp
   src/value.cpp
   src/vmValueParser.cpp
+  src/unloadedvalue.cpp
 )
 
 add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES})

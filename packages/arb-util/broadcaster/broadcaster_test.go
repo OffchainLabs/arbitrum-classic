@@ -65,7 +65,8 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	// Confirmed Accumulator will also broadcast to the clients.
+	// Only previous accumulator will also broadcast to the clients, so send twice for test
+	b.ConfirmedAccumulator(feedItem.BatchItem.Accumulator) // remove the first message we generated
 	b.ConfirmedAccumulator(feedItem.BatchItem.Accumulator) // remove the first message we generated
 
 	acc := <-accumulatorConfirmed

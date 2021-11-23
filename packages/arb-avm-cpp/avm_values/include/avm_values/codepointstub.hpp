@@ -20,14 +20,17 @@
 #include <avm_values/bigint.hpp>
 #include <avm_values/opcodes.hpp>
 
+#include <cassert>
+
 struct CodePoint;
 
 struct CodePointRef {
     uint64_t segment;
     uint64_t pc;
 
-    CodePointRef(uint64_t segment_, uint64_t pc_)
-        : segment(segment_), pc(pc_) {}
+    CodePointRef(uint64_t segment_, uint64_t pc_) : segment(segment_), pc(pc_) {
+        assert(segment < (uint64_t(1) << 62));
+    }
 
     CodePointRef& operator++() {
         --pc;

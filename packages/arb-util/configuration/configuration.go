@@ -146,7 +146,7 @@ type RPC struct {
 	Path              string `koanf:"path"`
 	EnableL1Calls     bool   `koanf:"enable-l1-calls"`
 	MaxCallGas        uint64 `koanf:"max-call-gas"`
-	EnableDevopsStubs bool   `konaf:"enable-devops-stubs"`
+	EnableDevopsStubs bool   `koanf:"enable-devops-stubs"`
 }
 
 type S3 struct {

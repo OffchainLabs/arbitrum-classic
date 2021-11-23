@@ -33,8 +33,9 @@ import (
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
 type Broadcaster struct {
-	server        *wsbroadcastserver.WSBroadcastServer
-	catchupBuffer wsbroadcastserver.CatchupBuffer
+	server           *wsbroadcastserver.WSBroadcastServer
+	catchupBuffer    wsbroadcastserver.CatchupBuffer
+	prevConfirmedAcc common.Hash
 }
 
 func NewBroadcaster(settings configuration.FeedOutput) *Broadcaster {
@@ -95,17 +96,26 @@ func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.Sequence
 }
 
 func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
-	logger.Debug().Hex("acc", accumulator.Bytes()).Msg("confirming accumulator")
+	logger.
+		Debug().
+		Hex("prevAcc", b.prevConfirmedAcc.Bytes()).
+		Hex("newAcc", accumulator.Bytes()).
+		Msg("confirming previous accumulator")
 
-	bm := BroadcastMessage{
-		Version: 1,
-		ConfirmedAccumulator: ConfirmedAccumulator{
-			IsConfirmed: true,
-			Accumulator: accumulator,
-		},
+	var emptyHash common.Hash
+	if b.prevConfirmedAcc != emptyHash {
+		bm := BroadcastMessage{
+			Version: 1,
+			ConfirmedAccumulator: ConfirmedAccumulator{
+				IsConfirmed: true,
+				Accumulator: b.prevConfirmedAcc,
+			},
+		}
+
+		b.server.Broadcast(bm)
 	}
 
-	b.server.Broadcast(bm)
+	b.prevConfirmedAcc = accumulator
 }
 
 func (b *Broadcaster) MessageCacheCount() int {

@@ -48,12 +48,12 @@ TEST_CASE("ARBOS test vectors") {
             for (auto& json_message : j.at("inbox")) {
                 messages.emplace_back(
                     InboxMessage::fromTuple(
-                        std::get<Tuple>(simple_value_from_json(json_message))),
+                        get<Tuple>(simple_value_from_json(json_message))),
                     0);
             }
 
             auto logs_json = j.at("logs");
-            std::vector<value> logs;
+            std::vector<Value> logs;
             for (auto& log_json : logs_json) {
                 logs.push_back(simple_value_from_json(log_json));
             }
@@ -78,10 +78,10 @@ TEST_CASE("ARBOS test vectors") {
             uint64_t block_log_count = 0;
             uint64_t tx_log_count = 0;
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
-                auto typecode = std::get<Tuple>(logs[k]).get_element(0);
-                if (values_equal(typecode, value{uint256_t{0}})) {
+                auto typecode = get<Tuple>(logs[k]).get_element(0);
+                if (values_equal(typecode, Value{uint256_t{0}})) {
                     tx_log_count++;
-                } else if (values_equal(typecode, value{uint256_t{1}})) {
+                } else if (values_equal(typecode, Value{uint256_t{1}})) {
                     block_log_count++;
                 }
             }
@@ -90,8 +90,8 @@ TEST_CASE("ARBOS test vectors") {
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
                 INFO("Checking log " << k);
                 CHECK(values_equal(assertion.logs[k].val, logs[k]));
-                if (values_equal(std::get<Tuple>(logs[k]).get_element(0),
-                                 value{uint256_t{1}})) {
+                if (values_equal(get<Tuple>(logs[k]).get_element(0),
+                                 Value{uint256_t{1}})) {
                     block_log_count++;
                 }
             }
