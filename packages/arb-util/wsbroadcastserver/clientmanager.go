@@ -244,7 +244,3 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 		}
 	}()
 }
-
-func (cm *ClientManager) MessageCacheCount() int {
-	return cm.catchupBuffer.GetMessageCount()
-}
