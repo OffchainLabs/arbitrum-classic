@@ -7,6 +7,11 @@ import networks, {
   l2Networks,
 } from './networks'
 
+interface CustomNetworks {
+  customL1Network?: L1Network
+  customL2Network?: L2Network
+}
+
 export interface SignersAndProviders {
   l1Provider?: Provider
   l2Provider?: Provider
@@ -23,8 +28,17 @@ export class MultiChainConnector {
   l2Network?: L2Network
 
   public async initSignorsAndProviders(
-    signersAndProviders: SignersAndProviders
+    signersAndProviders: SignersAndProviders,
+    customNetworks: CustomNetworks = {}
   ) {
+    const { customL1Network, customL2Network } = customNetworks
+    if (customL1Network) {
+      l1Networks[customL1Network.chainID] = customL1Network
+    }
+    if (customL2Network) {
+      l2Networks[customL2Network.chainID] = customL2Network
+    }
+
     const { l1Provider, l2Provider, l1Signer, l2Signer } = signersAndProviders
     if (l1Signer) {
       this.l1Signer = l1Signer
@@ -50,19 +64,19 @@ export class MultiChainConnector {
     if (this.l1Provider) {
       const chainID = (await this.l1Provider.getNetwork()).chainId.toString()
       const l1Network = l1Networks[chainID]
-      if (!l1Network) throw new Error('todo: custom')
+      if (!l1Network) throw new Error('L1 network info not provided')
       this.l1Network = l1Network
     }
     if (this.l2Provider) {
       const chainID = (await this.l2Provider.getNetwork()).chainId.toString()
       const l2Network = l2Networks[chainID]
-      if (!l2Network) throw new Error('todo: custom')
+      if (!l2Network) throw new Error('L2 network info not provided')
       this.l2Network = l2Network
     }
 
     if (this.l1Network && this.l2Network) {
       if (this.l2Network.partnerChainID !== this.l1Network.chainID) {
-        throw new Error('chains mismatched')
+        throw new Error('Provided L1 and L2 networks are mismatched')
       }
     }
   }
