@@ -72,6 +72,7 @@ type GetTransactionReceiptResult struct {
 	To                *common.Address `json:"to"`
 	CumulativeGasUsed hexutil.Uint64  `json:"cumulativeGasUsed"`
 	GasUsed           hexutil.Uint64  `json:"gasUsed"`
+	EffectiveGasPrice hexutil.Uint64  `json:"effectiveGasPrice"`
 	ContractAddress   *common.Address `json:"contractAddress"`
 	Logs              []*types.Log    `json:"logs"`
 	LogsBloom         hexutil.Bytes   `json:"logsBloom"`
