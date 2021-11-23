@@ -105,18 +105,25 @@ export class L1ToL2Message extends MultiChainConnector {
     const l1TxnHash = l1TxnReceipt.transactionHash
     this.l1TxnHash = l1TxnHash
 
-    if (!signersAndProviders.l2Provider) throw new Error('need l2 prov')
+    if (!signersAndProviders.l2Provider)
+      throw new Error('Missing required L2 Provider')
     const chainID = (
       await signersAndProviders.l2Provider.getNetwork()
     ).chainId.toString()
 
     const messageNumbers = getMessageNumbers(l1TxnReceipt)
-    if (!messageNumbers) throw new Error('no messages here')
+    if (!messageNumbers)
+      throw new Error('No l1 to l2 messages found in L1 txn ' + l1TxnHash)
 
     return messageNumbers.map((msgNumber: BigNumber) => {
       return new L1ToL2Message(
         signersAndProviders,
-        calculateRetryableTicketCreationHash(msgNumber, BigNumber.from(chainID))
+        calculateRetryableTicketCreationHash(
+          msgNumber,
+          BigNumber.from(chainID)
+        ),
+        msgNumber,
+        l1TxnHash
       )
     })
   }
@@ -143,33 +150,32 @@ export class L1ToL2Message extends MultiChainConnector {
   }
 
   public getL1TxnReceipt(): Promise<TransactionReceipt> {
-    if (!this.l1Provider) throw new Error('need l1 provier')
-    if (!this.l1TxnHash) throw new Error('need l1 txn hash')
+    if (!this.l1Provider) throw new Error('Missing required L1 Provider')
+    if (!this.l1TxnHash) throw new Error('L1 txn hash not available')
     return this.l1Provider.getTransactionReceipt(this.l1TxnHash)
   }
 
   public getTicketCreationReceipt(): Promise<TransactionReceipt> {
-    if (!this.l2Provider) throw new Error('need l2 provider')
+    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
     return this.l2Provider.getTransactionReceipt(this.l2TicketCreationTxnHash)
   }
   public getAutoRedeemReceipt(): Promise<TransactionReceipt> {
-    if (!this.l2Provider) throw new Error('need l2 provider')
+    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
     return this.l2Provider.getTransactionReceipt(this.autoRedeemHash)
   }
   public getUserTxnReceipt(): Promise<TransactionReceipt> {
-    if (!this.l2Provider) throw new Error('need l2 provider')
+    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
     return this.l2Provider.getTransactionReceipt(this.userTxnHash)
   }
 
   public async redeem(): Promise<ContractTransaction> {
-    if (!this.l2Signer || !this.l2Network) throw new Error('need l2 signer')
+    if (!this.l2Signer) throw new Error('Missing required L2 signer')
 
-    // explicitely check if already redeemed / do a getStatus?
     return this.arbRetryableActions.redeem(this.userTxnHash)
   }
 
   public async cancel(): Promise<ContractTransaction> {
-    if (!this.l2Signer) throw new Error('need l2 provider')
+    if (!this.l2Signer) throw new Error('Missing required L2 signer')
     return this.arbRetryableActions.cancel(this.userTxnHash)
   }
 
@@ -177,7 +183,7 @@ export class L1ToL2Message extends MultiChainConnector {
     timeout = 900000,
     confirmations?: number
   ): Promise<L1ToL2MessageReceipt> {
-    if (!this.l2Provider) throw new Error('need l2 provider')
+    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
     const ticketCreationReceipt = await this.l2Provider.waitForTransaction(
       this.l2TicketCreationTxnHash,
       confirmations,
@@ -204,7 +210,7 @@ export class L1ToL2Message extends MultiChainConnector {
   }
 
   public async status(): Promise<L1ToL2MessageStatus> {
-    if (!this.l2Provider) throw new Error('need l2 provider')
+    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
 
     const userTxnReceipt = await this.l2Provider.getTransactionReceipt(
       this.userTxnHash
@@ -249,7 +255,7 @@ export class ArbRetryableActions extends MultiChainConnector {
   }
 
   public redeem(userL2TxnHash: string): Promise<ContractTransaction> {
-    if (!this.l2Signer) throw new Error('Must have l2Signer')
+    if (!this.l2Signer) throw new Error('Missing required L2 signer')
 
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
@@ -258,7 +264,7 @@ export class ArbRetryableActions extends MultiChainConnector {
     return arbRetryableTx.redeem(userL2TxnHash)
   }
   public cancel(userL2TxnHash: string): Promise<ContractTransaction> {
-    if (!this.l2Signer) throw new Error('Must have l2Signer')
+    if (!this.l2Signer) throw new Error('Missing required L2 signer')
 
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
@@ -268,7 +274,7 @@ export class ArbRetryableActions extends MultiChainConnector {
   }
 
   public getTimeout(userL2TxnHash: string): Promise<BigNumber> {
-    if (!this.l2Provider) throw new Error('Must have l2Provider')
+    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
 
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
@@ -277,4 +283,5 @@ export class ArbRetryableActions extends MultiChainConnector {
     return arbRetryableTx.getTimeout(userL2TxnHash)
   }
   // keep alive etc.
+  // estimated time til redemption?
 }
