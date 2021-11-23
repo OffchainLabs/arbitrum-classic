@@ -33,24 +33,24 @@ import (
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
 type Broadcaster struct {
-	acceptor      *wsbroadcastserver.Acceptor
+	server        *wsbroadcastserver.WSBroadcastServer
 	catchupBuffer wsbroadcastserver.CatchupBuffer
 }
 
 func NewBroadcaster(settings configuration.FeedOutput) *Broadcaster {
 	catchupBuffer := NewConfirmedAccumulatorCatchupBuffer()
 	return &Broadcaster{
-		acceptor:      wsbroadcastserver.NewAcceptor(settings, catchupBuffer),
+		server:        wsbroadcastserver.NewWSBroadcastServer(settings, catchupBuffer),
 		catchupBuffer: catchupBuffer,
 	}
 }
 
 func (b *Broadcaster) ClientCount() int32 {
-	return b.acceptor.ClientCount()
+	return b.server.ClientCount()
 }
 
 func (b *Broadcaster) Start(ctx context.Context) error {
-	return b.acceptor.Start(ctx)
+	return b.server.Start(ctx)
 }
 
 func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
@@ -73,7 +73,7 @@ func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.Seque
 		Messages: broadcastMessages,
 	}
 
-	b.acceptor.Broadcast(bm)
+	b.server.Broadcast(bm)
 	return nil
 }
 
@@ -105,7 +105,7 @@ func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
 		},
 	}
 
-	b.acceptor.Broadcast(bm)
+	b.server.Broadcast(bm)
 }
 
 func (b *Broadcaster) MessageCacheCount() int {
@@ -113,5 +113,5 @@ func (b *Broadcaster) MessageCacheCount() int {
 }
 
 func (b *Broadcaster) Stop() {
-	b.acceptor.Stop()
+	b.server.Stop()
 }
