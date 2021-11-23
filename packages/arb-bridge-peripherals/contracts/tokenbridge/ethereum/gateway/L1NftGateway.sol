@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/introspection/IERC165.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
@@ -28,9 +29,9 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
 import "../../arbitrum/gateway/L2NftGateway.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
+import "../../libraries/Escrow721.sol";
 import "../L1ArbitrumMessenger.sol";
 import "./L1NftRouter.sol";
-import "./Escrow721.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
@@ -39,8 +40,6 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
     address public counterpartGateway;
     address public inbox;
     address public router;
-    bytes constant bytecode = type(Escrow721).creationCode;
-    bytes32 constant bytecodeHash = keccak256(type(Escrow721).creationCode);
 
     function initialize(
         address _counterpartGateway,
@@ -69,7 +68,7 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
         // TODO: implement tradeable exits?
         // TODO: what if NFT is L2 native?
 
-        address escrow = getCreate2EscrowAddress(l1Token, tokenId);
+        address escrow = Escrow721Handler.getCreate2EscrowAddress(l1Token, tokenId);
         if (Address.isContract(escrow)) {
             Escrow721(escrow).releaseEscrow(to, l1Token, tokenId, data);
         } else {
@@ -159,7 +158,9 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
         require(!shouldCreate2Escrow, "EXTERNAL_ESCROW_DISABLED");
 
         if (shouldCreate2Escrow) {
-            address escrow = create2Deploy(l1Token, tokenId);
+            // TODO: can we just check if the token is escrowed there, and allow this to be deployed during an eventual withdrawal?
+            // TODO: should we allow the user to deploy their own escrow logic?
+            address escrow = Escrow721Handler.create2Deploy(l1Token, tokenId);
             require(Escrow721(escrow).requestEscrow(from, l1Token, tokenId), "NO_ESCROW");
         } else {
             IERC721(l1Token).transferFrom(from, address(this), tokenId);
@@ -178,15 +179,12 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
             );
     }
 
-    function getSalt(address l1Token, uint256 tokenId) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(l1Token, tokenId));
-    }
-
-    function create2Deploy(address l1Token, uint256 tokenId) internal returns (address) {
-        // "The pair (contract address, uint256 tokenId) [...] globally unique"
-        // ~ https://eips.ethereum.org/EIPS/eip-721#rationale
-        bytes32 salt = getSalt(l1Token, tokenId);
-        return Create2.deploy(0, salt, bytecode);
+    function getCreate2EscrowAddress(address l1Token, uint256 tokenId)
+        external
+        view
+        returns (address)
+    {
+        return Escrow721Handler.getCreate2EscrowAddress(l1Token, tokenId);
     }
 
     function onERC721Received(
@@ -200,21 +198,6 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
         // return this.onERC721Received.selector;
     }
 
-    function getCreate2EscrowAddress(address l1Token, uint256 tokenId)
-        public
-        view
-        returns (address)
-    {
-        bytes32 salt = getSalt(l1Token, tokenId);
-        // TODO: this address oracle breaks with upgrades as bytecodeHash
-        // is calculated during compile time
-        return Create2.computeAddress(salt, bytecodeHash);
-    }
-
-    function updateBaseUriToL2() external {
-        // TODO: should we also allow update name/symbol?
-    }
-
     function updateTokenUriToL2() external {
         // TODO: take in batch
     }
@@ -226,7 +209,19 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
         uint256 tokenId,
         bytes calldata data
     ) public view returns (bytes memory) {
-        // TODO: query the 721 for "name" / "symbol" / "uri"
+        (, bytes memory tokenURI) = l1Token.staticcall(
+            abi.encodeWithSelector(IERC721Metadata.tokenURI.selector, tokenId)
+        );
+        // TODO: is it cheaper to only send these once?
+        (, bytes memory name) = l1Token.staticcall(
+            abi.encodeWithSelector(IERC721Metadata.name.selector)
+        );
+        (, bytes memory symbol) = l1Token.staticcall(
+            abi.encodeWithSelector(IERC721Metadata.symbol.selector)
+        );
+        // TODO: should we send baseUri? not part of the standard, but OZ implements it
+        // l1Token.staticcall(abi.encodeWithSelector(IERC721Metadata.baseURI.selector)),
+
         return
             abi.encodeWithSelector(
                 L2NftGateway.finalizeDeposit.selector,
@@ -234,6 +229,9 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
                 tokenId,
                 from,
                 to,
+                name,
+                symbol,
+                tokenURI,
                 data
             );
     }

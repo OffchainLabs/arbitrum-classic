@@ -20,9 +20,38 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/utils/Create2.sol";
+
+library Escrow721Handler {
+    // TODO: be careful, these break through upgrades
+    bytes constant bytecode = type(Escrow721).creationCode;
+    bytes32 constant bytecodeHash = keccak256(type(Escrow721).creationCode);
+
+    function getCreate2EscrowAddress(address l1Token, uint256 tokenId)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 salt = getSalt(l1Token, tokenId);
+        // TODO: this address oracle breaks with upgrades as bytecodeHash
+        // is calculated during compile time
+        return Create2.computeAddress(salt, bytecodeHash);
+    }
+
+    function create2Deploy(address l1Token, uint256 tokenId) internal returns (address) {
+        // "The pair (contract address, uint256 tokenId) [...] globally unique"
+        // ~ https://eips.ethereum.org/EIPS/eip-721#rationale
+        bytes32 salt = getSalt(l1Token, tokenId);
+        return Create2.deploy(0, salt, bytecode);
+    }
+
+    function getSalt(address l1Token, uint256 tokenId) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(l1Token, tokenId));
+    }
+}
 
 contract Escrow721 is IERC721Receiver {
-    address owner;
+    address public owner;
 
     constructor() public {
         owner = msg.sender;
