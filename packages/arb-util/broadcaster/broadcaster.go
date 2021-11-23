@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/wsbroadcastserver"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
@@ -32,20 +33,20 @@ import (
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
 type Broadcaster struct {
-	acceptor      *Acceptor
-	catchupBuffer CatchupBuffer
+	acceptor      *wsbroadcastserver.Acceptor
+	catchupBuffer wsbroadcastserver.CatchupBuffer
 }
 
 func NewBroadcaster(settings configuration.FeedOutput) *Broadcaster {
 	catchupBuffer := NewConfirmedAccumulatorCatchupBuffer()
 	return &Broadcaster{
-		acceptor:      NewAcceptor(settings, catchupBuffer),
+		acceptor:      wsbroadcastserver.NewAcceptor(settings, catchupBuffer),
 		catchupBuffer: catchupBuffer,
 	}
 }
 
 func (b *Broadcaster) ClientCount() int32 {
-	return b.acceptor.clientManager.ClientCount()
+	return b.acceptor.ClientCount()
 }
 
 func (b *Broadcaster) Start(ctx context.Context) error {
@@ -108,7 +109,7 @@ func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
 }
 
 func (b *Broadcaster) MessageCacheCount() int {
-	return b.catchupBuffer.getMessageCount()
+	return b.catchupBuffer.GetMessageCount()
 }
 
 func (b *Broadcaster) Stop() {

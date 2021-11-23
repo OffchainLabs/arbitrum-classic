@@ -20,6 +20,8 @@ import (
 	"context"
 	"sync/atomic"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/wsbroadcastserver"
 )
 
 type ConfirmedAccumulatorCatchupBuffer struct {
@@ -31,7 +33,7 @@ func NewConfirmedAccumulatorCatchupBuffer() *ConfirmedAccumulatorCatchupBuffer {
 	return &ConfirmedAccumulatorCatchupBuffer{}
 }
 
-func (q *ConfirmedAccumulatorCatchupBuffer) onRegisterClient(ctx context.Context, clientConnection *ClientConnection) error {
+func (q *ConfirmedAccumulatorCatchupBuffer) OnRegisterClient(ctx context.Context, clientConnection *wsbroadcastserver.ClientConnection) error {
 	start := time.Now()
 	if len(q.broadcastMessages) > 0 {
 		// send the newly connected client all the messages we've got...
@@ -40,19 +42,19 @@ func (q *ConfirmedAccumulatorCatchupBuffer) onRegisterClient(ctx context.Context
 			Messages: q.broadcastMessages,
 		}
 
-		err := clientConnection.write(bm)
+		err := clientConnection.Write(bm)
 		if err != nil {
-			logger.Error().Err(err).Str("client", clientConnection.name).Str("elapsed", time.Since(start).String()).Msg("error sending client cached messages")
+			logger.Error().Err(err).Str("client", clientConnection.Name).Str("elapsed", time.Since(start).String()).Msg("error sending client cached messages")
 			return err
 		}
 	}
 
-	logger.Info().Str("client", clientConnection.name).Str("elapsed", time.Since(start).String()).Msg("client registered")
+	logger.Info().Str("client", clientConnection.Name).Str("elapsed", time.Since(start).String()).Msg("client registered")
 
 	return nil
 }
 
-func (q *ConfirmedAccumulatorCatchupBuffer) onDoBroadcast(bmi interface{}) error {
+func (q *ConfirmedAccumulatorCatchupBuffer) OnDoBroadcast(bmi interface{}) error {
 	bm := bmi.(BroadcastMessage)
 	if bm.ConfirmedAccumulator.IsConfirmed {
 		for i, msg := range q.broadcastMessages {
@@ -98,6 +100,6 @@ func (q *ConfirmedAccumulatorCatchupBuffer) onDoBroadcast(bmi interface{}) error
 	return nil
 }
 
-func (q *ConfirmedAccumulatorCatchupBuffer) getMessageCount() int {
+func (q *ConfirmedAccumulatorCatchupBuffer) GetMessageCount() int {
 	return int(atomic.LoadInt32(&q.cacheSize))
 }

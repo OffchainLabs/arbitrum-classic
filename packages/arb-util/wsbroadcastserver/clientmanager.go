@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package broadcaster
+package wsbroadcastserver
 
 import (
 	"bytes"
@@ -35,9 +35,9 @@ import (
 
 /* Protocol-specific client catch-up logic can be injected using this interface. */
 type CatchupBuffer interface {
-	onRegisterClient(context.Context, *ClientConnection) error
-	onDoBroadcast(interface{}) error
-	getMessageCount() int
+	OnRegisterClient(context.Context, *ClientConnection) error
+	OnDoBroadcast(interface{}) error
+	GetMessageCount() int
 }
 
 // ClientManager manages client connections
@@ -71,7 +71,7 @@ func NewClientManager(poller netpoll.Poller, settings configuration.FeedOutput, 
 }
 
 func (cm *ClientManager) registerClient(ctx context.Context, clientConnection *ClientConnection) error {
-	if err := cm.catchupBuffer.onRegisterClient(ctx, clientConnection); err != nil {
+	if err := cm.catchupBuffer.OnRegisterClient(ctx, clientConnection); err != nil {
 		return err
 	}
 
@@ -145,7 +145,7 @@ func (cm *ClientManager) Broadcast(bm interface{}) {
 }
 
 func (cm *ClientManager) doBroadcast(bm interface{}) error {
-	if err := cm.catchupBuffer.onDoBroadcast(bm); err != nil {
+	if err := cm.catchupBuffer.OnDoBroadcast(bm); err != nil {
 		return err
 	}
 
@@ -170,7 +170,7 @@ func (cm *ClientManager) doBroadcast(bm interface{}) error {
 	}
 
 	for _, client := range clientDeleteList {
-		logger.Warn().Str("client", client.name).Msg("disconnecting client, queue too large")
+		logger.Warn().Str("client", client.Name).Msg("disconnecting client, queue too large")
 		cm.Remove(client)
 	}
 
@@ -191,7 +191,7 @@ func (cm *ClientManager) verifyClients() {
 	}
 
 	for _, deadClient := range deadClientList {
-		logger.Debug().Str("client", deadClient.name).Msg("disconnecting because connection timed out")
+		logger.Debug().Str("client", deadClient.Name).Msg("disconnecting because connection timed out")
 		cm.Remove(deadClient)
 	}
 
@@ -200,7 +200,7 @@ func (cm *ClientManager) verifyClients() {
 	for client := range cm.clientPtrMap {
 		err := client.Ping()
 		if err != nil {
-			logger.Error().Err(err).Str("name", client.name).Msg("error pinging client")
+			logger.Error().Err(err).Str("name", client.Name).Msg("error pinging client")
 		}
 	}
 }
@@ -246,5 +246,5 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 }
 
 func (cm *ClientManager) MessageCacheCount() int {
-	return cm.catchupBuffer.getMessageCount()
+	return cm.catchupBuffer.GetMessageCount()
 }

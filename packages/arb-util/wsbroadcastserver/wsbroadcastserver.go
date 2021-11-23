@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package broadcaster
+package wsbroadcastserver
 
 import (
 	"context"
@@ -27,7 +27,10 @@ import (
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/mailru/easygo/netpoll"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/rs/zerolog/log"
 )
+
+var logger = log.With().Caller().Str("component", "wsbroadcastserver").Logger()
 
 type Acceptor struct {
 	startMutex    *sync.Mutex
@@ -236,6 +239,10 @@ func (a *Acceptor) Stop() {
 // Broadcast sends batch item to all clients.
 func (a *Acceptor) Broadcast(bm interface{}) {
 	a.clientManager.Broadcast(bm)
+}
+
+func (a *Acceptor) ClientCount() int32 {
+	return a.clientManager.ClientCount()
 }
 
 // deadliner is a wrapper around net.Conn that sets read/write deadlines before
