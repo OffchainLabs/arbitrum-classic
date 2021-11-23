@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/introspection/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
@@ -29,43 +30,7 @@ import "../../arbitrum/gateway/L2NftGateway.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../L1ArbitrumMessenger.sol";
 import "./L1NftRouter.sol";
-
-contract Escrow721 is IERC721Receiver {
-    address owner;
-
-    constructor() public {}
-
-    function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    ) external override returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
-
-    function requestEscrow(
-        address user,
-        address tokenAddr,
-        uint256 tokenId
-    ) external returns (bool) {
-        require(IERC165(tokenAddr).supportsInterface(0x80ac58cd), "165_INTERFACE_NOT_DETECTED");
-        owner = msg.sender;
-        // TODO: should we check if was transfered here before getting created?
-        IERC721(tokenAddr).safeTransferFrom(user, address(this), tokenId);
-    }
-
-    function releaseEscrow(
-        address to,
-        address tokenAddr,
-        uint256 tokenId,
-        bytes calldata data
-    ) external returns (bool) {
-        require(msg.sender == owner, "NOT_OWNER");
-        IERC721(tokenAddr).safeTransferFrom(address(this), to, tokenId, data);
-        return true;
-    }
-}
+import "./Escrow721.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
@@ -74,6 +39,8 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
     address public counterpartGateway;
     address public inbox;
     address public router;
+    bytes constant bytecode = type(Escrow721).creationCode;
+    bytes32 constant bytecodeHash = keccak256(type(Escrow721).creationCode);
 
     function initialize(
         address _counterpartGateway,
@@ -195,7 +162,7 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
             address escrow = create2Deploy(l1Token, tokenId);
             require(Escrow721(escrow).requestEscrow(from, l1Token, tokenId), "NO_ESCROW");
         } else {
-            IERC721(l1Token).safeTransferFrom(from, address(this), tokenId);
+            IERC721(l1Token).transferFrom(from, address(this), tokenId);
         }
 
         bytes memory outboundCalldata = getOutboundCalldata(l1Token, from, to, tokenId, data);
@@ -211,11 +178,14 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
             );
     }
 
+    function getSalt(address l1Token, uint256 tokenId) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(l1Token, tokenId));
+    }
+
     function create2Deploy(address l1Token, uint256 tokenId) internal returns (address) {
         // "The pair (contract address, uint256 tokenId) [...] globally unique"
         // ~ https://eips.ethereum.org/EIPS/eip-721#rationale
-        bytes32 salt = keccak256(abi.encodePacked(l1Token, tokenId));
-        bytes memory bytecode = type(Escrow721).creationCode;
+        bytes32 salt = getSalt(l1Token, tokenId);
         return Create2.deploy(0, salt, bytecode);
     }
 
@@ -225,9 +195,9 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
         uint256 tokenId,
         bytes calldata data
     ) external override returns (bytes4) {
-        // TODO: should we check with the router that this is a valid gateway?
-        // should we SSTORE here instead of approval/transferfrom?
-        return this.onERC721Received.selector;
+        // this shouldn't be triggered since we don't do a safe `transferFrom`
+        revert("INVALID_DEPOSIT");
+        // return this.onERC721Received.selector;
     }
 
     function getCreate2EscrowAddress(address l1Token, uint256 tokenId)
@@ -235,10 +205,9 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
         view
         returns (address)
     {
-        // TODO: do the create2 in a factory so that the address oracle doesn't break on upgrades
-        bytes32 salt = keccak256(abi.encodePacked(l1Token, tokenId));
-        // TODO: hash this during compiletime and inline
-        bytes32 bytecodeHash = keccak256(type(Escrow721).creationCode);
+        bytes32 salt = getSalt(l1Token, tokenId);
+        // TODO: this address oracle breaks with upgrades as bytecodeHash
+        // is calculated during compile time
         return Create2.computeAddress(salt, bytecodeHash);
     }
 
