@@ -28,8 +28,6 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
 	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -400,22 +398,49 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	return cursor.updateValues()
 }
 
-func (ac *ArbCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error) {
+func (ac *ArbCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumberStart, logNumberEnd *big.Int) ([]core.MachineEmission, error) {
 	defer runtime.KeepAlive(ac)
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
 	}
 	maxGasData := math.U256Bytes(maxGas)
-	logNumberData := math.U256Bytes(logNumber)
+	logNumberStartData := math.U256Bytes(logNumberStart)
+	logNumberEndData := math.U256Bytes(logNumberEnd)
 
-	result := C.arbCoreAdvanceExecutionCursorWithTracing(ac.c, cursor.c, unsafeDataPointer(maxGasData), boolToCInt(goOverGas), boolToCInt(allowSlowLookup), unsafeDataPointer(logNumberData))
+	result := C.arbCoreAdvanceExecutionCursorWithTracing(
+		ac.c,
+		cursor.c,
+		unsafeDataPointer(maxGasData),
+		boolToCInt(goOverGas),
+		boolToCInt(allowSlowLookup),
+		unsafeDataPointer(logNumberStartData),
+		unsafeDataPointer(logNumberEndData),
+	)
 	if result.found == 0 {
 		return nil, errors.New("failed to advance cursor with tracing")
 	}
 	runtime.KeepAlive(cursor)
 
-	return protocol.BytesArrayToVals(receiveByteSlice(result.data.slice), uint64(result.data.count))
+	valCount := uint64(result.data.count)
+	rd := bytes.NewReader(receiveByteSlice(result.data.slice))
+	vals := make([]core.MachineEmission, 0, valCount)
+	for i := uint64(0); i < valCount; i++ {
+		var logCountData [32]byte
+		_, err := rd.Read(logCountData[:])
+		if err != nil {
+			return nil, err
+		}
+		val, err := value.UnmarshalValue(rd)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, core.MachineEmission{
+			Value:    val,
+			LogCount: new(big.Int).SetBytes(logCountData[:]),
+		})
+	}
+	return vals, nil
 }
 
 func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {

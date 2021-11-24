@@ -38,7 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
@@ -172,8 +171,8 @@ func (m *Server) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, ma
 	return m.db.Lookup.AdvanceExecutionCursor(executionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
-func (m *Server) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error) {
-	return m.db.Lookup.AdvanceExecutionCursorWithTracing(executionCursor, maxGas, goOverGas, allowSlowLookup, logNumber)
+func (m *Server) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumberStart, logNumberEnd *big.Int) ([]core.MachineEmission, error) {
+	return m.db.Lookup.AdvanceExecutionCursorWithTracing(executionCursor, maxGas, goOverGas, allowSlowLookup, logNumberStart, logNumberEnd)
 }
 
 func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {

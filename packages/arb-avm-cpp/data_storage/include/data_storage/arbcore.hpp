@@ -63,6 +63,11 @@ struct RawMessageInfo {
           accumulator(accumulator_) {}
 };
 
+struct DebugPrintCollectionOptions {
+    uint256_t log_number_begin;
+    uint256_t log_number_end;
+};
+
 class ArbCore {
    public:
     typedef enum {
@@ -297,11 +302,12 @@ class ArbCore {
                                            bool go_over_gas,
                                            bool allow_slow_lookup);
     ValueResult<std::vector<MachineEmission<Value>>>
-    advanceExecutionCursorWithTracing(ExecutionCursor& execution_cursor,
-                                      uint256_t max_gas,
-                                      bool go_over_gas,
-                                      bool allow_slow_lookup,
-                                      uint256_t log_number);
+    advanceExecutionCursorWithTracing(
+        ExecutionCursor& execution_cursor,
+        uint256_t max_gas,
+        bool go_over_gas,
+        bool allow_slow_lookup,
+        const DebugPrintCollectionOptions& collectionOptions);
 
     std::unique_ptr<Machine> takeExecutionCursorMachine(
         ExecutionCursor& execution_cursor);
@@ -314,8 +320,7 @@ class ArbCore {
         bool go_over_gas,
         size_t message_group_size,
         bool allow_slow_lookup,
-        bool save_debug_prints,
-        uint256_t debug_print_log_number);
+        const std::optional<DebugPrintCollectionOptions>& collectionOptions);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,

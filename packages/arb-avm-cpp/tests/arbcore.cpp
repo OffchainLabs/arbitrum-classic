@@ -126,10 +126,7 @@ TEST_CASE("ArbCore tests") {
     DBDeleter deleter;
     ValueCache value_cache{1, 0};
 
-    std::vector<std::string> files = {
-        "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
-        "evm_test_arbsys", "evm_xcontract_call_with_constructors",
-        "evm_test_create"};
+    std::vector<std::string> files = {"evm_test_arbsys"};
 
     uint64_t logs_count = 0;
     ArbCoreConfig coreConfig{};
@@ -234,7 +231,7 @@ TEST_CASE("ArbCore tests") {
 
         uint32_t log_number = 3;
         auto advanceResult = arbCore1->advanceExecutionCursorWithTracing(
-            *cursor.data, 30000000, true, true, log_number);
+            *cursor.data, 30000000, true, true, {log_number, log_number + 1});
         REQUIRE(advanceResult.status.ok());
         if (logs.size() > log_number) {
             REQUIRE(!advanceResult.data.empty());

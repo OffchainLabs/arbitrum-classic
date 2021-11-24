@@ -545,21 +545,26 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     }
 }
 
+uint256_t log_number_begin;
+uint256_t log_number_end;
+
 ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     CArbCore* arbcore_ptr,
     CExecutionCursor* execution_cursor_ptr,
     const void* max_gas_ptr,
     int go_over_gas,
     int allow_slow_lookup,
-    const void* log_number_ptr) {
+    const void* log_number_begin_ptr,
+    const void* log_number_end_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     auto max_gas = receiveUint256(max_gas_ptr);
-    auto log_number = receiveUint256(log_number_ptr);
+    auto log_number_begin = receiveUint256(log_number_begin_ptr);
+    auto log_number_end = receiveUint256(log_number_end_ptr);
     try {
         auto result = arbCore->advanceExecutionCursorWithTracing(
             *executionCursor, max_gas, go_over_gas, allow_slow_lookup,
-            log_number);
+            {log_number_begin, log_number_end});
         if (!result.status.ok()) {
             return {{}, false};
         }
@@ -567,6 +572,7 @@ ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
         std::vector<unsigned char> debug_print_data;
         int debug_print_count = 0;
         for (const auto& debug_print : result.data) {
+            marshal_uint256_t(debug_print.log_count, debug_print_data);
             marshal_value(debug_print.val, debug_print_data);
             debug_print_count++;
         }

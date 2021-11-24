@@ -39,6 +39,11 @@ const (
 	MessagesError
 )
 
+type MachineEmission struct {
+	Value    value.Value
+	LogCount *big.Int
+}
+
 type ExecutionCursor interface {
 	Clone() ExecutionCursor
 	MachineHash() common.Hash
@@ -79,7 +84,7 @@ type ArbCoreLookup interface {
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error
 
 	// AdvanceExecutionCursorWithTracing executes machine to get tracing debugprint for given log number
-	AdvanceExecutionCursorWithTracing(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error)
+	AdvanceExecutionCursorWithTracing(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumberStart, logNumberEnd *big.Int) ([]MachineEmission, error)
 
 	// TakeMachine takes ownership of machine such that ExecutionCursor will
 	// no longer be able to advance.

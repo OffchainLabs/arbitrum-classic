@@ -6,7 +6,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 func distortHash(hash common.Hash) common.Hash {
@@ -108,12 +107,12 @@ func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor,
 	return c.ArbCore.AdvanceExecutionCursor(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup)
 }
 
-func (c FaultyCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumber *big.Int) ([]value.Value, error) {
+func (c FaultyCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumberStart, logNumberEnd *big.Int) ([]core.MachineEmission, error) {
 	faultyCursor, maxGas, err, done := c.prepareCursor(executionCursor, maxGas)
 	if done {
 		return nil, err
 	}
-	return c.ArbCore.AdvanceExecutionCursorWithTracing(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup, logNumber)
+	return c.ArbCore.AdvanceExecutionCursorWithTracing(faultyCursor.ExecutionCursor, maxGas, goOverGas, allowSlowLookup, logNumberStart, logNumberEnd)
 }
 
 func (c FaultyCore) GetLastMachine() (machine.Machine, error) {
