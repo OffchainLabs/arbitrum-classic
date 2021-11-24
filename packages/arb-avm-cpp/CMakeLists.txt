@@ -73,6 +73,9 @@ option(ENABLE_JEMALLOC "Build with JEMalloc support" OFF)
 
 set(AVM_FUZZER "" CACHE STRING "Build fuzzing target for the requested fuzzer")
 
+add_compile_options(-fno-omit-frame-pointer)
+add_link_options(-fno-omit-frame-pointer)
+
 if (${AVM_FUZZER} MATCHES "afl")
     add_compile_options(-fsanitize=address)
     add_link_options(-fsanitize=address)
