@@ -207,15 +207,15 @@ jobs:
             cd packages/arb-avm-cpp/debug-asan
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address ..
             cmake --build . -j 2
-      - run:
-          name: Test
-          command: |
-            echo 'leak:libtcmalloc.so' > /tmp/lsan-supressions
-            LSAN_OPTIONS=supressions=/tmp/lsan-supressions ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
-            lcov --capture --directory . --output-file coverage.info
-            lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
-            lcov --list coverage.info
-          working_directory: /home/user/project/packages/arb-avm-cpp/debug-asan
+      #- run:
+      #    name: Test
+      #    command: |
+      #      echo 'leak:libtcmalloc.so' > /tmp/lsan-supressions
+      #      LSAN_OPTIONS=supressions=/tmp/lsan-supressions ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+      #      lcov --capture --directory . --output-file coverage.info
+      #      lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
+      #      lcov --list coverage.info
+      #    working_directory: /home/user/project/packages/arb-avm-cpp/debug-asan
 
   cpp-avm-tsan:
     docker:
