@@ -205,13 +205,13 @@ jobs:
           command: |
             mkdir -p packages/arb-avm-cpp/debug-asan
             cd packages/arb-avm-cpp/debug-asan
-            echo 'leak:libtcmalloc.so' > /tmp/lsan-supressions
-            LSAN_OPTIONS=supressions=/tmp/lsan-supressions cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address ..
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address ..
             cmake --build . -j 2
       - run:
           name: Test
           command: |
-            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+            echo 'leak:libtcmalloc.so' > /tmp/lsan-supressions
+            LSAN_OPTIONS=supressions=/tmp/lsan-supressions ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
