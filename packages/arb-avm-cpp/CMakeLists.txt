@@ -46,17 +46,24 @@ cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release Re
 
 project (arb-avm-cpp)
 
-if (NOT CMAKE_BUILD_TYPE MATCHES Debug)
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT error)
+option(ENABLE_TCMALLOC "Build with TCMalloc support" OFF)
+option(ENABLE_GPROF "Build with GPerf profiling support" OFF)
+option(ENABLE_JEMALLOC "Build with JEMalloc support" OFF)
+option(ENABLE_LTO "Enable link time optimization" OFF)
 
-    if(LTO_SUPPORTED)
-        message(STATUS "LTO enabled")
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-    else()
-        message(STATUS "LTO not supported: <${error}>")
+if (ENABLE_LTO)
+    if (NOT CMAKE_BUILD_TYPE MATCHES Debug)
+        include(CheckIPOSupported)
+        check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT error)
+
+        if(LTO_SUPPORTED)
+            message(STATUS "LTO enabled")
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        else()
+            message(STATUS "LTO not supported: <${error}>")
+        endif()
     endif()
-endif()
+endif(NOT ENABLE_LTO)
 
 include(CTest)
 
@@ -67,9 +74,6 @@ set(AVM_VERSION_PATCH 0)
 set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_PATCH})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
-
-option(ENABLE_GPERFTOOLS "Build with GPerfTools support (including TCMalloc)" OFF)
-option(ENABLE_JEMALLOC "Build with JEMalloc support" OFF)
 
 set(AVM_FUZZER "" CACHE STRING "Build fuzzing target for the requested fuzzer")
 
