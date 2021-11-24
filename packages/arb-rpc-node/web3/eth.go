@@ -679,6 +679,22 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 	return snap, nil
 }
 
+func (s *Server) blockInfoForNumberOrHash(blockNum rpc.BlockNumberOrHash) (*machine.BlockInfo, error) {
+	if blockNum.BlockNumber != nil {
+		height, err := s.srv.BlockNum(blockNum.BlockNumber)
+		if err != nil {
+			return nil, err
+		}
+		return s.srv.BlockInfoByNumber(height)
+	}
+	if blockNum.BlockHash == nil {
+		return nil, errors.New("must specify block number or hash")
+	}
+	var blockHash arbcommon.Hash
+	copy(blockHash[:], blockNum.BlockHash[:])
+	return s.srv.BlockInfoByHash(blockHash)
+}
+
 func (s *Server) getSnapshotForNumberOrHash(blockNum rpc.BlockNumberOrHash) (*snapshot.Snapshot, error) {
 	if blockNum.BlockNumber != nil {
 		return s.getSnapshot(blockNum.BlockNumber)

@@ -338,27 +338,6 @@ func NewLogLineFromValue(d value.Value) (EVMLogLine, error) {
 	}
 }
 
-func GetTrace(debugPrints []value.Value) (*EVMTrace, error) {
-	var trace *EVMTrace
-	for _, debugPrint := range debugPrints {
-		parsedLog, err := NewLogLineFromValue(debugPrint)
-		if err != nil {
-			return nil, err
-		}
-		foundTrace, ok := parsedLog.(*EVMTrace)
-		if ok {
-			if trace != nil {
-				return nil, errors.New("found multiple traces")
-			}
-			trace = foundTrace
-		}
-	}
-	if trace == nil {
-		return nil, errors.New("found no trace")
-	}
-	return trace, nil
-}
-
 func GetTraceFromLogLines(logLines []EVMLogLine) (*EVMTrace, error) {
 	var trace *EVMTrace
 	for _, parsedLog := range logLines {

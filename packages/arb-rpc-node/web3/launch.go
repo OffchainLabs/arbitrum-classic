@@ -22,6 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
@@ -36,6 +37,10 @@ const (
 	GanacheMode
 	ForwardingOnlyMode
 	NonMutatingMode
+)
+
+var (
+	logger = log.With().Caller().Str("component", "web3").Logger()
 )
 
 type ServerConfig struct {
@@ -80,9 +85,6 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		if config.Tracing {
 			tracer := NewTracer(ethServer, coreConfig)
 			if err := s.RegisterName("trace", tracer); err != nil {
-				return nil, err
-			}
-			if err := s.RegisterName("debug", &Debug{srv: ethServer}); err != nil {
 				return nil, err
 			}
 		}
