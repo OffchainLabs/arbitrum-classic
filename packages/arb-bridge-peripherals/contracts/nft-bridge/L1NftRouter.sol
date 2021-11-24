@@ -18,8 +18,8 @@
 
 pragma solidity ^0.6.11;
 
-import "../../libraries/gateway/GatewayMessageHandler.sol";
-import "../L1ArbitrumMessenger.sol";
+import "../tokenbridge/libraries/gateway/GatewayMessageHandler.sol";
+import "../tokenbridge/ethereum/L1ArbitrumMessenger.sol";
 import "./L1NftGateway.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";

@@ -27,10 +27,10 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
-import "../../arbitrum/gateway/L2NftGateway.sol";
-import "../../libraries/gateway/GatewayMessageHandler.sol";
-import "../../libraries/Escrow721.sol";
-import "../L1ArbitrumMessenger.sol";
+import "./L2NftGateway.sol";
+import "../tokenbridge/libraries/gateway/GatewayMessageHandler.sol";
+import "../tokenbridge/libraries/Escrow721.sol";
+import "../tokenbridge/ethereum/L1ArbitrumMessenger.sol";
 import "./L1NftRouter.sol";
 
 /**
@@ -199,7 +199,7 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
     }
 
     function updateTokenUriToL2() external {
-        // TODO: take in batch
+        // TODO: allow permissionless updating of URI in L2
     }
 
     function getOutboundCalldata(

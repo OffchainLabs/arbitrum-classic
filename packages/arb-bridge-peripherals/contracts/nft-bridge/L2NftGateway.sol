@@ -23,11 +23,11 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
-import "../../libraries/Escrow721.sol";
-import "../../libraries/ClonableBeaconProxy.sol";
-import "../../ethereum/gateway/L1NftGateway.sol";
-import "../L2ArbitrumMessenger.sol";
-import "../StandardArbERC721.sol";
+import "../tokenbridge/libraries/Escrow721.sol";
+import "../tokenbridge/libraries/ClonableBeaconProxy.sol";
+import "./L1NftGateway.sol";
+import "../tokenbridge/arbitrum/L2ArbitrumMessenger.sol";
+import "./StandardArbERC721.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
@@ -36,9 +36,6 @@ contract L2NftGateway is L2ArbitrumMessenger, IERC721Receiver {
     address public counterpartGateway;
     address public router;
     address public beaconProxyFactory;
-    // TODO: be careful, these break through upgrades
-    bytes constant bytecode = type(Escrow721).creationCode;
-    bytes32 constant bytecodeHash = keccak256(type(Escrow721).creationCode);
 
     function initialize(
         address _counterpartGateway,
