@@ -211,7 +211,8 @@ jobs:
       - run:
           name: Test
           command: |
-            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+            echo 'leak:libtcmalloc' > /tmp/lsan-suppressions
+            LSAN_OPTIONS=suppressions=/tmp/lsan-suppressions ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
