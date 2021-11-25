@@ -91,15 +91,18 @@ elseif (${AVM_FUZZER} MATCHES "honggfuzz")
     add_link_options(-fsanitize=address)
 endif ()
 
-if(NOT arb_node_LINKER_LIBS)
-    set(arb_node_LINKER_LIBS "")
-endif()
 
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
 
+set(GPROF_LIBRARY "")
+set(MALLOC_LIBRARY "")
 set(ALT_MALLOC_FLAGS "-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
+
+if (ENABLE_JEMALLOC AND (ENABLE_GPROF OR ENABLE_TCMALLOC))
+        message(FATAL_ERROR " ENABLE_JEMALLOC cannot be defined while ENABLE_GPROF or ENABLE_TCMALLOC is defined")
+endif()
 
 if (ENABLE_GPROF)
     find_package(Gperftools REQUIRED)
@@ -107,9 +110,10 @@ if (ENABLE_GPROF)
     include_directories(${GPERFTOOLS_INCLUDE_DIR})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS} -g -pg")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS} -g -pg")
-    set(arb_node_LINKER_LIBS ${arb_node_LINKER_LIBS} ${GPERFTOOLS_PROFILER})
-    set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg")
-    set(ENABLE_TCMALLOC 1)
+    set(GPROF_LIBRARY ${GPERFTOOLS_PROFILER})
+    set(MALLOC_LIBRARY ${GPERFTOOLS_TCMALLOC})
+    set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg ")
+    set(ENABLE_TCMALLOC 0)
 endif (ENABLE_GPROF)
 
 if (ENABLE_TCMALLOC)
@@ -118,13 +122,10 @@ if (ENABLE_TCMALLOC)
     include_directories(${GPERFTOOLS_INCLUDE_DIR})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
-    set(arb_node_LINKER_LIBS ${arb_node_LINKER_LIBS} ${GPERFTOOLS_TCMALLOC})
+    set(MALLOC_LIBRARY ${GPERFTOOLS_TCMALLOC})
 endif (ENABLE_TCMALLOC)
 
 if (ENABLE_JEMALLOC)
-    if(GPERFTOOLS_FOUND OR ENABLE_TCMALLOC OR ENABLE_GPROF)
-        message(FATAL_ERROR " Only one of ENABLE_JEMALLOC and ENABLE_GPROF/ENABLE_TCMALLOC can be defined at once")
-    endif()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules (JEMALLOC REQUIRED jemalloc)
     message(STATUS "Building with jemalloc")
@@ -132,7 +133,7 @@ if (ENABLE_JEMALLOC)
     link_directories(${JEMALLOC_LIBRARY_DIRS})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
-    set(arb_node_LINKER_LIBS ${arb_node_LINKER_LIBS} ${JEMALLOC_LINK_LIBRARIES})
+    set(MALLOC_LIBRARY ${JEMALLOC_LINK_LIBRARIES})
 endif (ENABLE_JEMALLOC)
 
 # On macOS, search Homebrew for keg-only versions of OpenSSL
@@ -242,7 +243,8 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm" AND NOT AVM_FUZZER)
             " $<TARGET_LINKER_FILE:OpenSSL::Crypto>"
             " $<TARGET_LINKER_FILE:RocksDB::RocksDB>"
             " $<TARGET_LINKER_FILE:ethash::keccak>"
-            " ${arb_node_LINKER_LIBS}"
+            " ${GPROF_LIBRARY}"
+            " ${MALLOC_LIBRARY}"
             " ${GMP_LIBRARY}"
             " ${GMPXX_LIBRARY}"
         )
