@@ -1,7 +1,7 @@
 package cmachine
 
 /*
-#cgo CFLAGS: ${CFLAGS}
+#cgo CFLAGS: ${CFLAGS} -fno-omit-frame-pointer
 #cgo LDFLAGS: ${LDFLAGS} -lstdc++ -lm -ldl
 #cgo linux LDFLAGS: -latomic
 */
