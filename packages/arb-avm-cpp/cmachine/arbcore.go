@@ -90,20 +90,14 @@ func (ac *ArbCore) PrintCoreThreadBacktrace() {
 	C.arbCorePrintCoreThreadBacktrace(ac.c)
 }
 
+// Note: the slices field of the returned struct needs manually freed by C.free
 func sequencerBatchItemsToByteSliceArray(batchItems []inbox.SequencerBatchItem) C.struct_ByteSliceArrayStruct {
 	return bytesArrayToByteSliceArray(encodeSequencerBatchItems(batchItems))
 }
 
+// Note: the slices field of the returned struct needs manually freed by C.free
 func delayedMessagesToByteSliceArray(delayedMessages []inbox.DelayedMessage) C.struct_ByteSliceArrayStruct {
 	return bytesArrayToByteSliceArray(encodeDelayedMessages(delayedMessages))
-}
-
-func u256ArrayToByteSliceArray(nums []*big.Int) C.struct_ByteSliceArrayStruct {
-	var data [][]byte
-	for _, num := range nums {
-		data = append(data, math.U256Bytes(num))
-	}
-	return bytesArrayToByteSliceArray(data)
 }
 
 func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool {
@@ -111,7 +105,9 @@ func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBat
 	previousMessageCountPtr := unsafeDataPointer(math.U256Bytes(previousMessageCount))
 	previousSeqBatchAccPtr := unsafeDataPointer(previousSeqBatchAcc.Bytes())
 	seqBatchItemsSlice := sequencerBatchItemsToByteSliceArray(seqBatchItems)
+	defer C.free(seqBatchItemsSlice.slices)
 	delayedMessagesSlice := delayedMessagesToByteSliceArray(delayedMessages)
+	defer C.free(delayedMessagesSlice.slices)
 
 	var cReorgSeqBatchItemCount unsafe.Pointer
 	if reorgSeqBatchItemCount != nil {
