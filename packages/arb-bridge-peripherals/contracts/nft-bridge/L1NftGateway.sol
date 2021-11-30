@@ -55,16 +55,25 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
         inbox = _inbox;
     }
 
+    modifier onlyCounterpartGateway() {
+        address _inbox = inbox;
+
+        // a message coming from the counterpart gateway was executed by the bridge
+        address bridge = address(super.getBridge(_inbox));
+        require(msg.sender == bridge, "NOT_FROM_BRIDGE");
+
+        // and the outbox reports that the L2 address of the sender is the counterpart gateway
+        address l2ToL1Sender = super.getL2ToL1Sender(_inbox);
+        require(l2ToL1Sender == counterpartGateway, "ONLY_COUNTERPART_GATEWAY");
+        _;
+    }
+
     function finalizeWithdraw(
         address l1Token,
         uint256 tokenId,
         address to,
         bytes calldata data
-    ) external {
-        address _inbox = inbox;
-        IOutbox outbox = IOutbox(getBridge(_inbox).activeOutbox());
-        require(msg.sender == address(outbox), "NOT_OUTBOX");
-        L1ArbitrumMessenger.getL2ToL1Sender(_inbox);
+    ) external onlyCounterpartGateway {
         // TODO: implement tradeable exits?
         // TODO: what if NFT is L2 native?
 

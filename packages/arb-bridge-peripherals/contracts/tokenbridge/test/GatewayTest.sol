@@ -31,6 +31,9 @@ import "../arbitrum/gateway/L2ERC20Gateway.sol";
 import "../arbitrum/L2ArbitrumMessenger.sol";
 import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
+import "../../nft-bridge/L1NftGateway.sol";
+import "../../nft-bridge/L2NftGateway.sol";
+
 contract AddressMappingTest is L2ArbitrumMessenger {
     function getL1AddressTest(address sender) external pure returns (address l1Address) {
         return AddressAliasHelper.undoL1ToL2Alias(sender);
@@ -370,6 +373,64 @@ contract L1GatewayRouterTester is L1ArbitrumTestMessenger, L1GatewayRouter {
 }
 
 contract L2GatewayRouterTester is L2ArbitrumTestMessenger, L2GatewayRouter {
+    function sendTxToL1(
+        uint256 _l1CallValue,
+        address _from,
+        address _to,
+        bytes memory _data
+    ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
+        return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
+    }
+}
+
+contract L1NftGatewayTester is L1ArbitrumTestMessenger, L1NftGateway {
+    function sendTxToL2(
+        address _inbox,
+        address _to,
+        address _user,
+        uint256 _l1CallValue,
+        uint256 _l2CallValue,
+        uint256 _maxSubmissionCost,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes memory _data
+    ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
+        return
+            L1ArbitrumTestMessenger.sendTxToL2(
+                _inbox,
+                _to,
+                _user,
+                _l1CallValue,
+                _l2CallValue,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
+    }
+
+    function getL2ToL1Sender(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (address)
+    {
+        return L1ArbitrumTestMessenger.getL2ToL1Sender(_inbox);
+    }
+
+    function getBridge(address _inbox)
+        internal
+        view
+        virtual
+        override(L1ArbitrumMessenger, L1ArbitrumTestMessenger)
+        returns (IBridge)
+    {
+        return L1ArbitrumTestMessenger.getBridge(_inbox);
+    }
+}
+
+contract L2NftGatewayTester is L2ArbitrumTestMessenger, L2NftGateway {
     function sendTxToL1(
         uint256 _l1CallValue,
         address _from,
