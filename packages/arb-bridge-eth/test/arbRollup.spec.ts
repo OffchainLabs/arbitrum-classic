@@ -21,7 +21,7 @@ import { BigNumberish, BigNumber } from '@ethersproject/bignumber'
 import { BytesLike, hexConcat, zeroPad } from '@ethersproject/bytes'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { assert, expect } from 'chai'
-import { Challenge, RollupAdminFacet, RollupUserFacet } from '../build/types'
+import { Challenge, RollupAdminLogic, RollupUserLogic } from '../build/types'
 import { initializeAccounts } from './utils'
 
 import {
@@ -52,7 +52,7 @@ const sequencerDelaySeconds = 900
 const ZERO_ADDR = ethers.constants.AddressZero
 
 let rollup: RollupContract
-let rollupAdmin: RollupAdminFacet
+let rollupAdmin: RollupAdminLogic
 let accounts: Signer[]
 
 type RollupConfig = [
@@ -91,7 +91,7 @@ async function createRollup(
   shouldDebug = process.env['ROLLUP_DEBUG'] === '1',
   rollupConfig?: RollupConfig
 ): Promise<{
-  rollupCon: RollupUserFacet
+  rollupCon: RollupUserLogic
   blockCreated: number
 }> {
   if (!rollupConfig) rollupConfig = await getDefaultConfig()
@@ -131,11 +131,11 @@ async function createRollup(
   expect(ev.name).to.equal('RollupCreated')
   const parsedEv = ev as any as { args: { rollupAddress: string } }
 
-  const Rollup = (await ethers.getContractFactory('RollupUserFacet')).connect(
+  const Rollup = (await ethers.getContractFactory('RollupUserLogic')).connect(
     accounts[8]
   )
   const RollupAdmin = (
-    await ethers.getContractFactory('RollupAdminFacet')
+    await ethers.getContractFactory('RollupAdminLogic')
   ).connect(accounts[0])
 
   rollupAdmin = RollupAdmin.attach(parsedEv.args.rollupAddress)
@@ -337,7 +337,7 @@ describe('ArbRollup', () => {
     ).to.be.revertedWith('ALREADY_INIT')
   })
 
-  it('should validate facets in initialization', async function () {
+  it('should validate logics in initialization', async function () {
     const rollupCreator = await ethers.getContractAt(
       'RollupCreator',
       (
@@ -369,10 +369,10 @@ describe('ArbRollup', () => {
         [ZERO_ADDR, ZERO_ADDR],
         [0, 0]
       )
-    ).to.be.revertedWith('FACET_0_NOT_CONTRACT')
+    ).to.be.revertedWith('LOGIC_0_NOT_CONTRACT')
 
-    const adminFacet = await (
-      await ethers.getContractFactory('RollupAdminFacet')
+    const adminLogic = await (
+      await ethers.getContractFactory('RollupAdminLogic')
     ).deploy()
 
     await expect(
@@ -383,10 +383,10 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         zerobytes32,
         [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
-        [adminFacet.address, ZERO_ADDR],
+        [adminLogic.address, ZERO_ADDR],
         [0, 0]
       )
-    ).to.be.revertedWith('FACET_1_NOT_CONTRACT')
+    ).to.be.revertedWith('LOGIC_1_NOT_CONTRACT')
 
     await expect(
       freshRollup.initialize(
@@ -396,26 +396,26 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         zerobytes32,
         [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
-        [adminFacet.address, adminFacet.address],
+        [adminLogic.address, adminLogic.address],
         [0, 0]
       )
-    ).to.be.revertedWith('FAIL_INIT_FACET')
+    ).to.be.revertedWith('FAIL_INIT_LOGIC')
   })
 
-  it('should assign facets correctly', async function () {
-    const expectedAdmin = (await deployments.get('RollupAdminFacet')).address
-    const expectedUser = (await deployments.get('RollupUserFacet')).address
+  it('should assign logics correctly', async function () {
+    const expectedAdmin = (await deployments.get('RollupAdminLogic')).address
+    const expectedUser = (await deployments.get('RollupUserLogic')).address
 
     const RollupDispatch = await ethers.getContractFactory('Rollup')
     const rollupDispatch = RollupDispatch.attach(rollup.rollup.address)
 
-    const actualFacets = await rollupDispatch.getFacets()
+    const actualLogics = await rollupDispatch.getLogicContracts()
 
-    expect(actualFacets[0]).to.equal(expectedAdmin)
-    expect(actualFacets[1]).to.equal(expectedUser)
+    expect(actualLogics[0]).to.equal(expectedAdmin)
+    expect(actualLogics[1]).to.equal(expectedUser)
   })
 
-  it('should validate facets during dispatch', async function () {
+  it('should validate logics during dispatch', async function () {
     await expect(
       accounts[1].sendTransaction({
         to: rollup.rollup.address,
@@ -425,10 +425,10 @@ describe('ArbRollup', () => {
 
     const RollupDispatch = await ethers.getContractFactory('Rollup')
     const rollupDispatch = RollupDispatch.attach(rollup.rollup.address)
-    const initialFacets = await rollupDispatch.getFacets()
+    const initialLogics = await rollupDispatch.getLogicContracts()
 
-    // we set the user facet to address(0)
-    await rollupAdmin.setFacets(initialFacets[0], ZERO_ADDR)
+    // we set the user logic to address(0)
+    await rollupAdmin.setLogicContracts(initialLogics[0], ZERO_ADDR)
 
     await expect(
       accounts[1].sendTransaction({
@@ -437,8 +437,8 @@ describe('ArbRollup', () => {
       })
     ).to.be.revertedWith('TARGET_NOT_CONTRACT')
 
-    // reset user facet to original value
-    await rollupAdmin.setFacets(initialFacets[0], initialFacets[1])
+    // reset user logic to original value
+    await rollupAdmin.setLogicContracts(initialLogics[0], initialLogics[1])
   })
 
   it('should place stake', async function () {

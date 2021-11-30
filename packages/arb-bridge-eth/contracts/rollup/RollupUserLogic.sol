@@ -2,10 +2,10 @@
 
 pragma solidity ^0.6.11;
 
-import "../Rollup.sol";
-import "./IRollupFacets.sol";
+import "./Rollup.sol";
+import "./IRollupLogic.sol";
 
-abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
+abstract contract AbsRollupUserLogic is RollupBase, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
 
     modifier onlyValidator() {
@@ -560,7 +560,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function withdrawStakerFunds(address payable destination) external virtual returns (uint256);
 }
 
-contract RollupUserFacet is AbsRollupUserFacet {
+contract RollupUserLogic is AbsRollupUserLogic {
     function initialize(address _stakeToken) public override {
         require(_stakeToken == address(0), "NO_TOKEN_ALLOWED");
         // stakeToken = _stakeToken;
@@ -601,7 +601,7 @@ contract RollupUserFacet is AbsRollupUserFacet {
     }
 }
 
-contract ERC20RollupUserFacet is AbsRollupUserFacet {
+contract ERC20RollupUserLogic is AbsRollupUserLogic {
     function initialize(address _stakeToken) public override {
         require(_stakeToken != address(0), "NEED_STAKE_TOKEN");
         require(stakeToken == address(0), "ALREADY_INIT");

@@ -2,17 +2,17 @@
 
 pragma solidity ^0.6.11;
 
-import "../Rollup.sol";
-import "./IRollupFacets.sol";
-import "../../bridge/interfaces/IOutbox.sol";
-import "../../bridge/interfaces/ISequencerInbox.sol";
-import "../../libraries/Whitelist.sol";
+import "./Rollup.sol";
+import "./IRollupLogic.sol";
+import "../bridge/interfaces/IOutbox.sol";
+import "../bridge/interfaces/ISequencerInbox.sol";
+import "../libraries/Whitelist.sol";
 
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
-contract RollupAdminFacet is RollupBase, IRollupAdmin {
+contract RollupAdminLogic is RollupBase, IRollupAdmin {
     /**
-     * Functions are only to reach this facet if the caller is the owner
+     * Functions are only to reach this logic contract if the caller is the owner
      * so there is no need for a redundant onlyOwner check
      */
 
@@ -64,13 +64,13 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     }
 
     /**
-     * @notice Set the addresses of rollup logic facets called
-     * @param newAdminFacet address of logic that owner of rollup calls
-     * @param newUserFacet address of logic that user of rollup calls
+     * @notice Set the addresses of rollup logic contracts called
+     * @param newAdminLogic address of logic that owner of rollup calls
+     * @param newUserLogic address of logic that user of rollup calls
      */
-    function setFacets(address newAdminFacet, address newUserFacet) external override {
-        facets[0] = newAdminFacet;
-        facets[1] = newUserFacet;
+    function setLogicContracts(address newAdminLogic, address newUserLogic) external override {
+        logicContracts[0] = newAdminLogic;
+        logicContracts[1] = newUserLogic;
         emit OwnerFunctionCalled(5);
     }
 

@@ -40,7 +40,7 @@ import "../bridge/Messages.sol";
 
 import "../libraries/ProxyUtil.sol";
 import "../libraries/Cloneable.sol";
-import "./facets/IRollupFacets.sol";
+import "./IRollupLogic.sol";
 
 contract RollupBase is IRollupCore, Cloneable, Pausable {
     using SafeMath for uint256;
@@ -66,7 +66,7 @@ contract RollupBase is IRollupCore, Cloneable, Pausable {
     uint256 public STORAGE_GAP_2;
     uint256 public challengeExecutionBisectionDegree;
 
-    address[] internal facets;
+    address[] internal logicContracts;
 
     mapping(address => bool) isValidator;
 
@@ -682,18 +682,18 @@ contract Rollup is Proxy, RollupBase {
         address _owner,
         bytes calldata _extraConfig,
         address[6] calldata connectedContracts,
-        address[2] calldata _facets,
+        address[2] calldata _logicContracts,
         uint256[2] calldata sequencerInboxParams
     ) public {
         require(!isInit(), "ALREADY_INIT");
 
-        // calls initialize method in user facet
-        require(_facets[0].isContract(), "FACET_0_NOT_CONTRACT");
-        require(_facets[1].isContract(), "FACET_1_NOT_CONTRACT");
-        (bool success, ) = _facets[1].delegatecall(
+        // calls initialize method in user logic
+        require(_logicContracts[0].isContract(), "LOGIC_0_NOT_CONTRACT");
+        require(_logicContracts[1].isContract(), "LOGIC_1_NOT_CONTRACT");
+        (bool success, ) = _logicContracts[1].delegatecall(
             abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
         );
-        require(success, "FAIL_INIT_FACET");
+        require(success, "FAIL_INIT_LOGIC");
 
         delayedBridge = IBridge(connectedContracts[0]);
         sequencerBridge = ISequencerInbox(connectedContracts[1]);
@@ -726,8 +726,8 @@ contract Rollup is Proxy, RollupBase {
 
         sequencerBridge.setMaxDelay(sequencerInboxParams[0], sequencerInboxParams[1]);
 
-        // facets[0] == admin, facets[1] == user
-        facets = _facets;
+        // logicContracts[0] == admin, logicContracts[1] == user
+        logicContracts = _logicContracts;
 
         emit RollupCreated(_machineHash);
         require(isInit(), "INITIALIZE_NOT_INIT");
@@ -738,13 +738,6 @@ contract Rollup is Proxy, RollupBase {
         // this function can only be called by the proxy admin contract
         address proxyAdmin = ProxyUtil.getProxyAdmin();
         require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
-
-        // this upgrade moves the delay blocks and seconds tracking to the sequencer inbox
-        // because of that we need to update the admin facet logic to allow the owner to set
-        // these values in the sequencer inbox
-
-        STORAGE_GAP_1 = 0;
-        STORAGE_GAP_2 = 0;
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
@@ -774,20 +767,20 @@ contract Rollup is Proxy, RollupBase {
     }
 
     /**
-     * This contract uses a dispatch pattern from EIP-2535: Diamonds
-     * together with Open Zeppelin's proxy
+     * This contract uses a dispatch pattern to delegate call to the appropriate logic contract
+     * depending on the needed functionality.
      */
 
-    function getFacets() external view returns (address, address) {
-        return (getAdminFacet(), getUserFacet());
+    function getLogicContracts() external view returns (address, address) {
+        return (getAdminLogic(), getUserLogic());
     }
 
-    function getAdminFacet() public view returns (address) {
-        return facets[0];
+    function getAdminLogic() public view returns (address) {
+        return logicContracts[0];
     }
 
-    function getUserFacet() public view returns (address) {
-        return facets[1];
+    function getUserLogic() public view returns (address) {
+        return logicContracts[1];
     }
 
     /**
@@ -797,10 +790,10 @@ contract Rollup is Proxy, RollupBase {
     function _implementation() internal view virtual override returns (address) {
         require(msg.data.length >= 4, "NO_FUNC_SIG");
         address rollupOwner = owner;
-        // if there is an owner and it is the sender, delegate to admin facet
+        // if there is an owner and it is the sender, delegate to admin logic
         address target = rollupOwner != address(0) && rollupOwner == msg.sender
-            ? getAdminFacet()
-            : getUserFacet();
+            ? getAdminLogic()
+            : getUserLogic();
         require(target.isContract(), "TARGET_NOT_CONTRACT");
         return target;
     }
