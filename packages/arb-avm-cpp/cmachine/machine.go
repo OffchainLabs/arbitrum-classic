@@ -171,6 +171,7 @@ func (m *Machine) ExecuteAssertion(
 	)
 }
 
+// Note: the slices field of the returned struct needs manually freed by C.free
 func bytesArrayToByteSliceArray(bytes [][]byte) C.struct_ByteSliceArrayStruct {
 	byteSlices := encodeByteSliceList(bytes)
 	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
@@ -190,13 +191,12 @@ func (m *Machine) ExecuteAssertionAdvanced(
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	defer runtime.KeepAlive(m)
 	conf := C.machineExecutionConfigCreate()
+	defer C.machineExecutionConfigDestroy(conf)
 
 	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), boolToCInt(goOverGas))
 
 	msgData := bytesArrayToByteSliceArray(encodeMachineInboxMessages(messages))
 	defer C.free(msgData.slices)
-	C.machineExecutionConfigSetInboxMessages(conf, msgData)
-
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
 
 	sideloadsData := bytesArrayToByteSliceArray(encodeInboxMessages(sideloads))
