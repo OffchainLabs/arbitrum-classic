@@ -105,9 +105,9 @@ func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBat
 	previousMessageCountPtr := unsafeDataPointer(math.U256Bytes(previousMessageCount))
 	previousSeqBatchAccPtr := unsafeDataPointer(previousSeqBatchAcc.Bytes())
 	seqBatchItemsSlice := sequencerBatchItemsToByteSliceArray(seqBatchItems)
-	defer C.free(seqBatchItemsSlice.slices)
+	defer freeByteSliceArray(seqBatchItemsSlice)
 	delayedMessagesSlice := delayedMessagesToByteSliceArray(delayedMessages)
-	defer C.free(delayedMessagesSlice.slices)
+	defer freeByteSliceArray(delayedMessagesSlice)
 
 	var cReorgSeqBatchItemCount unsafe.Pointer
 	if reorgSeqBatchItemCount != nil {

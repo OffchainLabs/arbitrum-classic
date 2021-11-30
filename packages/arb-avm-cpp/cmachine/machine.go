@@ -171,17 +171,6 @@ func (m *Machine) ExecuteAssertion(
 	)
 }
 
-// Note: the slices field of the returned struct needs manually freed by C.free
-func bytesArrayToByteSliceArray(bytes [][]byte) C.struct_ByteSliceArrayStruct {
-	byteSlices := encodeByteSliceList(bytes)
-	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
-	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
-	for i, data := range byteSlices {
-		sliceArray[i] = data
-	}
-	return C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
-}
-
 func (m *Machine) ExecuteAssertionAdvanced(
 	maxGas uint64,
 	goOverGas bool,
@@ -196,11 +185,11 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), boolToCInt(goOverGas))
 
 	msgData := bytesArrayToByteSliceArray(encodeMachineInboxMessages(messages))
-	defer C.free(msgData.slices)
+	defer freeByteSliceArray(msgData)
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
 
 	sideloadsData := bytesArrayToByteSliceArray(encodeInboxMessages(sideloads))
-	defer C.free(sideloadsData.slices)
+	defer freeByteSliceArray(sideloadsData)
 	C.machineExecutionConfigSetSideloads(conf, sideloadsData)
 
 	C.machineExecutionConfigSetStopOnSideload(conf, boolToCInt(stopOnSideload))
