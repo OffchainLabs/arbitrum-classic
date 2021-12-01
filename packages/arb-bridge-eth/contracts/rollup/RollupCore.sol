@@ -181,11 +181,11 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
     /**
      * @notice Get the amount of funds withdrawable by the given address
-     * @param owner Address to check the funds of
-     * @return Amount of funds withdrawable by owner
+     * @param user Address to check the funds of
+     * @return Amount of funds withdrawable by user
      */
-    function withdrawableFunds(address owner) external view override returns (uint256) {
-        return _withdrawableFunds[owner];
+    function withdrawableFunds(address user) external view override returns (uint256) {
+        return _withdrawableFunds[user];
     }
 
     /**
