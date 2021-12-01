@@ -27,7 +27,7 @@
 #include <catch2/catch.hpp>
 
 void saveValue(ReadWriteTransaction& transaction,
-               const value& val,
+               const Value& val,
                uint32_t expected_ref_count,
                bool expected_status) {
     auto results = saveValue(transaction, val);
@@ -36,18 +36,18 @@ void saveValue(ReadWriteTransaction& transaction,
     REQUIRE(results.reference_count == expected_ref_count);
 }
 
-DbResult<value> getValue(const ReadTransaction& transaction,
-                         const value& value_target,
+DbResult<Value> getValue(const ReadTransaction& transaction,
+                         const Value& value_target,
                          uint32_t expected_ref_count,
                          bool expected_status,
                          ValueCache& value_cache) {
     auto res =
         getValue(transaction, hash_value(value_target), value_cache, false);
     if (expected_status) {
-        REQUIRE(std::holds_alternative<CountedData<value>>(res));
-        REQUIRE(std::get<CountedData<value>>(res).reference_count ==
+        REQUIRE(std::holds_alternative<CountedData<Value>>(res));
+        REQUIRE(std::get<CountedData<Value>>(res).reference_count ==
                 expected_ref_count);
-        REQUIRE(hash_value(std::get<CountedData<value>>(res).data) ==
+        REQUIRE(hash_value(std::get<CountedData<Value>>(res).data) ==
                 hash_value(value_target));
     } else {
         REQUIRE(std::holds_alternative<rocksdb::Status>(res));
@@ -56,18 +56,17 @@ DbResult<value> getValue(const ReadTransaction& transaction,
 }
 
 void getTuple(const ReadTransaction& transaction,
-              const value& val,
+              const Value& val,
               uint32_t expected_ref_count,
               bool expected_status,
               ValueCache& value_cache) {
     auto res = getValue(transaction, val, expected_ref_count, expected_status,
                         value_cache);
-    const auto& tuple = std::get<Tuple>(val);
+    const auto& tuple = get<Tuple>(val);
     if (expected_status) {
-        REQUIRE(std::holds_alternative<Tuple>(
-            std::get<CountedData<value>>(res).data));
-        REQUIRE(std::get<Tuple>(std::get<CountedData<value>>(res).data) ==
-                tuple);
+        REQUIRE(
+            holds_alternative<Tuple>(std::get<CountedData<Value>>(res).data));
+        REQUIRE(get<Tuple>(std::get<CountedData<Value>>(res).data) == tuple);
     }
 }
 
@@ -76,10 +75,10 @@ void getTupleValues(const ReadTransaction& transaction,
                     std::vector<uint256_t> value_hashes,
                     ValueCache& value_cache) {
     auto results = getValue(transaction, tuple_hash, value_cache, false);
-    REQUIRE(std::holds_alternative<CountedData<value>>(results));
-    auto val = std::get<CountedData<value>>(results).data;
-    REQUIRE(std::holds_alternative<Tuple>(val));
-    auto tuple = std::get<Tuple>(val);
+    REQUIRE(std::holds_alternative<CountedData<Value>>(results));
+    auto val = std::get<CountedData<Value>>(results).data;
+    REQUIRE(holds_alternative<Tuple>(val));
+    auto tuple = get<Tuple>(val);
     REQUIRE(tuple.tuple_size() == value_hashes.size());
 
     for (size_t i = 0; i < value_hashes.size(); i++) {
@@ -127,7 +126,7 @@ TEST_CASE("Save tuple") {
     }
     SECTION("saved tuple in tuple") {
         uint256_t num = 1;
-        value inner_tuple = Tuple::createTuple(num);
+        Value inner_tuple = Tuple::createTuple(num);
         auto tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, tuple, 1, true);
         saveValue(*transaction, tuple, 2, true);
@@ -192,17 +191,17 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash(tuple), hashes, value_cache);
     }
     SECTION("save nested tuple") {
-        value inner_tuple = Tuple();
-        value tuple = Tuple::createTuple(inner_tuple);
+        Value inner_tuple = Tuple();
+        Value tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash_value(inner_tuple)};
         getTupleValues(*transaction, hash_value(tuple), hashes, value_cache);
     }
     SECTION("save multiple valued tuple") {
         CodePointStub code_point_stub({0, 1}, 654546);
-        value inner_tuple = Tuple();
+        Value inner_tuple = Tuple();
         uint256_t num = 1;
-        value tuple = Tuple(inner_tuple, num, code_point_stub);
+        Value tuple = Tuple(inner_tuple, num, code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash_value(inner_tuple), hash(num),
                                       hash(code_point_stub)};
@@ -295,7 +294,7 @@ TEST_CASE("Save And Get Tuple") {
         auto transaction2 = storage.makeReadWriteTransaction();
         uint256_t num = 4;
         Tuple inner_tuple = Tuple::createTuple(num);
-        value tuple = Tuple::createTuple(inner_tuple);
+        Value tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, inner_tuple, 1, true);
         getTuple(*transaction, inner_tuple, 1, true, value_cache);
         saveValue(*transaction, tuple, 1, true);
@@ -320,7 +319,7 @@ TEST_CASE("Checkpoint Benchmark") {
     ArbStorage storage(dbpath, coreConfig);
     auto transaction = storage.makeReadWriteTransaction();
     uint256_t num = 1;
-    value tuple = Tuple::createTuple(num);
+    Value tuple = Tuple::createTuple(num);
     for (uint64_t i = 1; i < 100000; i++) {
         tuple = Tuple::createTuple(tuple);
     }
