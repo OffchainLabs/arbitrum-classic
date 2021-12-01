@@ -38,8 +38,6 @@ import "../bridge/interfaces/ISequencerInbox.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IOutbox.sol";
 
-// import "../bridge/Messages.sol";
-
 abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     using SafeMath for uint256;
 
@@ -67,7 +65,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     IRollupAdmin public adminLogic;
     IRollupUser public userLogic;
 
-    mapping(address => bool) isValidator;
+    mapping(address => bool) public isValidator;
 
     // Stakers become Zombies after losing a challenge
     struct Zombie {
