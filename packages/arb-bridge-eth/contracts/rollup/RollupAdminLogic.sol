@@ -10,7 +10,7 @@ import "../libraries/Whitelist.sol";
 
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
-contract RollupAdminLogic is RollupBase, IRollupAdmin {
+contract RollupAdminLogic is RollupCore, IRollupAdmin {
     /**
      * Functions are only to reach this logic contract if the caller is the owner
      * so there is no need for a redundant onlyOwner check

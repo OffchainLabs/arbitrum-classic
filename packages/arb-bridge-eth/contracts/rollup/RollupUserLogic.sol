@@ -5,7 +5,7 @@ pragma solidity ^0.6.11;
 import "./Rollup.sol";
 import "./IRollupLogic.sol";
 
-abstract contract AbsRollupUserLogic is RollupBase, IRollupUser {
+abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
 
     modifier onlyValidator() {
