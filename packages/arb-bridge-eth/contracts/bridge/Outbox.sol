@@ -134,7 +134,7 @@ contract Outbox is IOutbox, Cloneable {
      * @notice Executes a messages in an Outbox entry.
      * @dev Reverts if dispute period hasn't expired, since the outbox entry
      * is only created once the rollup confirms the respective assertion.
-     * @param batchNum Number of target OutboxEntry
+     * @param batchNum Index of OutboxEntry in outboxEntries array
      * @param proof Merkle proof of message inclusion in outbox entry
      * @param merklePath Merkle path to message
      * @param l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)
