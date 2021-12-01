@@ -48,6 +48,7 @@
     "@openzeppelin/contracts-upgradeable": "3.4.2"
   },
   "devDependencies": {
+    "arb-upgrades": "0.0.1",
     "dotenv": "^10.0.0",
     "ethers": "^5.4.0",
     "hardhat-deploy": "^0.9.1",

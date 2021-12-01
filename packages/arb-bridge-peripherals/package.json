@@ -27,6 +27,7 @@
     "arb-bridge-eth": "0.7.2"
   },
   "devDependencies": {
+    "arb-upgrades": "0.0.1",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.0",
     "@types/chai": "^4.2.15",
