@@ -243,9 +243,6 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if snap.ArbosVersion() >= 42 && (args.GasPrice == nil || args.GasPrice.ToInt().Sign() <= 0) {
-		args.GasPrice = (*hexutil.Big)(big.NewInt(1 << 60))
-	}
 	from, tx := buildTransactionForEstimation(args)
 	var agg arbcommon.Address
 	if args.Aggregator != nil {
