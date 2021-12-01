@@ -31,7 +31,7 @@ const _abi = [
       {
         indexed: false,
         internalType: 'uint256',
-        name: 'transactionIndex',
+        name: 'merklePath',
         type: 'uint256',
       },
     ],

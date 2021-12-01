@@ -24,9 +24,11 @@ interface ArbAggregatorInterface extends ethers.utils.Interface {
     'getDefaultAggregator()': FunctionFragment
     'getFeeCollector(address)': FunctionFragment
     'getPreferredAggregator(address)': FunctionFragment
+    'getTxBaseFee(address)': FunctionFragment
     'setDefaultAggregator(address)': FunctionFragment
     'setFeeCollector(address,address)': FunctionFragment
     'setPreferredAggregator(address)': FunctionFragment
+    'setTxBaseFee(address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -41,6 +43,7 @@ interface ArbAggregatorInterface extends ethers.utils.Interface {
     functionFragment: 'getPreferredAggregator',
     values: [string]
   ): string
+  encodeFunctionData(functionFragment: 'getTxBaseFee', values: [string]): string
   encodeFunctionData(
     functionFragment: 'setDefaultAggregator',
     values: [string]
@@ -52,6 +55,10 @@ interface ArbAggregatorInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'setPreferredAggregator',
     values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'setTxBaseFee',
+    values: [string, BigNumberish]
   ): string
 
   decodeFunctionResult(
@@ -67,6 +74,10 @@ interface ArbAggregatorInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'getTxBaseFee',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'setDefaultAggregator',
     data: BytesLike
   ): Result
@@ -76,6 +87,10 @@ interface ArbAggregatorInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'setPreferredAggregator',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'setTxBaseFee',
     data: BytesLike
   ): Result
 
@@ -138,6 +153,11 @@ export class ArbAggregator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[string, boolean]>
 
+    getTxBaseFee(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
+
     setDefaultAggregator(
       newDefault: string,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -153,6 +173,12 @@ export class ArbAggregator extends BaseContract {
       prefAgg: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
+
+    setTxBaseFee(
+      aggregator: string,
+      feeInL1Gas: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
   }
 
   getDefaultAggregator(overrides?: CallOverrides): Promise<string>
@@ -166,6 +192,11 @@ export class ArbAggregator extends BaseContract {
     addr: string,
     overrides?: CallOverrides
   ): Promise<[string, boolean]>
+
+  getTxBaseFee(
+    aggregator: string,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
 
   setDefaultAggregator(
     newDefault: string,
@@ -183,6 +214,12 @@ export class ArbAggregator extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  setTxBaseFee(
+    aggregator: string,
+    feeInL1Gas: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   callStatic: {
     getDefaultAggregator(overrides?: CallOverrides): Promise<string>
 
@@ -195,6 +232,11 @@ export class ArbAggregator extends BaseContract {
       addr: string,
       overrides?: CallOverrides
     ): Promise<[string, boolean]>
+
+    getTxBaseFee(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     setDefaultAggregator(
       newDefault: string,
@@ -209,6 +251,12 @@ export class ArbAggregator extends BaseContract {
 
     setPreferredAggregator(
       prefAgg: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    setTxBaseFee(
+      aggregator: string,
+      feeInL1Gas: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
   }
@@ -228,6 +276,11 @@ export class ArbAggregator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    getTxBaseFee(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     setDefaultAggregator(
       newDefault: string,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -241,6 +294,12 @@ export class ArbAggregator extends BaseContract {
 
     setPreferredAggregator(
       prefAgg: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
+    setTxBaseFee(
+      aggregator: string,
+      feeInL1Gas: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
   }
@@ -260,6 +319,11 @@ export class ArbAggregator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    getTxBaseFee(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     setDefaultAggregator(
       newDefault: string,
       overrides?: Overrides & { from?: string | Promise<string> }
@@ -273,6 +337,12 @@ export class ArbAggregator extends BaseContract {
 
     setPreferredAggregator(
       prefAgg: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
+    setTxBaseFee(
+      aggregator: string,
+      feeInL1Gas: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
   }

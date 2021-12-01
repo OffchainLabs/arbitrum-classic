@@ -301,9 +301,21 @@ declare module 'hardhat/types/runtime' {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestArbCustomToken__factory>
     getContractFactory(
+      name: 'TestBytesParser',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TestBytesParser__factory>
+    getContractFactory(
       name: 'TestCustomTokenL1',
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestCustomTokenL1__factory>
+    getContractFactory(
+      name: 'Bytes32ERC20',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Bytes32ERC20__factory>
+    getContractFactory(
+      name: 'Bytes32ERC20WithMetadata',
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Bytes32ERC20WithMetadata__factory>
     getContractFactory(
       name: 'TestERC20',
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -678,10 +690,25 @@ declare module 'hardhat/types/runtime' {
       signer?: ethers.Signer
     ): Promise<Contracts.TestArbCustomToken>
     getContractAt(
+      name: 'TestBytesParser',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TestBytesParser>
+    getContractAt(
       name: 'TestCustomTokenL1',
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.TestCustomTokenL1>
+    getContractAt(
+      name: 'Bytes32ERC20',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Bytes32ERC20>
+    getContractAt(
+      name: 'Bytes32ERC20WithMetadata',
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Bytes32ERC20WithMetadata>
     getContractAt(
       name: 'TestERC20',
       address: string,

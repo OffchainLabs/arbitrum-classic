@@ -58,12 +58,27 @@ const _abi = [
       },
       {
         internalType: 'uint256',
-        name: 'maxGas',
+        name: 'maxGasForCustomBridge',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxGasForRouter',
         type: 'uint256',
       },
       {
         internalType: 'uint256',
         name: 'gasPriceBid',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'valueForGateway',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'valueForRouter',
         type: 'uint256',
       },
       {
@@ -74,7 +89,7 @@ const _abi = [
     ],
     name: 'registerTokenOnL2',
     outputs: [],
-    stateMutability: 'nonpayable',
+    stateMutability: 'payable',
     type: 'function',
   },
   {

@@ -75,6 +75,24 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: 'bytes32',
+        name: 'which',
+        type: 'bytes32',
+      },
+      {
+        internalType: 'uint256',
+        name: 'value',
+        type: 'uint256',
+      },
+    ],
+    name: 'createChainParameter',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
         internalType: 'bytes',
         name: 'constructorData',
         type: 'bytes',
@@ -164,18 +182,19 @@ const _abi = [
     type: 'function',
   },
   {
-    inputs: [],
-    name: 'getFeeRecipients',
+    inputs: [
+      {
+        internalType: 'bytes32',
+        name: 'which',
+        type: 'bytes32',
+      },
+    ],
+    name: 'getChainParameter',
     outputs: [
       {
-        internalType: 'address',
+        internalType: 'uint256',
         name: '',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: '',
-        type: 'address',
+        type: 'uint256',
       },
     ],
     stateMutability: 'view',
@@ -205,19 +224,6 @@ const _abi = [
       },
     ],
     stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'newOwnerAddr',
-        type: 'address',
-      },
-    ],
-    name: 'giveOwnership',
-    outputs: [],
-    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -272,6 +278,37 @@ const _abi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'serializeAllParameters',
+    outputs: [
+      {
+        internalType: 'bytes',
+        name: '',
+        type: 'bytes',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'bytes32',
+        name: 'which',
+        type: 'bytes32',
+      },
+      {
+        internalType: 'uint256',
+        name: 'value',
+        type: 'uint256',
+      },
+    ],
+    name: 'setChainParameter',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -292,79 +329,12 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'address',
-        name: 'netFeeRecipient',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: 'congestionFeeRecipient',
-        type: 'address',
-      },
-    ],
-    name: 'setFeeRecipients',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'bool',
-        name: 'enabled',
-        type: 'bool',
-      },
-    ],
-    name: 'setFeesEnabled',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'uint256',
-        name: 'speedLimitPerBlock',
-        type: 'uint256',
-      },
-      {
-        internalType: 'uint256',
-        name: 'gasPoolMax',
-        type: 'uint256',
-      },
-      {
-        internalType: 'uint256',
-        name: 'maxTxGasLimit',
-        type: 'uint256',
-      },
-    ],
-    name: 'setGasAccountingParams',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
         internalType: 'uint256',
         name: 'priceInGwei',
         type: 'uint256',
       },
     ],
     name: 'setL1GasPriceEstimate',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'uint256',
-        name: 'blocksPerSend',
-        type: 'uint256',
-      },
-    ],
-    name: 'setSecondsPerSend',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

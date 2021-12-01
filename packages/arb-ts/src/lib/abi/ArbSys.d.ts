@@ -83,17 +83,11 @@ interface ArbSysInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'withdrawEth', data: BytesLike): Result
 
   events: {
-    'EthWithdrawal(address,uint256)': EventFragment
     'L2ToL1Transaction(address,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bytes)': EventFragment
   }
 
-  getEvent(nameOrSignatureOrTopic: 'EthWithdrawal'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'L2ToL1Transaction'): EventFragment
 }
-
-export type EthWithdrawalEvent = TypedEvent<
-  [string, BigNumber] & { destAddr: string; amount: BigNumber }
->
 
 export type L2ToL1TransactionEvent = TypedEvent<
   [
@@ -259,22 +253,6 @@ export class ArbSys extends BaseContract {
   }
 
   filters: {
-    'EthWithdrawal(address,uint256)'(
-      destAddr?: string | null,
-      amount?: null
-    ): TypedEventFilter<
-      [string, BigNumber],
-      { destAddr: string; amount: BigNumber }
-    >
-
-    EthWithdrawal(
-      destAddr?: string | null,
-      amount?: null
-    ): TypedEventFilter<
-      [string, BigNumber],
-      { destAddr: string; amount: BigNumber }
-    >
-
     'L2ToL1Transaction(address,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bytes)'(
       caller?: null,
       destination?: string | null,

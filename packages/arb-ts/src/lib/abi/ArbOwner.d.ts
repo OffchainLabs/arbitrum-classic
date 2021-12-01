@@ -28,24 +28,22 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     'allowOnlyOwnerToSend()': FunctionFragment
     'bindAddressToPluggable(address,uint256)': FunctionFragment
     'continueCodeUpload(bytes)': FunctionFragment
+    'createChainParameter(bytes32,uint256)': FunctionFragment
     'deployContract(bytes,address,uint256)': FunctionFragment
     'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)': FunctionFragment
     'finishCodeUploadAsPluggable(uint256,bool)': FunctionFragment
     'getAllAllowedSenders()': FunctionFragment
     'getAllFairGasPriceSenders()': FunctionFragment
-    'getFeeRecipients()': FunctionFragment
+    'getChainParameter(bytes32)': FunctionFragment
     'getTotalOfEthBalances()': FunctionFragment
     'getUploadedCodeHash()': FunctionFragment
-    'giveOwnership(address)': FunctionFragment
     'isAllowedSender(address)': FunctionFragment
     'isFairGasPriceSender(address)': FunctionFragment
     'removeAllowedSender(address)': FunctionFragment
+    'serializeAllParameters()': FunctionFragment
+    'setChainParameter(bytes32,uint256)': FunctionFragment
     'setFairGasPriceSender(address,bool)': FunctionFragment
-    'setFeeRecipients(address,address)': FunctionFragment
-    'setFeesEnabled(bool)': FunctionFragment
-    'setGasAccountingParams(uint256,uint256,uint256)': FunctionFragment
     'setL1GasPriceEstimate(uint256)': FunctionFragment
-    'setSecondsPerSend(uint256)': FunctionFragment
     'startCodeUpload()': FunctionFragment
   }
 
@@ -74,6 +72,10 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     values: [BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'createChainParameter',
+    values: [BytesLike, BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'deployContract',
     values: [BytesLike, string, BigNumberish]
   ): string
@@ -94,8 +96,8 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'getFeeRecipients',
-    values?: undefined
+    functionFragment: 'getChainParameter',
+    values: [BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'getTotalOfEthBalances',
@@ -104,10 +106,6 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'getUploadedCodeHash',
     values?: undefined
-  ): string
-  encodeFunctionData(
-    functionFragment: 'giveOwnership',
-    values: [string]
   ): string
   encodeFunctionData(
     functionFragment: 'isAllowedSender',
@@ -122,27 +120,19 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     values: [string]
   ): string
   encodeFunctionData(
+    functionFragment: 'serializeAllParameters',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'setChainParameter',
+    values: [BytesLike, BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'setFairGasPriceSender',
     values: [string, boolean]
   ): string
   encodeFunctionData(
-    functionFragment: 'setFeeRecipients',
-    values: [string, string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'setFeesEnabled',
-    values: [boolean]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'setGasAccountingParams',
-    values: [BigNumberish, BigNumberish, BigNumberish]
-  ): string
-  encodeFunctionData(
     functionFragment: 'setL1GasPriceEstimate',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'setSecondsPerSend',
     values: [BigNumberish]
   ): string
   encodeFunctionData(
@@ -175,6 +165,10 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'createChainParameter',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'deployContract',
     data: BytesLike
   ): Result
@@ -195,7 +189,7 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'getFeeRecipients',
+    functionFragment: 'getChainParameter',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -204,10 +198,6 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'getUploadedCodeHash',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'giveOwnership',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -223,27 +213,19 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'serializeAllParameters',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'setChainParameter',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'setFairGasPriceSender',
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'setFeeRecipients',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setFeesEnabled',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setGasAccountingParams',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
     functionFragment: 'setL1GasPriceEstimate',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'setSecondsPerSend',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -326,6 +308,12 @@ export class ArbOwner extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    createChainParameter(
+      which: BytesLike,
+      value: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     deployContract(
       constructorData: BytesLike,
       deemedSender: string,
@@ -349,16 +337,14 @@ export class ArbOwner extends BaseContract {
 
     getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<[string]>
 
-    getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
+    getChainParameter(
+      which: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
 
     getTotalOfEthBalances(overrides?: CallOverrides): Promise<[BigNumber]>
 
     getUploadedCodeHash(overrides?: CallOverrides): Promise<[string]>
-
-    giveOwnership(
-      newOwnerAddr: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
 
     isAllowedSender(addr: string, overrides?: CallOverrides): Promise<[boolean]>
 
@@ -372,37 +358,22 @@ export class ArbOwner extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
+    serializeAllParameters(overrides?: CallOverrides): Promise<[string]>
+
+    setChainParameter(
+      which: BytesLike,
+      value: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>
+
     setFairGasPriceSender(
       addr: string,
       isFairGasPriceSender: boolean,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
-    setFeeRecipients(
-      netFeeRecipient: string,
-      congestionFeeRecipient: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    setFeesEnabled(
-      enabled: boolean,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    setGasAccountingParams(
-      speedLimitPerBlock: BigNumberish,
-      gasPoolMax: BigNumberish,
-      maxTxGasLimit: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
     setL1GasPriceEstimate(
       priceInGwei: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>
-
-    setSecondsPerSend(
-      blocksPerSend: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
@@ -439,6 +410,12 @@ export class ArbOwner extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  createChainParameter(
+    which: BytesLike,
+    value: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   deployContract(
     constructorData: BytesLike,
     deemedSender: string,
@@ -462,16 +439,14 @@ export class ArbOwner extends BaseContract {
 
   getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<string>
 
-  getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
+  getChainParameter(
+    which: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
 
   getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
 
   getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
-
-  giveOwnership(
-    newOwnerAddr: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
 
   isAllowedSender(addr: string, overrides?: CallOverrides): Promise<boolean>
 
@@ -485,37 +460,22 @@ export class ArbOwner extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
+  serializeAllParameters(overrides?: CallOverrides): Promise<string>
+
+  setChainParameter(
+    which: BytesLike,
+    value: BigNumberish,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>
+
   setFairGasPriceSender(
     addr: string,
     isFairGasPriceSender: boolean,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
-  setFeeRecipients(
-    netFeeRecipient: string,
-    congestionFeeRecipient: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  setFeesEnabled(
-    enabled: boolean,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  setGasAccountingParams(
-    speedLimitPerBlock: BigNumberish,
-    gasPoolMax: BigNumberish,
-    maxTxGasLimit: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
   setL1GasPriceEstimate(
     priceInGwei: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>
-
-  setSecondsPerSend(
-    blocksPerSend: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
@@ -543,6 +503,12 @@ export class ArbOwner extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    createChainParameter(
+      which: BytesLike,
+      value: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     deployContract(
       constructorData: BytesLike,
       deemedSender: string,
@@ -566,16 +532,14 @@ export class ArbOwner extends BaseContract {
 
     getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<string>
 
-    getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
+    getChainParameter(
+      which: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
 
     getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
-
-    giveOwnership(
-      newOwnerAddr: string,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     isAllowedSender(addr: string, overrides?: CallOverrides): Promise<boolean>
 
@@ -586,34 +550,22 @@ export class ArbOwner extends BaseContract {
 
     removeAllowedSender(addr: string, overrides?: CallOverrides): Promise<void>
 
+    serializeAllParameters(overrides?: CallOverrides): Promise<string>
+
+    setChainParameter(
+      which: BytesLike,
+      value: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     setFairGasPriceSender(
       addr: string,
       isFairGasPriceSender: boolean,
       overrides?: CallOverrides
     ): Promise<void>
 
-    setFeeRecipients(
-      netFeeRecipient: string,
-      congestionFeeRecipient: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    setFeesEnabled(enabled: boolean, overrides?: CallOverrides): Promise<void>
-
-    setGasAccountingParams(
-      speedLimitPerBlock: BigNumberish,
-      gasPoolMax: BigNumberish,
-      maxTxGasLimit: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     setL1GasPriceEstimate(
       priceInGwei: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    setSecondsPerSend(
-      blocksPerSend: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -651,6 +603,12 @@ export class ArbOwner extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    createChainParameter(
+      which: BytesLike,
+      value: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     deployContract(
       constructorData: BytesLike,
       deemedSender: string,
@@ -674,16 +632,14 @@ export class ArbOwner extends BaseContract {
 
     getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<BigNumber>
 
-    getFeeRecipients(overrides?: CallOverrides): Promise<BigNumber>
+    getChainParameter(
+      which: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
 
     getUploadedCodeHash(overrides?: CallOverrides): Promise<BigNumber>
-
-    giveOwnership(
-      newOwnerAddr: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
 
     isAllowedSender(addr: string, overrides?: CallOverrides): Promise<BigNumber>
 
@@ -697,37 +653,22 @@ export class ArbOwner extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
+    serializeAllParameters(overrides?: CallOverrides): Promise<BigNumber>
+
+    setChainParameter(
+      which: BytesLike,
+      value: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>
+
     setFairGasPriceSender(
       addr: string,
       isFairGasPriceSender: boolean,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
-    setFeeRecipients(
-      netFeeRecipient: string,
-      congestionFeeRecipient: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    setFeesEnabled(
-      enabled: boolean,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    setGasAccountingParams(
-      speedLimitPerBlock: BigNumberish,
-      gasPoolMax: BigNumberish,
-      maxTxGasLimit: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
     setL1GasPriceEstimate(
       priceInGwei: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>
-
-    setSecondsPerSend(
-      blocksPerSend: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
@@ -765,6 +706,12 @@ export class ArbOwner extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
+    createChainParameter(
+      which: BytesLike,
+      value: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
     deployContract(
       constructorData: BytesLike,
       deemedSender: string,
@@ -792,7 +739,10 @@ export class ArbOwner extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    getFeeRecipients(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    getChainParameter(
+      which: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
 
     getTotalOfEthBalances(
       overrides?: CallOverrides
@@ -800,11 +750,6 @@ export class ArbOwner extends BaseContract {
 
     getUploadedCodeHash(
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    giveOwnership(
-      newOwnerAddr: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     isAllowedSender(
@@ -822,37 +767,24 @@ export class ArbOwner extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
+    serializeAllParameters(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    setChainParameter(
+      which: BytesLike,
+      value: BigNumberish,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>
+
     setFairGasPriceSender(
       addr: string,
       isFairGasPriceSender: boolean,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
-    setFeeRecipients(
-      netFeeRecipient: string,
-      congestionFeeRecipient: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    setFeesEnabled(
-      enabled: boolean,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    setGasAccountingParams(
-      speedLimitPerBlock: BigNumberish,
-      gasPoolMax: BigNumberish,
-      maxTxGasLimit: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
     setL1GasPriceEstimate(
       priceInGwei: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>
-
-    setSecondsPerSend(
-      blocksPerSend: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 

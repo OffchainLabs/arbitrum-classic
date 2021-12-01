@@ -67,6 +67,25 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
+        name: 'aggregator',
+        type: 'address',
+      },
+    ],
+    name: 'getTxBaseFee',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
         name: 'newDefault',
         type: 'address',
       },
@@ -103,6 +122,24 @@ const _abi = [
       },
     ],
     name: 'setPreferredAggregator',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'aggregator',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'feeInL1Gas',
+        type: 'uint256',
+      },
+    ],
+    name: 'setTxBaseFee',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

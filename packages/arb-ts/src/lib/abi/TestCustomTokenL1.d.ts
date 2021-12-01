@@ -12,6 +12,7 @@ import {
   BaseContract,
   ContractTransaction,
   Overrides,
+  PayableOverrides,
   CallOverrides,
 } from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
@@ -34,7 +35,7 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
     'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
-    'registerTokenOnL2(address,uint256,uint256,uint256,uint256,address)': FunctionFragment
+    'registerTokenOnL2(address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)': FunctionFragment
     'router()': FunctionFragment
     'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
@@ -89,6 +90,9 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     functionFragment: 'registerTokenOnL2',
     values: [
       string,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
       BigNumberish,
       BigNumberish,
       BigNumberish,
@@ -288,10 +292,13 @@ export class TestCustomTokenL1 extends BaseContract {
       l2CustomTokenAddress: string,
       maxSubmissionCostForCustomBridge: BigNumberish,
       maxSubmissionCostForRouter: BigNumberish,
-      maxGas: BigNumberish,
+      maxGasForCustomBridge: BigNumberish,
+      maxGasForRouter: BigNumberish,
       gasPriceBid: BigNumberish,
+      valueForGateway: BigNumberish,
+      valueForRouter: BigNumberish,
       creditBackAddress: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     router(overrides?: CallOverrides): Promise<[string]>
@@ -378,10 +385,13 @@ export class TestCustomTokenL1 extends BaseContract {
     l2CustomTokenAddress: string,
     maxSubmissionCostForCustomBridge: BigNumberish,
     maxSubmissionCostForRouter: BigNumberish,
-    maxGas: BigNumberish,
+    maxGasForCustomBridge: BigNumberish,
+    maxGasForRouter: BigNumberish,
     gasPriceBid: BigNumberish,
+    valueForGateway: BigNumberish,
+    valueForRouter: BigNumberish,
     creditBackAddress: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   router(overrides?: CallOverrides): Promise<string>
@@ -466,8 +476,11 @@ export class TestCustomTokenL1 extends BaseContract {
       l2CustomTokenAddress: string,
       maxSubmissionCostForCustomBridge: BigNumberish,
       maxSubmissionCostForRouter: BigNumberish,
-      maxGas: BigNumberish,
+      maxGasForCustomBridge: BigNumberish,
+      maxGasForRouter: BigNumberish,
       gasPriceBid: BigNumberish,
+      valueForGateway: BigNumberish,
+      valueForRouter: BigNumberish,
       creditBackAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
@@ -596,10 +609,13 @@ export class TestCustomTokenL1 extends BaseContract {
       l2CustomTokenAddress: string,
       maxSubmissionCostForCustomBridge: BigNumberish,
       maxSubmissionCostForRouter: BigNumberish,
-      maxGas: BigNumberish,
+      maxGasForCustomBridge: BigNumberish,
+      maxGasForRouter: BigNumberish,
       gasPriceBid: BigNumberish,
+      valueForGateway: BigNumberish,
+      valueForRouter: BigNumberish,
       creditBackAddress: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     router(overrides?: CallOverrides): Promise<BigNumber>
@@ -693,10 +709,13 @@ export class TestCustomTokenL1 extends BaseContract {
       l2CustomTokenAddress: string,
       maxSubmissionCostForCustomBridge: BigNumberish,
       maxSubmissionCostForRouter: BigNumberish,
-      maxGas: BigNumberish,
+      maxGasForCustomBridge: BigNumberish,
+      maxGasForRouter: BigNumberish,
       gasPriceBid: BigNumberish,
+      valueForGateway: BigNumberish,
+      valueForRouter: BigNumberish,
       creditBackAddress: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>

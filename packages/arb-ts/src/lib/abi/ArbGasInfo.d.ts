@@ -22,7 +22,9 @@ interface ArbGasInfoInterface extends ethers.utils.Interface {
   functions: {
     'getGasAccountingParams()': FunctionFragment
     'getPricesInArbGas()': FunctionFragment
+    'getPricesInArbGasWithAggregator(address)': FunctionFragment
     'getPricesInWei()': FunctionFragment
+    'getPricesInWeiWithAggregator(address)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -34,8 +36,16 @@ interface ArbGasInfoInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'getPricesInArbGasWithAggregator',
+    values: [string]
+  ): string
+  encodeFunctionData(
     functionFragment: 'getPricesInWei',
     values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getPricesInWeiWithAggregator',
+    values: [string]
   ): string
 
   decodeFunctionResult(
@@ -47,7 +57,15 @@ interface ArbGasInfoInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'getPricesInArbGasWithAggregator',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'getPricesInWei',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'getPricesInWeiWithAggregator',
     data: BytesLike
   ): Result
 
@@ -106,7 +124,19 @@ export class ArbGasInfo extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber, BigNumber]>
 
+    getPricesInArbGasWithAggregator(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber, BigNumber]>
+
     getPricesInWei(
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, BigNumber, BigNumber, BigNumber]
+    >
+
+    getPricesInWeiWithAggregator(
+      aggregator: string,
       overrides?: CallOverrides
     ): Promise<
       [BigNumber, BigNumber, BigNumber, BigNumber, BigNumber, BigNumber]
@@ -121,7 +151,17 @@ export class ArbGasInfo extends BaseContract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, BigNumber, BigNumber]>
 
+  getPricesInArbGasWithAggregator(
+    aggregator: string,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, BigNumber, BigNumber]>
+
   getPricesInWei(
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, BigNumber, BigNumber, BigNumber, BigNumber, BigNumber]>
+
+  getPricesInWeiWithAggregator(
+    aggregator: string,
     overrides?: CallOverrides
   ): Promise<[BigNumber, BigNumber, BigNumber, BigNumber, BigNumber, BigNumber]>
 
@@ -134,7 +174,19 @@ export class ArbGasInfo extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber, BigNumber]>
 
+    getPricesInArbGasWithAggregator(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber, BigNumber]>
+
     getPricesInWei(
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, BigNumber, BigNumber, BigNumber]
+    >
+
+    getPricesInWeiWithAggregator(
+      aggregator: string,
       overrides?: CallOverrides
     ): Promise<
       [BigNumber, BigNumber, BigNumber, BigNumber, BigNumber, BigNumber]
@@ -148,7 +200,17 @@ export class ArbGasInfo extends BaseContract {
 
     getPricesInArbGas(overrides?: CallOverrides): Promise<BigNumber>
 
+    getPricesInArbGasWithAggregator(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     getPricesInWei(overrides?: CallOverrides): Promise<BigNumber>
+
+    getPricesInWeiWithAggregator(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -158,6 +220,16 @@ export class ArbGasInfo extends BaseContract {
 
     getPricesInArbGas(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
+    getPricesInArbGasWithAggregator(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     getPricesInWei(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    getPricesInWeiWithAggregator(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
   }
 }

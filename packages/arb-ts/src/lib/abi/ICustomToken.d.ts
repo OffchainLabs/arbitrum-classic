@@ -12,6 +12,7 @@ import {
   BaseContract,
   ContractTransaction,
   Overrides,
+  PayableOverrides,
   CallOverrides,
 } from 'ethers'
 import { BytesLike } from '@ethersproject/bytes'
@@ -23,7 +24,7 @@ interface ICustomTokenInterface extends ethers.utils.Interface {
   functions: {
     'balanceOf(address)': FunctionFragment
     'isArbitrumEnabled()': FunctionFragment
-    'registerTokenOnL2(address,uint256,uint256,uint256,uint256,address)': FunctionFragment
+    'registerTokenOnL2(address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,address)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
   }
 
@@ -36,6 +37,9 @@ interface ICustomTokenInterface extends ethers.utils.Interface {
     functionFragment: 'registerTokenOnL2',
     values: [
       string,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
       BigNumberish,
       BigNumberish,
       BigNumberish,
@@ -117,10 +121,13 @@ export class ICustomToken extends BaseContract {
       l2CustomTokenAddress: string,
       maxSubmissionCostForCustomBridge: BigNumberish,
       maxSubmissionCostForRouter: BigNumberish,
-      maxGas: BigNumberish,
+      maxGasForCustomBridge: BigNumberish,
+      maxGasForRouter: BigNumberish,
       gasPriceBid: BigNumberish,
+      valueForGateway: BigNumberish,
+      valueForRouter: BigNumberish,
       creditBackAddress: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
 
     transferFrom(
@@ -139,10 +146,13 @@ export class ICustomToken extends BaseContract {
     l2CustomTokenAddress: string,
     maxSubmissionCostForCustomBridge: BigNumberish,
     maxSubmissionCostForRouter: BigNumberish,
-    maxGas: BigNumberish,
+    maxGasForCustomBridge: BigNumberish,
+    maxGasForRouter: BigNumberish,
     gasPriceBid: BigNumberish,
+    valueForGateway: BigNumberish,
+    valueForRouter: BigNumberish,
     creditBackAddress: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
+    overrides?: PayableOverrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
 
   transferFrom(
@@ -161,8 +171,11 @@ export class ICustomToken extends BaseContract {
       l2CustomTokenAddress: string,
       maxSubmissionCostForCustomBridge: BigNumberish,
       maxSubmissionCostForRouter: BigNumberish,
-      maxGas: BigNumberish,
+      maxGasForCustomBridge: BigNumberish,
+      maxGasForRouter: BigNumberish,
       gasPriceBid: BigNumberish,
+      valueForGateway: BigNumberish,
+      valueForRouter: BigNumberish,
       creditBackAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
@@ -186,10 +199,13 @@ export class ICustomToken extends BaseContract {
       l2CustomTokenAddress: string,
       maxSubmissionCostForCustomBridge: BigNumberish,
       maxSubmissionCostForRouter: BigNumberish,
-      maxGas: BigNumberish,
+      maxGasForCustomBridge: BigNumberish,
+      maxGasForRouter: BigNumberish,
       gasPriceBid: BigNumberish,
+      valueForGateway: BigNumberish,
+      valueForRouter: BigNumberish,
       creditBackAddress: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
 
     transferFrom(
@@ -212,10 +228,13 @@ export class ICustomToken extends BaseContract {
       l2CustomTokenAddress: string,
       maxSubmissionCostForCustomBridge: BigNumberish,
       maxSubmissionCostForRouter: BigNumberish,
-      maxGas: BigNumberish,
+      maxGasForCustomBridge: BigNumberish,
+      maxGasForRouter: BigNumberish,
       gasPriceBid: BigNumberish,
+      valueForGateway: BigNumberish,
+      valueForRouter: BigNumberish,
       creditBackAddress: string,
-      overrides?: Overrides & { from?: string | Promise<string> }
+      overrides?: PayableOverrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
 
     transferFrom(

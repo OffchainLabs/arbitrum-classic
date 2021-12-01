@@ -196,7 +196,7 @@ export type OutBoxTransactionExecutedEvent = TypedEvent<
     destAddr: string
     l2Sender: string
     outboxEntryIndex: BigNumber
-    transactionIndex: BigNumber
+    merklePath: BigNumber
   }
 >
 
@@ -272,7 +272,7 @@ export class OldOutbox extends BaseContract {
 
     calculateMerkleRoot(
       proof: BytesLike[],
-      path: BigNumberish,
+      merklePath: BigNumberish,
       item: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string]>
@@ -280,7 +280,7 @@ export class OldOutbox extends BaseContract {
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
-      index: BigNumberish,
+      merklePath: BigNumberish,
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
@@ -348,7 +348,7 @@ export class OldOutbox extends BaseContract {
 
   calculateMerkleRoot(
     proof: BytesLike[],
-    path: BigNumberish,
+    merklePath: BigNumberish,
     item: BytesLike,
     overrides?: CallOverrides
   ): Promise<string>
@@ -356,7 +356,7 @@ export class OldOutbox extends BaseContract {
   executeTransaction(
     outboxIndex: BigNumberish,
     proof: BytesLike[],
-    index: BigNumberish,
+    merklePath: BigNumberish,
     l2Sender: string,
     destAddr: string,
     l2Block: BigNumberish,
@@ -424,7 +424,7 @@ export class OldOutbox extends BaseContract {
 
     calculateMerkleRoot(
       proof: BytesLike[],
-      path: BigNumberish,
+      merklePath: BigNumberish,
       item: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
@@ -432,7 +432,7 @@ export class OldOutbox extends BaseContract {
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
-      index: BigNumberish,
+      merklePath: BigNumberish,
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
@@ -486,14 +486,14 @@ export class OldOutbox extends BaseContract {
       destAddr?: string | null,
       l2Sender?: string | null,
       outboxEntryIndex?: BigNumberish | null,
-      transactionIndex?: null
+      merklePath?: null
     ): TypedEventFilter<
       [string, string, BigNumber, BigNumber],
       {
         destAddr: string
         l2Sender: string
         outboxEntryIndex: BigNumber
-        transactionIndex: BigNumber
+        merklePath: BigNumber
       }
     >
 
@@ -501,14 +501,14 @@ export class OldOutbox extends BaseContract {
       destAddr?: string | null,
       l2Sender?: string | null,
       outboxEntryIndex?: BigNumberish | null,
-      transactionIndex?: null
+      merklePath?: null
     ): TypedEventFilter<
       [string, string, BigNumber, BigNumber],
       {
         destAddr: string
         l2Sender: string
         outboxEntryIndex: BigNumber
-        transactionIndex: BigNumber
+        merklePath: BigNumber
       }
     >
 
@@ -563,7 +563,7 @@ export class OldOutbox extends BaseContract {
 
     calculateMerkleRoot(
       proof: BytesLike[],
-      path: BigNumberish,
+      merklePath: BigNumberish,
       item: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -571,7 +571,7 @@ export class OldOutbox extends BaseContract {
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
-      index: BigNumberish,
+      merklePath: BigNumberish,
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
@@ -640,7 +640,7 @@ export class OldOutbox extends BaseContract {
 
     calculateMerkleRoot(
       proof: BytesLike[],
-      path: BigNumberish,
+      merklePath: BigNumberish,
       item: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -648,7 +648,7 @@ export class OldOutbox extends BaseContract {
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
-      index: BigNumberish,
+      merklePath: BigNumberish,
       l2Sender: string,
       destAddr: string,
       l2Block: BigNumberish,
