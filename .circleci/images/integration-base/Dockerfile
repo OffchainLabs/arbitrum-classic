@@ -21,8 +21,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/yarnkey.gpg >/dev/null && \
     echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | sudo tee /etc/apt/sources.list.d/yarn.list && \
     apt-get update && sudo apt-get install yarn && \
-    curl https://dl.google.com/go/go1.15.2.linux-amd64.tar.gz --output go1.15.2.linux-amd64.tar.gz && \
-    tar -xf go1.15.2.linux-amd64.tar.gz && \
+    curl https://dl.google.com/go/go1.17.3.linux-amd64.tar.gz --output go1.17.3.linux-amd64.tar.gz && \
+    tar -xf go1.17.3.linux-amd64.tar.gz && \
     mv go /usr/local && \
     useradd -ms /bin/bash user
 USER user
