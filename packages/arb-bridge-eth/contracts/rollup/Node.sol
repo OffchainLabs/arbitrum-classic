@@ -17,55 +17,57 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "./INode.sol";
-import "../libraries/Cloneable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract Node is Cloneable, INode {
-    using SafeMath for uint256;
-
+struct Node {
     /// @notice Hash of the state of the chain as of this node
-    bytes32 public override stateHash;
+    bytes32 stateHash;
 
     /// @notice Hash of the data that can be challenged
-    bytes32 public override challengeHash;
+    bytes32 challengeHash;
 
     /// @notice Hash of the data that will be committed if this node is confirmed
-    bytes32 public override confirmData;
+    bytes32 confirmData;
 
     /// @notice Index of the node previous to this one
-    uint256 public override prev;
+    uint256 prev;
 
     /// @notice Deadline at which this node can be confirmed
-    uint256 public override deadlineBlock;
+    uint256 deadlineBlock;
 
     /// @notice Deadline at which a child of this node can be confirmed
-    uint256 public override noChildConfirmedBeforeBlock;
+    uint256 noChildConfirmedBeforeBlock;
 
     /// @notice Number of stakers staked on this node. This includes real stakers and zombies
-    uint256 public override stakerCount;
+    uint256 stakerCount;
 
     /// @notice Mapping of the stakers staked on this node with true if they are staked. This includes real stakers and zombies
-    mapping(address => bool) public override stakers;
+    mapping(address => bool) stakers;
 
     /// @notice Address of the rollup contract to which this node belongs
-    address public rollup;
+    address rollup;
 
     /// @notice This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed or the owner destroys pending nodes
-    uint256 public override firstChildBlock;
+    uint256 firstChildBlock;
 
     /// @notice The number of the latest child of this node to be created
-    uint256 public override latestChildNumber;
+    uint256 latestChildNumber;
+}
 
-    modifier onlyRollup() {
-        require(msg.sender == rollup, "ROLLUP_ONLY");
-        _;
-    }
+library NodeOps {
+    using SafeMath for uint256;
+
+    // CHRIS: no longer necessary
+    // modifier onlyRollup() {
+    //     require(msg.sender == rollup, "ROLLUP_ONLY");
+    //     _;
+    // }
 
     /**
      * @notice Mark the given staker as staked on this node
-     * @param _rollup Initial value of rollup
      * @param _stateHash Initial value of stateHash
      * @param _challengeHash Initial value of challengeHash
      * @param _confirmData Initial value of confirmData
@@ -73,75 +75,91 @@ contract Node is Cloneable, INode {
      * @param _deadlineBlock Initial value of deadlineBlock
      */
     function initialize(
-        address _rollup,
         bytes32 _stateHash,
         bytes32 _challengeHash,
         bytes32 _confirmData,
         uint256 _prev,
         uint256 _deadlineBlock
-    ) external override {
-        require(_rollup != address(0), "ROLLUP_ADDR");
-        require(rollup == address(0), "ALREADY_INIT");
-        rollup = _rollup;
-        stateHash = _stateHash;
-        challengeHash = _challengeHash;
-        confirmData = _confirmData;
-        prev = _prev;
-        deadlineBlock = _deadlineBlock;
-        noChildConfirmedBeforeBlock = _deadlineBlock;
+    ) internal returns (Node memory) {
+        // CHRIS: remove this function?
+        Node memory node;
+        node.stateHash = _stateHash;
+        node.challengeHash = _challengeHash;
+        node.confirmData = _confirmData;
+        node.prev = _prev;
+        node.deadlineBlock = _deadlineBlock;
+        node.noChildConfirmedBeforeBlock = _deadlineBlock;
+        return node;
     }
 
+    // CHRIS: updates to docs re Node contract
+
+    // destroy by removing from the mapping? we used to keep the address there
+    // CHRIS:check usages of destroy again
     /**
      * @notice Destroy this node
      */
-    function destroy() external override onlyRollup {
-        safeSelfDestruct(msg.sender);
-    }
+    // function destroy() external override onlyRollup {
+    //     safeSelfDestruct(msg.sender);
+    // }
+
+
+    // CHRIS: shouldn't all the Node be passed by storage instead of memory?
+    // CHRIS: we want to update in place don't we? check the passing/copying semantics
+
+    // CHRIS: check usages of each of these functions - they were protected before so we need to make sure they're not publicly accessible
 
     /**
      * @notice Mark the given staker as staked on this node
      * @param staker Address of the staker to mark
      * @return The number of stakers after adding this one
      */
-    function addStaker(address staker) external override onlyRollup returns (uint256) {
-        require(!stakers[staker], "ALREADY_STAKED");
-        stakers[staker] = true;
-        stakerCount++;
-        return stakerCount;
+    function addStaker(Node storage self, address staker) internal returns (uint256) {
+        require(!self.stakers[staker], "ALREADY_STAKED");
+        self.stakers[staker] = true;
+        self.stakerCount++;
+        return self.stakerCount;
     }
+
+    // CHRIS: all the functions in here should be internal
 
     /**
      * @notice Remove the given staker from this node
      * @param staker Address of the staker to remove
      */
-    function removeStaker(address staker) external override onlyRollup {
-        require(stakers[staker], "NOT_STAKED");
-        stakers[staker] = false;
-        stakerCount--;
+    function removeStaker(Node storage self, address staker) internal {
+        require(self.stakers[staker], "NOT_STAKED");
+        self.stakers[staker] = false;
+        self.stakerCount--;
     }
 
-    function childCreated(uint256 number) external override onlyRollup {
-        if (firstChildBlock == 0) {
-            firstChildBlock = block.number;
+    function childCreated(Node memory self, uint256 number) internal {
+        if (self.firstChildBlock == 0) {
+            self.firstChildBlock = block.number;
         }
-        latestChildNumber = number;
+        self.latestChildNumber = number;
     }
 
-    function newChildConfirmDeadline(uint256 deadline) external override onlyRollup {
-        noChildConfirmedBeforeBlock = deadline;
+    // CHRIS: we should have docs on each of these
+    // CHRIS: should we have tests on any of these?
+
+    function newChildConfirmDeadline(Node storage self, uint256 deadline) internal {
+        self.noChildConfirmedBeforeBlock = deadline;
     }
+
+    // CHRIS: update to view/pure where applicable?
 
     /**
      * @notice Check whether the current block number has met or passed the node's deadline
      */
-    function requirePastDeadline() external view override {
-        require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
+    function requirePastDeadline(Node memory self) internal view {
+        require(block.number >= self.deadlineBlock, "BEFORE_DEADLINE");
     }
 
     /**
      * @notice Check whether the current block number has met or passed deadline for children of this node to be confirmed
      */
-    function requirePastChildConfirmDeadline() external view override {
-        require(block.number >= noChildConfirmedBeforeBlock, "CHILD_TOO_RECENT");
+    function requirePastChildConfirmDeadline(Node memory self) internal view {
+        require(block.number >= self.noChildConfirmedBeforeBlock, "CHILD_TOO_RECENT");
     }
 }

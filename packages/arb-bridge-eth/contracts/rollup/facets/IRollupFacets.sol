@@ -32,7 +32,7 @@ interface IRollupUser {
 
     function requireUnresolvedExists() external view;
 
-    function countStakedZombies(INode node) external view returns (uint256);
+    function countStakedZombies(uint256 nodeNum) external view returns (uint256);
 }
 
 interface IRollupAdmin {

@@ -16,14 +16,18 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.6.11;
+// pragma solidity ^0.6.11;
+// pragma experimental ABIEncoderV2;
 
-interface INodeFactory {
-    function createNode(
-        bytes32 _stateHash,
-        bytes32 _challengeHash,
-        bytes32 _confirmData,
-        uint256 _prev,
-        uint256 _deadlineBlock
-    ) external returns (address);
-}
+// // CHRIS: not good to be importing a Node
+// import "./Node.sol";
+
+// interface INodeFactory {
+//     function createNode(
+//         bytes32 _stateHash,
+//         bytes32 _challengeHash,
+//         bytes32 _confirmData,
+//         uint256 _prev,
+//         uint256 _deadlineBlock
+//     ) external returns (Node memory);
+// }

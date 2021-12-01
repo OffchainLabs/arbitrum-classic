@@ -18,6 +18,7 @@
 
 pragma solidity ^0.6.11;
 
+// CHRIS: remove all traces of INode
 interface INode {
     function initialize(
         address _rollup,

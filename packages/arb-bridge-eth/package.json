@@ -18,7 +18,7 @@
   },
   "scripts": {
     "build": "hardhat compile",
-    "test": "hardhat test test/*.spec.ts",
+    "test": "hardhat test test/*.spec.ts --show-stack-traces",
     "test:ci": "CI=true yarn test",
     "test:gas": "REPORT_GAS=true yarn test",
     "test:fork": "SHOULD_FORK=1 hardhat test test/*.fork.ts",

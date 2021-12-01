@@ -104,16 +104,17 @@ contract ValidatorUtils {
 
     function requireRejectable(Rollup rollup) external view returns (bool) {
         IRollupUser(address(rollup)).requireUnresolvedExists();
-        INode node = rollup.getNode(rollup.firstUnresolvedNode());
-        bool inOrder = node.prev() == rollup.latestConfirmed();
+        uint256 nodeNum = rollup.firstUnresolvedNode();
+        bool inOrder = rollup.getPrevNodeNum(nodeNum) == rollup.latestConfirmed();
         if (inOrder) {
             // Verify the block's deadline has passed
-            require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
-            rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
+            require(block.number >= rollup.nodeDeadlineBlock(nodeNum), "BEFORE_DEADLINE");
+            // CHRIS: was this done correctly
+            rollup.nodeRequirePastChildConfirmDeadline(rollup.getPrevNodeNum(nodeNum));
 
             // Verify that no staker is staked on this node
             require(
-                node.stakerCount() == IRollupUser(address(rollup)).countStakedZombies(node),
+                rollup.nodeStakerCount(nodeNum) == IRollupUser(address(rollup)).countStakedZombies(nodeNum),
                 "HAS_STAKERS"
             );
         }
@@ -128,17 +129,16 @@ contract ValidatorUtils {
         require(stakerCount > 0, "NO_STAKERS");
 
         uint256 firstUnresolved = rollup.firstUnresolvedNode();
-        INode node = rollup.getNode(firstUnresolved);
 
         // Verify the block's deadline has passed
-        node.requirePastDeadline();
-        rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
+        rollup.nodeRequirePastDeadline(firstUnresolved);
+        rollup.nodeRequirePastChildConfirmDeadline(rollup.getPrevNodeNum(firstUnresolved));
 
         // Check that prev is latest confirmed
-        require(node.prev() == rollup.latestConfirmed(), "INVALID_PREV");
+        require(rollup.getPrevNodeNum(firstUnresolved) == rollup.latestConfirmed(), "INVALID_PREV");
         require(
-            node.stakerCount() ==
-                stakerCount + IRollupUser(address(rollup)).countStakedZombies(node),
+            rollup.nodeStakerCount(firstUnresolved) ==
+                stakerCount + IRollupUser(address(rollup)).countStakedZombies(firstUnresolved),
             "NOT_ALL_STAKED"
         );
     }
@@ -177,8 +177,8 @@ contract ValidatorUtils {
         uint256[] memory nodes = new uint256[](100000);
         uint256 index = 0;
         for (uint256 i = rollup.latestConfirmed(); i <= rollup.latestNodeCreated(); i++) {
-            INode node = rollup.getNode(i);
-            if (node.stakers(staker)) {
+            // CHRIS: this has just become very expensive by doing an additional storage lookup for the node every time
+            if (rollup.nodeHasStaker(i, staker)) {
                 nodes[index] = i;
                 index++;
             }
@@ -205,8 +205,8 @@ contract ValidatorUtils {
         )
     {
         uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        uint256 node1Prev = rollup.getNode(node1).prev();
-        uint256 node2Prev = rollup.getNode(node2).prev();
+        uint256 node1Prev = rollup.getPrevNodeNum(node1);
+        uint256 node2Prev = rollup.getPrevNodeNum(node2);
 
         for (uint256 i = 0; i < maxDepth; i++) {
             if (node1 == node2) {
@@ -220,10 +220,10 @@ contract ValidatorUtils {
             }
             if (node1Prev < node2Prev) {
                 node2 = node2Prev;
-                node2Prev = rollup.getNode(node2).prev();
+                node2Prev = rollup.getPrevNodeNum(node2);
             } else {
                 node1 = node1Prev;
-                node1Prev = rollup.getNode(node1).prev();
+                node1Prev = rollup.getPrevNodeNum(node1);
             }
         }
         return (NodeConflict.INCOMPLETE, node1, node2);
@@ -281,7 +281,7 @@ contract ValidatorUtils {
     function areUnresolvedNodesLinear(Rollup rollup) external view returns (bool) {
         uint256 end = rollup.latestNodeCreated();
         for (uint256 i = rollup.firstUnresolvedNode(); i <= end; i++) {
-            if (i > 0 && rollup.getNode(i).prev() != i - 1) {
+            if (i > 0 && rollup.getPrevNodeNum(i) != i - 1) {
                 return false;
             }
         }

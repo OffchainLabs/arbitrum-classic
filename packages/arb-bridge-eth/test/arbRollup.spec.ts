@@ -293,13 +293,13 @@ const initNewRollup = async () => {
 }
 
 describe('ArbRollup', () => {
-  it('should deploy contracts', async function () {
+  it.only('should deploy contracts', async function () {
     accounts = await initializeAccounts()
 
     await run('deploy', { tags: 'test' })
   })
 
-  it('should initialize', async function () {
+  it.only('should initialize', async function () {
     rollup = await initNewRollup()
   })
 
@@ -330,7 +330,7 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         ZERO_ADDR,
         zerobytes32,
-        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
         [ZERO_ADDR, ZERO_ADDR],
         [0, 0]
       )
@@ -365,7 +365,7 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         ZERO_ADDR,
         zerobytes32,
-        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
         [ZERO_ADDR, ZERO_ADDR],
         [0, 0]
       )
@@ -382,7 +382,7 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         ZERO_ADDR,
         zerobytes32,
-        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
         [adminFacet.address, ZERO_ADDR],
         [0, 0]
       )
@@ -395,7 +395,7 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         ZERO_ADDR,
         zerobytes32,
-        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
         [adminFacet.address, adminFacet.address],
         [0, 0]
       )
@@ -441,7 +441,7 @@ describe('ArbRollup', () => {
     await rollupAdmin.setFacets(initialFacets[0], initialFacets[1])
   })
 
-  it('should place stake', async function () {
+  it.only('should place stake', async function () {
     const stake = await rollup.currentRequiredStake()
     const tx = await rollup.newStake({ value: stake })
     const receipt = await tx.wait()
@@ -455,7 +455,7 @@ describe('ArbRollup', () => {
     expect(blockCreated).to.equal(receipt.blockNumber)
   })
 
-  it('should place stake on new node', async function () {
+  it.only('should place stake on new node', async function () {
     await tryAdvanceChain(minimumAssertionPeriod)
     const { node } = await makeSimpleNode(rollup, prevNode)
     prevNode = node
@@ -467,7 +467,7 @@ describe('ArbRollup', () => {
     await rollup.connect(accounts[1]).stakeOnExistingNode(1, prevNode.nodeHash)
   })
 
-  it('should move stake to a new node', async function () {
+  it.only('should move stake to a new node', async function () {
     await tryAdvanceChain(minimumAssertionPeriod)
     const { node } = await makeSimpleNode(rollup, prevNode)
     prevNode = node

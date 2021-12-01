@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "../Rollup.sol";
 import "./IRollupFacets.sol";
@@ -290,8 +291,8 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
                 confirmPeriodBlocks: confirmPeriodBlocks,
                 prevNode: prevNode,
                 sequencerInbox: sequencerBridge,
-                rollupEventBridge: rollupEventBridge,
-                nodeFactory: nodeFactory
+                rollupEventBridge: rollupEventBridge
+                // nodeFactory: nodeFactory
             }),
             expectedNodeHash
         );

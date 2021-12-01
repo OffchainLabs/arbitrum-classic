@@ -19,6 +19,10 @@
 pragma solidity ^0.6.11;
 
 import "./INode.sol";
+// CHRIS: It's not good to be importing the node.sol
+import "./Node.sol";
+
+pragma experimental ABIEncoderV2;
 
 interface IRollupCore {
     function _stakerMap(address stakerAddress)
@@ -71,7 +75,8 @@ interface IRollupCore {
         uint256 finalBalance
     );
 
-    function getNode(uint256 nodeNum) external view returns (INode);
+    // CHRIS: put this back in
+    // function getNode(uint256 nodeNum) external view returns (Node memory);
 
     /**
      * @notice Get the address of the staker at the given index
