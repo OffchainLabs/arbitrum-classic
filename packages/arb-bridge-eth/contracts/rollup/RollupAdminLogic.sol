@@ -285,14 +285,7 @@ contract RollupAdminLogic is RollupCore, IRollupAdmin {
             assertionBytes32Fields,
             assertionIntFields,
             sequencerBatchProof,
-            CreateNodeDataFrame({
-                avmGasSpeedLimitPerBlock: avmGasSpeedLimitPerBlock,
-                confirmPeriodBlocks: confirmPeriodBlocks,
-                prevNode: prevNode,
-                sequencerInbox: sequencerBridge,
-                rollupEventBridge: rollupEventBridge,
-                nodeFactory: nodeFactory
-            }),
+            prevNode,
             expectedNodeHash
         );
 
@@ -316,9 +309,7 @@ contract RollupAdminLogic is RollupCore, IRollupAdmin {
             sendLengths,
             afterSendCount,
             afterLogAcc,
-            afterLogCount,
-            outbox,
-            rollupEventBridge
+            afterLogCount
         );
         emit OwnerFunctionCalled(24);
     }

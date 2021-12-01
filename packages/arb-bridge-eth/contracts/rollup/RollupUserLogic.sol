@@ -82,7 +82,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
 
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
-
+        uint256 nodeNum = firstUnresolvedNode();
         INode node = getNode(firstUnresolvedNode());
 
         // Verify the block's deadline has passed
@@ -101,15 +101,14 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             "NOT_ALL_STAKED"
         );
 
-        confirmNextNode(
+        confirmNode(
+            nodeNum,
             beforeSendAcc,
             sendsData,
             sendLengths,
             afterSendCount,
             afterLogAcc,
-            afterLogCount,
-            outbox,
-            rollupEventBridge
+            afterLogCount
         );
     }
 
@@ -147,7 +146,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         );
         INode node = getNode(nodeNum);
         require(latestStakedNode(msg.sender) == node.prev(), "NOT_STAKED_PREV");
-        stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
+        stakeOnNode(msg.sender, nodeNum);
     }
 
     /**
@@ -209,18 +208,11 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             assertionBytes32Fields,
             assertionIntFields,
             sequencerBatchProof,
-            CreateNodeDataFrame({
-                avmGasSpeedLimitPerBlock: avmGasSpeedLimitPerBlock,
-                confirmPeriodBlocks: confirmPeriodBlocks,
-                prevNode: latestStakedNode(msg.sender), // Ensure staker is staked on the previous node
-                sequencerInbox: sequencerBridge,
-                rollupEventBridge: rollupEventBridge,
-                nodeFactory: nodeFactory
-            }),
+            latestStakedNode(msg.sender), // Ensure staker is staked on the previous node
             expectedNodeHash
         );
 
-        stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
+        stakeOnNode(msg.sender, latestNodeCreated());
     }
 
     /**
