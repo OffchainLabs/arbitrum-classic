@@ -219,10 +219,10 @@ task('set-outbox', 'deploy and set a new outbox')
     const Rollup = (await hre.ethers.getContractFactory('Rollup')).attach(
       rollupAddress
     )
-    await Rollup.getUserLogic()
+    await Rollup.userLogic()
     console.log('Rollup sanity checked ')
     const RollupAdmin = (
-      await hre.ethers.getContractFactory('RollupAdminFacet')
+      await hre.ethers.getContractFactory('RollupAdminLogic')
     ).attach(rollupAddress)
     const setRollupRes = await RollupAdmin.setOutbox(args.outboxproxy)
     const setRollupRec = await setRollupRes.wait()

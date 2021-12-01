@@ -482,8 +482,8 @@ export const initUpgrades = (
           await hre.ethers.getContractFactory(ContractNames.Rollup)
         ).attach(deploymentsJsonData.contracts.Rollup.proxyAddress)
         const facet = isRollupUserFacet(contractName)
-          ? await Rollup.getUserLogic()
-          : await Rollup.getAdminLogic()
+          ? await Rollup.userLogic()
+          : await Rollup.adminLogic()
         if (facet.toLowerCase() !== deploymentData.implAddress.toLowerCase()) {
           console.log(
             `${contractName} Verification failed; bad implementation`,

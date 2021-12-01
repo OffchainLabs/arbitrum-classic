@@ -69,8 +69,8 @@ contract RollupAdminLogic is RollupBase, IRollupAdmin {
      * @param newUserLogic address of logic that user of rollup calls
      */
     function setLogicContracts(address newAdminLogic, address newUserLogic) external override {
-        logicContracts[0] = newAdminLogic;
-        logicContracts[1] = newUserLogic;
+        adminLogic = IRollupAdmin(newAdminLogic);
+        userLogic = IRollupUser(newUserLogic);
         emit OwnerFunctionCalled(5);
     }
 

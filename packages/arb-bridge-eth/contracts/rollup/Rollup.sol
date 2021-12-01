@@ -66,7 +66,8 @@ contract RollupBase is IRollupCore, Cloneable, Pausable {
     uint256 public STORAGE_GAP_2;
     uint256 public challengeExecutionBisectionDegree;
 
-    address[] internal logicContracts;
+    IRollupAdmin public adminLogic;
+    IRollupUser public userLogic;
 
     mapping(address => bool) isValidator;
 
@@ -693,6 +694,8 @@ contract Rollup is Proxy, RollupBase {
         (bool success, ) = _logicContracts[1].delegatecall(
             abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
         );
+        adminLogic = IRollupAdmin(_logicContracts[0]);
+        userLogic = IRollupUser(_logicContracts[1]);
         require(success, "FAIL_INIT_LOGIC");
 
         delayedBridge = IBridge(connectedContracts[0]);
@@ -725,9 +728,6 @@ contract Rollup is Proxy, RollupBase {
         challengeExecutionBisectionDegree = 400;
 
         sequencerBridge.setMaxDelay(sequencerInboxParams[0], sequencerInboxParams[1]);
-
-        // logicContracts[0] == admin, logicContracts[1] == user
-        logicContracts = _logicContracts;
 
         emit RollupCreated(_machineHash);
         require(isInit(), "INITIALIZE_NOT_INIT");
@@ -767,23 +767,6 @@ contract Rollup is Proxy, RollupBase {
     }
 
     /**
-     * This contract uses a dispatch pattern to delegate call to the appropriate logic contract
-     * depending on the needed functionality.
-     */
-
-    function getLogicContracts() external view returns (address, address) {
-        return (getAdminLogic(), getUserLogic());
-    }
-
-    function getAdminLogic() public view returns (address) {
-        return logicContracts[0];
-    }
-
-    function getUserLogic() public view returns (address) {
-        return logicContracts[1];
-    }
-
-    /**
      * @dev This is a virtual function that should be overriden so it returns the address to which the fallback function
      * and {_fallback} should delegate.
      */
@@ -792,8 +775,8 @@ contract Rollup is Proxy, RollupBase {
         address rollupOwner = owner;
         // if there is an owner and it is the sender, delegate to admin logic
         address target = rollupOwner != address(0) && rollupOwner == msg.sender
-            ? getAdminLogic()
-            : getUserLogic();
+            ? address(adminLogic)
+            : address(userLogic);
         require(target.isContract(), "TARGET_NOT_CONTRACT");
         return target;
     }

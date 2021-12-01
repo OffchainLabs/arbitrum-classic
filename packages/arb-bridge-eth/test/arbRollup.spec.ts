@@ -409,10 +409,11 @@ describe('ArbRollup', () => {
     const RollupDispatch = await ethers.getContractFactory('Rollup')
     const rollupDispatch = RollupDispatch.attach(rollup.rollup.address)
 
-    const actualLogics = await rollupDispatch.getLogicContracts()
+    const actualAdminLogic = await rollupDispatch.adminLogic()
+    const actualUserLogic = await rollupDispatch.userLogic()
 
-    expect(actualLogics[0]).to.equal(expectedAdmin)
-    expect(actualLogics[1]).to.equal(expectedUser)
+    expect(actualAdminLogic).to.equal(expectedAdmin)
+    expect(actualUserLogic).to.equal(expectedUser)
   })
 
   it('should validate logics during dispatch', async function () {
@@ -425,10 +426,11 @@ describe('ArbRollup', () => {
 
     const RollupDispatch = await ethers.getContractFactory('Rollup')
     const rollupDispatch = RollupDispatch.attach(rollup.rollup.address)
-    const initialLogics = await rollupDispatch.getLogicContracts()
+    const initialAdminLogic = await rollupDispatch.adminLogic()
+    const initialUserLogic = await rollupDispatch.userLogic()
 
     // we set the user logic to address(0)
-    await rollupAdmin.setLogicContracts(initialLogics[0], ZERO_ADDR)
+    await rollupAdmin.setLogicContracts(initialAdminLogic, ZERO_ADDR)
 
     await expect(
       accounts[1].sendTransaction({
@@ -438,7 +440,7 @@ describe('ArbRollup', () => {
     ).to.be.revertedWith('TARGET_NOT_CONTRACT')
 
     // reset user logic to original value
-    await rollupAdmin.setLogicContracts(initialLogics[0], initialLogics[1])
+    await rollupAdmin.setLogicContracts(initialAdminLogic, initialUserLogic)
   })
 
   it('should place stake', async function () {
