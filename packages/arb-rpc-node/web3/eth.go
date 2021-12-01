@@ -31,34 +31,55 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "web3").Logger()
 var gasPriceFactor = big.NewInt(2)
 var gasEstimationCushion = 10
 
+const maxGas = 1<<31 - 1
+
+type ServerConfig struct {
+	Mode          RpcMode
+	MaxCallAVMGas uint64
+	DevopsStubs   bool
+}
+
 type Server struct {
-	srv         *aggregator.Server
-	ganacheMode bool
-	maxCallGas  uint64
-	maxAVMGas   uint64
-	aggregator  *arbcommon.Address
+	srv                   *aggregator.Server
+	ganacheMode           bool
+	maxAVMGas             uint64
+	aggregator            *arbcommon.Address
+	sequencerInboxWatcher *ethbridge.SequencerInboxWatcher
+}
+
+const DefaultMaxAVMGas = 500000000
+
+var DefaultConfig = ServerConfig{
+	Mode:          NormalMode,
+	MaxCallAVMGas: DefaultMaxAVMGas,
 }
 
 func NewServer(
 	srv *aggregator.Server,
-	ganacheMode bool,
+	config ServerConfig,
+	sequencerInboxWatcher *ethbridge.SequencerInboxWatcher,
 ) *Server {
+	maxGas := config.MaxCallAVMGas
+	if maxGas == 0 {
+		maxGas = math.MaxUint64
+	}
 	return &Server{
-		srv:         srv,
-		ganacheMode: ganacheMode,
-		maxCallGas:  1<<31 - 1,
-		maxAVMGas:   500000000,
-		aggregator:  srv.Aggregator(),
+		srv:                   srv,
+		ganacheMode:           config.Mode == GanacheMode,
+		maxAVMGas:             maxGas,
+		aggregator:            srv.Aggregator(),
+		sequencerInboxWatcher: sequencerInboxWatcher,
 	}
 }
 
@@ -105,12 +126,12 @@ func (s *Server) GetBalance(address *common.Address, blockNum rpc.BlockNumberOrH
 	return (*hexutil.Big)(balance), nil
 }
 
-func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (s *Server) GetStorageAt(address *common.Address, key string, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return nil, err
 	}
-	index := new(big.Int).SetBytes(key)
+	index := new(big.Int).SetBytes(common.FromHex(key))
 	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), index)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting storage")
@@ -183,7 +204,7 @@ func (s *Server) GetCode(address *common.Address, blockNum rpc.BlockNumberOrHash
 	return code, nil
 }
 
-func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overrides *map[common.Address]snapshot.EthCallOverride) (hexutil.Bytes, error) {
 	if callArgs.To != nil && *callArgs.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		var data []byte
 		if callArgs.Data != nil {
@@ -196,14 +217,16 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash) (hexu
 	if err != nil {
 		return nil, err
 	}
-	from, msg := buildCallMsg(callArgs, s.maxCallGas)
+	if snap.ArbosVersion() >= 42 && (callArgs.GasPrice == nil || callArgs.GasPrice.ToInt().Sign() <= 0) {
+		callArgs.GasPrice = (*hexutil.Big)(big.NewInt(1 << 60))
+	}
 
-	res, _, err := snap.Call(msg, from)
-	res, err = handleCallResult(res, err)
+	from, msg := buildCallMsg(callArgs)
+
+	res, _, err := snap.CallWithOverrides(msg, from, overrides, s.maxAVMGas)
 	if err != nil {
 		return nil, err
 	}
-
 	if res.ResultCode != evm.ReturnCode {
 		return nil, evm.HandleCallError(res, s.ganacheMode)
 	}
@@ -220,6 +243,9 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+	if snap.ArbosVersion() >= 42 && (args.GasPrice == nil || args.GasPrice.ToInt().Sign() <= 0) {
+		args.GasPrice = (*hexutil.Big)(big.NewInt(1 << 60))
+	}
 	from, tx := buildTransactionForEstimation(args)
 	var agg arbcommon.Address
 	if args.Aggregator != nil {
@@ -228,7 +254,9 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		agg = *s.aggregator
 	}
 	res, _, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
-	res, err = handleCallResult(res, err)
+	if err == nil && res.ResultCode != evm.ReturnCode {
+		err = evm.HandleCallError(res, s.ganacheMode)
+	}
 	if err != nil {
 		logging := log.Warn()
 		if args.Gas != nil {
@@ -251,9 +279,6 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		}
 		logging.Err(err).Msg("error estimating gas")
 		return 0, err
-	}
-	if res.ResultCode != evm.ReturnCode {
-		return 0, evm.HandleCallError(res, s.ganacheMode)
 	}
 
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
@@ -291,22 +316,22 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 	return s.getBlock(info, includeTxData)
 }
 
-func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, error) {
+func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, core.InboxState, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
-	res, err := s.srv.GetRequestResult(requestId)
+	res, inbox, err := s.srv.GetRequestResult(requestId)
 	if err != nil || res == nil {
-		return nil, nil, err
+		return nil, nil, core.InboxState{}, err
 	}
 	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
-		return nil, nil, err
+		return nil, nil, core.InboxState{}, err
 	}
-	return res, info, nil
+	return res, info, inbox, nil
 }
 
 func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
-	res, info, err := s.getTransactionInfoByHash(txHash)
+	res, info, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -345,8 +370,8 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 	return s.getTransactionByBlockAndIndex(info, index)
 }
 
-func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionReceiptResult, error) {
-	res, info, err := s.getTransactionInfoByHash(txHash)
+func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes, opts *ArbGetTxReceiptOpts) (*GetTransactionReceiptResult, error) {
+	res, info, inboxState, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -364,6 +389,47 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		contractAddress = &receipt.ContractAddress
 	}
 
+	var l1InboxBatchInfo *L1InboxBatchInfo
+	if opts != nil && opts.ReturnL1InboxBatchInfo {
+		if s.sequencerInboxWatcher == nil {
+			return nil, errors.New("RPC L1 lookups disabled")
+		}
+		lookup := s.srv.GetLookup()
+		seqNum := new(big.Int).Sub(inboxState.Count, big.NewInt(1))
+		batch, err := s.sequencerInboxWatcher.LookupBatchContaining(ctx, lookup, seqNum)
+		if err != nil {
+			return nil, err
+		}
+		if batch != nil {
+			if batch.GetAfterCount().Cmp(inboxState.Count) < 0 {
+				return nil, errors.New("retrieved too early sequencer batch")
+			}
+			expectedTxAcc, expectedBatchAcc, err := lookup.GetInboxAccPair(seqNum, new(big.Int).Sub(batch.GetAfterCount(), big.NewInt(1)))
+			if err != nil {
+				return nil, err
+			}
+			if expectedTxAcc != inboxState.Accumulator || expectedBatchAcc != batch.GetAfterAcc() {
+				return nil, errors.New("inconsistent sequencer inbox state")
+			}
+			currentBlockHeight, err := s.sequencerInboxWatcher.CurrentBlockHeight(ctx)
+			if err != nil {
+				return nil, err
+			}
+			rawLog := batch.GetRawLog()
+			blockNum := new(big.Int).SetUint64(rawLog.BlockNumber)
+			confirmations := new(big.Int).Sub(currentBlockHeight, blockNum)
+			if confirmations.Sign() >= 0 {
+				l1InboxBatchInfo = &L1InboxBatchInfo{
+					Confirmations: (*hexutil.Big)(confirmations),
+					BlockNumber:   (*hexutil.Big)(blockNum),
+					LogAddress:    rawLog.Address,
+					LogTopics:     rawLog.Topics,
+					LogData:       rawLog.Data,
+				}
+			}
+		}
+	}
+
 	return &GetTransactionReceiptResult{
 		TransactionHash:   receipt.TxHash,
 		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),
@@ -373,6 +439,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		To:                tx.Tx.To(),
 		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
 		GasUsed:           hexutil.Uint64(res.CalcGasUsed().Uint64()),
+		EffectiveGasPrice: hexutil.Uint64(res.FeeStats.Price.L2Computation.Uint64()),
 		ContractAddress:   contractAddress,
 		Logs:              receipt.Logs,
 		LogsBloom:         receipt.Bloom.Bytes(),
@@ -385,7 +452,8 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 			UnitsUsed: feeSetToFeeSetResult(res.FeeStats.UnitsUsed),
 			Paid:      feeSetToFeeSetResult(res.FeeStats.Paid),
 		},
-		L1BlockNumber: (*hexutil.Big)(res.IncomingRequest.L1BlockNumber),
+		L1BlockNumber:    (*hexutil.Big)(res.IncomingRequest.L1BlockNumber),
+		L1InboxBatchInfo: l1InboxBatchInfo,
 	}, nil
 }
 
@@ -529,17 +597,6 @@ func buildTransactionForEstimation(args CallTxArgs) (arbcommon.Address, *types.T
 	return buildTransactionImpl(args, gas)
 }
 
-func buildTransactionForCall(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types.Transaction) {
-	gas := uint64(0)
-	if args.Gas != nil {
-		gas = uint64(*args.Gas)
-	}
-	if gas == 0 || gas > maxGas {
-		gas = maxGas
-	}
-	return buildTransactionImpl(args, gas)
-}
-
 func buildTransactionImpl(args CallTxArgs, gas uint64) (arbcommon.Address, *types.Transaction) {
 	var from arbcommon.Address
 	if args.From != nil {
@@ -568,8 +625,15 @@ func buildTransactionImpl(args CallTxArgs, gas uint64) (arbcommon.Address, *type
 	})
 }
 
-func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.ContractTransaction) {
-	from, tx := buildTransactionForCall(args, maxGas)
+func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransaction) {
+	gas := uint64(0)
+	if args.Gas != nil {
+		gas = uint64(*args.Gas)
+	}
+	if gas == 0 || gas > maxGas {
+		gas = maxGas
+	}
+	from, tx := buildTransactionImpl(args, gas)
 	var dest arbcommon.Address
 	if tx.To() != nil {
 		dest = arbcommon.NewAddressFromEth(*tx.To())
@@ -583,23 +647,6 @@ func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.Co
 			Data:        tx.Data(),
 		},
 	}
-}
-
-func handleCallResult(res *evm.TxResult, err error) (*evm.TxResult, error) {
-	if err != nil {
-		logger.Warn().Err(err).Msg("error executing call")
-		return nil, err
-	}
-	log.Debug().
-		Uint64("gasused", res.GasUsed.Uint64()).
-		Hex("returndata", res.ReturnData).
-		Int("resultcode", int(res.ResultCode)).
-		Msg("executed call")
-
-	if res.ResultCode != evm.ReturnCode && res.ResultCode != evm.RevertCode {
-		return nil, errors.Errorf("failed to execute call with revert code %v", res.ResultCode)
-	}
-	return res, err
 }
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {

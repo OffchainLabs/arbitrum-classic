@@ -18,6 +18,7 @@ Although Arbitrum supports Solidity code, there are differences in the effects o
 - `gasleft` returns the amount of ArbGas remaining
 - `block.number` on a non-Sequencer Arbitrum chain, returns the L1 block number at which the transaction was submitted to the inbox; on a Sequencer Arbitrum chain, returns an "estimate" of the L1 block number at which the Sequencer received the transaction (see [Time in Arbitrum](Time_in_Arbitrum.md))
 - `msg.sender` works the same way it does on Ethereum for normal L2-to-L2 transactions; for L1-to-L2 "retryable ticket" transactions, it will return the L2 address alias of the L1 contract that triggered the message. See [retryable ticket address aliasing](L1_L2_Messages.md#address-aliasing) for more.
+- blake2f and ripemd160 precompiles are not currently supported.
 
 # Time
 

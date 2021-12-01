@@ -28,9 +28,9 @@ describe('Bridge peripherals end-to-end', () => {
   let l1TestBridge: Contract
   let l2TestBridge: Contract
 
-  const maxSubmissionCost = 0
+  const maxSubmissionCost = 1
   const maxGas = 1000000000
-  const gasPrice = 0
+  const gasPrice = 1
 
   before(async function () {
     accounts = await ethers.getSigners()
@@ -132,13 +132,37 @@ describe('Bridge peripherals end-to-end', () => {
       )
     ).to.be.revertedWith('NOT_FROM_ROUTER')
 
+    await expect(
+      l1RouterTestBridge.outboundTransfer(
+        token.address,
+        accounts[0].address,
+        tokenAmount,
+        maxGas,
+        gasPrice,
+        ethers.utils.defaultAbiCoder.encode(['uint256', 'bytes'], [0, '0x'])
+      )
+    ).to.be.revertedWith('NO_SUBMISSION_COST')
+
+    await expect(
+      l1RouterTestBridge.outboundTransfer(
+        token.address,
+        accounts[0].address,
+        tokenAmount,
+        maxGas,
+        gasPrice,
+        data,
+        { value: maxSubmissionCost }
+      )
+    ).to.be.revertedWith('WRONG_ETH_VALUE')
+
     await l1RouterTestBridge.outboundTransfer(
       token.address,
       accounts[0].address,
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const escrowedTokens = await token.balanceOf(l1TestBridge.address)
@@ -179,7 +203,8 @@ describe('Bridge peripherals end-to-end', () => {
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const prevUserBalance = await token.balanceOf(accounts[0].address)
@@ -216,7 +241,8 @@ describe('Bridge peripherals end-to-end', () => {
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const prevUserBalance = await token.balanceOf(accounts[0].address)
@@ -262,7 +288,8 @@ describe('Bridge peripherals end-to-end', () => {
       tokenAmount,
       maxGas,
       gasPrice,
-      data
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
     )
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
@@ -290,5 +317,90 @@ describe('Bridge peripherals end-to-end', () => {
     const l2Balance = await l2Token.balanceOf(accounts[0].address)
 
     assert.equal(l2Balance.toNumber(), 0, 'User has tokens in L2')
+
+    // reset stub return in test case
+    await l2TestBridge.setStubAddressOracleReturn(ethers.constants.AddressZero)
+  })
+
+  it('should deposit tokens with bytes32 field correctly', async function () {
+    const Token = await ethers.getContractFactory('Bytes32ERC20WithMetadata')
+    const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await token.mint()
+    await token.approve(l1TestBridge.address, tokenAmount)
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    await l1RouterTestBridge.outboundTransfer(
+      token.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
+    )
+
+    const l2TokenAddress = await l2RouterTestBridge.calculateL2TokenAddress(
+      token.address
+    )
+
+    const l2Code = await ethers.provider.getCode(l2TokenAddress)
+    assert.notEqual(l2Code, '0x', 'No code at L2 token address')
+
+    const l2Token = await ethers.getContractAt(
+      'StandardArbERC20',
+      l2TokenAddress
+    )
+
+    const name = await l2Token.name()
+    const symbol = await l2Token.symbol()
+
+    assert.equal(name, 'Maker')
+    assert.equal(symbol, 'MKR')
+  })
+
+  it('should not have L2 getters for unavailable fields', async function () {
+    const Token = await ethers.getContractFactory('Bytes32ERC20')
+    const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await token.mint()
+    await token.approve(l1TestBridge.address, tokenAmount)
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    await l1RouterTestBridge.outboundTransfer(
+      token.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
+    )
+
+    const l2TokenAddress = await l2RouterTestBridge.calculateL2TokenAddress(
+      token.address
+    )
+
+    const l2Code = await ethers.provider.getCode(l2TokenAddress)
+    assert.notEqual(l2Code, '0x', 'No code at L2 token address')
+
+    const l2Token = await ethers.getContractAt(
+      'StandardArbERC20',
+      l2TokenAddress
+    )
+
+    await expect(l2Token.name()).to.be.revertedWith('')
+    await expect(l2Token.symbol()).to.be.revertedWith('')
+    await expect(l2Token.decimals()).to.be.revertedWith('')
   })
 })

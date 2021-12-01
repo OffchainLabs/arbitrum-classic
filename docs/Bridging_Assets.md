@@ -73,9 +73,15 @@ Similarly, Arbitrum to Ethereum transfers are initiated via the `L2GatewayRouter
 
 For any given gateway pairing, we require that calls be initiated through the `GatewayRouter`, and that the gateways conform to the `TokenGateway` interfaces; the `TokenGateway` interfaces should be flexible and extensible enough to support any bridging functionality a particular token may require.
 
-#### Standard Arb-ERC20 Bridging
+### Default Standard Bridging
 
-To help illustrate what this looks like in practice, let's go through the steps of what depositing and withdrawing `SomeERC20Token` via our Standard ERC20 gateway looks like. Here, we're assuming that `SomeERC20Token` has already been registered in the `L1GatewayRouter` to use the Standard ERC20 Gateway.
+By default, any ERC20 token on L1 that isn't registered to a Gateway can be permissionlessly bridged to the Standard ERC20 Gateway.
+
+You can use [this script](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts#bridge-a-standard-token) to a bridge a token to L2.
+
+#### Example: Standard Arb-ERC20 Deposit/Withdraw
+
+To help illustrate what this all looks like in practice, let's go through the steps of what depositing and withdrawing `SomeERC20Token` via our Standard ERC20 gateway looks like. Here, we're assuming that `SomeERC20Token` has already been registered in the `L1GatewayRouter` to use the Standard ERC20 Gateway.
 
 #### Deposits
 
@@ -115,7 +121,7 @@ Follow the following steps to get your token set up to use the Generic Custom Ga
 
 **0. Have an L1 token**
 
-- You token on L1 should conform to the [ICustomToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/libraries/gateway/ICustomGateway.md) interface; (see [TestCustomTokenL1](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-peripherals/contracts/tokenbridge/test/TestCustomTokenL1.sol) for an example implementation). Crucially, it must have an `isArbitrumEnabled` method in its interface.
+- Your token on L1 should conform to the [ICustomToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/ICustomToken.md) interface; (see [TestCustomTokenL1](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-peripherals/contracts/tokenbridge/test/TestCustomTokenL1.sol) for an example implementation). Crucially, it must have an `isArbitrumEnabled` method in its interface.
 
 **1. Deploy your token on Arbitrum**
 
@@ -128,8 +134,8 @@ Have your L1 token's contract make an external call to `L1CustomGateway.register
 **3. Register Your Token on L1 To the L1Gateway Router**
 After your token's registration to the Custom Gateway is complete, have your L1 token's contract make an external call to `L1GatewayRouter.setGateway`; this registration can also alternatively be performed as an admin registration.
 
-| ☝️ The admin privilege over the router and generic custom gateway are temporary and users should use at their own discretion |
-| ---------------------------------------------------------------------------------------------------------------------------- |
+| If you have questions about your custom token needs, feel free to [reach out](https://discord.gg/ZpZuw7p). |
+| ---------------------------------------------------------------------------------------------------------- |
 
 #### Other Flavors of Gateways
 
@@ -142,3 +148,7 @@ No matter the complexity of a particular token's bridging needs, a gateway can i
 ### Demos
 
 See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-withdraw) for demos of interacting with the bridge architecture via [arb-ts](https://arb-ts-docs.netlify.app/).
+
+#### A Word of Caution on Bridges (aka, "I've Got a Bridge To Sell You")
+
+Cross chain bridging is an exciting design space; alternative bridge designs can potentially offer faster withdrawals, interoperability with other chains, different trust assumptions with their own potentially valuable UX tradeoffs, etc. They can also potentially be completely insecure and/or outright scams. Users should treat other, non-canonical bridge applications the same way they treat any application running on Arbitrum, and exercise caution and due diligence before entrusting them with their value.

@@ -4,6 +4,7 @@
 package arboscontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,8 +28,14 @@ var (
 	_ = event.NewSubscription
 )
 
+// ArbGasInfoMetaData contains all meta data concerning the ArbGasInfo contract.
+var ArbGasInfoMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"getGasAccountingParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getL1GasPriceEstimate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPricesInArbGas\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getPricesInArbGasWithAggregator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPricesInWei\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getPricesInWeiWithAggregator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"priceInWei\",\"type\":\"uint256\"}],\"name\":\"setL1GasPriceEstimate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+}
+
 // ArbGasInfoABI is the input ABI used to generate the binding from.
-const ArbGasInfoABI = "[{\"inputs\":[],\"name\":\"getGasAccountingParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPricesInArbGas\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getPricesInArbGasWithAggregator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPricesInWei\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getPricesInWeiWithAggregator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+// Deprecated: Use ArbGasInfoMetaData.ABI instead.
+var ArbGasInfoABI = ArbGasInfoMetaData.ABI
 
 // ArbGasInfo is an auto generated Go binding around an Ethereum contract.
 type ArbGasInfo struct {
@@ -204,6 +212,37 @@ func (_ArbGasInfo *ArbGasInfoCallerSession) GetGasAccountingParams() (*big.Int, 
 	return _ArbGasInfo.Contract.GetGasAccountingParams(&_ArbGasInfo.CallOpts)
 }
 
+// GetL1GasPriceEstimate is a free data retrieval call binding the contract method 0x055f362f.
+//
+// Solidity: function getL1GasPriceEstimate() view returns(uint256)
+func (_ArbGasInfo *ArbGasInfoCaller) GetL1GasPriceEstimate(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _ArbGasInfo.contract.Call(opts, &out, "getL1GasPriceEstimate")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetL1GasPriceEstimate is a free data retrieval call binding the contract method 0x055f362f.
+//
+// Solidity: function getL1GasPriceEstimate() view returns(uint256)
+func (_ArbGasInfo *ArbGasInfoSession) GetL1GasPriceEstimate() (*big.Int, error) {
+	return _ArbGasInfo.Contract.GetL1GasPriceEstimate(&_ArbGasInfo.CallOpts)
+}
+
+// GetL1GasPriceEstimate is a free data retrieval call binding the contract method 0x055f362f.
+//
+// Solidity: function getL1GasPriceEstimate() view returns(uint256)
+func (_ArbGasInfo *ArbGasInfoCallerSession) GetL1GasPriceEstimate() (*big.Int, error) {
+	return _ArbGasInfo.Contract.GetL1GasPriceEstimate(&_ArbGasInfo.CallOpts)
+}
+
 // GetPricesInArbGas is a free data retrieval call binding the contract method 0x02199f34.
 //
 // Solidity: function getPricesInArbGas() view returns(uint256, uint256, uint256)
@@ -340,4 +379,25 @@ func (_ArbGasInfo *ArbGasInfoSession) GetPricesInWeiWithAggregator(aggregator co
 // Solidity: function getPricesInWeiWithAggregator(address aggregator) view returns(uint256, uint256, uint256, uint256, uint256, uint256)
 func (_ArbGasInfo *ArbGasInfoCallerSession) GetPricesInWeiWithAggregator(aggregator common.Address) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int, *big.Int, error) {
 	return _ArbGasInfo.Contract.GetPricesInWeiWithAggregator(&_ArbGasInfo.CallOpts, aggregator)
+}
+
+// SetL1GasPriceEstimate is a paid mutator transaction binding the contract method 0x4290549e.
+//
+// Solidity: function setL1GasPriceEstimate(uint256 priceInWei) returns()
+func (_ArbGasInfo *ArbGasInfoTransactor) SetL1GasPriceEstimate(opts *bind.TransactOpts, priceInWei *big.Int) (*types.Transaction, error) {
+	return _ArbGasInfo.contract.Transact(opts, "setL1GasPriceEstimate", priceInWei)
+}
+
+// SetL1GasPriceEstimate is a paid mutator transaction binding the contract method 0x4290549e.
+//
+// Solidity: function setL1GasPriceEstimate(uint256 priceInWei) returns()
+func (_ArbGasInfo *ArbGasInfoSession) SetL1GasPriceEstimate(priceInWei *big.Int) (*types.Transaction, error) {
+	return _ArbGasInfo.Contract.SetL1GasPriceEstimate(&_ArbGasInfo.TransactOpts, priceInWei)
+}
+
+// SetL1GasPriceEstimate is a paid mutator transaction binding the contract method 0x4290549e.
+//
+// Solidity: function setL1GasPriceEstimate(uint256 priceInWei) returns()
+func (_ArbGasInfo *ArbGasInfoTransactorSession) SetL1GasPriceEstimate(priceInWei *big.Int) (*types.Transaction, error) {
+	return _ArbGasInfo.Contract.SetL1GasPriceEstimate(&_ArbGasInfo.TransactOpts, priceInWei)
 }

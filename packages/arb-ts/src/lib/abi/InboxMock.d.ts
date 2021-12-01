@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface InboxMockInterface extends ethers.utils.Interface {
   functions: {
@@ -80,6 +80,10 @@ interface InboxMockInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'TicketData'): EventFragment
 }
+
+export type TicketDataEvent = TypedEvent<
+  [BigNumber] & { maxSubmissionCost: BigNumber }
+>
 
 export class InboxMock extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -195,6 +199,10 @@ export class InboxMock extends BaseContract {
   }
 
   filters: {
+    'TicketData(uint256)'(
+      maxSubmissionCost?: null
+    ): TypedEventFilter<[BigNumber], { maxSubmissionCost: BigNumber }>
+
     TicketData(
       maxSubmissionCost?: null
     ): TypedEventFilter<[BigNumber], { maxSubmissionCost: BigNumber }>

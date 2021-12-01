@@ -98,18 +98,22 @@ char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
                                   const void* cursor_index);
 
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
-                                            const void* total_gas_used_ptr);
+                                            const void* total_gas_used_ptr,
+                                            int allow_slow_lookups);
 int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   CExecutionCursor* execution_cursor_ptr,
                                   const void* max_gas_ptr,
-                                  int go_over_gas);
+                                  int go_over_gas,
+                                  int allow_slow_lookup);
 CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr);
 Uint256Result arbCoreGetLastMachineTotalGas(CArbCore* arbcore_ptr);
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr);
-CMachineResult arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
-                                            uint64_t block_number,
-                                            int allow_slow_lookup);
+CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
+                                        uint64_t block_number,
+                                        int allow_slow_lookup);
+
+void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr);
 
 #ifdef __cplusplus
 }

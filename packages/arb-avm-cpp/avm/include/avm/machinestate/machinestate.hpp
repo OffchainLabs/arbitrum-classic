@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/status.hpp>
+#include <avm/valueloader.hpp>
 
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
@@ -32,12 +33,31 @@
 class MachineExecutionConfig;
 struct MachineState;
 
+struct InboxState {
+    uint256_t count;
+    uint256_t accumulator;
+
+    void addMessage(const MachineMessage& message) {
+        accumulator = message.accumulator;
+        count += 1;
+    }
+
+    bool operator==(const InboxState& other) const;
+    bool operator!=(const InboxState& other) const;
+};
+
+template <typename T>
+struct MachineEmission {
+    T val;
+    InboxState inbox;
+};
+
 struct AssertionContext {
     std::vector<MachineMessage> inbox_messages;
 
-    std::vector<std::vector<uint8_t>> sends;
-    std::vector<value> logs;
-    std::vector<value> debug_prints;
+    std::vector<MachineEmission<std::vector<uint8_t>>> sends;
+    std::vector<MachineEmission<Value>> logs;
+    std::vector<MachineEmission<Value>> debug_prints;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload{false};
     uint256_t max_gas;
@@ -58,12 +78,6 @@ struct AssertionContext {
         return inbox_messages[inbox_messages_consumed++];
     }
 
-    // peekInbox assumes that the number of messages already consumed is less
-    // than the number of messages in the inbox
-    [[nodiscard]] const MachineMessage& peekInbox() const {
-        return inbox_messages[inbox_messages_consumed];
-    }
-
     [[nodiscard]] bool inboxEmpty() const {
         return inbox_messages_consumed >= inbox_messages.size();
     }
@@ -81,16 +95,6 @@ struct OneStepProof {
     std::vector<unsigned char> buffer_proof;
 };
 
-struct InboxState {
-    uint256_t count;
-    uint256_t accumulator;
-
-    void addMessage(const MachineMessage& message) {
-        accumulator = message.accumulator;
-        count += 1;
-    }
-};
-
 struct MachineOutput {
     InboxState fully_processed_inbox;
     uint256_t total_steps;
@@ -99,59 +103,66 @@ struct MachineOutput {
     uint256_t log_acc;
     uint256_t send_count;
     uint256_t log_count;
+    uint256_t l1_block_number;
+    uint256_t l2_block_number;
+    uint256_t last_inbox_timestamp;
     std::optional<uint256_t> last_sideload;
+
+    bool operator==(const MachineOutput& other) const;
+    bool operator!=(const MachineOutput& other) const;
 };
 
 struct MachineStateKeys {
+    MachineOutput output;
+    CodePointStub pc;
     uint256_t static_hash;
     uint256_t register_hash;
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
     uint256_t arb_gas_remaining;
-    CodePointStub pc;
+    Status state;
     CodePointStub err_pc;
-    Status status;
-    MachineOutput output;
 
-    MachineStateKeys(uint256_t static_hash_,
+    MachineStateKeys(MachineOutput output_,
+                     CodePointStub pc_,
+                     uint256_t static_hash_,
                      uint256_t register_hash_,
                      uint256_t datastack_hash_,
                      uint256_t auxstack_hash_,
                      uint256_t arb_gas_remaining_,
-                     CodePointStub pc_,
-                     CodePointStub err_pc_,
-                     Status status_,
-                     MachineOutput output_)
-        : static_hash(static_hash_),
+                     Status state_,
+                     CodePointStub err_pc_)
+        : output(output_),
+          pc(pc_),
+          static_hash(static_hash_),
           register_hash(register_hash_),
           datastack_hash(datastack_hash_),
           auxstack_hash(auxstack_hash_),
           arb_gas_remaining(arb_gas_remaining_),
-          pc(pc_),
-          err_pc(err_pc_),
-          status(status_),
-          output(std::move(output_)) {}
+          state(state_),
+          err_pc(err_pc_) {}
 
-    MachineStateKeys(const MachineState& machine);
+    explicit MachineStateKeys(const MachineState& machine);
 
-    uint256_t getTotalMessagesRead() const;
-    uint256_t getInboxAcc() const;
-    uint256_t machineHash() const;
+    [[nodiscard]] uint256_t getTotalMessagesRead() const;
+    [[nodiscard]] uint256_t getInboxAcc() const;
+    [[nodiscard]] uint256_t machineHash() const;
 };
 
 struct MachineState {
+    MachineOutput output;
+
+    CodePointRef pc{0, 0};
     std::shared_ptr<Code> code;
+    ValueLoader value_loader;
     mutable std::optional<CodeSegmentSnapshot> loaded_segment;
-    value registerVal;
-    value static_val;
+    Value registerVal;
+    Value static_val;
     Datastack stack;
     Datastack auxstack;
     uint256_t arb_gas_remaining;
     Status state{Status::Extensive};
-    CodePointRef pc{0, 0};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
-
-    MachineOutput output;
 
     AssertionContext context;
 
@@ -159,18 +170,19 @@ struct MachineState {
 
     MachineState();
 
-    MachineState(std::shared_ptr<Code> code_, value static_val);
+    MachineState(std::shared_ptr<CoreCode> code_, Value static_val);
 
-    MachineState(std::shared_ptr<Code> code_,
-                 value register_val_,
-                 value static_val,
+    MachineState(MachineOutput output_,
+                 CodePointRef pc_,
+                 std::shared_ptr<Code> code_,
+                 ValueLoader value_loader_,
+                 Value register_val_,
+                 Value static_val,
                  Datastack stack_,
                  Datastack auxstack_,
                  uint256_t arb_gas_remaining_,
                  Status state_,
-                 CodePointRef pc_,
-                 CodePointStub errpc_,
-                 MachineOutput output_);
+                 CodePointStub errpc_);
 
     uint256_t getMachineSize() const;
     OneStepProof marshalForProof() const;
@@ -182,17 +194,17 @@ struct MachineState {
 
     CodePoint loadCurrentInstruction() const;
     const Operation& loadCurrentOperation() const;
-    uint256_t nextGasCost() const;
+    uint256_t nextGasCost();
 
     uint256_t getTotalMessagesRead() const;
 
     void addProcessedMessage(const MachineMessage& message);
     void addProcessedSend(std::vector<uint8_t> data);
-    void addProcessedLog(value log_val);
+    void addProcessedLog(Value log_val);
 
    private:
     void marshalBufferProof(OneStepProof& proof) const;
-    uint256_t gasCost(const Operation& op) const;
+    uint256_t gasCost(const Operation& op);
 };
 
 #endif /* machinestate_hpp */

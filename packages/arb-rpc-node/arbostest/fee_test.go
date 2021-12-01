@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -65,7 +66,7 @@ func addEnableFeesMessages(ib *InboxBuilder) {
 			BlockNum:  common.NewTimeBlocksInt(int64(len(ib.Messages))),
 			Timestamp: big.NewInt(0),
 		}
-		ib.AddMessage(message.NewSafeL2Message(msg), owner, big.NewInt(0), chainTime)
+		ib.AddMessage(message.NewSafeL2Message(msg), message.L1RemapAccount(owner), big.NewInt(0), chainTime)
 	}
 }
 
@@ -80,6 +81,7 @@ type txTemplate struct {
 	resultType         []evm.ResultType
 	nonzeroComputation []bool
 	correctStorageUsed int
+	correctStorageEstimate int
 	calldata           int
 	ranOutOfFunds      bool
 }
@@ -133,7 +135,7 @@ func TestArbOSFees(t *testing.T) {
 	rawTxes := []txTemplate{
 		// Successful call to constructor
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      300000000,
 			Value:    big.NewInt(0),
 			Data:     conDataSuccess,
@@ -141,10 +143,11 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.ReturnCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: (conDeployedLength + 31) / 32,
+			correctStorageEstimate: (conDeployedLength + 31) / 32,
 		},
 		// Successful call to method without storage
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      100000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
@@ -153,10 +156,11 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.ReturnCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 0,
 		},
 		// Successful call to storage allocating method
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      100000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
@@ -165,10 +169,11 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.ReturnCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 1,
+			correctStorageEstimate: 1,
 		},
 		// Successful eth transfer to EOA
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      100000000,
 			To:       &eoaDest,
 			Value:    big.NewInt(100000),
@@ -176,10 +181,11 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.ReturnCode},
 			nonzeroComputation: []bool{false},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 0,
 		},
 		// Reverted constructor
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      1000000000,
 			Value:    big.NewInt(0),
 			Data:     conDataFailure,
@@ -187,10 +193,11 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.RevertCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 0,
 		},
 		// Reverted storage allocating function call
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      100000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
@@ -199,10 +206,11 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.RevertCode},
 			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 1,
 		},
 		// Reverted since insufficient funds
 		{
-			GasPrice: big.NewInt(0),
+			GasPrice: big.NewInt(1 << 60),
 			Gas:      1000000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
@@ -211,8 +219,15 @@ func TestArbOSFees(t *testing.T) {
 			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode},
 			nonzeroComputation: []bool{true, false, false, false},
 			correctStorageUsed: 0,
+			correctStorageEstimate: 0,
 		},
 	}
+
+	if arbosVersion == 43 || arbosVersion == 44 {
+		// We charge for storage even when reverting in these versions
+		rawTxes[5].correctStorageUsed = 1;
+	}
+	
 	valueTransfered := big.NewInt(0)
 	for _, tx := range rawTxes {
 		valueTransfered = valueTransfered.Add(valueTransfered, tx.Value)
@@ -348,7 +363,7 @@ func TestArbOSFees(t *testing.T) {
 				Data:        tx.Data(),
 			}}
 			msg := message.NewSafeL2Message(l2msg)
-			feeWithContractTxIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)
+			feeWithContractTxIB.AddMessage(msg, message.L1RemapAccount(userAddress), big.NewInt(0), chainTime)
 			chainTime.BlockNum = common.NewTimeBlocksInt(int64(len(feeWithContractTxIB.Messages)))
 			contractTxData = append(contractTxData, countCalldataUnits(msg.Data))
 		}
@@ -365,7 +380,7 @@ func TestArbOSFees(t *testing.T) {
 		for _, tx := range ethTxes {
 			compressed := message.NewCompressedECDSAFromEth(tx)
 			compressed.GasLimit = big.NewInt(0)
-			compressed.GasPrice = big.NewInt(0)
+			compressed.GasPrice = big.NewInt(1 << 60)
 			msg, err := message.NewGasEstimationMessage(aggregator, big.NewInt(100000000), compressed)
 			test.FailIfError(t, err)
 			estimateFeeIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)
@@ -400,7 +415,8 @@ func TestArbOSFees(t *testing.T) {
 	checkAllUnits := func(results []*evm.TxResult, index int, calldataExact bool) {
 		t.Helper()
 		for i, res := range results {
-			checkUnits(t, res, rawTxes[i], index, rawTxes[i].calldata, calldataExact)
+			debugMessage := fmt.Sprint(i)
+			checkUnits(t, res, rawTxes[i], index, rawTxes[i].calldata, calldataExact, false, debugMessage)
 		}
 	}
 
@@ -429,9 +445,13 @@ func TestArbOSFees(t *testing.T) {
 	checkAllUnits(feeResults, 1, true)
 	checkAllUnits(feeWithAggResults, 2, true)
 	for i, res := range feeWithContractResults {
-		checkUnits(t, res, rawTxes[i], 1, contractTxData[i], true)
+		debugMessage := fmt.Sprint(i)
+		checkUnits(t, res, rawTxes[i], 1, contractTxData[i], true, false, debugMessage)
 	}
-	checkAllUnits(estimateFeeResults, 3, false)
+	for i, res := range estimateFeeResults {
+		debugMessage := fmt.Sprint(i, " estimation")
+		checkUnits(t, res, rawTxes[i], 3, rawTxes[i].calldata, false, true, debugMessage)
+	}
 
 	checkSameL2ComputationUnits(t, noFeeResults, feeResults)
 	checkSameL2ComputationUnits(t, noFeeResults, feeWithAggResults)
@@ -716,7 +736,7 @@ func checkL2UnitsEqual(t *testing.T, unitsUsed1 *evm.FeeSet, unitsUsed2 *evm.Fee
 		t.Error("different storage count used", unitsUsed1.L2Storage, unitsUsed2.L2Storage)
 	}
 }
-func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, calldataUnits int, calldataExact bool) {
+func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, calldataUnits int, calldataExact bool, estimationCase bool, debugMessage string) {
 	t.Helper()
 	unitsUsed := res.FeeStats.UnitsUsed
 	t.Log("UnitsUsed", res.FeeStats.UnitsUsed)
@@ -756,8 +776,16 @@ func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, call
 			t.Error("should have zero computation used")
 		}
 	}
-	if unitsUsed.L2Storage.Cmp(big.NewInt(int64(correct.correctStorageUsed))) != 0 {
-		t.Error("wrong storage count used got", unitsUsed.L2Storage, "but expected", correct.correctStorageUsed)
+
+	var correctStorage int64;
+	if estimationCase {
+		correctStorage = int64(correct.correctStorageEstimate);
+	} else {
+		correctStorage = int64(correct.correctStorageUsed);
+	}
+	
+	if unitsUsed.L2Storage.Cmp(big.NewInt(correctStorage)) != 0 {
+		t.Error("wrong storage count used got", unitsUsed.L2Storage, "but expected", correct.correctStorageUsed, "for test", debugMessage)
 	}
 }
 

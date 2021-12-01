@@ -60,8 +60,12 @@ class ReadTransaction {
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> delayedMessageGetIterator(
         rocksdb::Slice* lower_bound = nullptr,
         rocksdb::Slice* upper_bound = nullptr) const;
-    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> logGetIterator() const;
-    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sendGetIterator() const;
+    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> logGetIterator(
+        rocksdb::Slice* lower_bound = nullptr,
+        rocksdb::Slice* upper_bound = nullptr) const;
+    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sendGetIterator(
+        rocksdb::Slice* lower_bound = nullptr,
+        rocksdb::Slice* upper_bound = nullptr) const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sideloadGetIterator()
         const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> aggregatorGetIterator()
@@ -100,6 +104,9 @@ class ReadTransaction {
     [[nodiscard]] ValueResult<uint256_t> refCountedGetUint256(
         rocksdb::Slice key_slice) const;
 
+    // Doesn't actually do a DB read, uses cached value.
+    const std::vector<unsigned char>& getSecretHashSeed();
+
    private:
     ValueResult<std::vector<std::vector<unsigned char>>>
     getVectorVectorUsingFamilyAndKey(rocksdb::ColumnFamilyHandle* family,
@@ -119,7 +126,7 @@ class ReadTransaction {
 
 class ReadConsistentTransaction : public ReadTransaction {
    protected:
-    ReadConsistentTransaction(std::shared_ptr<DataStorage> store)
+    explicit ReadConsistentTransaction(std::shared_ptr<DataStorage> store)
         : ReadTransaction(std::move(store)) {}
 };
 

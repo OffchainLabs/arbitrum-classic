@@ -25,9 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
-	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
@@ -172,7 +170,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							select {
 							case <-ctx.Done():
 								return
-							case <-time.After(5 * time.Second):
+							case <-time.After(1 * time.Second):
 							}
 						}
 						if currentSeqNum.Cmp(targetSeqNum) >= 0 {
@@ -183,7 +181,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 								Msg("caught up to previous sequencer position")
 							break
 						}
-						if attemptCatchupUntil.After(time.Now()) {
+						if time.Now().After(attemptCatchupUntil) {
 							msg := "failed to catch up to previous sequencer position"
 							logger.
 								Warn().
@@ -193,7 +191,11 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							fatalError = errors.New(msg)
 							break
 						}
-						time.Sleep(500 * time.Millisecond)
+						select {
+						case <-ctx.Done():
+							return
+						case <-time.After(100 * time.Millisecond):
+						}
 					}
 					if fatalError == nil && b.hasSequencerLockout() {
 						err := b.sequencerBatcher.SequenceDelayedMessages(ctx, true)
@@ -321,10 +323,6 @@ func (b *LockoutBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
 	return b.getBatcher().PendingSnapshot()
 }
 
-func (b *LockoutBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return b.sequencerBatcher.SubscribeNewTxsEvent(ch)
-}
-
 func (b *LockoutBatcher) Aggregator() *common.Address {
 	return b.getBatcher().Aggregator()
 }
@@ -348,10 +346,6 @@ func (b *errorBatcher) SendTransaction(ctx context.Context, tx *types.Transactio
 
 func (b *errorBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
 	return nil, b.err
-}
-
-func (b *errorBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return nil
 }
 
 func (b *errorBatcher) Aggregator() *common.Address {

@@ -33,8 +33,7 @@
     "demo:initialize": "yarn workspace tools demo:initialize",
     "demo:deploy": "./scripts/arb_deploy.py local",
     "prod:initialize": "yarn workspace tools prod:initialize",
-    "deploy:validators": "./scripts/arb_deploy.py",
-    "sol_docs:generate": "python docs/sol_contract_docs/generate_docs.py"
+    "deploy:validators": "./scripts/arb_deploy.py"
   },
   "engines": {
     "node": ">= 8.0.0",
@@ -63,13 +62,10 @@
     "eslint-plugin-mocha": "^9.0.0",
     "eslint-plugin-prettier": "^4.0.0",
     "prettier": "^2.3.2",
-    "prettier-plugin-solidity": "^1.0.0-beta.17",
-    "solidity-docgen": "^0.5.11"
+    "prettier-plugin-solidity": "^1.0.0-beta.17"
   },
   "resolutions": {
     "eth-sig-util/ethereumjs-abi": "^0.6.8-1",
-    "typechain/truffle-v4/truffle": "^4.0.0",
-    "typechain/truffle-v5/truffle": "^5.0.0",
     "typechain/web3-v1/web3": "^1.0.0"
   }
 }

@@ -1,4 +1,4 @@
-import { run, ethers, deployments } from 'hardhat'
+import { ethers } from 'hardhat'
 
 import { createInterface } from 'readline'
 

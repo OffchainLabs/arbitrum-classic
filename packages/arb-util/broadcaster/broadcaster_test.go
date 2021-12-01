@@ -65,7 +65,8 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	// Confirmed Accumulator will also broadcast to the clients.
+	// Only previous accumulator will also broadcast to the clients, so send twice for test
+	b.ConfirmedAccumulator(feedItem.BatchItem.Accumulator) // remove the first message we generated
 	b.ConfirmedAccumulator(feedItem.BatchItem.Accumulator) // remove the first message we generated
 
 	acc := <-accumulatorConfirmed
@@ -238,7 +239,6 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1 * time.Second)
 
 	hash2, feedItem2, signature2 := newBroadcastMessage()
 	err = b.BroadcastSingle(hash2, feedItem2.BatchItem, signature2.Bytes())
@@ -259,8 +259,16 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if b.MessageCacheCount() != 2 {
-		t.Errorf("1. Failed to reorganized cached inbox message. MessageCacheCount: %v", b.MessageCacheCount())
+	updateTimeout := time.After(2 * time.Second)
+	for {
+		if b.MessageCacheCount() == 2 {
+			break
+		}
+		select {
+		case <-updateTimeout:
+			t.Fatalf("Failed to reorganized cached inbox message. MessageCacheCount: %v", b.MessageCacheCount())
+		case <-time.After(10 * time.Millisecond):
+		}
 	}
 
 	//TODO: Add some more assertions about the state of the cache

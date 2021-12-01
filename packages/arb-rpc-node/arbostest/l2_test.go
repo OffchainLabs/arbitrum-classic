@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"crypto/ecdsa"
+	"math"
 	"math/big"
 	"strings"
 	"testing"
@@ -148,7 +149,7 @@ func TestCallTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(7)) != 0 {
 		t.Errorf("Storage was updated %X", callRes.ReturnData)
@@ -162,7 +163,7 @@ func TestCallTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(call2Res.ReturnData).Cmp(big.NewInt(5)) != 0 {
 		t.Errorf("Storage was updated")
@@ -176,7 +177,7 @@ func TestCallTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode(arbostestcontracts.SimpleBin),
 		},
-	}, sender)
+	}, sender, math.MaxUint64)
 	failIfError(t, err)
 }
 
@@ -220,7 +221,7 @@ func TestContractTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(6)) != 0 {
 		t.Errorf("Storage wasn't updated %X", callRes.ReturnData)
@@ -234,7 +235,7 @@ func TestContractTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes2.ReturnData).Cmp(big.NewInt(8)) != 0 {
 		t.Errorf("Storage wasn't updated")
@@ -282,9 +283,9 @@ func TestUnsignedTx(t *testing.T) {
 
 		var correctHash common.Hash
 		if i == 0 {
-			correctHash = tx1.MessageID(sender, chainId)
+			correctHash = tx1.MessageID(message.L1RemapAccount(sender), chainId)
 		} else {
-			correctHash = tx2.MessageID(sender, chainId)
+			correctHash = tx2.MessageID(message.L1RemapAccount(sender), chainId)
 		}
 		if result.IncomingRequest.MessageID != correctHash {
 			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, correctHash)
@@ -321,7 +322,7 @@ func TestBatch(t *testing.T) {
 		}
 		senders = append(senders, sender)
 		txes = append(txes, tx)
-		hashes = append(hashes, tx.MessageID(sender, chainId))
+		hashes = append(hashes, tx.MessageID(message.L1RemapAccount(sender), chainId))
 		batchSenderSeq++
 	}
 	for _, pk := range pks[1:] {

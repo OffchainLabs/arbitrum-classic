@@ -20,8 +20,7 @@ set_target_properties(secp256k1 PROPERTIES
     "INTERFACE_INCLUDE_DIRECTORIES" "${install_dir}/include"
 
 )
-SET(OPENSSL_ROOT_DIR ${OPENSSL_ROOT_DIR})
-SET(OPENSSL_INCLUDE_DIR ${OPENSSL_ROOT_DIR}/include)
+
 SET(WITH_PROCPS OFF CACHE BOOL "" FORCE)
 add_subdirectory(libff)
 

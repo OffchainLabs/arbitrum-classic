@@ -17,13 +17,13 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface ICustomTokenInterface extends ethers.utils.Interface {
   functions: {
     'balanceOf(address)': FunctionFragment
     'isArbitrumEnabled()': FunctionFragment
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)': FunctionFragment
+    'registerTokenOnL2(address,uint256,uint256,uint256,uint256,address)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
   }
 
@@ -34,7 +34,14 @@ interface ICustomTokenInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'registerTokenOnL2',
-    values: [string, BigNumberish, BigNumberish, BigNumberish, string]
+    values: [
+      string,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      string
+    ]
   ): string
   encodeFunctionData(
     functionFragment: 'transferFrom',
@@ -108,7 +115,8 @@ export class ICustomToken extends BaseContract {
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
+      maxSubmissionCostForCustomBridge: BigNumberish,
+      maxSubmissionCostForRouter: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       creditBackAddress: string,
@@ -129,7 +137,8 @@ export class ICustomToken extends BaseContract {
 
   registerTokenOnL2(
     l2CustomTokenAddress: string,
-    maxSubmissionCost: BigNumberish,
+    maxSubmissionCostForCustomBridge: BigNumberish,
+    maxSubmissionCostForRouter: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
     creditBackAddress: string,
@@ -150,7 +159,8 @@ export class ICustomToken extends BaseContract {
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
+      maxSubmissionCostForCustomBridge: BigNumberish,
+      maxSubmissionCostForRouter: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       creditBackAddress: string,
@@ -174,7 +184,8 @@ export class ICustomToken extends BaseContract {
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
+      maxSubmissionCostForCustomBridge: BigNumberish,
+      maxSubmissionCostForRouter: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       creditBackAddress: string,
@@ -199,7 +210,8 @@ export class ICustomToken extends BaseContract {
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
+      maxSubmissionCostForCustomBridge: BigNumberish,
+      maxSubmissionCostForRouter: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       creditBackAddress: string,

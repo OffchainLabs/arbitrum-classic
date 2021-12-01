@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.9)
 
 set (CMAKE_CXX_STANDARD 17)
 
@@ -22,6 +22,7 @@ project (avm LANGUAGES CXX)
 set(LIB_HEADERS
   include/avm/machine.hpp
   include/avm/inboxmessage.hpp
+  include/avm/valueloader.hpp
   include/avm/machinestate/blockreason.hpp
   include/avm/machinestate/datastack.hpp
   include/avm/machinestate/ecops.hpp

@@ -32,78 +32,110 @@ func TestOwner(t *testing.T) {
 		Timestamp: big.NewInt(0),
 	}
 
-	tx1 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(0),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-		Payment:     big.NewInt(0),
-		Data:        arbos.GetTotalOfEthBalances(),
-	}
-
-	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(0),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-		Payment:     big.NewInt(0),
-		Data:        GiveOwnershipData(common.RandAddress()),
-	}
-
-	tx3 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(1),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-		Payment:     big.NewInt(0),
-		Data:        GiveOwnershipData(sender),
-	}
-
-	tx4 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(1),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-		Payment:     big.NewInt(0),
-		Data:        arbos.StartArbOSUpgradeData(),
-	}
-
-	// Actual upgrade tested in dev/upgrade_test.go
 	depositAmount := new(big.Int).Exp(big.NewInt(10), big.NewInt(16), nil)
-	deposit := message.EthDepositTx{
-		L2Message: message.NewSafeL2Message(message.ContractTransaction{
-			BasicTx: message.BasicTx{
-				MaxGas:      big.NewInt(1000000),
-				GasPriceBid: big.NewInt(0),
-				DestAddress: common.RandAddress(),
-				Payment:     depositAmount,
-				Data:        nil,
-			},
-		}),
+
+	fundAddress := func(address common.Address) message.EthDepositTx {
+		return message.EthDepositTx{
+			L2Message: message.NewSafeL2Message(message.ContractTransaction{
+				BasicTx: message.BasicTx{
+					MaxGas:      big.NewInt(1000000),
+					GasPriceBid: big.NewInt(0),
+					DestAddress: common.RandAddress(),
+					Payment:     depositAmount,
+					Data:        nil,
+				},
+			}),
+		}
 	}
+
+	addAddress := func(address common.Address, sequenceNum int) message.L2Message {
+		return message.NewSafeL2Message(message.Transaction{
+			MaxGas:      big.NewInt(1000000),
+			GasPriceBid: big.NewInt(0),
+			SequenceNum: big.NewInt(int64(sequenceNum)),
+			DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
+			Payment:     big.NewInt(0),
+			Data:        arbos.AddChainOwnerData(message.L2RemapAccount(address)),
+		})
+	}
+
+	removeAddress := func(address common.Address, sequenceNum int) message.L2Message {
+		return message.NewSafeL2Message(message.Transaction{
+			MaxGas:      big.NewInt(1000000),
+			GasPriceBid: big.NewInt(0),
+			SequenceNum: big.NewInt(int64(sequenceNum)),
+			DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
+			Payment:     big.NewInt(0),
+			Data:        arbos.RemoveChainOwnerData(message.L2RemapAccount(address)),
+		})
+	}
+
+	var shouldSucceed []bool;
 
 	ib := InboxBuilder{}
 	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), chainTime)
-	ib.AddMessage(deposit, chain, big.NewInt(0), chainTime)
-	ib.AddMessage(message.NewSafeL2Message(tx1), owner, big.NewInt(0), chainTime)
-	ib.AddMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(0), chainTime)
-	ib.AddMessage(message.NewSafeL2Message(tx3), owner, big.NewInt(0), chainTime)
-	ib.AddMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(0), chainTime)
+
+	// Add and remove a bunch of random owners
+
+	priorRandomOwner := owner
+	ib.AddMessage(addAddress(priorRandomOwner, 0), priorRandomOwner, big.NewInt(0), chainTime)
+	shouldSucceed = append(shouldSucceed, true)
+
+	for i := 0; i < 24; i++ {
+
+		println(len(shouldSucceed))
+
+		randomOwner := common.RandAddress()
+
+		ib.AddMessage(fundAddress(randomOwner), randomOwner, big.NewInt(0), chainTime)
+		ib.AddMessage(addAddress(randomOwner, i % 2 + 1), priorRandomOwner, big.NewInt(0), chainTime)
+		shouldSucceed = append(shouldSucceed, true, true)
+
+		if i % 2 == 1 {
+			ib.AddMessage(removeAddress(priorRandomOwner, 0), randomOwner, big.NewInt(0), chainTime)
+			ib.AddMessage(removeAddress(randomOwner, 3), priorRandomOwner, big.NewInt(0), chainTime)
+			shouldSucceed = append(shouldSucceed, true, false)
+
+			priorRandomOwner = randomOwner
+		}
+	}
+
+	// make sender an owner, then have sender remove prior owner
+	ib.AddMessage(addAddress(sender, 4), owner, big.NewInt(0), chainTime)
+	ib.AddMessage(addAddress(sender, 1), priorRandomOwner, big.NewInt(0), chainTime)
+	ib.AddMessage(removeAddress(priorRandomOwner, 0), sender, big.NewInt(0), chainTime)
+	shouldSucceed = append(shouldSucceed, false, true, true)
+
+	// try to start an upgrade with the new owner, which you can only do if you're an owner.
+	// this won't actually perform an upgrade (we test this elsewhere)
+	ownerOnlyAction := func(sequenceNum int) message.L2Message {
+		return message.NewSafeL2Message(message.Transaction{
+			MaxGas:      big.NewInt(1000000),
+			GasPriceBid: big.NewInt(0),
+			SequenceNum: big.NewInt(int64(sequenceNum)),
+			DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
+			Payment:     big.NewInt(0),
+			Data:        arbos.StartArbOSUpgradeData(),
+		})
+	}
+
+	ib.AddMessage(ownerOnlyAction(5), owner, big.NewInt(0), chainTime)
+	ib.AddMessage(ownerOnlyAction(1), sender, big.NewInt(0), chainTime)
+	ib.AddMessage(ownerOnlyAction(2), priorRandomOwner, big.NewInt(0), chainTime)
+	shouldSucceed = append(shouldSucceed, false, true, false)
 
 	results, _ := runTxAssertion(t, ib.Messages)
-	succeededTxCheck(t, results[0])
-	succeededTxCheck(t, results[1])
-	// Transfer from non-owner fails
-	revertedTxCheck(t, results[2])
-	succeededTxCheck(t, results[3])
-	succeededTxCheck(t, results[4])
 
-	totalBalance := new(big.Int).SetBytes(results[1].ReturnData)
-	if totalBalance.Cmp(depositAmount) != 0 {
-		t.Error("wrong total balance")
+	if len(results) != len(shouldSucceed) {
+		t.Log("length of results does not match checks", len(results), len(shouldSucceed))
 	}
-}
 
-func GiveOwnershipData(newOwnerAddr common.Address) []byte {
-	return arbos.SetChainParameterData(arbos.ChainOwnerParamId, new(big.Int).SetBytes(newOwnerAddr.Bytes()))
+	for i := 0; i < len(results); i++ {
+		t.Log("Checking txn", i, shouldSucceed[i])
+		if shouldSucceed[i] {
+			succeededTxCheck(t, results[i])
+		} else {
+			revertedTxCheck(t, results[i])
+		}
+	}
 }

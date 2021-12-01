@@ -49,7 +49,7 @@ func getInsnMultiplier(b *testing.B, filePath string) uint64 {
 
 func runExecutableFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(b, filePath)
-	coreConfig := configuration.DefaultCoreSettings()
+	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 	ckp, err := cmachine.NewArbStorage(b.TempDir(), coreConfig)
 	if err != nil {
 		b.Fatal(err)
@@ -58,7 +58,7 @@ func runExecutableFile(b *testing.B, filePath string) {
 		b.Fatal(err)
 	}
 	core := ckp.GetArbCore()
-	cursor, err := core.GetExecutionCursor(big.NewInt(0))
+	cursor, err := core.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
 		b.Fatal(err)
 	}

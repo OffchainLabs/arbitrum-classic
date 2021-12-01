@@ -17,6 +17,7 @@
 package common
 
 import (
+	"encoding/json"
 	"math/big"
 )
 
@@ -44,4 +45,8 @@ func (tb *TimeBlocks) Cmp(tb2 *TimeBlocks) int {
 
 func (tb *TimeBlocks) String() string {
 	return tb.AsInt().String()
+}
+
+func (tb *TimeBlocks) MarshalJSON() ([]byte, error) {
+	return json.Marshal(tb.AsInt())
 }

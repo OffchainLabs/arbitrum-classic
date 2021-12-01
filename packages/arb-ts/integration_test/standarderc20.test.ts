@@ -1,8 +1,28 @@
-import { BigNumber } from 'ethers'
-import { Bridge } from '../src/lib/bridge'
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict'
 
 import { expect } from 'chai'
+
+import { BigNumber } from '@ethersproject/bignumber'
+
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
+
+import { Bridge } from '../src/lib/bridge'
 import { OutgoingMessageState } from '../src/lib/bridge_helpers'
 
 import {
@@ -65,16 +85,19 @@ describe('standard ERC20', () => {
       withdrawEventData.batchNumber,
       withdrawEventData.indexInBatch
     )
-    expect(outgoingMessageState).to.equal(
-      OutgoingMessageState.UNCONFIRMED,
-      `standard token withdraw getOutGoingMessageState returned ${OutgoingMessageState.UNCONFIRMED}`
-    )
 
-    const l2Data = await bridge.getAndUpdateL2TokenData(existentTestERC20)
-    const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
     expect(
-      testWalletL2Balance &&
-        testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenFundAmount),
+      outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
+        outgoingMessageState === OutgoingMessageState.NOT_FOUND,
+      `standard token withdraw getOutGoingMessageState returned ${outgoingMessageState}`
+    ).to.be.true
+
+    const l2Data = await bridge.l2Bridge.getL2TokenData(
+      await bridge.getERC20L2Address(existentTestERC20)
+    )
+    const testWalletL2Balance = l2Data.balance
+    expect(
+      testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenFundAmount),
       'token withdraw balance not deducted'
     ).to.be.true
     const walletAddress = await bridge.l1Signer.getAddress()
@@ -99,6 +122,21 @@ describe('standard ERC20', () => {
       'token withdraw getTokenWithdrawEventData query failed'
     )
   })
+  it('getERC20L1Address/getERC20L2Address work as expected', async () => {
+    const { bridge } = await instantiateBridgeWithRandomWallet()
+    const queriedL2Address = await bridge.getERC20L2Address(existentTestERC20)
+    const queriedL1Address = await bridge.getERC20L1Address(queriedL2Address)
+
+    expect(queriedL1Address).to.equal(
+      existentTestERC20,
+      'getERC20L1Address/getERC20L2Address failed with proper token address'
+    )
+
+    const randomAddress = await bridge.l1Bridge.getWalletAddress()
+    const notAnL1Address = await bridge.getERC20L1Address(randomAddress)
+    expect(notAnL1Address).to.be.null,
+      "getERC20L1Address didn't return null for random input"
+  })
 })
 
 const depositTokenTest = async (bridge: Bridge) => {
@@ -114,8 +152,8 @@ const depositTokenTest = async (bridge: Bridge) => {
   const approveRes = await bridge.approveToken(existentTestERC20)
   await approveRes.wait()
 
-  const data = await bridge.getAndUpdateL1TokenData(existentTestERC20)
-  const allowed = data.ERC20 && data.ERC20.allowed
+  const data = await bridge.l1Bridge.getL1TokenData(existentTestERC20)
+  const allowed = data.allowed
   expect(allowed, 'set token allowance failed').to.be.true
 
   const expectedL1GatewayAddress = await bridge.l1Bridge.getGatewayAddress(
@@ -125,7 +163,10 @@ const depositTokenTest = async (bridge: Bridge) => {
     expectedL1GatewayAddress
   )
 
-  const depositRes = await bridge.deposit(existentTestERC20, tokenDepositAmount)
+  const depositRes = await bridge.deposit({
+    erc20L1Address: existentTestERC20,
+    amount: tokenDepositAmount,
+  })
 
   const depositRec = await depositRes.wait()
 
@@ -141,12 +182,14 @@ const depositTokenTest = async (bridge: Bridge) => {
   ).to.be.true
   await testRetryableTicket(bridge, depositRec)
 
-  const l2Data = await bridge.getAndUpdateL2TokenData(existentTestERC20)
+  const l2Data = await bridge.l2Bridge.getL2TokenData(
+    await bridge.getERC20L2Address(existentTestERC20)
+  )
 
-  const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
+  const testWalletL2Balance = l2Data.balance
 
   expect(
-    testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmount),
+    testWalletL2Balance.eq(tokenDepositAmount),
     'l2 wallet not updated after deposit'
   ).to.be.true
 }

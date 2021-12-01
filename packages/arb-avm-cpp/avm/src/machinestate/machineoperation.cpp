@@ -40,26 +40,30 @@ static T shrink(uint256_t i) {
 
 namespace machineoperation {
 
-uint256_t& assumeInt(value& val) {
-    auto aNum = std::get_if<uint256_t>(&val);
+uint256_t& assumeInt(Value& val) {
+    auto aNum = get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
     return *aNum;
 }
 
-const uint256_t& assumeInt(const value& val) {
-    auto aNum = std::get_if<uint256_t>(&val);
+const uint256_t& assumeInt(const Value& val) {
+    auto aNum = get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
     return *aNum;
 }
 
-const CodePointStub& assumeCodePoint(const value& val) {
-    auto cp = std::get_if<CodePointStub>(&val);
+CodePointStub assumeCodePoint(MachineState& m, Value& val) {
+    auto cp = get_if<CodePointStub>(&val);
     if (!cp) {
         throw bad_pop_type{};
+    }
+    auto segment = cp->pc.segment;
+    if (segment != m.pc.segment && !m.code->containsSegment(segment)) {
+        return get<CodePointStub>(m.value_loader.loadValue(hash_value(*cp)));
     }
     return *cp;
 }
@@ -72,24 +76,32 @@ uint64_t assumeInt64(uint256_t& val) {
     return static_cast<uint64_t>(val);
 }
 
-const Tuple& assumeTuple(const value& val) {
-    auto tup = std::get_if<Tuple>(&val);
+Tuple assumeTuple(MachineState& m, const Value& val) {
+    auto tup = get_if<Tuple>(&val);
     if (!tup) {
+        auto uv = get_if<UnloadedValue>(&val);
+        if (uv && uv->type() == TUPLE) {
+            return get<Tuple>(m.value_loader.loadValue(uv->hash()));
+        }
         throw bad_pop_type{};
     }
     return *tup;
 }
 
-Tuple& assumeTuple(value& val) {
-    auto tup = std::get_if<Tuple>(&val);
+Tuple assumeTuple(MachineState& m, Value& val) {
+    auto tup = get_if<Tuple>(&val);
     if (!tup) {
+        auto uv = get_if<UnloadedValue>(&val);
+        if (uv && uv->type() == TUPLE) {
+            return get<Tuple>(m.value_loader.loadValue(uv->hash()));
+        }
         throw bad_pop_type{};
     }
     return *tup;
 }
 
-Buffer& assumeBuffer(value& val) {
-    auto buf = std::get_if<Buffer>(&val);
+Buffer& assumeBuffer(Value& val) {
+    auto buf = get_if<Buffer>(&val);
     if (!buf) {
         throw bad_pop_type{};
     }
@@ -295,7 +307,7 @@ void eq(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aVal = m.stack[0];
     auto& bVal = m.stack[1];
-    m.stack[1] = aVal == bVal ? 1 : 0;
+    m.stack[1] = values_equal(aVal, bVal) ? 1 : 0;
     m.stack.popClear();
     ++m.pc;
 }
@@ -400,19 +412,9 @@ void hashOp(MachineState& m) {
     ++m.pc;
 }
 
-struct ValueTypeVisitor {
-    ValueTypes operator()(const uint256_t&) const { return NUM; }
-    ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
-    ValueTypes operator()(const Tuple&) const { return TUPLE; }
-    ValueTypes operator()(const std::shared_ptr<HashPreImage>&) const {
-        return TUPLE;
-    }
-    ValueTypes operator()(const Buffer&) const { return BUFFER; }
-};
-
 void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
-    m.stack[0] = std::visit(ValueTypeVisitor{}, m.stack[0]);
+    m.stack[0] = visit(ValueTypeVisitor{}, m.stack[0]);
     ++m.pc;
 }
 
@@ -465,7 +467,7 @@ Tuple decodeKeccakState(const uint64_t* state) {
 
 void keccakF(MachineState& m) {
     m.stack.prepForMod(1);
-    auto& tup = assumeTuple(m.stack[0]);
+    auto tup = assumeTuple(m, m.stack[0]);
     uint64_t state[25];
 
     internal::encodeKeccakState(tup, state);
@@ -522,13 +524,13 @@ void pop(MachineState& m) {
 }
 
 void spush(MachineState& m) {
-    value copiedStatic = m.static_val;
+    Value copiedStatic = m.static_val;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
 
 void rpush(MachineState& m) {
-    value copiedRegister = m.registerVal;
+    Value copiedRegister = m.registerVal;
     m.stack.push(std::move(copiedRegister));
     ++m.pc;
 }
@@ -542,14 +544,14 @@ void rset(MachineState& m) {
 
 void jump(MachineState& m) {
     m.stack.prepForMod(1);
-    auto& target = assumeCodePoint(m.stack[0]);
+    auto target = assumeCodePoint(m, m.stack[0]);
     m.pc = target.pc;
     m.stack.popClear();
 }
 
 void cjump(MachineState& m) {
     m.stack.prepForMod(2);
-    auto& target = assumeCodePoint(m.stack[0]);
+    auto target = assumeCodePoint(m, m.stack[0]);
     auto& cond = assumeInt(m.stack[1]);
     if (cond != 0) {
         m.pc = target.pc;
@@ -604,7 +606,7 @@ void errPush(MachineState& m) {
 
 void errSet(MachineState& m) {
     m.stack.prepForMod(1);
-    auto codePointVal = std::get_if<CodePointStub>(&m.stack[0]);
+    auto codePointVal = get_if<CodePointStub>(&m.stack[0]);
     if (!codePointVal) {
         m.state = Status::Error;
     } else {
@@ -615,19 +617,19 @@ void errSet(MachineState& m) {
 }
 
 void dup0(MachineState& m) {
-    value valACopy = m.stack[0];
+    Value valACopy = m.stack[0];
     m.stack.push(std::move(valACopy));
     ++m.pc;
 }
 
 void dup1(MachineState& m) {
-    value valBCopy = m.stack[1];
+    Value valBCopy = m.stack[1];
     m.stack.push(std::move(valBCopy));
     ++m.pc;
 }
 
 void dup2(MachineState& m) {
-    value valCCopy = m.stack[2];
+    Value valCCopy = m.stack[2];
     m.stack.push(std::move(valCCopy));
     ++m.pc;
 }
@@ -648,7 +650,7 @@ void tget(MachineState& m) {
     m.stack.prepForMod(2);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
-    auto& tup = assumeTuple(m.stack[1]);
+    auto tup = assumeTuple(m, m.stack[1]);
     m.stack[1] = tup.get_element(index);
     m.stack.popClear();
     ++m.pc;
@@ -658,7 +660,7 @@ void tset(MachineState& m) {
     m.stack.prepForMod(3);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
-    auto& tup = assumeTuple(m.stack[1]);
+    auto tup = assumeTuple(m, m.stack[1]);
     tup.set_element(index, std::move(m.stack[2]));
     m.stack[2] = std::move(tup);
     m.stack.popClear();
@@ -670,7 +672,7 @@ void xget(MachineState& m) {
     m.stack.prepForMod(1);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
-    auto& tup = assumeTuple(m.auxstack[0]);
+    auto tup = assumeTuple(m, m.auxstack[0]);
     m.stack[0] = tup.get_element(index);
     ++m.pc;
 }
@@ -680,7 +682,7 @@ void xset(MachineState& m) {
     m.auxstack.prepForMod(1);
     auto& bigIndex = assumeInt(m.stack[0]);
     auto index = assumeInt64(bigIndex);
-    auto& tup = assumeTuple(m.auxstack[0]);
+    auto tup = assumeTuple(m, m.auxstack[0]);
     tup.set_element(index, std::move(m.stack[1]));
     m.auxstack[0] = std::move(tup);
     m.stack.popClear();
@@ -690,9 +692,19 @@ void xset(MachineState& m) {
 
 void tlen(MachineState& m) {
     m.stack.prepForMod(1);
-    m.stack[0] = assumeTuple(m.stack[0]).tuple_size();
+    m.stack[0] = assumeTuple(m, m.stack[0]).tuple_size();
     ++m.pc;
 }
+
+struct Secp256k1Context {
+    secp256k1_context* context;
+
+    Secp256k1Context()
+        : context(secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
+                                           SECP256K1_CONTEXT_VERIFY)) {}
+
+    ~Secp256k1Context() { secp256k1_context_destroy(context); }
+};
 
 namespace {
 uint256_t parseSignature(MachineState& m) {
@@ -706,25 +718,25 @@ uint256_t parseSignature(MachineState& m) {
         return 0;
     }
 
-    static secp256k1_context* context = secp256k1_context_create(
-        SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+    static Secp256k1Context context;
 
     secp256k1_ecdsa_recoverable_signature sig;
     int parsed_sig = secp256k1_ecdsa_recoverable_signature_parse_compact(
-        context, &sig, sig_raw.data(), static_cast<int>(recovery_int));
+        context.context, &sig, sig_raw.data(), static_cast<int>(recovery_int));
     if (!parsed_sig) {
         return 0;
     }
 
     secp256k1_pubkey pubkey;
-    if (!secp256k1_ecdsa_recover(context, &pubkey, &sig, message.bytes)) {
+    if (!secp256k1_ecdsa_recover(context.context, &pubkey, &sig,
+                                 message.bytes)) {
         return 0;
     }
 
     std::array<unsigned char, 65> pubkey_raw{};
     size_t output_length = pubkey_raw.size();
     int serialized_pubkey = secp256k1_ec_pubkey_serialize(
-        context, pubkey_raw.data(), &output_length, &pubkey,
+        context.context, pubkey_raw.data(), &output_length, &pubkey,
         SECP256K1_EC_UNCOMPRESSED);
     if (!serialized_pubkey) {
         return 0;
@@ -793,16 +805,16 @@ void ec_pairing(MachineState& m) {
 
     std::vector<std::pair<G1Point, G2Point>> points;
 
-    const Tuple* val = &assumeTuple(m.stack[0]);
+    auto val = assumeTuple(m, m.stack[0]);
     for (int i = 0; i < max_ec_pairing_points; i++) {
-        if (val->tuple_size() == 0) {
+        if (val.tuple_size() == 0) {
             break;
         }
-        if (val->tuple_size() != 2) {
+        if (val.tuple_size() != 2) {
             throw bad_pop_type{};
         }
-        auto& next = assumeTuple(val->get_element_unsafe(0));
-        val = &assumeTuple(val->get_element_unsafe(1));
+        auto next = assumeTuple(m, val.get_element_unsafe(0));
+        val = assumeTuple(m, val.get_element_unsafe(1));
 
         if (next.tuple_size() != 6) {
             throw bad_pop_type{};
@@ -816,7 +828,7 @@ void ec_pairing(MachineState& m) {
                    assumeInt(next.get_element_unsafe(5))};
         points.emplace_back(g1, g2);
     }
-    if (val->tuple_size() != 0) {
+    if (val.tuple_size() != 0) {
         throw bad_pop_type{};
     }
 
@@ -830,26 +842,26 @@ void ec_pairing(MachineState& m) {
     ++m.pc;
 }
 
-uint64_t ec_pairing_variable_gas_cost(const MachineState& m) {
+uint64_t ec_pairing_variable_gas_cost(MachineState& m) {
     // The fixed cost of the the pairing opcode is applied elsewhere
     uint64_t gas_cost = 0;
     if (m.stack.stacksize() == 0) {
         return gas_cost;
     }
     try {
-        const value* val = &m.stack[0];
+        const Value* val = &m.stack[0];
         for (int i = 0; i < max_ec_pairing_points; i++) {
-            const Tuple* tup = &assumeTuple(*val);
-            if (tup->tuple_size() == 0) {
+            auto tup = assumeTuple(m, *val);
+            if (tup.tuple_size() == 0) {
                 break;
             }
-            if (tup->tuple_size() != 2) {
+            if (tup.tuple_size() != 2) {
                 throw bad_pop_type{};
             }
-            val = &tup->get_element_unsafe(1);
+            val = &tup.get_element_unsafe(1);
             gas_cost += ec_pair_gas_cost;
         }
-    } catch (const std::exception&) {
+    } catch (const avm_exception&) {
     }
 
     return gas_cost;
@@ -869,7 +881,8 @@ void log(MachineState& m) {
 
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.debug_prints.push_back(m.stack.pop());
+    m.context.debug_prints.push_back(
+        MachineEmission<Value>{m.stack.pop(), m.output.fully_processed_inbox});
     ++m.pc;
 }
 
@@ -900,13 +913,18 @@ void send(MachineState& m) {
 }
 
 BlockReason inboxOp(MachineState& m) {
-    MachineMessage next_message;
-    if (!m.context.inboxEmpty()) {
-        next_message = m.context.popInbox();
-    } else {
+    if (m.context.inboxEmpty()) {
         return InboxBlocked();
     }
 
+    auto next_message = m.context.popInbox();
+
+    if (next_message.message.block_number > m.output.l1_block_number) {
+        m.output.l1_block_number = next_message.message.block_number;
+    }
+    if (next_message.message.timestamp > m.output.last_inbox_timestamp) {
+        m.output.last_inbox_timestamp = next_message.message.timestamp;
+    }
     m.addProcessedMessage(next_message);
     m.stack.push(next_message.message.toTuple());
     ++m.pc;
@@ -934,29 +952,22 @@ void errcodept(MachineState& m) {
 
 void pushinsn(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = std::get_if<CodePointStub>(&m.stack[1]);
-    if (!target) {
-        m.state = Status::Error;
-        return;
-    }
+    auto target = assumeCodePoint(m, m.stack[1]);
     auto& op_int = assumeInt(m.stack[0]);
     auto op = static_cast<uint8_t>(op_int);
-    m.stack[1] = m.code->addOperation(target->pc, {static_cast<OpCode>(op)});
+    m.stack[1] =
+        m.code->addOperation(target.pc, Operation{static_cast<OpCode>(op)});
     m.stack.popClear();
     ++m.pc;
 }
 
 void pushinsnimm(MachineState& m) {
     m.stack.prepForMod(3);
-    auto target = std::get_if<CodePointStub>(&m.stack[2]);
-    if (!target) {
-        m.state = Status::Error;
-        return;
-    }
+    auto target = assumeCodePoint(m, m.stack[2]);
     auto& op_int = assumeInt(m.stack[0]);
     auto op = static_cast<uint8_t>(op_int);
     m.stack[2] = m.code->addOperation(
-        target->pc, {static_cast<OpCode>(op), std::move(m.stack[1])});
+        target.pc, {static_cast<OpCode>(op), std::move(m.stack[1])});
     m.stack.popClear();
     m.stack.popClear();
     ++m.pc;
@@ -971,6 +982,7 @@ BlockReason sideload(MachineState& m) {
         m.context.sideloads.pop_back();
     } else {
         if (m.context.stop_on_sideload && !m.context.first_instruction) {
+            m.output.l2_block_number = block_num;
             return SideloadBlocked{block_num};
         }
         m.stack[0] = Tuple();

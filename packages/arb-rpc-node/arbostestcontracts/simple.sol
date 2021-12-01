@@ -52,11 +52,11 @@ contract Simple {
     uint256 x;
     uint256 public y;
 
-    event TestEvent(uint256 value);
+    event TestEvent(uint256 value, address sender);
 
     constructor() public payable {
         y = msg.value;
-        emit TestEvent(msg.value);
+        emit TestEvent(msg.value, msg.sender);
     }
 
     receive() external payable {
@@ -65,7 +65,7 @@ contract Simple {
 
     function exists() external payable returns (uint256) {
         x = 5;
-        emit TestEvent(msg.value);
+        emit TestEvent(msg.value, msg.sender);
         return 10;
     }
 

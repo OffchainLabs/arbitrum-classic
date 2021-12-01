@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface TestCustomTokenL1Interface extends ethers.utils.Interface {
   functions: {
@@ -34,7 +34,8 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
     'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)': FunctionFragment
+    'registerTokenOnL2(address,uint256,uint256,uint256,uint256,address)': FunctionFragment
+    'router()': FunctionFragment
     'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
     'transfer(address,uint256)': FunctionFragment
@@ -86,8 +87,16 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'registerTokenOnL2',
-    values: [string, BigNumberish, BigNumberish, BigNumberish, string]
+    values: [
+      string,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      string
+    ]
   ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
   encodeFunctionData(functionFragment: 'symbol', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'totalSupply',
@@ -135,6 +144,7 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     functionFragment: 'registerTokenOnL2',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'totalSupply', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'transfer', data: BytesLike): Result
@@ -155,6 +165,27 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'Approval'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Transfer'): EventFragment
 }
+
+export type ApprovalEvent = TypedEvent<
+  [string, string, BigNumber] & {
+    owner: string
+    spender: string
+    value: BigNumber
+  }
+>
+
+export type Transfer_address_address_uint256_bytes_Event = TypedEvent<
+  [string, string, BigNumber, string] & {
+    from: string
+    to: string
+    value: BigNumber
+    data: string
+  }
+>
+
+export type Transfer_address_address_uint256_Event = TypedEvent<
+  [string, string, BigNumber] & { from: string; to: string; value: BigNumber }
+>
 
 export class TestCustomTokenL1 extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -255,12 +286,15 @@ export class TestCustomTokenL1 extends BaseContract {
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
+      maxSubmissionCostForCustomBridge: BigNumberish,
+      maxSubmissionCostForRouter: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       creditBackAddress: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>
+
+    router(overrides?: CallOverrides): Promise<[string]>
 
     symbol(overrides?: CallOverrides): Promise<[string]>
 
@@ -342,12 +376,15 @@ export class TestCustomTokenL1 extends BaseContract {
 
   registerTokenOnL2(
     l2CustomTokenAddress: string,
-    maxSubmissionCost: BigNumberish,
+    maxSubmissionCostForCustomBridge: BigNumberish,
+    maxSubmissionCostForRouter: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
     creditBackAddress: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>
+
+  router(overrides?: CallOverrides): Promise<string>
 
   symbol(overrides?: CallOverrides): Promise<string>
 
@@ -427,12 +464,15 @@ export class TestCustomTokenL1 extends BaseContract {
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
+      maxSubmissionCostForCustomBridge: BigNumberish,
+      maxSubmissionCostForRouter: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       creditBackAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
+
+    router(overrides?: CallOverrides): Promise<string>
 
     symbol(overrides?: CallOverrides): Promise<string>
 
@@ -460,6 +500,15 @@ export class TestCustomTokenL1 extends BaseContract {
   }
 
   filters: {
+    'Approval(address,address,uint256)'(
+      owner?: string | null,
+      spender?: string | null,
+      value?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { owner: string; spender: string; value: BigNumber }
+    >
+
     Approval(
       owner?: string | null,
       spender?: string | null,
@@ -469,7 +518,7 @@ export class TestCustomTokenL1 extends BaseContract {
       { owner: string; spender: string; value: BigNumber }
     >
 
-    Transfer(
+    'Transfer(address,address,uint256,bytes)'(
       from?: string | null,
       to?: string | null,
       value?: null,
@@ -477,6 +526,15 @@ export class TestCustomTokenL1 extends BaseContract {
     ): TypedEventFilter<
       [string, string, BigNumber, string],
       { from: string; to: string; value: BigNumber; data: string }
+    >
+
+    'Transfer(address,address,uint256)'(
+      from?: string | null,
+      to?: string | null,
+      value?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber],
+      { from: string; to: string; value: BigNumber }
     >
   }
 
@@ -536,12 +594,15 @@ export class TestCustomTokenL1 extends BaseContract {
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
+      maxSubmissionCostForCustomBridge: BigNumberish,
+      maxSubmissionCostForRouter: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       creditBackAddress: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<BigNumber>
 
     symbol(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -630,12 +691,15 @@ export class TestCustomTokenL1 extends BaseContract {
 
     registerTokenOnL2(
       l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
+      maxSubmissionCostForCustomBridge: BigNumberish,
+      maxSubmissionCostForRouter: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       creditBackAddress: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     symbol(overrides?: CallOverrides): Promise<PopulatedTransaction>
 

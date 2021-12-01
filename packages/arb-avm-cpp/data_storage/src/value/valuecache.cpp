@@ -16,7 +16,7 @@
 
 #include <data_storage/value/valuecache.hpp>
 
-void ValueCache::maybeSave(value val) {
+void ValueCache::maybeSave(Value val) {
     if (caches.empty()) {
         return;
     }
@@ -30,7 +30,7 @@ void ValueCache::maybeSave(value val) {
     }
 }
 
-std::optional<value> ValueCache::loadIfExists(const uint256_t& hash) {
+std::optional<Value> ValueCache::loadIfExists(const uint256_t& hash) {
     if (caches.empty()) {
         return std::nullopt;
     }

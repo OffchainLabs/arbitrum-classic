@@ -1,13 +1,33 @@
-import { instantiateBridge } from '../scripts/instantiate_bridge'
-import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
-import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
-import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict'
 
-import { TokenInfo, TokenList, schema } from '@uniswap/token-lists'
-import { writeFileSync, readFileSync } from 'fs'
+import { writeFileSync } from 'fs'
 import axios from 'axios'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
+import { AddressZero } from '@ethersproject/constants'
+import { TokenInfo, TokenList, schema } from '@uniswap/token-lists'
+
+import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
+import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+
+import { instantiateBridge } from '../scripts/instantiate_bridge'
+
 const ajv = new Ajv()
 addFormats(ajv)
 const validate = ajv.compile(schema)
@@ -15,7 +35,7 @@ const validate = ajv.compile(schema)
 const gen = async () => {
   const tokens: TokenInfo[] = []
 
-  const { bridge, l1Network, l2Network } = await instantiateBridge()
+  const { bridge, l2Network } = await instantiateBridge()
   const path = `./token_lists/lists/token-list-${l2Network.chainID}.json`
   const previousJSON = (
     await axios.get('https://bridge.arbitrum.io/token-list-42161.json')
@@ -71,7 +91,7 @@ const gen = async () => {
       continue
     }
 
-    if (l1GatewayAddress === constants.AddressZero) {
+    if (l1GatewayAddress === AddressZero) {
       throw new Error(`Token ${l1Address} not registered in L1 router`)
     }
     if (l1Address === '0x0CE51000d5244F1EAac0B313a792D5a5f96931BF') {

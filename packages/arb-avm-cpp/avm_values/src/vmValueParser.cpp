@@ -52,9 +52,9 @@ Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
     return Buffer::fromData(bytes);
 }
 
-value value_from_json(const nlohmann::json& full_value_json,
+Value value_from_json(const nlohmann::json& full_value_json,
                       size_t op_count,
-                      const CodeSegment& code) {
+                      const UnsafeCodeSegment& code) {
     std::vector<DeserializedValue> values;
     std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
         full_value_json};
@@ -63,7 +63,7 @@ value value_from_json(const nlohmann::json& full_value_json,
         json_values.pop_back();
 
         if (value_json.get().contains(INT_VAL_LABEL)) {
-            values.push_back(value{int_value_from_json(value_json)});
+            values.push_back(Value{int_value_from_json(value_json)});
         } else if (value_json.get().contains(TUP_VAL_LABEL)) {
             auto& json_tup = value_json.get()[TUP_VAL_LABEL];
             if (!json_tup.is_array() || json_tup.size() > 8) {
@@ -89,7 +89,7 @@ value value_from_json(const nlohmann::json& full_value_json,
             if (internal_offset != std::numeric_limits<uint64_t>::max()) {
                 pc = op_count - internal_offset;
             }
-            values.push_back(value{
+            values.push_back(Value{
                 CodePointStub({code.segmentID(), pc}, code.loadCodePoint(pc))});
         } else if (value_json.get().contains(BUF_LABEL)) {
             values.emplace_back(
@@ -103,7 +103,7 @@ value value_from_json(const nlohmann::json& full_value_json,
 
 Operation operation_from_json(const nlohmann::json& op_json,
                               size_t op_count,
-                              const CodeSegment& code) {
+                              const UnsafeCodeSegment& code) {
     auto opcode_json = op_json.at(OPCODE_LABEL);
     if (opcode_json.contains(OPCODE_SUB_LABEL)) {
         opcode_json = opcode_json.at(OPCODE_SUB_LABEL);
@@ -114,22 +114,22 @@ Operation operation_from_json(const nlohmann::json& op_json,
     auto opcode = opcode_json.get<OpCode>();
     auto& imm = op_json.at(IMMEDIATE_LABEL);
     if (imm.is_null()) {
-        return {opcode};
+        return Operation{opcode};
     }
     return {opcode, value_from_json(imm, op_count, code)};
 }
 }  // namespace
 
-value simple_value_from_json(const nlohmann::json& full_value_json) {
+Value simple_value_from_json(const nlohmann::json& full_value_json) {
     std::vector<DeserializedValue> values;
     std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
         full_value_json};
     while (!json_values.empty()) {
-        auto value_json = std::move(json_values.back());
+        auto value_json = json_values.back();
         json_values.pop_back();
 
         if (value_json.get().contains(INT_VAL_LABEL)) {
-            values.push_back(value{int_value_from_json(value_json)});
+            values.push_back(Value{int_value_from_json(value_json)});
         } else if (value_json.get().contains(TUP_VAL_LABEL)) {
             const auto& json_tup = value_json.get()[TUP_VAL_LABEL];
             if (!json_tup.is_array() || json_tup.size() > 8) {
@@ -177,11 +177,11 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
         throw std::runtime_error("expected code to be array");
     }
     auto op_count = json_code.size();
-    auto segment = std::make_shared<CodeSegment>(0);
+    auto segment = std::make_shared<UnsafeCodeSegment>(0);
     for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
         segment->addOperation(operation_from_json(*it, op_count, *segment));
     }
-    value static_val = value_from_json(
-        std::move(executable_json.at(STATIC_LABEL)), op_count, *segment);
+    Value static_val =
+        value_from_json(executable_json.at(STATIC_LABEL), op_count, *segment);
     return {std::move(segment), std::move(static_val)};
 }

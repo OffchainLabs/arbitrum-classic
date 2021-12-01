@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package broadcaster
+package wsbroadcastserver
 
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"math/rand"
 	"net"
 	"strconv"
@@ -39,10 +38,10 @@ const MaxSendQueue = 1000
 // ClientConnection represents client connection.
 type ClientConnection struct {
 	ioMutex sync.Mutex
-	conn    io.ReadWriteCloser
+	conn    net.Conn
 
 	desc          *netpoll.Desc
-	name          string
+	Name          string
 	clientManager *ClientManager
 
 	lastHeardUnix int64
@@ -54,7 +53,7 @@ func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *Clien
 	return &ClientConnection{
 		conn:          conn,
 		desc:          desc,
-		name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
+		Name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
 		clientManager: clientManager,
 		lastHeardUnix: time.Now().Unix(),
 		out:           make(chan []byte, MaxSendQueue),
@@ -75,7 +74,7 @@ func (cc *ClientConnection) Start(parentCtx context.Context) {
 			case data := <-cc.out:
 				err := cc.writeRaw(data)
 				if err != nil {
-					logger.Error().Err(err).Str("client", cc.name).Msg("error writing data to client")
+					logger.Error().Err(err).Str("client", cc.Name).Msg("error writing data to client")
 					cc.clientManager.Remove(cc)
 					for {
 						// Consume and ignore channel data until client properly stopped to prevent deadlock
@@ -106,36 +105,27 @@ func (cc *ClientConnection) GetLastHeard() time.Time {
 
 // Receive reads next message from client's underlying connection.
 // It blocks until full message received.
-func (cc *ClientConnection) Receive() error {
-	err := cc.readRequest()
+func (cc *ClientConnection) Receive(ctx context.Context, timeout time.Duration) ([]byte, ws.OpCode, error) {
+	msg, op, err := cc.readRequest(ctx, timeout)
 	if err != nil {
 		_ = cc.conn.Close()
-		return err
+		return nil, op, err
 	}
 
-	return nil
+	return msg, op, err
 }
 
 // readRequests reads json-rpc request from connection.
-func (cc *ClientConnection) readRequest() error {
+func (cc *ClientConnection) readRequest(ctx context.Context, timeout time.Duration) ([]byte, ws.OpCode, error) {
 	cc.ioMutex.Lock()
 	defer cc.ioMutex.Unlock()
 
 	atomic.StoreInt64(&cc.lastHeardUnix, time.Now().Unix())
 
-	h, r, err := wsutil.NextReader(cc.conn, ws.StateServerSide)
-	if h.OpCode.IsControl() {
-		return wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
-	}
-	if err != nil {
-
-		return err
-	}
-
-	return nil
+	return ReadData(ctx, cc.conn, timeout, ws.StateServerSide)
 }
 
-func (cc *ClientConnection) write(x interface{}) error {
+func (cc *ClientConnection) Write(x interface{}) error {
 	writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(writer)
 

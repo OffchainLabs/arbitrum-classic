@@ -521,4 +521,40 @@ inline const OpCodeArray<bool>& instructionValidity() {
     return costs;
 }
 
+inline OpCodeArray<size_t> initializeStackArgCount() {
+    OpCodeArray<size_t> arr;
+    for (size_t i = 0; i <= MaxValidOpcode; ++i) {
+        auto it = InstructionStackPops.find(static_cast<OpCode>(i));
+        if (it != InstructionStackPops.end()) {
+            arr[i] = it->second.size();
+        } else {
+            arr[i] = 0;
+        }
+    }
+    return arr;
+}
+
+inline const OpCodeArray<size_t>& stackArgCount() {
+    static OpCodeArray<size_t> costs = initializeStackArgCount();
+    return costs;
+}
+
+inline OpCodeArray<size_t> initializeAuxstackArgCount() {
+    OpCodeArray<size_t> arr;
+    for (size_t i = 0; i <= MaxValidOpcode; ++i) {
+        auto it = InstructionAuxStackPops.find(static_cast<OpCode>(i));
+        if (it != InstructionAuxStackPops.end()) {
+            arr[i] = it->second.size();
+        } else {
+            arr[i] = 0;
+        }
+    }
+    return arr;
+}
+
+inline const OpCodeArray<size_t>& auxstackArgCount() {
+    static OpCodeArray<size_t> costs = initializeAuxstackArgCount();
+    return costs;
+}
+
 #endif /* opcodes_hpp */

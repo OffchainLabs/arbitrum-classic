@@ -72,11 +72,11 @@ type ArbCoreLookup interface {
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
-	GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
+	GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (ExecutionCursor, error)
 
-	// Advance executes as much as it can without going over maxGas or
+	// AdvanceExecutionCursor executes as much as it can without going over maxGas or
 	// optionally until it reaches or goes over maxGas
-	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
+	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error
 
 	// TakeMachine takes ownership of machine such that ExecutionCursor will
 	// no longer be able to advance.
@@ -86,6 +86,7 @@ type ArbCoreLookup interface {
 type ArbCoreInbox interface {
 	DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool
 	MessagesStatus() (MessageStatus, error)
+	PrintCoreThreadBacktrace()
 }
 
 func DeliverMessagesAndWait(db ArbCoreInbox, previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
@@ -128,6 +129,7 @@ func WaitForMachineIdle(db ArbCore) {
 
 func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 	start := time.Now()
+	nextLog := time.Second * 30
 	var status MessageStatus
 	var err error
 	for {
@@ -143,9 +145,10 @@ func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 			break
 		}
 		duration := time.Since(start)
-		if duration > time.Second*30 {
+		if duration > nextLog {
 			logger.Warn().Dur("elapsed", duration).Msg("Message delivery taking too long")
-			start = time.Now()
+			db.PrintCoreThreadBacktrace()
+			nextLog += time.Second * 30
 		}
 		<-time.After(time.Millisecond * 50)
 	}
@@ -189,29 +192,29 @@ func GetSingleSend(lookup ArbOutputLookup, index *big.Int) ([]byte, error) {
 	return sends[0], nil
 }
 
-func GetZeroOrOneLog(lookup ArbOutputLookup, index *big.Int) (value.Value, error) {
+func GetZeroOrOneLog(lookup ArbOutputLookup, index *big.Int) (ValueAndInbox, error) {
 	logs, err := lookup.GetLogs(index, big.NewInt(1))
 	if err != nil {
-		return nil, err
+		return ValueAndInbox{}, err
 	}
 	if len(logs) == 0 {
-		return nil, nil
+		return ValueAndInbox{}, nil
 	}
 	if len(logs) > 1 {
-		return nil, errors.New("too many logs")
+		return ValueAndInbox{}, errors.New("too many logs")
 	}
 	return logs[0], nil
 }
 
 type ExecutionState struct {
-	MachineHash       common.Hash
-	InboxAcc          common.Hash
-	TotalMessagesRead *big.Int
-	TotalGasConsumed  *big.Int
-	TotalSendCount    *big.Int
-	TotalLogCount     *big.Int
-	SendAcc           common.Hash
-	LogAcc            common.Hash
+	MachineHash       common.Hash `json:"machineHash"`
+	InboxAcc          common.Hash `json:"inboxAcc"`
+	TotalMessagesRead *big.Int    `json:"inboxCount"`
+	TotalGasConsumed  *big.Int    `json:"gasUsed"`
+	TotalSendCount    *big.Int    `json:"sendCount"`
+	TotalLogCount     *big.Int    `json:"logCount"`
+	SendAcc           common.Hash `json:"sendAcc"`
+	LogAcc            common.Hash `json:"logAcc"`
 }
 
 func NewExecutionState(c ExecutionCursor) (*ExecutionState, error) {
@@ -234,10 +237,6 @@ func (e *ExecutionState) IsPermanentlyBlocked() bool {
 	return e.MachineHash == haltedHash || e.MachineHash == erroredHash
 }
 
-func (e *ExecutionState) Equals(other Cut) bool {
-	return e.CutHash() == other.CutHash()
-}
-
 func (e *ExecutionState) RestHash() [32]byte {
 	return hashing.SoliditySHA3(
 		hashing.Uint256(e.TotalMessagesRead),
@@ -249,21 +248,31 @@ func (e *ExecutionState) RestHash() [32]byte {
 	)
 }
 
-func (e *ExecutionState) CutHash() [32]byte {
+func (e *ExecutionState) CutHash() common.Hash {
 	return hashing.SoliditySHA3(
 		hashing.Uint256(e.TotalGasConsumed),
 		hashing.Bytes32(e.RestHash()),
 	)
 }
 
+type InboxState struct {
+	Count       *big.Int
+	Accumulator common.Hash
+}
+
+type ValueAndInbox struct {
+	Value value.Value
+	Inbox InboxState
+}
+
 type LogConsumer interface {
-	AddLogs(initialIndex *big.Int, avmLogs []value.Value) error
-	DeleteLogs(avmLogs []value.Value) error
+	AddLogs(initialIndex *big.Int, avmLogs []ValueAndInbox) error
+	DeleteLogs(avmLogs []ValueAndInbox) error
 }
 
 type LogsCursor interface {
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
-	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, []value.Value, error)
+	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []ValueAndInbox, []ValueAndInbox, error)
 	LogsCursorCheckError(cursorIndex *big.Int) error
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error)

@@ -15,13 +15,16 @@
  */
 
 #include <data_storage/datastorage.hpp>
+#include <data_storage/readtransaction.hpp>
+#include <data_storage/storageresult.hpp>
 
+#include <openssl/rand.h>
 #include <rocksdb/convenience.h>
 #include <rocksdb/filter_policy.h>
-#include <data_storage/storageresult.hpp>
 
 #include <iostream>
 #include <string>
+#include <thread>
 
 DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::TransactionDBOptions txn_options{};
@@ -106,6 +109,19 @@ DataStorage::DataStorage(const std::string& db_path) {
     //    }
 
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
+
+    status = updateSecretHashSeed();
+    if (!status.ok()) {
+        throw std::runtime_error(status.ToString());
+    }
+}
+
+DataStorage::~DataStorage() {
+    auto status = closeDb();
+    if (!status.ok()) {
+        std::cerr << "error closing DataStorage: " << status.ToString()
+                  << std::endl;
+    }
 }
 
 rocksdb::Status DataStorage::flushNextColumn() {
@@ -114,13 +130,50 @@ rocksdb::Status DataStorage::flushNextColumn() {
 }
 
 rocksdb::Status DataStorage::closeDb() {
-    column_handles.clear();
     if (txn_db) {
+        std::cerr << "closing ArbStorage" << std::endl;
+        for (auto handle : column_handles) {
+            auto status = txn_db->DestroyColumnFamilyHandle(handle);
+            if (!status.ok()) {
+                return status;
+            }
+        }
+        txn_db->SyncWAL();
         auto s = txn_db->Close();
+
+        // Normally, the database will shutdown cleanly very quickly.  However,
+        // if database is under heavy load, it could take a while to finish
+        // pending requests and close all snapshots so that database can be
+        // closed cleanly.
+        for (std::chrono::seconds seconds_left = std::chrono::minutes(30);
+             s.IsAborted() && seconds_left.count() > 0;
+             seconds_left -= std::chrono::seconds(1)) {
+            // Try to close database once a second for 30 minutes
+            if (seconds_left.count() % 10 == 0) {
+                // Print message every 10 seconds
+                auto output_minutes =
+                    std::chrono::duration_cast<std::chrono::minutes>(
+                        seconds_left)
+                        .count();
+                auto output_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>(
+                        seconds_left % std::chrono::minutes(1))
+                        .count();
+                std::cerr << "waiting up to " << output_minutes << " minutes, "
+                          << output_seconds
+                          << " seconds for rocksdb snapshots to be freed"
+                          << std::endl;
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            s = txn_db->Close();
+        }
+        if (s.IsAborted()) {
+            std::cerr << "rocksdb snapshots not freed" << std::endl;
+        }
         txn_db.reset();
+        std::cerr << "closed ArbStorage" << std::endl;
         return s;
     }
-
     return rocksdb::Status::OK();
 }
 
@@ -142,4 +195,28 @@ rocksdb::Status DataStorage::clearDBExceptInbox() {
         }
     }
     return rocksdb::Status::OK();
+}
+
+rocksdb::Status DataStorage::updateSecretHashSeed() {
+    std::string key("secretHashSeed");
+    rocksdb::PinnableSlice value;
+    rocksdb::ReadOptions read_opts;
+    auto status =
+        txn_db->Get(read_opts, column_handles[STATE_COLUMN], key, &value);
+    if (status.IsNotFound()) {
+        secret_hash_seed.resize(32);
+        RAND_bytes(secret_hash_seed.data(),
+                   static_cast<int>(secret_hash_seed.size()));
+        rocksdb::WriteOptions write_opts;
+        rocksdb::Slice value_slice(
+            reinterpret_cast<const char*>(secret_hash_seed.data()),
+            secret_hash_seed.size());
+        status = txn_db->Put(write_opts, column_handles[STATE_COLUMN], key,
+                             value_slice);
+    } else if (status.ok()) {
+        secret_hash_seed = std::vector<unsigned char>(
+            value.data(), value.data() + value.size());
+        value.Reset();
+    }
+    return status;
 }
