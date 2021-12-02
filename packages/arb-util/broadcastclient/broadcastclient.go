@@ -32,6 +32,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/wsbroadcastserver"
 )
 
 type BroadcastClient struct {
@@ -140,7 +141,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 			default:
 			}
 
-			msg, op, err := broadcaster.ReadData(ctx, bc.conn, bc.idleTimeout, ws.StateClientSide)
+			msg, op, err := wsbroadcastserver.ReadData(ctx, bc.conn, bc.idleTimeout, ws.StateClientSide)
 			if err != nil {
 				if bc.shuttingDown {
 					return
