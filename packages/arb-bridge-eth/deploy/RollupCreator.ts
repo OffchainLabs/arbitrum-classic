@@ -9,7 +9,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const bridgeCreator = await deployments.get('BridgeCreator')
   const rollup = await deployments.get('Rollup')
   const challengeFactory = await deployments.get('ChallengeFactory')
-  const nodeFactory = await deployments.get('NodeFactory')
   const RollupAdminFacet = await deployments.get('RollupAdminFacet')
   const RollupUserFacet = await deployments.get('RollupUserFacet')
 
@@ -24,7 +23,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     bridgeCreator.address,
     rollup.address,
     challengeFactory.address,
-    nodeFactory.address,
     RollupAdminFacet.address,
     RollupUserFacet.address
   )
@@ -35,6 +33,5 @@ module.exports.tags = ['RollupCreator', 'live', 'test']
 module.exports.dependencies = [
   'Rollup',
   'ChallengeFactory',
-  'NodeFactory',
   'BridgeCreator',
 ]

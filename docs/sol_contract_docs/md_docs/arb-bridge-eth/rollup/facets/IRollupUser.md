@@ -13,4 +13,4 @@ id: IRollupUser
 
 ### `requireUnresolvedExists()` (external)
 
-### `countStakedZombies(contract INode node) → uint256` (external)
+### `countStakedZombies(uint256 nodeNum) → uint256` (external)

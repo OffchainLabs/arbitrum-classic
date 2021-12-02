@@ -17,18 +17,21 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
-import "./INode.sol";
+import "./Node.sol";
 import "./IRollupCore.sol";
 import "./RollupLib.sol";
-import "./INodeFactory.sol";
 import "./RollupEventBridge.sol";
 import "../bridge/interfaces/ISequencerInbox.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+
 contract RollupCore is IRollupCore {
     using SafeMath for uint256;
+    using NodePropsLib for NodeProps;
+    using NodeLib for Node;
 
     // Stakers become Zombies after losing a challenge
     struct Zombie {
@@ -49,7 +52,7 @@ contract RollupCore is IRollupCore {
     uint256 private _firstUnresolvedNode;
     uint256 private _latestNodeCreated;
     uint256 private _lastStakeBlock;
-    mapping(uint256 => INode) private _nodes;
+    mapping(uint256 => Node) private _nodes;
     mapping(uint256 => bytes32) private _nodeHashes;
 
     address payable[] private _stakerList;
@@ -60,12 +63,28 @@ contract RollupCore is IRollupCore {
     mapping(address => uint256) private _withdrawableFunds;
 
     /**
-     * @notice Get the address of the Node contract for the given node
+     * @notice Get the Node the given node index
      * @param nodeNum Index of the node
-     * @return Address of the Node contract
+     * @return Node struct
      */
-    function getNode(uint256 nodeNum) public view override returns (INode) {
+    // CHRIS: check all usages of getNode to see if we're accessing it more than once in a particular call - we are in many
+    function getNode(uint256 nodeNum) internal view returns (Node storage) {
         return _nodes[nodeNum];
+    }
+
+    /**
+     * @notice Get the Node properties for the given index. 
+     * We can't expose the full Node publicly as it contains a mapping 
+     */
+    function getNodeProps(uint256 nodeNum) public view override returns (NodeProps memory) {
+        return getNode(nodeNum).props;
+    }
+
+    /**
+     * @notice Check if the specified node has been staked on by the provided staker
+     */
+    function nodeHasStaker(uint256 nodeNum, address staker) public view override returns(bool) {
+        return getNode(nodeNum).stakers[staker];
     }
 
     /**
@@ -186,7 +205,7 @@ contract RollupCore is IRollupCore {
      * @notice Initialize the core with an initial node
      * @param initialNode Initial node to start the chain with
      */
-    function initializeCore(INode initialNode) internal {
+    function initializeCore(Node memory initialNode) internal {
         _nodes[0] = initialNode;
         _firstUnresolvedNode = 1;
     }
@@ -196,7 +215,7 @@ contract RollupCore is IRollupCore {
      * @param node Node that was newly created
      * @param nodeHash The hash of said node
      */
-    function nodeCreated(INode node, bytes32 nodeHash) internal {
+    function nodeCreated(Node memory node, bytes32 nodeHash) internal {
         _latestNodeCreated++;
         _nodes[_latestNodeCreated] = node;
         _nodeHashes[_latestNodeCreated] = nodeHash;
@@ -250,10 +269,10 @@ contract RollupCore is IRollupCore {
     ) internal {
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
 
-        INode node = getNode(nodeNum);
+        Node storage node = getNode(nodeNum);
         // Authenticate data against node's confirm data pre-image
         require(
-            node.confirmData() ==
+            node.props.confirmData ==
                 RollupLib.confirmHash(
                     beforeSendAcc,
                     afterSendAcc,
@@ -418,13 +437,14 @@ contract RollupCore is IRollupCore {
         uint256 confirmPeriodBlocks
     ) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        INode node = _nodes[nodeNum];
+        Node storage node = getNode(nodeNum);
         uint256 newStakerCount = node.addStaker(stakerAddress);
         staker.latestStakedNode = nodeNum;
         if (newStakerCount == 1) {
-            INode parent = _nodes[node.prev()];
-            parent.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
+            Node storage parent = getNode(nodeNum);
+            parent.props.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
         }
+
     }
 
     /**
@@ -464,32 +484,32 @@ contract RollupCore is IRollupCore {
     }
 
     /**
-     * @notice Destroy the given node and clear out its address
+     * @notice Destroy the given node and clear out the data
      * @param nodeNum Index of the node to remove
      */
     function destroyNode(uint256 nodeNum) internal {
-        _nodes[nodeNum].destroy();
-        _nodes[nodeNum] = INode(0);
+        // CHRIS: should we destroy the nodehash mapping? we weren't already
+        delete _nodes[nodeNum];
     }
 
     function nodeDeadline(
         uint256 avmGasSpeedLimitPerBlock,
         uint256 gasUsed,
         uint256 confirmPeriodBlocks,
-        INode prevNode
+        Node memory prevNode
     ) internal view returns (uint256 deadlineBlock) {
         // Set deadline rounding up to the nearest block
         uint256 checkTime = gasUsed.add(avmGasSpeedLimitPerBlock.sub(1)).div(
             avmGasSpeedLimitPerBlock
         );
 
-        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(
+        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.props.deadlineBlock).add(
             checkTime
         );
 
-        uint256 olderSibling = prevNode.latestChildNumber();
+        uint256 olderSibling = prevNode.props.latestChildNumber;
         if (olderSibling != 0) {
-            deadlineBlock = max(deadlineBlock, getNode(olderSibling).deadlineBlock());
+            deadlineBlock = max(deadlineBlock, getNode(olderSibling).props.deadlineBlock);
         }
         return deadlineBlock;
     }
@@ -500,9 +520,9 @@ contract RollupCore is IRollupCore {
 
     struct StakeOnNewNodeFrame {
         uint256 currentInboxSize;
-        INode node;
+        Node node;
         bytes32 executionHash;
-        INode prevNode;
+        Node prevNode;
         bytes32 lastHash;
         bool hasSibling;
         uint256 deadlineBlock;
@@ -517,7 +537,6 @@ contract RollupCore is IRollupCore {
         uint256 avmGasSpeedLimitPerBlock;
         ISequencerInbox sequencerInbox;
         RollupEventBridge rollupEventBridge;
-        INodeFactory nodeFactory;
     }
 
     uint8 internal constant MAX_SEND_COUNT = 100;
@@ -535,11 +554,12 @@ contract RollupCore is IRollupCore {
             // validate data
             memoryFrame.gasUsed = RollupLib.assertionGasUsed(assertion);
             memoryFrame.prevNode = getNode(inputDataFrame.prevNode);
+
             memoryFrame.currentInboxSize = inputDataFrame.sequencerInbox.messageCount();
 
             // Make sure the previous state is correct against the node being built on
             require(
-                RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.stateHash(),
+                RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.props.stateHash,
                 "PREV_STATE_HASH"
             );
 
@@ -564,28 +584,30 @@ contract RollupCore is IRollupCore {
                 memoryFrame.prevNode
             );
 
-            memoryFrame.hasSibling = memoryFrame.prevNode.latestChildNumber() > 0;
+            memoryFrame.hasSibling = memoryFrame.prevNode.props.latestChildNumber > 0;
             // here we don't use ternacy operator to remain compatible with slither
             if (memoryFrame.hasSibling) {
-                memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.latestChildNumber());
+                memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.props.latestChildNumber);
             } else {
                 memoryFrame.lastHash = getNodeHash(inputDataFrame.prevNode);
             }
 
-            memoryFrame.node = INode(
-                inputDataFrame.nodeFactory.createNode(
-                    RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, memoryFrame.executionHash, block.number),
-                    RollupLib.confirmHash(assertion),
-                    inputDataFrame.prevNode,
-                    memoryFrame.deadlineBlock
-                )
+            memoryFrame.node = NodeLib.initialize(
+                RollupLib.stateHash(assertion.afterState),
+                RollupLib.challengeRoot(assertion, memoryFrame.executionHash, block.number),
+                RollupLib.confirmHash(assertion),
+                inputDataFrame.prevNode,
+                memoryFrame.deadlineBlock
             );
         }
 
         {
             uint256 nodeNum = latestNodeCreated() + 1;
-            memoryFrame.prevNode.childCreated(nodeNum);
+
+            // Fetch a storage reference to prevNode since we copied our other one into memory
+            // and we don't have enough stack available to keep to keep the previous storage reference around
+            Node storage prevNode = getNode(inputDataFrame.prevNode);
+            prevNode.props.childCreated(nodeNum);
 
             newNodeHash = RollupLib.nodeHash(
                 memoryFrame.hasSibling,

@@ -17,6 +17,7 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "../bridge/Bridge.sol";
 import "../bridge/Inbox.sol";
@@ -24,7 +25,6 @@ import "../bridge/Outbox.sol";
 import "../bridge/SequencerInbox.sol";
 import "../rollup/RollupEventBridge.sol";
 import "../rollup/Rollup.sol";
-import "../rollup/NodeFactory.sol";
 
 import "../rollup/Rollup.sol";
 import "../bridge/interfaces/IBridge.sol";
@@ -47,34 +47,11 @@ contract RollupTester is Rollup {
 contract RollupCreatorNoProxy {
     event RollupCreated(address rollupAddress, Inbox inbox);
 
+    // CHRIS: find all usages of this RollupCreatorProxy
     constructor(
         address _challengeFactory,
-        bytes32 _machineHash,
-        uint256 _confirmPeriodBlocks,
-        uint256 _extraChallengeTimeBlocks,
-        uint256 _avmGasSpeedLimitPerBlock,
-        uint256 _baseStake,
-        address _stakeToken,
-        address _owner,
-        address _sequencer,
-        uint256 _sequencerDelayBlocks,
-        uint256 _sequencerDelaySeconds,
-        bytes memory _extraConfig
+        RollupLib.Config memory config
     ) public {
-        RollupLib.Config memory config = RollupLib.Config(
-            _machineHash,
-            _confirmPeriodBlocks,
-            _extraChallengeTimeBlocks,
-            _avmGasSpeedLimitPerBlock,
-            _baseStake,
-            _stakeToken,
-            _owner,
-            _sequencer,
-            _sequencerDelayBlocks,
-            _sequencerDelaySeconds,
-            _extraConfig
-        );
-
         createRollupNoProxy(config, _challengeFactory);
         selfdestruct(msg.sender);
     }
@@ -167,8 +144,7 @@ contract RollupCreatorNoProxy {
                 address(frame.sequencerInbox),
                 address(frame.outbox),
                 address(frame.rollupEventBridge),
-                challengeFactory,
-                address(new NodeFactory())
+                challengeFactory
             ],
             [address(new RollupAdminFacet()), address(new RollupUserFacet())],
             [config.sequencerDelayBlocks, config.sequencerDelaySeconds]

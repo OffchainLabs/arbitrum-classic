@@ -18,7 +18,10 @@
 
 pragma solidity ^0.6.11;
 
-import "./INode.sol";
+// CHRIS: should we import Node - this will cause the Node code to be compiled into this contract - consider this everywhere
+import "./Node.sol";
+
+pragma experimental ABIEncoderV2;
 
 interface IRollupCore {
     function _stakerMap(address stakerAddress)
@@ -71,7 +74,16 @@ interface IRollupCore {
         uint256 finalBalance
     );
 
-    function getNode(uint256 nodeNum) external view returns (INode);
+    /**
+     * @notice Get the Node properties for the given index. 
+     * We can't expose the full Node publicly as it contains a mapping 
+     */
+    function getNodeProps(uint256 nodeNum) external view returns (NodeProps memory);
+
+    /**
+     * @notice Check if the specified node has been staked on by the provided staker
+     */
+    function nodeHasStaker(uint256 nodeNum, address staker) external view returns(bool);
 
     /**
      * @notice Get the address of the staker at the given index

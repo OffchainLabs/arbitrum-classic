@@ -17,6 +17,8 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
+
 
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
@@ -26,8 +28,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./RollupEventBridge.sol";
 import "./RollupCore.sol";
 import "./RollupLib.sol";
-import "./INode.sol";
-import "./INodeFactory.sol";
+import "./Node.sol";
 
 import "../challenge/IChallenge.sol";
 import "../challenge/IChallengeFactory.sol";
@@ -53,7 +54,6 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     IOutbox public outbox;
     RollupEventBridge public rollupEventBridge;
     IChallengeFactory public challengeFactory;
-    INodeFactory public nodeFactory;
     address public owner;
     address public stakeToken;
     uint256 public minimumAssertionPeriod;
@@ -88,14 +88,14 @@ contract Rollup is Proxy, RollupBase {
     }
 
     // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, avmGasSpeedLimitPerBlock, baseStake ]
-    // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
+    // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory]
     function initialize(
         bytes32 _machineHash,
         uint256[4] calldata _rollupParams,
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[6] calldata connectedContracts,
+        address[5] calldata connectedContracts,
         address[2] calldata _facets,
         uint256[2] calldata sequencerInboxParams
     ) public {
@@ -124,9 +124,8 @@ contract Rollup is Proxy, RollupBase {
         );
 
         challengeFactory = IChallengeFactory(connectedContracts[4]);
-        nodeFactory = INodeFactory(connectedContracts[5]);
 
-        INode node = createInitialNode(_machineHash);
+        Node memory node = createInitialNode(_machineHash);
         initializeCore(node);
 
         confirmPeriodBlocks = _rollupParams[0];
@@ -161,7 +160,7 @@ contract Rollup is Proxy, RollupBase {
         STORAGE_GAP_2 = 0;
     }
 
-    function createInitialNode(bytes32 _machineHash) private returns (INode) {
+    function createInitialNode(bytes32 _machineHash) private view returns (Node memory) {
         bytes32 state = RollupLib.stateHash(
             RollupLib.ExecutionState(
                 0, // total gas used
@@ -175,16 +174,13 @@ contract Rollup is Proxy, RollupBase {
                 1 // Initialization message already in inbox
             )
         );
-        return
-            INode(
-                nodeFactory.createNode(
-                    state,
-                    0, // challenge hash (not challengeable)
-                    0, // confirm data
-                    0, // prev node
-                    block.number // deadline block (not challengeable)
-                )
-            );
+        return NodeLib.initialize(
+            state,
+            0, // challenge hash (not challengeable)
+            0, // confirm data
+            0, // prev node
+            block.number // deadline block (not challengeable)
+        );
     }
 
     /**

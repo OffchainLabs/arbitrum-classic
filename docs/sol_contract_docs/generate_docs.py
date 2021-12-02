@@ -7,7 +7,6 @@ black_list_dirs = ["arb-bridge-eth/libraries", "arb-bridge-eth/interfaces"]
 black_list_files = [
     "ProxySetter.md",
     "TokenAddressHandler.md",
-    "INode.md",
     "IRollup.md",
     "IEthERC20Bridge.md",
 ]

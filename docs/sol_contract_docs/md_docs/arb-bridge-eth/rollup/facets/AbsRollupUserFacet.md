@@ -119,7 +119,7 @@ that only blocks operations that should be blocked anyway
 
 ### `currentRequiredStake() → uint256` (public)
 
-### `countStakedZombies(contract INode node) → uint256` (public)
+### `countStakedZombies(uint256 nodeNum) → uint256` (public)
 
 Calculate the number of zombies staked on the given node
 
@@ -127,7 +127,7 @@ This function could be uncallable if there are too many zombies. However,
 removeZombie and removeOldZombies can be used to remove any zombies that exist
 so that this will then be callable
 
-- `node`: The node on which to count staked zombies
+- `nodeNum`: The node index on which to count staked zombies
 
 **Returns**: The: number of zombies staked on the node
 /

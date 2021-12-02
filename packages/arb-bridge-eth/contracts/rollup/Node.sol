@@ -17,55 +17,101 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
-import "./INode.sol";
-import "../libraries/Cloneable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract Node is Cloneable, INode {
+struct NodeProps {
+    // Hash of the state of the chain as of this node
+    bytes32 stateHash;
+
+    // Hash of the data that can be challenged
+    bytes32 challengeHash;
+
+    // Hash of the data that will be committed if this node is confirmed
+    bytes32 confirmData;
+
+    // Index of the node previous to this one
+    uint256 prev;
+
+    // Deadline at which this node can be confirmed
+    uint256 deadlineBlock;
+
+    // Deadline at which a child of this node can be confirmed
+    uint256 noChildConfirmedBeforeBlock;
+
+    // Number of stakers staked on this node. This includes real stakers and zombies
+    uint256 stakerCount;
+
+    // Address of the rollup contract to which this node belongs
+    address rollup;
+
+    // This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed or the owner destroys pending nodes
+    uint256 firstChildBlock;
+
+    // The number of the latest child of this node to be created
+    uint256 latestChildNumber;
+}
+
+struct Node {
+    // Mapping of the stakers staked on this node with true if they are staked. This includes real stakers and zombies
+    mapping(address => bool) stakers;
+    
+    // All other Node data
+    NodeProps props;
+}
+
+/**
+ * @notice Utility functions for NodeProps
+ */
+library NodePropsLib {
     using SafeMath for uint256;
 
-    /// @notice Hash of the state of the chain as of this node
-    bytes32 public override stateHash;
+    /**
+     * @notice Update child properties
+     * @param number The child number to set
+     */
+    function childCreated(NodeProps storage self, uint256 number) internal {
+        if (self.firstChildBlock == 0) {
+            self.firstChildBlock = block.number;
+        }
+        self.latestChildNumber = number;
+    }
 
-    /// @notice Hash of the data that can be challenged
-    bytes32 public override challengeHash;
+    // CHRIS: should we have tests on any of these?
 
-    /// @notice Hash of the data that will be committed if this node is confirmed
-    bytes32 public override confirmData;
-
-    /// @notice Index of the node previous to this one
-    uint256 public override prev;
-
-    /// @notice Deadline at which this node can be confirmed
-    uint256 public override deadlineBlock;
-
-    /// @notice Deadline at which a child of this node can be confirmed
-    uint256 public override noChildConfirmedBeforeBlock;
-
-    /// @notice Number of stakers staked on this node. This includes real stakers and zombies
-    uint256 public override stakerCount;
-
-    /// @notice Mapping of the stakers staked on this node with true if they are staked. This includes real stakers and zombies
-    mapping(address => bool) public override stakers;
-
-    /// @notice Address of the rollup contract to which this node belongs
-    address public rollup;
-
-    /// @notice This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed or the owner destroys pending nodes
-    uint256 public override firstChildBlock;
-
-    /// @notice The number of the latest child of this node to be created
-    uint256 public override latestChildNumber;
-
-    modifier onlyRollup() {
-        require(msg.sender == rollup, "ROLLUP_ONLY");
-        _;
+    /**
+     * @notice Update the child confirmed deadline
+     * @param deadline The new deadline to set
+     */
+    function newChildConfirmDeadline(NodeProps storage self, uint256 deadline) internal {
+        self.noChildConfirmedBeforeBlock = deadline;
     }
 
     /**
-     * @notice Mark the given staker as staked on this node
-     * @param _rollup Initial value of rollup
+     * @notice Check whether the current block number has met or passed the node's deadline
+     */
+    function requirePastDeadline(NodeProps memory self) internal view {
+        require(block.number >= self.deadlineBlock, "BEFORE_DEADLINE");
+    }
+
+    /**
+     * @notice Check whether the current block number has met or passed deadline for children of this node to be confirmed
+     */
+    function requirePastChildConfirmDeadline(NodeProps memory self) internal view {
+        require(block.number >= self.noChildConfirmedBeforeBlock, "CHILD_TOO_RECENT");
+    }
+}
+
+
+/**
+ * @notice Utility functions for Node
+ */
+library NodeLib {
+    using SafeMath for uint256;
+    
+    /**
+     * @notice Initialise a Node
      * @param _stateHash Initial value of stateHash
      * @param _challengeHash Initial value of challengeHash
      * @param _confirmData Initial value of confirmData
@@ -73,29 +119,24 @@ contract Node is Cloneable, INode {
      * @param _deadlineBlock Initial value of deadlineBlock
      */
     function initialize(
-        address _rollup,
         bytes32 _stateHash,
         bytes32 _challengeHash,
         bytes32 _confirmData,
         uint256 _prev,
         uint256 _deadlineBlock
-    ) external override {
-        require(_rollup != address(0), "ROLLUP_ADDR");
-        require(rollup == address(0), "ALREADY_INIT");
-        rollup = _rollup;
-        stateHash = _stateHash;
-        challengeHash = _challengeHash;
-        confirmData = _confirmData;
-        prev = _prev;
-        deadlineBlock = _deadlineBlock;
-        noChildConfirmedBeforeBlock = _deadlineBlock;
-    }
+    ) internal pure returns (Node memory) {
+        NodeProps memory props;
+        props.stateHash = _stateHash;
+        props.challengeHash = _challengeHash;
+        props.confirmData = _confirmData;
+        props.prev = _prev;
+        props.deadlineBlock = _deadlineBlock;
+        props.noChildConfirmedBeforeBlock = _deadlineBlock;
 
-    /**
-     * @notice Destroy this node
-     */
-    function destroy() external override onlyRollup {
-        safeSelfDestruct(msg.sender);
+        Node memory node;
+        node.props = props;
+
+        return node;
     }
 
     /**
@@ -103,45 +144,21 @@ contract Node is Cloneable, INode {
      * @param staker Address of the staker to mark
      * @return The number of stakers after adding this one
      */
-    function addStaker(address staker) external override onlyRollup returns (uint256) {
-        require(!stakers[staker], "ALREADY_STAKED");
-        stakers[staker] = true;
-        stakerCount++;
-        return stakerCount;
+    function addStaker(Node storage self, address staker) internal returns (uint256) {
+        require(!self.stakers[staker], "ALREADY_STAKED");
+        self.stakers[staker] = true;
+        self.props.stakerCount++;
+        return self.props.stakerCount;
     }
 
     /**
      * @notice Remove the given staker from this node
      * @param staker Address of the staker to remove
      */
-    function removeStaker(address staker) external override onlyRollup {
-        require(stakers[staker], "NOT_STAKED");
-        stakers[staker] = false;
-        stakerCount--;
-    }
-
-    function childCreated(uint256 number) external override onlyRollup {
-        if (firstChildBlock == 0) {
-            firstChildBlock = block.number;
-        }
-        latestChildNumber = number;
-    }
-
-    function newChildConfirmDeadline(uint256 deadline) external override onlyRollup {
-        noChildConfirmedBeforeBlock = deadline;
-    }
-
-    /**
-     * @notice Check whether the current block number has met or passed the node's deadline
-     */
-    function requirePastDeadline() external view override {
-        require(block.number >= deadlineBlock, "BEFORE_DEADLINE");
-    }
-
-    /**
-     * @notice Check whether the current block number has met or passed deadline for children of this node to be confirmed
-     */
-    function requirePastChildConfirmDeadline() external view override {
-        require(block.number >= noChildConfirmedBeforeBlock, "CHILD_TOO_RECENT");
+    function removeStaker(Node storage self, address staker) internal {
+        require(self.stakers[staker], "NOT_STAKED");
+        self.stakers[staker] = false;
+        self.props.stakerCount--;
     }
 }
+

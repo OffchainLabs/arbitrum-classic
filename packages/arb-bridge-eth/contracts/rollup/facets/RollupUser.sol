@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "../Rollup.sol";
 import "./IRollupFacets.sol";
+
 
 abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
@@ -21,9 +23,9 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         requireUnresolvedExists();
         uint256 latestConfirmedNodeNum = latestConfirmed();
         uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
-        INode firstUnresolvedNode_ = getNode(firstUnresolvedNodeNum);
+        Node storage firstUnresolvedNode_ = getNode(firstUnresolvedNodeNum);
 
-        if (firstUnresolvedNode_.prev() == latestConfirmedNodeNum) {
+        if (firstUnresolvedNode_.props.prev == latestConfirmedNodeNum) {
             /**If the first unresolved node is a child of the latest confirmed node, to prove it can be rejected, we show:
              * a) Its deadline has expired
              * b) *Some* staker is staked on a sibling
@@ -38,19 +40,19 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             requireUnresolved(latestStakedNode(stakerAddress));
 
             // 3. staker isn't staked on first unresolved node; this proves staker's latest staked can't be a child of firstUnresolvedNode (recall staking on node requires staking on all of its parents)
-            require(!firstUnresolvedNode_.stakers(stakerAddress), "STAKED_ON_TARGET");
+            require(!firstUnresolvedNode_.stakers[stakerAddress], "STAKED_ON_TARGET");
             // If a staker is staked on a node that is neither a child nor a parent of firstUnresolvedNode, it must be a sibling, QED
 
             // Verify the block's deadline has passed
-            firstUnresolvedNode_.requirePastDeadline();
+            firstUnresolvedNode_.props.requirePastDeadline();
 
-            getNode(latestConfirmedNodeNum).requirePastChildConfirmDeadline();
+            getNode(latestConfirmedNodeNum).props.requirePastChildConfirmDeadline();
 
             removeOldZombies(0);
 
             // Verify that no staker is staked on this node
             require(
-                firstUnresolvedNode_.stakerCount() == countStakedZombies(firstUnresolvedNode_),
+                firstUnresolvedNode_.props.stakerCount == countStakedZombies(firstUnresolvedNodeNum),
                 "HAS_STAKERS"
             );
         }
@@ -83,21 +85,22 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
 
-        INode node = getNode(firstUnresolvedNode());
+        uint256 nodeNum = firstUnresolvedNode();
+        Node storage node = getNode(nodeNum);
 
         // Verify the block's deadline has passed
-        node.requirePastDeadline();
+        node.props.requirePastDeadline();
 
         // Check that prev is latest confirmed
-        require(node.prev() == latestConfirmed(), "INVALID_PREV");
+        require(node.props.prev == latestConfirmed(), "INVALID_PREV");
 
-        getNode(latestConfirmed()).requirePastChildConfirmDeadline();
+        getNode(latestConfirmed()).props.requirePastChildConfirmDeadline();
 
         removeOldZombies(0);
 
         // All non-zombie stakers are staked on this node
         require(
-            node.stakerCount() == stakerCount().add(countStakedZombies(node)),
+            node.props.stakerCount == stakerCount().add(countStakedZombies(nodeNum)),
             "NOT_ALL_STAKED"
         );
 
@@ -145,8 +148,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated(),
             "NODE_NUM_OUT_OF_RANGE"
         );
-        INode node = getNode(nodeNum);
-        require(latestStakedNode(msg.sender) == node.prev(), "NOT_STAKED_PREV");
+        Node storage node = getNode(nodeNum);
+        require(latestStakedNode(msg.sender) == node.props.prev, "NOT_STAKED_PREV");
         stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
     }
 
@@ -214,8 +217,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
                 confirmPeriodBlocks: confirmPeriodBlocks,
                 prevNode: latestStakedNode(msg.sender), // Ensure staker is staked on the previous node
                 sequencerInbox: sequencerBridge,
-                rollupEventBridge: rollupEventBridge,
-                nodeFactory: nodeFactory
+                rollupEventBridge: rollupEventBridge
             }),
             expectedNodeHash
         );
@@ -282,22 +284,22 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
         require(latestConfirmed() < nodeNums[0], "ALREADY_CONFIRMED");
 
-        INode node1 = getNode(nodeNums[0]);
-        INode node2 = getNode(nodeNums[1]);
+        Node storage node1 = getNode(nodeNums[0]);
+        Node storage node2 = getNode(nodeNums[1]);
 
         // ensure nodes staked on the same parent (and thus in conflict)
-        require(node1.prev() == node2.prev(), "DIFF_PREV");
+        require(node1.props.prev == node2.props.prev, "DIFF_PREV");
 
         // ensure both stakers aren't currently in challenge
         requireUnchallengedStaker(stakers[0]);
         requireUnchallengedStaker(stakers[1]);
 
-        require(node1.stakers(stakers[0]), "STAKER1_NOT_STAKED");
-        require(node2.stakers(stakers[1]), "STAKER2_NOT_STAKED");
+        require(node1.stakers[stakers[0]], "STAKER1_NOT_STAKED");
+        require(node2.stakers[stakers[1]], "STAKER2_NOT_STAKED");
 
         // Check param data against challenge hash
         require(
-            node1.challengeHash() ==
+            node1.props.challengeHash ==
                 RollupLib.challengeRootHash(
                     executionHashes[0],
                     proposedTimes[0],
@@ -307,7 +309,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         );
 
         require(
-            node2.challengeHash() ==
+            node2.props.challengeHash ==
                 RollupLib.challengeRootHash(
                     executionHashes[1],
                     proposedTimes[1],
@@ -317,8 +319,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         );
 
         // Calculate upper limit for allowed node proposal time:
-        uint256 commonEndTime = getNode(node1.prev()).firstChildBlock().add( // Dispute start: dispute timer for a node starts when its first child is created
-            node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
+        uint256 commonEndTime = getNode(node1.props.prev).props.firstChildBlock.add( // Dispute start: dispute timer for a node starts when its first child is created
+            node1.props.deadlineBlock.sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
         );
         if (commonEndTime < proposedTimes[1]) {
             // The 2nd node was created too late; loses challenge automatically.
@@ -394,9 +396,10 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         uint256 nodesRemoved = 0;
         uint256 firstUnresolved = firstUnresolvedNode();
         while (latestNodeStaked >= firstUnresolved && nodesRemoved < maxNodes) {
-            INode node = getNode(latestNodeStaked);
+            Node storage node = getNode(latestNodeStaked);
+            // CHRIS: check that this really does remove from storage
             node.removeStaker(zombieStakerAddress);
-            latestNodeStaked = node.prev();
+            latestNodeStaked = node.props.prev;
             nodesRemoved++;
         }
         if (latestNodeStaked < firstUnresolved) {
@@ -439,7 +442,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         if (_firstUnresolvedNodeNum - 1 == _latestCreatedNode) {
             return baseStake;
         }
-        uint256 firstUnresolvedDeadline = getNode(_firstUnresolvedNodeNum).deadlineBlock();
+        uint256 firstUnresolvedDeadline = getNode(_firstUnresolvedNodeNum).props.deadlineBlock;
         if (_blockNumber < firstUnresolvedDeadline) {
             return baseStake;
         }
@@ -518,14 +521,15 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * removeZombie and removeOldZombies can be used to remove any zombies that exist
      * so that this will then be callable
      *
-     * @param node The node on which to count staked zombies
+     * @param nodeNum The node on which to count staked zombies
      * @return The number of zombies staked on the node
      */
-    function countStakedZombies(INode node) public view override returns (uint256) {
+    function countStakedZombies(uint256 nodeNum) public view override returns (uint256) {
+        Node storage node = getNode(nodeNum);
         uint256 currentZombieCount = zombieCount();
         uint256 stakedZombieCount = 0;
         for (uint256 i = 0; i < currentZombieCount; i++) {
-            if (node.stakers(zombieAddress(i))) {
+            if (node.stakers[zombieAddress(i)]) {
                 stakedZombieCount++;
             }
         }
