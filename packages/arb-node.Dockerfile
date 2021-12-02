@@ -4,7 +4,7 @@
 ### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
-FROM offchainlabs/cpp-base:0.3.6 as arb-avm-cpp
+FROM offchainlabs/cpp-base:0.4.1 as arb-avm-cpp
 
 # Copy external dependencies
 COPY --chown=user arb-avm-cpp/CMakeLists.txt /home/user/arb-avm-cpp/
@@ -12,7 +12,7 @@ COPY --chown=user arb-avm-cpp/external /home/user/arb-avm-cpp/external
 COPY --chown=user arb-avm-cpp/cmake /home/user/arb-avm-cpp/cmake
 # Build arb-avm-cpp
 RUN mkdir -p arb-avm-cpp/build && cd arb-avm-cpp/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 -DENABLE_JEMALLOC=true && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 -DENABLE_TCMALLOC=true && \
     cmake --build . -j $(nproc)
 
 COPY --chown=user arb-avm-cpp/avm_values /home/user/arb-avm-cpp/avm_values
@@ -36,7 +36,7 @@ RUN cd arb-avm-cpp/build && \
     cmake .. && \
     cmake --build . -j $(nproc)
 
-FROM offchainlabs/backend-base:0.3.6 as arb-node-builder
+FROM offchainlabs/backend-base:0.4.1 as arb-node-builder
 
 # Build dependencies
 COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
@@ -67,7 +67,7 @@ COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
 RUN cd arb-node-core && go install -v ./cmd/arb-validator && go install -v ./cmd/arb-relay && \
     cd ../arb-rpc-node && go install -v ./cmd/arb-node && go install -v ./cmd/arb-dev-node
 
-FROM offchainlabs/dist-base:0.3.8 as arb-node
+FROM offchainlabs/dist-base:0.4.1 as arb-node
 # Export binary
 
 COPY --chown=user --from=arb-node-builder /home/user/go/bin /home/user/go/bin

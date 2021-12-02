@@ -31,14 +31,6 @@ type GetBlockResult struct {
 	L1BlockNumber *hexutil.Big `json:"l1BlockNumber"`
 }
 
-type EthCallOverride struct {
-	Nonce     *hexutil.Uint64              `json:"nonce"`
-	Code      *hexutil.Bytes               `json:"code"`
-	Balance   *hexutil.Big                 `json:"balance"`
-	State     *map[common.Hash]common.Hash `json:"state"`
-	StateDiff *map[common.Hash]common.Hash `json:"stateDiff"`
-}
-
 type CallTxArgs struct {
 	From       *common.Address `json:"from"`
 	To         *common.Address `json:"to"`
@@ -80,6 +72,7 @@ type GetTransactionReceiptResult struct {
 	To                *common.Address `json:"to"`
 	CumulativeGasUsed hexutil.Uint64  `json:"cumulativeGasUsed"`
 	GasUsed           hexutil.Uint64  `json:"gasUsed"`
+	EffectiveGasPrice hexutil.Uint64  `json:"effectiveGasPrice"`
 	ContractAddress   *common.Address `json:"contractAddress"`
 	Logs              []*types.Log    `json:"logs"`
 	LogsBloom         hexutil.Bytes   `json:"logsBloom"`

@@ -51,6 +51,8 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
 std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
     ReadWriteTransaction& transaction,
     const Machine& machine);
+void saveCodeToCore(Machine& machine,
+                    const std::map<uint64_t, uint64_t>& segment_counts);
 SaveResults saveTestMachine(ReadWriteTransaction& transaction,
                             Machine& machine);
 void deleteMachineState(ReadWriteTransaction& transaction,

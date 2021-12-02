@@ -9,7 +9,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y curl cmake git gcc g++ libboost-dev libboost-filesystem-dev \
     lcov make libgmp-dev libssl-dev libusb-dev sudo netcat-openbsd nodejs \
-    autotools-dev dh-autoreconf pkg-config libjemalloc-dev \
+    autotools-dev dh-autoreconf pkg-config \
+    google-perftools libgoogle-perftools-dev \
     libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev && \
     rm -rf /var/lib/apt/lists/* && \
     curl -L https://github.com/facebook/zstd/archive/refs/tags/v1.5.0.tar.gz --output zstd-1.5.0.tar.gz && \
