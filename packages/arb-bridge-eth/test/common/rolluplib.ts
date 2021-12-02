@@ -352,10 +352,14 @@ export class RollupContract {
     return this.rollup.latestConfirmed()
   }
 
-  getNode(index: BigNumberish): Promise<string> {
-    return this.rollup.getNode(index)
+  getNodeStateHash(index: BigNumberish): Promise<string> {
+    return (this.rollup.getNodeProps(index)).then(n => n.stateHash)
   }
 
+  latestStakedNode(staker: string): Promise<BigNumber> {
+    return this.rollup.latestStakedNode(staker)
+  }
+  
   // async inboxMaxValue(): Promise<BytesLike> {
   //   const bridgeAddress = await this.rollup.delayedBridge()
   //   const Bridge = await ethers.getContractFactory('Bridge')

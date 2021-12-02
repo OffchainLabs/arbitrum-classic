@@ -5,7 +5,23 @@ id: IRollupCore
 
 ### `_stakerMap(address stakerAddress) → uint256, uint256, uint256, address, bool` (external)
 
-### `getNode(uint256 nodeNum) → contract INode` (external)
+### `getNodeProps(uint256 nodeNum) → struct NodeProps` (public)
+
+Get data properties of a node
+
+- `nodeNum`: Index of the node properties
+
+// CHRIS: should we specify all the props?
+**Returns**: Data properties for the specified node
+
+### `nodeHasStaker(uint256 nodeNum, address staker) → bool` (public)
+
+Check is a address is staking on an node
+
+- `nodeNum`: Index of the node
+- `staker`: Address of the staker
+
+**Returns**: Whether the address is a staker on the node
 
 ### `getStakerAddress(uint256 stakerNum) → address` (external)
 

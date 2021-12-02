@@ -87,6 +87,22 @@ async function getDefaultConfig(
   ]
 }
 
+function toNamedParams(rollupConfig: RollupConfig) {
+  return { 
+      machineHash: rollupConfig[0],
+      confirmPeriodBlocks: rollupConfig[1],
+      extraChallengeTimeBlocks: rollupConfig[2],
+      avmGasSpeedLimitPerBlock: rollupConfig[3],
+      baseStake:rollupConfig[4],
+      stakeToken:rollupConfig[5],
+      owner:rollupConfig[6],
+      sequencer:rollupConfig[7],
+      sequencerDelayBlocks:rollupConfig[8],
+      sequencerDelaySeconds:rollupConfig[9],
+      extraConfig:rollupConfig[10],
+  }
+}
+
 async function createRollup(
   shouldDebug = process.env['ROLLUP_DEBUG'] === '1',
   rollupConfig?: RollupConfig
@@ -107,7 +123,7 @@ async function createRollup(
     )
     rollupCreator = await RollupCreatorNoProxy.deploy(
       ChallengeFactory.address,
-      ...rollupConfig
+      toNamedParams(rollupConfig)
     )
     receipt = await rollupCreator.deployTransaction.wait()
   } else {
@@ -255,10 +271,7 @@ const initNewRollup = async () => {
   const { rollupCon, blockCreated } = await createRollup()
   rollup = new RollupContract(rollupCon)
   const originalNode = await rollup.latestConfirmed()
-  const nodeAddress = await rollup.getNode(originalNode)
-
-  const NodeContract = await ethers.getContractFactory('Node')
-  const node = NodeContract.attach(nodeAddress)
+  const stateHash = await rollup.getNodeStateHash(originalNode)
 
   const initialExecState = {
     gasUsed: 0,
@@ -285,7 +298,7 @@ const initNewRollup = async () => {
   }
 
   assert.equal(
-    await node.stateHash(),
+    stateHash,
     nodeStateHash(prevNode),
     'initial confirmed node should have set initial state'
   )
@@ -330,7 +343,7 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         ZERO_ADDR,
         zerobytes32,
-        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
         [ZERO_ADDR, ZERO_ADDR],
         [0, 0]
       )
@@ -365,7 +378,7 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         ZERO_ADDR,
         zerobytes32,
-        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
         [ZERO_ADDR, ZERO_ADDR],
         [0, 0]
       )
@@ -382,7 +395,7 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         ZERO_ADDR,
         zerobytes32,
-        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
         [adminFacet.address, ZERO_ADDR],
         [0, 0]
       )
@@ -395,7 +408,7 @@ describe('ArbRollup', () => {
         ZERO_ADDR,
         ZERO_ADDR,
         zerobytes32,
-        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
+        [ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR, ZERO_ADDR],
         [adminFacet.address, adminFacet.address],
         [0, 0]
       )
@@ -888,45 +901,6 @@ describe('ArbRollup', () => {
       .newStake({ value: await rollup.currentRequiredStake() })
 
     await makeSimpleNode(rollup.connect(accounts[1]), prevNode)
-  })
-
-  it('should not allow node to be re initialized', async function () {
-    const Node = await ethers.getContractFactory('Node')
-    const node = await Node.deploy()
-
-    await expect(
-      node.initialize(ZERO_ADDR, zerobytes32, zerobytes32, zerobytes32, 0, 0)
-    ).to.be.revertedWith('ROLLUP_ADDR')
-
-    await node.initialize(
-      await accounts[0].getAddress(),
-      zerobytes32,
-      zerobytes32,
-      zerobytes32,
-      0,
-      0
-    )
-
-    await expect(
-      node.initialize(
-        rollup.rollup.address,
-        zerobytes32,
-        zerobytes32,
-        zerobytes32,
-        0,
-        0
-      )
-    ).to.be.revertedWith('ALREADY_INIT')
-
-    await expect(
-      node.connect(accounts[1]).addStaker(await accounts[1].getAddress())
-    ).to.be.revertedWith('ROLLUP_ONLY')
-
-    node.connect(accounts[0]).addStaker(await accounts[1].getAddress())
-
-    await expect(
-      node.connect(accounts[0]).addStaker(await accounts[1].getAddress())
-    ).to.be.revertedWith('ALREADY_STAKED')
   })
 
   it('should initialize a fresh rollup', async function () {
