@@ -631,6 +631,14 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
     // Ensure future continueRunningMachine calls don't use the set gas limit.
     core_machine->machine_state.context.max_gas = 0;
 
+    // We skip over sideloads while fast forwarding, so l2_block_number and
+    // last_sideload may not be updated properly.  Update here so comparison
+    // is correct.
+    core_machine->machine_state.output.l2_block_number =
+        target_output.l2_block_number;
+    core_machine->machine_state.output.last_sideload =
+        target_output.last_sideload;
+
     if (core_machine->machine_state.output != target_output) {
         // Machine in unexpected state, data corruption might have occurred
         std::cerr << "Error catching up: machine in unexpected state"
