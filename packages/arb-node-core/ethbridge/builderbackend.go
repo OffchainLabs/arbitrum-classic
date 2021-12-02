@@ -103,6 +103,9 @@ func (b *BuilderBackend) EstimateGas(ctx context.Context, call ethereum.CallMsg)
 func (b *BuilderBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	b.transactions = append(b.transactions, tx)
 	data, dest, amount, totalAmount := combineTxes(b.transactions)
+	if b.wallet == (common.Address{}) {
+		return nil
+	}
 	realData, err := validatorABI.Pack("executeTransactions", data, dest, amount)
 	if err != nil {
 		return err

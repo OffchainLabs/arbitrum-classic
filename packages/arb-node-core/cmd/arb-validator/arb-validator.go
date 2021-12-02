@@ -26,7 +26,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -178,33 +177,17 @@ func startup() error {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
 	validatorAddress := ethcommon.Address{}
-	if chainState.ValidatorWallet == "" {
-		for {
-			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, config.Rollup.FromBlock, valAuth, l1Client)
-			if err == nil {
-				break
-			}
-			logger.Warn().Err(err).
-				Str("sender", auth.From.Hex()).
-				Msg("Failed to deploy validator wallet")
-
-			select {
-			case <-ctx.Done():
-				return nil
-			case <-time.After(time.Second * 5):
-			}
-		}
-		chainState.ValidatorWallet = validatorAddress.String()
-
+	if chainState.ValidatorWallet != "" {
+		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
+	}
+	onValidatorWalletCreated := func(addr ethcommon.Address) {
+		chainState.ValidatorWallet = addr.String()
 		newChainStateData, err := json.Marshal(chainState)
 		if err != nil {
-			return errors.Wrap(err, "failed to marshal chain state")
+			log.Warn().Err(err).Msg("failed to marshal chain state")
+		} else if err := ioutil.WriteFile(chainStatePath, newChainStateData, 0644); err != nil {
+			log.Warn().Err(err).Msg("failed to write chain state config")
 		}
-		if err := ioutil.WriteFile(chainStatePath, newChainStateData, 0644); err != nil {
-			return errors.Wrap(err, "failed to write chain state config")
-		}
-	} else {
-		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
 
 	mon, err := monitor.NewMonitor(config.GetValidatorDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
@@ -213,7 +196,7 @@ func startup() error {
 	}
 	defer mon.Close()
 
-	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, l1Client, valAuth)
+	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, onValidatorWalletCreated)
 	if err != nil {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
