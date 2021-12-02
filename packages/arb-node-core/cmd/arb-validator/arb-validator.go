@@ -176,9 +176,10 @@ func startup() error {
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
-	validatorAddress := ethcommon.Address{}
+	var validatorAddress *ethcommon.Address
 	if chainState.ValidatorWallet != "" {
-		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
+		addr := ethcommon.HexToAddress(chainState.ValidatorWallet)
+		validatorAddress = &addr
 	}
 	onValidatorWalletCreated := func(addr ethcommon.Address) {
 		chainState.ValidatorWallet = addr.String()

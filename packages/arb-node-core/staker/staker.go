@@ -186,11 +186,20 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 		return nil, nil
 	}
 	s.builder.ClearTransactions()
-	rawInfo, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
-	if err != nil {
-		return nil, err
+	var rawInfo *ethbridge.StakerInfo
+	walletAddress := s.wallet.Address()
+	var walletAddressOrZero common.Address
+	if walletAddress != nil {
+		walletAddressOrZero = common.NewAddressFromEth(*walletAddress)
 	}
-	latestStakedNode, latestStakedNodeHash, err := s.validatorUtils.LatestStaked(ctx, s.wallet.Address())
+	if walletAddress != nil {
+		var err error
+		rawInfo, err = s.rollup.StakerInfo(ctx, walletAddressOrZero)
+		if err != nil {
+			return nil, err
+		}
+	}
+	latestStakedNode, latestStakedNodeHash, err := s.validatorUtils.LatestStaked(ctx, walletAddressOrZero)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +315,9 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			return err
 		}
 
-		s.activeChallenge = challenge.NewChallenger(challengeCon, s.sequencerInbox, s.lookup, nodeInfo.Assertion, s.wallet.Address())
+		// This is safe to dereference, as handleConflict can only be called if we have a wallet address
+		ourAddr := common.NewAddressFromEth(*s.wallet.Address())
+		s.activeChallenge = challenge.NewChallenger(challengeCon, s.sequencerInbox, s.lookup, nodeInfo.Assertion, ourAddr)
 	}
 
 	_, err := s.activeChallenge.HandleConflict(ctx)
@@ -314,12 +325,15 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 }
 
 func (s *Staker) newStake(ctx context.Context) error {
-	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
-	if err != nil {
-		return err
-	}
-	if info != nil {
-		return nil
+	var addr = s.wallet.Address()
+	if addr != nil {
+		info, err := s.rollup.StakerInfo(ctx, common.NewAddressFromEth(*addr))
+		if err != nil {
+			return err
+		}
+		if info != nil {
+			return nil
+		}
 	}
 	stakeAmount, err := s.rollup.CurrentRequiredStake(ctx)
 	if err != nil {
@@ -374,6 +388,8 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 	if err != nil {
 		return err
 	}
+	// Safe to dereference as createConflict is only called when we have a wallet address
+	walletAddr := common.NewAddressFromEth(*s.wallet.Address())
 	for _, staker := range stakers {
 		stakerInfo, err := s.rollup.StakerInfo(ctx, staker)
 		if err != nil {
@@ -382,14 +398,14 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		if stakerInfo.CurrentChallenge != nil {
 			continue
 		}
-		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address(), staker)
+		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, walletAddr, staker)
 		if err != nil {
 			return err
 		}
 		if conflictType != ethbridge.CONFLICT_TYPE_FOUND {
 			continue
 		}
-		staker1 := s.wallet.Address()
+		staker1 := walletAddr
 		staker2 := staker
 		if node2.Cmp(node1) < 0 {
 			staker1, staker2 = staker2, staker1

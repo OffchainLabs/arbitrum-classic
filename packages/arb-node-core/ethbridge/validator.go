@@ -54,7 +54,7 @@ func init() {
 
 type ValidatorWallet struct {
 	con               *ethbridgecontracts.Validator
-	address           ethcommon.Address
+	address           *ethcommon.Address
 	onWalletCreated   func(ethcommon.Address)
 	client            ethutils.EthClient
 	auth              transactauth.TransactAuth
@@ -63,11 +63,11 @@ type ValidatorWallet struct {
 	rollupFromBlock   int64
 }
 
-func NewValidator(address, walletFactoryAddr, rollupAddress ethcommon.Address, client ethutils.EthClient, auth transactauth.TransactAuth, onWalletCreated func(ethcommon.Address)) (*ValidatorWallet, error) {
+func NewValidator(address *ethcommon.Address, walletFactoryAddr, rollupAddress ethcommon.Address, client ethutils.EthClient, auth transactauth.TransactAuth, onWalletCreated func(ethcommon.Address)) (*ValidatorWallet, error) {
 	var con *ethbridgecontracts.Validator
-	if address != (ethcommon.Address{}) {
+	if address != nil {
 		var err error
-		con, err = ethbridgecontracts.NewValidator(address, client)
+		con, err = ethbridgecontracts.NewValidator(*address, client)
 		if err != nil {
 			return nil, err
 		}
@@ -84,9 +84,9 @@ func NewValidator(address, walletFactoryAddr, rollupAddress ethcommon.Address, c
 	}, nil
 }
 
-// May be the zero address if the wallet hasn't been deployed yet
-func (v *ValidatorWallet) Address() common.Address {
-	return common.NewAddressFromEth(v.address)
+// May be the nil if the wallet hasn't been deployed yet
+func (v *ValidatorWallet) Address() *ethcommon.Address {
+	return v.address
 }
 
 func (v *ValidatorWallet) From() common.Address {
@@ -105,18 +105,18 @@ func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Tran
 }
 
 func (v *ValidatorWallet) createWalletIfNeeded(ctx context.Context) error {
-	if v.address == (ethcommon.Address{}) {
+	if v.address == nil {
 		addr, err := CreateValidatorWallet(ctx, v.walletFactoryAddr, v.rollupFromBlock, v.auth, v.client)
 		if err != nil {
 			return err
 		}
-		v.address = addr
+		v.address = &addr
 		if v.onWalletCreated != nil {
-			v.onWalletCreated(v.address)
+			v.onWalletCreated(addr)
 		}
 	}
 	if v.con == nil {
-		con, err := ethbridgecontracts.NewValidator(v.address, v.client)
+		con, err := ethbridgecontracts.NewValidator(*v.address, v.client)
 		if err != nil {
 			return err
 		}
