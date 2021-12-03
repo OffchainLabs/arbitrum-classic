@@ -42,7 +42,7 @@ class Datastack {
     void calculateAllHashes() const;
 
    public:
-    std::vector<value> values;
+    std::vector<Value> values;
     mutable std::vector<HashPreImage> hashes;
 
     Datastack() {
@@ -54,28 +54,28 @@ class Datastack {
 
     Tuple getTupleRepresentation() const;
 
-    void push(value&& newdata) {
+    void push(Value&& newdata) {
         values.push_back(std::move(newdata));
         if (values.size() > hashes.size() + lazyCount) {
             addHash();
         }
     }
 
-    const value& operator[](size_t index) const {
+    const Value& operator[](size_t index) const {
         if (index >= values.size()) {
             throw stack_too_small();
         }
         return values[values.size() - 1 - index];
     }
 
-    value& operator[](size_t index) {
+    Value& operator[](size_t index) {
         if (index >= values.size()) {
             throw stack_too_small();
         }
         return values[values.size() - 1 - index];
     }
 
-    value pop() {
+    Value pop() {
         auto stackEmpty = values.empty();
         if (stackEmpty) {
             throw std::runtime_error("Stack is empty");
@@ -108,7 +108,7 @@ class Datastack {
     DataStackProof marshalForProof(const std::vector<size_t>& stackInfo,
                                    const Code& code) const;
 
-    value& peek() {
+    Value& peek() {
         if (values.empty()) {
             throw stack_too_small();
         }

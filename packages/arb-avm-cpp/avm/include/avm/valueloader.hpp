@@ -25,7 +25,7 @@ class AbstractValueLoader {
     virtual ~AbstractValueLoader() = default;
 
     // Throws an exception if the tuple cannot be loaded
-    virtual value loadValue(const uint256_t& hash) = 0;
+    virtual Value loadValue(const uint256_t& hash) = 0;
 
     [[nodiscard]] virtual std::unique_ptr<AbstractValueLoader> clone()
         const = 0;
@@ -48,7 +48,7 @@ class ValueLoader : public AbstractValueLoader {
         return *this;
     }
 
-    value loadValue(const uint256_t& hash) override {
+    Value loadValue(const uint256_t& hash) override {
         if (!impl) {
             throw std::runtime_error("Value loader needed but not defined");
         }

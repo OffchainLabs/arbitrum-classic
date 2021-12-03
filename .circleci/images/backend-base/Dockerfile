@@ -9,15 +9,16 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y curl cmake git gcc g++ libboost-dev libboost-filesystem-dev \
     lcov make libgmp-dev libssl-dev libusb-dev sudo netcat-openbsd nodejs \
-    autotools-dev dh-autoreconf pkg-config libjemalloc-dev \
+    autotools-dev dh-autoreconf pkg-config \
+    libgoogle-perftools-dev \
     libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev && \
     rm -rf /var/lib/apt/lists/* && \
     curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v6.20.3.tar.gz --output rocksdb-6.20.3.tar.gz && \
     tar xf rocksdb-6.20.3.tar.gz && \
     cd rocksdb-6.20.3 && \
     PREFIX=/usr make shared_lib install-shared && \
-    curl https://dl.google.com/go/go1.15.2.linux-amd64.tar.gz --output go1.15.2.linux-amd64.tar.gz && \
-    tar -xf go1.15.2.linux-amd64.tar.gz && \
+    curl https://dl.google.com/go/go1.17.3.linux-amd64.tar.gz --output go1.17.3.linux-amd64.tar.gz && \
+    tar -xf go1.17.3.linux-amd64.tar.gz && \
     mv go /usr/local && \
     useradd -ms /bin/bash user
 USER user
