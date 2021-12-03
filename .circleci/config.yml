@@ -259,13 +259,13 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/
+      - restore_cache: *restore_go_cache
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - restore_cache: *restore_go_cache
       - run:
           name: test arb-util
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
@@ -301,13 +301,13 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/
+      - restore_cache: *restore_go_cache
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - restore_cache: *restore_go_cache
       - run:
           name: test arb-rpc-node
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
@@ -334,13 +334,13 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/
+      - restore_cache: *restore_go_cache
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - restore_cache: *restore_go_cache
       - run:
           name: Run dev node
           command: go run arb-dev-node.go
