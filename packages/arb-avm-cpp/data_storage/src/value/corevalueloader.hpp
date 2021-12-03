@@ -29,7 +29,7 @@ class CoreValueLoader : public AbstractValueLoader {
                     std::shared_ptr<CoreCode>,
                     ValueCache);
 
-    value loadValue(const uint256_t& hash) override;
+    Value loadValue(const uint256_t& hash) override;
 
     [[nodiscard]] std::unique_ptr<AbstractValueLoader> clone() const override;
 

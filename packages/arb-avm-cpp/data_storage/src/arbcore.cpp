@@ -631,6 +631,14 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
     // Ensure future continueRunningMachine calls don't use the set gas limit.
     core_machine->machine_state.context.max_gas = 0;
 
+    // We skip over sideloads while fast forwarding, so l2_block_number and
+    // last_sideload may not be updated properly.  Update here so comparison
+    // is correct.
+    core_machine->machine_state.output.l2_block_number =
+        target_output.l2_block_number;
+    core_machine->machine_state.output.last_sideload =
+        target_output.last_sideload;
+
     if (core_machine->machine_state.output != target_output) {
         // Machine in unexpected state, data corruption might have occurred
         std::cerr << "Error catching up: machine in unexpected state"
@@ -960,8 +968,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     auto stack_results = ::getValueImpl(transaction, state_data.datastack_hash,
                                         segment_ids, value_cache, false);
     if (std::holds_alternative<rocksdb::Status>(stack_results) ||
-        !std::holds_alternative<Tuple>(
-            std::get<CountedData<value>>(stack_results).data)) {
+        !holds_alternative<Tuple>(
+            std::get<CountedData<Value>>(stack_results).data)) {
         std::cerr << "failed to load machine stack" << std::endl;
         throw std::runtime_error("failed to load machine stack");
     }
@@ -972,8 +980,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         std::cerr << "failed to load machine auxstack" << std::endl;
         throw std::runtime_error("failed to load machine auxstack");
     }
-    if (!std::holds_alternative<Tuple>(
-            std::get<CountedData<value>>(auxstack_results).data)) {
+    if (!holds_alternative<Tuple>(
+            std::get<CountedData<Value>>(auxstack_results).data)) {
         std::cerr << "failed to load machine auxstack because of format error"
                   << std::endl;
         throw std::runtime_error(
@@ -991,12 +999,11 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         state_data.pc.pc,
         std::make_shared<RunningCode>(core_code),
         makeValueLoader(),
-        std::move(std::get<CountedData<value>>(register_results).data),
-        std::move(std::get<CountedData<value>>(static_results).data),
+        std::move(std::get<CountedData<Value>>(register_results).data),
+        std::move(std::get<CountedData<Value>>(static_results).data),
+        Datastack(get<Tuple>(std::get<CountedData<Value>>(stack_results).data)),
         Datastack(
-            std::get<Tuple>(std::get<CountedData<value>>(stack_results).data)),
-        Datastack(std::get<Tuple>(
-            std::get<CountedData<value>>(auxstack_results).data)),
+            get<Tuple>(std::get<CountedData<Value>>(auxstack_results).data)),
         state_data.arb_gas_remaining,
         state_data.state,
         state_data.err_pc};
@@ -1379,7 +1386,7 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
 
 rocksdb::Status ArbCore::saveLogs(
     ReadWriteTransaction& tx,
-    const std::vector<MachineEmission<value>>& logs) {
+    const std::vector<MachineEmission<Value>>& logs) {
     if (logs.empty()) {
         return rocksdb::Status::OK();
     }
@@ -1416,14 +1423,14 @@ rocksdb::Status ArbCore::saveLogs(
     return updateLogInsertedCount(tx, log_index);
 }
 
-ValueResult<std::vector<MachineEmission<value>>>
+ValueResult<std::vector<MachineEmission<Value>>>
 ArbCore::getLogs(uint256_t index, uint256_t count, ValueCache& valueCache) {
     ReadSnapshotTransaction tx(data_storage);
 
     return getLogsNoLock(tx, index, count, valueCache);
 }
 
-ValueResult<std::vector<MachineEmission<value>>> ArbCore::getLogsNoLock(
+ValueResult<std::vector<MachineEmission<Value>>> ArbCore::getLogsNoLock(
     ReadTransaction& tx,
     uint256_t index,
     uint256_t count,
@@ -1455,7 +1462,7 @@ ValueResult<std::vector<MachineEmission<value>>> ArbCore::getLogsNoLock(
 
     auto it = tx.logGetIterator(&lower_slice, &upper_slice);
     it->SeekToFirst();
-    std::vector<MachineEmission<value>> logs;
+    std::vector<MachineEmission<Value>> logs;
     while (it->Valid()) {
         auto key = it->key().data();
         auto current_log_index = extractUint256(key);
@@ -1468,8 +1475,8 @@ ValueResult<std::vector<MachineEmission<value>>> ArbCore::getLogsNoLock(
         auto inbox_count = extractUint256(info);
         auto inbox_accumulator = extractUint256(info);
         auto inbox = InboxState{inbox_count, inbox_accumulator};
-        auto val = std::move(std::get<CountedData<value>>(val_result).data);
-        logs.push_back(MachineEmission<value>{val, inbox, current_log_index});
+        auto val = std::move(std::get<CountedData<Value>>(val_result).data);
+        logs.push_back(MachineEmission<Value>{val, inbox, current_log_index});
         it->Next();
     }
 

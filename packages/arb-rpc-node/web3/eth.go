@@ -434,6 +434,7 @@ func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes
 		To:                tx.Tx.To(),
 		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
 		GasUsed:           hexutil.Uint64(res.CalcGasUsed().Uint64()),
+		EffectiveGasPrice: hexutil.Uint64(res.FeeStats.Price.L2Computation.Uint64()),
 		ContractAddress:   contractAddress,
 		Logs:              receipt.Logs,
 		LogsBloom:         receipt.Bloom.Bytes(),

@@ -74,8 +74,8 @@ class ArbCore {
 
     struct logscursor_logs {
         uint256_t first_log_index;
-        std::vector<MachineEmission<value>> logs;
-        std::vector<MachineEmission<value>> deleted_logs;
+        std::vector<MachineEmission<Value>> logs;
+        std::vector<MachineEmission<Value>> deleted_logs;
     };
 
    private:
@@ -331,7 +331,7 @@ class ArbCore {
     [[nodiscard]] ValueResult<uint256_t> delayedMessageEntryInsertedCount()
         const;
     [[nodiscard]] ValueResult<uint256_t> totalDelayedMessagesSequenced() const;
-    ValueResult<std::vector<MachineEmission<value>>>
+    ValueResult<std::vector<MachineEmission<Value>>>
     getLogs(uint256_t index, uint256_t count, ValueCache& valueCache);
     [[nodiscard]] ValueResult<std::vector<std::vector<unsigned char>>> getSends(
         uint256_t index,
@@ -393,7 +393,7 @@ class ArbCore {
         const ReadTransaction& tx) const;
 
     rocksdb::Status saveLogs(ReadWriteTransaction& tx,
-                             const std::vector<MachineEmission<value>>& val);
+                             const std::vector<MachineEmission<Value>>& val);
     rocksdb::Status saveSends(
         ReadWriteTransaction& tx,
         const std::vector<MachineEmission<std::vector<unsigned char>>>& sends);
@@ -402,7 +402,7 @@ class ArbCore {
     ValueResult<std::optional<uint256_t>> addMessages(
         const message_data_struct& data,
         ValueCache& cache);
-    ValueResult<std::vector<MachineEmission<value>>> getLogsNoLock(
+    ValueResult<std::vector<MachineEmission<Value>>> getLogsNoLock(
         ReadTransaction& tx,
         uint256_t index,
         uint256_t count,

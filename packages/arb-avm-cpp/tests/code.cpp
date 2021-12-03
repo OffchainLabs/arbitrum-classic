@@ -66,7 +66,7 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     auto assertion = mach.run();
     REQUIRE(assertion.gas_count <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
-    REQUIRE(values_equal(val, value{uint256_t{4}}));
+    REQUIRE(values_equal(val, Value{uint256_t{4}}));
     REQUIRE(mach.machine_state.stack.stacksize() == 0);
 }
 
@@ -75,7 +75,7 @@ TEST_CASE("Code works correctly") {
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
-                                        value{Tuple()}));
+                                        Value{Tuple()}));
     auto mach = storage.getInitialMachine();
     generateTestMachine(mach);
     checkRun(*mach);
@@ -86,7 +86,7 @@ TEST_CASE("Code serialization") {
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
     storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
-                                        value{Tuple()}));
+                                        Value{Tuple()}));
     ValueCache value_cache{1, 0};
 
     auto mach = storage.getInitialMachine();
