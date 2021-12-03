@@ -24,6 +24,8 @@ keys.json
 arbitrum_flat.sol
 vconan
 gasReporterOutput.json
+/packages/tools/gas-*.json
+/packages/tools/comparison-output.csv
 rollups
 /packages/arb-node-core/arb-validator
 /packages/arb-node-core/proof_test_server
