@@ -11,12 +11,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     args: [1],
   })
 
-  await deploy('RollupUserFacet', {
+  await deploy('RollupUserLogic', {
     from: deployer,
     args: [],
   })
 
-  await deploy('RollupAdminFacet', {
+  await deploy('RollupAdminLogic', {
     from: deployer,
     args: [],
   })

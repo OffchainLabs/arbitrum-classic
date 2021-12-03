@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "../../bridge/interfaces/IOutbox.sol";
+import "../bridge/interfaces/IOutbox.sol";
 
 interface IRollupUser {
     function initialize(address _stakeToken) external;
@@ -67,11 +67,11 @@ interface IRollupAdmin {
     function resume() external;
 
     /**
-     * @notice Set the addresses of rollup logic facets called
-     * @param newAdminFacet address of logic that owner of rollup calls
-     * @param newUserFacet ddress of logic that user of rollup calls
+     * @notice Set the addresses of rollup logic contracts called
+     * @param newAdminLogic address of logic that owner of rollup calls
+     * @param newUserLogic ddress of logic that user of rollup calls
      */
-    function setFacets(address newAdminFacet, address newUserFacet) external;
+    function setLogicContracts(address newAdminLogic, address newUserLogic) external;
 
     /**
      * @notice Set the addresses of the validator whitelist
@@ -121,7 +121,7 @@ interface IRollupAdmin {
     /**
      * @notice Set the token used for stake, where address(0) == eth
      * @dev Before changing the base stake token, you might need to change the
-     * implementation of the Rollup User facet!
+     * implementation of the Rollup User logic!
      * @param newStakeToken address of token used for staking
      */
     function setStakeToken(address newStakeToken) external;

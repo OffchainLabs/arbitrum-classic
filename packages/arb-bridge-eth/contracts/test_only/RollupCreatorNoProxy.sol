@@ -30,8 +30,8 @@ import "../rollup/Rollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "../rollup/RollupLib.sol";
-import "../rollup/facets/RollupUser.sol";
-import "../rollup/facets/RollupAdmin.sol";
+import "../rollup/RollupUserLogic.sol";
+import "../rollup/RollupAdminLogic.sol";
 
 import "../libraries/Whitelist.sol";
 
@@ -146,7 +146,7 @@ contract RollupCreatorNoProxy {
                 address(frame.rollupEventBridge),
                 challengeFactory
             ],
-            [address(new RollupAdminFacet()), address(new RollupUserFacet())],
+            [address(new RollupAdminLogic()), address(new RollupUserLogic())],
             [config.sequencerDelayBlocks, config.sequencerDelaySeconds]
         );
         emit RollupCreated(frame.rollup, frame.inbox);

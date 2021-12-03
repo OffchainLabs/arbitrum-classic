@@ -178,7 +178,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         // the rollup contract owns the bridge
         address rollup = Bridge(address(bridge)).owner();
         // we want to validate the owner of the rollup
-        address owner = RollupBase(rollup).owner();
+        address owner = RollupCore(rollup).owner();
         require(msg.sender == owner, "NOT_ROLLUP");
         _;
     }

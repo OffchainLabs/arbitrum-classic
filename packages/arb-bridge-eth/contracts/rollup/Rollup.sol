@@ -20,61 +20,17 @@ pragma solidity ^0.6.11;
 pragma experimental ABIEncoderV2;
 
 
-import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./RollupEventBridge.sol";
 import "./RollupCore.sol";
+import "./RollupEventBridge.sol";
 import "./RollupLib.sol";
 import "./Node.sol";
 
-import "../challenge/IChallenge.sol";
-import "../challenge/IChallengeFactory.sol";
-
-import "../bridge/interfaces/IBridge.sol";
-import "../bridge/interfaces/IOutbox.sol";
-import "../bridge/Messages.sol";
-
 import "../libraries/ProxyUtil.sol";
-import "../libraries/Cloneable.sol";
-import "./facets/IRollupFacets.sol";
 
-abstract contract RollupBase is Cloneable, RollupCore, Pausable {
-    // Rollup Config
-    uint256 public confirmPeriodBlocks;
-    uint256 public extraChallengeTimeBlocks;
-    uint256 public avmGasSpeedLimitPerBlock;
-    uint256 public baseStake;
-
-    // Bridge is an IInbox and IOutbox
-    IBridge public delayedBridge;
-    ISequencerInbox public sequencerBridge;
-    IOutbox public outbox;
-    RollupEventBridge public rollupEventBridge;
-    IChallengeFactory public challengeFactory;
-    address public owner;
-    address public stakeToken;
-    uint256 public minimumAssertionPeriod;
-
-    uint256 public STORAGE_GAP_1;
-    uint256 public STORAGE_GAP_2;
-    uint256 public challengeExecutionBisectionDegree;
-
-    address[] internal facets;
-
-    mapping(address => bool) isValidator;
-
-    /// @notice DEPRECATED -- this method is deprecated but still mantained for backward compatibility
-    /// @dev this actually returns the avmGasSpeedLimitPerBlock
-    /// @return this actually returns the avmGasSpeedLimitPerBlock
-    function arbGasSpeedLimitPerBlock() external view returns (uint256) {
-        return avmGasSpeedLimitPerBlock;
-    }
-}
-
-contract Rollup is Proxy, RollupBase {
+contract Rollup is Proxy, RollupCore {
     using Address for address;
 
     constructor(uint256 _confirmPeriodBlocks) public Cloneable() Pausable() {
@@ -96,18 +52,20 @@ contract Rollup is Proxy, RollupBase {
         address _owner,
         bytes calldata _extraConfig,
         address[5] calldata connectedContracts,
-        address[2] calldata _facets,
+        address[2] calldata _logicContracts,
         uint256[2] calldata sequencerInboxParams
     ) public {
         require(!isInit(), "ALREADY_INIT");
 
-        // calls initialize method in user facet
-        require(_facets[0].isContract(), "FACET_0_NOT_CONTRACT");
-        require(_facets[1].isContract(), "FACET_1_NOT_CONTRACT");
-        (bool success, ) = _facets[1].delegatecall(
+        // calls initialize method in user logic
+        require(_logicContracts[0].isContract(), "LOGIC_0_NOT_CONTRACT");
+        require(_logicContracts[1].isContract(), "LOGIC_1_NOT_CONTRACT");
+        (bool success, ) = _logicContracts[1].delegatecall(
             abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
         );
-        require(success, "FAIL_INIT_FACET");
+        adminLogic = IRollupAdmin(_logicContracts[0]);
+        userLogic = IRollupUser(_logicContracts[1]);
+        require(success, "FAIL_INIT_LOGIC");
 
         delayedBridge = IBridge(connectedContracts[0]);
         sequencerBridge = ISequencerInbox(connectedContracts[1]);
@@ -139,9 +97,6 @@ contract Rollup is Proxy, RollupBase {
 
         sequencerBridge.setMaxDelay(sequencerInboxParams[0], sequencerInboxParams[1]);
 
-        // facets[0] == admin, facets[1] == user
-        facets = _facets;
-
         emit RollupCreated(_machineHash);
         require(isInit(), "INITIALIZE_NOT_INIT");
     }
@@ -151,13 +106,6 @@ contract Rollup is Proxy, RollupBase {
         // this function can only be called by the proxy admin contract
         address proxyAdmin = ProxyUtil.getProxyAdmin();
         require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
-
-        // this upgrade moves the delay blocks and seconds tracking to the sequencer inbox
-        // because of that we need to update the admin facet logic to allow the owner to set
-        // these values in the sequencer inbox
-
-        STORAGE_GAP_1 = 0;
-        STORAGE_GAP_2 = 0;
     }
 
     function createInitialNode(bytes32 _machineHash) private view returns (Node memory) {
@@ -184,33 +132,16 @@ contract Rollup is Proxy, RollupBase {
     }
 
     /**
-     * This contract uses a dispatch pattern from EIP-2535: Diamonds
-     * together with Open Zeppelin's proxy
-     */
-
-    function getFacets() external view returns (address, address) {
-        return (getAdminFacet(), getUserFacet());
-    }
-
-    function getAdminFacet() public view returns (address) {
-        return facets[0];
-    }
-
-    function getUserFacet() public view returns (address) {
-        return facets[1];
-    }
-
-    /**
      * @dev This is a virtual function that should be overriden so it returns the address to which the fallback function
      * and {_fallback} should delegate.
      */
     function _implementation() internal view virtual override returns (address) {
         require(msg.data.length >= 4, "NO_FUNC_SIG");
         address rollupOwner = owner;
-        // if there is an owner and it is the sender, delegate to admin facet
+        // if there is an owner and it is the sender, delegate to admin logic
         address target = rollupOwner != address(0) && rollupOwner == msg.sender
-            ? getAdminFacet()
-            : getUserFacet();
+            ? address(adminLogic)
+            : address(userLogic);
         require(target.isContract(), "TARGET_NOT_CONTRACT");
         return target;
     }

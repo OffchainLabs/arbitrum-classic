@@ -30,8 +30,8 @@ import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./Rollup.sol";
-import "./facets/RollupUser.sol";
-import "./facets/RollupAdmin.sol";
+import "./RollupUserLogic.sol";
+import "./RollupAdminLogic.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "./RollupLib.sol";
@@ -44,8 +44,8 @@ contract RollupCreator is Ownable {
     BridgeCreator public bridgeCreator;
     ICloneable public rollupTemplate;
     address public challengeFactory;
-    address public rollupAdminFacet;
-    address public rollupUserFacet;
+    address public rollupAdminLogic;
+    address public rollupUserLogic;
 
     constructor() public Ownable() {}
 
@@ -53,14 +53,14 @@ contract RollupCreator is Ownable {
         BridgeCreator _bridgeCreator,
         ICloneable _rollupTemplate,
         address _challengeFactory,
-        address _rollupAdminFacet,
-        address _rollupUserFacet
+        address _rollupAdminLogic,
+        address _rollupUserLogic
     ) external onlyOwner {
         bridgeCreator = _bridgeCreator;
         rollupTemplate = _rollupTemplate;
         challengeFactory = _challengeFactory;
-        rollupAdminFacet = _rollupAdminFacet;
-        rollupUserFacet = _rollupUserFacet;
+        rollupAdminLogic = _rollupAdminLogic;
+        rollupUserLogic = _rollupUserLogic;
         emit TemplatesUpdated();
     }
 
@@ -144,7 +144,7 @@ contract RollupCreator is Ownable {
                 address(frame.rollupEventBridge),
                 challengeFactory
             ],
-            [rollupAdminFacet, rollupUserFacet],
+            [rollupAdminLogic, rollupUserLogic],
             [config.sequencerDelayBlocks, config.sequencerDelaySeconds]
         );
 
