@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 import "./Rollup.sol";
 import "./IRollupLogic.sol";
 
+
 abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
 
@@ -83,7 +84,6 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
 
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
-
         uint256 nodeNum = firstUnresolvedNode();
         Node storage node = getNode(nodeNum);
 
