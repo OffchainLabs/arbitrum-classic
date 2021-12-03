@@ -20,11 +20,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v11-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
-      - go-mod-v11-{{ .Branch }}-
-      - go-mod-v11-
+      - go-mod-v12-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
+      - go-mod-v12-{{ .Branch }}-
+      - go-mod-v12-
   - &save_go_cache
-    key: go-mod-v11-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
+    key: go-mod-v12-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &test-path /tmp/test-results
