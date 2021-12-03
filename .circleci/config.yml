@@ -20,11 +20,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v12-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
-      - go-mod-v12-{{ .Branch }}-
-      - go-mod-v12-
+      - go-mod-v13-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
+      - go-mod-v13-{{ .Branch }}-
+      - go-mod-v13-
   - &save_go_cache
-    key: go-mod-v12-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
+    key: go-mod-v13-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &test-path /tmp/test-results
@@ -56,7 +56,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.4.1
+      - image: offchainlabs/backend-base:0.4.2
     steps:
       - checkout
       - restore_cache: *restore_go_cache
