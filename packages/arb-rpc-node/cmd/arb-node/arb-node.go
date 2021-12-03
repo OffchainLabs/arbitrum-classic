@@ -23,11 +23,13 @@ import (
 	"math/big"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -174,7 +176,7 @@ func startup() error {
 
 	defer logger.Log().Msg("Cleanly shutting down node")
 
-	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
+	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core, gethlog.StreamHandler(os.Stderr, gethlog.JSONFormat())); err != nil {
 		return err
 	}
 

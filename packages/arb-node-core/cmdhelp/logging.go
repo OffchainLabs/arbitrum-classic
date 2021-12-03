@@ -18,7 +18,6 @@ package cmdhelp
 
 import (
 	"flag"
-	"os"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/rs/zerolog"
@@ -30,7 +29,7 @@ func AddLogFlags(fs *flag.FlagSet) (*string, *string) {
 	return gethLogLevel, arbLogLevel
 }
 
-func ParseLogFlags(gethLogLevel, arbLogLevel *string) error {
+func ParseLogFlags(gethLogLevel, arbLogLevel *string, coreHandler gethlog.Handler) error {
 	gethLevel, err := gethlog.LvlFromString(*gethLogLevel)
 	if err != nil {
 		return err
@@ -40,7 +39,7 @@ func ParseLogFlags(gethLogLevel, arbLogLevel *string) error {
 		return err
 	}
 	zerolog.SetGlobalLevel(arbLevel)
-	h := gethlog.LvlFilterHandler(gethLevel, gethlog.StreamHandler(os.Stderr, gethlog.JSONFormat()))
+	h := gethlog.LvlFilterHandler(gethLevel, coreHandler)
 	h = gethlog.CallerFuncHandler(h)
 	gethlog.Root().SetHandler(h)
 	return nil
