@@ -41,7 +41,6 @@ import "../bridge/interfaces/IOutbox.sol";
 
 abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     using SafeMath for uint256;
-    using NodePropsLib for NodeProps;
     using NodeLib for Node;
 
     // Rollup Config
@@ -87,6 +86,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     uint256 private _lastStakeBlock;
     mapping(uint256 => Node) private _nodes;
     mapping(uint256 => bytes32) private _nodeHashes;
+    mapping(uint256 => mapping(address => bool)) private _nodeStakers;
 
     address payable[] private _stakerList;
     mapping(address => Staker) public override _stakerMap;
@@ -96,27 +96,26 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     mapping(address => uint256) private _withdrawableFunds;
 
     /**
-     * @notice Get the Node the given node index
+     * @notice Get a storage refernce to the Node for the given node index
      * @param nodeNum Index of the node
      * @return Node struct
      */
-    function getNode(uint256 nodeNum) internal view returns (Node storage) {
+    function getNodeStorage(uint256 nodeNum) internal view returns (Node storage) {
         return _nodes[nodeNum];
     }
 
     /**
-     * @notice Get the Node properties for the given index. 
-     * We can't expose the full Node publicly as it contains a mapping 
+     * @notice Get the Node for the given index. 
      */
-    function getNodeProps(uint256 nodeNum) public view override returns (NodeProps memory) {
-        return getNode(nodeNum).props;
+    function getNode(uint256 nodeNum) public view override returns (Node memory) {
+        return getNodeStorage(nodeNum);
     }
 
     /**
      * @notice Check if the specified node has been staked on by the provided staker
      */
     function nodeHasStaker(uint256 nodeNum, address staker) public view override returns(bool) {
-        return getNode(nodeNum).stakers[staker];
+        return _nodeStakers[nodeNum][staker];
     }
 
     /**
@@ -275,10 +274,10 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     ) internal {
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
 
-        Node storage node = getNode(nodeNum);
+        Node storage node = getNodeStorage(nodeNum);
         // Authenticate data against node's confirm data pre-image
         require(
-            node.props.confirmData ==
+            node.confirmData ==
                 RollupLib.confirmHash(
                     beforeSendAcc,
                     afterSendAcc,
@@ -420,6 +419,34 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         _zombies.pop();
     }
 
+     /**
+     * @notice Mark the given staker as staked on this node
+     * @param staker Address of the staker to mark
+     * @return The number of stakers after adding this one
+     */
+    function addStaker(uint256 nodeNum, address staker) internal returns (uint256) {
+        require(!_nodeStakers[nodeNum][staker], "ALREADY_STAKED");
+        _nodeStakers[nodeNum][staker] = true;
+        Node storage node = getNodeStorage(nodeNum);
+        require(node.deadlineBlock != 0, "NO_NODE");
+        
+        uint256 prevCount = node.stakerCount;
+        node.stakerCount = prevCount + 1;
+        return prevCount + 1;
+    }
+
+    /**
+     * @notice Remove the given staker from this node
+     * @param staker Address of the staker to remove
+     */
+    function removeStaker(uint256 nodeNum, address staker) internal {
+        require(_nodeStakers[nodeNum][staker], "NOT_STAKED");
+        _nodeStakers[nodeNum][staker] = false;
+
+        Node storage node = getNodeStorage(nodeNum);
+        node.stakerCount--;
+    }
+
     /**
      * @notice Remove the given staker and return their stake
      * @param stakerAddress Address of the staker withdrawing their stake
@@ -439,12 +466,11 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      */
     function stakeOnNode(address stakerAddress, uint256 nodeNum) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        Node storage node = getNode(nodeNum);
-        uint256 newStakerCount = node.addStaker(stakerAddress);
+        uint256 newStakerCount = addStaker(nodeNum, stakerAddress);
         staker.latestStakedNode = nodeNum;
         if (newStakerCount == 1) {
-            Node storage parent = getNode(nodeNum);
-            parent.props.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
+            Node storage parent = getNodeStorage(nodeNum);
+            parent.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
         }
 
     }
@@ -503,13 +529,13 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
             avmGasSpeedLimitPerBlock
         );
 
-        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.props.deadlineBlock).add(
+        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock).add(
             checkTime
         );
 
-        uint256 olderSibling = prevNode.props.latestChildNumber;
+        uint256 olderSibling = prevNode.latestChildNumber;
         if (olderSibling != 0) {
-            deadlineBlock = max(deadlineBlock, getNode(olderSibling).props.deadlineBlock);
+            deadlineBlock = max(deadlineBlock, getNodeStorage(olderSibling).deadlineBlock);
         }
         return deadlineBlock;
     }
@@ -551,7 +577,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
             // Make sure the previous state is correct against the node being built on
             require(
-                RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.props.stateHash,
+                RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.stateHash,
                 "PREV_STATE_HASH"
             );
 
@@ -570,10 +596,10 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
             memoryFrame.deadlineBlock = nodeDeadline(memoryFrame.gasUsed, memoryFrame.prevNode);
 
-            memoryFrame.hasSibling = memoryFrame.prevNode.props.latestChildNumber > 0;
+            memoryFrame.hasSibling = memoryFrame.prevNode.latestChildNumber > 0;
             // here we don't use ternacy operator to remain compatible with slither
             if (memoryFrame.hasSibling) {
-                memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.props.latestChildNumber);
+                memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.latestChildNumber);
             } else {
                 memoryFrame.lastHash = getNodeHash(prevNodeNumber);
             }
@@ -592,8 +618,8 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
             // Fetch a storage reference to prevNode since we copied our other one into memory
             // and we don't have enough stack available to keep to keep the previous storage reference around
-            Node storage prevNode = getNode(prevNodeNumber);
-            prevNode.props.childCreated(nodeNum);
+            Node storage prevNode = getNodeStorage(prevNodeNumber);
+            prevNode.childCreated(nodeNum);
 
             newNodeHash = RollupLib.nodeHash(
                 memoryFrame.hasSibling,

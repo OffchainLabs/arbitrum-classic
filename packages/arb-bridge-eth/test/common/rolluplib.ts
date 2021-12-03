@@ -353,7 +353,7 @@ export class RollupContract {
   }
 
   getNodeStateHash(index: BigNumberish): Promise<string> {
-    return (this.rollup.getNodeProps(index)).then(n => n.stateHash)
+    return (this.rollup.getNode(index)).then(n => n.stateHash)
   }
 
   latestStakedNode(staker: string): Promise<BigNumber> {

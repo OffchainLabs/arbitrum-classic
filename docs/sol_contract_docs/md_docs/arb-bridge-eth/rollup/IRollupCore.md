@@ -5,11 +5,11 @@ id: IRollupCore
 
 ### `_stakerMap(address stakerAddress) → uint256, uint256, uint256, address, bool` (external)
 
-### `getNodeProps(uint256 nodeNum) → struct NodeProps` (public)
+### `getNode(uint256 nodeNum) → struct Node` (public)
 
-Get data properties of a node
+Get a node by index
 
-- `nodeNum`: Index of the node properties
+- `nodeNum`: Index \of the node properties
 
 **Returns**: Data properties for the specified node
 

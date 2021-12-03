@@ -74,10 +74,9 @@ interface IRollupCore {
     );
 
     /**
-     * @notice Get the Node properties for the given index. 
-     * We can't expose the full Node publicly as it contains a mapping 
+     * @notice Get the Node for the given index. 
      */
-    function getNodeProps(uint256 nodeNum) external view returns (NodeProps memory);
+    function getNode(uint256 nodeNum) external view returns (Node memory);
 
     /**
      * @notice Check if the specified node has been staked on by the provided staker

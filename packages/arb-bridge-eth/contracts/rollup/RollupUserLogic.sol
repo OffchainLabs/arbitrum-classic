@@ -23,9 +23,9 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         requireUnresolvedExists();
         uint256 latestConfirmedNodeNum = latestConfirmed();
         uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
-        Node storage firstUnresolvedNode_ = getNode(firstUnresolvedNodeNum);
+        Node storage firstUnresolvedNode_ = getNodeStorage(firstUnresolvedNodeNum);
 
-        if (firstUnresolvedNode_.props.prev == latestConfirmedNodeNum) {
+        if (firstUnresolvedNode_.prev == latestConfirmedNodeNum) {
             /**If the first unresolved node is a child of the latest confirmed node, to prove it can be rejected, we show:
              * a) Its deadline has expired
              * b) *Some* staker is staked on a sibling
@@ -40,19 +40,19 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             requireUnresolved(latestStakedNode(stakerAddress));
 
             // 3. staker isn't staked on first unresolved node; this proves staker's latest staked can't be a child of firstUnresolvedNode (recall staking on node requires staking on all of its parents)
-            require(!firstUnresolvedNode_.stakers[stakerAddress], "STAKED_ON_TARGET");
+            require(!nodeHasStaker(firstUnresolvedNodeNum, stakerAddress), "STAKED_ON_TARGET");
             // If a staker is staked on a node that is neither a child nor a parent of firstUnresolvedNode, it must be a sibling, QED
 
             // Verify the block's deadline has passed
-            firstUnresolvedNode_.props.requirePastDeadline();
+            firstUnresolvedNode_.requirePastDeadline();
 
-            getNode(latestConfirmedNodeNum).props.requirePastChildConfirmDeadline();
+            getNodeStorage(latestConfirmedNodeNum).requirePastChildConfirmDeadline();
 
             removeOldZombies(0);
 
             // Verify that no staker is staked on this node
             require(
-                firstUnresolvedNode_.props.stakerCount == countStakedZombies(firstUnresolvedNodeNum),
+                firstUnresolvedNode_.stakerCount == countStakedZombies(firstUnresolvedNodeNum),
                 "HAS_STAKERS"
             );
         }
@@ -85,21 +85,21 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
         uint256 nodeNum = firstUnresolvedNode();
-        Node storage node = getNode(nodeNum);
+        Node storage node = getNodeStorage(nodeNum);
 
         // Verify the block's deadline has passed
-        node.props.requirePastDeadline();
+        node.requirePastDeadline();
 
         // Check that prev is latest confirmed
-        require(node.props.prev == latestConfirmed(), "INVALID_PREV");
+        require(node.prev == latestConfirmed(), "INVALID_PREV");
 
-        getNode(latestConfirmed()).props.requirePastChildConfirmDeadline();
+        getNodeStorage(latestConfirmed()).requirePastChildConfirmDeadline();
 
         removeOldZombies(0);
 
         // All non-zombie stakers are staked on this node
         require(
-            node.props.stakerCount == stakerCount().add(countStakedZombies(nodeNum)),
+            node.stakerCount == stakerCount().add(countStakedZombies(nodeNum)),
             "NOT_ALL_STAKED"
         );
 
@@ -146,8 +146,8 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated(),
             "NODE_NUM_OUT_OF_RANGE"
         );
-        Node storage node = getNode(nodeNum);
-        require(latestStakedNode(msg.sender) == node.props.prev, "NOT_STAKED_PREV");
+        Node storage node = getNodeStorage(nodeNum);
+        require(latestStakedNode(msg.sender) == node.prev, "NOT_STAKED_PREV");
         stakeOnNode(msg.sender, nodeNum);
     }
 
@@ -276,22 +276,22 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
         require(latestConfirmed() < nodeNums[0], "ALREADY_CONFIRMED");
 
-        Node storage node1 = getNode(nodeNums[0]);
-        Node storage node2 = getNode(nodeNums[1]);
+        Node storage node1 = getNodeStorage(nodeNums[0]);
+        Node storage node2 = getNodeStorage(nodeNums[1]);
 
         // ensure nodes staked on the same parent (and thus in conflict)
-        require(node1.props.prev == node2.props.prev, "DIFF_PREV");
+        require(node1.prev == node2.prev, "DIFF_PREV");
 
         // ensure both stakers aren't currently in challenge
         requireUnchallengedStaker(stakers[0]);
         requireUnchallengedStaker(stakers[1]);
 
-        require(node1.stakers[stakers[0]], "STAKER1_NOT_STAKED");
-        require(node2.stakers[stakers[1]], "STAKER2_NOT_STAKED");
+        require(nodeHasStaker(nodeNums[0], stakers[0]), "STAKER1_NOT_STAKED");
+        require(nodeHasStaker(nodeNums[1], stakers[1]), "STAKER2_NOT_STAKED");
 
         // Check param data against challenge hash
         require(
-            node1.props.challengeHash ==
+            node1.challengeHash ==
                 RollupLib.challengeRootHash(
                     executionHashes[0],
                     proposedTimes[0],
@@ -301,7 +301,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         );
 
         require(
-            node2.props.challengeHash ==
+            node2.challengeHash ==
                 RollupLib.challengeRootHash(
                     executionHashes[1],
                     proposedTimes[1],
@@ -311,8 +311,8 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         );
 
         // Calculate upper limit for allowed node proposal time:
-        uint256 commonEndTime = getNode(node1.props.prev).props.firstChildBlock.add( // Dispute start: dispute timer for a node starts when its first child is created
-            node1.props.deadlineBlock.sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
+        uint256 commonEndTime = getNodeStorage(node1.prev).firstChildBlock.add( // Dispute start: dispute timer for a node starts when its first child is created
+            node1.deadlineBlock.sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
         );
         if (commonEndTime < proposedTimes[1]) {
             // The 2nd node was created too late; loses challenge automatically.
@@ -388,9 +388,9 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         uint256 nodesRemoved = 0;
         uint256 firstUnresolved = firstUnresolvedNode();
         while (latestNodeStaked >= firstUnresolved && nodesRemoved < maxNodes) {
-            Node storage node = getNode(latestNodeStaked);
-            node.removeStaker(zombieStakerAddress);
-            latestNodeStaked = node.props.prev;
+            Node storage node = getNodeStorage(latestNodeStaked);
+            removeStaker(latestNodeStaked, zombieStakerAddress);
+            latestNodeStaked = node.prev;
             nodesRemoved++;
         }
         if (latestNodeStaked < firstUnresolved) {
@@ -433,7 +433,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         if (_firstUnresolvedNodeNum - 1 == _latestCreatedNode) {
             return baseStake;
         }
-        uint256 firstUnresolvedDeadline = getNode(_firstUnresolvedNodeNum).props.deadlineBlock;
+        uint256 firstUnresolvedDeadline = getNodeStorage(_firstUnresolvedNodeNum).deadlineBlock;
         if (_blockNumber < firstUnresolvedDeadline) {
             return baseStake;
         }
@@ -516,11 +516,10 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
      * @return The number of zombies staked on the node
      */
     function countStakedZombies(uint256 nodeNum) public view override returns (uint256) {
-        Node storage node = getNode(nodeNum);
         uint256 currentZombieCount = zombieCount();
         uint256 stakedZombieCount = 0;
         for (uint256 i = 0; i < currentZombieCount; i++) {
-            if (node.stakers[zombieAddress(i)]) {
+            if (nodeHasStaker(nodeNum, zombieAddress(i))) {
                 stakedZombieCount++;
             }
         }
