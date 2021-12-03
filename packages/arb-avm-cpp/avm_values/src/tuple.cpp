@@ -15,6 +15,7 @@
  */
 
 #include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 #include <ethash/keccak.hpp>
 
@@ -31,7 +32,7 @@ Tuple Tuple::createSizedTuple(const size_t size) {
     return Tuple(std::move(tpl));
 }
 
-Tuple Tuple::createTuple(std::vector<value> values) {
+Tuple Tuple::createTuple(std::vector<Value> values) {
     if (!values.empty() && values.size() > 8) {
         return {};
     }
@@ -42,27 +43,27 @@ Tuple Tuple::createTuple(std::vector<value> values) {
     return Tuple(std::move(tpl));
 }
 
-Tuple Tuple::createTuple(value val) {
+Tuple Tuple::createTuple(Value val) {
     auto tpl = TuplePool::get_impl().getResource(1);
     tpl->data.emplace_back(std::move(val));
 
     return Tuple(std::move(tpl));
 }
 
-Tuple::Tuple(value val1, value val2)
+Tuple::Tuple(Value val1, Value val2)
     : tpl(TuplePool::get_impl().getResource(2)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
 }
 
-Tuple::Tuple(value val1, value val2, value val3)
+Tuple::Tuple(Value val1, Value val2, Value val3)
     : tpl(TuplePool::get_impl().getResource(3)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
     tpl->data.push_back(std::move(val3));
 }
 
-Tuple::Tuple(value val1, value val2, value val3, value val4)
+Tuple::Tuple(Value val1, Value val2, Value val3, Value val4)
     : tpl(TuplePool::get_impl().getResource(4)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -70,7 +71,7 @@ Tuple::Tuple(value val1, value val2, value val3, value val4)
     tpl->data.push_back(std::move(val4));
 }
 
-Tuple::Tuple(value val1, value val2, value val3, value val4, value val5)
+Tuple::Tuple(Value val1, Value val2, Value val3, Value val4, Value val5)
     : tpl(TuplePool::get_impl().getResource(5)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -79,12 +80,12 @@ Tuple::Tuple(value val1, value val2, value val3, value val4, value val5)
     tpl->data.push_back(std::move(val5));
 }
 
-Tuple::Tuple(value val1,
-             value val2,
-             value val3,
-             value val4,
-             value val5,
-             value val6)
+Tuple::Tuple(Value val1,
+             Value val2,
+             Value val3,
+             Value val4,
+             Value val5,
+             Value val6)
     : tpl(TuplePool::get_impl().getResource(6)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -94,13 +95,13 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val6));
 }
 
-Tuple::Tuple(value val1,
-             value val2,
-             value val3,
-             value val4,
-             value val5,
-             value val6,
-             value val7)
+Tuple::Tuple(Value val1,
+             Value val2,
+             Value val3,
+             Value val4,
+             Value val5,
+             Value val6,
+             Value val7)
     : tpl(TuplePool::get_impl().getResource(7)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -111,14 +112,14 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val7));
 }
 
-Tuple::Tuple(value val1,
-             value val2,
-             value val3,
-             value val4,
-             value val5,
-             value val6,
-             value val7,
-             value val8)
+Tuple::Tuple(Value val1,
+             Value val2,
+             Value val3,
+             Value val4,
+             Value val5,
+             Value val6,
+             Value val7,
+             Value val8)
     : tpl(TuplePool::get_impl().getResource(8)) {
     tpl->data.push_back(std::move(val1));
     tpl->data.push_back(std::move(val2));
@@ -130,13 +131,54 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val8));
 }
 
+void Tuple::unsafe_set_element(uint64_t pos, Value&& newval) {
+    if (pos >= tuple_size()) {
+        throw bad_tuple_index{};
+    }
+    tpl->data[pos] = std::move(newval);
+    tpl->deferredHashing = true;
+}
+
+void Tuple::set_element(const uint64_t pos, Value newval) {
+    if (pos >= tuple_size()) {
+        throw bad_tuple_index{};
+    }
+    std::shared_ptr<RawTuple> tmp =
+        TuplePool::get_impl().getResource(tuple_size());
+    for (uint64_t i = 0; i < tuple_size(); i++) {
+        if (i == pos) {
+            tmp->data.emplace_back(std::move(newval));
+        } else {
+            tmp->data.emplace_back(tpl->data[i]);
+        }
+    }
+    tpl = std::move(tmp);
+}
+
+Value Tuple::get_element(const uint64_t pos) const {
+    if (pos >= tuple_size()) {
+        throw bad_tuple_index{};
+    }
+    return tpl->data[pos];
+}
+
+[[nodiscard]] const Value& Tuple::get_element_unsafe(const uint64_t pos) const {
+    return tpl->data[pos];
+}
+
+[[nodiscard]] Value& Tuple::get_element_mutable_unsafe(
+    const uint64_t pos) const {
+    tpl->deferredHashing = true;
+    return tpl->data[pos];
+}
+
 constexpr uint64_t hash_size = 32;
 
 // BasicValChecker checks to see whether a value can be hashed without
 // recursion. All non-tuple values or tuples with a cached hash are
 // basic. Tuples that haven't been hashed yet are not
 struct BasicValChecker {
-    bool operator()(const value& val) const { return std::visit(*this, val); }
+    bool operator()(const Value& val) const { return visit(*this, val); }
     bool operator()(const Tuple& tup) const {
         return !tup.tpl || !tup.tpl->deferredHashing;
     }
@@ -183,7 +225,7 @@ void Tuple::calculateHashPreImage() const {
                 auto& elem = tup.get_element_unsafe(i);
                 if (!BasicValChecker{}(elem)) {
                     found_complex = true;
-                    tups.push_back(std::get<Tuple>(tup.get_element(i)));
+                    tups.push_back(get<Tuple>(tup.get_element(i)));
                 }
             }
             if (!found_complex) {

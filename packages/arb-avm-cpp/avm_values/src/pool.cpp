@@ -16,6 +16,7 @@
 
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 #include <ostream>
 
@@ -24,7 +25,7 @@ RawTuple::~RawTuple() {
     thread_local bool deleting_shutdown = false;
 
     for (auto& item : data) {
-        if (auto tup = std::get_if<Tuple>(&item)) {
+        if (auto tup = get_if<Tuple>(&item)) {
             if (tup->tpl != nullptr) {
                 deletion_queue.push_back(std::move(tup->tpl));
             }

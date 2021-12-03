@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.9)
 
 find_package(Git)
 if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../.git")
@@ -46,6 +46,25 @@ cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release Re
 
 project (arb-avm-cpp)
 
+option(ENABLE_TCMALLOC "Build with TCMalloc support" OFF)
+option(ENABLE_GPROF "Build with GPerf profiling support" OFF)
+option(ENABLE_JEMALLOC "Build with JEMalloc support" OFF)
+option(ENABLE_LTO "Enable link time optimization" OFF)
+
+if (ENABLE_LTO)
+    if (NOT CMAKE_BUILD_TYPE MATCHES Debug)
+        include(CheckIPOSupported)
+        check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT error)
+
+        if(LTO_SUPPORTED)
+            message(STATUS "LTO enabled")
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        else()
+            message(STATUS "LTO not supported: <${error}>")
+        endif()
+    endif()
+endif(ENABLE_LTO)
+
 include(CTest)
 
 set(AVM_VERSION_MAJOR 0)
@@ -56,9 +75,10 @@ set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_P
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
-option(ENABLE_JEMALLOC "Enable jemalloc" OFF)
-
 set(AVM_FUZZER "" CACHE STRING "Build fuzzing target for the requested fuzzer")
+
+add_compile_options(-fno-omit-frame-pointer)
+add_link_options(-fno-omit-frame-pointer)
 
 if (${AVM_FUZZER} MATCHES "afl")
     add_compile_options(-fsanitize=address)
@@ -71,9 +91,39 @@ elseif (${AVM_FUZZER} MATCHES "honggfuzz")
     add_link_options(-fsanitize=address)
 endif ()
 
+
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
+
+set(GPROF_LIBRARY "")
+set(MALLOC_LIBRARY "")
+set(ALT_MALLOC_FLAGS "-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
+
+if (ENABLE_JEMALLOC AND (ENABLE_GPROF OR ENABLE_TCMALLOC))
+        message(FATAL_ERROR " ENABLE_JEMALLOC cannot be defined while ENABLE_GPROF or ENABLE_TCMALLOC is defined")
+endif()
+
+if (ENABLE_GPROF)
+    find_package(Gperftools REQUIRED)
+    message(STATUS "Using GPROF")
+    include_directories(${GPERFTOOLS_INCLUDE_DIR})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS} -g -pg")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS} -g -pg")
+    set(GPROF_LIBRARY ${GPERFTOOLS_PROFILER})
+    set(MALLOC_LIBRARY ${GPERFTOOLS_TCMALLOC})
+    set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg ")
+    set(ENABLE_TCMALLOC 0)
+endif (ENABLE_GPROF)
+
+if (ENABLE_TCMALLOC)
+    find_package(Gperftools REQUIRED)
+    message(STATUS "Using tcmalloc")
+    include_directories(${GPERFTOOLS_INCLUDE_DIR})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(MALLOC_LIBRARY ${GPERFTOOLS_TCMALLOC})
+endif (ENABLE_TCMALLOC)
 
 if (ENABLE_JEMALLOC)
     find_package(PkgConfig REQUIRED)
@@ -81,6 +131,9 @@ if (ENABLE_JEMALLOC)
     message(STATUS "Building with jemalloc")
     include_directories(${JEMALLOC_INCLUDE_DIRS})
     link_directories(${JEMALLOC_LIBRARY_DIRS})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(MALLOC_LIBRARY ${JEMALLOC_LINK_LIBRARIES})
 endif (ENABLE_JEMALLOC)
 
 # On macOS, search Homebrew for keg-only versions of OpenSSL
@@ -187,10 +240,11 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm" AND NOT AVM_FUZZER)
             " $<TARGET_LINKER_FILE:avm_values>"
             " $<TARGET_LINKER_FILE:ff>"
             " $<TARGET_LINKER_FILE:secp256k1>"
-            " ${JEMALLOC_LINK_LIBRARIES}"
             " $<TARGET_LINKER_FILE:OpenSSL::Crypto>"
             " $<TARGET_LINKER_FILE:RocksDB::RocksDB>"
             " $<TARGET_LINKER_FILE:ethash::keccak>"
+            " ${GPROF_LIBRARY}"
+            " ${MALLOC_LIBRARY}"
             " ${GMP_LIBRARY}"
             " ${GMPXX_LIBRARY}"
         )

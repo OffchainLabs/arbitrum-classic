@@ -129,7 +129,7 @@ CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     auto blockReason = mach->isBlocked(newMessages != 0);
-    return std::visit(ReasonConverter{}, blockReason);
+    return visit(ReasonConverter{}, blockReason);
 }
 
 COneStepProof machineMarshallForProof(CMachine* m) {

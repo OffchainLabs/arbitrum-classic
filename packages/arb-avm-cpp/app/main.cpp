@@ -89,14 +89,12 @@ int main(int argc, char* argv[]) {
                 (std::istreambuf_iterator<char>(file)),
                 std::istreambuf_iterator<char>());
             auto data = reinterpret_cast<const char*>(raw_inbox.data());
-            auto inbox_val = std::get<Tuple>(deserialize_value(data));
+            auto inbox_val = get<Tuple>(deserialize_value(data));
             while (inbox_val != Tuple{}) {
-                inbox_messages.emplace_back(
-                    InboxMessage::fromTuple(
-                        std::get<Tuple>(inbox_val.get_element(1))),
-                    0);
-                inbox_val =
-                    std::get<Tuple>(std::move(inbox_val.get_element(0)));
+                inbox_messages.emplace_back(InboxMessage::fromTuple(get<Tuple>(
+                                                inbox_val.get_element(1))),
+                                            0);
+                inbox_val = get<Tuple>(std::move(inbox_val.get_element(0)));
             }
             std::reverse(inbox_messages.begin(), inbox_messages.end());
         } else if (std::string(argv[3]) == "--json-inbox") {
@@ -105,10 +103,9 @@ int main(int argc, char* argv[]) {
             file >> j;
 
             for (auto& val : j["inbox"]) {
-                inbox_messages.emplace_back(
-                    InboxMessage::fromTuple(
-                        std::get<Tuple>(simple_value_from_json(val))),
-                    0);
+                inbox_messages.emplace_back(InboxMessage::fromTuple(get<Tuple>(
+                                                simple_value_from_json(val))),
+                                            0);
             }
         }
     }

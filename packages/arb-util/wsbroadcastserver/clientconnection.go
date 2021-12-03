@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package broadcaster
+package wsbroadcastserver
 
 import (
 	"context"
@@ -41,7 +41,7 @@ type ClientConnection struct {
 	conn    net.Conn
 
 	desc          *netpoll.Desc
-	name          string
+	Name          string
 	clientManager *ClientManager
 
 	lastHeardUnix int64
@@ -53,7 +53,7 @@ func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *Clien
 	return &ClientConnection{
 		conn:          conn,
 		desc:          desc,
-		name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
+		Name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
 		clientManager: clientManager,
 		lastHeardUnix: time.Now().Unix(),
 		out:           make(chan []byte, MaxSendQueue),
@@ -74,7 +74,7 @@ func (cc *ClientConnection) Start(parentCtx context.Context) {
 			case data := <-cc.out:
 				err := cc.writeRaw(data)
 				if err != nil {
-					logger.Error().Err(err).Str("client", cc.name).Msg("error writing data to client")
+					logger.Error().Err(err).Str("client", cc.Name).Msg("error writing data to client")
 					cc.clientManager.Remove(cc)
 					for {
 						// Consume and ignore channel data until client properly stopped to prevent deadlock
@@ -125,7 +125,7 @@ func (cc *ClientConnection) readRequest(ctx context.Context, timeout time.Durati
 	return ReadData(ctx, cc.conn, timeout, ws.StateServerSide)
 }
 
-func (cc *ClientConnection) write(x interface{}) error {
+func (cc *ClientConnection) Write(x interface{}) error {
 	writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(writer)
 

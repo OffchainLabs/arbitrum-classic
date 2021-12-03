@@ -77,7 +77,7 @@ std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
     return arb_core->getMachine<Machine>(machineHash, value_cache);
 }
 
-DbResult<value> ArbStorage::getValue(uint256_t value_hash,
+DbResult<Value> ArbStorage::getValue(uint256_t value_hash,
                                      ValueCache& value_cache) const {
     ReadTransaction tx(datastorage);
     return ::getValue(tx, value_hash, value_cache, false);
