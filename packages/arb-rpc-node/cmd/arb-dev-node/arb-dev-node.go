@@ -76,8 +76,6 @@ func init() {
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
-
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-dev-node").Logger()
 }
@@ -117,7 +115,7 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))); err != nil {
 		return err
 	}
 
