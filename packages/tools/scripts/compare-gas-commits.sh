@@ -1,6 +1,6 @@
 # run this from arbitrum project root
-HASH_NOW=$(git rev-parse HEAD)
-echo "Currently on commit $HASH_NOW"
+BRANCH_NOW=$(git branch --show-current)
+echo "Currently on branch $BRANCH_NOW"
 HASH_BEFORE=$1
 HASH_AFTER=$2
 echo "Comparing gas usage between $HASH_BEFORE and $HASH_AFTER"
@@ -26,9 +26,9 @@ cd ../..
 mv gasReporterOutput.json ./packages/tools/gas-$HASH_AFTER.json
 
 # now compare by running output
+git checkout $BRANCH_NOW
 echo "Calculating comparison"
-echo "./gas-$HASH_BEFORE.json ./gas-$HASH_AFTER.json ./comparison-output.csv"
 cd packages/tools
-yarn dev:compare-gas -- "./gas-$HASH_BEFORE.json ./gas-$HASH_AFTER.json ./comparison-output.csv"
-
+yarn dev:compare-gas -- "--gasReport1=./gas-$HASH_BEFORE.json --gasReport2=./gas-$HASH_AFTER.json --outputFile=./comparison-output.csv"
+cd ../..
 
