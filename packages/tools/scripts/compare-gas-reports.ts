@@ -1,74 +1,82 @@
 import fs from 'fs'
-
-// read the gas report
-
-const loadJson = (fileName: string) => {
-  const rawdata = fs.readFileSync(fileName)
-  return JSON.parse(rawdata.toString())
-}
+const args = require('args-parser')(process.argv)
 
 interface GasMeasure {
   contract: string
   name: string
-  min: number
-  max: number
-  average: number
-  numberOfCalls: number
+  min: number | string
+  max: number | string
+  average: number | string
+  numberOfCalls: number | string
+  key: string
 }
 
-const toMinMaxAvg = (data: number[]) => {
-  const min = Math.min(...data)
-  const max = Math.max(...data)
-  const avg = Math.round(data.reduce((a, b) => a + b, 0) / data.length)
+interface Deployment {
+  name: string
+  bytecode: string
+  deployedBytecode: string
+  gasData: number[]
+}
 
-  return {
-    min,
-    max,
-    avg,
+/**
+ * Calculates diffs from hardhat-gas-reporter output json files
+ */
+class GasDiffReporter {
+  private readonly differences: GasMeasure[] = []
+  private readonly gasReport1: any
+  private readonly gasReport2: any
+
+  constructor(
+    public readonly gasReportFileLocation1: string,
+    public readonly gasReportFileLocation2: string
+  ) {
+    this.gasReport1 = this.loadJson(gasReportFileLocation1)
+    this.gasReport2 = this.loadJson(gasReportFileLocation2)
   }
-}
 
-const main = async (args: string[]) => {
-  const gasReport1Name = args[2]
-  if (!gasReport1Name)
-    throw new Error(
-      'Missing 1st argument, should be the path to a gasReporterOutput.json'
+  private loadJson(fileName: string) {
+    const rawdata = fs.readFileSync(fileName)
+    return JSON.parse(rawdata.toString())
+  }
+
+  private toMinMaxAvg(data: number[]) {
+    const min = Math.min(...data)
+    const max = Math.max(...data)
+    const avg = Math.round(data.reduce((a, b) => a + b, 0) / data.length)
+
+    return {
+      min,
+      max,
+      avg,
+    }
+  }
+
+  /**
+   * Calculate gas usage diffs of contract function calls
+   */
+  public calcFunctionDiffs() {
+    const gasReport1Methods = this.gasReport1['info']['methods']
+    const gasReport2Methods = this.gasReport2['info']['methods']
+
+    const validEntries1 = Object.keys(gasReport1Methods).filter(
+      m => gasReport1Methods[m]['gasData'].length > 0
     )
-
-  const gasReport2Name = args[3]
-  if (!gasReport2Name)
-    throw new Error(
-      'Missing 2nd argument, should be the path to another gasReporterOutput.json'
+    const validEntries2 = Object.keys(gasReport2Methods).filter(
+      m => gasReport2Methods[m]['gasData'].length > 0
     )
+    const inBoth = validEntries1.filter(v1 => validEntries2.includes(v1))
+    const in1 = validEntries1.filter(v1 => !validEntries2.includes(v1))
+    const in2 = validEntries2.filter(v1 => !validEntries1.includes(v1))
 
-  const output = args[4]
-  if (!output)
-    throw new Error(
-      'Missing 3nd argument, should be the path an output csv file location'
-    )
-
-  const differences: GasMeasure[] = []
-
-  const gasReport1 = loadJson(gasReport1Name)
-  const gasReport2 = loadJson(gasReport2Name)
-
-  const gasReport1Methods = gasReport1['info']['methods']
-  const gasReport2Methods = gasReport2['info']['methods']
-
-  for (const methodKey of Object.keys(gasReport1Methods)) {
-    if (
-      gasReport1Methods[methodKey]['gasData'].length > 0 &&
-      // CHRIS: we should check from both sides and include if either side contains a call
-      gasReport2Methods[methodKey] &&
-      gasReport2Methods[methodKey]['gasData'].length > 0
-    ) {
+    for (const methodKey of inBoth) {
       const method1 = gasReport1Methods[methodKey]
       const method2 = gasReport2Methods[methodKey]
 
-      const gasData1 = toMinMaxAvg(method1['gasData'])
-      const gasData2 = toMinMaxAvg(method2['gasData'])
+      const gasData1 = this.toMinMaxAvg(method1['gasData'])
+      const gasData2 = this.toMinMaxAvg(method2['gasData'])
 
       const measure: GasMeasure = {
+        key: methodKey,
         contract: method1['contract'],
         name: method1['method'],
         numberOfCalls: method2['numberOfCalls'] - method1['numberOfCalls'],
@@ -77,27 +85,64 @@ const main = async (args: string[]) => {
         average: gasData2.avg - gasData1.avg,
       }
 
-      differences.push(measure)
+      this.differences.push(measure)
     }
+    in1.forEach(i => {
+      const method = gasReport1Methods[i]
+      this.differences.push({
+        key: i,
+        contract: method['contract'],
+        name: method['method'],
+        numberOfCalls: 'MISSING_AFTER',
+        min: 'MISSING_AFTER',
+        max: 'MISSING_AFTER',
+        average: 'MISSING_AFTER',
+      })
+    })
+    in2.forEach(i => {
+      const method = gasReport2Methods[i]
+      this.differences.push({
+        key: i,
+        contract: method['contract'],
+        name: method['method'],
+        numberOfCalls: 'MISSING_BEFORE',
+        min: 'MISSING_BEFORE',
+        max: 'MISSING_BEFORE',
+        average: 'MISSING_BEFORE',
+      })
+    })
   }
 
-  const gasReport1Deployments = gasReport1['info']['deployments']
-  const gasReport2Deployments = gasReport2['info']['deployments']
+  /**
+   * Calculate gas usages diffs of contract deployments
+   */
+  public calcDeploymentDiffs() {
+    const gasReport1Deployments = (this.gasReport1['info'][
+      'deployments'
+    ] as Deployment[]).filter(d => d['gasData'].length > 0)
+    const gasReport2Deployments = (this.gasReport2['info'][
+      'deployments'
+    ] as Deployment[]).filter(d => d['gasData'].length > 0)
+    const inBothDeploys = gasReport1Deployments.filter(
+      d1 => gasReport2Deployments.filter(d2 => d2.name == d1.name).length > 0
+    )
+    const in1Deploys = gasReport1Deployments.filter(
+      d1 => gasReport2Deployments.filter(d2 => d2.name == d1.name).length === 0
+    )
+    const in2Deploys = gasReport2Deployments.filter(
+      d1 => gasReport1Deployments.filter(d2 => d2.name == d1.name).length === 0
+    )
 
-  for (const methodKey of Object.keys(gasReport1Deployments)) {
-    if (
-      gasReport1Deployments[methodKey]['gasData'].length > 0 &&
-      // CHRIS: we should check from both sides and include if either side contains a call
-      gasReport2Deployments[methodKey] &&
-      gasReport2Deployments[methodKey]['gasData'].length > 0
-    ) {
-      const deployment1 = gasReport1Deployments[methodKey]
-      const deployment2 = gasReport2Deployments[methodKey]
+    for (const deployment1 of inBothDeploys) {
+      const deployment2 = gasReport2Deployments.filter(
+        a => a.name === deployment1.name
+      )[0]
 
-      const gasData1 = toMinMaxAvg(deployment1['gasData'])
-      const gasData2 = toMinMaxAvg(deployment2['gasData'])
+      const gasData1 = this.toMinMaxAvg(deployment1['gasData'])
+      const gasData2 = this.toMinMaxAvg(deployment2['gasData'])
 
       const measure: GasMeasure = {
+        key: deployment1['name'] + '_constructor',
         contract: deployment1['name'],
         name: '_constructor',
         numberOfCalls:
@@ -106,22 +151,84 @@ const main = async (args: string[]) => {
         max: gasData2.max - gasData1.max,
         average: gasData2.avg - gasData1.avg,
       }
-
-      differences.push(measure)
+      this.differences.push(measure)
     }
+
+    in1Deploys.forEach(i => {
+      this.differences.push({
+        key: i.name + '_constructor',
+        contract: i.name,
+        name: '_constructor',
+        numberOfCalls: 'MISSING_AFTER',
+        min: 'MISSING_AFTER',
+        max: 'MISSING_AFTER',
+        average: 'MISSING_AFTER',
+      })
+    })
+    in2Deploys.forEach(i => {
+      this.differences.push({
+        key: i.name + '_constructor',
+        contract: i.name,
+        name: '_constructor',
+        numberOfCalls: 'MISSING_BEFORE',
+        min: 'MISSING_BEFORE',
+        max: 'MISSING_BEFORE',
+        average: 'MISSING_BEFORE',
+      })
+    })
   }
 
-  // print all the measures to file
-  let data = 'contract,method,numberOfCalls,min,max,average\n'
-  for (const diff of differences.sort((a, b) => {
-    const contractCompare = a.contract.localeCompare(b.contract)
-    if (contractCompare == 0) return a.name.localeCompare(b.name)
-    else return contractCompare
-  })) {
-    data += `${diff.contract},${diff.name},${diff.numberOfCalls},${diff.min},${diff.max},${diff.average}\n`
+  private sortDifferences() {
+    this.differences.sort((a, b) => {
+      const contractCompare = a.contract.localeCompare(b.contract)
+      if (contractCompare == 0) return a.name.localeCompare(b.name)
+      else return contractCompare
+    })
   }
 
-  fs.writeFileSync(output, data)
+  /**
+   * Write the calculated diffs to file. Will overwrite existing file.
+   * @param outputFileLocation
+   */
+  public writeDiffs(outputFileLocation: string) {
+    // print all the measures to file
+    let data = 'key,contract,function,numberOfCalls,min,max,average\n'
+    this.sortDifferences()
+    for (const diff of this.differences) {
+      data += `${diff.key},${diff.contract},${diff.name},${diff.numberOfCalls},${diff.min},${diff.max},${diff.average}\n`
+    }
+
+    fs.writeFileSync(outputFileLocation, data)
+  }
+
+  /**
+   * Write the calculated diff to a console table.
+   */
+  public writeDiffsToConsole() {
+    this.sortDifferences()
+    console.table(this.differences)
+  }
 }
 
-main(process.argv).catch(console.error)
+const main = async (args: any) => {
+  const gasReport1Name = args.gasReport1
+  if (!gasReport1Name)
+    throw new Error(
+      'Missing gasReport1 argument, should be the path to a gasReporterOutput.json'
+    )
+
+  const gasReport2Name = args.gasReport2
+  if (!gasReport2Name)
+    throw new Error(
+      'Missing gasReport2 argument, should be the path to another gasReporterOutput.json'
+    )
+
+  const gasDiffReporter = new GasDiffReporter(gasReport1Name, gasReport2Name)
+  gasDiffReporter.calcDeploymentDiffs()
+  gasDiffReporter.calcFunctionDiffs()
+  args.outputFile
+    ? gasDiffReporter.writeDiffs(args.outputFile)
+    : gasDiffReporter.writeDiffsToConsole()
+}
+
+main(args).catch(console.error)
