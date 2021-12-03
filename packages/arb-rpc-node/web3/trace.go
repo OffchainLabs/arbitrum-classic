@@ -234,15 +234,15 @@ func (at *CallTraceRequest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (t *Trace) transaction(txHash hexutil.Bytes) ([]TraceFrame, *evm.TxResult, *machine.BlockInfo, error) {
+func (t *Trace) transaction(txHash hexutil.Bytes) (*rawTxTrace, *machine.BlockInfo, error) {
 	res, blockInfo, _, logNumber, err := t.s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	blockNumber := res.IncomingRequest.L2BlockNumber.Uint64()
 	cursor, err := t.s.srv.GetExecutionCursorAtEndOfBlock(blockNumber-1, true)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	maxGas := int64(t.coreConfig.CheckpointMaxExecutionGas)
 	if maxGas == 0 {
@@ -257,14 +257,85 @@ func (t *Trace) transaction(txHash hexutil.Bytes) ([]TraceFrame, *evm.TxResult, 
 		new(big.Int).Add(logNumber, big.NewInt(1)),
 	)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	vmTrace, err := extractTrace(extractValuesFromEmissions(debugPrints))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	frames, err := renderTraceFrames(res, vmTrace)
-	return frames, res, blockInfo, err
+	return &rawTxTrace{
+		frames: frames,
+		res:    res,
+	}, blockInfo, err
+}
+
+type rawTxTrace struct {
+	frames []TraceFrame
+	res    *evm.TxResult
+}
+
+func (t *Trace) block(blockNum rpc.BlockNumberOrHash) ([]*rawTxTrace, *machine.BlockInfo, error) {
+	blockInfo, err := t.s.blockInfoForNumberOrHash(blockNum)
+	if err != nil || blockInfo == nil {
+		return nil, nil, err
+	}
+	blockLog, txResults, err := t.s.srv.GetMachineBlockResults(blockInfo)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cursor, err := t.s.srv.GetExecutionCursorAtEndOfBlock(blockInfo.Header.Number.Uint64()-1, true)
+	if err != nil {
+		return nil, nil, err
+	}
+	maxGas := int64(t.coreConfig.CheckpointMaxExecutionGas)
+	if maxGas == 0 {
+		maxGas = 100000000000
+	}
+
+	firstIndex := blockLog.FirstAVMLog()
+	lastIndex := new(big.Int).Add(blockLog.FirstAVMLog(), blockLog.BlockStats.TxCount)
+	debugPrints, err := t.s.srv.AdvanceExecutionCursorWithTracing(
+		cursor,
+		big.NewInt(maxGas),
+		true,
+		true,
+		firstIndex,
+		lastIndex,
+	)
+
+	res := make([]*rawTxTrace, 0, len(debugPrints))
+	for logIndex, debugPrints := range splitEmissionsByLog(debugPrints) {
+		if logIndex < firstIndex.Uint64() {
+			return nil, nil, errors.New("expected log index to be greater the first in the block")
+		}
+		if logIndex >= lastIndex.Uint64() {
+			return nil, nil, errors.Errorf("expected log index to be less then the last in the block")
+		}
+		logOffset := logIndex - firstIndex.Uint64()
+		txRes := txResults[logOffset]
+		trace, err := extractTrace(debugPrints)
+		failMsg := logger.
+			Warn().
+			Uint64("block", blockInfo.Header.Number.Uint64()).
+			Str("txhash", txRes.IncomingRequest.MessageID.String()).
+			Err(err)
+		if err != nil {
+			failMsg.Msg("error getting trace for transaction")
+			continue
+		}
+		frames, err := renderTraceFrames(txRes, trace)
+		if err != nil {
+			failMsg.Msg("error rending trace for transaction")
+			continue
+		}
+		res = append(res, &rawTxTrace{
+			frames: frames,
+			res:    txRes,
+		})
+	}
+	return res, blockInfo, nil
 }
 
 func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.BlockNumberOrHash) (*TraceResult, error) {
@@ -335,17 +406,39 @@ func (t *Trace) CallMany(calls []*CallTraceRequest, blockNum rpc.BlockNumberOrHa
 	return traces, nil
 }
 
+func (t *Trace) ReplayBlockTransactions(blockNum rpc.BlockNumberOrHash, traceTypes []string) ([]*TraceResult, error) {
+	if err := authenticateTraceType(traceTypes); err != nil {
+		return nil, err
+	}
+	txTraces, blockInfo, err := t.block(blockNum)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]*TraceResult, 0)
+	for _, txTrace := range txTraces {
+		chainContext := newChainContext(txTrace.res, blockInfo)
+		for i := range txTrace.frames {
+			txTrace.frames[i].TransactionHash = chainContext.transactionHash
+		}
+		results = append(results, &TraceResult{
+			Output: txTrace.res.ReturnData,
+			Trace:  txTrace.frames,
+		})
+	}
+	return results, nil
+}
+
 func (t *Trace) ReplayTransaction(txHash hexutil.Bytes, traceTypes []string) (*TraceResult, error) {
 	if err := authenticateTraceType(traceTypes); err != nil {
 		return nil, err
 	}
-	frames, res, _, err := t.transaction(txHash)
-	if err != nil || res == nil {
+	txTrace, _, err := t.transaction(txHash)
+	if err != nil || txTrace.res == nil {
 		return nil, err
 	}
 	return &TraceResult{
-		Output: res.ReturnData,
-		Trace:  frames,
+		Output: txTrace.res.ReturnData,
+		Trace:  txTrace.frames,
 	}, nil
 }
 
@@ -377,15 +470,15 @@ func addChainContext(frame *TraceFrame, context *chainContext) {
 }
 
 func (t *Trace) Transaction(txHash hexutil.Bytes) ([]TraceFrame, error) {
-	frames, res, blockInfo, err := t.transaction(txHash)
-	if err != nil || res == nil {
+	txTrace, blockInfo, err := t.transaction(txHash)
+	if err != nil || txTrace == nil {
 		return nil, err
 	}
-	chainContext := newChainContext(res, blockInfo)
-	for i := range frames {
-		addChainContext(&frames[i], chainContext)
+	chainContext := newChainContext(txTrace.res, blockInfo)
+	for i := range txTrace.frames {
+		addChainContext(&txTrace.frames[i], chainContext)
 	}
-	return frames, nil
+	return txTrace.frames, nil
 }
 
 func (t *Trace) Get(txHash hexutil.Bytes, path []hexutil.Uint64) (*TraceFrame, error) {
@@ -408,61 +501,17 @@ func (t *Trace) Get(txHash hexutil.Bytes, path []hexutil.Uint64) (*TraceFrame, e
 }
 
 func (t *Trace) Block(blockNum rpc.BlockNumberOrHash) ([]TraceFrame, error) {
-	blockInfo, err := t.s.blockInfoForNumberOrHash(blockNum)
-	if err != nil || blockInfo == nil {
-		return nil, err
-	}
-	blockLog, txResults, err := t.s.srv.GetMachineBlockResults(blockInfo)
+	txTraces, blockInfo, err := t.block(blockNum)
 	if err != nil {
 		return nil, err
 	}
-
-	cursor, err := t.s.srv.GetExecutionCursorAtEndOfBlock(blockInfo.Header.Number.Uint64()-1, true)
-	if err != nil {
-		return nil, err
-	}
-	maxGas := int64(t.coreConfig.CheckpointMaxExecutionGas)
-	if maxGas == 0 {
-		maxGas = 100000000000
-	}
-
-	debugPrints, err := t.s.srv.AdvanceExecutionCursorWithTracing(
-		cursor,
-		big.NewInt(maxGas),
-		true,
-		true,
-		blockLog.FirstAVMLog(),
-		new(big.Int).Add(blockLog.FirstAVMLog(), blockLog.BlockStats.TxCount),
-	)
-
-	firstIndex := blockLog.FirstAVMLog().Uint64()
-	lastIndex := blockLog.BlockStats.TxCount.Uint64()
 	traces := make([]TraceFrame, 0)
-	for logIndex, debugPrints := range splitEmissionsByLog(debugPrints) {
-		if logIndex < firstIndex {
-			return nil, errors.New("expected log index to be greater the first in the block")
+	for _, txTrace := range txTraces {
+		chainContext := newChainContext(txTrace.res, blockInfo)
+		for i := range txTrace.frames {
+			addChainContext(&txTrace.frames[i], chainContext)
 		}
-		if logIndex >= lastIndex {
-			return nil, errors.New("expected log index to be less then the last in the block")
-		}
-		logOffset := logIndex - firstIndex
-		txRes := txResults[logOffset]
-		trace, err := extractTrace(debugPrints)
-		failMsg := logger.
-			Warn().
-			Uint64("block", blockInfo.Header.Number.Uint64()).
-			Str("txhash", txRes.IncomingRequest.MessageID.String()).
-			Err(err)
-		if err != nil {
-			failMsg.Msg("error getting trace for transaction")
-			continue
-		}
-		frames, err := renderTraceFrames(txRes, trace)
-		if err != nil {
-			failMsg.Msg("error rending trace for transaction")
-			continue
-		}
-		traces = append(traces, frames...)
+		traces = append(traces, txTrace.frames...)
 	}
 	return traces, nil
 }
