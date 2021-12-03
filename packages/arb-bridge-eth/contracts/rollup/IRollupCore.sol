@@ -18,7 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-// CHRIS: should we import Node - this will cause the Node code to be compiled into this contract - consider this everywhere
 import "./Node.sol";
 
 pragma experimental ABIEncoderV2;

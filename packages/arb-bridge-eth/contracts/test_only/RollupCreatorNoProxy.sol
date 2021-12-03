@@ -47,7 +47,6 @@ contract RollupTester is Rollup {
 contract RollupCreatorNoProxy {
     event RollupCreated(address rollupAddress, Inbox inbox);
 
-    // CHRIS: find all usages of this RollupCreatorProxy
     constructor(
         address _challengeFactory,
         RollupLib.Config memory config

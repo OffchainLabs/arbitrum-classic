@@ -9,7 +9,6 @@ Get data properties of a node
 
 - `nodeNum`: Index of the node properties
 
-// CHRIS: should we specify all the props?
 **Returns**: Data properties for the specified node
 
 ### `nodeHasStaker(uint256 nodeNum, address staker) → bool` (public)

@@ -100,7 +100,6 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      * @param nodeNum Index of the node
      * @return Node struct
      */
-    // CHRIS: check all usages of getNode to see if we're accessing it more than once in a particular call - we are in many
     function getNode(uint256 nodeNum) internal view returns (Node storage) {
         return _nodes[nodeNum];
     }
@@ -491,8 +490,8 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      * @param nodeNum Index of the node to remove
      */
     function destroyNode(uint256 nodeNum) internal {
-        // CHRIS: should we destroy the nodehash mapping? we weren't already
         delete _nodes[nodeNum];
+        delete _nodeHashes[nodeNum];
     }
 
     function nodeDeadline(

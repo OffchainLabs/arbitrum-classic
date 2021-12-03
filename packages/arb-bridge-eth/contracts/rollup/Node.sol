@@ -78,8 +78,6 @@ library NodePropsLib {
         self.latestChildNumber = number;
     }
 
-    // CHRIS: should we have tests on any of these?
-
     /**
      * @notice Update the child confirmed deadline
      * @param deadline The new deadline to set
