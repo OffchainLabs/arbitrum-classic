@@ -1,5 +1,6 @@
 # run this from arbitrum project root
 HASH_NOW=$(git rev-parse HEAD)
+echo "Currently on commit $HASH_NOW"
 HASH_BEFORE=$1
 HASH_AFTER=$2
 echo "Comparing gas usage between $HASH_BEFORE and $HASH_AFTER"
