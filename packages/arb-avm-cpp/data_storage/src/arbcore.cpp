@@ -2120,7 +2120,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     return result.status;
 }
 
-ValueResult<std::vector<MachineEmission<value>>>
+ValueResult<std::vector<MachineEmission<Value>>>
 ArbCore::advanceExecutionCursorWithTracing(ExecutionCursor& execution_cursor,
                                            uint256_t max_gas,
                                            bool go_over_gas,
@@ -2171,7 +2171,7 @@ std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachine(
     return takeExecutionCursorMachineImpl(tx, execution_cursor);
 }
 
-ValueResult<std::vector<MachineEmission<value>>>
+ValueResult<std::vector<MachineEmission<Value>>>
 ArbCore::advanceExecutionCursorImpl(ExecutionCursor& execution_cursor,
                                     uint256_t total_gas_used,
                                     bool go_over_gas,
@@ -2186,7 +2186,7 @@ ArbCore::advanceExecutionCursorImpl(ExecutionCursor& execution_cursor,
     }
     auto handle_reorg = true;
     size_t reorg_attempts = 0;
-    std::vector<MachineEmission<value>> debug_prints;
+    std::vector<MachineEmission<Value>> debug_prints;
     while (handle_reorg) {
         handle_reorg = false;
         if (reorg_attempts > 0) {

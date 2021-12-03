@@ -296,7 +296,7 @@ class ArbCore {
                                            uint256_t max_gas,
                                            bool go_over_gas,
                                            bool allow_slow_lookup);
-    ValueResult<std::vector<MachineEmission<value>>>
+    ValueResult<std::vector<MachineEmission<Value>>>
     advanceExecutionCursorWithTracing(ExecutionCursor& execution_cursor,
                                       uint256_t max_gas,
                                       bool go_over_gas,
@@ -308,7 +308,7 @@ class ArbCore {
 
    private:
     // Execution cursor internal functions
-    ValueResult<std::vector<MachineEmission<value>>> advanceExecutionCursorImpl(
+    ValueResult<std::vector<MachineEmission<Value>>> advanceExecutionCursorImpl(
         ExecutionCursor& execution_cursor,
         uint256_t total_gas_used,
         bool go_over_gas,
