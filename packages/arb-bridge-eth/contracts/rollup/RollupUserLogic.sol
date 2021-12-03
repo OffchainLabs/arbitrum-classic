@@ -39,7 +39,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             requireUnresolved(latestStakedNode(stakerAddress));
 
             // 3. staker isn't staked on first unresolved node; this proves staker's latest staked can't be a child of firstUnresolvedNode (recall staking on node requires staking on all of its parents)
-            require(!firstUnresolvedNode_.stakers[stakerAddress], "STAKED_ON_TARGET");
+            require(!nodeHasStaker(firstUnresolvedNodeNum, stakerAddress), "STAKED_ON_TARGET");
             // If a staker is staked on a node that is neither a child nor a parent of firstUnresolvedNode, it must be a sibling, QED
 
             // Verify the block's deadline has passed
@@ -51,7 +51,8 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
 
             // Verify that no staker is staked on this node
             require(
-                firstUnresolvedNode_.props.stakerCount == countStakedZombies(firstUnresolvedNodeNum),
+                firstUnresolvedNode_.props.stakerCount ==
+                    countStakedZombies(firstUnresolvedNodeNum),
                 "HAS_STAKERS"
             );
         }
@@ -286,8 +287,8 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         requireUnchallengedStaker(stakers[0]);
         requireUnchallengedStaker(stakers[1]);
 
-        require(node1.stakers[stakers[0]], "STAKER1_NOT_STAKED");
-        require(node2.stakers[stakers[1]], "STAKER2_NOT_STAKED");
+        require(nodeHasStaker(nodeNums[0], stakers[0]), "STAKER1_NOT_STAKED");
+        require(nodeHasStaker(nodeNums[1], stakers[1]), "STAKER2_NOT_STAKED");
 
         // Check param data against challenge hash
         require(
@@ -390,7 +391,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         while (latestNodeStaked >= firstUnresolved && nodesRemoved < maxNodes) {
             Node storage node = getNode(latestNodeStaked);
             // CHRIS: check that this really does remove from storage
-            node.removeStaker(zombieStakerAddress);
+            removeStaker(latestNodeStaked, zombieStakerAddress);
             latestNodeStaked = node.props.prev;
             nodesRemoved++;
         }
@@ -517,11 +518,10 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
      * @return The number of zombies staked on the node
      */
     function countStakedZombies(uint256 nodeNum) public view override returns (uint256) {
-        Node storage node = getNode(nodeNum);
         uint256 currentZombieCount = zombieCount();
         uint256 stakedZombieCount = 0;
         for (uint256 i = 0; i < currentZombieCount; i++) {
-            if (node.stakers[zombieAddress(i)]) {
+            if (nodeHasStaker(nodeNum, zombieAddress(i))) {
                 stakedZombieCount++;
             }
         }

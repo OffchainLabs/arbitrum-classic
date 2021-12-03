@@ -85,6 +85,8 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     uint256 private _firstUnresolvedNode;
     uint256 private _latestNodeCreated;
     uint256 private _lastStakeBlock;
+    // Mapping of the stakers staked on this node with true if they are staked. This includes real stakers and zombies
+    mapping(uint256 => mapping(address => bool)) private _stakers;
     mapping(uint256 => Node) private _nodes;
     mapping(uint256 => bytes32) private _nodeHashes;
 
@@ -106,8 +108,8 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     }
 
     /**
-     * @notice Get the Node properties for the given index. 
-     * We can't expose the full Node publicly as it contains a mapping 
+     * @notice Get the Node properties for the given index.
+     * We can't expose the full Node publicly as it contains a mapping
      */
     function getNodeProps(uint256 nodeNum) public view override returns (NodeProps memory) {
         return getNode(nodeNum).props;
@@ -116,8 +118,8 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     /**
      * @notice Check if the specified node has been staked on by the provided staker
      */
-    function nodeHasStaker(uint256 nodeNum, address staker) public view override returns(bool) {
-        return getNode(nodeNum).stakers[staker];
+    function nodeHasStaker(uint256 nodeNum, address staker) public view override returns (bool) {
+        return _stakers[nodeNum][staker];
     }
 
     /**
@@ -440,14 +442,39 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      */
     function stakeOnNode(address stakerAddress, uint256 nodeNum) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        Node storage node = getNode(nodeNum);
-        uint256 newStakerCount = node.addStaker(stakerAddress);
+        uint256 newStakerCount = addStaker(nodeNum, stakerAddress);
         staker.latestStakedNode = nodeNum;
         if (newStakerCount == 1) {
             Node storage parent = getNode(nodeNum);
             parent.props.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
         }
+    }
 
+    /**
+     * @notice Mark the given staker as staked on this node
+     * @param staker Address of the staker to mark
+     * @return The number of stakers after adding this one
+     */
+    function addStaker(uint256 nodeNum, address staker) internal returns (uint256) {
+        require(!_stakers[nodeNum][staker], "ALREADY_STAKED");
+        _stakers[nodeNum][staker] = true;
+        Node storage node = getNode(nodeNum);
+        require(node.props.deadlineBlock != 0, "NO_NODE");
+
+        uint256 prevCount = node.props.stakerCount;
+        node.props.stakerCount = prevCount + 1;
+        return prevCount + 1;
+    }
+
+    /**
+     * @notice Remove the given staker from this node
+     * @param staker Address of the staker to remove
+     */
+    function removeStaker(uint256 nodeNum, address staker) internal {
+        require(_stakers[nodeNum][staker], "NOT_STAKED");
+        _stakers[nodeNum][staker] = false;
+        Node storage node = getNode(nodeNum);
+        node.props.stakerCount--;
     }
 
     /**
@@ -495,18 +522,18 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         delete _nodes[nodeNum];
     }
 
-    function nodeDeadline(
-        uint256 gasUsed,
-        Node memory prevNode
-    ) internal view returns (uint256 deadlineBlock) {
+    function nodeDeadline(uint256 gasUsed, Node memory prevNode)
+        internal
+        view
+        returns (uint256 deadlineBlock)
+    {
         // Set deadline rounding up to the nearest block
         uint256 checkTime = gasUsed.add(avmGasSpeedLimitPerBlock.sub(1)).div(
             avmGasSpeedLimitPerBlock
         );
 
-        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.props.deadlineBlock).add(
-            checkTime
-        );
+        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.props.deadlineBlock)
+            .add(checkTime);
 
         uint256 olderSibling = prevNode.props.latestChildNumber;
         if (olderSibling != 0) {
@@ -605,7 +632,12 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
             require(newNodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
 
             nodeCreated(memoryFrame.node, newNodeHash);
-            rollupEventBridge.nodeCreated(nodeNum, prevNodeNumber, memoryFrame.deadlineBlock, msg.sender);
+            rollupEventBridge.nodeCreated(
+                nodeNum,
+                prevNodeNumber,
+                memoryFrame.deadlineBlock,
+                msg.sender
+            );
         }
 
         emit NodeCreated(
