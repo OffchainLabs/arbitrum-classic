@@ -247,7 +247,6 @@ const config = {
     currency: 'USD',
     gasPrice: 20,
     enabled: process.env.REPORT_GAS ? true : false,
-    outputFile: "gas-report"
   },
   namedAccounts: {
     deployer: {

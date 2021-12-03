@@ -7,7 +7,8 @@
   "scripts": {
     "demo:initialize": "ts-node ./scripts/setup_validators_demo.ts init",
     "prod:initialize": "ts-node ./scripts/setup_validators.ts init",
-    "arbos:upgrade": "ts-node ./scripts/update-arbos.ts init"
+    "arbos:upgrade": "ts-node ./scripts/update-arbos.ts init",
+    "dev:compare-gas": "ts-node ./scripts/compare-gas-reports.ts"
   },
   "devDependencies": {
     "@ethersproject/providers": "^5.4.5",
