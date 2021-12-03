@@ -1077,256 +1077,274 @@ void ArbCore::operator()() {
         maxCheckpointGas() + coreConfig.checkpoint_gas_frequency;
     uint256_t next_basic_cache_gas =
         maxCheckpointGas() + coreConfig.basic_machine_cache_interval;
-    while (!arbcore_abort) {
-        bool isMachineValid;
-        {
-            ReadTransaction tx(data_storage);
-            isMachineValid = isValid(tx, core_machine->getReorgData());
-        }
-        if (!isMachineValid) {
-            std::cerr
-                << "Core thread operating on invalid machine. Rolling back."
-                << std::endl;
-            assert(false);
-            auto status = reorgToMessageCountOrBefore(0, false, cache);
-            if (!status.ok()) {
-                std::cerr << "Error in core thread calling "
-                             "reorgCheckpoints: "
-                          << status.ToString() << std::endl;
-            }
-            next_checkpoint_gas = coreConfig.checkpoint_gas_frequency;
-        }
-        if (message_data_status == MESSAGES_READY) {
-            // Reorg might occur while adding messages
-            try {
-                auto add_status = addMessages(message_data, cache);
-                if (!add_status.status.ok()) {
-                    core_error_string = add_status.status.ToString();
-                    message_data_status = MESSAGES_ERROR;
-                    std::cerr
-                        << "ArbCore addMessages error: " << core_error_string
-                        << "\n";
-                } else {
-                    machine_idle = false;
-                    message_data_status = MESSAGES_SUCCESS;
-                    if (add_status.data.has_value()) {
-                        next_checkpoint_gas =
-                            add_status.data.value() +
-                            coreConfig.checkpoint_gas_frequency;
-                    }
-                }
-            } catch (const std::exception& e) {
-                core_error_string = e.what();
-                message_data_status = MESSAGES_ERROR;
-                std::cerr << "ArbCore addMessages exception: "
-                          << core_error_string << "\n";
-            }
-        }
-
-        // Check machine thread
-        if (core_machine->status() == MachineThread::MACHINE_ERROR) {
-            core_error_string = core_machine->getErrorString();
-            std::cerr << "AVM machine stopped with error: " << core_error_string
-                      << "\n";
-            break;
-        }
-
-        if (core_machine->status() == MachineThread::MACHINE_SUCCESS) {
-            ReadWriteTransaction tx(data_storage);
-
-            auto last_assertion = core_machine->nextAssertion();
-
-            // Save last machine output
+    try {
+        while (!arbcore_abort) {
+            bool isMachineValid;
             {
-                std::unique_lock<std::shared_mutex> guard(last_machine_mutex);
-                last_machine = std::make_unique<Machine>(*core_machine);
+                ReadTransaction tx(data_storage);
+                isMachineValid = isValid(tx, core_machine->getReorgData());
+            }
+            if (!isMachineValid) {
+                std::cerr
+                    << "Core thread operating on invalid machine. Rolling back."
+                    << std::endl;
+                assert(false);
+                auto status = reorgToMessageCountOrBefore(0, false, cache);
+                if (!status.ok()) {
+                    std::cerr << "Error in core thread calling "
+                                 "reorgCheckpoints: "
+                              << status.ToString() << std::endl;
+                }
+                next_checkpoint_gas = coreConfig.checkpoint_gas_frequency;
+            }
+            if (message_data_status == MESSAGES_READY) {
+                // Reorg might occur while adding messages
+                try {
+                    auto add_status = addMessages(message_data, cache);
+                    if (!add_status.status.ok()) {
+                        core_error_string = add_status.status.ToString();
+                        message_data_status = MESSAGES_ERROR;
+                        std::cerr << "ArbCore addMessages error: "
+                                  << core_error_string << "\n";
+                    } else {
+                        machine_idle = false;
+                        message_data_status = MESSAGES_SUCCESS;
+                        if (add_status.data.has_value()) {
+                            next_checkpoint_gas =
+                                add_status.data.value() +
+                                coreConfig.checkpoint_gas_frequency;
+                        }
+                    }
+                } catch (DataStorage::shutting_down_exception e) {
+                    throw;
+                } catch (const std::exception& e) {
+                    core_error_string = e.what();
+                    message_data_status = MESSAGES_ERROR;
+                    std::cerr << "ArbCore addMessages exception: "
+                              << core_error_string << "\n";
+                }
             }
 
-            if (core_machine->machine_state.output.arb_gas_used >
-                next_basic_cache_gas) {
-                combined_machine_cache.basic_add(
-                    std::make_unique<Machine>(*core_machine));
-
-                next_basic_cache_gas =
-                    core_machine->machine_state.output.arb_gas_used +
-                    coreConfig.basic_machine_cache_interval;
-            }
-
-            // Save logs and sends
-            auto status =
-                saveAssertion(tx, last_assertion,
-                              core_machine->machine_state.output.arb_gas_used);
-            if (!status.ok()) {
-                core_error_string = status.ToString();
-                std::cerr << "ArbCore assertion saving failed: "
+            // Check machine thread
+            if (core_machine->status() == MachineThread::MACHINE_ERROR) {
+                core_error_string = core_machine->getErrorString();
+                std::cerr << "AVM machine stopped with error: "
                           << core_error_string << "\n";
                 break;
             }
 
-            // Cache pre-sideload machines
-            if (last_assertion.sideload_block_number) {
-                combined_machine_cache.timed_add(
-                    std::make_unique<Machine>(*core_machine));
+            if (core_machine->status() == MachineThread::MACHINE_SUCCESS) {
+                ReadWriteTransaction tx(data_storage);
 
-                if (core_machine->machine_state.output.arb_gas_used >=
-                    next_checkpoint_gas) {
-                    // Save checkpoint after checkpoint_gas_frequency gas
-                    // used
-                    status = saveCheckpoint(tx);
-                    if (!status.ok()) {
-                        core_error_string = status.ToString();
-                        std::cerr << "ArbCore checkpoint saving failed: "
-                                  << core_error_string << "\n";
-                        break;
-                    }
-                    next_checkpoint_gas =
+                auto last_assertion = core_machine->nextAssertion();
+
+                // Save last machine output
+                {
+                    std::unique_lock<std::shared_mutex> guard(
+                        last_machine_mutex);
+                    last_machine = std::make_unique<Machine>(*core_machine);
+                }
+
+                if (core_machine->machine_state.output.arb_gas_used >
+                    next_basic_cache_gas) {
+                    combined_machine_cache.basic_add(
+                        std::make_unique<Machine>(*core_machine));
+
+                    next_basic_cache_gas =
                         core_machine->machine_state.output.arb_gas_used +
-                        coreConfig.checkpoint_gas_frequency;
-                    // Clear oldest cache and start populating next cache
-                    std::cout
-                        << "Last checkpoint gas used: "
-                        << core_machine->machine_state.output.arb_gas_used
-                        << ", L1 block: "
-                        << core_machine->machine_state.output.l1_block_number
-                        << ", L2 block: "
-                        << *last_assertion.sideload_block_number << std::endl;
-                    cache.nextCache();
+                        coreConfig.basic_machine_cache_interval;
+                }
 
-                    // Check if database copy needs to be saved to disk
-                    auto current_seconds = seconds_since_epoch();
-                    if (next_rocksdb_save_timestamp != 0 &&
-                        current_seconds >= next_rocksdb_save_timestamp) {
-                        auto timestamp_dir = std::to_string(current_seconds);
-                        auto checkpoint_dir = save_rocksdb_path / timestamp_dir;
-                        status =
-                            tx.createRocksdbCheckpoint(checkpoint_dir.string());
+                // Save logs and sends
+                auto status = saveAssertion(
+                    tx, last_assertion,
+                    core_machine->machine_state.output.arb_gas_used);
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    std::cerr << "ArbCore assertion saving failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
+
+                // Cache pre-sideload machines
+                if (last_assertion.sideload_block_number) {
+                    combined_machine_cache.timed_add(
+                        std::make_unique<Machine>(*core_machine));
+
+                    if (core_machine->machine_state.output.arb_gas_used >=
+                        next_checkpoint_gas) {
+                        // Save checkpoint after checkpoint_gas_frequency gas
+                        // used
+                        status = saveCheckpoint(tx);
                         if (!status.ok()) {
-                            std::cerr << "Unable to save checkpoint into "
-                                      << checkpoint_dir
-                                      << ", error: " << status.ToString()
-                                      << std::endl;
-                        } else {
-                            auto save_elapsed =
-                                seconds_since_epoch() - current_seconds;
-                            std::cerr << "Saving rocksdb checkpoint in "
-                                      << checkpoint_dir << " took "
-                                      << save_elapsed << " seconds"
-                                      << std::endl;
+                            core_error_string = status.ToString();
+                            std::cerr << "ArbCore checkpoint saving failed: "
+                                      << core_error_string << "\n";
+                            break;
                         }
+                        next_checkpoint_gas =
+                            core_machine->machine_state.output.arb_gas_used +
+                            coreConfig.checkpoint_gas_frequency;
+                        // Clear oldest cache and start populating next cache
+                        std::cout
+                            << "Last checkpoint gas used: "
+                            << core_machine->machine_state.output.arb_gas_used
+                            << ", L1 block: "
+                            << core_machine->machine_state.output
+                                   .l1_block_number
+                            << ", L2 block: "
+                            << *last_assertion.sideload_block_number
+                            << std::endl;
+                        cache.nextCache();
 
-                        next_rocksdb_save_timestamp =
-                            current_seconds + coreConfig.save_rocksdb_interval;
+                        // Check if database copy needs to be saved to disk
+                        auto current_seconds = seconds_since_epoch();
+                        if (next_rocksdb_save_timestamp != 0 &&
+                            current_seconds >= next_rocksdb_save_timestamp) {
+                            auto timestamp_dir =
+                                std::to_string(current_seconds);
+                            auto checkpoint_dir =
+                                save_rocksdb_path / timestamp_dir;
+                            status = tx.createRocksdbCheckpoint(
+                                checkpoint_dir.string());
+                            if (!status.ok()) {
+                                std::cerr << "Unable to save checkpoint into "
+                                          << checkpoint_dir
+                                          << ", error: " << status.ToString()
+                                          << std::endl;
+                            } else {
+                                auto save_elapsed =
+                                    seconds_since_epoch() - current_seconds;
+                                std::cerr << "Saving rocksdb checkpoint in "
+                                          << checkpoint_dir << " took "
+                                          << save_elapsed << " seconds"
+                                          << std::endl;
+                            }
+
+                            next_rocksdb_save_timestamp =
+                                current_seconds +
+                                coreConfig.save_rocksdb_interval;
+                        }
+                    }
+
+                    // Machine was stopped to save sideload, update execConfig
+                    // and start machine back up where it stopped
+                    auto machine_success =
+                        core_machine->continueRunningMachine(true);
+                    if (!machine_success) {
+                        core_error_string = "Error starting machine thread";
+                        machine_error = true;
+                        std::cerr << "ArbCore error: " << core_error_string
+                                  << "\n";
+                        break;
                     }
                 }
 
-                // Machine was stopped to save sideload, update execConfig
-                // and start machine back up where it stopped
-                auto machine_success =
-                    core_machine->continueRunningMachine(true);
-                if (!machine_success) {
-                    core_error_string = "Error starting machine thread";
+                status = tx.commit();
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
                     machine_error = true;
-                    std::cerr << "ArbCore error: " << core_error_string << "\n";
+                    std::cerr << "ArbCore database update failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
+
+                if (coreConfig.test_run_until != 0 &&
+                    last_machine->machine_state.output.fully_processed_inbox
+                            .count >= coreConfig.test_run_until) {
+                    // Reached stopping point for profiling
+                    auto end_time = std::chrono::steady_clock::now();
+                    auto duration =
+                        std::chrono::duration_cast<std::chrono::seconds>(
+                            end_time - begin_time)
+                            .count();
+                    std::cerr << "Done processing " << begin_message << " to "
+                              << last_machine->machine_state.output
+                                     .fully_processed_inbox.count
+                              << ", profiling took " << duration << " seconds"
+                              << std::endl;
+
+                    if (coreConfig.test_load_count > 0) {
+                        auto load_begin_time = std::chrono::steady_clock::now();
+                        auto target_gas =
+                            last_machine->machine_state.output.arb_gas_used;
+                        for (uint64_t i = 0; i < coreConfig.test_load_count;
+                             i++) {
+                            std::cerr << "Loading machine " << i << std::endl;
+                            auto current_execution = findCloserExecutionCursor(
+                                tx, std::nullopt, target_gas, true);
+                            if (std::holds_alternative<rocksdb::Status>(
+                                    current_execution)) {
+                                std::cerr
+                                    << "Error loading profile machine number "
+                                    << i << ": "
+                                    << std::get<rocksdb::Status>(
+                                           current_execution)
+                                           .ToString()
+                                    << std::endl;
+                                break;
+                            }
+                        }
+
+                        auto load_end_time = std::chrono::steady_clock::now();
+                        auto load_duration =
+                            std::chrono::duration_cast<std::chrono::seconds>(
+                                load_end_time - load_begin_time)
+                                .count();
+                        std::cerr
+                            << "Done loading " << coreConfig.test_load_count
+                            << " machines, profiling took " << load_duration
+                            << " seconds" << std::endl;
+                    }
+
+                    // Exit now that profiling is complete
                     break;
                 }
             }
 
-            status = tx.commit();
-            if (!status.ok()) {
-                core_error_string = status.ToString();
-                machine_error = true;
-                std::cerr << "ArbCore database update failed: "
-                          << core_error_string << "\n";
-                break;
+            if (core_machine->status() == MachineThread::MACHINE_ABORTED) {
+                // Just reset status so machine can be restarted
+                core_machine->clearError();
             }
 
-            if (coreConfig.test_run_until != 0 &&
-                last_machine->machine_state.output.fully_processed_inbox
-                        .count >= coreConfig.test_run_until) {
-                // Reached stopping point for profiling
-                auto end_time = std::chrono::steady_clock::now();
-                auto duration =
-                    std::chrono::duration_cast<std::chrono::seconds>(end_time -
-                                                                     begin_time)
-                        .count();
-                std::cerr << "Done processing " << begin_message << " to "
-                          << last_machine->machine_state.output
-                                 .fully_processed_inbox.count
-                          << ", profiling took " << duration << " seconds"
-                          << std::endl;
-
-                if (coreConfig.test_load_count > 0) {
-                    auto load_begin_time = std::chrono::steady_clock::now();
-                    auto target_gas =
-                        last_machine->machine_state.output.arb_gas_used;
-                    for (uint64_t i = 0; i < coreConfig.test_load_count; i++) {
-                        std::cerr << "Loading machine " << i << std::endl;
-                        auto current_execution = findCloserExecutionCursor(
-                            tx, std::nullopt, target_gas, true);
-                        if (std::holds_alternative<rocksdb::Status>(
-                                current_execution)) {
-                            std::cerr
-                                << "Error loading profile machine number " << i
-                                << ": "
-                                << std::get<rocksdb::Status>(current_execution)
-                                       .ToString()
-                                << std::endl;
-                            break;
-                        }
-                    }
-
-                    auto load_end_time = std::chrono::steady_clock::now();
-                    auto load_duration =
-                        std::chrono::duration_cast<std::chrono::seconds>(
-                            load_end_time - load_begin_time)
-                            .count();
-                    std::cerr << "Done loading " << coreConfig.test_load_count
-                              << " machines, profiling took " << load_duration
-                              << " seconds" << std::endl;
+            if (core_machine->status() == MachineThread::MACHINE_NONE) {
+                // Start execution of machine if new message available
+                auto success = runMachineWithMessages(
+                    execConfig, coreConfig.message_process_count, true);
+                if (!success) {
+                    break;
                 }
+            }
 
-                // Exit now that profiling is complete
-                break;
+            for (size_t i = 0; i < logs_cursors.size(); i++) {
+                if (logs_cursors[i].status == DataCursor::REQUESTED) {
+                    ReadTransaction tx(data_storage);
+                    handleLogsCursorRequested(tx, i, cache);
+                }
+            }
+
+            if (save_checkpoint) {
+                ReadWriteTransaction tx(data_storage);
+                save_checkpoint_status = saveCheckpoint(tx);
+                tx.commit();
+                save_checkpoint = false;
+            }
+
+            if (!machineIdle() || message_data_status != MESSAGES_READY) {
+                // Machine is already running or no new messages, so sleep for a
+                // short while
+                std::this_thread::sleep_for(std::chrono::milliseconds(
+                    coreConfig.idle_sleep_milliseconds));
             }
         }
 
-        if (core_machine->status() == MachineThread::MACHINE_ABORTED) {
-            // Just reset status so machine can be restarted
-            core_machine->clearError();
-        }
-
-        if (core_machine->status() == MachineThread::MACHINE_NONE) {
-            // Start execution of machine if new message available
-            auto success = runMachineWithMessages(
-                execConfig, coreConfig.message_process_count, true);
-            if (!success) {
-                break;
-            }
-        }
-
-        for (size_t i = 0; i < logs_cursors.size(); i++) {
-            if (logs_cursors[i].status == DataCursor::REQUESTED) {
-                ReadTransaction tx(data_storage);
-                handleLogsCursorRequested(tx, i, cache);
-            }
-        }
-
-        if (save_checkpoint) {
-            ReadWriteTransaction tx(data_storage);
-            save_checkpoint_status = saveCheckpoint(tx);
-            tx.commit();
-            save_checkpoint = false;
-        }
-
-        if (!machineIdle() || message_data_status != MESSAGES_READY) {
-            // Machine is already running or no new messages, so sleep for a
-            // short while
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(coreConfig.idle_sleep_milliseconds));
-        }
+        std::cerr << "Exiting main ArbCore thread" << std::endl;
+    } catch (DataStorage::shutting_down_exception e) {
+        std::cerr << "Caught shutting down exception in ArbCore thread"
+                  << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "ArbCore thread exception: " << e.what() << std::endl;
     }
-
-    std::cerr << "Exiting main ArbCore thread" << std::endl;
 
     // Error occurred, make sure machine stops cleanly
     core_machine->abortMachine();

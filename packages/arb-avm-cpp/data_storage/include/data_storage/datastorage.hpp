@@ -66,7 +66,7 @@ class DataStorage {
             }
             concurrent_database_access_counter++;
             if (shutting_down) {
-                concurrent_database_access_counter--;
+                // Destructor will take care of decrementing counter
                 throw shutting_down_exception();
             }
         }
