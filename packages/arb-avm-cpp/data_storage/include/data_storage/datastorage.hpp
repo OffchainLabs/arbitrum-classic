@@ -56,18 +56,41 @@ class DataStorage {
     size_t next_column_to_flush{0};
     std::vector<uint8_t> secret_hash_seed;
 
+    class shutting_down_exception : public std::exception {};
+
+    class ConcurrentCounter {
+       public:
+        ConcurrentCounter() {
+            if (shutting_down) {
+                throw shutting_down_exception();
+            }
+            concurrent_database_access_counter++;
+            if (shutting_down) {
+                concurrent_database_access_counter--;
+                throw shutting_down_exception();
+            }
+        }
+        ~ConcurrentCounter() { concurrent_database_access_counter--; }
+    };
+
     explicit DataStorage(const std::string& db_path);
     ~DataStorage();
 
     rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
     rocksdb::Status clearDBExceptInbox();
+    [[nodiscard]] std::unique_ptr<ConcurrentCounter> getCounter();
 
    private:
+    static std::atomic<bool> shutting_down;
+    static std::atomic<uint64_t> concurrent_database_access_counter;
+
     rocksdb::Status updateSecretHashSeed();
 
-    [[nodiscard]] std::unique_ptr<rocksdb::Transaction> beginTransaction()
-        const {
+    [[nodiscard]] std::unique_ptr<rocksdb::Transaction> beginTransaction() {
+        // Make sure database isn't closed while it is being used
+        auto counter = getCounter();
+
         return std::unique_ptr<rocksdb::Transaction>{
             txn_db->BeginTransaction(rocksdb::WriteOptions())};
     }
@@ -85,9 +108,19 @@ class Transaction {
         : datastorage(std::move(datastorage_)),
           transaction(std::move(transaction_)) {}
 
-    rocksdb::Status commit() { return transaction->Commit(); }
+    rocksdb::Status commit() {
+        // Make sure database isn't closed while it is being used
+        auto counter = datastorage->getCounter();
 
-    rocksdb::Status rollback() { return transaction->Rollback(); }
+        return transaction->Commit();
+    }
+
+    rocksdb::Status rollback() {
+        // Make sure database isn't closed while it is being used
+        auto counter = datastorage->getCounter();
+
+        return transaction->Rollback();
+    }
 
    private:
     static std::unique_ptr<Transaction> makeTransaction(

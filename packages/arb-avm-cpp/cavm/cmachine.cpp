@@ -196,7 +196,8 @@ void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
     config->stop_on_sideload = stop_on_sideload;
 }
 
-RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
+RawAssertionResult executeAssertion(CMachine* m,
+                                    const CMachineExecutionConfig* c) {
     assert(m);
     assert(c);
     auto mach = static_cast<Machine*>(m);
@@ -228,17 +229,20 @@ RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
         }
 
         // TODO extend usage of uint256
-        return {intx::narrow_cast<uint64_t>(assertion.inbox_messages_consumed),
-                returnCharVector(sendData),
-                static_cast<int>(assertion.sends.size()),
-                returnCharVector(logData),
-                static_cast<int>(assertion.logs.size()),
-                returnCharVector(debugPrintData),
-                static_cast<int>(assertion.debug_prints.size()),
-                intx::narrow_cast<uint64_t>(assertion.step_count),
-                intx::narrow_cast<uint64_t>(assertion.gas_count)};
+        return {
+            {intx::narrow_cast<uint64_t>(assertion.inbox_messages_consumed),
+             returnCharVector(sendData),
+             static_cast<int>(assertion.sends.size()),
+             returnCharVector(logData), static_cast<int>(assertion.logs.size()),
+             returnCharVector(debugPrintData),
+             static_cast<int>(assertion.debug_prints.size()),
+             intx::narrow_cast<uint64_t>(assertion.step_count),
+             intx::narrow_cast<uint64_t>(assertion.gas_count)},
+            false};
+    } catch (const DataStorage::shutting_down_exception& e) {
+        return {makeEmptyAssertion(), true};
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";
-        return makeEmptyAssertion();
+        return {makeEmptyAssertion(), false};
     }
 }

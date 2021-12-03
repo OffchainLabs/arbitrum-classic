@@ -25,6 +25,9 @@ ReadTransaction::ReadTransaction(std::shared_ptr<DataStorage> store)
 
 rocksdb::Status ReadTransaction::createRocksdbCheckpoint(
     const std::string& checkpoint_dir) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     rocksdb::Checkpoint* checkpoint;
     auto status = rocksdb::Checkpoint::Create(
         transaction->datastorage->txn_db.get(), &checkpoint);
@@ -39,6 +42,9 @@ rocksdb::Status ReadTransaction::createRocksdbCheckpoint(
 
 rocksdb::Status ReadTransaction::defaultGet(const rocksdb::Slice& key,
                                             std::string* value) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return transaction->transaction->Get(
         read_options,
         transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN],
@@ -46,6 +52,9 @@ rocksdb::Status ReadTransaction::defaultGet(const rocksdb::Slice& key,
 }
 rocksdb::Status ReadTransaction::stateGet(const rocksdb::Slice& key,
                                           std::string* value) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return transaction->transaction->Get(
         read_options,
         transaction->datastorage->column_handles[DataStorage::STATE_COLUMN],
@@ -53,6 +62,9 @@ rocksdb::Status ReadTransaction::stateGet(const rocksdb::Slice& key,
 }
 rocksdb::Status ReadTransaction::checkpointGet(const rocksdb::Slice& key,
                                                std::string* value) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return transaction->transaction->Get(
         read_options,
         transaction->datastorage
@@ -61,6 +73,9 @@ rocksdb::Status ReadTransaction::checkpointGet(const rocksdb::Slice& key,
 }
 rocksdb::Status ReadTransaction::logGet(const rocksdb::Slice& key,
                                         std::string* value) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return transaction->transaction->Get(
         read_options,
         transaction->datastorage->column_handles[DataStorage::LOG_COLUMN], key,
@@ -68,6 +83,9 @@ rocksdb::Status ReadTransaction::logGet(const rocksdb::Slice& key,
 }
 rocksdb::Status ReadTransaction::sendGet(const rocksdb::Slice& key,
                                          std::string* value) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return transaction->transaction->Get(
         read_options,
         transaction->datastorage->column_handles[DataStorage::SEND_COLUMN], key,
@@ -75,6 +93,9 @@ rocksdb::Status ReadTransaction::sendGet(const rocksdb::Slice& key,
 }
 rocksdb::Status ReadTransaction::sideloadGet(const rocksdb::Slice& key,
                                              std::string* value) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return transaction->transaction->Get(
         read_options,
         transaction->datastorage->column_handles[DataStorage::SIDELOAD_COLUMN],
@@ -83,6 +104,9 @@ rocksdb::Status ReadTransaction::sideloadGet(const rocksdb::Slice& key,
 
 rocksdb::Status ReadTransaction::aggregatorGet(const rocksdb::Slice& key,
                                                std::string* value) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return transaction->transaction->Get(
         read_options,
         transaction->datastorage
@@ -92,6 +116,9 @@ rocksdb::Status ReadTransaction::aggregatorGet(const rocksdb::Slice& key,
 
 rocksdb::Status ReadTransaction::refCountedGet(const rocksdb::Slice& key,
                                                std::string* value) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return transaction->transaction->Get(
         read_options,
         transaction->datastorage
@@ -102,6 +129,9 @@ rocksdb::Status ReadTransaction::refCountedGet(const rocksdb::Slice& key,
 rocksdb::Status ReadTransaction::refCountedGet(
     const rocksdb::Slice& key,
     rocksdb::PinnableSlice* pinnable_val) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return transaction->transaction->Get(
         read_options,
         transaction->datastorage
@@ -110,6 +140,9 @@ rocksdb::Status ReadTransaction::refCountedGet(
 }
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::stateGetIterator() const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto it = transaction->transaction->GetIterator(
         read_options,
         transaction->datastorage->column_handles[DataStorage::STATE_COLUMN]);
@@ -118,6 +151,9 @@ std::unique_ptr<rocksdb::Iterator> ReadTransaction::stateGetIterator() const {
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::checkpointGetIterator()
     const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage
                           ->column_handles[DataStorage::CHECKPOINT_COLUMN]);
@@ -128,6 +164,9 @@ std::unique_ptr<rocksdb::Iterator>
 ReadTransaction::sequencerBatchItemGetIterator(
     rocksdb::Slice* lower_bound,
     rocksdb::Slice* upper_bound) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto read_opts = read_options;
     read_opts.iterate_lower_bound = lower_bound;
     read_opts.iterate_upper_bound = upper_bound;
@@ -141,6 +180,9 @@ ReadTransaction::sequencerBatchItemGetIterator(
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::delayedMessageGetIterator(
     rocksdb::Slice* lower_bound,
     rocksdb::Slice* upper_bound) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto read_opts = read_options;
     read_opts.iterate_lower_bound = lower_bound;
     read_opts.iterate_upper_bound = upper_bound;
@@ -153,6 +195,9 @@ std::unique_ptr<rocksdb::Iterator> ReadTransaction::delayedMessageGetIterator(
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::logGetIterator(
     rocksdb::Slice* lower_bound,
     rocksdb::Slice* upper_bound) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto read_opts = read_options;
     read_opts.iterate_lower_bound = lower_bound;
     read_opts.iterate_upper_bound = upper_bound;
@@ -165,6 +210,9 @@ std::unique_ptr<rocksdb::Iterator> ReadTransaction::logGetIterator(
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::sendGetIterator(
     rocksdb::Slice* lower_bound,
     rocksdb::Slice* upper_bound) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto read_opts = read_options;
     read_opts.iterate_lower_bound = lower_bound;
     read_opts.iterate_upper_bound = upper_bound;
@@ -176,6 +224,9 @@ std::unique_ptr<rocksdb::Iterator> ReadTransaction::sendGetIterator(
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::sideloadGetIterator()
     const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto it = transaction->transaction->GetIterator(
         read_options,
         transaction->datastorage->column_handles[DataStorage::SIDELOAD_COLUMN]);
@@ -184,6 +235,9 @@ std::unique_ptr<rocksdb::Iterator> ReadTransaction::sideloadGetIterator()
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::aggregatorGetIterator()
     const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage
                           ->column_handles[DataStorage::AGGREGATOR_COLUMN]);
@@ -192,6 +246,9 @@ std::unique_ptr<rocksdb::Iterator> ReadTransaction::aggregatorGetIterator()
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::refCountedGetIterator()
     const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage
                           ->column_handles[DataStorage::REFCOUNTED_COLUMN]);
@@ -200,6 +257,9 @@ std::unique_ptr<rocksdb::Iterator> ReadTransaction::refCountedGetIterator()
 
 ValueResult<uint256_t> ReadTransaction::defaultGetUint256(
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN],
         key_slice);
@@ -207,6 +267,9 @@ ValueResult<uint256_t> ReadTransaction::defaultGetUint256(
 
 ValueResult<uint256_t> ReadTransaction::stateGetUint256(
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->column_handles[DataStorage::STATE_COLUMN],
         key_slice);
@@ -214,6 +277,9 @@ ValueResult<uint256_t> ReadTransaction::stateGetUint256(
 
 ValueResult<uint256_t> ReadTransaction::checkpointGetUint256(
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getUint256UsingFamilyAndKey(
         transaction->datastorage
             ->column_handles[DataStorage::CHECKPOINT_COLUMN],
@@ -222,6 +288,9 @@ ValueResult<uint256_t> ReadTransaction::checkpointGetUint256(
 
 ValueResult<uint256_t> ReadTransaction::logGetUint256(
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->column_handles[DataStorage::LOG_COLUMN],
         key_slice);
@@ -229,6 +298,9 @@ ValueResult<uint256_t> ReadTransaction::logGetUint256(
 
 ValueResult<uint256_t> ReadTransaction::sendGetUint256(
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->column_handles[DataStorage::SEND_COLUMN],
         key_slice);
@@ -236,6 +308,9 @@ ValueResult<uint256_t> ReadTransaction::sendGetUint256(
 
 ValueResult<uint256_t> ReadTransaction::sideloadGetUint256(
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->column_handles[DataStorage::SIDELOAD_COLUMN],
         key_slice);
@@ -243,6 +318,9 @@ ValueResult<uint256_t> ReadTransaction::sideloadGetUint256(
 
 ValueResult<uint256_t> ReadTransaction::aggregatorGetUint256(
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getUint256UsingFamilyAndKey(
         transaction->datastorage
             ->column_handles[DataStorage::AGGREGATOR_COLUMN],
@@ -251,6 +329,9 @@ ValueResult<uint256_t> ReadTransaction::aggregatorGetUint256(
 
 ValueResult<uint256_t> ReadTransaction::refCountedGetUint256(
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getUint256UsingFamilyAndKey(
         transaction->datastorage
             ->column_handles[DataStorage::REFCOUNTED_COLUMN],
@@ -261,6 +342,9 @@ ValueResult<std::vector<std::vector<unsigned char>>>
 ReadTransaction::sequencerBatchItemGetVectorVector(
     const rocksdb::Slice first_key_slice,
     size_t count) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getVectorVectorUsingFamilyAndKey(
         transaction->datastorage
             ->column_handles[DataStorage::SEQUENCERBATCHITEM_COLUMN],
@@ -270,6 +354,9 @@ ReadTransaction::sequencerBatchItemGetVectorVector(
 ValueResult<std::vector<std::vector<unsigned char>>>
 ReadTransaction::sendGetVectorVector(const rocksdb::Slice first_key_slice,
                                      size_t count) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getVectorVectorUsingFamilyAndKey(
         transaction->datastorage->column_handles[DataStorage::SEND_COLUMN],
         first_key_slice, count);
@@ -278,6 +365,9 @@ ReadTransaction::sendGetVectorVector(const rocksdb::Slice first_key_slice,
 ValueResult<std::vector<unsigned char>>
 ReadTransaction::sequencerBatchItemGetVector(
     const rocksdb::Slice first_key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getVectorUsingFamilyAndKey(
         transaction->datastorage
             ->column_handles[DataStorage::SEQUENCERBATCHITEM_COLUMN],
@@ -287,6 +377,9 @@ ReadTransaction::sequencerBatchItemGetVector(
 ValueResult<std::vector<unsigned char>>
 ReadTransaction::delayedMessageGetVector(
     const rocksdb::Slice first_key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getVectorUsingFamilyAndKey(
         transaction->datastorage
             ->column_handles[DataStorage::DELAYEDMESSAGE_COLUMN],
@@ -295,6 +388,9 @@ ReadTransaction::delayedMessageGetVector(
 
 ValueResult<std::vector<unsigned char>> ReadTransaction::checkpointGetVector(
     const rocksdb::Slice first_key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getVectorUsingFamilyAndKey(
         transaction->datastorage
             ->column_handles[DataStorage::CHECKPOINT_COLUMN],
@@ -304,6 +400,9 @@ ValueResult<std::vector<unsigned char>> ReadTransaction::checkpointGetVector(
 ValueResult<std::vector<uint256_t>> ReadTransaction::logGetUint256Vector(
     const rocksdb::Slice first_key_slice,
     size_t count) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     return getUint256VectorUsingFamilyAndKey(
         transaction->datastorage->column_handles[DataStorage::LOG_COLUMN],
         first_key_slice, count);
@@ -314,6 +413,9 @@ ReadTransaction::getVectorVectorUsingFamilyAndKey(
     rocksdb::ColumnFamilyHandle* family,
     const rocksdb::Slice first_key_slice,
     const size_t count) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto it = std::unique_ptr<rocksdb::Iterator>(
         transaction->transaction->GetIterator(read_options, family));
 
@@ -344,6 +446,9 @@ ValueResult<std::vector<unsigned char>>
 ReadTransaction::getVectorUsingFamilyAndKey(
     rocksdb::ColumnFamilyHandle* family,
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     std::string returned_value;
 
     auto status = transaction->transaction->Get(read_options, family, key_slice,
@@ -363,6 +468,9 @@ ReadTransaction::getUint256VectorUsingFamilyAndKey(
     rocksdb::ColumnFamilyHandle* family,
     const rocksdb::Slice first_key_slice,
     const size_t count) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto it = std::unique_ptr<rocksdb::Iterator>(
         transaction->transaction->GetIterator(read_options, family));
 
@@ -393,6 +501,9 @@ ReadTransaction::getUint256VectorUsingFamilyAndKey(
 ValueResult<uint256_t> ReadTransaction::getUint256UsingFamilyAndKey(
     rocksdb::ColumnFamilyHandle* family,
     const rocksdb::Slice key_slice) const {
+    // Make sure database isn't closed while it is being used
+    auto counter = transaction->datastorage->getCounter();
+
     auto result = getVectorUsingFamilyAndKey(family, key_slice);
     if (!result.status.ok()) {
         return {result.status, {}};

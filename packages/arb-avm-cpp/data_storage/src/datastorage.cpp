@@ -26,7 +26,15 @@
 #include <string>
 #include <thread>
 
+std::atomic<bool> DataStorage::shutting_down;
+std::atomic<uint64_t> DataStorage::concurrent_database_access_counter;
+
 DataStorage::DataStorage(const std::string& db_path) {
+    std::atomic_init(&shutting_down, false);
+    std::atomic_init(&concurrent_database_access_counter, 0);
+    // Make sure database isn't closed while constructor still running
+    auto counter = getCounter();
+
     rocksdb::TransactionDBOptions txn_options{};
     rocksdb::Options options{};
     rocksdb::ColumnFamilyOptions cf_options{};
@@ -125,6 +133,9 @@ DataStorage::~DataStorage() {
 }
 
 rocksdb::Status DataStorage::flushNextColumn() {
+    // Make sure database isn't closed while it is being used
+    auto counter = getCounter();
+
     next_column_to_flush = (next_column_to_flush + 1) % column_handles.size();
     return txn_db->Flush(flush_options, column_handles[next_column_to_flush]);
 }
@@ -132,32 +143,55 @@ rocksdb::Status DataStorage::flushNextColumn() {
 rocksdb::Status DataStorage::closeDb() {
     if (txn_db) {
         std::cerr << "closing ArbStorage" << std::endl;
+        shutting_down = true;
+        auto last_concurrent_counter =
+            concurrent_database_access_counter.load();
+        for (std::chrono::seconds counter_seconds_left =
+                 std::chrono::minutes(10);
+             last_concurrent_counter > 0 && counter_seconds_left.count() > 0;
+             counter_seconds_left -= std::chrono::seconds(1)) {
+            if (counter_seconds_left.count() % 10 == 0) {
+                // Print message every 10 seconds
+                auto output_minutes =
+                    std::chrono::duration_cast<std::chrono::minutes>(
+                        counter_seconds_left)
+                        .count();
+                auto output_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>(
+                        counter_seconds_left % std::chrono::minutes(1))
+                        .count();
+                std::cerr
+                    << "waiting up to " << output_minutes << " minutes, "
+                    << output_seconds << " seconds for "
+                    << last_concurrent_counter
+                    << " database operation(s) to finish before shutting down"
+                    << std::endl;
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            last_concurrent_counter = concurrent_database_access_counter.load();
+        }
         for (auto handle : column_handles) {
             auto status = txn_db->DestroyColumnFamilyHandle(handle);
             if (!status.ok()) {
                 return status;
             }
         }
+
         txn_db->SyncWAL();
         auto s = txn_db->Close();
-
-        // Normally, the database will shutdown cleanly very quickly.  However,
-        // if database is under heavy load, it could take a while to finish
-        // pending requests and close all snapshots so that database can be
-        // closed cleanly.
-        for (std::chrono::seconds seconds_left = std::chrono::minutes(30);
-             s.IsAborted() && seconds_left.count() > 0;
-             seconds_left -= std::chrono::seconds(1)) {
+        for (std::chrono::seconds close_seconds_left = std::chrono::minutes(10);
+             s.IsAborted() && close_seconds_left.count() > 0;
+             close_seconds_left -= std::chrono::seconds(1)) {
             // Try to close database once a second for 30 minutes
-            if (seconds_left.count() % 10 == 0) {
+            if (close_seconds_left.count() % 10 == 0) {
                 // Print message every 10 seconds
                 auto output_minutes =
                     std::chrono::duration_cast<std::chrono::minutes>(
-                        seconds_left)
+                        close_seconds_left)
                         .count();
                 auto output_seconds =
                     std::chrono::duration_cast<std::chrono::seconds>(
-                        seconds_left % std::chrono::minutes(1))
+                        close_seconds_left % std::chrono::minutes(1))
                         .count();
                 std::cerr << "waiting up to " << output_minutes << " minutes, "
                           << output_seconds
@@ -179,11 +213,17 @@ rocksdb::Status DataStorage::closeDb() {
 
 std::unique_ptr<Transaction> Transaction::makeTransaction(
     std::shared_ptr<DataStorage> store) {
+    // Make sure database isn't closed while it is being used
+    auto counter = store->getCounter();
+
     auto tx = store->beginTransaction();
     return std::make_unique<Transaction>(std::move(store), std::move(tx));
 }
 
 rocksdb::Status DataStorage::clearDBExceptInbox() {
+    // Make sure database isn't closed while it is being used
+    auto counter = getCounter();
+
     for (int i = 0; i < FAMILY_COLUMN_COUNT; i++) {
         if (i == DEFAULT_COLUMN || i == DELAYEDMESSAGE_COLUMN ||
             i == SEQUENCERBATCHITEM_COLUMN || i == SEQUENCERBATCH_COLUMN) {
@@ -199,6 +239,10 @@ rocksdb::Status DataStorage::clearDBExceptInbox() {
 
 rocksdb::Status DataStorage::updateSecretHashSeed() {
     std::string key("secretHashSeed");
+
+    // Make sure database isn't closed while it is being used
+    auto counter = getCounter();
+
     rocksdb::PinnableSlice value;
     rocksdb::ReadOptions read_opts;
     auto status =
@@ -219,4 +263,7 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
         value.Reset();
     }
     return status;
+}
+std::unique_ptr<DataStorage::ConcurrentCounter> DataStorage::getCounter() {
+    return std::make_unique<ConcurrentCounter>();
 }
