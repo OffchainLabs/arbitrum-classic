@@ -564,14 +564,14 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[4][2] calldata assertionIntFields,
         bytes calldata sequencerBatchProof,
-        uint256 prevNodeNumber,
+        uint256 prevNodeNum,
         bytes32 expectedNodeHash
     ) internal returns (bytes32 newNodeHash) {
         StakeOnNewNodeFrame memory memoryFrame;
         {
             // validate data
             memoryFrame.gasUsed = RollupLib.assertionGasUsed(assertion);
-            memoryFrame.prevNode = getNode(prevNodeNumber);
+            memoryFrame.prevNode = getNode(prevNodeNum);
             // TODO: don't query twice
             memoryFrame.currentInboxSize = sequencerBridge.messageCount();
 
@@ -601,14 +601,14 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
             if (memoryFrame.hasSibling) {
                 memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.latestChildNumber);
             } else {
-                memoryFrame.lastHash = getNodeHash(prevNodeNumber);
+                memoryFrame.lastHash = getNodeHash(prevNodeNum);
             }
 
             memoryFrame.node = NodeLib.initialize(
                 RollupLib.stateHash(assertion.afterState),
                 RollupLib.challengeRoot(assertion, memoryFrame.executionHash, block.number),
                 RollupLib.confirmHash(assertion),
-                prevNodeNumber,
+                prevNodeNum,
                 memoryFrame.deadlineBlock
             );
         }
@@ -618,7 +618,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
             // Fetch a storage reference to prevNode since we copied our other one into memory
             // and we don't have enough stack available to keep to keep the previous storage reference around
-            Node storage prevNode = getNodeStorage(prevNodeNumber);
+            Node storage prevNode = getNodeStorage(prevNodeNum);
             prevNode.childCreated(nodeNum);
 
             newNodeHash = RollupLib.nodeHash(
@@ -630,12 +630,12 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
             require(newNodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
 
             nodeCreated(memoryFrame.node, newNodeHash);
-            rollupEventBridge.nodeCreated(nodeNum, prevNodeNumber, memoryFrame.deadlineBlock, msg.sender);
+            rollupEventBridge.nodeCreated(nodeNum, prevNodeNum, memoryFrame.deadlineBlock, msg.sender);
         }
 
         emit NodeCreated(
             latestNodeCreated(),
-            getNodeHash(prevNodeNumber),
+            getNodeHash(prevNodeNum),
             newNodeHash,
             memoryFrame.executionHash,
             memoryFrame.currentInboxSize,

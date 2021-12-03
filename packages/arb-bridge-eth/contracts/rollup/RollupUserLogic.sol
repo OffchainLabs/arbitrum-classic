@@ -25,7 +25,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
         Node storage firstUnresolvedNode_ = getNodeStorage(firstUnresolvedNodeNum);
 
-        if (firstUnresolvedNode_.prev == latestConfirmedNodeNum) {
+        if (firstUnresolvedNode_.prevNum == latestConfirmedNodeNum) {
             /**If the first unresolved node is a child of the latest confirmed node, to prove it can be rejected, we show:
              * a) Its deadline has expired
              * b) *Some* staker is staked on a sibling
@@ -91,7 +91,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         node.requirePastDeadline();
 
         // Check that prev is latest confirmed
-        require(node.prev == latestConfirmed(), "INVALID_PREV");
+        require(node.prevNum == latestConfirmed(), "INVALID_PREV");
 
         getNodeStorage(latestConfirmed()).requirePastChildConfirmDeadline();
 
@@ -147,7 +147,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             "NODE_NUM_OUT_OF_RANGE"
         );
         Node storage node = getNodeStorage(nodeNum);
-        require(latestStakedNode(msg.sender) == node.prev, "NOT_STAKED_PREV");
+        require(latestStakedNode(msg.sender) == node.prevNum, "NOT_STAKED_PREV");
         stakeOnNode(msg.sender, nodeNum);
     }
 
@@ -280,7 +280,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         Node storage node2 = getNodeStorage(nodeNums[1]);
 
         // ensure nodes staked on the same parent (and thus in conflict)
-        require(node1.prev == node2.prev, "DIFF_PREV");
+        require(node1.prevNum == node2.prevNum, "DIFF_PREV");
 
         // ensure both stakers aren't currently in challenge
         requireUnchallengedStaker(stakers[0]);
@@ -311,7 +311,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         );
 
         // Calculate upper limit for allowed node proposal time:
-        uint256 commonEndTime = getNodeStorage(node1.prev).firstChildBlock.add( // Dispute start: dispute timer for a node starts when its first child is created
+        uint256 commonEndTime = getNodeStorage(node1.prevNum).firstChildBlock.add( // Dispute start: dispute timer for a node starts when its first child is created
             node1.deadlineBlock.sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
         );
         if (commonEndTime < proposedTimes[1]) {
@@ -390,7 +390,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         while (latestNodeStaked >= firstUnresolved && nodesRemoved < maxNodes) {
             Node storage node = getNodeStorage(latestNodeStaked);
             removeStaker(latestNodeStaked, zombieStakerAddress);
-            latestNodeStaked = node.prev;
+            latestNodeStaked = node.prevNum;
             nodesRemoved++;
         }
         if (latestNodeStaked < firstUnresolved) {

@@ -29,7 +29,7 @@ struct Node {
     // Hash of the data that will be committed if this node is confirmed
     bytes32 confirmData;
     // Index of the node previous to this one
-    uint256 prev;
+    uint256 prevNum;
     // Deadline at which this node can be confirmed
     uint256 deadlineBlock;
     // Deadline at which a child of this node can be confirmed
@@ -53,21 +53,21 @@ library NodeLib {
      * @param _stateHash Initial value of stateHash
      * @param _challengeHash Initial value of challengeHash
      * @param _confirmData Initial value of confirmData
-     * @param _prev Initial value of prev
+     * @param _prevNum Initial value of prevNum
      * @param _deadlineBlock Initial value of deadlineBlock
      */
     function initialize(
         bytes32 _stateHash,
         bytes32 _challengeHash,
         bytes32 _confirmData,
-        uint256 _prev,
+        uint256 _prevNum,
         uint256 _deadlineBlock
     ) internal pure returns (Node memory) {
         Node memory node;
         node.stateHash = _stateHash;
         node.challengeHash = _challengeHash;
         node.confirmData = _confirmData;
-        node.prev = _prev;
+        node.prevNum = _prevNum;
         node.deadlineBlock = _deadlineBlock;
         node.noChildConfirmedBeforeBlock = _deadlineBlock;
         return node;
