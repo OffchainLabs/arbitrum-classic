@@ -9,7 +9,8 @@ echo "Comparing gas usage between $HASH_BEFORE and $HASH_AFTER"
 git checkout $HASH_BEFORE
 cd ./packages/arb-bridge-eth
 echo "Measuring gas usage for $HASH_BEFORE"
-hardhat clean
+yarn hardhat clean
+yarn hardhat compile
 yarn test:gas:ci
 cd ../..
 mv gasReporterOutput.json ./packages/tools/gas-$HASH_BEFORE.json
@@ -18,7 +19,8 @@ mv gasReporterOutput.json ./packages/tools/gas-$HASH_BEFORE.json
 git checkout $HASH_AFTER
 cd ./packages/arb-bridge-eth
 echo "Measuring gas usage for $HASH_AFTER"
-hardhat clean
+yarn hardhat clean
+yarn hardhat compile
 yarn test:gas:ci
 cd ../..
 mv gasReporterOutput.json ./packages/tools/gas-$HASH_AFTER.json
