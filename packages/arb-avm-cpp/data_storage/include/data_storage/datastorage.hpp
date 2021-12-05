@@ -59,18 +59,18 @@ class DataStorage {
     class shutting_down_exception : public std::exception {};
 
     class ConcurrentCounter {
+       private:
+        ConcurrentCounter();
+
        public:
-        ConcurrentCounter() {
-            if (shutting_down) {
-                throw shutting_down_exception();
-            }
-            concurrent_database_access_counter++;
-            if (shutting_down) {
-                // Destructor will take care of decrementing counter
-                throw shutting_down_exception();
-            }
-        }
         ~ConcurrentCounter() { concurrent_database_access_counter--; }
+
+        static std::unique_ptr<ConcurrentCounter> Get() {
+            if (shutting_down) {
+                throw shutting_down_exception();
+            }
+            return std::unique_ptr<ConcurrentCounter>(new ConcurrentCounter());
+        }
     };
 
     explicit DataStorage(const std::string& db_path);

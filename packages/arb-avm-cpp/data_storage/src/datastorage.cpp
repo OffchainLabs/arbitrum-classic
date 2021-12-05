@@ -265,5 +265,13 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
     return status;
 }
 std::unique_ptr<DataStorage::ConcurrentCounter> DataStorage::getCounter() {
-    return std::make_unique<ConcurrentCounter>();
+    return ConcurrentCounter::Get();
+}
+
+DataStorage::ConcurrentCounter::ConcurrentCounter() {
+    concurrent_database_access_counter++;
+    if (shutting_down) {
+        // Destructor will take care of decrementing counter
+        throw shutting_down_exception();
+    }
 }
