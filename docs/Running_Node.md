@@ -6,7 +6,7 @@ sidebar_label: Running a Node
 
 ### Required Artifacts
 
-- Latest Docker Image: offchainlabs/arb-validator:v1.0.0-2b628f8
+- Latest Docker Image: offchainlabs/arb-node:v1.1.2-cffb3a0
 
 ### Required parameter
 
@@ -51,8 +51,13 @@ sidebar_label: Running a Node
   - Will default to `https://arb1.arbitrum.io/rpc` or `https://rinkeby.arbitrum.io/rpc` depending on chain ID reported by ethereum node provided.
 - `--core.cache.timed-expire`
   - Defaults to `20m`, or 20 minutes. Age of oldest blocks to hold in cache so that disk lookups are not required
+- `--node.rpc.max-call-gas`
+  - Maximum amount of gas that a node will use in call, default is `5000000`
+- `--node.rpc.enable-l1-calls`
+  - This option enables the ability to request L1 inclusion information about a transaction by including the argument `returnL1InboxBatchInfo` in a `eth_getTransactionReceipt` request
+    - Example: `curl http://arbnode -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_getTransactionReceipt","params": ["txhash", {"returnL1InboxBatchInfo": true}],"id":1}'`
 - `--node.cache.allow-slow-lookup`
-  - When enabled, will load old blocks from disk if not in memory cache
+  - When this option is present, will load old blocks from disk if not in memory cache
 - `--core.checkpoint-gas-frequency`
   - Defaults to `1000000000`. Amount of gas between saving checkpoints to disk. When making archive queries node has to load closest previous checkpoint and then execute up to the requested block. The farther apart the checkpoints, the longer potential execution required. However, saving checkpoints more often slows down the node in general.
 - If archive support is desired, recommend using `--node.cache.allow-slow-lookup --core.checkpoint-gas-frequency=156250000`
