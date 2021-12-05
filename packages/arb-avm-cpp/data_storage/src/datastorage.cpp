@@ -25,9 +25,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
-
-std::atomic<bool> DataStorage::shutting_down;
-std::atomic<uint64_t> DataStorage::concurrent_database_access_counter;
+#include <utility>
 
 DataStorage::DataStorage(const std::string& db_path) {
     std::atomic_init(&shutting_down, false);
@@ -264,14 +262,29 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
     }
     return status;
 }
-std::unique_ptr<DataStorage::ConcurrentCounter> DataStorage::getCounter() {
-    return ConcurrentCounter::Get();
+
+std::unique_ptr<ConcurrentCounter> DataStorage::getCounter(
+    std::shared_ptr<DataStorage> storage) {
+    return ConcurrentCounter::Get(this);
 }
 
-DataStorage::ConcurrentCounter::ConcurrentCounter() {
-    concurrent_database_access_counter++;
-    if (shutting_down) {
+ConcurrentCounter::ConcurrentCounter(std::shared_ptr<DataStorage> _storage)
+    : storage(std::move(_storage)) {
+    storage->concurrent_database_access_counter++;
+    if (storage->shutting_down) {
         // Destructor will take care of decrementing counter
-        throw shutting_down_exception();
+        throw DataStorage::shutting_down_exception();
     }
+}
+
+ConcurrentCounter::~ConcurrentCounter() {
+    storage->concurrent_database_access_counter--;
+}
+
+std::unique_ptr<ConcurrentCounter> ConcurrentCounter::Get(
+    const std::shared_ptr<DataStorage>& storage) {
+    if (storage->shutting_down) {
+        throw DataStorage::shutting_down_exception();
+    }
+    return std::unique_ptr<ConcurrentCounter>(new ConcurrentCounter(storage));
 }

@@ -1115,7 +1115,7 @@ void ArbCore::operator()() {
                                 coreConfig.checkpoint_gas_frequency;
                         }
                     }
-                } catch (DataStorage::shutting_down_exception e) {
+                } catch (DataStorage::shutting_down_exception& e) {
                     throw;
                 } catch (const std::exception& e) {
                     core_error_string = e.what();
@@ -1339,7 +1339,7 @@ void ArbCore::operator()() {
         }
 
         std::cerr << "Exiting main ArbCore thread" << std::endl;
-    } catch (DataStorage::shutting_down_exception e) {
+    } catch (DataStorage::shutting_down_exception& e) {
         std::cerr << "Caught shutting down exception in ArbCore thread"
                   << std::endl;
     } catch (const std::exception& e) {
