@@ -268,7 +268,7 @@ ConcurrentCounter DataStorage::getCounter() const {
 }
 
 ConcurrentCounter::ConcurrentCounter(const DataStorage* _storage)
-    : storage(std::move(_storage)) {
+    : storage(_storage) {
     storage->concurrent_database_access_counter++;
     if (storage->shutting_down) {
         // Destructor will take care of decrementing counter
@@ -281,7 +281,7 @@ ConcurrentCounter::~ConcurrentCounter() {
         return;
     }
     auto new_counter = storage->concurrent_database_access_counter.fetch_sub(1);
-    assert(new_counter < (uint64_t(1) << 63));
+    assert(new_counter >= 0);
     (void)new_counter;  // silence unused variable warning on release builds
                         // where assert is disabled
 }
@@ -293,12 +293,13 @@ ConcurrentCounter ConcurrentCounter::Get(const DataStorage* storage) {
     return ConcurrentCounter(storage);
 }
 
-ConcurrentCounter::ConcurrentCounter(ConcurrentCounter&& other)
+ConcurrentCounter::ConcurrentCounter(ConcurrentCounter&& other) noexcept
     : storage(other.storage) {
     other.storage = nullptr;
 }
 
-ConcurrentCounter& ConcurrentCounter::operator=(ConcurrentCounter&& other) {
+ConcurrentCounter& ConcurrentCounter::operator=(
+    ConcurrentCounter&& other) noexcept {
     this->~ConcurrentCounter();
     storage = other.storage;
     other.storage = nullptr;

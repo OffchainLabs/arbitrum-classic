@@ -40,9 +40,9 @@ class ConcurrentCounter {
 
     ConcurrentCounter(const DataStorage* storage);
     ConcurrentCounter(const ConcurrentCounter& other) = delete;
-    ConcurrentCounter(ConcurrentCounter&& other);
+    ConcurrentCounter(ConcurrentCounter&& other) noexcept;
     ConcurrentCounter& operator=(const ConcurrentCounter& other) = delete;
-    ConcurrentCounter& operator=(ConcurrentCounter&& other);
+    ConcurrentCounter& operator=(ConcurrentCounter&& other) noexcept;
 
     static ConcurrentCounter Get(const DataStorage* storage);
 
@@ -88,7 +88,7 @@ class DataStorage {
 
    private:
     std::atomic<bool> shutting_down;
-    mutable std::atomic<uint64_t> concurrent_database_access_counter;
+    mutable std::atomic<int64_t> concurrent_database_access_counter;
 
     rocksdb::Status updateSecretHashSeed();
 
