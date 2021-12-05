@@ -30,7 +30,25 @@
 
 class Transaction;
 class ReadTransaction;
-class ConcurrentCounter;
+class DataStorage;
+
+class ConcurrentCounter {
+    friend DataStorage;
+
+   private:
+    const DataStorage* storage;
+
+    ConcurrentCounter(const DataStorage* storage);
+    ConcurrentCounter(const ConcurrentCounter& other) = delete;
+    ConcurrentCounter(ConcurrentCounter&& other);
+    ConcurrentCounter& operator=(const ConcurrentCounter& other) = delete;
+    ConcurrentCounter& operator=(ConcurrentCounter&& other);
+
+    static ConcurrentCounter Get(const DataStorage* storage);
+
+   public:
+    ~ConcurrentCounter();
+};
 
 class DataStorage {
     friend Transaction;
@@ -66,12 +84,11 @@ class DataStorage {
     rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
     rocksdb::Status clearDBExceptInbox();
-    [[nodiscard]] static std::unique_ptr<ConcurrentCounter> getCounter(
-        std::shared_ptr<DataStorage> storage);
+    [[nodiscard]] ConcurrentCounter getCounter() const;
 
    private:
     std::atomic<bool> shutting_down;
-    std::atomic<uint64_t> concurrent_database_access_counter;
+    mutable std::atomic<uint64_t> concurrent_database_access_counter;
 
     rocksdb::Status updateSecretHashSeed();
 
@@ -98,7 +115,7 @@ class Transaction {
 
     rocksdb::Status commit() {
         // Make sure database isn't closed while it is being used
-        auto counter = datastorage->getCounter(datastorage);
+        auto counter = datastorage->getCounter();
 
         return transaction->Commit();
     }
@@ -113,25 +130,6 @@ class Transaction {
    private:
     static std::unique_ptr<Transaction> makeTransaction(
         std::shared_ptr<DataStorage> store);
-};
-
-class ConcurrentCounter {
-    friend DataStorage;
-
-   private:
-    std::shared_ptr<DataStorage> storage;
-
-    ConcurrentCounter(std::shared_ptr<DataStorage> storage);
-    ConcurrentCounter(const ConcurrentCounter& other) = delete;
-    ConcurrentCounter(const ConcurrentCounter&& other) = delete;
-    ConcurrentCounter& operator=(const ConcurrentCounter& other) = delete;
-    ConcurrentCounter& operator=(const ConcurrentCounter&& other) = delete;
-
-    static std::unique_ptr<ConcurrentCounter> Get(
-        const std::shared_ptr<DataStorage>& storage);
-
-   public:
-    ~ConcurrentCounter();
 };
 
 #endif /* datastorage_hpp */

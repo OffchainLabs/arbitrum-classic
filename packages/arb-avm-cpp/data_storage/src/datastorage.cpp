@@ -263,12 +263,11 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
     return status;
 }
 
-std::unique_ptr<ConcurrentCounter> DataStorage::getCounter(
-    std::shared_ptr<DataStorage> storage) {
+ConcurrentCounter DataStorage::getCounter() const {
     return ConcurrentCounter::Get(this);
 }
 
-ConcurrentCounter::ConcurrentCounter(std::shared_ptr<DataStorage> _storage)
+ConcurrentCounter::ConcurrentCounter(const DataStorage* _storage)
     : storage(std::move(_storage)) {
     storage->concurrent_database_access_counter++;
     if (storage->shutting_down) {
@@ -278,13 +277,30 @@ ConcurrentCounter::ConcurrentCounter(std::shared_ptr<DataStorage> _storage)
 }
 
 ConcurrentCounter::~ConcurrentCounter() {
-    storage->concurrent_database_access_counter--;
+    if (storage == nullptr) {
+        return;
+    }
+    auto new_counter = storage->concurrent_database_access_counter.fetch_sub(1);
+    assert(new_counter < (uint64_t(1) << 63));
+    (void)new_counter;  // silence unused variable warning on release builds
+                        // where assert is disabled
 }
 
-std::unique_ptr<ConcurrentCounter> ConcurrentCounter::Get(
-    const std::shared_ptr<DataStorage>& storage) {
+ConcurrentCounter ConcurrentCounter::Get(const DataStorage* storage) {
     if (storage->shutting_down) {
         throw DataStorage::shutting_down_exception();
     }
-    return std::unique_ptr<ConcurrentCounter>(new ConcurrentCounter(storage));
+    return ConcurrentCounter(storage);
+}
+
+ConcurrentCounter::ConcurrentCounter(ConcurrentCounter&& other)
+    : storage(other.storage) {
+    other.storage = nullptr;
+}
+
+ConcurrentCounter& ConcurrentCounter::operator=(ConcurrentCounter&& other) {
+    this->~ConcurrentCounter();
+    storage = other.storage;
+    other.storage = nullptr;
+    return *this;
 }
