@@ -246,7 +246,7 @@ const config = {
   gasReporter: {
     currency: 'USD',
     gasPrice: 20,
-    enabled: process.env.REPORT_GAS ? true : false
+    enabled: process.env.REPORT_GAS ? true : false,
   },
   namedAccounts: {
     deployer: {

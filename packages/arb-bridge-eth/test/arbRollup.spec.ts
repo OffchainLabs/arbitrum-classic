@@ -88,18 +88,18 @@ async function getDefaultConfig(
 }
 
 function toNamedParams(rollupConfig: RollupConfig) {
-  return { 
-      machineHash: rollupConfig[0],
-      confirmPeriodBlocks: rollupConfig[1],
-      extraChallengeTimeBlocks: rollupConfig[2],
-      avmGasSpeedLimitPerBlock: rollupConfig[3],
-      baseStake:rollupConfig[4],
-      stakeToken:rollupConfig[5],
-      owner:rollupConfig[6],
-      sequencer:rollupConfig[7],
-      sequencerDelayBlocks:rollupConfig[8],
-      sequencerDelaySeconds:rollupConfig[9],
-      extraConfig:rollupConfig[10],
+  return {
+    machineHash: rollupConfig[0],
+    confirmPeriodBlocks: rollupConfig[1],
+    extraChallengeTimeBlocks: rollupConfig[2],
+    avmGasSpeedLimitPerBlock: rollupConfig[3],
+    baseStake: rollupConfig[4],
+    stakeToken: rollupConfig[5],
+    owner: rollupConfig[6],
+    sequencer: rollupConfig[7],
+    sequencerDelayBlocks: rollupConfig[8],
+    sequencerDelaySeconds: rollupConfig[9],
+    extraConfig: rollupConfig[10],
   }
 }
 

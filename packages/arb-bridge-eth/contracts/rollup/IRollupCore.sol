@@ -74,14 +74,14 @@ interface IRollupCore {
     );
 
     /**
-     * @notice Get the Node for the given index. 
+     * @notice Get the Node for the given index.
      */
     function getNode(uint256 nodeNum) external view returns (Node memory);
 
     /**
      * @notice Check if the specified node has been staked on by the provided staker
      */
-    function nodeHasStaker(uint256 nodeNum, address staker) external view returns(bool);
+    function nodeHasStaker(uint256 nodeNum, address staker) external view returns (bool);
 
     /**
      * @notice Get the address of the staker at the given index
