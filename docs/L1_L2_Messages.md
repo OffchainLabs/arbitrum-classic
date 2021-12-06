@@ -10,6 +10,7 @@ Standard, client-generated transaction calls on the Arbitrum chain are sent thro
 
 ```solidity
 function sendL2Message(address chain, bytes calldata messageData) external;
+
 ```
 
 Generally calls will come in batches from an aggregator as described in [Transaction Lifecycle](Tx_Lifecycle.md).
@@ -125,7 +126,9 @@ If for some reason you need to compute the L1 address from an L2 alias on chain,
     }
 ```
 
-_Of note: the (highly) recommended convenience methods `Inbox.depositEth` and `Inbox.createRetryableTicket` handle subtracting the offset for the credit back address and beneficiary address, and using the these reverse-aliased values as the inputs for the create retryable tickets. This way, the beneficiary and credit back addresses as received on L2 will be equivalent to those provided as the L1 params._
+##### Address Aliasing & Refund Addresses In Inbox Methods
+
+Both of the convenience methods `Inbox.depositEth` and `Inbox.createRetryableTicket` include a sanity check to help minimize the risk of user error and ensure refunded Ether on L2 remains accessible. For either method, if the provided `beneficiary` or `credit-back-address` is an L1 contract address, the address will be converted to its address alias, providing a path for the L1 contract to recover the funds. A power-user who understands what they're doing may bypass this conversion by calling `Inbox.createRetryableTicketNoRefundAliasRewrite`.
 
 #### Directly Redeeming / Cancelling Retryables
 
