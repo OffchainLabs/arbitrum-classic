@@ -36,7 +36,7 @@ RUN cd arb-avm-cpp/build && \
     cmake .. && \
     cmake --build . -j $(nproc)
 
-FROM offchainlabs/backend-base:0.4.1 as arb-node-builder
+FROM offchainlabs/backend-base:0.4.2 as arb-node-builder
 
 # Build dependencies
 COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
