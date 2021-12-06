@@ -28,18 +28,6 @@ const prevAddresses: DeployedContracts = {
   rollupCreator: '',
   rollup: '',
 }
-
-const newAddresses: DeployedContracts = {
-  bridgeCreator: '',
-  currentBridge: '',
-  challengeFactory: '',
-  osp: '',
-  osp2: '',
-  ospHash: '',
-  rollupCreator: '',
-  rollup: '',
-}
-
 async function promptUserToContinue() {
   const rl = createInterface({
     input: process.stdin, //or fileStream
@@ -112,7 +100,7 @@ async function main() {
     'latest' // toBlock
   )
   const parsedLog = rollupCreator.interface.parseLog(rollupsCreated[0])
-  const { rollupAddress, inboxAddress, adminProxy } = parsedLog.args
+  const { rollupAddress, adminProxy } = parsedLog.args
 
   console.log({ rollupAddress })
   console.log({ adminProxy })
