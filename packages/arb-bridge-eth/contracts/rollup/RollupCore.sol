@@ -96,7 +96,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     mapping(address => uint256) private _withdrawableFunds;
 
     /**
-     * @notice Get a storage refernce to the Node for the given node index
+     * @notice Get a storage reference to the Node for the given node index
      * @param nodeNum Index of the node
      * @return Node struct
      */
