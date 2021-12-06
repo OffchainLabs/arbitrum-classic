@@ -10,8 +10,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const rollup = await deployments.get('Rollup')
   const challengeFactory = await deployments.get('ChallengeFactory')
   const nodeFactory = await deployments.get('NodeFactory')
-  const RollupAdminFacet = await deployments.get('RollupAdminFacet')
-  const RollupUserFacet = await deployments.get('RollupUserFacet')
+  const RollupAdminLogic = await deployments.get('RollupAdminLogic')
+  const RollupUserLogic = await deployments.get('RollupUserLogic')
 
   const dep = await deploy('RollupCreator', {
     from: await deployer.getAddress(),
@@ -25,8 +25,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     rollup.address,
     challengeFactory.address,
     nodeFactory.address,
-    RollupAdminFacet.address,
-    RollupUserFacet.address
+    RollupAdminLogic.address,
+    RollupUserLogic.address
   )
 }
 

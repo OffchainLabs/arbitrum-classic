@@ -2,10 +2,10 @@
 
 pragma solidity ^0.6.11;
 
-import "../Rollup.sol";
-import "./IRollupFacets.sol";
+import "./Rollup.sol";
+import "./IRollupLogic.sol";
 
-abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
+abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
 
     modifier onlyValidator() {
@@ -82,7 +82,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
 
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
-
+        uint256 nodeNum = firstUnresolvedNode();
         INode node = getNode(firstUnresolvedNode());
 
         // Verify the block's deadline has passed
@@ -101,15 +101,14 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             "NOT_ALL_STAKED"
         );
 
-        confirmNextNode(
+        confirmNode(
+            nodeNum,
             beforeSendAcc,
             sendsData,
             sendLengths,
             afterSendCount,
             afterLogAcc,
-            afterLogCount,
-            outbox,
-            rollupEventBridge
+            afterLogCount
         );
     }
 
@@ -147,7 +146,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         );
         INode node = getNode(nodeNum);
         require(latestStakedNode(msg.sender) == node.prev(), "NOT_STAKED_PREV");
-        stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
+        stakeOnNode(msg.sender, nodeNum);
     }
 
     /**
@@ -209,18 +208,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             assertionBytes32Fields,
             assertionIntFields,
             sequencerBatchProof,
-            CreateNodeDataFrame({
-                avmGasSpeedLimitPerBlock: avmGasSpeedLimitPerBlock,
-                confirmPeriodBlocks: confirmPeriodBlocks,
-                prevNode: latestStakedNode(msg.sender), // Ensure staker is staked on the previous node
-                sequencerInbox: sequencerBridge,
-                rollupEventBridge: rollupEventBridge,
-                nodeFactory: nodeFactory
-            }),
+            latestStakedNode(msg.sender), // Ensure staker is staked on the previous node
             expectedNodeHash
         );
 
-        stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
+        stakeOnNode(msg.sender, latestNodeCreated());
     }
 
     /**
@@ -560,7 +552,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function withdrawStakerFunds(address payable destination) external virtual returns (uint256);
 }
 
-contract RollupUserFacet is AbsRollupUserFacet {
+contract RollupUserLogic is AbsRollupUserLogic {
     function initialize(address _stakeToken) public override {
         require(_stakeToken == address(0), "NO_TOKEN_ALLOWED");
         // stakeToken = _stakeToken;
@@ -601,7 +593,7 @@ contract RollupUserFacet is AbsRollupUserFacet {
     }
 }
 
-contract ERC20RollupUserFacet is AbsRollupUserFacet {
+contract ERC20RollupUserLogic is AbsRollupUserLogic {
     function initialize(address _stakeToken) public override {
         require(_stakeToken != address(0), "NEED_STAKE_TOKEN");
         require(stakeToken == address(0), "ALREADY_INIT");

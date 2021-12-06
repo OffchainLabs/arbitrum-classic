@@ -5,7 +5,7 @@ import { BigNumberish, BigNumber } from '@ethersproject/bignumber'
 import { BytesLike, hexDataLength } from '@ethersproject/bytes'
 import { ContractTransaction, PayableOverrides } from '@ethersproject/contracts'
 import { Provider } from '@ethersproject/providers'
-import { RollupUserFacet, RollupAdminFacet } from '../../build/types'
+import { RollupUserLogic, RollupAdminLogic } from '../../build/types'
 
 export interface ExecutionState {
   machineHash: BytesLike
@@ -223,7 +223,7 @@ async function nodeFromTx(
 }
 
 export class RollupContract {
-  constructor(public rollup: RollupUserFacet) {}
+  constructor(public rollup: RollupUserLogic) {}
 
   connect(signerOrProvider: Signer | Provider | string): RollupContract {
     return new RollupContract(this.rollup.connect(signerOrProvider))
@@ -370,7 +370,7 @@ export class RollupContract {
 }
 
 export async function forceCreateNode(
-  rollupAdmin: RollupAdminFacet,
+  rollupAdmin: RollupAdminLogic,
   newNodeHash: BytesLike,
   assertion: Assertion,
   batchProof: BytesLike,

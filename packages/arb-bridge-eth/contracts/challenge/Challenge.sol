@@ -22,7 +22,7 @@ import "../libraries/Cloneable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./IChallenge.sol";
-import "../rollup/facets/RollupUser.sol";
+import "../rollup/RollupUserLogic.sol";
 import "../arch/IOneStepProof.sol";
 
 import "./ChallengeLib.sol";
@@ -64,7 +64,7 @@ contract Challenge is Cloneable, IChallenge {
     IOneStepProof[] public executors;
     address[2] public bridges;
 
-    RollupUserFacet internal resultReceiver;
+    RollupUserLogic internal resultReceiver;
 
     uint256 maxMessageCount;
 
@@ -112,7 +112,7 @@ contract Challenge is Cloneable, IChallenge {
 
         executors = _executors;
 
-        resultReceiver = RollupUserFacet(_resultReceiver);
+        resultReceiver = RollupUserLogic(_resultReceiver);
 
         maxMessageCount = _maxMessageCount;
 
