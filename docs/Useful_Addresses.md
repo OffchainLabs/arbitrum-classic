@@ -22,6 +22,10 @@ Here's some contract addreses that may be useful and/or of interest to those exp
 
 ### Token Bridge
 
+**IMPORTANT**: _Do **not** simply transfer tokens or Ether to any of the addresses below; it will result in loss of funds._
+
+_Users should only interact with the token bridge via dapp interfaces like https://bridge.arbitrum.io_.
+
 |                       | Mainnet                                                                                                               | Rinkeby                                                                                                                               |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | L1 Gateway Router     | [0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef](https://etherscan.io/address/0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef) | [0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380](https://rinkeby.etherscan.io/address/0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380)         |
