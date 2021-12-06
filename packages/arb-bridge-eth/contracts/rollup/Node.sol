@@ -49,7 +49,7 @@ library NodeLib {
     using SafeMath for uint256;
 
     /**
-     * @notice Initialise a Node
+     * @notice Initialize a Node
      * @param _stateHash Initial value of stateHash
      * @param _challengeHash Initial value of challengeHash
      * @param _confirmData Initial value of confirmData
