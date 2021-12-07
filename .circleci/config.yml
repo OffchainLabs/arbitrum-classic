@@ -212,12 +212,10 @@ jobs:
           command: |
             source $BASH_ENV
             echo $CIRCLE_PR_HEAD_SHA
-            OUTFILE=$GC_RESULTS/eth-bridge.csv
-            echo $OUTFILE
-            ./packages/tools/scripts/compare-gas-commits.sh $CIRCLE_PR_BASE_SHA $CIRCLE_PR_HEAD_SHA $OUTFILE
+            ./packages/tools/scripts/compare-gas-commits.sh $CIRCLE_PR_BASE_SHA $CIRCLE_PR_HEAD_SHA $GC_RESULTS_PATH
             ls -al /tmp/gas-compare-results
       - store_artifacts:
-          path: $GC_RESULTS/eth-bridge.csv
+          path: *gas-compare-results-path
 
   cpp-avm-build:
     docker:
