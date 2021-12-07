@@ -184,8 +184,8 @@ jobs:
             echo $CIRCLE_PR_HEAD_SHA
             echo CIRCLE_PR_BASE_SHA
             echo $CIRCLE_PR_BASE_SHA
-            echo 'export CIRCLE_PR_BASE_SHA=$CIRCLE_PR_BASE_SHA' >> $BASH_ENV
-            echo 'export CIRCLE_PR_HEAD_SHA=$CIRCLE_PR_HEAD_SHA' >> $BASH_ENV
+            echo 'export CIRCLE_PR_BASE_SHA='$CIRCLE_PR_BASE_SHA >> $BASH_ENV
+            echo 'export CIRCLE_PR_HEAD_SHA='$CIRCLE_PR_HEAD_SHA >> $BASH_ENV
             cat $BASH_ENV
             source $BASH_ENV
             cat $BASH_ENV
