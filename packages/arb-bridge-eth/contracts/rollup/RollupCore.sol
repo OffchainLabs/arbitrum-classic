@@ -105,7 +105,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     }
 
     /**
-     * @notice Get the Node for the given index. 
+     * @notice Get the Node for the given index.
      */
     function getNode(uint256 nodeNum) public view override returns (Node memory) {
         return getNodeStorage(nodeNum);
@@ -114,7 +114,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     /**
      * @notice Check if the specified node has been staked on by the provided staker
      */
-    function nodeHasStaker(uint256 nodeNum, address staker) public view override returns(bool) {
+    function nodeHasStaker(uint256 nodeNum, address staker) public view override returns (bool) {
         return _nodeStakers[nodeNum][staker];
     }
 
@@ -419,7 +419,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         _zombies.pop();
     }
 
-     /**
+    /**
      * @notice Mark the given staker as staked on this node
      * @param staker Address of the staker to mark
      * @return The number of stakers after adding this one
@@ -429,7 +429,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         _nodeStakers[nodeNum][staker] = true;
         Node storage node = getNodeStorage(nodeNum);
         require(node.deadlineBlock != 0, "NO_NODE");
-        
+
         uint256 prevCount = node.stakerCount;
         node.stakerCount = prevCount + 1;
         return prevCount + 1;
@@ -472,7 +472,6 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
             Node storage parent = getNodeStorage(nodeNum);
             parent.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
         }
-
     }
 
     /**
@@ -520,10 +519,11 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         delete _nodeHashes[nodeNum];
     }
 
-    function nodeDeadline(
-        uint256 gasUsed,
-        Node memory prevNode
-    ) internal view returns (uint256 deadlineBlock) {
+    function nodeDeadline(uint256 gasUsed, Node memory prevNode)
+        internal
+        view
+        returns (uint256 deadlineBlock)
+    {
         // Set deadline rounding up to the nearest block
         uint256 checkTime = gasUsed.add(avmGasSpeedLimitPerBlock.sub(1)).div(
             avmGasSpeedLimitPerBlock
@@ -630,7 +630,12 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
             require(newNodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
 
             nodeCreated(memoryFrame.node, newNodeHash);
-            rollupEventBridge.nodeCreated(nodeNum, prevNodeNum, memoryFrame.deadlineBlock, msg.sender);
+            rollupEventBridge.nodeCreated(
+                nodeNum,
+                prevNodeNum,
+                memoryFrame.deadlineBlock,
+                msg.sender
+            );
         }
 
         emit NodeCreated(
