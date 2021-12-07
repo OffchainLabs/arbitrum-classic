@@ -1,6 +1,6 @@
 {
   "name": "arb-bridge-peripherals",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "Apache-2.0",
   "scripts": {
     "postinstall": "$npm_execpath run clean:build",
@@ -22,9 +22,9 @@
   },
   "dependencies": {
     "arbos-precompiles": "^1.0.1",
-    "@openzeppelin/contracts": "3.4.0",
-    "@openzeppelin/contracts-upgradeable": "3.4.0",
-    "arb-bridge-eth": "0.7.2"
+    "@openzeppelin/contracts": "3.4.2",
+    "@openzeppelin/contracts-upgradeable": "3.4.2",
+    "arb-bridge-eth": "0.7.3"
   },
   "devDependencies": {
     "arb-upgrades": "0.0.1",
