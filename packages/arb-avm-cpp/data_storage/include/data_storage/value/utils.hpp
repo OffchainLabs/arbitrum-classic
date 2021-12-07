@@ -20,6 +20,7 @@
 #include <rocksdb/slice.h>
 #include <avm_values/bigint.hpp>
 #include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 template <typename Iterator>
 uint64_t extractUint64(Iterator& iter) {

@@ -64,6 +64,8 @@ void* machineClone(CMachine* m) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     auto cloneMach = new Machine(*mach);
+    cloneMach->machine_state.code =
+        std::make_shared<RunningCode>(cloneMach->machine_state.code);
     return static_cast<void*>(cloneMach);
 }
 
@@ -127,7 +129,7 @@ CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     auto blockReason = mach->isBlocked(newMessages != 0);
-    return std::visit(ReasonConverter{}, blockReason);
+    return visit(ReasonConverter{}, blockReason);
 }
 
 COneStepProof machineMarshallForProof(CMachine* m) {

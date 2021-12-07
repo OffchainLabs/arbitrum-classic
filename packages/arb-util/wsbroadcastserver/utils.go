@@ -1,4 +1,4 @@
-package broadcaster
+package wsbroadcastserver
 
 import (
 	"context"

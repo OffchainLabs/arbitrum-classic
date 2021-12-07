@@ -29,7 +29,7 @@
 TEST_CASE("ValueCache reload") {
     ValueCache cache{4, 0};
 
-    value val1{CodePointStub({0, 0}, 0)};
+    Value val1{CodePointStub({0, 0}, 0)};
     // Cache 1
     cache.maybeSave(val1);
     auto retrieved_val = cache.loadIfExists(hash_value(val1));
@@ -68,7 +68,7 @@ TEST_CASE("ValueCache reload") {
 TEST_CASE("ValueCache reset") {
     ValueCache cache{2, 0};
 
-    value val1{CodePointStub({0, 0}, 0)};
+    Value val1{CodePointStub({0, 0}, 0)};
     // Cache 1
     cache.maybeSave(val1);
     REQUIRE(cache.loadIfExists(hash_value(val1)) != std::nullopt);
@@ -90,8 +90,8 @@ TEST_CASE("ValueCache reset") {
 TEST_CASE("ValueCache reload max") {
     ValueCache cache{4, 2};
 
-    value val1{CodePointStub({0, 0}, 0)};
-    value val2{uint256_t(42)};
+    Value val1{CodePointStub({0, 0}, 0)};
+    Value val2{uint256_t(42)};
     // Cache 1
     cache.maybeSave(val1);
     cache.maybeSave(val2);
@@ -128,7 +128,7 @@ TEST_CASE("ValueCache reload max") {
 TEST_CASE("ValueCache disabled") {
     ValueCache cache{0, 0};
 
-    value val1{CodePointStub({0, 0}, 0)};
+    Value val1{CodePointStub({0, 0}, 0)};
     // Cache 1
     cache.maybeSave(val1);
     REQUIRE(cache.loadIfExists(hash_value(val1)) == std::nullopt);

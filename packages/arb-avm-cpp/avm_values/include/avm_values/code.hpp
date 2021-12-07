@@ -18,6 +18,7 @@
 #define code_hpp
 
 #include <avm_values/codepoint.hpp>
+#include <avm_values/value.hpp>
 
 #include <cassert>
 #include <map>
@@ -40,7 +41,7 @@ struct CodeSegmentData {
 
     CodeSegmentData() = default;
 
-    CodeSegmentData(std::vector<Operation> ops) {
+    explicit CodeSegmentData(std::vector<Operation> ops) {
         for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
             addOperation(std::move(*it));
         }
@@ -63,7 +64,7 @@ struct CodeSegmentData {
     }
 
     // Return the subset of this code segment starting in the given pc
-    CodeSegmentData getSubset(uint64_t pc) const {
+    [[nodiscard]] CodeSegmentData getSubset(uint64_t pc) const {
         auto ops = static_cast<std::vector<CodePoint>::difference_type>(pc);
         std::vector<Operation> copy_copy;
         auto code_copy = std::vector<Operation>{operations.begin(),
@@ -74,16 +75,16 @@ struct CodeSegmentData {
         return {std::move(code_copy), std::move(hashes_copy)};
     }
 
-    CodePoint loadCodePoint(uint64_t pc) const {
-        uint256_t prev_hash;
+    [[nodiscard]] CodePoint loadCodePoint(uint64_t pc) const {
+        uint256_t previous_hash;
 
         if (pc / 10 > 0) {
-            prev_hash = cached_hashes.at(pc / 10 - 1);
+            previous_hash = cached_hashes.at(pc / 10 - 1);
         }
         for (uint64_t i = (pc / 10) * 10; i < pc; i++) {
-            prev_hash = hash(CodePoint(operations[i], prev_hash));
+            previous_hash = hash(CodePoint(operations[i], previous_hash));
         }
-        return {operations[pc], prev_hash};
+        return {operations[pc], previous_hash};
     }
 
     void reserve(size_t size) {
@@ -97,7 +98,7 @@ class UnsafeCodeSegment {
     uint64_t segment_id;
     CodeSegmentData data;
 
-    UnsafeCodeSegment(uint64_t segment_id_) : segment_id(segment_id_) {
+    explicit UnsafeCodeSegment(uint64_t segment_id_) : segment_id(segment_id_) {
         addOperation(getErrOperation());
     }
 
@@ -107,44 +108,42 @@ class UnsafeCodeSegment {
     UnsafeCodeSegment(uint64_t segment_id_, std::vector<Operation> ops)
         : segment_id(segment_id_), data(std::move(ops)) {}
 
-    uint64_t segmentID() const { return segment_id; }
+    [[nodiscard]] uint64_t segmentID() const { return segment_id; }
 
-    CodePoint loadCodePoint(uint64_t pc) const {
+    [[nodiscard]] CodePoint loadCodePoint(uint64_t pc) const {
         return data.loadCodePoint(pc);
     }
 
-    const Operation& loadOperation(uint64_t pc) const {
+    [[nodiscard]] const Operation& loadOperation(uint64_t pc) const {
         return data.operations[pc];
     }
-    const uint256_t& loadCachedHash(uint64_t i) const {
+    [[nodiscard]] const uint256_t& loadCachedHash(uint64_t i) const {
         return data.cached_hashes[i];
     }
 
-    friend std::ostream& operator<<(std::ostream& os,
-                                    const UnsafeCodeSegment& code);
-
-    CodePointStub initialCodePointStub() const {
+    [[nodiscard]] CodePointStub initialCodePointStub() const {
         return {{segment_id, 0}, getErrCodePointHash()};
     }
 
     void reserve(size_t size) { data.reserve(size); }
 
-    size_t capacity() const { return data.operations.capacity(); }
+    [[nodiscard]] size_t capacity() const { return data.operations.capacity(); }
 
-    size_t size() const { return data.operations.size(); }
+    [[nodiscard]] size_t size() const { return data.operations.size(); }
 
     CodePointStub addOperation(Operation op) {
         data.addOperation(std::move(op));
         return {{segment_id, data.operations.size() - 1}, data.prev_hash};
     }
 
-    CodePointStub lastCodePointStubAdded() const {
+    [[nodiscard]] CodePointStub lastCodePointStubAdded() const {
         return {{segment_id, data.operations.size() - 1}, data.prev_hash};
     }
 
     // Return the subset of this code segment starting in the given pc
-    std::shared_ptr<UnsafeCodeSegment> getSubset(uint64_t new_segment_id,
-                                                 uint64_t pc) const {
+    [[nodiscard]] std::shared_ptr<UnsafeCodeSegment> getSubset(
+        uint64_t new_segment_id,
+        uint64_t pc) const {
         return std::make_shared<UnsafeCodeSegment>(new_segment_id,
                                                    data.getSubset(pc));
     }
@@ -155,8 +154,8 @@ struct CodeSegmentSnapshot {
     std::shared_ptr<const UnsafeCodeSegment> segment;
 
    public:
-    uint64_t op_count;
-    uint64_t cached_hash_count;
+    uint64_t op_count{};
+    uint64_t cached_hash_count{};
 
     CodeSegmentSnapshot() = default;
     CodeSegmentSnapshot(std::shared_ptr<const UnsafeCodeSegment> segment_,
@@ -166,17 +165,17 @@ struct CodeSegmentSnapshot {
           op_count(op_count_),
           cached_hash_count(cached_hash_count_) {}
 
-    uint64_t segmentID() const { return segment->segmentID(); }
+    [[nodiscard]] uint64_t segmentID() const { return segment->segmentID(); }
 
-    CodePoint loadCodePoint(uint64_t pc) const {
+    [[nodiscard]] CodePoint loadCodePoint(uint64_t pc) const {
         return segment->loadCodePoint(pc);
     }
 
-    const Operation& loadOperation(uint64_t pc) const {
+    [[nodiscard]] const Operation& loadOperation(uint64_t pc) const {
         return segment->loadOperation(pc);
     }
 
-    const uint256_t& loadCachedHash(uint64_t i) const {
+    [[nodiscard]] const uint256_t& loadCachedHash(uint64_t i) const {
         return segment->loadCachedHash(i);
     }
 };
@@ -184,11 +183,6 @@ struct CodeSegmentSnapshot {
 struct CodeSnapshot {
     std::unordered_map<uint64_t, CodeSegmentSnapshot> segments;
     uint64_t next_segment_num;
-};
-
-struct CopiedSegment {
-    CodeSegmentData segment;
-    CodePointStub stub;
 };
 
 struct SegmentsAndLock {
@@ -201,13 +195,15 @@ class Code {
    public:
     virtual ~Code() = default;
 
-    virtual SegmentsAndLock getSegmentsForCommit() const = 0;
+    [[nodiscard]] virtual SegmentsAndLock getSegmentsForCommit() const = 0;
 
-    virtual uint64_t initialSegmentForChildCode() const = 0;
+    [[nodiscard]] virtual uint64_t initialSegmentForChildCode() const = 0;
 
-    virtual CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const = 0;
+    [[nodiscard]] virtual CodeSegmentSnapshot loadCodeSegment(
+        uint64_t segment_num) const = 0;
 
-    virtual CodePoint loadCodePoint(const CodePointRef& ref) const = 0;
+    [[nodiscard]] virtual CodePoint loadCodePoint(
+        const CodePointRef& ref) const = 0;
 
     virtual CodePointStub addSegment() = 0;
 
@@ -218,9 +214,9 @@ class Code {
         const CodePointRef& ref,
         Operation op) = 0;
 
-    virtual CodeSnapshot snapshot() const = 0;
+    [[nodiscard]] virtual CodeSnapshot snapshot() const = 0;
 
-    virtual bool containsSegment(uint64_t segment_id) const = 0;
+    [[nodiscard]] virtual bool containsSegment(uint64_t segment_id) const = 0;
 };
 
 template <typename T>
@@ -230,22 +226,26 @@ class CodeBase {
 
    public:
     template <typename... Args>
-    CodeBase(Args&&... args)
+    explicit CodeBase(Args&&... args)
         : impl(std::make_unique<T>(std::forward<Args>(args)...)) {}
 
    protected:
-    CodeSegmentSnapshot loadCodeSegmentImpl(uint64_t segment_num) const {
+    [[nodiscard]] CodeSegmentSnapshot loadCodeSegmentImpl(
+        uint64_t segment_num) const {
         auto& segment = impl->getSegment(segment_num);
         return {segment, segment->size(), segment->data.cached_hashes.size()};
     }
 
-    CodePoint loadCodePointImpl(const CodePointRef& ref) const {
+    [[nodiscard]] CodePoint loadCodePointImpl(const CodePointRef& ref) const {
         auto& segment = impl->getSegment(ref.segment);
         return segment->loadCodePoint(ref.pc);
     }
 
     CodePointStub addSegmentImpl() {
         uint64_t segment_num = impl->nextSegmentNum();
+        if (segment_num >= (uint64_t(1) << 62)) {
+            throw std::runtime_error("Exceeded limit of 2^62 segments");
+        }
         auto new_segment = std::make_shared<UnsafeCodeSegment>(segment_num);
         auto stub = new_segment->initialCodePointStub();
         impl->storeSegment(std::move(new_segment));
@@ -320,7 +320,7 @@ struct CoreCodeImpl {
     }
 
     CoreCodeImpl() : CoreCodeImpl(0) {}
-    CoreCodeImpl(uint64_t next_segment_num_)
+    explicit CoreCodeImpl(uint64_t next_segment_num_)
         : next_segment_num(next_segment_num_) {}
 };
 
@@ -329,27 +329,27 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
 
    public:
     CoreCode() : CodeBase<CoreCodeImpl>(0) {}
-    CoreCode(uint64_t next_segment_num_)
+    explicit CoreCode(uint64_t next_segment_num_)
         : CodeBase<CoreCodeImpl>(next_segment_num_) {}
 
-    SegmentsAndLock getSegmentsForCommit() const {
+    SegmentsAndLock getSegmentsForCommit() const override {
         auto lock = std::unique_lock<std::shared_mutex>(mutex);
         return SegmentsAndLock{&impl->segments, &impl->next_segment_num,
                                std::move(lock)};
     }
 
-    uint64_t initialSegmentForChildCode() const {
+    uint64_t initialSegmentForChildCode() const override {
         const std::shared_lock<std::shared_mutex> lock(mutex);
         return impl->next_segment_num;
     }
 
-    CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
+    CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const override {
         const std::shared_lock<std::shared_mutex> lock(mutex);
         auto& segment = impl->segments.at(segment_num);
         return {segment, segment->size(), segment->data.cached_hashes.size()};
     }
 
-    bool containsSegment(uint64_t segment_id) const {
+    bool containsSegment(uint64_t segment_id) const override {
         const std::shared_lock<std::shared_mutex> lock(mutex);
         return impl->segments.find(segment_id) != impl->segments.end();
     }
@@ -365,7 +365,7 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
         }
     }
 
-    CodeSnapshot snapshot() const {
+    CodeSnapshot snapshot() const override {
         const std::shared_lock<std::shared_mutex> lock(mutex);
         std::unordered_map<uint64_t, CodeSegmentSnapshot> copied_segments;
         for (const auto& key_val : impl->segments) {
@@ -376,12 +376,12 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
         return {std::move(copied_segments), impl->next_segment_num};
     }
 
-    CodePoint loadCodePoint(const CodePointRef& ref) const {
+    CodePoint loadCodePoint(const CodePointRef& ref) const override {
         const std::shared_lock<std::shared_mutex> lock(mutex);
         return loadCodePointImpl(ref);
     }
 
-    CodePointStub addSegment() {
+    CodePointStub addSegment() override {
         const std::unique_lock<std::shared_mutex> lock(mutex);
         return addSegmentImpl();
     }
@@ -393,14 +393,14 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
         impl->next_segment_num++;
     }
 
-    CodePointStub addOperation(const CodePointRef& ref, Operation op) {
+    CodePointStub addOperation(const CodePointRef& ref, Operation op) override {
         const std::unique_lock<std::shared_mutex> lock(mutex);
         return addOperationImpl(ref, std::move(op));
     }
 
     std::variant<CodePointStub, CodeSegmentData> tryAddOperation(
         const CodePointRef& ref,
-        Operation op) {
+        Operation op) override {
         const std::unique_lock<std::shared_mutex> lock(mutex);
         return tryAddOperationImpl(ref, std::move(op));
     }
@@ -415,14 +415,15 @@ struct RunningCodeImpl {
     uint64_t first_segment;
     std::vector<std::shared_ptr<UnsafeCodeSegment>> segment_list;
 
-    RunningCodeImpl(uint64_t first_segment_) : first_segment(first_segment_) {}
+    explicit RunningCodeImpl(uint64_t first_segment_)
+        : first_segment(first_segment_) {}
 
-    const std::shared_ptr<UnsafeCodeSegment>& getSegment(
+    [[nodiscard]] const std::shared_ptr<UnsafeCodeSegment>& getSegment(
         uint64_t segment_num) const {
         return segment_list.at(segment_num - first_segment);
     }
 
-    uint64_t nextSegmentNum() const {
+    [[nodiscard]] uint64_t nextSegmentNum() const {
         return first_segment + segment_list.size();
     }
 
@@ -432,26 +433,31 @@ struct RunningCodeImpl {
 };
 
 class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
-    mutable std::mutex mutex;
+    mutable std::shared_mutex mutex;
 
     std::shared_ptr<Code> parent;
 
    public:
-    RunningCode(std::shared_ptr<Code> parent_)
+    explicit RunningCode(std::shared_ptr<Code> parent_)
         : CodeBase<RunningCodeImpl>(parent_->initialSegmentForChildCode()),
           parent(std::move(parent_)) {}
 
-    SegmentsAndLock getSegmentsForCommit() const {
+    SegmentsAndLock getSegmentsForCommit() const override {
         return parent->getSegmentsForCommit();
     }
 
     void commitCodeToParent(
         const std::map<uint64_t, uint64_t>& segment_counts) const {
-        const std::lock_guard<std::mutex> lock(mutex);
+        const std::shared_lock<std::shared_mutex> lock(mutex);
         auto parent_segments = parent->getSegmentsForCommit();
         auto it = segment_counts.lower_bound(impl->first_segment);
         auto end = segment_counts.end();
         for (; it != end; ++it) {
+            // Skip segments not included here
+            if (it->first < impl->first_segment ||
+                it->first >= impl->first_segment + impl->segment_list.size()) {
+                continue;
+            }
             auto inserted = parent_segments.segments->insert(
                 std::make_pair(it->first, impl->getSegment(it->first)));
             // Verify that the element didn't exist previously
@@ -461,19 +467,21 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
                     "code segment id collision when filling in code");
             }
         }
-        *parent_segments.next_segment_num = impl->nextSegmentNum();
+        if (impl->nextSegmentNum() > *parent_segments.next_segment_num) {
+            *parent_segments.next_segment_num = impl->nextSegmentNum();
+        }
     }
 
-    std::shared_ptr<Code> getParent() const { return parent; }
+    const std::shared_ptr<Code>& getParent() const { return parent; }
 
-    uint64_t initialSegmentForChildCode() const {
-        const std::lock_guard<std::mutex> lock(mutex);
+    uint64_t initialSegmentForChildCode() const override {
+        const std::shared_lock<std::shared_mutex> lock(mutex);
         return impl->first_segment + impl->segment_list.size();
     }
 
-    CodeSnapshot snapshot() const {
+    CodeSnapshot snapshot() const override {
         auto snap = parent->snapshot();
-        const std::lock_guard<std::mutex> lock(mutex);
+        const std::shared_lock<std::shared_mutex> lock(mutex);
         for (const auto& segment : impl->segment_list) {
             snap.segments[segment->segmentID()] = {
                 segment, segment->size(), segment->data.cached_hashes.size()};
@@ -482,33 +490,33 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
         return snap;
     }
 
-    CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
+    CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const override {
         if (segment_num < impl->first_segment) {
             return parent->loadCodeSegment(segment_num);
         }
-        const std::lock_guard<std::mutex> lock(mutex);
+        const std::shared_lock<std::shared_mutex> lock(mutex);
         return loadCodeSegmentImpl(segment_num);
     }
 
-    CodePoint loadCodePoint(const CodePointRef& ref) const {
+    CodePoint loadCodePoint(const CodePointRef& ref) const override {
         if (ref.segment < impl->first_segment) {
             return parent->loadCodePoint(ref);
         }
-        const std::lock_guard<std::mutex> lock(mutex);
+        const std::shared_lock<std::shared_mutex> lock(mutex);
         return loadCodePointImpl(ref);
     }
 
-    CodePointStub addSegment() {
-        const std::lock_guard<std::mutex> lock(mutex);
+    CodePointStub addSegment() override {
+        const std::unique_lock<std::shared_mutex> lock(mutex);
         return addSegmentImpl();
     }
 
-    CodePointStub addOperation(const CodePointRef& ref, Operation op) {
-        std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+    CodePointStub addOperation(const CodePointRef& ref, Operation op) override {
+        std::unique_lock<std::shared_mutex> lock(mutex, std::defer_lock);
         if (ref.segment < impl->first_segment) {
             auto add_var = parent->tryAddOperation(ref, std::move(op));
-            if (std::holds_alternative<CodePointStub>(add_var)) {
-                return std::get<CodePointStub>(add_var);
+            if (holds_alternative<CodePointStub>(add_var)) {
+                return get<CodePointStub>(add_var);
             } else {
                 lock.lock();
                 auto& added = std::get<CodeSegmentData>(add_var);
@@ -525,19 +533,19 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
 
     std::variant<CodePointStub, CodeSegmentData> tryAddOperation(
         const CodePointRef& ref,
-        Operation op) {
+        Operation op) override {
         if (ref.segment < impl->first_segment) {
             return parent->tryAddOperation(ref, std::move(op));
         }
-        const std::lock_guard<std::mutex> lock(mutex);
+        const std::unique_lock<std::shared_mutex> lock(mutex);
         return tryAddOperationImpl(ref, std::move(op));
     }
 
-    bool containsSegment(uint64_t segment_id) const {
+    bool containsSegment(uint64_t segment_id) const override {
         if (segment_id < impl->first_segment) {
             return parent->containsSegment(segment_id);
         }
-        const std::lock_guard<std::mutex> lock(mutex);
+        const std::shared_lock<std::shared_mutex> lock(mutex);
         return segment_id < impl->nextSegmentNum();
     }
 };

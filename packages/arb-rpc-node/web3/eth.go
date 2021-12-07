@@ -39,29 +39,45 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "web3").Logger()
 var gasPriceFactor = big.NewInt(2)
 var gasEstimationCushion = 10
+
+const maxGas = 1<<31 - 1
+
+type ServerConfig struct {
+	Mode          RpcMode
+	MaxCallAVMGas uint64
+	DevopsStubs   bool
+}
 
 type Server struct {
 	srv                   *aggregator.Server
 	ganacheMode           bool
-	maxCallGas            uint64
 	maxAVMGas             uint64
 	aggregator            *arbcommon.Address
 	sequencerInboxWatcher *ethbridge.SequencerInboxWatcher
 }
 
+const DefaultMaxAVMGas = 500000000
+
+var DefaultConfig = ServerConfig{
+	Mode:          NormalMode,
+	MaxCallAVMGas: DefaultMaxAVMGas,
+}
+
 func NewServer(
 	srv *aggregator.Server,
-	ganacheMode bool,
+	config ServerConfig,
 	sequencerInboxWatcher *ethbridge.SequencerInboxWatcher,
 ) *Server {
+	maxGas := config.MaxCallAVMGas
+	if maxGas == 0 {
+		maxGas = math.MaxUint64
+	}
 	return &Server{
 		srv:                   srv,
-		ganacheMode:           ganacheMode,
-		maxCallGas:            1<<31 - 1,
-		maxAVMGas:             500000000,
+		ganacheMode:           config.Mode == GanacheMode,
+		maxAVMGas:             maxGas,
 		aggregator:            srv.Aggregator(),
 		sequencerInboxWatcher: sequencerInboxWatcher,
 	}
@@ -188,7 +204,7 @@ func (s *Server) GetCode(address *common.Address, blockNum rpc.BlockNumberOrHash
 	return code, nil
 }
 
-func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overrides *map[common.Address]EthCallOverride) (hexutil.Bytes, error) {
+func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overrides *map[common.Address]snapshot.EthCallOverride) (hexutil.Bytes, error) {
 	if callArgs.To != nil && *callArgs.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		var data []byte
 		if callArgs.Data != nil {
@@ -205,52 +221,12 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash, overr
 		callArgs.GasPrice = (*hexutil.Big)(big.NewInt(1 << 60))
 	}
 
-	if overrides != nil {
-		for address, override := range *overrides {
-			account := arbcommon.NewAddressFromEth(address)
-			if override.Nonce != nil {
-				err := snap.SetNonce(account, uint64(*override.Nonce))
-				if err != nil {
-					return nil, err
-				}
-			}
-			if override.Balance != nil {
-				err := snap.SetBalance(account, override.Balance.ToInt())
-				if err != nil {
-					return nil, err
-				}
-			}
-			if override.Code != nil {
-				err := snap.SetCode(account, *override.Code)
-				if err != nil {
-					return nil, err
-				}
-			}
-			if override.State != nil {
-				storage := make(map[arbcommon.Hash]arbcommon.Hash)
-				for key, val := range *override.State {
-					storage[arbcommon.NewHashFromEth(key)] = arbcommon.NewHashFromEth(val)
-				}
-				err := snap.SetState(account, storage)
-				if err != nil {
-					return nil, err
-				}
-			}
-			if override.StateDiff != nil {
-				for key, val := range *override.StateDiff {
-					err := snap.Store(account, arbcommon.NewHashFromEth(key), arbcommon.NewHashFromEth(val))
-					if err != nil {
-						return nil, err
-					}
-				}
-			}
-		}
+	from, msg := buildCallMsg(callArgs)
+
+	res, _, err := snap.CallWithOverrides(msg, from, overrides, s.maxAVMGas)
+	if err != nil {
+		return nil, err
 	}
-
-	from, msg := buildCallMsg(callArgs, s.maxCallGas)
-
-	res, _, err := snap.Call(msg, from)
-
 	if res.ResultCode != evm.ReturnCode {
 		return nil, evm.HandleCallError(res, s.ganacheMode)
 	}
@@ -463,6 +439,7 @@ func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes
 		To:                tx.Tx.To(),
 		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
 		GasUsed:           hexutil.Uint64(res.CalcGasUsed().Uint64()),
+		EffectiveGasPrice: hexutil.Uint64(res.FeeStats.Price.L2Computation.Uint64()),
 		ContractAddress:   contractAddress,
 		Logs:              receipt.Logs,
 		LogsBloom:         receipt.Bloom.Bytes(),
@@ -620,17 +597,6 @@ func buildTransactionForEstimation(args CallTxArgs) (arbcommon.Address, *types.T
 	return buildTransactionImpl(args, gas)
 }
 
-func buildTransactionForCall(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types.Transaction) {
-	gas := uint64(0)
-	if args.Gas != nil {
-		gas = uint64(*args.Gas)
-	}
-	if gas == 0 || gas > maxGas {
-		gas = maxGas
-	}
-	return buildTransactionImpl(args, gas)
-}
-
 func buildTransactionImpl(args CallTxArgs, gas uint64) (arbcommon.Address, *types.Transaction) {
 	var from arbcommon.Address
 	if args.From != nil {
@@ -659,8 +625,15 @@ func buildTransactionImpl(args CallTxArgs, gas uint64) (arbcommon.Address, *type
 	})
 }
 
-func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.ContractTransaction) {
-	from, tx := buildTransactionForCall(args, maxGas)
+func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransaction) {
+	gas := uint64(0)
+	if args.Gas != nil {
+		gas = uint64(*args.Gas)
+	}
+	if gas == 0 || gas > maxGas {
+		gas = maxGas
+	}
+	from, tx := buildTransactionImpl(args, gas)
 	var dest arbcommon.Address
 	if tx.To() != nil {
 		dest = arbcommon.NewAddressFromEth(*tx.To())

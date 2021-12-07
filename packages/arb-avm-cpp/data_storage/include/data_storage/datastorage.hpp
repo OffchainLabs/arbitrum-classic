@@ -57,6 +57,7 @@ class DataStorage {
     std::vector<uint8_t> secret_hash_seed;
 
     explicit DataStorage(const std::string& db_path);
+    ~DataStorage();
 
     rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
