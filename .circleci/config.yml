@@ -207,7 +207,7 @@ jobs:
             echo $CIRCLE_PR_HEAD_SHA
             OUTFILE=$GC_RESULTS/eth-bridge.csv
             echo $OUTFILE
-            ./packages/tools/scripts/compare-gas-commits.sh $CIRCLE_PR_BASE_SHA $CIRCLE_PR_HEAD_SHA $GC_RESULTS
+            ./packages/tools/scripts/compare-gas-commits.sh $CIRCLE_PR_BASE_SHA $CIRCLE_PR_HEAD_SHA $OUTFILE
             ls -al /tmp/gas-compare-results
       - store_test_results:
           path: *gas-compare-results
