@@ -174,14 +174,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: apt jq
-          command: |
-            apt install jq
-      - run:
-          name: jq version
-          command: |
-            jq --version
-      - run:
           name: 'Pull Submodules'
           command: |
             git submodule update --init --recommend-shallow packages/arb-os
@@ -196,8 +188,9 @@ jobs:
       - run:
           name: get commit hashes
           command: |
-            CIRCLE_PR_HEAD_SHA = `curl -s https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${CIRCLE_PR_NUMBER} | jq -r '.head.sha'`
-            CIRCLE_PR_BASE_SHA = `curl -s https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${CIRCLE_PR_NUMBER} | jq -r '.base.sha'`
+            CIRCLE_PR = `curl -s https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${CIRCLE_PR_NUMBER}`
+            CIRCLE_PR_HEAD_SHA = `echo $CIRCLE_PR | grep -Eo '"sha"[^,]*' | grep -Eo '[^:]*$' | head -1`
+            CIRCLE_PR_BASE_SHA = `echo $CIRCLE_PR | grep -Eo '"sha"[^,]*' | grep -Eo '[^:]*$' | head -1`
             echo $CIRCLE_PR_HEAD_SHA
             echo $CIRCLE_PR_BASE_SHA
       - run:
