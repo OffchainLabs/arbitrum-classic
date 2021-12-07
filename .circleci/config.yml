@@ -28,8 +28,8 @@ aliases:
     paths:
       - ~/go/pkg/mod
   - &test-path /tmp/test-results
-  - &gas-compare-results /tmp/gas-compare-results
   - &ethbridge-test-path /tmp/test-results/ethbridge.xml
+  - &gas-compare-results /tmp/gas-compare-results
 version: 2
 workflows:
   version: 2
@@ -209,8 +209,8 @@ jobs:
             echo $OUTFILE
             ./packages/tools/scripts/compare-gas-commits.sh $CIRCLE_PR_BASE_SHA $CIRCLE_PR_HEAD_SHA $OUTFILE
             ls -al /tmp/gas-compare-results
-      - store_test_results:
-          path: *gas-compare-results
+      - store_artifacts:
+          path: $GC_RESULTS/eth-bridge.csv
 
   cpp-avm-build:
     docker:
