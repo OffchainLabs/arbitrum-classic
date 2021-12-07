@@ -37,6 +37,9 @@
     "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
     "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
+  "bin": {
+    "arb-ts:gen": "./dist/gen/genAbi.js"
+  },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
@@ -49,9 +52,7 @@
     "arb-bridge-peripherals": "1.0.1",
     "arbos-precompiles": "1.0.1",
     "dotenv": "^10.0.0",
-    "ethers": "^5.1.0",
-    "prompts": "^2.4.2",
-    "ts-node": "^10.2.1"
+    "ethers": "^5.1.0"
   },
   "resolutions": {
     "@ethersproject/bignumber": "^5.1.1"
@@ -72,6 +73,7 @@
     "typedoc": "^0.21.5",
     "typedoc-plugin-markdown": "^3.10.4",
     "typescript": "^4.2.2",
+    "ts-node": "^10.2.1",
     "yargs": "^17.1.1"
   },
   "files": [
