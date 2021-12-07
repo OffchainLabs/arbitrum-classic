@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "2.0.0-beta.2",
+  "version": "2.0.0-beta.3",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -27,7 +27,7 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
-    "gen:abi": "ts-node scripts/genAbi.ts",
+    "gen:abi": "node ./dist/gen/genAbi.js",
     "test:integration": "mocha integration_test/ --timeout 30000000 --bail",
     "generate_docs": "typedoc --plugin none",
     "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
@@ -36,9 +36,6 @@
     "setCustom": "ts-node scripts/setArbCustomGateways.ts",
     "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
     "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
-  },
-  "bin": {
-    "arb-ts:gen": "./dist/gen/genAbi.js"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
