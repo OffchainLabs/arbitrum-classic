@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -84,7 +85,7 @@ func NewStaker(
 		return nil, nil, err
 	}
 	withdrawDestination := wallet.From()
-	if len(config.WithdrawDestination) > 0 {
+	if ethcommon.IsHexAddress(config.WithdrawDestination) {
 		withdrawDestination = common.HexToAddress(config.WithdrawDestination)
 	}
 	return &Staker{
@@ -234,12 +235,11 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 			if effectiveStrategy == DefensiveStrategy {
 				effectiveStrategy = StakeLatestStrategy
 			}
-			s.inactiveLastCheckedNode = nil
 		} else {
 			logger.Info().Msg("defensive validator staked past incorrect node; waiting here")
 			s.bringActiveUntilNode = nil
-			s.inactiveLastCheckedNode = nil
 		}
+		s.inactiveLastCheckedNode = nil
 	}
 	if effectiveStrategy <= DefensiveStrategy && s.inactiveLastCheckedNode != nil {
 		info.LatestStakedNode = s.inactiveLastCheckedNode.id
