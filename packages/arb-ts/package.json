@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0-beta.2",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -75,6 +75,8 @@
     "yargs": "^17.1.1"
   },
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "scripts/genAbi.ts",
+    "scripts/util.ts"
   ]
 }
