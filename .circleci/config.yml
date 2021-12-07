@@ -192,8 +192,13 @@ jobs:
           name: 'Pull Submodules'
           command: |
             git submodule update --init --recommend-shallow packages/arb-os
-
       - run: mkdir -p $GC_RESULTS
+      - run:
+          name: testy
+          command: |
+            touch $GC_RESULTS/face.txt
+      - store_artifacts:
+          path: $GC_RESULTS/eth-bridge.csv
       - restore_cache: *restore_yarn_cache
       - run:
           name: install
