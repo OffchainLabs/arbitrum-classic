@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "2.0.0-beta.3",
+  "version": "2.0.0-beta.4",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -27,7 +27,7 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
-    "gen:abi": "node ./dist/gen/genAbi.js",
+    "gen:abi": "ts-node ./scripts/genAbi.ts",
     "test:integration": "mocha integration_test/ --timeout 30000000 --bail",
     "generate_docs": "typedoc --plugin none",
     "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
@@ -49,6 +49,7 @@
     "arb-bridge-peripherals": "1.0.1",
     "arbos-precompiles": "1.0.1",
     "dotenv": "^10.0.0",
+    "ts-node": "^10.2.1",
     "ethers": "^5.1.0"
   },
   "resolutions": {
@@ -70,7 +71,6 @@
     "typedoc": "^0.21.5",
     "typedoc-plugin-markdown": "^3.10.4",
     "typescript": "^4.2.2",
-    "ts-node": "^10.2.1",
     "yargs": "^17.1.1"
   },
   "files": [
