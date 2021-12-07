@@ -165,7 +165,6 @@ async function createRollup(
   )
 
   const rollupCon = Rollup.attach(parsedEv.args.rollupAddress)
-
   return {
     rollupCon: rollupCon,
     blockCreated: receipt.blockNumber!,
