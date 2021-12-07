@@ -189,19 +189,13 @@ jobs:
             echo $CIRCLE_PR_BASE_SHA
             echo 'export CIRCLE_PR_BASE_SHA='$CIRCLE_PR_BASE_SHA >> $BASH_ENV
             echo 'export CIRCLE_PR_HEAD_SHA='$CIRCLE_PR_HEAD_SHA >> $BASH_ENV
-      - run: mkdir -p $GC_RESULTS
-      - run:
-          name: testy
-          command: |
-            touch $GC_RESULTS_PATH
-      - store_artifacts:
-          path: *gas-compare-results-path
       - checkout
       - run:
           name: 'Pull Submodules'
           command: |
             git submodule update --init --recommend-shallow packages/arb-os
       - restore_cache: *restore_yarn_cache
+      - run: mkdir -p $GC_RESULTS
       - run:
           name: install
           command: |
