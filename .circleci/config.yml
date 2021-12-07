@@ -174,9 +174,9 @@ jobs:
     steps:
       - checkout
       - run:
-          name: install jq
+          name: jq version
           command: |
-            sudo apt install jq
+            jq --version
       - run:
           name: 'Pull Submodules'
           command: |
