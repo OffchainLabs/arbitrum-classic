@@ -27,7 +27,7 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
-    "gen:abi": "ts-node ./scripts/genAbi.ts",
+    "gen:abi": "node ./scripts/genAbi.js",
     "test:integration": "mocha integration_test/ --timeout 30000000 --bail",
     "generate_docs": "typedoc --plugin none",
     "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
@@ -75,7 +75,6 @@
   },
   "files": [
     "dist/**/*",
-    "scripts/genAbi.ts",
-    "scripts/util.ts"
+    "scripts/genAbi.js"
   ]
 }

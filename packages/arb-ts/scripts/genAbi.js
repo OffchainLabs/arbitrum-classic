@@ -1,6 +1,10 @@
-import { runTypeChain, glob } from 'typechain'
-import { getPackagePath } from './util'
-import { execSync } from 'child_process'
+const { runTypeChain, glob } = require('typechain')
+const { execSync } = require('child_process')
+
+const getPackagePath = packageName => {
+  const path = require.resolve(`${packageName}/package.json`)
+  return path.substr(0, path.indexOf('package.json'))
+}
 
 async function main() {
   const cwd = process.cwd()
