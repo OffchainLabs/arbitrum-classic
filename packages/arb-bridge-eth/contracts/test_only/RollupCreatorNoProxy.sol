@@ -47,10 +47,7 @@ contract RollupTester is Rollup {
 contract RollupCreatorNoProxy {
     event RollupCreated(address rollupAddress, Inbox inbox);
 
-    constructor(
-        address _challengeFactory,
-        RollupLib.Config memory config
-    ) public {
+    constructor(address _challengeFactory, RollupLib.Config memory config) public {
         createRollupNoProxy(config, _challengeFactory);
         selfdestruct(msg.sender);
     }

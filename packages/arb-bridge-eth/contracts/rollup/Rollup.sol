@@ -19,7 +19,6 @@
 pragma solidity ^0.6.11;
 pragma experimental ABIEncoderV2;
 
-
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
@@ -122,13 +121,14 @@ contract Rollup is Proxy, RollupCore {
                 1 // Initialization message already in inbox
             )
         );
-        return NodeLib.initialize(
-            state,
-            0, // challenge hash (not challengeable)
-            0, // confirm data
-            0, // prev node
-            block.number // deadline block (not challengeable)
-        );
+        return
+            NodeLib.initialize(
+                state,
+                0, // challenge hash (not challengeable)
+                0, // confirm data
+                0, // prev node
+                block.number // deadline block (not challengeable)
+            );
     }
 
     /**

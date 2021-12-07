@@ -142,7 +142,7 @@ contract ValidatorUtils {
         // Check that prev is latest confirmed
         require(node.prevNum == rollup.latestConfirmed(), "INVALID_PREV");
         require(
-            node.stakerCount == 
+            node.stakerCount ==
                 stakerCount + IRollupUser(address(rollup)).countStakedZombies(firstUnresolved),
             "NOT_ALL_STAKED"
         );

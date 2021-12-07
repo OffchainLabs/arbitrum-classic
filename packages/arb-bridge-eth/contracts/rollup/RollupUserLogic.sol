@@ -6,7 +6,6 @@ pragma experimental ABIEncoderV2;
 import "./Rollup.sol";
 import "./IRollupLogic.sol";
 
-
 abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
 
