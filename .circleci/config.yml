@@ -184,6 +184,14 @@ jobs:
             echo $CIRCLE_PR_HEAD_SHA
             echo CIRCLE_PR_BASE_SHA
             echo $CIRCLE_PR_BASE_SHA
+            echo 'export CIRCLE_PR_BASE_SHA=$CIRCLE_PR_BASE_SHA' >> $BASH_ENV
+            echo 'export CIRCLE_PR_HEAD_SHA=$CIRCLE_PR_HEAD_SHA' >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: test vars
+          command: |
+            echo $CIRCLE_PR_HEAD_SHA
+            echo $CIRCLE_PR_BASE_SHA
       - checkout
       - run:
           name: 'Pull Submodules'
