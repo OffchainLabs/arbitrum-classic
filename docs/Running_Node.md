@@ -6,7 +6,7 @@ sidebar_label: Running a Node
 
 ### Required Artifacts
 
-- Latest Docker Image: offchainlabs/arb-validator:v1.0.0-2b628f8
+- Latest Docker Image: offchainlabs/arb-node:v1.1.2-cffb3a0
 
 ### Required parameter
 
@@ -24,11 +24,11 @@ sidebar_label: Running a Node
 - When running docker image, an external volume should be mounted to persist the database across restarts. The mount point should be `/home/user/.arbitrum/mainnet` or `/home/user/.arbitrum/rinkeby` depending on what chain you are connecting to.
 - Here is an example of how to run arb-node for mainnet:
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545
+  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.1.2-cffb3a0 --l1.url https://l1-node:8545
   ```
 - Here is an example of how to run arb-node for rinkeby:
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-rinkeby-node:8545
+  docker run --rm -it  -v /some/local/dir/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.1.2-cffb3a0 --l1.url https://l1-rinkeby-node:8545
   ```
 
 ### Note on permissions
@@ -51,8 +51,13 @@ sidebar_label: Running a Node
   - Will default to `https://arb1.arbitrum.io/rpc` or `https://rinkeby.arbitrum.io/rpc` depending on chain ID reported by ethereum node provided.
 - `--core.cache.timed-expire`
   - Defaults to `20m`, or 20 minutes. Age of oldest blocks to hold in cache so that disk lookups are not required
+- `--node.rpc.max-call-gas`
+  - Maximum amount of gas that a node will use in call, default is `5000000`
+- `--node.rpc.enable-l1-calls`
+  - This option enables the ability to request L1 inclusion information about a transaction by including the argument `returnL1InboxBatchInfo` in a `eth_getTransactionReceipt` request
+    - Example: `curl http://arbnode -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_getTransactionReceipt","params": ["txhash", {"returnL1InboxBatchInfo": true}],"id":1}'`
 - `--node.cache.allow-slow-lookup`
-  - When enabled, will load old blocks from disk if not in memory cache
+  - When this option is present, will load old blocks from disk if not in memory cache
 - `--core.checkpoint-gas-frequency`
   - Defaults to `1000000000`. Amount of gas between saving checkpoints to disk. When making archive queries node has to load closest previous checkpoint and then execute up to the requested block. The farther apart the checkpoints, the longer potential execution required. However, saving checkpoints more often slows down the node in general.
 - If archive support is desired, recommend using `--node.cache.allow-slow-lookup --core.checkpoint-gas-frequency=156250000`
@@ -63,9 +68,9 @@ sidebar_label: Running a Node
   The arb-relay is in the same docker image.
 - Here is an example of how to run arb-relay for mainnet:
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:9642:9642 --entrypoint /home/user/go/bin/arb-relay offchainlabs/arb-node:v1.0.0-2b628f8 --feed.input.url wss://arb1.arbitrum.io/feed
+  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:9642:9642 --entrypoint /home/user/go/bin/arb-relay offchainlabs/arb-node:v1.1.2-cffb3a0 --feed.input.url wss://arb1.arbitrum.io/feed
   ```
 - Here is an example of how to run arb-node for mainnet with custom relay:
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.0.0-2b628f8 --l1.url https://l1-node:8545 --feed.input.url ws://local-relay-address:9642
+  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.1.2-cffb3a0 --l1.url https://l1-node:8545 --feed.input.url ws://local-relay-address:9642
   ```
