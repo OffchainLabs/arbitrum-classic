@@ -1,16 +1,13 @@
 import { task } from 'hardhat/config'
 import '@nomiclabs/hardhat-ethers'
 
-try {
-  require('@typechain/hardhat')
-  require('hardhat-deploy')
-  require('dotenv/config')
-  require('@nomiclabs/hardhat-waffle')
-  require('solidity-coverage')
-  require('hardhat-spdx-license-identifier')
-  require('hardhat-gas-reporter')
-  require('@nomiclabs/hardhat-etherscan')
-} catch (e) {}
+import '@typechain/hardhat'
+import '@nomiclabs/hardhat-waffle'
+import 'dotenv/config'
+import 'solidity-coverage'
+import 'hardhat-gas-reporter'
+import '@nomiclabs/hardhat-etherscan'
+import 'hardhat-deploy'
 
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   const accounts = await bre.ethers.getSigners()

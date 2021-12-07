@@ -1,6 +1,6 @@
 {
   "name": "arb-bridge-peripherals",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "Apache-2.0",
   "scripts": {
     "postinstall": "$npm_execpath run clean:build",
@@ -24,20 +24,26 @@
     "arbos-precompiles": "^1.0.1",
     "@openzeppelin/contracts": "3.4.2",
     "@openzeppelin/contracts-upgradeable": "3.4.2",
-    "arb-bridge-eth": "0.7.3"
+    "arb-bridge-eth": "0.7.3",
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@typechain/hardhat": "^2.3.0",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "ethereum-waffle": "^3.2.0",
+    "dotenv": "^10.0.0",
+    "solidity-coverage": "v0.7.17",
+    "hardhat-gas-reporter": "^1.0.4",
+    "@nomiclabs/hardhat-etherscan": "^2.1.0",
+    "hardhat-deploy": "^0.9.1",
+    "typechain": "^5.1.2",
+    "hardhat": "^2.6.1",
+    "ethers": "^5.4.5"
   },
   "devDependencies": {
     "arb-upgrades": "0.0.1",
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@nomiclabs/hardhat-waffle": "^2.0.0",
     "@types/chai": "^4.2.15",
     "@types/mocha": "^9.0.0",
     "@types/node": "^14.14.28",
     "chai": "^4.2.0",
-    "ethereum-waffle": "^3.0.0",
-    "ethers": "^5.4.5",
-    "hardhat": "^2.6.1",
-    "typechain": "^5.1.2",
     "typescript": "^4.2.2",
     "ynpx": "^2.1.1"
   },
