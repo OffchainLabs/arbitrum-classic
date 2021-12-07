@@ -192,7 +192,7 @@ jobs:
       - run:
           name: test vars
           command: |
-            cat $BASH_ENV
+            source $BASH_ENV
             echo $CIRCLE_PR_HEAD_SHA
             echo $CIRCLE_PR_BASE_SHA
       - checkout
