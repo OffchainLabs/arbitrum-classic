@@ -23,7 +23,6 @@ import "./IRollupLogic.sol";
 
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IMessageProvider.sol";
-import "./INode.sol";
 import "../libraries/Cloneable.sol";
 
 contract RollupEventBridge is IMessageProvider, Cloneable {

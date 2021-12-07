@@ -18,7 +18,9 @@
 
 pragma solidity ^0.6.11;
 
-import "./INode.sol";
+import "./Node.sol";
+
+pragma experimental ABIEncoderV2;
 
 interface IRollupCore {
     function _stakerMap(address stakerAddress)
@@ -71,7 +73,15 @@ interface IRollupCore {
         uint256 finalBalance
     );
 
-    function getNode(uint256 nodeNum) external view returns (INode);
+    /**
+     * @notice Get the Node for the given index.
+     */
+    function getNode(uint256 nodeNum) external view returns (Node memory);
+
+    /**
+     * @notice Check if the specified node has been staked on by the provided staker
+     */
+    function nodeHasStaker(uint256 nodeNum, address staker) external view returns (bool);
 
     /**
      * @notice Get the address of the staker at the given index

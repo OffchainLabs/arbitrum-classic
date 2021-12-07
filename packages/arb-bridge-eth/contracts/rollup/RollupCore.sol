@@ -17,17 +17,18 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "./INodeFactory.sol";
+import "./Node.sol";
+import "./IRollupCore.sol";
 import "./RollupLib.sol";
 import "./RollupEventBridge.sol";
 import "./IRollupLogic.sol";
 import "./IRollupCore.sol";
-import "./INode.sol";
 
 import "../libraries/Cloneable.sol";
 
@@ -40,6 +41,7 @@ import "../bridge/interfaces/IOutbox.sol";
 
 abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     using SafeMath for uint256;
+    using NodeLib for Node;
 
     // Rollup Config
     uint256 public confirmPeriodBlocks;
@@ -53,7 +55,6 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     IOutbox public outbox;
     RollupEventBridge public rollupEventBridge;
     IChallengeFactory public challengeFactory;
-    INodeFactory public nodeFactory;
     address public owner;
     address public stakeToken;
     uint256 public minimumAssertionPeriod;
@@ -83,8 +84,9 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     uint256 private _firstUnresolvedNode;
     uint256 private _latestNodeCreated;
     uint256 private _lastStakeBlock;
-    mapping(uint256 => INode) private _nodes;
+    mapping(uint256 => Node) private _nodes;
     mapping(uint256 => bytes32) private _nodeHashes;
+    mapping(uint256 => mapping(address => bool)) private _nodeStakers;
 
     address payable[] private _stakerList;
     mapping(address => Staker) public override _stakerMap;
@@ -94,12 +96,26 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     mapping(address => uint256) private _withdrawableFunds;
 
     /**
-     * @notice Get the address of the Node contract for the given node
+     * @notice Get a storage reference to the Node for the given node index
      * @param nodeNum Index of the node
-     * @return Address of the Node contract
+     * @return Node struct
      */
-    function getNode(uint256 nodeNum) public view override returns (INode) {
+    function getNodeStorage(uint256 nodeNum) internal view returns (Node storage) {
         return _nodes[nodeNum];
+    }
+
+    /**
+     * @notice Get the Node for the given index.
+     */
+    function getNode(uint256 nodeNum) public view override returns (Node memory) {
+        return getNodeStorage(nodeNum);
+    }
+
+    /**
+     * @notice Check if the specified node has been staked on by the provided staker
+     */
+    function nodeHasStaker(uint256 nodeNum, address staker) public view override returns (bool) {
+        return _nodeStakers[nodeNum][staker];
     }
 
     /**
@@ -220,7 +236,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      * @notice Initialize the core with an initial node
      * @param initialNode Initial node to start the chain with
      */
-    function initializeCore(INode initialNode) internal {
+    function initializeCore(Node memory initialNode) internal {
         _nodes[0] = initialNode;
         _firstUnresolvedNode = 1;
     }
@@ -230,7 +246,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      * @param node Node that was newly created
      * @param nodeHash The hash of said node
      */
-    function nodeCreated(INode node, bytes32 nodeHash) internal {
+    function nodeCreated(Node memory node, bytes32 nodeHash) internal {
         _latestNodeCreated++;
         _nodes[_latestNodeCreated] = node;
         _nodeHashes[_latestNodeCreated] = nodeHash;
@@ -258,10 +274,10 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     ) internal {
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
 
-        INode node = getNode(nodeNum);
+        Node storage node = getNodeStorage(nodeNum);
         // Authenticate data against node's confirm data pre-image
         require(
-            node.confirmData() ==
+            node.confirmData ==
                 RollupLib.confirmHash(
                     beforeSendAcc,
                     afterSendAcc,
@@ -404,6 +420,34 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     }
 
     /**
+     * @notice Mark the given staker as staked on this node
+     * @param staker Address of the staker to mark
+     * @return The number of stakers after adding this one
+     */
+    function addStaker(uint256 nodeNum, address staker) internal returns (uint256) {
+        require(!_nodeStakers[nodeNum][staker], "ALREADY_STAKED");
+        _nodeStakers[nodeNum][staker] = true;
+        Node storage node = getNodeStorage(nodeNum);
+        require(node.deadlineBlock != 0, "NO_NODE");
+
+        uint256 prevCount = node.stakerCount;
+        node.stakerCount = prevCount + 1;
+        return prevCount + 1;
+    }
+
+    /**
+     * @notice Remove the given staker from this node
+     * @param staker Address of the staker to remove
+     */
+    function removeStaker(uint256 nodeNum, address staker) internal {
+        require(_nodeStakers[nodeNum][staker], "NOT_STAKED");
+        _nodeStakers[nodeNum][staker] = false;
+
+        Node storage node = getNodeStorage(nodeNum);
+        node.stakerCount--;
+    }
+
+    /**
      * @notice Remove the given staker and return their stake
      * @param stakerAddress Address of the staker withdrawing their stake
      */
@@ -422,11 +466,10 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      */
     function stakeOnNode(address stakerAddress, uint256 nodeNum) internal {
         Staker storage staker = _stakerMap[stakerAddress];
-        INode node = _nodes[nodeNum];
-        uint256 newStakerCount = node.addStaker(stakerAddress);
+        uint256 newStakerCount = addStaker(nodeNum, stakerAddress);
         staker.latestStakedNode = nodeNum;
         if (newStakerCount == 1) {
-            INode parent = _nodes[node.prev()];
+            Node storage parent = getNodeStorage(nodeNum);
             parent.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
         }
     }
@@ -468,15 +511,15 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     }
 
     /**
-     * @notice Destroy the given node and clear out its address
+     * @notice Destroy the given node and clear out the data
      * @param nodeNum Index of the node to remove
      */
     function destroyNode(uint256 nodeNum) internal {
-        _nodes[nodeNum].destroy();
-        _nodes[nodeNum] = INode(0);
+        delete _nodes[nodeNum];
+        delete _nodeHashes[nodeNum];
     }
 
-    function nodeDeadline(uint256 gasUsed, INode prevNode)
+    function nodeDeadline(uint256 gasUsed, Node memory prevNode)
         internal
         view
         returns (uint256 deadlineBlock)
@@ -486,13 +529,13 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
             avmGasSpeedLimitPerBlock
         );
 
-        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock()).add(
+        deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock).add(
             checkTime
         );
 
-        uint256 olderSibling = prevNode.latestChildNumber();
+        uint256 olderSibling = prevNode.latestChildNumber;
         if (olderSibling != 0) {
-            deadlineBlock = max(deadlineBlock, getNode(olderSibling).deadlineBlock());
+            deadlineBlock = max(deadlineBlock, getNodeStorage(olderSibling).deadlineBlock);
         }
         return deadlineBlock;
     }
@@ -503,9 +546,9 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
     struct StakeOnNewNodeFrame {
         uint256 currentInboxSize;
-        INode node;
+        Node node;
         bytes32 executionHash;
-        INode prevNode;
+        Node prevNode;
         bytes32 lastHash;
         bool hasSibling;
         uint256 deadlineBlock;
@@ -521,20 +564,20 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[4][2] calldata assertionIntFields,
         bytes calldata sequencerBatchProof,
-        uint256 prevNode,
+        uint256 prevNodeNum,
         bytes32 expectedNodeHash
     ) internal returns (bytes32 newNodeHash) {
         StakeOnNewNodeFrame memory memoryFrame;
         {
             // validate data
             memoryFrame.gasUsed = RollupLib.assertionGasUsed(assertion);
-            memoryFrame.prevNode = getNode(prevNode);
+            memoryFrame.prevNode = getNode(prevNodeNum);
             // TODO: don't query twice
             memoryFrame.currentInboxSize = sequencerBridge.messageCount();
 
             // Make sure the previous state is correct against the node being built on
             require(
-                RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.stateHash(),
+                RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.stateHash,
                 "PREV_STATE_HASH"
             );
 
@@ -553,28 +596,30 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
             memoryFrame.deadlineBlock = nodeDeadline(memoryFrame.gasUsed, memoryFrame.prevNode);
 
-            memoryFrame.hasSibling = memoryFrame.prevNode.latestChildNumber() > 0;
+            memoryFrame.hasSibling = memoryFrame.prevNode.latestChildNumber > 0;
             // here we don't use ternacy operator to remain compatible with slither
             if (memoryFrame.hasSibling) {
-                memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.latestChildNumber());
+                memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.latestChildNumber);
             } else {
-                memoryFrame.lastHash = getNodeHash(prevNode);
+                memoryFrame.lastHash = getNodeHash(prevNodeNum);
             }
 
-            memoryFrame.node = INode(
-                nodeFactory.createNode(
-                    RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, memoryFrame.executionHash, block.number),
-                    RollupLib.confirmHash(assertion),
-                    prevNode,
-                    memoryFrame.deadlineBlock
-                )
+            memoryFrame.node = NodeLib.initialize(
+                RollupLib.stateHash(assertion.afterState),
+                RollupLib.challengeRoot(assertion, memoryFrame.executionHash, block.number),
+                RollupLib.confirmHash(assertion),
+                prevNodeNum,
+                memoryFrame.deadlineBlock
             );
         }
 
         {
             uint256 nodeNum = latestNodeCreated() + 1;
-            memoryFrame.prevNode.childCreated(nodeNum);
+
+            // Fetch a storage reference to prevNode since we copied our other one into memory
+            // and we don't have enough stack available to keep to keep the previous storage reference around
+            Node storage prevNode = getNodeStorage(prevNodeNum);
+            prevNode.childCreated(nodeNum);
 
             newNodeHash = RollupLib.nodeHash(
                 memoryFrame.hasSibling,
@@ -585,12 +630,17 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
             require(newNodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
 
             nodeCreated(memoryFrame.node, newNodeHash);
-            rollupEventBridge.nodeCreated(nodeNum, prevNode, memoryFrame.deadlineBlock, msg.sender);
+            rollupEventBridge.nodeCreated(
+                nodeNum,
+                prevNodeNum,
+                memoryFrame.deadlineBlock,
+                msg.sender
+            );
         }
 
         emit NodeCreated(
             latestNodeCreated(),
-            getNodeHash(prevNode),
+            getNodeHash(prevNodeNum),
             newNodeHash,
             memoryFrame.executionHash,
             memoryFrame.currentInboxSize,

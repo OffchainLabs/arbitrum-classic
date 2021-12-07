@@ -44,7 +44,6 @@ contract RollupCreator is Ownable {
     BridgeCreator public bridgeCreator;
     ICloneable public rollupTemplate;
     address public challengeFactory;
-    address public nodeFactory;
     address public rollupAdminLogic;
     address public rollupUserLogic;
 
@@ -54,14 +53,12 @@ contract RollupCreator is Ownable {
         BridgeCreator _bridgeCreator,
         ICloneable _rollupTemplate,
         address _challengeFactory,
-        address _nodeFactory,
         address _rollupAdminLogic,
         address _rollupUserLogic
     ) external onlyOwner {
         bridgeCreator = _bridgeCreator;
         rollupTemplate = _rollupTemplate;
         challengeFactory = _challengeFactory;
-        nodeFactory = _nodeFactory;
         rollupAdminLogic = _rollupAdminLogic;
         rollupUserLogic = _rollupUserLogic;
         emit TemplatesUpdated();
@@ -145,8 +142,7 @@ contract RollupCreator is Ownable {
                 address(frame.sequencerInbox),
                 address(frame.outbox),
                 address(frame.rollupEventBridge),
-                challengeFactory,
-                nodeFactory
+                challengeFactory
             ],
             [rollupAdminLogic, rollupUserLogic],
             [config.sequencerDelayBlocks, config.sequencerDelaySeconds]

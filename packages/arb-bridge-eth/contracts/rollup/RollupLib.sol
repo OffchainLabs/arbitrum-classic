@@ -19,7 +19,6 @@
 pragma solidity ^0.6.11;
 
 import "../challenge/ChallengeLib.sol";
-import "./INode.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 

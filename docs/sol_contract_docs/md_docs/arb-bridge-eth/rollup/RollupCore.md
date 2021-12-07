@@ -3,13 +3,22 @@ title: RollupCore.sol Spec
 id: RollupCore
 ---
 
-### `getNode(uint256 nodeNum) → contract INode` (public)
+### `getNode(uint256 nodeNum) → struct Node` (public)
 
-Get the address of the Node contract for the given node
+Get a node by index
+
+- `nodeNum`: Index \of the node properties
+
+**Returns**: Data properties for the specified node
+
+### `nodeHasStaker(uint256 nodeNum, address staker) → bool` (public)
+
+Check is a address is staking on an node
 
 - `nodeNum`: Index of the node
+- `staker`: Address of the staker
 
-**Returns**: Address: of the Node contract
+**Returns**: Whether the address is a staker on the node
 
 ### `getStakerAddress(uint256 stakerNum) → address` (public)
 

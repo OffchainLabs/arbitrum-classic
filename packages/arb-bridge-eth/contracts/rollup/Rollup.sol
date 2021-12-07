@@ -17,6 +17,7 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -24,8 +25,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./RollupCore.sol";
 import "./RollupEventBridge.sol";
 import "./RollupLib.sol";
-import "./INode.sol";
-import "./INodeFactory.sol";
+import "./Node.sol";
 
 import "../libraries/ProxyUtil.sol";
 
@@ -43,14 +43,14 @@ contract Rollup is Proxy, RollupCore {
     }
 
     // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, avmGasSpeedLimitPerBlock, baseStake ]
-    // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
+    // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory]
     function initialize(
         bytes32 _machineHash,
         uint256[4] calldata _rollupParams,
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[6] calldata connectedContracts,
+        address[5] calldata connectedContracts,
         address[2] calldata _logicContracts,
         uint256[2] calldata sequencerInboxParams
     ) public {
@@ -81,9 +81,8 @@ contract Rollup is Proxy, RollupCore {
         );
 
         challengeFactory = IChallengeFactory(connectedContracts[4]);
-        nodeFactory = INodeFactory(connectedContracts[5]);
 
-        INode node = createInitialNode(_machineHash);
+        Node memory node = createInitialNode(_machineHash);
         initializeCore(node);
 
         confirmPeriodBlocks = _rollupParams[0];
@@ -108,7 +107,7 @@ contract Rollup is Proxy, RollupCore {
         require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
     }
 
-    function createInitialNode(bytes32 _machineHash) private returns (INode) {
+    function createInitialNode(bytes32 _machineHash) private view returns (Node memory) {
         bytes32 state = RollupLib.stateHash(
             RollupLib.ExecutionState(
                 0, // total gas used
@@ -123,14 +122,12 @@ contract Rollup is Proxy, RollupCore {
             )
         );
         return
-            INode(
-                nodeFactory.createNode(
-                    state,
-                    0, // challenge hash (not challengeable)
-                    0, // confirm data
-                    0, // prev node
-                    block.number // deadline block (not challengeable)
-                )
+            NodeLib.initialize(
+                state,
+                0, // challenge hash (not challengeable)
+                0, // confirm data
+                0, // prev node
+                block.number // deadline block (not challengeable)
             );
     }
 

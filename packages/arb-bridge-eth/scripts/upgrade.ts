@@ -10,7 +10,6 @@ interface DeployedContracts {
   bridgeCreator: string
   currentBridge: string
   challengeFactory: string
-  nodeFactory: string
   osp: string
   osp2: string
   ospHash: string
@@ -23,26 +22,12 @@ const prevAddresses: DeployedContracts = {
   bridgeCreator: '',
   currentBridge: '',
   challengeFactory: '',
-  nodeFactory: '',
   osp: '',
   osp2: '',
   ospHash: '',
   rollupCreator: '',
   rollup: '',
 }
-
-const newAddresses: DeployedContracts = {
-  bridgeCreator: '',
-  currentBridge: '',
-  challengeFactory: '',
-  nodeFactory: '',
-  osp: '',
-  osp2: '',
-  ospHash: '',
-  rollupCreator: '',
-  rollup: '',
-}
-
 async function promptUserToContinue() {
   const rl = createInterface({
     input: process.stdin, //or fileStream
@@ -88,7 +73,6 @@ async function main() {
   const linkedBridgeCreator = await rollupCreator.bridgeCreator()
   const linkedRollupTemplate = await rollupCreator.rollupTemplate()
   const linkedChallengeFactory = await rollupCreator.challengeFactory()
-  const linkedNodeFactory = await rollupCreator.nodeFactory()
 
   // check if current linked templates match the supplied previous ones
   if (
@@ -109,11 +93,6 @@ async function main() {
   ) {
     throw new Error('Wrong challenge factory')
   }
-  if (
-    linkedNodeFactory.toLowerCase() !== prevAddresses.nodeFactory.toLowerCase()
-  ) {
-    throw new Error('Wrong node factory')
-  }
 
   const rollupsCreated = await rollupCreator.queryFilter(
     rollupCreator.filters.RollupCreated(prevAddresses.rollup, null, null),
@@ -121,7 +100,7 @@ async function main() {
     'latest' // toBlock
   )
   const parsedLog = rollupCreator.interface.parseLog(rollupsCreated[0])
-  const { rollupAddress, inboxAddress, adminProxy } = parsedLog.args
+  const { rollupAddress, adminProxy } = parsedLog.args
 
   console.log({ rollupAddress })
   console.log({ adminProxy })
@@ -167,7 +146,7 @@ async function main() {
   // TODO: deploy new instances, then update connected contracts
   // const updateTx = await rollupInstance.updateConnectedContracts(
   //   [
-  // [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
+  // [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory]
   //   ],
   //   [true, true, true, true, true, true]
   // )
