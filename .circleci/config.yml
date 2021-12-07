@@ -193,7 +193,7 @@ jobs:
       - run:
           name: testy
           command: |
-            touch $GC_RESULTS/face.txt
+            touch $GC_RESULTS_PATH
       - store_artifacts:
           path: *gas-compare-results-path
       - checkout
