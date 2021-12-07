@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "2.0.0-beta.5",
+  "version": "2.0.0-beta.6",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -46,7 +46,7 @@
     "typechain": "^5.2.0",
     "@typechain/ethers-v5": "^7.2.0",
     "arb-bridge-eth": "0.7.3",
-    "arb-bridge-peripherals": "1.0.2",
+    "arb-bridge-peripherals": "1.0.3",
     "arbos-precompiles": "1.0.1",
     "dotenv": "^10.0.0",
     "ts-node": "^10.2.1",
