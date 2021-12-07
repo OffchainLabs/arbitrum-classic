@@ -63,6 +63,7 @@ Machine getDefaultMachine() {
     auto output =
         MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34, 72, 73, 74};
     return Machine(MachineState(output, pc, std::move(code), ValueLoader(),
-                                register_val, std::move(static_val), data_stack,
-                                aux_stack, arb_gas_remaining, state, err_pc));
+                                register_val, std::move(static_val),
+                                Datastack(data_stack), Datastack(aux_stack),
+                                arb_gas_remaining, state, err_pc));
 }

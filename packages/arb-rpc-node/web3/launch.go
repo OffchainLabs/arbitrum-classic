@@ -37,7 +37,7 @@ const (
 	NonMutatingMode
 )
 
-func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, mode RpcMode, plugins map[string]interface{}, inboxReader *monitor.InboxReader) (*rpc.Server, error) {
+func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, config ServerConfig, plugins map[string]interface{}, inboxReader *monitor.InboxReader) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
 	var sequencerInboxWatcher *ethbridge.SequencerInboxWatcher
@@ -45,14 +45,14 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		sequencerInboxWatcher = inboxReader.GetSequencerInboxWatcher()
 	}
 
-	ethServer := NewServer(server, mode == GanacheMode, sequencerInboxWatcher)
-	forwarderServer := NewForwarderServer(server, ethServer, mode)
+	ethServer := NewServer(server, config, sequencerInboxWatcher)
+	forwarderServer := NewForwarderServer(server, ethServer, config.Mode)
 
 	if err := s.RegisterName("eth", forwarderServer); err != nil {
 		return nil, err
 	}
 
-	if mode != ForwardingOnlyMode {
+	if config.Mode != ForwardingOnlyMode {
 		if err := s.RegisterName("eth", ethServer); err != nil {
 			return nil, err
 		}
@@ -61,7 +61,7 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 			return nil, err
 		}
 
-		if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys, mode == NonMutatingMode)); err != nil {
+		if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys, config.Mode == NonMutatingMode)); err != nil {
 			return nil, err
 		}
 
@@ -85,6 +85,12 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 
 	for name, val := range plugins {
 		if err := s.RegisterName(name, val); err != nil {
+			return nil, err
+		}
+	}
+
+	if config.DevopsStubs {
+		if err := registerDevopsStubs(s); err != nil {
 			return nil, err
 		}
 	}

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.9)
 
 find_package(Git)
 if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../.git")
@@ -45,6 +45,18 @@ HunterGate(
 cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release RelWithDebInfo)
 
 project (arb-avm-cpp)
+
+if (NOT CMAKE_BUILD_TYPE MATCHES Debug)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT error)
+
+    if(LTO_SUPPORTED)
+        message(STATUS "LTO enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(STATUS "LTO not supported: <${error}>")
+    endif()
+endif()
 
 include(CTest)
 
@@ -86,7 +98,7 @@ endif (ENABLE_JEMALLOC)
 # On macOS, search Homebrew for keg-only versions of OpenSSL
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     execute_process(
-        COMMAND brew --prefix OpenSSL
+        COMMAND brew --prefix OpenSSL@1.1
         RESULT_VARIABLE BREW_OPENSSL
         OUTPUT_VARIABLE BREW_OPENSSL_PREFIX
         OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -189,6 +201,10 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm" AND NOT AVM_FUZZER)
             " $<TARGET_LINKER_FILE:secp256k1>"
             " ${JEMALLOC_LINK_LIBRARIES}"
             " $<TARGET_LINKER_FILE:OpenSSL::Crypto>"
+            " $<TARGET_LINKER_FILE:RocksDB::RocksDB>"
+            " $<TARGET_LINKER_FILE:ethash::keccak>"
+            " ${GMP_LIBRARY}"
+            " ${GMPXX_LIBRARY}"
         )
         configure_file( ${INFILE} ${MIDDLEFILE} )
         file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})

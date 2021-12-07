@@ -40,30 +40,30 @@ static T shrink(uint256_t i) {
 
 namespace machineoperation {
 
-uint256_t& assumeInt(value& val) {
-    auto aNum = std::get_if<uint256_t>(&val);
+uint256_t& assumeInt(Value& val) {
+    auto aNum = get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
     return *aNum;
 }
 
-const uint256_t& assumeInt(const value& val) {
-    auto aNum = std::get_if<uint256_t>(&val);
+const uint256_t& assumeInt(const Value& val) {
+    auto aNum = get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
     return *aNum;
 }
 
-CodePointStub assumeCodePoint(MachineState& m, value& val) {
-    auto cp = std::get_if<CodePointStub>(&val);
+CodePointStub assumeCodePoint(MachineState& m, Value& val) {
+    auto cp = get_if<CodePointStub>(&val);
     if (!cp) {
         throw bad_pop_type{};
     }
-    if (!m.code->containsSegment(cp->pc.segment)) {
-        return std::get<CodePointStub>(
-            m.value_loader.loadValue(hash_value(*cp)));
+    auto segment = cp->pc.segment;
+    if (segment != m.pc.segment && !m.code->containsSegment(segment)) {
+        return get<CodePointStub>(m.value_loader.loadValue(hash_value(*cp)));
     }
     return *cp;
 }
@@ -76,32 +76,32 @@ uint64_t assumeInt64(uint256_t& val) {
     return static_cast<uint64_t>(val);
 }
 
-Tuple assumeTuple(MachineState& m, const value& val) {
-    auto tup = std::get_if<Tuple>(&val);
+Tuple assumeTuple(MachineState& m, const Value& val) {
+    auto tup = get_if<Tuple>(&val);
     if (!tup) {
-        auto uv = std::get_if<UnloadedValue>(&val);
-        if (uv && uv->type == TUPLE) {
-            return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
+        auto uv = get_if<UnloadedValue>(&val);
+        if (uv && uv->type() == TUPLE) {
+            return get<Tuple>(m.value_loader.loadValue(uv->hash()));
         }
         throw bad_pop_type{};
     }
     return *tup;
 }
 
-Tuple assumeTuple(MachineState& m, value& val) {
-    auto tup = std::get_if<Tuple>(&val);
+Tuple assumeTuple(MachineState& m, Value& val) {
+    auto tup = get_if<Tuple>(&val);
     if (!tup) {
-        auto uv = std::get_if<UnloadedValue>(&val);
-        if (uv && uv->type == TUPLE) {
-            return std::get<Tuple>(m.value_loader.loadValue(uv->hash));
+        auto uv = get_if<UnloadedValue>(&val);
+        if (uv && uv->type() == TUPLE) {
+            return get<Tuple>(m.value_loader.loadValue(uv->hash()));
         }
         throw bad_pop_type{};
     }
     return *tup;
 }
 
-Buffer& assumeBuffer(value& val) {
-    auto buf = std::get_if<Buffer>(&val);
+Buffer& assumeBuffer(Value& val) {
+    auto buf = get_if<Buffer>(&val);
     if (!buf) {
         throw bad_pop_type{};
     }
@@ -414,7 +414,7 @@ void hashOp(MachineState& m) {
 
 void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
-    m.stack[0] = std::visit(ValueTypeVisitor{}, m.stack[0]);
+    m.stack[0] = visit(ValueTypeVisitor{}, m.stack[0]);
     ++m.pc;
 }
 
@@ -524,13 +524,13 @@ void pop(MachineState& m) {
 }
 
 void spush(MachineState& m) {
-    value copiedStatic = m.static_val;
+    Value copiedStatic = m.static_val;
     m.stack.push(std::move(copiedStatic));
     ++m.pc;
 }
 
 void rpush(MachineState& m) {
-    value copiedRegister = m.registerVal;
+    Value copiedRegister = m.registerVal;
     m.stack.push(std::move(copiedRegister));
     ++m.pc;
 }
@@ -606,7 +606,7 @@ void errPush(MachineState& m) {
 
 void errSet(MachineState& m) {
     m.stack.prepForMod(1);
-    auto codePointVal = std::get_if<CodePointStub>(&m.stack[0]);
+    auto codePointVal = get_if<CodePointStub>(&m.stack[0]);
     if (!codePointVal) {
         m.state = Status::Error;
     } else {
@@ -617,19 +617,19 @@ void errSet(MachineState& m) {
 }
 
 void dup0(MachineState& m) {
-    value valACopy = m.stack[0];
+    Value valACopy = m.stack[0];
     m.stack.push(std::move(valACopy));
     ++m.pc;
 }
 
 void dup1(MachineState& m) {
-    value valBCopy = m.stack[1];
+    Value valBCopy = m.stack[1];
     m.stack.push(std::move(valBCopy));
     ++m.pc;
 }
 
 void dup2(MachineState& m) {
-    value valCCopy = m.stack[2];
+    Value valCCopy = m.stack[2];
     m.stack.push(std::move(valCCopy));
     ++m.pc;
 }
@@ -696,6 +696,16 @@ void tlen(MachineState& m) {
     ++m.pc;
 }
 
+struct Secp256k1Context {
+    secp256k1_context* context;
+
+    Secp256k1Context()
+        : context(secp256k1_context_create(SECP256K1_CONTEXT_SIGN |
+                                           SECP256K1_CONTEXT_VERIFY)) {}
+
+    ~Secp256k1Context() { secp256k1_context_destroy(context); }
+};
+
 namespace {
 uint256_t parseSignature(MachineState& m) {
     std::array<unsigned char, 64> sig_raw{};
@@ -708,25 +718,25 @@ uint256_t parseSignature(MachineState& m) {
         return 0;
     }
 
-    static secp256k1_context* context = secp256k1_context_create(
-        SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
+    static Secp256k1Context context;
 
     secp256k1_ecdsa_recoverable_signature sig;
     int parsed_sig = secp256k1_ecdsa_recoverable_signature_parse_compact(
-        context, &sig, sig_raw.data(), static_cast<int>(recovery_int));
+        context.context, &sig, sig_raw.data(), static_cast<int>(recovery_int));
     if (!parsed_sig) {
         return 0;
     }
 
     secp256k1_pubkey pubkey;
-    if (!secp256k1_ecdsa_recover(context, &pubkey, &sig, message.bytes)) {
+    if (!secp256k1_ecdsa_recover(context.context, &pubkey, &sig,
+                                 message.bytes)) {
         return 0;
     }
 
     std::array<unsigned char, 65> pubkey_raw{};
     size_t output_length = pubkey_raw.size();
     int serialized_pubkey = secp256k1_ec_pubkey_serialize(
-        context, pubkey_raw.data(), &output_length, &pubkey,
+        context.context, pubkey_raw.data(), &output_length, &pubkey,
         SECP256K1_EC_UNCOMPRESSED);
     if (!serialized_pubkey) {
         return 0;
@@ -839,7 +849,7 @@ uint64_t ec_pairing_variable_gas_cost(MachineState& m) {
         return gas_cost;
     }
     try {
-        const value* val = &m.stack[0];
+        const Value* val = &m.stack[0];
         for (int i = 0; i < max_ec_pairing_points; i++) {
             auto tup = assumeTuple(m, *val);
             if (tup.tuple_size() == 0) {
@@ -872,7 +882,7 @@ void log(MachineState& m) {
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
     m.context.debug_prints.push_back(
-        MachineEmission<value>{m.stack.pop(), m.output.fully_processed_inbox});
+        MachineEmission<Value>{m.stack.pop(), m.output.fully_processed_inbox});
     ++m.pc;
 }
 
@@ -945,7 +955,8 @@ void pushinsn(MachineState& m) {
     auto target = assumeCodePoint(m, m.stack[1]);
     auto& op_int = assumeInt(m.stack[0]);
     auto op = static_cast<uint8_t>(op_int);
-    m.stack[1] = m.code->addOperation(target.pc, {static_cast<OpCode>(op)});
+    m.stack[1] =
+        m.code->addOperation(target.pc, Operation{static_cast<OpCode>(op)});
     m.stack.popClear();
     ++m.pc;
 }

@@ -109,9 +109,7 @@ void destroyArbStorage(CArbStorage* storage_ptr) {
     if (storage == nullptr) {
         return;
     }
-    std::cerr << "closing ArbStorage:" << std::endl;
     storage->closeArbStorage();
-    std::cerr << "closed ArbStorage:" << std::endl;
     delete static_cast<ArbStorage*>(storage);
 }
 

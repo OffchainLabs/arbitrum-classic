@@ -25,6 +25,122 @@
 #include <iomanip>
 #include <ostream>
 
+Value::Value() : Value(Tuple()) {}
+Value::Value(Tuple tup) : Value(0) {
+    inner.tagged.tag = value_tuple_tag;
+    new (&inner.tagged.inner.tuple) Tuple{std::move(tup)};
+}
+Value::Value(uint64_t num) : Value(uint256_t(num)) {}
+Value::Value(const uint256_t& num)
+    : inner{TaggedValue{value_num_tag, TaggedValueContents{num}}} {}
+Value::Value(const CodePointStub& code_point) : Value(0) {
+    inner.code_point = code_point;
+    assert(!isTagged());
+    assert(!(inner.tagged.tag & value_unloaded_bit));
+}
+Value::Value(std::shared_ptr<HashPreImage> hash_pre_image) : Value(0) {
+    inner.tagged.tag = value_hash_pre_image_tag;
+    new (&inner.tagged.inner.hash_pre_image)
+        std::shared_ptr<HashPreImage>{std::move(hash_pre_image)};
+}
+Value::Value(Buffer buffer) : Value(0) {
+    inner.tagged.tag = value_buffer_tag;
+    new (&inner.tagged.inner.buffer) Buffer{std::move(buffer)};
+}
+Value::Value(UnloadedValue uv) : Value(0) {
+    new (&inner.unloaded) UnloadedValue{std::move(uv)};
+    assert(!isTagged());
+    assert(inner.tagged.tag & value_unloaded_bit);
+}
+
+void Value::destroy() {
+    if (isTagged()) {
+        // No need to destruct a uint256. Select for the other tags.
+        switch (inner.tagged.tag) {
+            case value_tuple_tag:
+                inner.tagged.inner.tuple.~Tuple();
+                break;
+            case value_hash_pre_image_tag:
+                inner.tagged.inner.hash_pre_image.~shared_ptr();
+                break;
+            case value_buffer_tag:
+                inner.tagged.inner.buffer.~Buffer();
+                break;
+        }
+    } else if (inner.tagged.tag & value_unloaded_bit) {
+        inner.unloaded.~UnloadedValue();
+    }
+}
+
+void Value::assignCopy(const Value& other) {
+    if (other.isTagged()) {
+        inner.tagged.tag = other.inner.tagged.tag;
+        switch (other.inner.tagged.tag) {
+            case value_num_tag:
+                // Trivial copy
+                inner.tagged.inner.num = other.inner.tagged.inner.num;
+                break;
+            case value_tuple_tag:
+                new (&inner.tagged.inner.tuple)
+                    Tuple{other.inner.tagged.inner.tuple};
+                break;
+            case value_hash_pre_image_tag:
+                new (&inner.tagged.inner.hash_pre_image)
+                    std::shared_ptr<HashPreImage>{
+                        other.inner.tagged.inner.hash_pre_image};
+                break;
+            case value_buffer_tag:
+                new (&inner.tagged.inner.buffer)
+                    Buffer{other.inner.tagged.inner.buffer};
+                break;
+            default:
+                assert(0);
+                __builtin_unreachable();
+                throw std::runtime_error("Unknown value tag");
+        }
+    } else if (other.inner.tagged.tag & value_unloaded_bit) {
+        new (&inner.unloaded) UnloadedValue{other.inner.unloaded};
+    } else {
+        // Trivial copy
+        inner.code_point = other.inner.code_point;
+    }
+}
+
+void Value::assignMove(Value&& other) {
+    if (other.isTagged()) {
+        inner.tagged.tag = other.inner.tagged.tag;
+        switch (other.inner.tagged.tag) {
+            case value_num_tag:
+                // Trivial copy
+                inner.tagged.inner.num = other.inner.tagged.inner.num;
+                break;
+            case value_tuple_tag:
+                new (&inner.tagged.inner.tuple)
+                    Tuple{std::move(other.inner.tagged.inner.tuple)};
+                break;
+            case value_hash_pre_image_tag:
+                new (&inner.tagged.inner.hash_pre_image)
+                    std::shared_ptr<HashPreImage>{
+                        std::move(other.inner.tagged.inner.hash_pre_image)};
+                break;
+            case value_buffer_tag:
+                new (&inner.tagged.inner.buffer)
+                    Buffer{std::move(other.inner.tagged.inner.buffer)};
+                break;
+            default:
+                assert(0);
+                __builtin_unreachable();
+                std::terminate();
+        }
+        std::swap(inner.tagged.tag, other.inner.tagged.tag);
+    } else if (other.inner.tagged.tag & value_unloaded_bit) {
+        new (&inner.unloaded) UnloadedValue{std::move(other.inner.unloaded)};
+    } else {
+        // Trivial copy
+        inner.code_point = other.inner.code_point;
+    }
+}
+
 uint64_t deserialize_uint64_t(const char*& bufptr) {
     auto val = intx::be::unsafe::load<uint64_t>(
         reinterpret_cast<const unsigned char*>(bufptr));
@@ -51,7 +167,7 @@ uint256_t deserializeUint256t(const char*& bufptr) {
     return ret;
 }
 
-value deserialize_value(const char*& bufptr) {
+Value deserialize_value(const char*& bufptr) {
     // Iteratively read all values leaving placeholder for the tuples
     std::vector<DeserializedValue> values;
     uint64_t values_to_read = 1;
@@ -62,11 +178,11 @@ value deserialize_value(const char*& bufptr) {
         --values_to_read;
         switch (valType) {
             case NUM: {
-                values.push_back(value{deserializeUint256t(bufptr)});
+                values.push_back(Value{deserializeUint256t(bufptr)});
                 break;
             }
             case CODEPT: {
-                values.push_back(value{deserializeCodePointStub(bufptr)});
+                values.push_back(Value{deserializeCodePointStub(bufptr)});
                 break;
             }
             default: {
@@ -87,7 +203,7 @@ value deserialize_value(const char*& bufptr) {
     return assembleValueFromDeserialized(std::move(values));
 }
 
-value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
+Value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
     // Next form the full value out of the interleaved values and placeholders
     size_t total_values_size = values.size();
     for (size_t i = 0; i < total_values_size; ++i) {
@@ -100,13 +216,13 @@ value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
         Tuple tup = Tuple::createSizedTuple(holder.values);
         for (uint8_t j = 0; j < holder.values; ++j) {
             tup.set_element(
-                j, std::move(std::get<value>(values[val_pos + 1 + j])));
+                j, std::move(std::get<Value>(values[val_pos + 1 + j])));
         }
         values.erase(values.begin() + val_pos + 1,
                      values.begin() + val_pos + 1 + holder.values);
         values[val_pos] = std::move(tup);
     }
-    return std::get<value>(values.back());
+    return std::get<Value>(values.back());
 }
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
@@ -117,7 +233,7 @@ void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
 
 namespace {
 struct Marshaller {
-    std::vector<value>& values;
+    std::vector<Value>& values;
     std::vector<unsigned char>& buf;
 
     void operator()(const std::shared_ptr<HashPreImage>& val) const {
@@ -157,13 +273,13 @@ struct Marshaller {
 };
 }  // namespace
 
-void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
-    std::vector<value> values{full_val};
+void marshal_value(const Value& full_val, std::vector<unsigned char>& buf) {
+    std::vector<Value> values{full_val};
     Marshaller marshaller{values, buf};
     while (!values.empty()) {
         const auto val = std::move(values.back());
         values.pop_back();
-        std::visit(marshaller, val);
+        visit(marshaller, val);
     }
 }
 
@@ -236,22 +352,45 @@ void marshalForProof(const Buffer& val,
 
 }  // namespace
 
-void marshalForProof(const value& val,
+void marshalForProof(const Value& val,
                      size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    return std::visit(
+    return visit(
         [&](const auto& v) {
             return marshalForProof(v, marshal_level, buf, code);
         },
         val);
 }
 
-uint256_t hash_value(const value& value) {
-    return std::visit([](const auto& val) { return hash(val); }, value);
+uint256_t hash_value(const Value& value) {
+    return visit([](const auto& val) { return hash(val); }, value);
 }
 
-bool values_equal(const value& a, const value& b) {
+bool values_equal(const Value& a, const Value& b) {
+    // Fast path: if the values are both ints, compare them directly
+    {
+        const uint256_t* a_int = get_if<uint256_t>(&a);
+        const uint256_t* b_int = get_if<uint256_t>(&b);
+        if (a_int && b_int) {
+            return *a_int == *b_int;
+        }
+    }
+    // Fast path: if the values are tuples of different sizes, return false
+    {
+        const Tuple* a_tup = get_if<Tuple>(&a);
+        const Tuple* b_tup = get_if<Tuple>(&b);
+        if (a_tup && b_tup && a_tup->tuple_size() != b_tup->tuple_size()) {
+            return false;
+        }
+    }
+    // Fast path: if the values are of different types, return false
+    // Note: ValueTypeVisitor correctly sees through unloaded values
+    if (visit(ValueTypeVisitor{}, a) != visit(ValueTypeVisitor{}, b)) {
+        return false;
+    }
+    // Slow path: the preconditions for the fast paths weren't met
+    // Check if the hashes are equal
     return hash_value(a) == hash_value(b);
 }
 
@@ -269,12 +408,12 @@ struct GetSize {
     uint256_t operator()(const CodePointStub&) const { return 1; }
 
     uint256_t operator()(const UnloadedValue& val) const {
-        return val.value_size;
+        return val.value_size();
     }
 };
 
-uint256_t getSize(const value& val) {
-    return std::visit(GetSize{}, val);
+uint256_t getSize(const Value& val) {
+    return visit(GetSize{}, val);
 }
 
 struct ValuePrinter {
@@ -320,11 +459,12 @@ struct ValuePrinter {
     }
 
     std::ostream* operator()(const UnloadedValue& val) const {
-        os << "UnloadedValue(type " << val.type << ", hash " << val.hash << ")";
+        os << "UnloadedValue(type " << val.type() << ", hash " << ::hash(val)
+           << ")";
         return &os;
     }
 };
 
-std::ostream& operator<<(std::ostream& os, const value& val) {
-    return *std::visit(ValuePrinter{os}, val);
+std::ostream& operator<<(std::ostream& os, const Value& val) {
+    return *visit(ValuePrinter{os}, val);
 }

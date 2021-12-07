@@ -22,9 +22,11 @@
 CoreValueLoader::CoreValueLoader(std::shared_ptr<DataStorage> data_storage_,
                                  std::shared_ptr<CoreCode> core_code_,
                                  ValueCache cache_)
-    : data_storage(data_storage_), core_code(core_code_), cache(cache_) {}
+    : data_storage(std::move(data_storage_)),
+      core_code(std::move(core_code_)),
+      cache(std::move(cache_)) {}
 
-value CoreValueLoader::loadValue(const uint256_t& hash) {
+Value CoreValueLoader::loadValue(const uint256_t& hash) {
     ReadTransaction tx(data_storage);
     std::set<uint64_t> segment_ids;
     auto res = getValueImpl(tx, hash, segment_ids, cache, true);
@@ -33,7 +35,7 @@ value CoreValueLoader::loadValue(const uint256_t& hash) {
                                  status->ToString());
     }
     restoreCodeSegments(tx, core_code, cache, segment_ids, true);
-    return std::get<CountedData<value>>(res).data;
+    return std::get<CountedData<Value>>(res).data;
 }
 
 std::unique_ptr<AbstractValueLoader> CoreValueLoader::clone() const {
