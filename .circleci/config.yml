@@ -175,20 +175,9 @@ jobs:
       - run:
           name: get commit hashes
           command: |
-            head --help
-            tail --help
             PR_NUMBER=${CIRCLE_PULL_REQUEST##*/}
             CIRCLE_PR=`curl -s https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${PR_NUMBER}`
-            FACEA=`echo $CIRCLE_PR`
-            echo FACEA
-            echo $FACEA
-            FACEB=`echo $CIRCLE_PR | grep -Eo '"sha"[^,]*'`
-            echo FACEB
-            echo $FACEB
             HASHES=`echo $CIRCLE_PR | grep -Eo '"sha"[^,]*' | grep -Eo '[a-fA-F0-9]{40}'`
-            echo HASHES
-            echo $HASHES
-            echo TESTY
             CIRCLE_PR_HEAD_SHA=`echo $HASHES | cut -d' ' -f1`
             CIRCLE_PR_BASE_SHA=`echo $HASHES | cut -d' ' -f2`
             echo CIRCLE_PR_HEAD_SHA
