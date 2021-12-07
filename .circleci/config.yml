@@ -189,7 +189,8 @@ jobs:
             echo FACEC
             echo $FACEC
             echo TESTY
-            echo $FACEC | head -1
+            echo $FACEC | cut -d' ' -f1
+            echo $FACEC | cut -d' ' -f2
             CIRCLE_PR_HEAD_SHA=`echo $CIRCLE_PR | grep -Eo '"sha"[^,]*' | grep -Eo '[a-fA-F0-9]{40}' | cut -d' ' -f1`
             CIRCLE_PR_BASE_SHA=`echo $CIRCLE_PR | grep -Eo '"sha"[^,]*' | grep -Eo '[a-fA-F0-9]{40}' | cut -d' ' -f2`
             echo CIRCLE_PR_HEAD_SHA
