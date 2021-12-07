@@ -41,6 +41,7 @@ workflows:
       - arb-ts
       - ethbridge
       - ethbridge-coverage
+      - gas-compare
       - backend:
           requires:
             - go-deps
@@ -164,6 +165,43 @@ jobs:
           working_directory: /home/user/project/packages
       - store_test_results:
           path: *test-path
+
+  gas-compare:
+    docker:
+      - image: offchainlabs/frontend-base:0.4.0
+    environment: # environment variables for the build itself
+      TEST_RESULTS: *test-path # path to where test results will be saved
+    steps:
+      - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
+
+      - run: mkdir -p $TEST_RESULTS
+      - restore_cache: *restore_yarn_cache
+      - run:
+          name: install
+          command: |
+            yarn install --cache-folder ~/.cache/yarn
+          working_directory: /home/user/project
+      - run:
+          name: get commit hashes
+          command: |
+            CIRCLE_PR_HEAD_SHA = `curl -s https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${CIRCLE_PR_NUMBER} | jq -r '.head.sha'`
+            CIRCLE_PR_BASE_SHA = `curl -s https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${CIRCLE_PR_NUMBER} | jq -r '.base.sha'`
+            echo $CIRCLE_PR_HEAD_SHA
+            echo $CIRCLE_PR_BASE_SHA
+          environment:
+            MOCHA_FILE: *ethbridge-test-path
+          working_directory: /home/user/project/packages/arb-bridge-eth
+      - run:
+          name: Upload Coverage to Codecov
+          command: codecovbash -R /home/user/project -c -F unit
+          working_directory: /home/user/project/packages
+      - store_test_results:
+          path: *test-path
+
   cpp-avm-build:
     docker:
       - image: offchainlabs/cpp-base:0.4.1
