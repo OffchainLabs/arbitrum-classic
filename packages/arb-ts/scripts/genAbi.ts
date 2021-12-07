@@ -7,7 +7,7 @@ async function main() {
 
   const arbosPath = getPackagePath('arbos-precompiles')
   const ethBridgePath = getPackagePath('arb-bridge-eth')
-  const peripheralsPath = getPackagePath('arb-bridge-eth')
+  const peripheralsPath = getPackagePath('arb-bridge-peripherals')
 
   console.log('Compiling paths.')
   console.log('building arbos')
@@ -25,10 +25,12 @@ async function main() {
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
+  const files = allFiles.filter(curr => !curr.toLowerCase().includes('test'))
+
   const result = await runTypeChain({
     cwd,
-    filesToProcess: allFiles.filter(curr => !curr.includes('test')),
-    allFiles,
+    filesToProcess: files,
+    allFiles: files,
     outDir: './src/lib/abi/',
     target: 'ethers-v5',
   })
