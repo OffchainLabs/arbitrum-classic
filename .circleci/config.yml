@@ -198,7 +198,7 @@ jobs:
           command: |
             touch $GC_RESULTS/face.txt
       - store_artifacts:
-          path: $GC_RESULTS/eth-bridge.csv
+          path: $GC_RESULTS/face.txt
       - restore_cache: *restore_yarn_cache
       - run:
           name: install
