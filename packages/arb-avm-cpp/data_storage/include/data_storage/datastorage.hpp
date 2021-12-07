@@ -87,8 +87,8 @@ class DataStorage {
     [[nodiscard]] ConcurrentCounter getCounter() const;
 
    private:
-    std::atomic<bool> shutting_down;
-    mutable std::atomic<int64_t> concurrent_database_access_counter;
+    std::atomic<bool> shutting_down{false};
+    mutable std::atomic<int64_t> concurrent_database_access_counter{0};
 
     rocksdb::Status updateSecretHashSeed();
 

@@ -28,8 +28,6 @@
 #include <utility>
 
 DataStorage::DataStorage(const std::string& db_path) {
-    std::atomic_init(&shutting_down, false);
-    std::atomic_init(&concurrent_database_access_counter, 0);
     // Make sure database isn't closed while constructor still running
     auto counter = getCounter();
 

@@ -1337,14 +1337,13 @@ void ArbCore::operator()() {
                     coreConfig.idle_sleep_milliseconds));
             }
         }
-
-        std::cerr << "Exiting main ArbCore thread" << std::endl;
     } catch (DataStorage::shutting_down_exception& e) {
         std::cerr << "Caught shutting down exception in ArbCore thread"
                   << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "ArbCore thread exception: " << e.what() << std::endl;
     }
+    std::cerr << "Exiting main ArbCore thread" << std::endl;
 
     // Error occurred, make sure machine stops cleanly
     core_machine->abortMachine();
