@@ -30,7 +30,7 @@ aliases:
   - &test-path /tmp/test-results
   - &ethbridge-test-path /tmp/test-results/ethbridge.xml
   - &gas-compare-results /tmp/gas-compare-results
-  - &gas-compare-results-path /tmp/gas-compare-results/compare-results.csv
+  - &gas-compare-results-path /tmp/gas-compare-results/compare-results.txt
 version: 2
 workflows:
   version: 2
