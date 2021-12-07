@@ -15,8 +15,13 @@ task('create-chain', 'Creates a rollup chain')
     console.log(
       `Creating chain for machine with hash ${machineHash} for sequencer ${taskArguments.sequencer}`
     )
-    const { deployments, ethers } = hre
+    const { ethers } = hre
     const [deployer] = await ethers.getSigners()
+    const deployments = (hre as any).deployments
+    if (!deployments || !deployments.get)
+      throw new Error(
+        'Missing hardhat deployer dependency for deployments object'
+      )
     const rollupCreatorDep = await deployments.get('RollupCreator')
     const RollupCreator = await ethers.getContractFactory('RollupCreator')
     const rollupCreator = RollupCreator.attach(
