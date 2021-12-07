@@ -190,7 +190,7 @@ jobs:
           command: |
             CIRCLE_PR = `curl -s https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${CIRCLE_PR_NUMBER}`
             CIRCLE_PR_HEAD_SHA = `echo $CIRCLE_PR | grep -Eo '"sha"[^,]*' | grep -Eo '[^:]*$' | head -1`
-            CIRCLE_PR_BASE_SHA = `echo $CIRCLE_PR | grep -Eo '"sha"[^,]*' | grep -Eo '[^:]*$' | head -1`
+            CIRCLE_PR_BASE_SHA = `echo $CIRCLE_PR | grep -Eo '"sha"[^,]*' | grep -Eo '[^:]*$' | tail -1`
             echo $CIRCLE_PR_HEAD_SHA
             echo $CIRCLE_PR_BASE_SHA
       - run:
