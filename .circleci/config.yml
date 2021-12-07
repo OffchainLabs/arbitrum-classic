@@ -30,6 +30,7 @@ aliases:
   - &test-path /tmp/test-results
   - &ethbridge-test-path /tmp/test-results/ethbridge.xml
   - &gas-compare-results /tmp/gas-compare-results
+  - &gas-compare-results-path /tmp/gas-compare-results/compare-results.csv
 version: 2
 workflows:
   version: 2
@@ -171,7 +172,8 @@ jobs:
     docker:
       - image: offchainlabs/frontend-base:0.4.0
     environment: # environment variables for the build itself
-      GC_RESULTS: *gas-compare-results # path to where gas compare results will be saved
+      GC_RESULTS: *gas-compare-results # path to the directory where gas compare results will be saved
+      GC_RESULTS_PATH: *gas-compare-results-path
     steps:
       - run:
           name: get commit hashes
@@ -187,18 +189,18 @@ jobs:
             echo $CIRCLE_PR_BASE_SHA
             echo 'export CIRCLE_PR_BASE_SHA='$CIRCLE_PR_BASE_SHA >> $BASH_ENV
             echo 'export CIRCLE_PR_HEAD_SHA='$CIRCLE_PR_HEAD_SHA >> $BASH_ENV
-      - checkout
-      - run:
-          name: 'Pull Submodules'
-          command: |
-            git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $GC_RESULTS
       - run:
           name: testy
           command: |
             touch $GC_RESULTS/face.txt
       - store_artifacts:
-          path: $GC_RESULTS/face.txt
+          path: *gas-compare-results-path
+      - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
       - restore_cache: *restore_yarn_cache
       - run:
           name: install
