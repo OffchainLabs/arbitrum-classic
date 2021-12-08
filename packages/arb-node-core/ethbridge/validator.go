@@ -63,7 +63,7 @@ type ValidatorWallet struct {
 	rollupFromBlock   int64
 }
 
-func NewValidator(address *ethcommon.Address, walletFactoryAddr, rollupAddress ethcommon.Address, client ethutils.EthClient, auth transactauth.TransactAuth, onWalletCreated func(ethcommon.Address)) (*ValidatorWallet, error) {
+func NewValidator(address *ethcommon.Address, walletFactoryAddr, rollupAddress ethcommon.Address, client ethutils.EthClient, auth transactauth.TransactAuth, rollupFromBlock int64, onWalletCreated func(ethcommon.Address)) (*ValidatorWallet, error) {
 	var con *ethbridgecontracts.Validator
 	if address != nil {
 		var err error
@@ -80,7 +80,7 @@ func NewValidator(address *ethcommon.Address, walletFactoryAddr, rollupAddress e
 		auth:              auth,
 		rollupAddress:     rollupAddress,
 		walletFactoryAddr: walletFactoryAddr,
-		// TODO: rollupFromBlock
+		rollupFromBlock:   rollupFromBlock,
 	}, nil
 }
 
@@ -105,6 +105,9 @@ func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Tran
 }
 
 func (v *ValidatorWallet) createWalletIfNeeded(ctx context.Context) error {
+	if v.con != nil {
+		return nil
+	}
 	if v.address == nil {
 		addr, err := CreateValidatorWallet(ctx, v.walletFactoryAddr, v.rollupFromBlock, v.auth, v.client)
 		if err != nil {
@@ -115,13 +118,11 @@ func (v *ValidatorWallet) createWalletIfNeeded(ctx context.Context) error {
 			v.onWalletCreated(addr)
 		}
 	}
-	if v.con == nil {
-		con, err := ethbridgecontracts.NewValidator(*v.address, v.client)
-		if err != nil {
-			return err
-		}
-		v.con = con
+	con, err := ethbridgecontracts.NewValidator(*v.address, v.client)
+	if err != nil {
+		return err
 	}
+	v.con = con
 	return nil
 }
 

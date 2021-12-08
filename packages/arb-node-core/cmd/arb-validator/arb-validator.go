@@ -197,7 +197,7 @@ func startup() error {
 	}
 	defer mon.Close()
 
-	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, onValidatorWalletCreated)
+	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, config.Rollup.FromBlock, onValidatorWalletCreated)
 	if err != nil {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
