@@ -179,7 +179,7 @@ jobs:
           name: check pr
           command: |
             PR_NUMBER=${CIRCLE_PULL_REQUEST##*/}
-            curl -u $GH_USER:$GH_TOKEN https://api.github.com/user
+            curl --header "Authorization: token $GH_TOKEN" -u $GH_USER:$GH_TOKEN https://api.github.com/user
             PR_URL="https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/issues/${PR_NUMBER}/comments"
             echo $PR_URL
             curl --location --request POST --header "Authorization: token $GH_TOKEN" --header 'Content-Type: application/json' --data-raw '{ "body": "Test comment" }' $PR_URL
