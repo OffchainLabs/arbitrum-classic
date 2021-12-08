@@ -181,8 +181,8 @@ jobs:
             PR_NUMBER=${CIRCLE_PULL_REQUEST##*/}
             PR_URL="https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/issues/${PR_NUMBER}/comments"
             echo $PR_URL
-            curl --user "$GH_USER:$GH_TOKEN" "https://api.github.com/users/$GH_USER"
-            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header 'Content-Type: application/json' --data-raw '{ "body": "Test comment" }' $PR_URL
+            curl "https://api.github.com/users/$GH_USER"
+            curl --location --request POST --user "$GH_USER:$GH_TOKEN" --header 'Content-Type: application/json' --data-raw '{ "body": "Test comment" }' $PR_URL
       - run:
           name: get commit hashes
           command: |
