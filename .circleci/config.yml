@@ -214,7 +214,7 @@ jobs:
             PR_NUMBER=${CIRCLE_PULL_REQUEST##*/}
             PR_URL="https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/issues/${PR_NUMBER}/comments"
             COMPARE_OUTPUT=`cat $GC_RESULTS_PATH`
-            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header 'Content-Type: application/json' --data-raw "{ 'body': $COMPARE_OUTPUT }" $PR_URL
+            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header 'Content-Type: application/json' --data-urlencode "{ 'body': $COMPARE_OUTPUT }" $PR_URL
       - store_artifacts:
           path: *gas-compare-results-path
 
