@@ -181,7 +181,7 @@ jobs:
             PR_NUMBER=${CIRCLE_PULL_REQUEST##*/}
             PR_URL="https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/issues/${PR_NUMBER}/comments"
             echo $PR_URL
-            FACE='content $PR_URL'
+            FACE=\'content $PR_URL\'
             echo $FACE
             curl --location --request POST --header 'Authorization: token $GH_TOKEN' --header 'Content-Type: application/json' --data-raw '{ "body": "Test comment" }' $PR_URL
       - run:
