@@ -178,6 +178,7 @@ jobs:
       - run:
           name: check pr
           command: |
+            PR_NUMBER=${CIRCLE_PULL_REQUEST##*/}
             curl --location --request POST \
             https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/issues/${PR_NUMBER}/comments \
             -u $GH_USER:$GH_TOKEN \
