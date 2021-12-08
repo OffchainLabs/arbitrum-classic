@@ -224,7 +224,7 @@ func startup() error {
 	if len(config.Feed.Input.URLs) == 0 {
 		logger.Warn().Msg("Missing --feed.url so not subscribing to feed")
 	} else {
-		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 1)
+		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 4096)
 		for _, url := range config.Feed.Input.URLs {
 			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
 			broadcastClient.ConnectInBackground(ctx, sequencerFeed)
