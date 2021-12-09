@@ -228,7 +228,7 @@ func TestSequencerBatcher(t *testing.T) {
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		nil,
 		dummySequencerFeed,
-		config.Node,
+		config.Node.InboxReader,
 	)
 	test.FailIfError(t, err)
 
@@ -240,7 +240,7 @@ func TestSequencerBatcher(t *testing.T) {
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		nil,
 		dummySequencerFeed,
-		config.Node,
+		config.Node.InboxReader,
 	)
 	test.FailIfError(t, err)
 

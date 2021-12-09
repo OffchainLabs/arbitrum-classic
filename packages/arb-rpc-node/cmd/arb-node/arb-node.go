@@ -241,7 +241,7 @@ func startup() error {
 			common.HexToAddress(config.BridgeUtilsAddress),
 			healthChan,
 			sequencerFeed,
-			config.Node,
+			config.Node.InboxReader,
 		)
 		if err == nil {
 			break
