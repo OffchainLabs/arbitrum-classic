@@ -194,9 +194,12 @@ func (m *Machine) ExecuteAssertionAdvanced(
 
 	C.machineExecutionConfigSetStopOnSideload(conf, boolToCInt(stopOnSideload))
 
-	assertion := C.executeAssertion(m.c, conf)
+	assertionResult := C.executeAssertion(m.c, conf)
+	if assertionResult.shutting_down == 1 {
+		return nil, nil, 0, errors.New("Shutting down")
+	}
 
-	executionAssertion, values, steps, err := makeExecutionAssertion(assertion)
+	executionAssertion, values, steps, err := makeExecutionAssertion(assertionResult.assertion)
 	GasCounter.Inc(int64(executionAssertion.NumGas))
 	StepsCounter.Inc(int64(steps))
 	return executionAssertion, values, steps, err

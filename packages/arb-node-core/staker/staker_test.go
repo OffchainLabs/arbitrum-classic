@@ -283,6 +283,8 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: "0.0.0.0:8080"}
 	nodehealth.Init(healthChan)
 
+	nodeConfig := *configuration.DefaultNodeSettings()
+
 	go func() {
 		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, registry)
 		test.FailIfError(t, err)
@@ -291,7 +293,16 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	// Make a dummy feed for now
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed, false)
+	_, err = mon.StartInboxReader(
+		ctx,
+		client,
+		common.NewAddressFromEth(rollupAddr),
+		rollupBlock.Int64(),
+		common.NewAddressFromEth(bridgeUtilsAddr),
+		healthChan,
+		sequencerFeed,
+		nodeConfig.InboxReader,
+	)
 	test.FailIfError(t, err)
 
 	for i := 1; i <= 10; i++ {
