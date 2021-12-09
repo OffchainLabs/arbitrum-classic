@@ -189,7 +189,6 @@ jobs:
             echo $FILELOCATIONS
             FILELOCATIONO=$PWD/test-file-3.txt
             echo $FILELOCATIONO
-            wget
             curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data '{ "data": "testy" }' $PR_URL
             curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binary '{ "data": "testy" }' $PR_URL
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binary @$FILELOCATIONS $PR_URL
