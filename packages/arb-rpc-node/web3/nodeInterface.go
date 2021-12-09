@@ -142,6 +142,6 @@ func handleEstimateRetryableTicket(srv *Server, calldata []byte, blockNum rpc.Bl
 	used = used.Div(used, big.NewInt(10))
 	return estimateRetryableTicket.Outputs.PackValues([]interface{}{
 		new(big.Int).Add(used, big.NewInt(100)),
-		new(big.Int).Mul(res.GasPrice, gasPriceFactor),
+		applyGasPriceBidFactor(res.GasPrice),
 	})
 }
