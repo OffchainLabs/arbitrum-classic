@@ -194,18 +194,23 @@ type Forwarder struct {
 	RpcMode   string `koanf:"rpc-mode"`
 }
 
+type InboxReader struct {
+	DelayBlocks int64 `koanf:"delay-blocks"`
+	Paranoid    bool  `koanf:"paranoid"`
+}
+
 type Node struct {
-	Aggregator          Aggregator    `koanf:"aggregator"`
-	Cache               NodeCache     `koanf:"cache"`
-	ChainID             uint64        `koanf:"chain-id"`
-	Forwarder           Forwarder     `koanf:"forwarder"`
-	LogProcessCount     int           `koanf:"log-process-count"`
-	LogIdleSleep        time.Duration `koanf:"log-idle-sleep"`
-	RPC                 RPC           `koanf:"rpc"`
-	Sequencer           Sequencer     `koanf:"sequencer"`
-	Type                string        `koanf:"type"`
-	WS                  WS            `koanf:"ws"`
-	ParanoidInboxReader bool          `koanf:"paranoid-inbox-reader"`
+	Aggregator      Aggregator    `koanf:"aggregator"`
+	Cache           NodeCache     `koanf:"cache"`
+	ChainID         uint64        `koanf:"chain-id"`
+	Forwarder       Forwarder     `koanf:"forwarder"`
+	InboxReader     InboxReader   `koanf:"inbox-reader"`
+	LogProcessCount int           `koanf:"log-process-count"`
+	LogIdleSleep    time.Duration `koanf:"log-idle-sleep"`
+	RPC             RPC           `koanf:"rpc"`
+	Sequencer       Sequencer     `koanf:"sequencer"`
+	Type            string        `koanf:"type"`
+	WS              WS            `koanf:"ws"`
 }
 
 type NodeCache struct {
@@ -362,10 +367,19 @@ func DefaultNodeSettings() *Node {
 			LRUSize:         1000,
 			TimedExpire:     20 * time.Minute,
 		},
+		InboxReader: InboxReader{
+			DelayBlocks: 4,
+			Paranoid:    false,
+		},
 		LogProcessCount: 100,
 		LogIdleSleep:    10 * time.Millisecond, // 10 for dev, 100 for server
+		Sequencer: Sequencer{
+			CreateBatchBlockInterval:   40,
+			DelayedMessagesTargetDelay: 1,
+			MaxBatchGasCost:            2_000_000,
+			GasRefunderAddress:         "",
+		},
 	}
-
 }
 
 func (c *Config) GetNodeDatabasePath() string {
@@ -410,6 +424,9 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
 	f.String("node.forwarder.rpc-mode", "full", "RPC mode: either full, non-mutating (no eth_sendRawTransaction), or forwarding-only (only requests forwarded upstream are permitted)")
 
+	f.Int64("node.inbox-reader.delay-blocks", 4, "number of L1 blocks to wait for confirmation before updating L2 state")
+	f.Bool("node.inbox-reader.paranoid", false, "if enabled, check for reorgs before searching for messages")
+
 	f.Duration("node.log-idle-sleep", 100*time.Millisecond, "milliseconds for log reader to sleep between reading logs")
 	f.Int("node.log-process-count", 100, "maximum number of logs to process at a time")
 
@@ -439,7 +456,6 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
-	f.Bool("node.paranoid-inbox-reader", false, "if enabled, check for reorgs before searching for messages")
 
 	return ParseNonRelay(ctx, f, "rpc-wallet", 250_000_000)
 }
