@@ -230,7 +230,7 @@ jobs:
           command: |
             source $BASH_ENV
             echo $CIRCLE_PR_HEAD_SHA
-            ./packages/tools/scripts/compare-gas-commits.sh $CIRCLE_PR_BASE_SHA $CIRCLE_PR_HEAD_SHA $GC_RESULTS_PATH
+            ./packages/tools/scripts/compare-gas-commits.sh $CIRCLE_PR_BASE_SHA $CIRCLE_PR_HEAD_SHA $GC_RESULTS
             ls -al /tmp/gas-compare-results
       - run:
           name: comment on PR

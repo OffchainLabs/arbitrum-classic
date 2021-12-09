@@ -3,8 +3,8 @@ BRANCH_NOW=$(git branch --show-current)
 echo "Currently on branch $BRANCH_NOW"
 HASH_BEFORE=$1
 HASH_AFTER=$2
-OUTFILE=$3
-echo "Comparing gas usage between $HASH_BEFORE and $HASH_AFTER. Store results to $OUTFILE."
+OUTDIR=$3
+echo "Comparing gas usage between $HASH_BEFORE and $HASH_AFTER. Store results to $OUTDIR."
 
 # checkout before, run tests, create report
 git checkout $HASH_BEFORE
@@ -30,6 +30,6 @@ mv gasReporterOutput.json ./packages/tools/gas-$HASH_AFTER.json
 git checkout $BRANCH_NOW
 echo "Calculating comparison"
 cd packages/tools
-yarn dev:compare-gas --gasReport1=./gas-$HASH_BEFORE.json --gasReport2=./gas-$HASH_AFTER.json --outputFile=$OUTFILE
+yarn dev:compare-gas --gasReport1=$OUTDIR/gas-$HASH_BEFORE.json --gasReport2=$OUTDIR/gas-$HASH_AFTER.json --outputFile=$OUTDIR/compare-results
 cd ../..
 

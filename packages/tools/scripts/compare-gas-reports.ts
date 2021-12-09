@@ -243,9 +243,10 @@ class GasDiffReporter {
    */
   public writeDiffsCsv(outputFileLocation: string) {
     // print all the measures to file
+    const differences = this.differences
     let data =
       'key,contract,function,numberOfCalls,min,max,average,numberOfCallsPercent,minPercent,maxPercent,averagePercent|\n'
-    for (const diff of this.differences) {
+    for (const diff of differences) {
       data += `${diff.key},${diff.contract},${diff.name},${diff.numberOfCalls},${diff.min},${diff.max},${diff.average},${diff.numberOfCallsPercent},${diff.minPercent},${diff.maxPercent},${diff.averagePercent}\n`
     }
 
@@ -257,16 +258,21 @@ class GasDiffReporter {
    * @param outputFileLocation
    */
   public writeDiffsGithubMd(outputFileLocation: string) {
-    // print all the measures to file
-    let data = `<details><summary>${this.differences.length} methods had a different gas cost.</summary>\\n\\n`
-    data +=
-      '|key|contract|function|numberOfCalls|min|max|average|numberOfCallsPercent|minPercent|maxPercent|averagePercent|\\n'
-    data += '|---|---|---|---|---|---|---|---|---|---|---|\\n'
-    for (const diff of this.differences) {
-      data += `|${diff.key}|${diff.contract}|${diff.name}|${diff.numberOfCalls}|${diff.min}|${diff.max}|${diff.average}|${diff.numberOfCallsPercent}|${diff.minPercent}|${diff.maxPercent}|${diff.averagePercent}|\\n`
+    // print only difference measures to a file
+    const differences = this.onlyDifferent()
+    let data = ''
+    if (differences.length === 0) {
+      data += `${differences} methods had a different gas cost.`
+    } else {
+      data += `<details><summary>${differences} methods had a different gas cost.</summary>\\n\\n`
+      data +=
+        '|key|contract|function|numberOfCalls|min|max|average|numberOfCallsPercent|minPercent|maxPercent|averagePercent|\\n'
+      data += '|---|---|---|---|---|---|---|---|---|---|---|\\n'
+      for (const diff of differences) {
+        data += `|${diff.key}|${diff.contract}|${diff.name}|${diff.numberOfCalls}|${diff.min}|${diff.max}|${diff.average}|${diff.numberOfCallsPercent}|${diff.minPercent}|${diff.maxPercent}|${diff.averagePercent}|\\n`
+      }
+      data += '</details>'
     }
-    data += '</details>'
-
     fs.writeFileSync(outputFileLocation, data)
   }
 
@@ -274,7 +280,8 @@ class GasDiffReporter {
    * Write the calculated diff to a console table.
    */
   public writeDiffsToConsole() {
-    console.table(this.differences)
+    const differences = this.onlyDifferent()
+    console.table(differences)
   }
 }
 
