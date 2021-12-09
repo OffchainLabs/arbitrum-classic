@@ -1,4 +1,4 @@
-yarn run v1.22.5
+{ "body": "yarn run v1.22.5
 $ ts-node ./scripts/compare-gas-reports.ts --gasReport1=./gas-771f6701d4fddb285a948164f68a48dcc2394fbf.json --gasReport2=./gas-6e826d10e6a2662725f74053c35093e79cbd4334.json
 ┌─────────┬───────────────────────────────────────────┬───────────────────────────────┬─────────────────────────────┬───────────────┬─────┬─────┬─────────┐
 │ (index) │                    key                    │           contract            │            name             │ numberOfCalls │ min │ max │ average │
@@ -65,4 +65,4 @@ $ ts-node ./scripts/compare-gas-reports.ts --gasReport1=./gas-771f6701d4fddb285a
 │   59    │   'ValidatorWalletCreator_constructor'    │   'ValidatorWalletCreator'    │       '_constructor'        │       0       │  0  │  0  │    0    │
 │   60    │         'ValueTester_constructor'         │         'ValueTester'         │       '_constructor'        │       0       │  0  │  0  │    0    │
 └─────────┴───────────────────────────────────────────┴───────────────────────────────┴─────────────────────────────┴───────────────┴─────┴─────┴─────────┘
-Done in 2.50s.
+Done in 2.50s." }
