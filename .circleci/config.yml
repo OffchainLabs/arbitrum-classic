@@ -191,9 +191,9 @@ jobs:
             curl --trace ./test2 --location --request POST --header "Authorization: token $GH_TOKEN" --data-urlencode "payload={\"body\": \"$(cat test-file.txt | sed "s/\"/'/g")\"}" $PR_URL
             curl --trace ./test3 --location --request POST --header "Authorization: token $GH_TOKEN" --header 'Content-Type: application/json' --data-binary @./test-file.txt $PR_URL
 
-            cat ./test1
-            cat ./test2
-            cat ./test3
+            # cat ./test1
+            # cat ./test2
+            # cat ./test3
       - run:
           name: get commit hashes
           command: |
