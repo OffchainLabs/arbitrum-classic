@@ -185,7 +185,7 @@ jobs:
             echo "$COMPARE_OUTPUT"
             FACE="{ \"body\": \"$COMPARE_OUTPUT\" }"
             echo "$FACE"
-            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header 'Content-Type: application/json' --data-urlencode "payload={\"body\": \"$(cat test-file.txt | sed "s/\"/'/g")\"}" $PR_URL
+            curl --location --request POST --header "Authorization: token $GH_TOKEN" --data-urlencode "payload={\"body\": \"$(cat test-file.txt | sed "s/\"/'/g")\"}" $PR_URL
             curl --location --request POST --header "Authorization: token $GH_TOKEN" --header 'Content-Type: application/json' --data-binary @./test-file.txt $PR_URL
       - run:
           name: get commit hashes
