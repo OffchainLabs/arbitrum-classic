@@ -32,27 +32,25 @@ class Transaction;
 class ReadTransaction;
 class DataStorage;
 
-class ConcurrentCounter {
+class TryDbLockShared {
     friend DataStorage;
 
    private:
     const DataStorage* storage;
 
-    ConcurrentCounter(const DataStorage* storage);
-    ConcurrentCounter(const ConcurrentCounter& other) = delete;
-    ConcurrentCounter(ConcurrentCounter&& other) noexcept;
-    ConcurrentCounter& operator=(const ConcurrentCounter& other) = delete;
-    ConcurrentCounter& operator=(ConcurrentCounter&& other) noexcept;
-
-    static ConcurrentCounter Get(const DataStorage* storage);
+    TryDbLockShared(const DataStorage* storage);
+    TryDbLockShared(const TryDbLockShared& other) = delete;
+    TryDbLockShared(TryDbLockShared&& other) noexcept;
+    TryDbLockShared& operator=(const TryDbLockShared& other) = delete;
+    TryDbLockShared& operator=(TryDbLockShared&& other) noexcept;
 
    public:
-    ~ConcurrentCounter();
+    ~TryDbLockShared();
 };
 
 class DataStorage {
     friend Transaction;
-    friend ConcurrentCounter;
+    friend TryDbLockShared;
 
    public:
     enum column_family_indexes {
@@ -84,7 +82,7 @@ class DataStorage {
     rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
     rocksdb::Status clearDBExceptInbox();
-    [[nodiscard]] ConcurrentCounter getCounter() const;
+    [[nodiscard]] TryDbLockShared getCounter() const;
 
    private:
     std::atomic<bool> shutting_down{false};
