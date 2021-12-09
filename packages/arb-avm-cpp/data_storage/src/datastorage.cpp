@@ -29,7 +29,7 @@
 
 DataStorage::DataStorage(const std::string& db_path) {
     // Make sure database isn't closed while constructor still running
-    auto counter = getCounter();
+    auto counter = tryLockShared();
 
     rocksdb::TransactionDBOptions txn_options{};
     rocksdb::Options options{};
@@ -130,7 +130,7 @@ DataStorage::~DataStorage() {
 
 rocksdb::Status DataStorage::flushNextColumn() {
     // Make sure database isn't closed while it is being used
-    auto counter = getCounter();
+    auto counter = tryLockShared();
 
     next_column_to_flush = (next_column_to_flush + 1) % column_handles.size();
     return txn_db->Flush(flush_options, column_handles[next_column_to_flush]);
@@ -210,7 +210,7 @@ rocksdb::Status DataStorage::closeDb() {
 std::unique_ptr<Transaction> Transaction::makeTransaction(
     std::shared_ptr<DataStorage> store) {
     // Make sure database isn't closed while it is being used
-    auto counter = store->getCounter();
+    auto counter = store->tryLockShared();
 
     auto tx = store->beginTransaction();
     return std::make_unique<Transaction>(std::move(store), std::move(tx));
@@ -218,7 +218,7 @@ std::unique_ptr<Transaction> Transaction::makeTransaction(
 
 rocksdb::Status DataStorage::clearDBExceptInbox() {
     // Make sure database isn't closed while it is being used
-    auto counter = getCounter();
+    auto counter = tryLockShared();
 
     for (int i = 0; i < FAMILY_COLUMN_COUNT; i++) {
         if (i == DEFAULT_COLUMN || i == DELAYEDMESSAGE_COLUMN ||
@@ -237,7 +237,7 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
     std::string key("secretHashSeed");
 
     // Make sure database isn't closed while it is being used
-    auto counter = getCounter();
+    auto counter = tryLockShared();
 
     rocksdb::PinnableSlice value;
     rocksdb::ReadOptions read_opts;
@@ -261,15 +261,14 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
     return status;
 }
 
-TryDbLockShared DataStorage::getCounter() const {
+DbLockShared DataStorage::tryLockShared() const {
     if (shutting_down) {
         throw DataStorage::shutting_down_exception();
     }
-    return TryDbLockShared(this);
+    return DbLockShared(this);
 }
 
-TryDbLockShared::TryDbLockShared(const DataStorage* _storage)
-    : storage(_storage) {
+DbLockShared::DbLockShared(const DataStorage* _storage) : storage(_storage) {
     storage->concurrent_database_access_counter++;
     if (storage->shutting_down) {
         // Destructor will take care of decrementing counter
@@ -277,22 +276,24 @@ TryDbLockShared::TryDbLockShared(const DataStorage* _storage)
     }
 }
 
-TryDbLockShared::~TryDbLockShared() {
+DbLockShared::~DbLockShared() {
     if (storage == nullptr) {
         // Don't do anything if counter was moved
         return;
     }
-    storage->concurrent_database_access_counter--;
-    assert(storage->concurrent_database_access_counter.load() >= 0);
+    auto new_counter = --storage->concurrent_database_access_counter;
+    assert(new_counter >= 0);
+    (void)new_counter;  // silence unused variable warning on release builds
+                        // where assert is disabled
 }
 
-TryDbLockShared::TryDbLockShared(TryDbLockShared&& other) noexcept
+DbLockShared::DbLockShared(DbLockShared&& other) noexcept
     : storage(other.storage) {
     other.storage = nullptr;
 }
 
-TryDbLockShared& TryDbLockShared::operator=(TryDbLockShared&& other) noexcept {
-    this->~TryDbLockShared();
+DbLockShared& DbLockShared::operator=(DbLockShared&& other) noexcept {
+    this->DbLockShared();
     storage = other.storage;
     other.storage = nullptr;
     return *this;

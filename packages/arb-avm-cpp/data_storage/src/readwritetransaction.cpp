@@ -24,7 +24,7 @@ ReadWriteTransaction::ReadWriteTransaction(std::shared_ptr<DataStorage> store)
 rocksdb::Status ReadWriteTransaction::defaultPut(const rocksdb::Slice& key,
                                                  const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN],
@@ -34,7 +34,7 @@ rocksdb::Status ReadWriteTransaction::defaultPut(const rocksdb::Slice& key,
 rocksdb::Status ReadWriteTransaction::statePut(const rocksdb::Slice& key,
                                                const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage->column_handles[DataStorage::STATE_COLUMN],
@@ -45,7 +45,7 @@ rocksdb::Status ReadWriteTransaction::checkpointPut(
     const rocksdb::Slice& key,
     const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage
@@ -56,7 +56,7 @@ rocksdb::Status ReadWriteTransaction::checkpointPut(
 rocksdb::Status ReadWriteTransaction::logPut(const rocksdb::Slice& key,
                                              const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage->column_handles[DataStorage::LOG_COLUMN], key,
@@ -66,7 +66,7 @@ rocksdb::Status ReadWriteTransaction::logPut(const rocksdb::Slice& key,
 rocksdb::Status ReadWriteTransaction::sendPut(const rocksdb::Slice& key,
                                               const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage->column_handles[DataStorage::SEND_COLUMN], key,
@@ -76,7 +76,7 @@ rocksdb::Status ReadWriteTransaction::sendPut(const rocksdb::Slice& key,
 rocksdb::Status ReadWriteTransaction::sideloadPut(const rocksdb::Slice& key,
                                                   const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage->column_handles[DataStorage::SIDELOAD_COLUMN],
@@ -87,7 +87,7 @@ rocksdb::Status ReadWriteTransaction::aggregatorPut(
     const rocksdb::Slice& key,
     const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage
@@ -99,7 +99,7 @@ rocksdb::Status ReadWriteTransaction::refCountedPut(
     const rocksdb::Slice& key,
     const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage
@@ -111,7 +111,7 @@ rocksdb::Status ReadWriteTransaction::sequencerBatchItemPut(
     const rocksdb::Slice& key,
     const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage
@@ -123,7 +123,7 @@ rocksdb::Status ReadWriteTransaction::delayedMessagePut(
     const rocksdb::Slice& key,
     const rocksdb::Slice& value) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Put(
         transaction->datastorage
@@ -133,7 +133,7 @@ rocksdb::Status ReadWriteTransaction::delayedMessagePut(
 
 rocksdb::Status ReadWriteTransaction::defaultDelete(const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN],
@@ -142,7 +142,7 @@ rocksdb::Status ReadWriteTransaction::defaultDelete(const rocksdb::Slice& key) {
 
 rocksdb::Status ReadWriteTransaction::stateDelete(const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage->column_handles[DataStorage::STATE_COLUMN],
@@ -151,7 +151,7 @@ rocksdb::Status ReadWriteTransaction::stateDelete(const rocksdb::Slice& key) {
 rocksdb::Status ReadWriteTransaction::checkpointDelete(
     const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage
@@ -160,14 +160,14 @@ rocksdb::Status ReadWriteTransaction::checkpointDelete(
 }
 rocksdb::Status ReadWriteTransaction::logDelete(const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage->column_handles[DataStorage::LOG_COLUMN], key);
 }
 rocksdb::Status ReadWriteTransaction::sendDelete(const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage->column_handles[DataStorage::SEND_COLUMN],
@@ -176,7 +176,7 @@ rocksdb::Status ReadWriteTransaction::sendDelete(const rocksdb::Slice& key) {
 rocksdb::Status ReadWriteTransaction::sideloadDelete(
     const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage->column_handles[DataStorage::SIDELOAD_COLUMN],
@@ -185,7 +185,7 @@ rocksdb::Status ReadWriteTransaction::sideloadDelete(
 rocksdb::Status ReadWriteTransaction::aggregatorDelete(
     const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage
@@ -195,7 +195,7 @@ rocksdb::Status ReadWriteTransaction::aggregatorDelete(
 rocksdb::Status ReadWriteTransaction::refCountedDelete(
     const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage
@@ -205,7 +205,7 @@ rocksdb::Status ReadWriteTransaction::refCountedDelete(
 rocksdb::Status ReadWriteTransaction::sequencerBatchItemDelete(
     const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage
@@ -215,7 +215,7 @@ rocksdb::Status ReadWriteTransaction::sequencerBatchItemDelete(
 rocksdb::Status ReadWriteTransaction::delayedMessageDelete(
     const rocksdb::Slice& key) {
     // Make sure database isn't closed while it is being used
-    auto counter = transaction->datastorage->getCounter();
+    auto counter = transaction->datastorage->tryLockShared();
 
     return transaction->transaction->Delete(
         transaction->datastorage

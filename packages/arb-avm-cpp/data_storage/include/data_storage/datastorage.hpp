@@ -32,25 +32,25 @@ class Transaction;
 class ReadTransaction;
 class DataStorage;
 
-class TryDbLockShared {
+class DbLockShared {
     friend DataStorage;
 
    private:
     const DataStorage* storage;
 
-    TryDbLockShared(const DataStorage* storage);
-    TryDbLockShared(const TryDbLockShared& other) = delete;
-    TryDbLockShared(TryDbLockShared&& other) noexcept;
-    TryDbLockShared& operator=(const TryDbLockShared& other) = delete;
-    TryDbLockShared& operator=(TryDbLockShared&& other) noexcept;
+    DbLockShared(const DataStorage* storage);
+    DbLockShared(const DbLockShared& other) = delete;
+    DbLockShared(DbLockShared&& other) noexcept;
+    DbLockShared& operator=(const DbLockShared& other) = delete;
+    DbLockShared& operator=(DbLockShared&& other) noexcept;
 
    public:
-    ~TryDbLockShared();
+    ~DbLockShared();
 };
 
 class DataStorage {
     friend Transaction;
-    friend TryDbLockShared;
+    friend DbLockShared;
 
    public:
     enum column_family_indexes {
@@ -82,7 +82,7 @@ class DataStorage {
     rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
     rocksdb::Status clearDBExceptInbox();
-    [[nodiscard]] TryDbLockShared getCounter() const;
+    [[nodiscard]] DbLockShared tryLockShared() const;
 
    private:
     std::atomic<bool> shutting_down{false};
@@ -92,7 +92,7 @@ class DataStorage {
 
     [[nodiscard]] std::unique_ptr<rocksdb::Transaction> beginTransaction() {
         // Make sure database isn't closed while it is being used
-        auto counter = getCounter();
+        auto counter = tryLockShared();
 
         return std::unique_ptr<rocksdb::Transaction>{
             txn_db->BeginTransaction(rocksdb::WriteOptions())};
@@ -113,14 +113,14 @@ class Transaction {
 
     rocksdb::Status commit() {
         // Make sure database isn't closed while it is being used
-        auto counter = datastorage->getCounter();
+        auto counter = datastorage->tryLockShared();
 
         return transaction->Commit();
     }
 
     rocksdb::Status rollback() {
         // Make sure database isn't closed while it is being used
-        auto counter = datastorage->getCounter();
+        auto counter = datastorage->tryLockShared();
 
         return transaction->Rollback();
     }
