@@ -59,7 +59,7 @@ class GasDiffReporter {
   }
 
   private getPercentOf(a: number, b: number) {
-    return Math.round((a - b / b) * 10000) / 100
+    return Math.round(((a - b) / b) * 10000) / 100
   }
 
   /**
@@ -245,7 +245,7 @@ class GasDiffReporter {
     // print all the measures to file
     const differences = this.differences
     let data =
-      'key,contract,function,numberOfCalls,min,max,average,numberOfCallsPercent,minPercent,maxPercent,averagePercent|\n'
+      'key,contract,function,numberOfCalls,min,max,average,numberOfCalls%,min%,max%,average%|\n'
     for (const diff of differences) {
       data += `${diff.key},${diff.contract},${diff.name},${diff.numberOfCalls},${diff.min},${diff.max},${diff.average},${diff.numberOfCallsPercent},${diff.minPercent},${diff.maxPercent},${diff.averagePercent}\n`
     }
@@ -266,7 +266,7 @@ class GasDiffReporter {
     } else {
       data += `<details><summary>${differences} methods had a different gas cost.</summary>\\n\\n`
       data +=
-        '|key|contract|function|numberOfCalls|min|max|average|numberOfCallsPercent|minPercent|maxPercent|averagePercent|\\n'
+        '|key|contract|function|numberOfCalls|min|max|average|numberOfCalls%|min%|max%|average%|\\n'
       data += '|---|---|---|---|---|---|---|---|---|---|---|\\n'
       for (const diff of differences) {
         data += `|${diff.key}|${diff.contract}|${diff.name}|${diff.numberOfCalls}|${diff.min}|${diff.max}|${diff.average}|${diff.numberOfCallsPercent}|${diff.minPercent}|${diff.maxPercent}|${diff.averagePercent}|\\n`
