@@ -1,0 +1,68 @@
+{ "body": "yarn run v1.22.5
+$ ts-node ./scripts/compare-gas-reports.ts --gasReport1=./gas-771f6701d4fddb285a948164f68a48dcc2394fbf.json --gasReport2=./gas-6e826d10e6a2662725f74053c35093e79cbd4334.json
+┌─────────┬───────────────────────────────────────────┬───────────────────────────────┬─────────────────────────────┬───────────────┬─────┬─────┬─────────┐
+│ (index) │                    key                    │           contract            │            name             │ numberOfCalls │ min │ max │ average │
+├─────────┼───────────────────────────────────────────┼───────────────────────────────┼─────────────────────────────┼───────────────┼─────┼─────┼─────────┤
+│    0    │           'Bridge_constructor'            │           'Bridge'            │       '_constructor'        │       0       │  0  │  0  │    0    │
+│    1    │             'Bridge_8129fc1c'             │           'Bridge'            │        'initialize'         │       0       │  0  │  0  │    0    │
+│    2    │        'BridgeCreator_constructor'        │        'BridgeCreator'        │       '_constructor'        │       0       │  0  │  0  │    0    │
+│    3    │         'BridgeMock_constructor'          │         'BridgeMock'          │       '_constructor'        │       0       │  0  │  0  │    0    │
+│    4    │           'BridgeMock_da9b1caf'           │         'BridgeMock'          │ 'deliverMessageToInboxTest' │       0       │  0  │  0  │    0    │
+│    5    │           'BridgeMock_8129fc1c'           │         'BridgeMock'          │        'initialize'         │       0       │  0  │  0  │    0    │
+│    6    │      'BufferProofTester_constructor'      │      'BufferProofTester'      │       '_constructor'        │       0       │  0  │  0  │    0    │
+│    7    │           'Challenge_8e7b84c5'            │          'Challenge'          │      'bisectExecution'      │       0       │  0  │  0  │    0    │
+│    8    │           'Challenge_95979201'            │          'Challenge'          │   'oneStepProveExecution'   │       0       │  0  │  0  │    0    │
+│    9    │           'Challenge_70dea79a'            │          'Challenge'          │          'timeout'          │       0       │  0  │  0  │    0    │
+│   10    │      'ChallengeFactory_constructor'       │      'ChallengeFactory'       │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   11    │       'ChallengeTester_constructor'       │       'ChallengeTester'       │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   12    │        'ChallengeTester_f5aa337c'         │       'ChallengeTester'       │      'startChallenge'       │       0       │ 12  │ 12  │    9    │
+│   13    │      'ERC20RollupUserFacet_f31d863f'      │    'ERC20RollupUserFacet'     │      'confirmNextNode'      │       0       │  0  │  0  │    0    │
+│   14    │      'ERC20RollupUserFacet_488ed1a9'      │    'ERC20RollupUserFacet'     │      'createChallenge'      │       0       │  0  │  0  │    0    │
+│   15    │      'ERC20RollupUserFacet_1e83d30f'      │    'ERC20RollupUserFacet'     │       'reduceDeposit'       │       0       │  0  │  0  │    0    │
+│   16    │      'ERC20RollupUserFacet_6b94c33b'      │    'ERC20RollupUserFacet'     │      'rejectNextNode'       │       0       │  0  │  0  │    0    │
+│   17    │      'ERC20RollupUserFacet_edfd03ed'      │    'ERC20RollupUserFacet'     │     'removeOldZombies'      │       0       │  0  │  0  │    0    │
+│   18    │      'ERC20RollupUserFacet_7427be51'      │    'ERC20RollupUserFacet'     │     'returnOldDeposit'      │       0       │  0  │  0  │    0    │
+│   19    │      'ERC20RollupUserFacet_414f23fe'      │    'ERC20RollupUserFacet'     │    'stakeOnExistingNode'    │       0       │  0  │  0  │    0    │
+│   20    │      'ERC20RollupUserFacet_3fe38627'      │    'ERC20RollupUserFacet'     │      'stakeOnNewNode'       │       0       │  0  │  0  │    0    │
+│   21    │      'ERC20RollupUserFacet_81fbc98a'      │    'ERC20RollupUserFacet'     │    'withdrawStakerFunds'    │       0       │  0  │  0  │    0    │
+│   22    │        'HashingTester_constructor'        │        'HashingTester'        │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   23    │            'Node_constructor'             │            'Node'             │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   24    │              'Node_2466696e'              │            'Node'             │         'addStaker'         │       0       │  0  │  0  │    0    │
+│   25    │              'Node_a406b374'              │            'Node'             │        'initialize'         │       0       │  0  │  0  │    0    │
+│   26    │         'NodeFactory_constructor'         │         'NodeFactory'         │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   27    │          'NodeFactory_d45ab2b5'           │         'NodeFactory'         │        'createNode'         │       0       │  0  │  0  │    0    │
+│   28    │        'OneStepProof_constructor'         │        'OneStepProof'         │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   29    │        'OneStepProof2_constructor'        │        'OneStepProof2'        │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   30    │      'OneStepProofHash_constructor'       │      'OneStepProofHash'       │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   31    │     'OneStepProofTester_constructor'      │     'OneStepProofTester'      │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   32    │       'OneStepProofTester_ad6847a8'       │     'OneStepProofTester'      │      'executeStepTest'      │       0       │  0  │  0  │    0    │
+│   33    │      'PrecompilesTester_constructor'      │      'PrecompilesTester'      │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   34    │         'ProxyAdmin_constructor'          │         'ProxyAdmin'          │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   35    │           'Rollup_constructor'            │           'Rollup'            │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   36    │      'RollupAdminFacet_constructor'       │      'RollupAdminFacet'       │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   37    │        'RollupAdminFacet_f53f5afa'        │      'RollupAdminFacet'       │     'forceConfirmNode'      │       0       │  0  │  0  │    0    │
+│   38    │        'RollupAdminFacet_9ea28e65'        │      'RollupAdminFacet'       │      'forceCreateNode'      │       0       │  0  │  0  │    0    │
+│   39    │        'RollupAdminFacet_7c75c298'        │      'RollupAdminFacet'       │     'forceRefundStaker'     │       0       │  0  │  0  │    0    │
+│   40    │        'RollupAdminFacet_f38c9379'        │      'RollupAdminFacet'       │   'forceResolveChallenge'   │       0       │  0  │  0  │    0    │
+│   41    │        'RollupAdminFacet_8456cb59'        │      'RollupAdminFacet'       │           'pause'           │       0       │  0  │  0  │    0    │
+│   42    │        'RollupAdminFacet_046f7da2'        │      'RollupAdminFacet'       │          'resume'           │       0       │  0  │  0  │    0    │
+│   43    │        'RollupAdminFacet_27035859'        │      'RollupAdminFacet'       │         'setFacets'         │       0       │  0  │  0  │    0    │
+│   44    │        'RollupAdminFacet_a3ffb772'        │      'RollupAdminFacet'       │       'setValidator'        │       0       │  0  │  0  │    0    │
+│   45    │        'RollupCreator_constructor'        │        'RollupCreator'        │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   46    │         'RollupCreator_4b1ef030'          │        'RollupCreator'        │       'createRollup'        │       0       │  0  │  0  │    0    │
+│   47    │         'RollupCreator_01183c89'          │        'RollupCreator'        │       'setTemplates'        │       0       │  0  │  0  │    0    │
+│   48    │         'RollupMock_constructor'          │         'RollupMock'          │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   49    │           'RollupMock_27ce1def'           │         'RollupMock'          │          'setMock'          │       0       │  0  │  0  │    0    │
+│   50    │       'RollupUserFacet_constructor'       │       'RollupUserFacet'       │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   51    │        'RollupUserFacet_45c5b2c7'         │       'RollupUserFacet'       │       'addToDeposit'        │       0       │  0  │  0  │    0    │
+│   52    │        'RollupUserFacet_5f576db6'         │       'RollupUserFacet'       │         'newStake'          │       0       │  0  │  0  │    0    │
+│   53    │       'SequencerInbox_constructor'        │       'SequencerInbox'        │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   54    │         'SequencerInbox_1a734229'         │       'SequencerInbox'        │    'addSequencerL2Batch'    │       0       │  0  │  0  │    0    │
+│   55    │         'SequencerInbox_c0c53b8b'         │       'SequencerInbox'        │        'initialize'         │       0       │  0  │  0  │    0    │
+│   56    │         'SequencerInbox_4d480faa'         │       'SequencerInbox'        │        'setMaxDelay'        │       0       │  0  │  0  │    0    │
+│   57    │ 'TransparentUpgradeableProxy_constructor' │ 'TransparentUpgradeableProxy' │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   58    │       'ValidatorUtils_constructor'        │       'ValidatorUtils'        │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   59    │   'ValidatorWalletCreator_constructor'    │   'ValidatorWalletCreator'    │       '_constructor'        │       0       │  0  │  0  │    0    │
+│   60    │         'ValueTester_constructor'         │         'ValueTester'         │       '_constructor'        │       0       │  0  │  0  │    0    │
+└─────────┴───────────────────────────────────────────┴───────────────────────────────┴─────────────────────────────┴───────────────┴─────┴─────┴─────────┘
+Done in 2.50s." }
