@@ -293,7 +293,7 @@ DbLockShared::DbLockShared(DbLockShared&& other) noexcept
 }
 
 DbLockShared& DbLockShared::operator=(DbLockShared&& other) noexcept {
-    this->DbLockShared();
+    this->~DbLockShared();
     storage = other.storage;
     other.storage = nullptr;
     return *this;
