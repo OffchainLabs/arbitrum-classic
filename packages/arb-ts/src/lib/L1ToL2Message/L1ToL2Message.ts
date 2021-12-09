@@ -68,7 +68,7 @@ export class L1ToL2Message extends MultiChainConnector {
       )
     if (messageNumberIndex === undefined && messageNumbers.length > 1)
       throw new Error(
-        `${messageNumbers.length} L2 messages for ${l1TxnHash}; must provide messamessageNumberIndex (or use initAllFromL1Txn)`
+        `${messageNumbers.length} L2 messages for ${l1TxnHash}; must provide messageNumberIndex (or use initAllFromL1Txn)`
       )
     const messageNumber = messageNumbers[messageNumberIndex || 0]
     if (!signersAndProviders.l2Provider) throw new Error('need l2 prov')
