@@ -43,7 +43,7 @@ var gasPriceFactorNum = big.NewInt(5)
 var gasPriceFactorDenom = big.NewInt(4)
 var gasEstimationCushion = 10
 
-func applyGasPriceBidFactor(price *big.Int) *big.Int {
+func ApplyGasPriceBidFactor(price *big.Int) *big.Int {
 	adjustedPrice := new(big.Int).Mul(price, gasPriceFactorNum)
 	return adjustedPrice.Div(adjustedPrice, gasPriceFactorDenom)
 }
@@ -102,7 +102,7 @@ func (s *Server) GasPrice() (*hexutil.Big, error) {
 	if err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(applyGasPriceBidFactor(prices[5])), nil
+	return (*hexutil.Big)(ApplyGasPriceBidFactor(prices[5])), nil
 }
 
 func (s *Server) Accounts() []common.Address {
@@ -291,7 +291,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
-		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(applyGasPriceBidFactor(res.FeeStats.Price.L2Computation).Bytes()) + gasEstimationCushion) * 16
+		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(ApplyGasPriceBidFactor(res.FeeStats.Price.L2Computation).Bytes()) + gasEstimationCushion) * 16
 		// Adjust calldata units used for calldata from gas limit
 		res.FeeStats.UnitsUsed.L1Calldata = res.FeeStats.UnitsUsed.L1Calldata.Add(res.FeeStats.UnitsUsed.L1Calldata, big.NewInt(int64(extraCalldataUnits)))
 		used := res.FeeStats.TargetGasUsed()
