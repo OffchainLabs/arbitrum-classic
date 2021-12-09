@@ -258,7 +258,7 @@ class GasDiffReporter {
    */
   public writeDiffsGithubMd(outputFileLocation: string) {
     // print all the measures to file
-    let data = `<details><summary>${this.differences.length} methods had a different gas cost.</summary>\\n`
+    let data = `<details><summary>${this.differences.length} methods had a different gas cost.</summary>\\n\\n`
     data +=
       '|key|contract|function|numberOfCalls|min|max|average|numberOfCallsPercent|minPercent|maxPercent|averagePercent|\\n'
     data += '|---|---|---|---|---|---|---|---|---|---|---|\\n'
