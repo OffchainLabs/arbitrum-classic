@@ -258,7 +258,7 @@ func startup() error {
 			bridgeUtilsAddress,
 			nil,
 			dummySequencerFeed,
-			config.Node,
+			config.Node.InboxReader,
 		)
 		if err == nil {
 			break

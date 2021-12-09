@@ -231,7 +231,7 @@ func startup() error {
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		healthChan,
 		dummySequencerFeed,
-		config.Node,
+		config.Node.InboxReader,
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to create inbox reader")

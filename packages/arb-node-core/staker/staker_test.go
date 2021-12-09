@@ -301,7 +301,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		healthChan,
 		sequencerFeed,
-		nodeConfig,
+		nodeConfig.InboxReader,
 	)
 	test.FailIfError(t, err)
 
