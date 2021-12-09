@@ -369,7 +369,7 @@ func TestRetryableFee(t *testing.T) {
 	res, _, err := backend.db.GetRequest(redeemId)
 	test.FailIfError(t, err)
 
-	if new(big.Int).Mul(res.GasPrice, big.NewInt(2)).Cmp(gasPriceEstimate) != 0 {
+	if web3.ApplyGasPriceBidFactor(res.GasPrice).Cmp(gasPriceEstimate) != 0 {
 		t.Error("wrong gas price")
 	}
 

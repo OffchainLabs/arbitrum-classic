@@ -59,8 +59,8 @@ func NewRollup(address ethcommon.Address, fromBlock int64, client ethutils.EthCl
 	}, nil
 }
 
-func (r *Rollup) RejectNextNode(ctx context.Context, staker common.Address) error {
-	_, err := r.builderCon.RejectNextNode(authWithContext(ctx, r.builderAuth), staker.ToEthAddress())
+func (r *Rollup) RejectNextNode(ctx context.Context, staker ethcommon.Address) error {
+	_, err := r.builderCon.RejectNextNode(authWithContext(ctx, r.builderAuth), staker)
 	return errors.WithStack(err)
 }
 
