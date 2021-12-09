@@ -223,7 +223,16 @@ func startup() error {
 		return errors.Wrap(err, "error setting up staker")
 	}
 
-	_, err = mon.StartInboxReader(ctx, l1Client, common.NewAddressFromEth(rollupAddr), config.Rollup.FromBlock, common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed, config.Node.ParanoidInboxReader)
+	_, err = mon.StartInboxReader(
+		ctx,
+		l1Client,
+		common.NewAddressFromEth(rollupAddr),
+		config.Rollup.FromBlock,
+		common.NewAddressFromEth(bridgeUtilsAddr),
+		healthChan,
+		dummySequencerFeed,
+		config.Node,
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed to create inbox reader")
 	}
