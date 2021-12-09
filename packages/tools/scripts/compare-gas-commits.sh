@@ -30,6 +30,6 @@ mv gasReporterOutput.json ./packages/tools/gas-$HASH_AFTER.json
 git checkout $BRANCH_NOW
 echo "Calculating comparison"
 cd packages/tools
-yarn dev:compare-gas --gasReport1=./gas-$HASH_BEFORE.json --gasReport2=./gas-$HASH_AFTER.json > $OUTFILE
+yarn dev:compare-gas --gasReport1=./gas-$HASH_BEFORE.json --gasReport2=./gas-$HASH_AFTER.json --outputFile=$OUTFILE
 cd ../..
 

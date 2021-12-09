@@ -1,4 +1,5 @@
 import fs from 'fs'
+/* eslint-disable  @typescript-eslint/no-var-requires */
 const args = require('args-parser')(process.argv)
 
 interface GasMeasure {
@@ -23,7 +24,9 @@ interface Deployment {
  */
 class GasDiffReporter {
   private readonly differences: GasMeasure[] = []
+  /* eslint-disable  @typescript-eslint/no-explicit-any */
   private readonly gasReport1: any
+  /* eslint-disable  @typescript-eslint/no-explicit-any */
   private readonly gasReport2: any
 
   constructor(
@@ -117,12 +120,12 @@ class GasDiffReporter {
    * Calculate gas usages diffs of contract deployments
    */
   public calcDeploymentDiffs() {
-    const gasReport1Deployments = (this.gasReport1['info'][
-      'deployments'
-    ] as Deployment[]).filter(d => d['gasData'].length > 0)
-    const gasReport2Deployments = (this.gasReport2['info'][
-      'deployments'
-    ] as Deployment[]).filter(d => d['gasData'].length > 0)
+    const gasReport1Deployments = (
+      this.gasReport1['info']['deployments'] as Deployment[]
+    ).filter(d => d['gasData'].length > 0)
+    const gasReport2Deployments = (
+      this.gasReport2['info']['deployments'] as Deployment[]
+    ).filter(d => d['gasData'].length > 0)
     const inBothDeploys = gasReport1Deployments.filter(
       d1 => gasReport2Deployments.filter(d2 => d2.name == d1.name).length > 0
     )
@@ -187,15 +190,31 @@ class GasDiffReporter {
   }
 
   /**
-   * Write the calculated diffs to file. Will overwrite existing file.
+   * Write the calculated diffs to csv format. Will overwrite existing file.
    * @param outputFileLocation
    */
-  public writeDiffs(outputFileLocation: string) {
+  public writeDiffsCsv(outputFileLocation: string) {
     // print all the measures to file
     let data = 'key,contract,function,numberOfCalls,min,max,average\n'
     this.sortDifferences()
     for (const diff of this.differences) {
       data += `${diff.key},${diff.contract},${diff.name},${diff.numberOfCalls},${diff.min},${diff.max},${diff.average}\n`
+    }
+
+    fs.writeFileSync(outputFileLocation, data)
+  }
+
+  /**
+   * Write the calculated diffs to github markdown. Will overwrite existing file.
+   * @param outputFileLocation
+   */
+  public writeDiffsGithubMd(outputFileLocation: string) {
+    // print all the measures to file
+    let data = '|key|contract|function|numberOfCalls|min|max|average|\\n'
+    data += '|---|---|---|---|---|---|---|\\n'
+    this.sortDifferences()
+    for (const diff of this.differences) {
+      data += `|${diff.key}|${diff.contract}|${diff.name}|${diff.numberOfCalls}|${diff.min}|${diff.max}|${diff.average}|\\n`
     }
 
     fs.writeFileSync(outputFileLocation, data)
@@ -210,7 +229,11 @@ class GasDiffReporter {
   }
 }
 
-const main = async (args: any) => {
+const main = async (args: {
+  gasReport1?: string
+  gasReport2?: string
+  outputFile?: string
+}) => {
   const gasReport1Name = args.gasReport1
   if (!gasReport1Name)
     throw new Error(
@@ -226,9 +249,12 @@ const main = async (args: any) => {
   const gasDiffReporter = new GasDiffReporter(gasReport1Name, gasReport2Name)
   gasDiffReporter.calcDeploymentDiffs()
   gasDiffReporter.calcFunctionDiffs()
-  args.outputFile
-    ? gasDiffReporter.writeDiffs(args.outputFile)
-    : gasDiffReporter.writeDiffsToConsole()
-}
 
+  if (args.outputFile) {
+    gasDiffReporter.writeDiffsCsv(args.outputFile + '.csv')
+    gasDiffReporter.writeDiffsGithubMd(args.outputFile + '.githubmd')
+  } else {
+    gasDiffReporter.writeDiffsToConsole()
+  }
+}
 main(args).catch(console.error)

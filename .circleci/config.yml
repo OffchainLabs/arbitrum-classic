@@ -30,7 +30,7 @@ aliases:
   - &test-path /tmp/test-results
   - &ethbridge-test-path /tmp/test-results/ethbridge.xml
   - &gas-compare-results /tmp/gas-compare-results
-  - &gas-compare-results-path /tmp/gas-compare-results/compare-results.txt
+  - &gas-compare-results-path /tmp/gas-compare-results/compare-results
 version: 2
 workflows:
   version: 2
@@ -190,8 +190,8 @@ jobs:
             FILELOCATIONO=$PWD/test-file-3.txt
             echo $FILELOCATIONO
             TESTFILE=`cat ./test-file-4.txt`
-            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data "{ \"body\": \"$TESTFILE\" }" $PR_URL
-            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binary "{ \"body\": \"$TESTFILE\" }" $PR_URL
+            # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data "{ \"body\": \"$TESTFILE\" }" $PR_URL
+            # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binary "{ \"body\": \"$TESTFILE\" }" $PR_URL
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binary @$FILELOCATIONS $PR_URL
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: text/plain; charset=utf-8" --data-binary @$FILELOCATIONS $PR_URL
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-raw @$FILELOCATIONS $PR_URL
@@ -237,13 +237,13 @@ jobs:
           command: |
             PR_NUMBER=${CIRCLE_PULL_REQUEST##*/}
             PR_URL="https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/issues/${PR_NUMBER}/comments"
-            COMPARE_OUTPUT=`cat $GC_RESULTS_PATH`
+            COMPARE_OUTPUT=`cat $GC_RESULTS_PATH.githubmd`
             echo "$COMPARE_OUTPUT"
             FACE="{ \"body\": \"$COMPARE_OUTPUT\" }"
             echo "$FACE"
             curl --location --request POST --header "Authorization: token $GH_TOKEN" --header 'Content-Type: application/json' --data "$FACE" $PR_URL
       - store_artifacts:
-          path: *gas-compare-results-path
+          path: *gas-compare-results
 
   cpp-avm-build:
     docker:
