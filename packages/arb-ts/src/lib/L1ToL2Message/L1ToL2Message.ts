@@ -38,11 +38,12 @@ export class L1ToL2Message extends MultiChainConnector {
     signersAndProviders: SignersAndProviders,
     public readonly l2TicketCreationTxnHash: string,
     public readonly messageNumber?: BigNumber,
-    public readonly l1TxnHash?: string
+    public l1TxnHash?: string
   ) {
     super()
     this.initSignorsAndProviders(signersAndProviders)
     this.arbRetryableActions = new RetryableActions(signersAndProviders)
+    this.l1TxnHash
   }
   async initFromL1Txn(
     signersAndProviders: SignersAndProviders,
