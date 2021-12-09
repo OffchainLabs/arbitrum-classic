@@ -183,14 +183,13 @@ jobs:
             PR_URL="https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/issues/${PR_NUMBER}/comments"
             COMPARE_OUTPUT=`cat ./test-file.txt`
             echo "$COMPARE_OUTPUT"
-            FACE="{ \"body\": \"$COMPARE_OUTPUT\" }"
-            echo "$FACE"
             FILELOCATION=$PWD/test-file.txt
             echo $FILELOCATION
             FILELOCATIONS=$PWD/test-file-2.txt
             echo $FILELOCATIONS
             curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" -d @$FILELOCATIONS $PR_URL
             curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binary @$FILELOCATIONS $PR_URL
+            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-raw @$FILELOCATIONS $PR_URL
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" -d @- $PR_URL << cat $FILELOCATIONS
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binrary @- $PR_URL << cat $FILELOCATIONS
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header 'Content-Type: application/json; charset=utf-8' --data-binary "@$FILELOCATION" $PR_URL
