@@ -264,7 +264,9 @@ class GasDiffReporter {
     if (differences.length === 0) {
       data += `${differences.length} methods had a different gas cost.`
     } else {
-      data += `<details><summary>${differences.length} methods had a different gas cost.</summary>\\n\\n`
+      data += `<details><summary>${differences.length} method${
+        differences.length !== 1 ? 's' : ''
+      } had a different gas cost.</summary>\\n\\n`
       data +=
         '|key|contract|function|numberOfCalls|min|max|average|numberOfCalls%|min%|max%|average%|\\n'
       data += '|---|---|---|---|---|---|---|---|---|---|---|\\n'
