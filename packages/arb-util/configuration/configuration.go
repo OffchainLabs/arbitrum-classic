@@ -196,7 +196,7 @@ type Forwarder struct {
 
 type InboxReader struct {
 	DelayBlocks int64 `koanf:"delay-blocks"`
-	Paranoid    bool  `koanf:"paranoid-inbox-reader"`
+	Paranoid    bool  `koanf:"paranoid"`
 }
 
 type Node struct {
