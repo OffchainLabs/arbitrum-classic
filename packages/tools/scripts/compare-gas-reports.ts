@@ -281,7 +281,11 @@ class GasDiffReporter {
    */
   public writeDiffsToConsole() {
     const differences = this.onlyDifferent()
-    console.table(differences)
+    if (differences.length == 0) {
+      console.log('No difference between reports.')
+    } else {
+      console.table(differences)
+    }
   }
 }
 
