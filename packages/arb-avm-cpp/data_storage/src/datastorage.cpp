@@ -261,11 +261,14 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
     return status;
 }
 
-ConcurrentCounter DataStorage::getCounter() const {
-    return ConcurrentCounter::Get(this);
+TryDbLockShared DataStorage::getCounter() const {
+    if (shutting_down) {
+        throw DataStorage::shutting_down_exception();
+    }
+    return TryDbLockShared(this);
 }
 
-ConcurrentCounter::ConcurrentCounter(const DataStorage* _storage)
+TryDbLockShared::TryDbLockShared(const DataStorage* _storage)
     : storage(_storage) {
     storage->concurrent_database_access_counter++;
     if (storage->shutting_down) {
@@ -274,31 +277,22 @@ ConcurrentCounter::ConcurrentCounter(const DataStorage* _storage)
     }
 }
 
-ConcurrentCounter::~ConcurrentCounter() {
+TryDbLockShared::~TryDbLockShared() {
     if (storage == nullptr) {
+        // Don't do anything if counter was moved
         return;
     }
-    auto new_counter = storage->concurrent_database_access_counter.fetch_sub(1);
-    assert(new_counter >= 0);
-    (void)new_counter;  // silence unused variable warning on release builds
-                        // where assert is disabled
+    storage->concurrent_database_access_counter--;
+    assert(storage->concurrent_database_access_counter.load() >= 0);
 }
 
-ConcurrentCounter ConcurrentCounter::Get(const DataStorage* storage) {
-    if (storage->shutting_down) {
-        throw DataStorage::shutting_down_exception();
-    }
-    return ConcurrentCounter(storage);
-}
-
-ConcurrentCounter::ConcurrentCounter(ConcurrentCounter&& other) noexcept
+TryDbLockShared::TryDbLockShared(TryDbLockShared&& other) noexcept
     : storage(other.storage) {
     other.storage = nullptr;
 }
 
-ConcurrentCounter& ConcurrentCounter::operator=(
-    ConcurrentCounter&& other) noexcept {
-    this->~ConcurrentCounter();
+TryDbLockShared& TryDbLockShared::operator=(TryDbLockShared&& other) noexcept {
+    this->~TryDbLockShared();
     storage = other.storage;
     other.storage = nullptr;
     return *this;
