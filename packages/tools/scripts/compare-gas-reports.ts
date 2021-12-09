@@ -6,13 +6,13 @@ interface GasMeasure {
   contract: string
   name: string
   min: number | string
-  minPercent?: number | string
+  minPercent: number | string
   max: number | string
-  maxPercent?: number | string
+  maxPercent: number | string
   average: number | string
-  averagePercent?: number | string
+  averagePercent: number | string
   numberOfCalls: number | string
-  numberOfCallsPercent?: number | string
+  numberOfCallsPercent: number | string
   key: string
 }
 
@@ -58,6 +58,10 @@ class GasDiffReporter {
     }
   }
 
+  private getPercentOf(a: number, b: number) {
+    return Math.round((a - b / b) * 10000) / 100
+  }
+
   /**
    * Calculate gas usage diffs of contract function calls
    */
@@ -87,15 +91,16 @@ class GasDiffReporter {
         contract: method1['contract'],
         name: method1['method'],
         numberOfCalls: method2['numberOfCalls'] - method1['numberOfCalls'],
-        numberOfCallsPercent:
-          Math.round(
-            (method2['numberOfCalls'] -
-              method1['numberOfCalls'] / method1['numberOfCalls']) *
-              10000
-          ) / 100,
+        numberOfCallsPercent: this.getPercentOf(
+          method2['numberOfCalls'],
+          method1['numberOfCalls']
+        ),
         min: gasData2.min - gasData1.min,
+        minPercent: this.getPercentOf(gasData2.min, gasData1.min),
         max: gasData2.max - gasData1.max,
+        maxPercent: this.getPercentOf(gasData2.max, gasData1.max),
         average: gasData2.avg - gasData1.avg,
+        averagePercent: this.getPercentOf(gasData2.avg, gasData1.avg),
       }
 
       this.differences.push(measure)
@@ -170,9 +175,16 @@ class GasDiffReporter {
         name: '_constructor',
         numberOfCalls:
           deployment2['gasData'].length - deployment1['gasData'].length,
+        numberOfCallsPercent: this.getPercentOf(
+          deployment2['gasData'].length,
+          deployment1['gasData'].length
+        ),
         min: gasData2.min - gasData1.min,
+        minPercent: this.getPercentOf(gasData2.min, gasData1.min),
         max: gasData2.max - gasData1.max,
+        maxPercent: this.getPercentOf(gasData2.max, gasData1.max),
         average: gasData2.avg - gasData1.avg,
+        averagePercent: this.getPercentOf(gasData2.avg, gasData1.avg),
       }
       this.differences.push(measure)
     }
@@ -183,9 +195,13 @@ class GasDiffReporter {
         contract: i.name,
         name: '_constructor',
         numberOfCalls: 'MISSING_AFTER',
+        numberOfCallsPercent: 'MISSING_AFTER',
         min: 'MISSING_AFTER',
+        minPercent: 'MISSING_AFTER',
         max: 'MISSING_AFTER',
+        maxPercent: 'MISSING_AFTER',
         average: 'MISSING_AFTER',
+        averagePercent: 'MISSING_AFTER',
       })
     })
     in2Deploys.forEach(i => {
@@ -194,9 +210,13 @@ class GasDiffReporter {
         contract: i.name,
         name: '_constructor',
         numberOfCalls: 'MISSING_BEFORE',
+        numberOfCallsPercent: 'MISSING_BEFORE',
         min: 'MISSING_BEFORE',
+        minPercent: 'MISSING_BEFORE',
         max: 'MISSING_BEFORE',
+        maxPercent: 'MISSING_BEFORE',
         average: 'MISSING_BEFORE',
+        averagePercent: 'MISSING_BEFORE',
       })
     })
 
@@ -223,9 +243,10 @@ class GasDiffReporter {
    */
   public writeDiffsCsv(outputFileLocation: string) {
     // print all the measures to file
-    let data = 'key,contract,function,numberOfCalls,min,max,average\n'
+    let data =
+      'key,contract,function,numberOfCalls,min,max,average,numberOfCallsPercent,minPercent,maxPercent,averagePercent|\n'
     for (const diff of this.differences) {
-      data += `${diff.key},${diff.contract},${diff.name},${diff.numberOfCalls},${diff.min},${diff.max},${diff.average}\n`
+      data += `${diff.key},${diff.contract},${diff.name},${diff.numberOfCalls},${diff.min},${diff.max},${diff.average},${diff.numberOfCallsPercent},${diff.minPercent},${diff.maxPercent},${diff.averagePercent}\n`
     }
 
     fs.writeFileSync(outputFileLocation, data)
@@ -238,10 +259,11 @@ class GasDiffReporter {
   public writeDiffsGithubMd(outputFileLocation: string) {
     // print all the measures to file
     let data = `<details><summary>${this.differences.length} methods had a different gas cost.</summary>\\n`
-    data += '|key|contract|function|numberOfCalls|min|max|average|\\n'
-    data += '|---|---|---|---|---|---|---|\\n'
+    data +=
+      '|key|contract|function|numberOfCalls|min|max|average|numberOfCallsPercent|minPercent|maxPercent|averagePercent|\\n'
+    data += '|---|---|---|---|---|---|---|---|---|---|---|\\n'
     for (const diff of this.differences) {
-      data += `|${diff.key}|${diff.contract}|${diff.name}|${diff.numberOfCalls}|${diff.min}|${diff.max}|${diff.average}|\\n`
+      data += `|${diff.key}|${diff.contract}|${diff.name}|${diff.numberOfCalls}|${diff.min}|${diff.max}|${diff.average}|${diff.numberOfCallsPercent}|${diff.minPercent}|${diff.maxPercent}|${diff.averagePercent}|\\n`
     }
     data += '</details>'
 
