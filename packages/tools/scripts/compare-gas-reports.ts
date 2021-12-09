@@ -262,9 +262,9 @@ class GasDiffReporter {
     const differences = this.onlyDifferent()
     let data = ''
     if (differences.length === 0) {
-      data += `${differences} methods had a different gas cost.`
+      data += `${differences.length} methods had a different gas cost.`
     } else {
-      data += `<details><summary>${differences} methods had a different gas cost.</summary>\\n\\n`
+      data += `<details><summary>${differences.length} methods had a different gas cost.</summary>\\n\\n`
       data +=
         '|key|contract|function|numberOfCalls|min|max|average|numberOfCalls%|min%|max%|average%|\\n'
       data += '|---|---|---|---|---|---|---|---|---|---|---|\\n'
