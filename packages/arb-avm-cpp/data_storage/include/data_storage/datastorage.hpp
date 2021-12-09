@@ -30,9 +30,27 @@
 
 class Transaction;
 class ReadTransaction;
+class DataStorage;
+
+class DbLockShared {
+    friend DataStorage;
+
+   private:
+    const DataStorage* storage;
+
+    DbLockShared(const DataStorage* storage);
+    DbLockShared(const DbLockShared& other) = delete;
+    DbLockShared(DbLockShared&& other) noexcept;
+    DbLockShared& operator=(const DbLockShared& other) = delete;
+    DbLockShared& operator=(DbLockShared&& other) noexcept;
+
+   public:
+    ~DbLockShared();
+};
 
 class DataStorage {
     friend Transaction;
+    friend DbLockShared;
 
    public:
     enum column_family_indexes {
@@ -56,18 +74,26 @@ class DataStorage {
     size_t next_column_to_flush{0};
     std::vector<uint8_t> secret_hash_seed;
 
+    class shutting_down_exception : public std::exception {};
+
     explicit DataStorage(const std::string& db_path);
     ~DataStorage();
 
     rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
     rocksdb::Status clearDBExceptInbox();
+    [[nodiscard]] DbLockShared tryLockShared() const;
 
    private:
+    std::atomic<bool> shutting_down{false};
+    mutable std::atomic<int64_t> concurrent_database_access_counter{0};
+
     rocksdb::Status updateSecretHashSeed();
 
-    [[nodiscard]] std::unique_ptr<rocksdb::Transaction> beginTransaction()
-        const {
+    [[nodiscard]] std::unique_ptr<rocksdb::Transaction> beginTransaction() {
+        // Make sure database isn't closed while it is being used
+        auto counter = tryLockShared();
+
         return std::unique_ptr<rocksdb::Transaction>{
             txn_db->BeginTransaction(rocksdb::WriteOptions())};
     }
@@ -85,9 +111,19 @@ class Transaction {
         : datastorage(std::move(datastorage_)),
           transaction(std::move(transaction_)) {}
 
-    rocksdb::Status commit() { return transaction->Commit(); }
+    rocksdb::Status commit() {
+        // Make sure database isn't closed while it is being used
+        auto counter = datastorage->tryLockShared();
 
-    rocksdb::Status rollback() { return transaction->Rollback(); }
+        return transaction->Commit();
+    }
+
+    rocksdb::Status rollback() {
+        // Make sure database isn't closed while it is being used
+        auto counter = datastorage->tryLockShared();
+
+        return transaction->Rollback();
+    }
 
    private:
     static std::unique_ptr<Transaction> makeTransaction(

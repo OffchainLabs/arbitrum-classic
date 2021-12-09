@@ -25,8 +25,12 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <utility>
 
 DataStorage::DataStorage(const std::string& db_path) {
+    // Make sure database isn't closed while constructor still running
+    auto counter = tryLockShared();
+
     rocksdb::TransactionDBOptions txn_options{};
     rocksdb::Options options{};
     rocksdb::ColumnFamilyOptions cf_options{};
@@ -125,6 +129,9 @@ DataStorage::~DataStorage() {
 }
 
 rocksdb::Status DataStorage::flushNextColumn() {
+    // Make sure database isn't closed while it is being used
+    auto counter = tryLockShared();
+
     next_column_to_flush = (next_column_to_flush + 1) % column_handles.size();
     return txn_db->Flush(flush_options, column_handles[next_column_to_flush]);
 }
@@ -132,32 +139,55 @@ rocksdb::Status DataStorage::flushNextColumn() {
 rocksdb::Status DataStorage::closeDb() {
     if (txn_db) {
         std::cerr << "closing ArbStorage" << std::endl;
+        shutting_down = true;
+        auto last_concurrent_counter =
+            concurrent_database_access_counter.load();
+        for (std::chrono::seconds counter_seconds_left =
+                 std::chrono::minutes(10);
+             last_concurrent_counter > 0 && counter_seconds_left.count() > 0;
+             counter_seconds_left -= std::chrono::seconds(1)) {
+            if (counter_seconds_left.count() % 10 == 0) {
+                // Print message every 10 seconds
+                auto output_minutes =
+                    std::chrono::duration_cast<std::chrono::minutes>(
+                        counter_seconds_left)
+                        .count();
+                auto output_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>(
+                        counter_seconds_left % std::chrono::minutes(1))
+                        .count();
+                std::cerr
+                    << "waiting up to " << output_minutes << " minutes, "
+                    << output_seconds << " seconds for "
+                    << last_concurrent_counter
+                    << " database operation(s) to finish before shutting down"
+                    << std::endl;
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            last_concurrent_counter = concurrent_database_access_counter.load();
+        }
         for (auto handle : column_handles) {
             auto status = txn_db->DestroyColumnFamilyHandle(handle);
             if (!status.ok()) {
                 return status;
             }
         }
+
         txn_db->SyncWAL();
         auto s = txn_db->Close();
-
-        // Normally, the database will shutdown cleanly very quickly.  However,
-        // if database is under heavy load, it could take a while to finish
-        // pending requests and close all snapshots so that database can be
-        // closed cleanly.
-        for (std::chrono::seconds seconds_left = std::chrono::minutes(30);
-             s.IsAborted() && seconds_left.count() > 0;
-             seconds_left -= std::chrono::seconds(1)) {
+        for (std::chrono::seconds close_seconds_left = std::chrono::minutes(10);
+             s.IsAborted() && close_seconds_left.count() > 0;
+             close_seconds_left -= std::chrono::seconds(1)) {
             // Try to close database once a second for 30 minutes
-            if (seconds_left.count() % 10 == 0) {
+            if (close_seconds_left.count() % 10 == 0) {
                 // Print message every 10 seconds
                 auto output_minutes =
                     std::chrono::duration_cast<std::chrono::minutes>(
-                        seconds_left)
+                        close_seconds_left)
                         .count();
                 auto output_seconds =
                     std::chrono::duration_cast<std::chrono::seconds>(
-                        seconds_left % std::chrono::minutes(1))
+                        close_seconds_left % std::chrono::minutes(1))
                         .count();
                 std::cerr << "waiting up to " << output_minutes << " minutes, "
                           << output_seconds
@@ -179,11 +209,17 @@ rocksdb::Status DataStorage::closeDb() {
 
 std::unique_ptr<Transaction> Transaction::makeTransaction(
     std::shared_ptr<DataStorage> store) {
+    // Make sure database isn't closed while it is being used
+    auto counter = store->tryLockShared();
+
     auto tx = store->beginTransaction();
     return std::make_unique<Transaction>(std::move(store), std::move(tx));
 }
 
 rocksdb::Status DataStorage::clearDBExceptInbox() {
+    // Make sure database isn't closed while it is being used
+    auto counter = tryLockShared();
+
     for (int i = 0; i < FAMILY_COLUMN_COUNT; i++) {
         if (i == DEFAULT_COLUMN || i == DELAYEDMESSAGE_COLUMN ||
             i == SEQUENCERBATCHITEM_COLUMN || i == SEQUENCERBATCH_COLUMN) {
@@ -199,6 +235,10 @@ rocksdb::Status DataStorage::clearDBExceptInbox() {
 
 rocksdb::Status DataStorage::updateSecretHashSeed() {
     std::string key("secretHashSeed");
+
+    // Make sure database isn't closed while it is being used
+    auto counter = tryLockShared();
+
     rocksdb::PinnableSlice value;
     rocksdb::ReadOptions read_opts;
     auto status =
@@ -219,4 +259,42 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
         value.Reset();
     }
     return status;
+}
+
+DbLockShared DataStorage::tryLockShared() const {
+    if (shutting_down) {
+        throw DataStorage::shutting_down_exception();
+    }
+    return DbLockShared(this);
+}
+
+DbLockShared::DbLockShared(const DataStorage* _storage) : storage(_storage) {
+    storage->concurrent_database_access_counter++;
+    if (storage->shutting_down) {
+        // Destructor will take care of decrementing counter
+        throw DataStorage::shutting_down_exception();
+    }
+}
+
+DbLockShared::~DbLockShared() {
+    if (storage == nullptr) {
+        // Don't do anything if counter was moved
+        return;
+    }
+    auto new_counter = --storage->concurrent_database_access_counter;
+    assert(new_counter >= 0);
+    (void)new_counter;  // silence unused variable warning on release builds
+                        // where assert is disabled
+}
+
+DbLockShared::DbLockShared(DbLockShared&& other) noexcept
+    : storage(other.storage) {
+    other.storage = nullptr;
+}
+
+DbLockShared& DbLockShared::operator=(DbLockShared&& other) noexcept {
+    this->~DbLockShared();
+    storage = other.storage;
+    other.storage = nullptr;
+    return *this;
 }
