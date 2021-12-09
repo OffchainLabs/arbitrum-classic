@@ -26,6 +26,7 @@ import {
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import { concat, zeroPad, hexZeroPad } from '@ethersproject/bytes'
+import { FunctionFragment } from '@ethersproject/abi'
 
 import { ContractTransaction } from '@ethersproject/contracts'
 import { keccak256 } from '@ethersproject/keccak256'
@@ -39,10 +40,11 @@ import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { Rollup__factory } from './abi/factories/Rollup__factory'
 import { L2ArbitrumGateway__factory } from './abi/factories/L2ArbitrumGateway__factory'
 import { Whitelist__factory } from './abi/factories/Whitelist__factory'
+import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
+import { Multicall2 } from './abi/Multicall2'
+import { ArbMulticall2 } from './abi/ArbMulticall2'
 
 import { NODE_INTERFACE_ADDRESS, ARB_SYS_ADDRESS } from './precompile_addresses'
-import { ArbMulticall2, Multicall2, NodeInterface__factory } from './abi'
-import { FunctionFragment } from 'ethers/lib/utils'
 
 export const addressToSymbol = (erc20L1Address: string): string => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
