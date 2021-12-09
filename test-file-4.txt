@@ -1,2 +1,1 @@
-face
-off
+face\noff
