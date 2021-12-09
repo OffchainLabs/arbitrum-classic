@@ -231,6 +231,9 @@ class GasDiffReporter {
     })
   }
 
+  /**
+   * Get only changed measurements
+   */
   public onlyDifferent() {
     return this.differences.filter(
       a => a.average != 0 || a.min != 0 || a.max != 0 || a.numberOfCalls != 0
