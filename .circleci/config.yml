@@ -189,10 +189,8 @@ jobs:
             echo $FILELOCATIONS
             FILELOCATIONO=$PWD/test-file-3.txt
             echo $FILELOCATIONO
-            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data '{ "body": "testy
-            face2" }' $PR_URL
-            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binary '{ "body": "testy
-            face" }' $PR_URL
+            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data '{ "body": "testy\nface2" }' $PR_URL
+            curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binary '{ "body": "testy\nface" }' $PR_URL
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-binary @$FILELOCATIONS $PR_URL
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: text/plain; charset=utf-8" --data-binary @$FILELOCATIONS $PR_URL
             # curl --location --request POST --header "Authorization: token $GH_TOKEN" --header "Content-Type: application/json; charset=utf-8" --data-raw @$FILELOCATIONS $PR_URL
