@@ -5,8 +5,7 @@ import {
 import { TransactionReceipt } from '@ethersproject/providers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { ARB_RETRYABLE_TX_ADDRESS } from '../precompile_addresses'
+import { RetryableActions } from './RetryableActions'
 import { constants } from 'ethers'
 import {
   getMessageNumbers,
@@ -33,23 +32,17 @@ export interface L1ToL2MessageReceipt {
 }
 
 export class L1ToL2Message extends MultiChainConnector {
-  arbRetryableActions: ArbRetryableActions
-  l2TicketCreationTxnHash: string
-  messageNumber?: BigNumber
-  l1TxnHash?: string
+  arbRetryableActions: RetryableActions
 
   constructor(
     signersAndProviders: SignersAndProviders,
-    l2TicketCreationTxnHash: string,
-    messageNumber?: BigNumber,
-    l1TxnHash?: string
+    public readonly l2TicketCreationTxnHash: string,
+    public readonly messageNumber?: BigNumber,
+    public readonly l1TxnHash?: string
   ) {
     super()
     this.initSignorsAndProviders(signersAndProviders)
-    this.l2TicketCreationTxnHash = l2TicketCreationTxnHash
-    this.arbRetryableActions = new ArbRetryableActions(signersAndProviders)
-    this.messageNumber = messageNumber
-    this.l1TxnHash = l1TxnHash
+    this.arbRetryableActions = new RetryableActions(signersAndProviders)
   }
   async initFromL1Txn(
     signersAndProviders: SignersAndProviders,
@@ -253,50 +246,5 @@ export class L1ToL2Message extends MultiChainConnector {
 
   public async getBeneficiary(): Promise<string> {
     return this.arbRetryableActions.getBeneficiary(this.userTxnHash)
-  }
-}
-
-export class ArbRetryableActions extends MultiChainConnector {
-  constructor(signersAndProviders: SignersAndProviders) {
-    super()
-    this.initSignorsAndProviders(signersAndProviders)
-  }
-
-  public redeem(userL2TxnHash: string): Promise<ContractTransaction> {
-    if (!this.l2Signer) throw new Error('Missing required L2 signer')
-
-    const arbRetryableTx = ArbRetryableTx__factory.connect(
-      ARB_RETRYABLE_TX_ADDRESS,
-      this.l2Signer
-    )
-    return arbRetryableTx.redeem(userL2TxnHash)
-  }
-  public cancel(userL2TxnHash: string): Promise<ContractTransaction> {
-    if (!this.l2Signer) throw new Error('Missing required L2 signer')
-
-    const arbRetryableTx = ArbRetryableTx__factory.connect(
-      ARB_RETRYABLE_TX_ADDRESS,
-      this.l2Signer
-    )
-    return arbRetryableTx.cancel(userL2TxnHash)
-  }
-
-  public getTimeout(userL2TxnHash: string): Promise<BigNumber> {
-    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
-
-    const arbRetryableTx = ArbRetryableTx__factory.connect(
-      ARB_RETRYABLE_TX_ADDRESS,
-      this.l2Provider
-    )
-    return arbRetryableTx.getTimeout(userL2TxnHash)
-  }
-  public getBeneficiary(userL2TxnHash: string): Promise<string> {
-    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
-
-    const arbRetryableTx = ArbRetryableTx__factory.connect(
-      ARB_RETRYABLE_TX_ADDRESS,
-      this.l2Provider
-    )
-    return arbRetryableTx.getBeneficiary(userL2TxnHash)
   }
 }
