@@ -14,7 +14,7 @@ yarn hardhat clean
 yarn hardhat compile
 yarn test:gas:ci
 cd ../..
-mv gasReporterOutput.json ./packages/tools/gas-$HASH_BEFORE.json
+mv gasReporterOutput.json $OUTDIR/gas-$HASH_BEFORE.json
 
 # and after
 git checkout $HASH_AFTER
@@ -24,7 +24,7 @@ yarn hardhat clean
 yarn hardhat compile
 yarn test:gas:ci
 cd ../..
-mv gasReporterOutput.json ./packages/tools/gas-$HASH_AFTER.json
+mv gasReporterOutput.json $OUTDIR/gas-$HASH_AFTER.json
 
 # now compare by running output
 git checkout $BRANCH_NOW
