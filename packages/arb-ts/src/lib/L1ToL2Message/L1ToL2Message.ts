@@ -33,19 +33,20 @@ export interface L1ToL2MessageReceipt {
 
 export class L1ToL2Message extends MultiChainConnector {
   arbRetryableActions: RetryableActions
+  l1TxnHash?: string
 
   constructor(
     signersAndProviders: SignersAndProviders,
     public readonly l2TicketCreationTxnHash: string,
     public readonly messageNumber?: BigNumber,
-    public l1TxnHash?: string
+    l1TxnHash?: string
   ) {
     super()
     this.initSignorsAndProviders(signersAndProviders)
     this.arbRetryableActions = new RetryableActions(signersAndProviders)
-    this.l1TxnHash
+    this.l1TxnHash = l1TxnHash
   }
-  async initFromL1Txn(
+  static async initFromL1Txn(
     signersAndProviders: SignersAndProviders,
     l1Txn: string | TransactionReceipt,
     messageNumberIndex?: number
@@ -88,7 +89,7 @@ export class L1ToL2Message extends MultiChainConnector {
     )
   }
 
-  public async initAllFromL1Txn(
+  static async initAllFromL1Txn(
     signersAndProviders: SignersAndProviders,
     l1Txn: string | TransactionReceipt
   ): Promise<L1ToL2Message[]> {
@@ -97,7 +98,6 @@ export class L1ToL2Message extends MultiChainConnector {
       signersAndProviders.l1Provider
     )
     const l1TxnHash = l1TxnReceipt.transactionHash
-    this.l1TxnHash = l1TxnHash
 
     if (!signersAndProviders.l2Provider)
       throw new Error('Missing required L2 Provider')
@@ -122,7 +122,7 @@ export class L1ToL2Message extends MultiChainConnector {
     })
   }
 
-  initFromL2Txn(
+  static initFromL2Txn(
     signersAndProviders: SignersAndProviders,
     l2TicketCreationHash: string
   ): L1ToL2Message {
