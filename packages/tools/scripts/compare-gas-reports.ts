@@ -6,9 +6,13 @@ interface GasMeasure {
   contract: string
   name: string
   min: number | string
+  minPercent?: number | string
   max: number | string
+  maxPercent?: number | string
   average: number | string
+  averagePercent?: number | string
   numberOfCalls: number | string
+  numberOfCallsPercent?: number | string
   key: string
 }
 
@@ -83,6 +87,12 @@ class GasDiffReporter {
         contract: method1['contract'],
         name: method1['method'],
         numberOfCalls: method2['numberOfCalls'] - method1['numberOfCalls'],
+        numberOfCallsPercent:
+          Math.round(
+            (method2['numberOfCalls'] -
+              method1['numberOfCalls'] / method1['numberOfCalls']) *
+              10000
+          ) / 100,
         min: gasData2.min - gasData1.min,
         max: gasData2.max - gasData1.max,
         average: gasData2.avg - gasData1.avg,
@@ -97,9 +107,13 @@ class GasDiffReporter {
         contract: method['contract'],
         name: method['method'],
         numberOfCalls: 'MISSING_AFTER',
+        numberOfCallsPercent: 'MISSING_AFTER',
         min: 'MISSING_AFTER',
+        minPercent: 'MISSING_AFTER',
         max: 'MISSING_AFTER',
+        maxPercent: 'MISSING_AFTER',
         average: 'MISSING_AFTER',
+        averagePercent: 'MISSING_AFTER',
       })
     })
     in2.forEach(i => {
@@ -109,11 +123,17 @@ class GasDiffReporter {
         contract: method['contract'],
         name: method['method'],
         numberOfCalls: 'MISSING_BEFORE',
+        numberOfCallsPercent: 'MISSING_BEFORE',
         min: 'MISSING_BEFORE',
+        minPercent: 'MISSING_BEFORE',
         max: 'MISSING_BEFORE',
+        maxPercent: 'MISSING_BEFORE',
         average: 'MISSING_BEFORE',
+        averagePercent: 'MISSING_BEFORE',
       })
     })
+
+    this.sortDifferences()
   }
 
   /**
@@ -179,6 +199,8 @@ class GasDiffReporter {
         average: 'MISSING_BEFORE',
       })
     })
+
+    this.sortDifferences()
   }
 
   private sortDifferences() {
@@ -189,6 +211,12 @@ class GasDiffReporter {
     })
   }
 
+  public onlyDifferent() {
+    return this.differences.filter(
+      a => a.average != 0 || a.min != 0 || a.max != 0 || a.numberOfCalls != 0
+    )
+  }
+
   /**
    * Write the calculated diffs to csv format. Will overwrite existing file.
    * @param outputFileLocation
@@ -196,7 +224,6 @@ class GasDiffReporter {
   public writeDiffsCsv(outputFileLocation: string) {
     // print all the measures to file
     let data = 'key,contract,function,numberOfCalls,min,max,average\n'
-    this.sortDifferences()
     for (const diff of this.differences) {
       data += `${diff.key},${diff.contract},${diff.name},${diff.numberOfCalls},${diff.min},${diff.max},${diff.average}\n`
     }
@@ -210,12 +237,13 @@ class GasDiffReporter {
    */
   public writeDiffsGithubMd(outputFileLocation: string) {
     // print all the measures to file
-    let data = '|key|contract|function|numberOfCalls|min|max|average|\\n'
+    let data = `<details><summary>${this.differences.length} methods had a different gas cost.</summary>\\n`
+    data += '|key|contract|function|numberOfCalls|min|max|average|\\n'
     data += '|---|---|---|---|---|---|---|\\n'
-    this.sortDifferences()
     for (const diff of this.differences) {
       data += `|${diff.key}|${diff.contract}|${diff.name}|${diff.numberOfCalls}|${diff.min}|${diff.max}|${diff.average}|\\n`
     }
+    data += '</details>'
 
     fs.writeFileSync(outputFileLocation, data)
   }
@@ -224,7 +252,6 @@ class GasDiffReporter {
    * Write the calculated diff to a console table.
    */
   public writeDiffsToConsole() {
-    this.sortDifferences()
     console.table(this.differences)
   }
 }
