@@ -95,35 +95,8 @@ const config = {
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
     },
-    arbkovan4: {
-      gasPrice: 0,
-      url: 'https://kovan4.arbitrum.io/rpc',
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
-    kovan5: {
-      gasPrice: 0,
-      url: 'https://kovan5.arbitrum.io/rpc',
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
-    devnet: {
-      url: 'https://devnet.arbitrum.io/rpc',
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
-    devnetL2: {
-      url: 'https://devnet-l2.arbitrum.io/rpc',
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
     arbitrum: {
       url: 'http://127.0.0.1:8547',
-      // url: 'https://kovan3.arbitrum.io/rpc',
       gas: 999999999999999,
       accounts: {
         mnemonic:
