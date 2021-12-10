@@ -9,27 +9,28 @@ export enum L2TxnType {
   AUTO_REDEEM = 1,
 }
 
+export interface MessageId {
+  messageNumber: BigNumber
+  l2ChainId: BigNumber
+}
+
 const bitFlip = (num: BigNumber): BigNumber => {
   return num.or(BigNumber.from(1).shl(255))
 }
 
-export const calculateL2TxnHash = (
-  messageNumber: BigNumber,
-  l2ChainId: BigNumber
-): string => {
+export const calculateL2TxnHash = (messageId: MessageId): string => {
   return keccak256(
     concat([
-      zeroPad(l2ChainId.toHexString(), 32),
-      zeroPad(bitFlip(messageNumber).toHexString(), 32),
+      zeroPad(messageId.l2ChainId.toHexString(), 32),
+      zeroPad(bitFlip(messageId.messageNumber).toHexString(), 32),
     ])
   )
 }
 
 export const calculateRetryableTicketCreationHash = (
-  messageNumber: BigNumber,
-  l2ChainId: BigNumber
+  messageId: MessageId
 ): string => {
-  return calculateL2TxnHash(messageNumber, l2ChainId)
+  return calculateL2TxnHash(messageId)
 }
 
 export const calculateL2MessageFromTicketTxnHash = (
@@ -45,30 +46,26 @@ export const calculateL2MessageFromTicketTxnHash = (
 }
 
 export const calculateRetryableAutoRedeemTxnHash = (
-  messageNumber: BigNumber,
-  l2ChainID: BigNumber
+  messageId: MessageId
 ): string => {
-  const ticketCreationHash = calculateL2TxnHash(messageNumber, l2ChainID)
+  const ticketCreationHash = calculateL2TxnHash(messageId)
   return calculateL2MessageFromTicketTxnHash(
     ticketCreationHash,
     L2TxnType.AUTO_REDEEM
   )
 }
 
-export const calculateRetryableUserTxnHash = (
-  messageNumber: BigNumber,
-  l2ChainID: BigNumber
-): string => {
-  const ticketCreationHash = calculateL2TxnHash(messageNumber, l2ChainID)
+export const calculateRetryableUserTxnHash = (messageId: MessageId): string => {
+  const ticketCreationHash = calculateL2TxnHash(messageId)
   return calculateL2MessageFromTicketTxnHash(
     ticketCreationHash,
     L2TxnType.USER_TXN
   )
 }
 
-export const getMessageNumbers = (
+export const getMessageNumbersFromL1TxnReceipt = (
   l1Transaction: TransactionReceipt
-): BigNumber[] | undefined => {
+): BigNumber[] => {
   const iface = Inbox__factory.createInterface()
   const messageDelivered = iface.getEvent('InboxMessageDelivered')
   const messageDeliveredFromOrigin = iface.getEvent(
@@ -85,7 +82,5 @@ export const getMessageNumbers = (
       log.topics[0] === eventTopics.InboxMessageDelivered ||
       log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
   )
-
-  if (logs.length === 0) return undefined
   return logs.map(log => BigNumber.from(log.topics[1]))
 }

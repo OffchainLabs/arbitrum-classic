@@ -6,11 +6,14 @@ import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../precompile_addresses'
+import { TransactionReceipt } from '@ethersproject/providers'
+import { getTxnReceipt } from '../utils/lib'
+import { getMessageNumbersFromL1TxnReceipt } from './lib'
 
 export class RetryableActions extends MultiChainConnector {
   constructor(signersAndProviders: SignersAndProviders) {
     super()
-    this.initSignorsAndProviders(signersAndProviders)
+    this.initSignersAndProviders(signersAndProviders)
   }
 
   public redeem(userL2TxnHash: string): Promise<ContractTransaction> {
@@ -49,5 +52,12 @@ export class RetryableActions extends MultiChainConnector {
       this.l2Provider
     )
     return arbRetryableTx.getBeneficiary(userL2TxnHash)
+  }
+
+  public async getMessageNumbersFromL1Txn(
+    l1TxnHashOrReceipt: string | TransactionReceipt
+  ): Promise<BigNumber[]> {
+    const txnReceipt = await getTxnReceipt(l1TxnHashOrReceipt, this.l1Provider)
+    return getMessageNumbersFromL1TxnReceipt(txnReceipt)
   }
 }

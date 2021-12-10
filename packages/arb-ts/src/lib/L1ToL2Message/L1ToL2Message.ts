@@ -8,7 +8,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { RetryableActions } from './RetryableActions'
 import { constants } from 'ethers'
 import {
-  getMessageNumbers,
+  getMessageNumbersFromL1TxnReceipt,
   calculateRetryableTicketCreationHash,
   calculateL2MessageFromTicketTxnHash,
   L2TxnType,
@@ -42,7 +42,7 @@ export class L1ToL2Message extends MultiChainConnector {
     l1TxnHash?: string
   ) {
     super()
-    this.initSignorsAndProviders(signersAndProviders)
+    this.initSignersAndProviders(signersAndProviders)
     this.arbRetryableActions = new RetryableActions(signersAndProviders)
     this.l1TxnHash = l1TxnHash
   }
@@ -57,13 +57,13 @@ export class L1ToL2Message extends MultiChainConnector {
     )
     const l1TxnHash = l1TxnReceipt.transactionHash
 
-    const messageNumbers = getMessageNumbers(l1TxnReceipt)
-    if (messageNumbers === undefined)
+    const messageNumbers = getMessageNumbersFromL1TxnReceipt(l1TxnReceipt)
+    if (!messageNumbers.length)
       throw new Error(`No l1 to L2 message found for ${l1TxnHash}`)
 
     if (
       messageNumberIndex !== undefined &&
-      messageNumberIndex > messageNumbers.length
+      messageNumberIndex >= messageNumbers.length
     )
       throw new Error(
         `Provided message number out of range for ${l1TxnHash}; index was ${messageNumberIndex}, but only ${messageNumbers.length} messages`
@@ -77,10 +77,10 @@ export class L1ToL2Message extends MultiChainConnector {
     const chainID = (
       await signersAndProviders.l2Provider.getNetwork()
     ).chainId.toString()
-    const ticketCreationHash = calculateRetryableTicketCreationHash(
+    const ticketCreationHash = calculateRetryableTicketCreationHash({
       messageNumber,
-      BigNumber.from(chainID)
-    )
+      l2ChainId: BigNumber.from(chainID),
+    })
     return new L1ToL2Message(
       signersAndProviders,
       ticketCreationHash,
@@ -105,18 +105,18 @@ export class L1ToL2Message extends MultiChainConnector {
       await signersAndProviders.l2Provider.getNetwork()
     ).chainId.toString()
 
-    const messageNumbers = getMessageNumbers(l1TxnReceipt)
-    if (!messageNumbers)
+    const messageNumbers = getMessageNumbersFromL1TxnReceipt(l1TxnReceipt)
+    if (!messageNumbers.length)
       throw new Error('No l1 to l2 messages found in L1 txn ' + l1TxnHash)
 
-    return messageNumbers.map((msgNumber: BigNumber) => {
+    return messageNumbers.map((messageNumber: BigNumber) => {
       return new L1ToL2Message(
         signersAndProviders,
-        calculateRetryableTicketCreationHash(
-          msgNumber,
-          BigNumber.from(chainID)
-        ),
-        msgNumber,
+        calculateRetryableTicketCreationHash({
+          messageNumber,
+          l2ChainId: BigNumber.from(chainID),
+        }),
+        messageNumber,
         l1TxnHash
       )
     })

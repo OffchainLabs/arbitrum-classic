@@ -13,10 +13,10 @@ interface CustomNetworks {
 }
 
 export interface SignersAndProviders {
-  l1Provider?: Provider
-  l2Provider?: Provider
-  l1Signer?: Signer
-  l2Signer?: Signer
+  readonly l1Provider?: Provider
+  readonly l2Provider?: Provider
+  readonly l1Signer?: Signer
+  readonly l2Signer?: Signer
 }
 
 export class MultiChainConnector {
@@ -27,10 +27,10 @@ export class MultiChainConnector {
   l1Network?: L1Network
   l2Network?: L2Network
 
-  public async initSignorsAndProviders(
+  public async initSignersAndProviders(
     signersAndProviders: SignersAndProviders,
     customNetworks: CustomNetworks = {}
-  ) {
+  ): Promise<void> {
     const { customL1Network, customL2Network } = customNetworks
     if (customL1Network) {
       l1Networks[customL1Network.chainID] = customL1Network
