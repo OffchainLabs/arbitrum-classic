@@ -51,42 +51,25 @@ export class L1ToL2Message extends MultiChainConnector {
     l1Txn: string | TransactionReceipt,
     messageNumberIndex?: number
   ): Promise<L1ToL2Message> {
-    const l1TxnReceipt = await getTxnReceipt(
-      l1Txn,
-      signersAndProviders.l1Provider
+    const l1TxnHash = typeof l1Txn === 'string' ? l1Txn : l1Txn.transactionHash
+    const allL1ToL2Messages = await L1ToL2Message.initAllFromL1Txn(
+      signersAndProviders,
+      l1Txn
     )
-    const l1TxnHash = l1TxnReceipt.transactionHash
-
-    const messageNumbers = getMessageNumbersFromL1TxnReceipt(l1TxnReceipt)
-    if (!messageNumbers.length)
+    const messageCount = allL1ToL2Messages.length
+    if (!messageCount)
       throw new Error(`No l1 to L2 message found for ${l1TxnHash}`)
 
-    if (
-      messageNumberIndex !== undefined &&
-      messageNumberIndex >= messageNumbers.length
-    )
+    if (messageNumberIndex !== undefined && messageNumberIndex >= messageCount)
       throw new Error(
-        `Provided message number out of range for ${l1TxnHash}; index was ${messageNumberIndex}, but only ${messageNumbers.length} messages`
+        `Provided message number out of range for ${l1TxnHash}; index was ${messageNumberIndex}, but only ${messageCount} messages`
       )
-    if (messageNumberIndex === undefined && messageNumbers.length > 1)
+    if (messageNumberIndex === undefined && messageCount > 1)
       throw new Error(
-        `${messageNumbers.length} L2 messages for ${l1TxnHash}; must provide messageNumberIndex (or use initAllFromL1Txn)`
+        `${messageCount} L2 messages for ${l1TxnHash}; must provide messageNumberIndex (or use (signersAndProviders, l1Txn))`
       )
-    const messageNumber = messageNumbers[messageNumberIndex || 0]
-    if (!signersAndProviders.l2Provider) throw new Error('need l2 prov')
-    const chainID = (
-      await signersAndProviders.l2Provider.getNetwork()
-    ).chainId.toString()
-    const ticketCreationHash = calculateRetryableTicketCreationHash({
-      messageNumber,
-      l2ChainId: BigNumber.from(chainID),
-    })
-    return new L1ToL2Message(
-      signersAndProviders,
-      ticketCreationHash,
-      messageNumber,
-      l1TxnHash
-    )
+
+    return allL1ToL2Messages[messageNumberIndex || 0]
   }
 
   static async initAllFromL1Txn(
