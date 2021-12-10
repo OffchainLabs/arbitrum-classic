@@ -41,6 +41,7 @@ workflows:
       - arb-ts
       - ethbridge
       - ethbridge-coverage
+      - gas-compare-test
       - backend:
           requires:
             - go-deps
