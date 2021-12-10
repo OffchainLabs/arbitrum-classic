@@ -54,10 +54,6 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
 
     // end of inline reentrancy guard
 
-    function postUpgradeInit() external override {
-        _status = _NOT_ENTERED;
-    }
-
     function outboundTransfer(
         address _l1Token,
         address _to,

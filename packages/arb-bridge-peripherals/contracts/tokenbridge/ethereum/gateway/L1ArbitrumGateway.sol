@@ -70,7 +70,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         _;
     }
 
-    function postUpgradeInit() external virtual {
+    function postUpgradeInit() external {
         // it is assumed the L1 Arbitrum Gateway contract is behind a Proxy controlled by a proxy admin
         // this function can only be called by the proxy admin contract
         address proxyAdmin = ProxyUtil.getProxyAdmin();
