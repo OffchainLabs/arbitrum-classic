@@ -88,6 +88,11 @@ typedef struct {
     int slow_error;
 } CMachineResult;
 
+typedef struct {
+    RawAssertion assertion;
+    int shutting_down;
+} RawAssertionResult;
+
 typedef void CAggregatorStore;
 typedef void CArbCore;
 typedef void CArbStorage;

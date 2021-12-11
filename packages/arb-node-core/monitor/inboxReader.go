@@ -101,7 +101,7 @@ func NewInboxReader(
 	}, nil
 }
 
-func (ir *InboxReader) Start(parentCtx context.Context) {
+func (ir *InboxReader) Start(parentCtx context.Context, inboxReaderDelayBlocks int64) {
 	ctx, cancelFunc := context.WithCancel(parentCtx)
 	go func() {
 		defer func() {
@@ -109,7 +109,7 @@ func (ir *InboxReader) Start(parentCtx context.Context) {
 		}()
 		justErrored := false
 		for {
-			err := ir.getMessages(ctx, justErrored)
+			err := ir.getMessages(ctx, justErrored, inboxReaderDelayBlocks)
 			if err == nil {
 				break
 			}
@@ -147,9 +147,7 @@ func (ir *InboxReader) GetSequencerInboxWatcher() *ethbridge.SequencerInboxWatch
 	return ir.sequencerInbox
 }
 
-const inboxReaderDelay int64 = 4
-
-func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool) error {
+func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool, inboxReaderDelayBlocks int64) error {
 	from, err := ir.getNextBlockToRead()
 	if err != nil {
 		return err
@@ -191,8 +189,8 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			}
 		}
 
-		if !reorgingDelayed && !reorgingSequencer && inboxReaderDelay > 0 {
-			currentHeight = new(big.Int).Sub(currentHeight, big.NewInt(inboxReaderDelay))
+		if !reorgingDelayed && !reorgingSequencer && inboxReaderDelayBlocks > 0 {
+			currentHeight = new(big.Int).Sub(currentHeight, big.NewInt(inboxReaderDelayBlocks))
 			if currentHeight.Sign() <= 0 {
 				currentHeight = currentHeight.SetInt64(1)
 			}

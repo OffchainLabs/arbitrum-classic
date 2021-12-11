@@ -230,9 +230,19 @@ func startup() error {
 			broadcastClient.ConnectInBackground(ctx, sequencerFeed)
 		}
 	}
+
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), healthChan, sequencerFeed, config.Node.ParanoidInboxReader)
+		inboxReader, err = mon.StartInboxReader(
+			ctx,
+			l1Client,
+			common.HexToAddress(config.Rollup.Address),
+			config.Rollup.FromBlock,
+			common.HexToAddress(config.BridgeUtilsAddress),
+			healthChan,
+			sequencerFeed,
+			config.Node.InboxReader,
+		)
 		if err == nil {
 			break
 		}
