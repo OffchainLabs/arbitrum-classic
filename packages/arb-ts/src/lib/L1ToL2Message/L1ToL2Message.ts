@@ -1,7 +1,7 @@
 import {
   MultiChainConnector,
   SignersAndProviders,
-} from '../utils/MultichainConnector'
+} from '../utils/MultiChainConnector'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'

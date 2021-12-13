@@ -1,7 +1,7 @@
 import {
   MultiChainConnector,
   SignersAndProviders,
-} from '../utils/MultichainConnector'
+} from '../utils/MultiChainConnector'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
