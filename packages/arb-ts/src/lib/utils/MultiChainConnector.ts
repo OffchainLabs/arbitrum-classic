@@ -29,15 +29,15 @@ export class MultiChainConnector {
 
   public async initSignersAndProviders(
     signersAndProviders: SignersAndProviders,
-    customNetworks: CustomNetworks = {}
+    // customNetworks: CustomNetworks = {}
   ): Promise<void> {
-    const { customL1Network, customL2Network } = customNetworks
-    if (customL1Network) {
-      l1Networks[customL1Network.chainID] = customL1Network
-    }
-    if (customL2Network) {
-      l2Networks[customL2Network.chainID] = customL2Network
-    }
+    // const { customL1Network, customL2Network } = customNetworks
+    // if (customL1Network) {
+    //   l1Networks[customL1Network.chainID] = customL1Network
+    // }
+    // if (customL2Network) {
+    //   l2Networks[customL2Network.chainID] = customL2Network
+    // }
 
     const { l1Provider, l2Provider, l1Signer, l2Signer } = signersAndProviders
     if (l1Signer) {

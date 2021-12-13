@@ -1,11 +1,10 @@
-import {
-  MultiChainConnector,
-  SignersAndProviders,
-} from '../utils/MultiChainConnector'
+import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
+import { ARB_RETRYABLE_TX_ADDRESS } from '../precompile_addresses'
 import { TransactionReceipt } from '@ethersproject/providers'
+import { Provider } from '@ethersproject/abstract-provider'
+import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { RetryableActions } from './RetryableActions'
 import { constants } from 'ethers'
 import {
   getMessageNumbersFromL1TxnReceipt,
@@ -13,8 +12,6 @@ import {
   calculateL2MessageFromTicketTxnHash,
   L2TxnType,
 } from './lib'
-
-import { getTxnReceipt } from '../utils/lib'
 
 export enum L1ToL2MessageStatus {
   NOT_YET_CREATED,
@@ -31,86 +28,142 @@ export interface L1ToL2MessageReceipt {
   status: L1ToL2MessageStatus
 }
 
-export class L1ToL2Message extends MultiChainConnector {
-  arbRetryableActions: RetryableActions
-  l1TxnHash?: string
+/**
+ * Conditional type for Signer or Provider. If T is of type Provider
+ * then L1ToL2MessageReaderOrWriter<T> will be of type L1ToL2MessageReader.
+ * If T is of type Signer then L1ToL2MessageReaderOrWriter<T> will be of
+ * type L1ToL2MessageWriter.
+ */
+type L1ToL2MessageReaderOrWriter<
+  T extends Provider | Signer
+> = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
-  constructor(
-    signersAndProviders: SignersAndProviders,
-    public readonly l2TicketCreationTxnHash: string,
-    public readonly messageNumber?: BigNumber,
-    l1TxnHash?: string
-  ) {
-    super()
-    this.initSignersAndProviders(signersAndProviders)
-    this.arbRetryableActions = new RetryableActions(signersAndProviders)
-    this.l1TxnHash = l1TxnHash
+/**
+ * Utiliy functions for signer/provider union types
+ */
+export class SignerOrProvider {
+  public static isSigner(
+    signerOrProvider: Provider | Signer
+  ): signerOrProvider is Signer {
+    return (signerOrProvider as Signer).sendTransaction !== undefined
   }
-  static async initFromL1Txn(
-    signersAndProviders: SignersAndProviders,
-    l1Txn: string | TransactionReceipt,
+
+  public static getProvider(signerOrProvider: Provider | Signer) {
+    return this.isSigner(signerOrProvider)
+      ? signerOrProvider.provider
+      : signerOrProvider
+  }
+}
+
+export class L1ToL2Message {
+  protected static getMessageOrThrow(
+    l1TxnReceipt: TransactionReceipt,
     messageNumberIndex?: number
-  ): Promise<L1ToL2Message> {
-    const l1TxnHash = typeof l1Txn === 'string' ? l1Txn : l1Txn.transactionHash
-    const allL1ToL2Messages = await L1ToL2Message.initAllFromL1Txn(
-      signersAndProviders,
-      l1Txn
+  ) {
+    const messageNumbers = getMessageNumbersFromL1TxnReceipt(l1TxnReceipt)
+    if (messageNumbers === undefined)
+      throw new Error(
+        `No l1 to L2 message found for ${l1TxnReceipt.transactionHash}`
+      )
+
+    if (
+      messageNumberIndex !== undefined &&
+      messageNumberIndex > messageNumbers.length
+    )
+      throw new Error(
+        `Provided message number out of range for ${l1TxnReceipt.transactionHash}; index was ${messageNumberIndex}, but only ${messageNumbers.length} messages`
+      )
+    if (messageNumberIndex === undefined && messageNumbers.length > 1)
+      throw new Error(
+        `${messageNumbers.length} L2 messages for ${l1TxnReceipt.transactionHash}; must provide messamessageNumberIndex (or use initAllFromL1Txn)`
+      )
+
+    return messageNumbers[messageNumberIndex || 0]
+  }
+
+  public static async fromL1ReceiptAll<T extends Provider | Signer>(
+    l2SignerOrProvider: T,
+    l1TxnReceipt: TransactionReceipt
+  ): Promise<L1ToL2MessageReaderOrWriter<T>[]>
+  public static async fromL1ReceiptAll<T extends Provider | Signer>(
+    l2SignerOrProvider: T,
+    l1TxnReceipt: TransactionReceipt
+  ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
+    const provider = SignerOrProvider.getProvider(l2SignerOrProvider)
+    if (!provider) throw new Error('Signer not connected to provider.')
+
+    const chainID = (await provider.getNetwork()).chainId.toString()
+
+    const messageNumbers = getMessageNumbersFromL1TxnReceipt(l1TxnReceipt)
+    if (!messageNumbers)
+      throw new Error(
+        'No l1 to l2 messages found in L1 txn ' + l1TxnReceipt.transactionHash
+      )
+
+    return messageNumbers.map((mn: BigNumber) => {
+      const ticketCreationHash = calculateRetryableTicketCreationHash({
+        l2ChainId: BigNumber.from(chainID),
+        messageNumber: mn,
+      })
+      return l2SignerOrProvider instanceof Provider
+        ? new L1ToL2MessageReader(l2SignerOrProvider, ticketCreationHash, mn)
+        : new L1ToL2MessageWriter(l2SignerOrProvider, ticketCreationHash, mn)
+    })
+  }
+
+  public static async fromL1Receipt<T extends Provider | Signer>(
+    l2SignerOrProvider: T,
+    l1TxnReceipt: TransactionReceipt,
+    messageNumberIndex?: number
+  ): Promise<L1ToL2MessageReaderOrWriter<T>>
+  public static async fromL1Receipt<T extends Provider | Signer>(
+    l2SignerOrProvider: T,
+    l1TxnReceipt: TransactionReceipt,
+    messageNumberIndex?: number
+  ): Promise<L1ToL2MessageReader | L1ToL2MessageWriter> {
+    const allL1ToL2Messages = await L1ToL2Message.fromL1ReceiptAll(
+      l2SignerOrProvider,
+      l1TxnReceipt
     )
     const messageCount = allL1ToL2Messages.length
     if (!messageCount)
-      throw new Error(`No l1 to L2 message found for ${l1TxnHash}`)
+      throw new Error(
+        `No l1 to L2 message found for ${l1TxnReceipt.transactionHash}`
+      )
 
     if (messageNumberIndex !== undefined && messageNumberIndex >= messageCount)
       throw new Error(
-        `Provided message number out of range for ${l1TxnHash}; index was ${messageNumberIndex}, but only ${messageCount} messages`
+        `Provided message number out of range for ${l1TxnReceipt.transactionHash}; index was ${messageNumberIndex}, but only ${messageCount} messages`
       )
     if (messageNumberIndex === undefined && messageCount > 1)
       throw new Error(
-        `${messageCount} L2 messages for ${l1TxnHash}; must provide messageNumberIndex (or use (signersAndProviders, l1Txn))`
+        `${messageCount} L2 messages for ${l1TxnReceipt.transactionHash}; must provide messageNumberIndex (or use (signersAndProviders, l1Txn))`
       )
 
     return allL1ToL2Messages[messageNumberIndex || 0]
   }
 
-  static async initAllFromL1Txn(
-    signersAndProviders: SignersAndProviders,
-    l1Txn: string | TransactionReceipt
-  ): Promise<L1ToL2Message[]> {
-    const l1TxnReceipt = await getTxnReceipt(
-      l1Txn,
-      signersAndProviders.l1Provider
-    )
-    const l1TxnHash = l1TxnReceipt.transactionHash
-
-    if (!signersAndProviders.l2Provider)
-      throw new Error('Missing required L2 Provider')
-    const chainID = (
-      await signersAndProviders.l2Provider.getNetwork()
-    ).chainId.toString()
-
-    const messageNumbers = getMessageNumbersFromL1TxnReceipt(l1TxnReceipt)
-    if (!messageNumbers.length)
-      throw new Error('No l1 to l2 messages found in L1 txn ' + l1TxnHash)
-
-    return messageNumbers.map((messageNumber: BigNumber) => {
-      return new L1ToL2Message(
-        signersAndProviders,
-        calculateRetryableTicketCreationHash({
-          messageNumber,
-          l2ChainId: BigNumber.from(chainID),
-        }),
-        messageNumber,
-        l1TxnHash
-      )
-    })
-  }
-
-  static initFromL2Txn(
-    signersAndProviders: SignersAndProviders,
+  public static fromL2Ticket<T extends Provider | Signer>(
+    l2SignerOrProvider: T,
     l2TicketCreationHash: string
-  ): L1ToL2Message {
-    return new L1ToL2Message(signersAndProviders, l2TicketCreationHash)
+  ): L1ToL2MessageReaderOrWriter<T>
+  public static fromL2Ticket<T extends Provider | Signer>(
+    l2SignerOrProvider: T,
+    l2TicketCreationHash: string
+  ): L1ToL2MessageReader | L1ToL2MessageWriter {
+    return l2SignerOrProvider instanceof Provider
+      ? new L1ToL2MessageReader(l2SignerOrProvider, l2TicketCreationHash)
+      : new L1ToL2MessageWriter(l2SignerOrProvider, l2TicketCreationHash)
   }
+}
+
+export class L1ToL2MessageReader {
+  constructor(
+    private readonly l2Provider: Provider,
+    public readonly l2TicketCreationTxnHash: string,
+    public readonly messageNumber?: BigNumber
+  ) {}
+  // CHRIS: remember initSignersAndProviders was called here did something
 
   get autoRedeemHash(): string {
     return calculateL2MessageFromTicketTxnHash(
@@ -126,22 +179,13 @@ export class L1ToL2Message extends MultiChainConnector {
     )
   }
 
-  public getL1TxnReceipt(): Promise<TransactionReceipt> {
-    if (!this.l1Provider) throw new Error('Missing required L1 Provider')
-    if (!this.l1TxnHash) throw new Error('L1 txn hash not available')
-    return this.l1Provider.getTransactionReceipt(this.l1TxnHash)
-  }
-
   public getTicketCreationReceipt(): Promise<TransactionReceipt> {
-    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
     return this.l2Provider.getTransactionReceipt(this.l2TicketCreationTxnHash)
   }
   public getAutoRedeemReceipt(): Promise<TransactionReceipt> {
-    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
     return this.l2Provider.getTransactionReceipt(this.autoRedeemHash)
   }
   public getUserTxnReceipt(): Promise<TransactionReceipt> {
-    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
     return this.l2Provider.getTransactionReceipt(this.userTxnHash)
   }
 
@@ -149,7 +193,6 @@ export class L1ToL2Message extends MultiChainConnector {
     timeout = 900000,
     confirmations?: number
   ): Promise<L1ToL2MessageReceipt> {
-    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
     const ticketCreationReceipt = await this.l2Provider.waitForTransaction(
       this.l2TicketCreationTxnHash,
       confirmations,
@@ -176,8 +219,6 @@ export class L1ToL2Message extends MultiChainConnector {
   }
 
   public async status(): Promise<L1ToL2MessageStatus> {
-    if (!this.l2Provider) throw new Error('Missing required L2 Provider')
-
     const userTxnReceipt = await this.l2Provider.getTransactionReceipt(
       this.userTxnHash
     )
@@ -187,9 +228,7 @@ export class L1ToL2Message extends MultiChainConnector {
   }
 
   public async isExpired(): Promise<boolean> {
-    return (await this.arbRetryableActions.getTimeout(this.userTxnHash)).eq(
-      constants.Zero
-    )
+    return (await this.getTimeout(this.userTxnHash)).eq(constants.Zero)
   }
 
   private async receiptsToStatus(
@@ -213,22 +252,44 @@ export class L1ToL2Message extends MultiChainConnector {
     return L1ToL2MessageStatus.NOT_YET_REDEEMED
   }
 
-  public async redeem(): Promise<ContractTransaction> {
-    if (!this.l2Signer) throw new Error('Missing required L2 signer')
+  public getTimeout(userL2TxnHash: string): Promise<BigNumber> {
+    const arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      this.l2Provider
+    )
+    return arbRetryableTx.getTimeout(userL2TxnHash)
+  }
+  public getBeneficiary(userL2TxnHash: string): Promise<string> {
+    const arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      this.l2Provider
+    )
+    return arbRetryableTx.getBeneficiary(userL2TxnHash)
+  }
+}
 
-    return this.arbRetryableActions.redeem(this.userTxnHash)
+export class L1ToL2MessageWriter extends L1ToL2MessageReader {
+  constructor(
+    private readonly l2Signer: Signer,
+    l2TicketCreationTxnHash: string,
+    messageNumber?: BigNumber
+  ) {
+    super(l2Signer.provider!, l2TicketCreationTxnHash, messageNumber)
+    if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
   }
 
-  public async cancel(): Promise<ContractTransaction> {
-    if (!this.l2Signer) throw new Error('Missing required L2 signer')
-    return this.arbRetryableActions.cancel(this.userTxnHash)
+  public redeem(userL2TxnHash: string): Promise<ContractTransaction> {
+    const arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      this.l2Signer
+    )
+    return arbRetryableTx.redeem(userL2TxnHash)
   }
-
-  public async getTimeout(): Promise<BigNumber> {
-    return this.arbRetryableActions.getTimeout(this.userTxnHash)
-  }
-
-  public async getBeneficiary(): Promise<string> {
-    return this.arbRetryableActions.getBeneficiary(this.userTxnHash)
+  public cancel(userL2TxnHash: string): Promise<ContractTransaction> {
+    const arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      this.l2Signer
+    )
+    return arbRetryableTx.cancel(userL2TxnHash)
   }
 }
