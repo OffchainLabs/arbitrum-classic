@@ -6,7 +6,7 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants } from 'ethers'
-import { SignerOrProvider } from "../utils/signerOrProvider"
+import { SignerOrProvider } from '../utils/signerOrProvider'
 import {
   getMessageNumbersFromL1TxnReceipt,
   calculateRetryableTicketCreationHash,
@@ -35,9 +35,8 @@ export interface L1ToL2MessageReceipt {
  * If T is of type Signer then L1ToL2MessageReaderOrWriter<T> will be of
  * type L1ToL2MessageWriter.
  */
-type L1ToL2MessageReaderOrWriter<
-  T extends Provider | Signer
-> = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
+type L1ToL2MessageReaderOrWriter<T extends Provider | Signer> =
+  T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export class L1ToL2Message {
   protected static getMessageOrThrow(
