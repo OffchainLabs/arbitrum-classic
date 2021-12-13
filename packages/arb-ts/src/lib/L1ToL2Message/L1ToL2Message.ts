@@ -6,6 +6,7 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants } from 'ethers'
+import { SignerOrProvider } from "../utils/signerOrProvider"
 import {
   getMessageNumbersFromL1TxnReceipt,
   calculateRetryableTicketCreationHash,
@@ -141,7 +142,7 @@ export class L1ToL2Message {
 }
 
 export class L1ToL2MessageReader {
-  constructor(
+  public constructor(
     private readonly l2Provider: Provider,
     public readonly l2TicketCreationTxnHash: string,
     public readonly messageNumber?: BigNumber
@@ -251,7 +252,7 @@ export class L1ToL2MessageReader {
 }
 
 export class L1ToL2MessageWriter extends L1ToL2MessageReader {
-  constructor(
+  public constructor(
     private readonly l2Signer: Signer,
     l2TicketCreationTxnHash: string,
     messageNumber?: BigNumber
