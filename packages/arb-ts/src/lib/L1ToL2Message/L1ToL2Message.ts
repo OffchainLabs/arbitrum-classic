@@ -38,23 +38,6 @@ type L1ToL2MessageReaderOrWriter<
   T extends Provider | Signer
 > = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
-/**
- * Utiliy functions for signer/provider union types
- */
-export class SignerOrProvider {
-  public static isSigner(
-    signerOrProvider: Provider | Signer
-  ): signerOrProvider is Signer {
-    return (signerOrProvider as Signer).sendTransaction !== undefined
-  }
-
-  public static getProvider(signerOrProvider: Provider | Signer) {
-    return this.isSigner(signerOrProvider)
-      ? signerOrProvider.provider
-      : signerOrProvider
-  }
-}
-
 export class L1ToL2Message {
   protected static getMessageOrThrow(
     l1TxnReceipt: TransactionReceipt,
@@ -163,7 +146,6 @@ export class L1ToL2MessageReader {
     public readonly l2TicketCreationTxnHash: string,
     public readonly messageNumber?: BigNumber
   ) {}
-  // CHRIS: remember initSignersAndProviders was called here did something
 
   get autoRedeemHash(): string {
     return calculateL2MessageFromTicketTxnHash(
