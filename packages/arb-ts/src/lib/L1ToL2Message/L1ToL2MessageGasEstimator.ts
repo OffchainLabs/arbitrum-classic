@@ -28,11 +28,12 @@ const defaultL1ToL2MessageEstimateOptions = {
   sendL2CallValueFromL1: true,
 }
 
-interface L1toL2MessageGasValues {
+export interface L1toL2MessageGasValues {
   maxGasPriceBid: BigNumber
   maxSubmissionPriceBid: BigNumber
   maxGasBid: BigNumber
   totalDepositValue: BigNumber
+  l2CallValue: BigNumber
 }
 
 export class L1ToL2MessageGasEstimator {
@@ -81,7 +82,7 @@ export class L1ToL2MessageGasEstimator {
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
     maxGas: BigNumber,
-    gasPriceBig: BigNumber,
+    gasPriceBid: BigNumber,
     calldata: string
   ): Promise<BigNumber> {
     const nodeInterface = NodeInterface__factory.connect(
@@ -98,7 +99,7 @@ export class L1ToL2MessageGasEstimator {
         excessFeeRefundAddress,
         callValueRefundAddress,
         maxGas,
-        gasPriceBig,
+        gasPriceBid,
         calldata
       )
     )[0]
@@ -130,11 +131,11 @@ export class L1ToL2MessageGasEstimator {
   }
 
   public async estimateGasValuesL1ToL2Creation(
-    callDataHex: string,
     sender: string,
     destAddr: string,
+    callDataHex: string,
     l2CallValue: BigNumber,
-    options: L1ToL2MessageEstimateOptions
+    options: L1ToL2MessageEstimateOptions = defaultL1ToL2MessageEstimateOptions
   ): Promise<L1toL2MessageGasValues> {
     const {
       maxSubmissionFeePercentIncrease,
@@ -188,6 +189,7 @@ export class L1ToL2MessageGasEstimator {
       maxSubmissionPriceBid,
       maxGasPriceBid,
       totalDepositValue,
+      l2CallValue,
     }
   }
 }
