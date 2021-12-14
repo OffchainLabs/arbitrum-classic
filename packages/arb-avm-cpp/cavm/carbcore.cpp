@@ -556,6 +556,13 @@ Uint256Result arbCoreGetLastMachineTotalGas(CArbCore* arbcore_ptr) {
     return returnUint256Result({rocksdb::Status::OK(), gas});
 }
 
+void arbCoreUpdateCheckpointPruningGas(CArbCore* arbcore_ptr,
+                                       const void* gas_ptr) {
+    auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
+    auto gas = receiveUint256(gas_ptr);
+    arbCore->updateCheckpointPruningGas(gas);
+}
+
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
