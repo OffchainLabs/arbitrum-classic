@@ -58,10 +58,10 @@ struct ArbCoreConfig {
     bool debug{false};
 
     // Number of seconds to wait between saving rocksdb checkpoint, 0 to disable
-    uint64_t save_rocksdb_interval{0};
+    uint64_t database_save_interval{0};
 
-    // Rocksdb checkpoints will be saved in save_rocksdb_path/timestamp/
-    std::string save_rocksdb_path{};
+    // Rocksdb checkpoints will be saved in database_save_path/timestamp/
+    std::string database_save_path{};
 
     // If any profile_* parameters are non-zero, program will exit after
     // all profile conditions are satisfied.
@@ -95,6 +95,27 @@ struct ArbCoreConfig {
 
     // Whether to lazy load archive queries
     bool lazy_load_archive_queries{false};
+
+    // Do complete prune on startup
+    bool checkpoint_prune_on_startup{false};
+
+    // Perform database compaction
+    bool database_compact{false};
+
+    // Exit after manipulating database
+    bool database_exit_after{false};
+
+    // Number of threads to allow database to use
+    uint64_t database_threads{2};
+
+    // Number of files on layer zero
+    uint64_t database_l0_files{4};
+
+    // Number of seconds to keep checkpoints
+    uint64_t checkpoint_pruning_age_seconds{0};
+
+    // Maximum number of checkpoints to prune at a time
+    uint64_t checkpoint_max_to_prune{0};
 
     ArbCoreConfig() = default;
 };

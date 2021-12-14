@@ -28,7 +28,7 @@
 
 ArbStorage::ArbStorage(const std::string& db_path,
                        const ArbCoreConfig& coreConfig)
-    : datastorage(std::make_shared<DataStorage>(db_path)),
+    : datastorage(std::make_shared<DataStorage>(db_path, coreConfig)),
       arb_core(std::make_shared<ArbCore>(datastorage, coreConfig)) {}
 
 rocksdb::Status ArbStorage::initialize(const std::string& executable_path) {

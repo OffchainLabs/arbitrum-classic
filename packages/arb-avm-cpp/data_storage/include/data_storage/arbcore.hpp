@@ -96,20 +96,12 @@ class ArbCore {
     std::atomic<bool> arbcore_abort{false};
 
     // Core thread input
+    std::mutex checkpoint_pruning_mutex;
+    uint256_t unsafe_checkpoint_pruning_gas_used;
+
+    // Core thread input
     std::atomic<bool> save_checkpoint{false};
     rocksdb::Status save_checkpoint_status;
-
-    // Core thread input for cleaning up old checkpoints
-    // Delete_checkpoints_before message should be set to non-zero value
-    // after other parameters are set.  Main thread will set
-    // delete_checkpoints_before_message to zero once cleanup has finished.
-    std::atomic<uint256_t> delete_checkpoints_before_message{0};
-    // If save_checkpoint_message_interval is zero, all checkpoints after
-    // delete_checkpoints_before_message are deleted.  If non-zero, only
-    // the last checkpoint for each message interval is saved.
-    uint256_t save_checkpoint_message_interval{0};
-    // Do not delete any checkpoints after ignore_checkpoints_after_message
-    uint256_t ignore_checkpoints_after_message{0};
 
     // Core thread holds mutex only during reorg.
     // Routines accessing database for log entries will need to acquire mutex
@@ -248,6 +240,10 @@ class ArbCore {
     rocksdb::Status triggerSaveCheckpoint();
     bool isCheckpointsEmpty(ReadTransaction& tx) const;
     uint256_t maxCheckpointGas();
+
+   public:
+    // Controlling checkpoint pruning
+    void updateCheckpointPruningGas(uint256_t gas);
 
    public:
     // Managing machine state
@@ -447,6 +443,13 @@ class ArbCore {
     [[nodiscard]] ValueResult<uint256_t> logsCursorGetCurrentTotalCount(
         const ReadTransaction& tx,
         size_t cursor_index) const;
+    rocksdb::Status pruneCheckpoints(
+        const std::function<bool(const MachineOutput&)>& check_output,
+        uint64_t checkpoint_max_to_prune);
+    rocksdb::Status pruneToTimestampOrBefore(const uint256_t& timestamp,
+                                             uint64_t checkpoint_max_to_prune);
+    rocksdb::Status pruneToGasOrBefore(const uint256_t& gas,
+                                       uint64_t checkpoint_max_to_prune);
 };
 
 uint64_t seconds_since_epoch();

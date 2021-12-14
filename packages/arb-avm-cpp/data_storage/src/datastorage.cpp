@@ -27,9 +27,10 @@
 #include <thread>
 #include <utility>
 
-DataStorage::DataStorage(const std::string& db_path) {
+DataStorage::DataStorage(const std::string& db_path,
+                         const ArbCoreConfig& coreConfig) {
     // Make sure database isn't closed while constructor still running
-    auto counter = tryLockShared();
+    auto lock = tryLockShared();
 
     rocksdb::TransactionDBOptions txn_options{};
     rocksdb::Options options{};
@@ -39,16 +40,18 @@ DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::BlockBasedTableOptions table_options{};
     options.create_if_missing = true;
     options.create_missing_column_families = true;
+    options.delete_obsolete_files_period_micros = 1;
+    options.max_background_jobs = coreConfig.database_threads;
+    options.max_subcompactions = coreConfig.database_threads;
+    options.allow_data_in_errors = true;
+    options.level0_file_num_compaction_trigger = coreConfig.database_l0_files;
 
-    options.compression = rocksdb::CompressionType::kZSTD;
-    cf_options.compression = rocksdb::CompressionType::kZSTD;
-    cf_options.target_file_size_multiplier = 10;
+    options.avoid_unnecessary_blocking_io = true;
+    options.compression = rocksdb::CompressionType::kLZ4Compression;
 
     // As recommended for new applications by
     // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning
     cf_options.level_compaction_dynamic_level_bytes = true;
-    options.max_background_compactions = 4;
-    options.max_background_flushes = 2;
     options.bytes_per_sync = 1048576;
     options.compaction_pri = rocksdb::kMinOverlappingRatio;
     table_options.block_size = 16 * 1024;
@@ -56,7 +59,6 @@ DataStorage::DataStorage(const std::string& db_path) {
     table_options.pin_l0_filter_and_index_blocks_in_cache = true;
     options.table_factory.reset(
         rocksdb::NewBlockBasedTableFactory(table_options));
-    table_options.format_version = 4;
 
     // No need to keep old log files
     options.keep_log_file_num = 3;
@@ -68,11 +70,7 @@ DataStorage::DataStorage(const std::string& db_path) {
 
     // Settings for refcounted data table
     hashkey_cf_options = cf_options;
-    //
-
-    // OptimizeForPointLookup slows down when database gets large
-    // hashkey_cf_options.OptimizeForPointLookup(16);
-    // hashkey_cf_options.level_compaction_dynamic_level_bytes = true;
+    hashkey_cf_options.OptimizeForPointLookup(16);
 
     txn_db_path = db_path;
 
@@ -103,16 +101,22 @@ DataStorage::DataStorage(const std::string& db_path) {
     }
     assert(status.ok());
 
-    // Compact all family columns on startup
-    // Disabled because of concern over leaving the db in a bad state if
-    // terminated during compaction
-
-    //    auto cr_options = rocksdb::CompactRangeOptions();
-    //    for (size_t i = 0; i < FAMILY_COLUMN_COUNT; i++) {
-    //        db->CompactRange(cr_options, column_handles[i], nullptr, nullptr);
-    //    }
-
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
+
+    if (coreConfig.database_compact) {
+        // Optimize database
+        // This is first database compaction, second compaction is done after
+        // if pruning performed on startup
+        std::cerr << "Compacting database"
+                  << "\n";
+        status = compact(true);
+        if (!status.ok()) {
+            std::cerr << "Database failed compacting: " << status.ToString()
+                      << "\n";
+        }
+        std::cerr << "Database finished compacting"
+                  << "\n";
+    }
 
     status = updateSecretHashSeed();
     if (!status.ok()) {
@@ -126,14 +130,6 @@ DataStorage::~DataStorage() {
         std::cerr << "error closing DataStorage: " << status.ToString()
                   << std::endl;
     }
-}
-
-rocksdb::Status DataStorage::flushNextColumn() {
-    // Make sure database isn't closed while it is being used
-    auto counter = tryLockShared();
-
-    next_column_to_flush = (next_column_to_flush + 1) % column_handles.size();
-    return txn_db->Flush(flush_options, column_handles[next_column_to_flush]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
@@ -207,6 +203,36 @@ rocksdb::Status DataStorage::closeDb() {
     return rocksdb::Status::OK();
 }
 
+rocksdb::Status DataStorage::compact(bool aggressive) {
+    auto cr_options = rocksdb::CompactRangeOptions();
+    rocksdb::FlushOptions compact_flush_options;
+
+    auto dboptions = txn_db->GetDBOptions();
+    if (aggressive) {
+        txn_db->EnableFileDeletions(true);
+        cr_options.allow_write_stall = true;
+        compact_flush_options.allow_write_stall = true;
+        compact_flush_options.wait = true;
+    }
+
+    for (size_t i = 0; i < FAMILY_COLUMN_COUNT; i++) {
+        auto lock = tryLockShared();
+        auto status = txn_db->Flush(compact_flush_options, column_handles[i]);
+        if (!status.ok()) {
+            std::cerr << "flush failed for family column " << i << ": "
+                      << status.ToString() << std::endl;
+        }
+        status = txn_db->CompactRange(cr_options, column_handles[i], nullptr,
+                                      nullptr);
+        if (!status.ok()) {
+            std::cerr << "compact failed for family column " << i << ": "
+                      << status.ToString() << std::endl;
+        }
+    }
+
+    return rocksdb::Status::OK();
+}
+
 std::unique_ptr<Transaction> Transaction::makeTransaction(
     std::shared_ptr<DataStorage> store) {
     // Make sure database isn't closed while it is being used
@@ -218,7 +244,7 @@ std::unique_ptr<Transaction> Transaction::makeTransaction(
 
 rocksdb::Status DataStorage::clearDBExceptInbox() {
     // Make sure database isn't closed while it is being used
-    auto counter = tryLockShared();
+    auto lock = tryLockShared();
 
     for (int i = 0; i < FAMILY_COLUMN_COUNT; i++) {
         if (i == DEFAULT_COLUMN || i == DELAYEDMESSAGE_COLUMN ||
@@ -237,7 +263,7 @@ rocksdb::Status DataStorage::updateSecretHashSeed() {
     std::string key("secretHashSeed");
 
     // Make sure database isn't closed while it is being used
-    auto counter = tryLockShared();
+    auto lock = tryLockShared();
 
     rocksdb::PinnableSlice value;
     rocksdb::ReadOptions read_opts;
