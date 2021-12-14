@@ -39,31 +39,6 @@ type L1ToL2MessageReaderOrWriter<T extends Provider | Signer> =
   T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export class L1ToL2Message {
-  protected static getMessageOrThrow(
-    l1TxnReceipt: TransactionReceipt,
-    messageNumberIndex?: number
-  ) {
-    const messageNumbers = getMessageNumbersFromL1TxnReceipt(l1TxnReceipt)
-    if (messageNumbers === undefined)
-      throw new Error(
-        `No l1 to L2 message found for ${l1TxnReceipt.transactionHash}`
-      )
-
-    if (
-      messageNumberIndex !== undefined &&
-      messageNumberIndex > messageNumbers.length
-    )
-      throw new Error(
-        `Provided message number out of range for ${l1TxnReceipt.transactionHash}; index was ${messageNumberIndex}, but only ${messageNumbers.length} messages`
-      )
-    if (messageNumberIndex === undefined && messageNumbers.length > 1)
-      throw new Error(
-        `${messageNumbers.length} L2 messages for ${l1TxnReceipt.transactionHash}; must provide messamessageNumberIndex (or use initAllFromL1Txn)`
-      )
-
-    return messageNumbers[messageNumberIndex || 0]
-  }
-
   public static async fromL1ReceiptAll<T extends Provider | Signer>(
     l2SignerOrProvider: T,
     l1TxnReceipt: TransactionReceipt
