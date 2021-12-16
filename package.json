@@ -20,7 +20,8 @@
     "run:rpc": "ts-node ./scripts/run-rpc.ts && ./scripts/tmpRPC.sh",
     "mine": "yarn workspace tools mine-local-chain-blocks",
     "fund": "yarn workspace tools fundWallet",
-    "fund:l2": "yarn workspace tools fund:l2"
+    "fund:l2": "yarn workspace tools fund:l2",
+    "setValidator": "yarn workspace arb-bridge-eth setValidator"
   },
   "engines": {
     "node": ">= 8.0.0",

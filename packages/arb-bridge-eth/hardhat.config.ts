@@ -41,6 +41,25 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   }
 })
 
+task('setValidator', 'whitelist/block a validator')
+  .addPositionalParam('address', "Validator's account address")
+  .addPositionalParam('status', 'True/False')
+  .setAction(async ({ address, status }, bre) => {
+    const { deployments, ethers } = bre
+    const [deployer] = await ethers.getSigners()
+
+    const RollupAdminFacetFactory = await ethers.getContractFactory('RollupAdminFacet')
+    const RollupAdminFacetDep = await deployments.get('RollupAdminFacet')
+    
+    const rollupAdmin = RollupAdminFacetFactory
+                      .attach(RollupAdminFacetDep.address)
+                      .connect(deployer)
+    await rollupAdmin.setValidator(
+      [ address ], [status == "True"]
+    )
+    console.log("Done!")
+  })
+
 task('create-chain', 'Creates a rollup chain')
   .addParam('sequencer', "The sequencer's address")
   .setAction(async (taskArguments, hre) => {

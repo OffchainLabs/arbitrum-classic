@@ -39,7 +39,9 @@
     "typechain": "hardhat typechain",
     "slither": "slither . --hardhat-artifacts-directory build/contracts",
     "hardhat": "hardhat",
-    "deploy:contracts": "hardhat deploy --export bridge_eth_addresses.json"
+    "deploy:contracts": "hardhat deploy --export bridge_eth_addresses.json",
+    "setValidator": "npx hardhat setValidator"
+
   },
   "dependencies": {
     "@openzeppelin/contracts": "3.4.2",
