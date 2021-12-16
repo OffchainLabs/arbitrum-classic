@@ -38,7 +38,8 @@
     "verify": "hardhat etherscan-verify --api-key $(dotenv -p ETHERSCAN_API_KEY)",
     "typechain": "hardhat typechain",
     "slither": "slither . --hardhat-artifacts-directory build/contracts",
-    "hardhat": "hardhat"
+    "hardhat": "hardhat",
+    "deploy:contracts": "hardhat deploy --export bridge_eth_addresses.json"
   },
   "dependencies": {
     "@openzeppelin/contracts": "3.4.2",
@@ -47,6 +48,7 @@
     "@types/node": "^14.0.13",
     "dotenv": "^10.0.0",
     "ethers": "^5.4.0",
+    "find-up": "^6.2.0",
     "hardhat-deploy": "^0.9.1",
     "typescript": "^4.2.2"
   },

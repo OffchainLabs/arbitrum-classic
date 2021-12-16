@@ -1,7 +1,10 @@
 import { task } from 'hardhat/config'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import 'dotenv/config'
+import { findEnv } from './find-env';
+import { config } from "dotenv"; 
+config({ path: findEnv() });
 import * as fs from 'fs'
+
 
 import 'hardhat-deploy'
 
@@ -230,8 +233,10 @@ task('set-outbox', 'deploy and set a new outbox')
     console.log('all set 👍')
   })
 
-const config = {
-  defaultNetwork: 'hardhat',
+console.log("Deploying on: ", process.env['DEPLOY_ON']);
+
+module.exports = {
+  defaultNetwork: process.env['DEPLOY_ON'] || 'hardhat',
   paths: {
     artifacts: 'build/contracts',
   },
@@ -271,68 +276,8 @@ const config = {
         enabled: process.env['SHOULD_FORK'] === '1',
       },
     },
-    local_development: {
+    local_ganache: {
       url: 'http://127.0.0.1:7545',
-    },
-    kovan: {
-      url: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
-    mainnet: {
-      url: 'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY'],
-      accounts: process.env['MAINNET_PRIVKEY']
-        ? [process.env['MAINNET_PRIVKEY']]
-        : [],
-    },
-    fork: {
-      url: 'http://127.0.0.1:8545/',
-    },
-    arbitrum1: {
-      url: 'https://arb1.arbitrum.io/rpc',
-      accounts: process.env['MAINNET_PRIVKEY']
-        ? [process.env['MAINNET_PRIVKEY']]
-        : [],
-    },
-    rinkeby: {
-      url: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
-    arbRinkeby: {
-      gasPrice: 0,
-      url: 'https://rinkeby.arbitrum.io/rpc',
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
-    arbkovan4: {
-      gasPrice: 0,
-      url: 'https://kovan4.arbitrum.io/rpc',
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
-    kovan5: {
-      gasPrice: 0,
-      url: 'https://kovan5.arbitrum.io/rpc',
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
-    devnet: {
-      url: 'https://devnet.arbitrum.io/rpc',
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
-    },
-    devnetL2: {
-      url: 'https://devnet-l2.arbitrum.io/rpc',
-      accounts: process.env['DEVNET_PRIVKEY']
-        ? [process.env['DEVNET_PRIVKEY']]
-        : [],
     },
     arbitrum: {
       url: 'http://127.0.0.1:8547',
@@ -378,32 +323,3 @@ const config = {
     ],
   },
 }
-
-if (process.env['RINKEBY_URL'] && process.env['RINKEBY_MNEMONIC']) {
-  ;(config.networks as any)['rinkeby'] = {
-    url: process.env['RINKEBY_URL'] || '',
-    accounts: [process.env['RINKEBY_MNEMONIC'] || ''],
-    network_id: 4,
-    confirmations: 1,
-  }
-}
-
-if (process.env['ROPSTEN_URL'] && process.env['ROPSTEN_MNEMONIC']) {
-  ;(config.networks as any)['ropsten'] = {
-    url: process.env['ROPSTEN_URL'] || '',
-    accounts: [process.env['ROPSTEN_MNEMONIC'] || ''],
-    network_id: 3,
-    confirmations: 1,
-  }
-}
-
-if (process.env['KOVAN_URL'] && process.env['KOVAN_MNEMONIC']) {
-  ;(config.networks as any)['kovan'] = {
-    url: process.env['KOVAN_URL'] || '',
-    accounts: [process.env['KOVAN_MNEMONIC'] || ''],
-    network_id: 42,
-    confirmations: 4,
-  }
-}
-
-module.exports = config
