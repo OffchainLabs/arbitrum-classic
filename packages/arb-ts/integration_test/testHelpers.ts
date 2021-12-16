@@ -33,7 +33,6 @@ import { Network } from '../src/lib/networks'
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 
 import config from './config'
-import { L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
 import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
 
 const argv = yargs(process.argv.slice(2))

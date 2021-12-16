@@ -31,11 +31,7 @@ import {
   prettyLog,
 } from './testHelpers'
 import { OutgoingMessageState } from '../src/lib/dataEntities'
-import { L1ToL2Message } from '../src/lib/message/L1ToL2Message'
-import {
-  L2ToL1Message,
-  L2TransactionReceipt,
-} from '../src/lib/message/L2ToL1Message'
+import { L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
 
 describe('WETH', async () => {
   beforeEach('skipIfMainnet', function () {
@@ -46,11 +42,8 @@ describe('WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToWithdraw = parseEther('0.00000001')
 
-    const {
-      bridge,
-      l1Network,
-      l2Network,
-    } = await instantiateBridgeWithRandomWallet()
+    const { bridge, l1Network, l2Network } =
+      await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
 
     const l2Weth = AeWETH__factory.connect(
@@ -74,8 +67,8 @@ describe('WETH', async () => {
       withdrawRec
     ).getL2ToL1Messages(bridge.l2Provider)
     const firstMessage = outgoingMessages[0]
-    expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty')
-      .to.exist
+    expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
+      .exist
 
     const outgoingMessageState = await firstMessage.status(null)
     expect(

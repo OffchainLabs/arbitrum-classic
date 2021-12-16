@@ -16,18 +16,10 @@
 /* eslint-env node */
 'use strict'
 
-import {
-  Filter,
-  Provider,
-  TransactionReceipt,
-} from '@ethersproject/abstract-provider'
+import { Filter, Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
-import {
-  ContractReceipt,
-  ContractTransaction,
-  PayableOverrides,
-} from '@ethersproject/contracts'
+import { ContractTransaction, PayableOverrides } from '@ethersproject/contracts'
 import { Logger } from '@ethersproject/logger'
 import { Zero } from '@ethersproject/constants'
 import { parseEther } from '@ethersproject/units'
@@ -36,32 +28,15 @@ import { utils } from 'ethers'
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import { L1WethGateway__factory } from './abi/factories/L1WethGateway__factory'
-import { Inbox__factory } from './abi/factories/Inbox__factory'
-import { Bridge__factory } from './abi/factories/Bridge__factory'
-import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
 
-import { Await, DepositParams, L1Bridge, L1TokenData } from './l1Bridge'
-import { L2Bridge, L2TokenData } from './l2Bridge'
+import { Await, DepositParams, L1Bridge } from './l1Bridge'
+import { L2Bridge } from './l2Bridge'
 import { BridgeHelper } from './bridge_helpers'
-import {
-  DepositInitiated,
-  GatewaySet,
-  L2ToL1EventResult,
-  WithdrawalInitiated,
-} from './dataEntities'
+import { GatewaySet, WithdrawalInitiated } from './dataEntities'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks, { Network } from './networks'
-import {
-  L1ERC20Gateway,
-  L1GatewayRouter,
-  Multicall2__factory,
-  ArbMulticall2__factory,
-  ERC20__factory,
-  ERC20,
-} from './abi'
-import { Result } from '@ethersproject/abi'
-import { L2TransactionReceipt } from './message/L2ToL1Message'
-import { L1TransactionReceipt } from './message/L1ToL2Message'
+import { L1ERC20Gateway, L1GatewayRouter, ERC20__factory, ERC20 } from './abi'
+
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
   maxGas?: BigNumber
@@ -665,6 +640,87 @@ export class Bridge {
   //     this.l2Provider,
   //     confirmations
   //   )
+  // }
+
+  // public async redeemRetryableTicket(
+  //   l1Transaction: string | ContractReceipt,
+  //   waitTimeForL2Receipt = 900000, // 15 minutes
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   if (typeof l1Transaction == 'string') {
+  //     l1Transaction = await this.getL1Transaction(l1Transaction)
+  //   }
+  //   const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
+  //     l1Transaction
+  //   )
+  //   if (!inboxSeqNum) throw new Error('Inbox not triggered')
+
+  //   const l2TxnHash = await this.calculateL2TransactionHash(inboxSeqNum[0])
+  //   console.log('waiting for retryable ticket...', l2TxnHash)
+
+  //   const l2Txn = await this.l2Provider.waitForTransaction(
+  //     l2TxnHash,
+  //     undefined,
+  //     waitTimeForL2Receipt
+  //   )
+  //   if (!l2Txn) throw new Error('retryable ticket not found')
+  //   console.log('retryable ticket found!')
+  //   if (l2Txn.status === 0) {
+  //     console.warn('retryable ticket failed', l2Txn)
+  //     throw new Error('l2 txn failed')
+  //   }
+  //   const retryHash = await BridgeHelper.calculateL2RetryableTransactionHash(
+  //     inboxSeqNum[0],
+  //     this.l2Provider
+  //   )
+  //   console.log('Redeeming retryable ticket:', retryHash)
+  //   return this.l2Bridge.arbRetryableTx.redeem(retryHash, overrides)
+  // }
+
+  // public async cancelRetryableTicket(
+  //   l1Transaction: string | ContractReceipt,
+  //   waitTimeForL2Receipt = 900000, // 15 minutes
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   if (typeof l1Transaction == 'string') {
+  //     l1Transaction = await this.getL1Transaction(l1Transaction)
+  //   }
+  //   const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
+  //     l1Transaction
+  //   )
+  //   if (!inboxSeqNum) throw new Error('Inbox not triggered')
+
+  //   const l2TxnHash = await this.calculateL2TransactionHash(inboxSeqNum[0])
+  //   console.log('waiting for retryable ticket...', l2TxnHash)
+
+  //   const l2Txn = await this.l2Provider.waitForTransaction(
+  //     l2TxnHash,
+  //     undefined,
+  //     waitTimeForL2Receipt
+  //   )
+  //   if (!l2Txn) throw new Error('retryable ticket not found')
+  //   console.log('retryable ticket found!')
+  //   if (l2Txn.status === 0) {
+  //     console.warn('retryable ticket failed', l2Txn)
+  //     throw new Error('l2 txn failed')
+  //   }
+  //   const redemptionTxHash =
+  //     await BridgeHelper.calculateL2RetryableTransactionHash(
+  //       inboxSeqNum[0],
+  //       this.l2Provider
+  //     )
+  //   console.log(`Ensuring txn hasn't been redeemed:`)
+
+  //   const redemptionRec = await this.l2Provider.getTransactionReceipt(
+  //     redemptionTxHash
+  //   )
+  //   if (redemptionRec && redemptionRec.status === 1) {
+  //     throw new Error(
+  //       `Can't cancel retryable, it's already been redeemed: ${redemptionTxHash}`
+  //     )
+  //   }
+  //   console.log(`Hasn't been redeemed yet, calling cancel now`)
+  //   return this.l2Bridge.arbRetryableTx.cancel(redemptionTxHash, overrides)
   // }
 
   /**

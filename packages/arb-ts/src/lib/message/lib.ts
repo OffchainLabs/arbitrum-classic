@@ -16,11 +16,9 @@
 /* eslint-env node */
 'use strict'
 
-import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { keccak256 } from '@ethersproject/keccak256'
-import { concat, zeroPad, hexZeroPad } from '@ethersproject/bytes'
+import { concat, zeroPad } from '@ethersproject/bytes'
 
 export enum L2TxnType {
   USER_TXN = 0,

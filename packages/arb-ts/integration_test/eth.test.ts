@@ -34,8 +34,11 @@ import {
 import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
 import { ARB_GAS_INFO } from '../src/lib/precompile_addresses'
 import { OutgoingMessageState } from '../src/lib/dataEntities'
-import { L1ToL2Message, L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
-import { L2ToL1Message, L2ToL1MessageReader, L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
+import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
+import {
+  L2ToL1Message,
+  L2TransactionReceipt,
+} from '../src/lib/message/L2ToL1Message'
 import { hexZeroPad } from '@ethersproject/bytes'
 dotenv.config()
 
@@ -82,7 +85,9 @@ describe('Ether', async () => {
       'balance failed to update after eth deposit'
     )
 
-    const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(bridge.l2Provider)
+    const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
+      bridge.l2Provider
+    )
 
     // const seqNumArr = await bridge.getInboxSeqNumFromContractTransaction(rec)
     if (messages === undefined) {
@@ -137,7 +142,11 @@ describe('Ether', async () => {
     const inWei = await arbGasInfo.getPricesInWei({
       blockTag: withdrawEthRec.blockNumber,
     })
-    const withdrawMessage = (await new L2TransactionReceipt(withdrawEthRec).getL2ToL1Messages(bridge.l1Provider))[0]
+    const withdrawMessage = (
+      await new L2TransactionReceipt(withdrawEthRec).getL2ToL1Messages(
+        bridge.l1Provider
+      )
+    )[0]
     expect(
       withdrawMessage,
       'eth withdraw getWithdrawalsInL2Transaction query came back empty'
@@ -146,10 +155,13 @@ describe('Ether', async () => {
     const myAddress = await bridge.l1Signer.getAddress()
 
     // CHRIS: convenience method for this
-    const withdrawEvents = await L2ToL1Message.getL2ToL1MessageLogs(bridge.l2Provider, {
-      fromBlock: withdrawEthRec.blockNumber,
-      topics: [hexZeroPad(myAddress, 32)],
-    })
+    const withdrawEvents = await L2ToL1Message.getL2ToL1MessageLogs(
+      bridge.l2Provider,
+      {
+        fromBlock: withdrawEthRec.blockNumber,
+        topics: [hexZeroPad(myAddress, 32)],
+      }
+    )
 
     expect(withdrawEvents.length).to.equal(
       1,

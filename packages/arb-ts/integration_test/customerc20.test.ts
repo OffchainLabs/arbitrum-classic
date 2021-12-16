@@ -71,8 +71,12 @@ describe('Custom ERC20', () => {
     const withdrawRec = await withdrawRes.wait()
 
     expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
-    
-    const message = (await new L2TransactionReceipt(withdrawRec).getL2ToL1Messages(bridge.l1Provider))[0]
+
+    const message = (
+      await new L2TransactionReceipt(withdrawRec).getL2ToL1Messages(
+        bridge.l1Provider
+      )
+    )[0]
     expect(message, 'withdrawEventData not found').to.exist
 
     const outgoingMessageState = await message.status(null)

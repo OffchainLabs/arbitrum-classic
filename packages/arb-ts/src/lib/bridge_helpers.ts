@@ -16,35 +16,19 @@
 /* eslint-env node */
 'use strict'
 
-import { Interface, defaultAbiCoder } from '@ethersproject/abi'
-import {
-  Provider,
-  TransactionReceipt,
-  Filter,
-  Log,
-} from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
+import { Interface } from '@ethersproject/abi'
+import { Provider, Filter, Log } from '@ethersproject/abstract-provider'
 import { BigNumber } from '@ethersproject/bignumber'
-import { concat, zeroPad, hexZeroPad } from '@ethersproject/bytes'
+import { hexZeroPad } from '@ethersproject/bytes'
 
-import { ContractTransaction } from '@ethersproject/contracts'
-import { keccak256 } from '@ethersproject/keccak256'
-
-import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
-import { Outbox__factory } from './abi/factories/Outbox__factory'
-import { IOutbox__factory } from './abi/factories/IOutbox__factory'
-import { Inbox__factory } from './abi/factories/Inbox__factory'
-import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { Rollup__factory } from './abi/factories/Rollup__factory'
 import { L2ArbitrumGateway__factory } from './abi/factories/L2ArbitrumGateway__factory'
 import { Whitelist__factory } from './abi/factories/Whitelist__factory'
 
-import { NODE_INTERFACE_ADDRESS, ARB_SYS_ADDRESS } from './precompile_addresses'
-import { ArbMulticall2, Multicall2, NodeInterface__factory } from './abi'
+import { ArbMulticall2, Multicall2 } from './abi'
 import {
   GatewaySet,
-  L2ToL1EventResult,
   WithdrawalInitiated,
   MulticallFunctionInput,
 } from './dataEntities'
@@ -203,7 +187,7 @@ export class BridgeHelper {
         ...iface.parseLog(log).args,
         txHash: log.transactionHash,
       }
-      return (data as unknown) as WithdrawalInitiated
+      return data as unknown as WithdrawalInitiated
     })
     // TODO: use l1TokenAddress as filter in topics instead of here
     return l1TokenAddress
@@ -248,7 +232,7 @@ export class BridgeHelper {
       iface,
       gatewayRouterAddress
     )
-    return logs.map(log => (iface.parseLog(log).args as unknown) as GatewaySet)
+    return logs.map(log => iface.parseLog(log).args as unknown as GatewaySet)
   }
 
   // static getCoreBridgeFromInbox = (
