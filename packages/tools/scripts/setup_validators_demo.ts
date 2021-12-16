@@ -9,7 +9,20 @@ import { setupValidatorStates } from './setup_validators'
 import * as addresses from '../../arb-bridge-eth/bridge_eth_addresses.json'
 import { execSync } from 'child_process'
 
-const provider = new JsonRpcProvider('http://localhost:7545')
+import { findEnv } from '../find-env';
+import { config } from "dotenv"; 
+config({ path: findEnv() });
+
+
+const network:string = process.env['DEPLOY_ON'] || '';
+const network_url:string = process.env[network.toUpperCase() + "_NETWORK"] || '';
+const pvtKey = process.env[network.toUpperCase() + "_PRIVATE_KEY"] || '';
+console.log("Network:", network)
+console.log("Network Url:", network_url)
+console.log("Private Key:", pvtKey);
+
+
+const provider = new JsonRpcProvider(network_url)
 
 const wallet = provider.getSigner(0)
 const root = '../../'
@@ -23,9 +36,6 @@ export interface RollupCreatedEvent {
 async function setupRollup(
   sequencerAddress: string
 ): Promise<RollupCreatedEvent> {
-  // TODO: is the L2 sequencer the 1st unlocked account in the L1 node?
-  const network = 'local_development'
-
   execSync(
     `yarn workspace arb-bridge-eth hardhat create-chain --sequencer ${sequencerAddress} --network ${network}`
   )
@@ -85,7 +95,7 @@ async function setupValidators(
   )
   console.log('Created rollup', rollupAddress)
 
-  const validatorsPath = rollupsPath + 'local/'
+  const validatorsPath = rollupsPath + network + '/'
 
   if (count < 2) {
     throw Error('must create at least 1 validator')
@@ -109,14 +119,14 @@ async function setupValidators(
     rollup_address: rollupAddress,
     inbox_address: inboxAddress,
     validator_utils_address: addresses['contracts']['ValidatorUtils'].address,
-    validator_wallet_factory_address:
-      addresses['contracts']['ValidatorWalletCreator'].address,
-    eth_url: 'http://localhost:7545',
+    validator_wallet_factory_address:addresses['contracts']['ValidatorWalletCreator'].address,
+    bridge_utils_address: addresses['contracts']['BridgeUtils'].address,
+    eth_url: network_url,
     password: 'pass',
     blocktime: blocktime,
   }
 
-  await setupValidatorStates(count, 'local', config)
+  await setupValidatorStates(count, network, config)
 
   let i = 0
   for (const wallet of wallets) {
@@ -128,7 +138,7 @@ async function setupValidators(
     i++
   }
 
-  await initializeClientWallets(inboxAddress)
+  // await initializeClientWallets(inboxAddress)
 }
 
 if (require.main === module) {

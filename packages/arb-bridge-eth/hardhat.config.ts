@@ -233,7 +233,8 @@ task('set-outbox', 'deploy and set a new outbox')
     console.log('all set 👍')
   })
 
-console.log("Deploying on: ", process.env['DEPLOY_ON']);
+const network = process.env['DEPLOY_ON'] || "";
+console.log("Deploying on: ", network);
 
 module.exports = {
   defaultNetwork: process.env['DEPLOY_ON'] || 'hardhat',
@@ -277,7 +278,8 @@ module.exports = {
       },
     },
     local_ganache: {
-      url: 'http://127.0.0.1:7545',
+      url: process.env[network.toUpperCase() + "_NETWORK"],
+      accounts: [process.env[network.toUpperCase() + "_PRIVATE_KEY"]]
     },
     arbitrum: {
       url: 'http://127.0.0.1:8547',
