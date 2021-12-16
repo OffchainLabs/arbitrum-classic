@@ -80,25 +80,3 @@ export const calculateRetryableUserTxnHash = (messageId: MessageId): string => {
     L2TxnType.USER_TXN
   )
 }
-
-export const getMessageNumbersFromL1TxnReceipt = (
-  l1Transaction: TransactionReceipt
-): BigNumber[] => {
-  const iface = Inbox__factory.createInterface()
-  const messageDelivered = iface.getEvent('InboxMessageDelivered')
-  const messageDeliveredFromOrigin = iface.getEvent(
-    'InboxMessageDeliveredFromOrigin'
-  )
-  const eventTopics = {
-    InboxMessageDelivered: iface.getEventTopic(messageDelivered),
-    InboxMessageDeliveredFromOrigin: iface.getEventTopic(
-      messageDeliveredFromOrigin
-    ),
-  }
-  const logs = l1Transaction.logs.filter(
-    log =>
-      log.topics[0] === eventTopics.InboxMessageDelivered ||
-      log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
-  )
-  return logs.map(log => BigNumber.from(log.topics[1]))
-}

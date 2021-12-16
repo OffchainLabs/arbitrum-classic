@@ -42,16 +42,13 @@ import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
 
 import { Await, DepositParams, L1Bridge, L1TokenData } from './l1Bridge'
 import { L2Bridge, L2TokenData } from './l2Bridge'
+import { BridgeHelper } from './bridge_helpers'
 import {
-  BridgeHelper,
-  BuddyDeployEventResult,
   DepositInitiated,
   GatewaySet,
   L2ToL1EventResult,
-  MessageBatchProofInfo,
-  OutgoingMessageState,
   WithdrawalInitiated,
-} from './bridge_helpers'
+} from './dataEntities'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks, { Network } from './networks'
 import {
@@ -63,6 +60,8 @@ import {
   ERC20,
 } from './abi'
 import { Result } from '@ethersproject/abi'
+import { L2TransactionReceipt } from './message/L2ToL1Message'
+import { L1TransactionReceipt } from './message/L1ToL2Message'
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
   maxGas?: BigNumber
@@ -482,270 +481,191 @@ export class Bridge {
     return this.l2Bridge.getL2EthBalance()
   }
 
-  public getL2Transaction(
-    l2TransactionHash: string
-  ): Promise<TransactionReceipt> {
-    return BridgeHelper.getL2Transaction(l2TransactionHash, this.l2Provider)
-  }
+  // public getL2Transaction(
+  //   l2TransactionHash: string
+  // ): Promise<TransactionReceipt> {
+  //   return BridgeHelper.getL2Transaction(l2TransactionHash, this.l2Provider)
+  // }
 
-  public getL1Transaction(
-    l1TransactionHash: string
-  ): Promise<TransactionReceipt> {
-    return BridgeHelper.getL1Transaction(l1TransactionHash, this.l1Provider)
-  }
+  // public getL1Transaction(
+  //   l1TransactionHash: string
+  // ): Promise<TransactionReceipt> {
+  //   return BridgeHelper.getL1Transaction(l1TransactionHash, this.l1Provider)
+  // }
 
-  /**
-   * get hash of regular L2 txn from corresponding inbox sequence number
-   */
-  public calculateL2TransactionHash(
-    inboxSequenceNumber: BigNumber,
-    l2ChainId?: BigNumber
-  ): Promise<string> {
-    return BridgeHelper.calculateL2TransactionHash(
-      inboxSequenceNumber,
-      l2ChainId || this.l2Provider
-    )
-  }
-  /**
-   * Hash of L2 side of retryable txn; txn gets generated automatically and is formatted as tho user submitted
-   */
-  public calculateL2RetryableTransactionHash(
-    inboxSequenceNumber: BigNumber,
-    l2ChainId?: BigNumber
-  ): Promise<string> {
-    return BridgeHelper.calculateL2RetryableTransactionHash(
-      inboxSequenceNumber,
-      l2ChainId || this.l2Provider
-    )
-  }
+  // /**
+  //  * get hash of regular L2 txn from corresponding inbox sequence number
+  //  */
+  // public calculateL2TransactionHash(
+  //   inboxSequenceNumber: BigNumber,
+  //   l2ChainId?: BigNumber
+  // ): Promise<string> {
+  //   return BridgeHelper.calculateL2TransactionHash(
+  //     inboxSequenceNumber,
+  //     l2ChainId || this.l2Provider
+  //   )
+  // }
 
-  /**
-   * Hash of L2 ArbOs generated "auto-redeem" transaction; if it succeeded, a transaction queryable by {@link calculateL2RetryableTransactionHash} will then be created
-   */
-  public calculateRetryableAutoRedeemTxnHash(
-    inboxSequenceNumber: BigNumber,
-    l2ChainId?: BigNumber
-  ): Promise<string> {
-    return BridgeHelper.calculateRetryableAutoRedeemTxnHash(
-      inboxSequenceNumber,
-      l2ChainId || this.l2Provider
-    )
-  }
+  // /**
+  //  * Hash of L2 side of retryable txn; txn gets generated automatically and is formatted as tho user submitted
+  //  */
+  // public calculateL2RetryableTransactionHash(
+  //   inboxSequenceNumber: BigNumber,
+  //   l2ChainId?: BigNumber
+  // ): Promise<string> {
+  //   return BridgeHelper.calculateL2RetryableTransactionHash(
+  //     inboxSequenceNumber,
+  //     l2ChainId || this.l2Provider
+  //   )
+  // }
 
-  public async getInboxSeqNumFromContractTransaction(
-    l1Transaction: TransactionReceipt
-  ): Promise<BigNumber[] | undefined> {
-    return BridgeHelper.getInboxSeqNumFromContractTransaction(l1Transaction)
-  }
+  // /**
+  //  * Hash of L2 ArbOs generated "auto-redeem" transaction; if it succeeded, a transaction queryable by {@link calculateL2RetryableTransactionHash} will then be created
+  //  */
+  // public calculateRetryableAutoRedeemTxnHash(
+  //   inboxSequenceNumber: BigNumber,
+  //   l2ChainId?: BigNumber
+  // ): Promise<string> {
+  //   return BridgeHelper.calculateRetryableAutoRedeemTxnHash(
+  //     inboxSequenceNumber,
+  //     l2ChainId || this.l2Provider
+  //   )
+  // }
 
-  /**
-   * Convenience method to directly retrieve retryable hash from an l1 transaction
-   */
-  public async getL2TxHashByRetryableTicket(
-    l1Transaction: string | ContractReceipt
-  ): Promise<string> {
-    if (typeof l1Transaction == 'string') {
-      l1Transaction = await this.getL1Transaction(l1Transaction)
-    }
-    const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
-      l1Transaction
-    )
+  // public async getInboxSeqNumFromContractTransaction(
+  //   l1Transaction: TransactionReceipt
+  // ): Promise<BigNumber[] | undefined> {
+  //   return BridgeHelper.getInboxSeqNumFromContractTransaction(l1Transaction)
+  // }
 
-    if (!inboxSeqNum) throw new Error('Inbox not triggered')
-    return this.calculateL2RetryableTransactionHash(inboxSeqNum[0])
-  }
+  // /**
+  //  * Convenience method to directly retrieve retryable hash from an l1 transaction
+  //  */
+  // public async getL2TxHashByRetryableTicket(
+  //   l1Transaction: string | ContractReceipt
+  // ): Promise<string> {
+  //   if (typeof l1Transaction == 'string') {
+  //     l1Transaction = await this.getL1Transaction(l1Transaction)
+  //   }
+  //   const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
+  //     l1Transaction
+  //   )
 
-  public async redeemRetryableTicket(
-    l1Transaction: string | ContractReceipt,
-    waitTimeForL2Receipt = 900000, // 15 minutes
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    if (typeof l1Transaction == 'string') {
-      l1Transaction = await this.getL1Transaction(l1Transaction)
-    }
-    const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
-      l1Transaction
-    )
-    if (!inboxSeqNum) throw new Error('Inbox not triggered')
+  //   if (!inboxSeqNum) throw new Error('Inbox not triggered')
+  //   return this.calculateL2RetryableTransactionHash(inboxSeqNum[0])
+  // }
 
-    const l2TxnHash = await this.calculateL2TransactionHash(inboxSeqNum[0])
-    console.log('waiting for retryable ticket...', l2TxnHash)
+  // public getWithdrawalsInL2Transaction(
+  //   l2Transaction: TransactionReceipt
+  // ): L2ToL1EventResult[] {
+  //   return new L2TransactionReceipt(l2Transaction).getL2ToL1Events()
+  // }
 
-    const l2Txn = await this.l2Provider.waitForTransaction(
-      l2TxnHash,
-      undefined,
-      waitTimeForL2Receipt
-    )
-    if (!l2Txn) throw new Error('retryable ticket not found')
-    console.log('retryable ticket found!')
-    if (l2Txn.status === 0) {
-      console.warn('retryable ticket failed', l2Txn)
-      throw new Error('l2 txn failed')
-    }
-    const retryHash = await BridgeHelper.calculateL2RetryableTransactionHash(
-      inboxSeqNum[0],
-      this.l2Provider
-    )
-    console.log('Redeeming retryable ticket:', retryHash)
-    return this.l2Bridge.arbRetryableTx.redeem(retryHash, overrides)
-  }
+  // public async getDepositTokenEventData(
+  //   l1Transaction: TransactionReceipt
+  // ): Promise<DepositInitiated[]> {
+  //   return new L1TransactionReceipt(l1Transaction).getDepositEvents()
+  // }
 
-  public async cancelRetryableTicket(
-    l1Transaction: string | ContractReceipt,
-    waitTimeForL2Receipt = 900000, // 15 minutes
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    if (typeof l1Transaction == 'string') {
-      l1Transaction = await this.getL1Transaction(l1Transaction)
-    }
-    const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
-      l1Transaction
-    )
-    if (!inboxSeqNum) throw new Error('Inbox not triggered')
+  // /**
+  //  * Attempt to execute an outbox message; must be confirmed to succeed (i.e., confirmation delay must have passed)
+  //  */
+  // public async triggerL2ToL1Transaction(
+  //   batchNumber: BigNumber,
+  //   indexInBatch: BigNumber,
+  //   singleAttempt = false
+  // ): Promise<ContractTransaction> {
+  //   const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
+  //   return BridgeHelper.triggerL2ToL1Transaction(
+  //     batchNumber,
+  //     indexInBatch,
+  //     outboxAddress,
+  //     this.l2Provider,
+  //     this.l1Signer,
+  //     singleAttempt
+  //   )
+  // }
 
-    const l2TxnHash = await this.calculateL2TransactionHash(inboxSeqNum[0])
-    console.log('waiting for retryable ticket...', l2TxnHash)
+  // public tryOutboxExecute(
+  //   outboxAddress: string,
+  //   batchNumber: BigNumber,
+  //   proof: Array<string>,
+  //   path: BigNumber,
+  //   l2Sender: string,
+  //   l1Dest: string,
+  //   l2Block: BigNumber,
+  //   l1Block: BigNumber,
+  //   timestamp: BigNumber,
+  //   amount: BigNumber,
+  //   calldataForL1: string
+  // ): Promise<ContractTransaction> {
+  //   return BridgeHelper.tryOutboxExecute(
+  //     {
+  //       batchNumber,
+  //       proof,
+  //       path,
+  //       l2Sender,
+  //       l1Dest,
+  //       l2Block,
+  //       l1Block,
+  //       timestamp,
+  //       amount,
+  //       calldataForL1,
+  //     },
+  //     outboxAddress,
+  //     this.l1Signer
+  //   )
+  // }
 
-    const l2Txn = await this.l2Provider.waitForTransaction(
-      l2TxnHash,
-      undefined,
-      waitTimeForL2Receipt
-    )
-    if (!l2Txn) throw new Error('retryable ticket not found')
-    console.log('retryable ticket found!')
-    if (l2Txn.status === 0) {
-      console.warn('retryable ticket failed', l2Txn)
-      throw new Error('l2 txn failed')
-    }
-    const redemptionTxHash =
-      await BridgeHelper.calculateL2RetryableTransactionHash(
-        inboxSeqNum[0],
-        this.l2Provider
-      )
-    console.log(`Ensuring txn hasn't been redeemed:`)
+  // public tryGetProofOnce(
+  //   batchNumber: BigNumber,
+  //   indexInBatch: BigNumber
+  // ): Promise<MessageBatchProofInfo | null> {
+  //   return BridgeHelper.tryGetProofOnce(
+  //     batchNumber,
+  //     indexInBatch,
+  //     this.l2Provider
+  //   )
+  // }
 
-    const redemptionRec = await this.l2Provider.getTransactionReceipt(
-      redemptionTxHash
-    )
-    if (redemptionRec && redemptionRec.status === 1) {
-      throw new Error(
-        `Can't cancel retryable, it's already been redeemed: ${redemptionTxHash}`
-      )
-    }
-    console.log(`Hasn't been redeemed yet, calling cancel now`)
-    return this.l2Bridge.arbRetryableTx.cancel(redemptionTxHash, overrides)
-  }
+  // public tryGetProof(
+  //   batchNumber: BigNumber,
+  //   indexInBatch: BigNumber,
+  //   retryDelay = 500
+  // ): Promise<MessageBatchProofInfo> {
+  //   return BridgeHelper.tryGetProof(
+  //     batchNumber,
+  //     indexInBatch,
+  //     this.l2Provider,
+  //     retryDelay
+  //   )
+  // }
 
-  public getWithdrawalsInL2Transaction(
-    l2Transaction: TransactionReceipt
-  ): L2ToL1EventResult[] {
-    return BridgeHelper.getWithdrawalsInL2Transaction(l2Transaction)
-  }
+  // public waitUntilOutboxEntryCreated(
+  //   batchNumber: BigNumber,
+  //   outboxAddress: string
+  // ): Promise<void> {
 
-  public async getDepositTokenEventData(
-    l1Transaction: TransactionReceipt
-  ): Promise<DepositInitiated[]> {
-    return BridgeHelper.getDepositTokenEventData(l1Transaction)
-  }
-
-  /**
-   * Attempt to execute an outbox message; must be confirmed to succeed (i.e., confirmation delay must have passed)
-   */
-  public async triggerL2ToL1Transaction(
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
-    singleAttempt = false
-  ): Promise<ContractTransaction> {
-    const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
-    return BridgeHelper.triggerL2ToL1Transaction(
-      batchNumber,
-      indexInBatch,
-      outboxAddress,
-      this.l2Provider,
-      this.l1Signer,
-      singleAttempt
-    )
-  }
-
-  public tryOutboxExecute(
-    outboxAddress: string,
-    batchNumber: BigNumber,
-    proof: Array<string>,
-    path: BigNumber,
-    l2Sender: string,
-    l1Dest: string,
-    l2Block: BigNumber,
-    l1Block: BigNumber,
-    timestamp: BigNumber,
-    amount: BigNumber,
-    calldataForL1: string
-  ): Promise<ContractTransaction> {
-    return BridgeHelper.tryOutboxExecute(
-      {
-        batchNumber,
-        proof,
-        path,
-        l2Sender,
-        l1Dest,
-        l2Block,
-        l1Block,
-        timestamp,
-        amount,
-        calldataForL1,
-      },
-      outboxAddress,
-      this.l1Signer
-    )
-  }
-
-  public tryGetProofOnce(
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
-  ): Promise<MessageBatchProofInfo | null> {
-    return BridgeHelper.tryGetProofOnce(
-      batchNumber,
-      indexInBatch,
-      this.l2Provider
-    )
-  }
-
-  public tryGetProof(
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
-    retryDelay = 500
-  ): Promise<MessageBatchProofInfo> {
-    return BridgeHelper.tryGetProof(
-      batchNumber,
-      indexInBatch,
-      this.l2Provider,
-      retryDelay
-    )
-  }
-
-  public waitUntilOutboxEntryCreated(
-    batchNumber: BigNumber,
-    outboxAddress: string
-  ): Promise<void> {
-    return BridgeHelper.waitUntilOutboxEntryCreated(
-      batchNumber,
-      outboxAddress,
-      this.l1Provider
-    )
-  }
+  //   return BridgeHelper.waitUntilOutboxEntryCreated(
+  //     batchNumber,
+  //     outboxAddress,
+  //     this.l1Provider
+  //   )
+  // }
 
   /**
    * Return receipt of retryable transaction after execution
    */
-  public async waitForRetryableReceipt(
-    seqNum: BigNumber,
-    confirmations?: number
-  ): Promise<TransactionReceipt> {
-    return BridgeHelper.waitForRetryableReceipt(
-      seqNum,
-      this.l2Provider,
-      confirmations
-    )
-  }
+  // public async waitForRetryableReceipt(
+  //   seqNum: BigNumber,
+  //   confirmations?: number
+  // ): Promise<TransactionReceipt> {
+  //   return BridgeHelper.waitForRetryableReceipt(
+  //     seqNum,
+  //     this.l2Provider,
+  //     confirmations
+  //   )
+  // }
 
   /**
    * All withdrawals from given token
@@ -771,7 +691,6 @@ export class Bridge {
   /**
    * All withdrawals from given gateway
    */
-
   public async getGatewayWithdrawEventData(
     gatewayAddress: string,
     fromAddress?: string,
@@ -786,58 +705,58 @@ export class Bridge {
     )
   }
 
-  public async getL2ToL1EventData(
-    fromAddress: string,
-    filter?: Filter
-  ): Promise<L2ToL1EventResult[]> {
-    return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider, filter)
-  }
+  // public async getL2ToL1EventData(
+  //   fromAddress: string,
+  //   filter?: Filter
+  // ): Promise<L2ToL1EventResult[]> {
+  //   return BridgeHelper.getL2ToL1EventData(fromAddress, this.l2Provider, filter)
+  // }
 
-  public async getOutboxAddressByBatchNum(
-    batchNum: BigNumber
-  ): Promise<string> {
-    const inbox = Inbox__factory.connect(
-      (await this.l1Bridge.getInbox()).address,
-      this.l1Provider
-    )
-    const bridge = await Bridge__factory.connect(
-      await inbox.bridge(),
-      this.l1Provider
-    )
-    const oldOutboxAddress = await bridge.allowedOutboxList(0)
-    let newOutboxAddress: string
-    try {
-      newOutboxAddress = await bridge.allowedOutboxList(1)
-    } catch {
-      // new outbox not yet deployed; using old outbox
-      return oldOutboxAddress
-    }
-    const oldOutbox = OldOutbox__factory.connect(
-      oldOutboxAddress,
-      this.l1Provider
-    )
-    const lastOldOutboxBatchNumber = await oldOutbox.outboxesLength()
+  // public async getOutboxAddressByBatchNum(
+  //   batchNum: BigNumber
+  // ): Promise<string> {
+  //   const inbox = Inbox__factory.connect(
+  //     (await this.l1Bridge.getInbox()).address,
+  //     this.l1Provider
+  //   )
+  //   const bridge = await Bridge__factory.connect(
+  //     await inbox.bridge(),
+  //     this.l1Provider
+  //   )
+  //   const oldOutboxAddress = await bridge.allowedOutboxList(0)
+  //   let newOutboxAddress: string
+  //   try {
+  //     newOutboxAddress = await bridge.allowedOutboxList(1)
+  //   } catch {
+  //     // new outbox not yet deployed; using old outbox
+  //     return oldOutboxAddress
+  //   }
+  //   const oldOutbox = OldOutbox__factory.connect(
+  //     oldOutboxAddress,
+  //     this.l1Provider
+  //   )
+  //   const lastOldOutboxBatchNumber = await oldOutbox.outboxesLength()
 
-    return batchNum.lt(lastOldOutboxBatchNumber)
-      ? oldOutboxAddress
-      : newOutboxAddress
-  }
+  //   return batchNum.lt(lastOldOutboxBatchNumber)
+  //     ? oldOutboxAddress
+  //     : newOutboxAddress
+  // }
   /**
    * Returns {@link OutgoingMessageState} for given outgoing message
    */
-  public async getOutGoingMessageState(
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
-  ): Promise<OutgoingMessageState> {
-    const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
-    return BridgeHelper.getOutGoingMessageState(
-      batchNumber,
-      indexInBatch,
-      outboxAddress,
-      this.l1Provider,
-      this.l2Provider
-    )
-  }
+  // public async getOutGoingMessageState(
+  //   batchNumber: BigNumber,
+  //   indexInBatch: BigNumber
+  // ): Promise<OutgoingMessageState> {
+  //   const outboxAddress = await this.getOutboxAddressByBatchNum(batchNumber)
+  //   return BridgeHelper.getOutGoingMessageState(
+  //     batchNumber,
+  //     indexInBatch,
+  //     outboxAddress,
+  //     this.l1Provider,
+  //     this.l2Provider
+  //   )
+  // }
 
   public async getERC20L2Address(erc20L1Address: string): Promise<string> {
     return this.l1Bridge.getERC20L2Address(erc20L1Address)

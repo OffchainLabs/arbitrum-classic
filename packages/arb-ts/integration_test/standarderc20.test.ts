@@ -23,7 +23,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 
 import { Bridge } from '../src/lib/bridge'
-import { OutgoingMessageState } from '../src/lib/bridge_helpers'
+import { OutgoingMessageState } from '../src/lib/dataEntities'
 
 import {
   fundL1,
@@ -36,6 +36,7 @@ import {
   skipIfMainnet,
   existentTestERC20,
 } from './testHelpers'
+import { L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
 
 describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', function () {
@@ -73,18 +74,15 @@ describe('standard ERC20', () => {
       1,
       'token withdraw initiation txn failed'
     )
-    const withdrawEventData =
-      bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
 
-    expect(
-      withdrawEventData,
-      'token withdraw getWithdrawalsInL2Transaction came back empty'
-    ).to.exist
+    const outgoingMessages = await new L2TransactionReceipt(
+      withdrawRec
+    ).getL2ToL1Messages(bridge.l2Provider)
+    const firstMessage = outgoingMessages[0]
+    expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
+      .exist
 
-    const outgoingMessageState = await bridge.getOutGoingMessageState(
-      withdrawEventData.batchNumber,
-      withdrawEventData.indexInBatch
-    )
+    const outgoingMessageState = await firstMessage.status(null)
 
     expect(
       outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||

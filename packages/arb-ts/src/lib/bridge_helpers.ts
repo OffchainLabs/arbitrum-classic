@@ -42,227 +42,140 @@ import { Whitelist__factory } from './abi/factories/Whitelist__factory'
 
 import { NODE_INTERFACE_ADDRESS, ARB_SYS_ADDRESS } from './precompile_addresses'
 import { ArbMulticall2, Multicall2, NodeInterface__factory } from './abi'
-import { FunctionFragment } from 'ethers/lib/utils'
+import {
+  GatewaySet,
+  L2ToL1EventResult,
+  WithdrawalInitiated,
+  MulticallFunctionInput,
+} from './dataEntities'
 
 export const addressToSymbol = (erc20L1Address: string): string => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
-}
-
-// TODO: can we import these interfaces directly from typechain?
-export interface L2ToL1EventResult {
-  caller: string
-  destination: string
-  uniqueId: BigNumber
-  batchNumber: BigNumber
-  indexInBatch: BigNumber
-  arbBlockNum: BigNumber
-  ethBlockNum: BigNumber
-  timestamp: string
-  callvalue: BigNumber
-  data: string
-}
-
-export interface WithdrawalInitiated {
-  l1Token: string
-  _from: string
-  _to: string
-  _l2ToL1Id: BigNumber
-  _exitNum: BigNumber
-  _amount: BigNumber
-  txHash: string
-}
-
-export interface DepositInitiated {
-  l1Token: string
-  _from: string
-  _to: string
-  _sequenceNumber: BigNumber
-  amount: BigNumber
-}
-export interface BuddyDeployEventResult {
-  _sender: string
-  _contract: string
-  withdrawalId: BigNumber
-  success: boolean
-}
-
-export interface OutboxProofData {
-  batchNumber: BigNumber
-  proof: string[]
-  path: BigNumber
-  l2Sender: string
-  l1Dest: string
-  l2Block: BigNumber
-  l1Block: BigNumber
-  timestamp: BigNumber
-  amount: BigNumber
-  calldataForL1: string
-}
-
-export interface ActivateCustomTokenResult {
-  seqNum: BigNumber
-  l1Addresss: string
-  l2Address: string
-}
-
-export interface OutBoxTransactionExecuted {
-  destAddr: string
-  l2Sender: string
-  outboxIndex: BigNumber
-  transactionIndex: BigNumber
-}
-
-export interface GatewaySet {
-  l1Token: string
-  gateway: string
-}
-
-export enum OutgoingMessageState {
-  /**
-   * No corresponding {@link L2ToL1EventResult} emitted
-   */
-  NOT_FOUND,
-  /**
-   * ArbSys.sendTxToL1 called, but assertion not yet confirmed
-   */
-  UNCONFIRMED,
-  /**
-   * Assertion for outgoing message confirmed, but message not yet executed
-   */
-  CONFIRMED,
-  /**
-   * Outgoing message executed (terminal state)
-   */
-  EXECUTED,
 }
 
 export type ChainIdOrProvider = BigNumber | Provider
 
 const ADDRESS_ALIAS_OFFSET = '0x1111000000000000000000000000000000001111'
 
-export interface MessageBatchProofInfo {
-  proof: string[]
-  path: BigNumber
-  l2Sender: string
-  l1Dest: string
-  l2Block: BigNumber
-  l1Block: BigNumber
-  timestamp: BigNumber
-  amount: BigNumber
-  calldataForL1: string
-}
-
-export type MulticallFunctionInput = Array<{
-  target: string
-  funcFragment: FunctionFragment
-  values?: Array<any>
-}>
-
 /**
  * Stateless helper methods; most wrapped / accessible (and documented) via {@link Bridge}
  */
 export class BridgeHelper {
-  static calculateL2TransactionHash = async (
-    inboxSequenceNumber: BigNumber,
-    chainIdOrL2Provider: ChainIdOrProvider
-  ): Promise<string> => {
-    const l2ChainId = BigNumber.isBigNumber(chainIdOrL2Provider)
-      ? chainIdOrL2Provider
-      : BigNumber.from((await chainIdOrL2Provider.getNetwork()).chainId)
+  // static calculateL2TransactionHash = async (
+  //   inboxSequenceNumber: BigNumber,
+  //   chainIdOrL2Provider: ChainIdOrProvider
+  // ): Promise<string> => {
+  //   const l2ChainId = BigNumber.isBigNumber(chainIdOrL2Provider)
+  //     ? chainIdOrL2Provider
+  //     : BigNumber.from((await chainIdOrL2Provider.getNetwork()).chainId)
 
-    return keccak256(
-      concat([
-        zeroPad(l2ChainId.toHexString(), 32),
-        zeroPad(
-          BridgeHelper.bitFlipSeqNum(inboxSequenceNumber).toHexString(),
-          32
-        ),
-      ])
-    )
-  }
+  //   return keccak256(
+  //     concat([
+  //       zeroPad(l2ChainId.toHexString(), 32),
+  //       zeroPad(
+  //         BridgeHelper.bitFlipSeqNum(inboxSequenceNumber).toHexString(),
+  //         32
+  //       ),
+  //     ])
+  //   )
+  // }
 
-  static bitFlipSeqNum = (seqNum: BigNumber): BigNumber => {
-    return seqNum.or(BigNumber.from(1).shl(255))
-  }
+  // static bitFlipSeqNum = (seqNum: BigNumber): BigNumber => {
+  //   return seqNum.or(BigNumber.from(1).shl(255))
+  // }
 
-  private static _calculateRetryableHashInternal = async (
-    inboxSequenceNumber: BigNumber,
-    chainIdOrL2Provider: ChainIdOrProvider,
-    txnType: 0 | 1
-  ): Promise<string> => {
-    const requestID = await BridgeHelper.calculateL2TransactionHash(
-      inboxSequenceNumber,
-      chainIdOrL2Provider
-    )
-    return keccak256(
-      concat([
-        zeroPad(requestID, 32),
-        zeroPad(BigNumber.from(txnType).toHexString(), 32),
-      ])
-    )
-  }
+  // private static _calculateRetryableHashInternal = async (
+  //   inboxSequenceNumber: BigNumber,
+  //   chainIdOrL2Provider: ChainIdOrProvider,
+  //   txnType: 0 | 1
+  // ): Promise<string> => {
+  //   const requestID = await BridgeHelper.calculateL2TransactionHash(
+  //     inboxSequenceNumber,
+  //     chainIdOrL2Provider
+  //   )
+  //   return keccak256(
+  //     concat([
+  //       zeroPad(requestID, 32),
+  //       zeroPad(BigNumber.from(txnType).toHexString(), 32),
+  //     ])
+  //   )
+  // }
 
-  static calculateL2RetryableTransactionHash = async (
-    inboxSequenceNumber: BigNumber,
-    chainIdOrL2Provider: ChainIdOrProvider
-  ): Promise<string> => {
-    return BridgeHelper._calculateRetryableHashInternal(
-      inboxSequenceNumber,
-      chainIdOrL2Provider,
-      0
-    )
-  }
+  // static calculateL2RetryableTransactionHash = async (
+  //   inboxSequenceNumber: BigNumber,
+  //   chainIdOrL2Provider: ChainIdOrProvider
+  // ): Promise<string> => {
+  //   return BridgeHelper._calculateRetryableHashInternal(
+  //     inboxSequenceNumber,
+  //     chainIdOrL2Provider,
+  //     0
+  //   )
+  // }
 
-  static calculateRetryableAutoRedeemTxnHash = async (
-    inboxSequenceNumber: BigNumber,
-    chainIdOrL2Provider: ChainIdOrProvider
-  ): Promise<string> => {
-    return BridgeHelper._calculateRetryableHashInternal(
-      inboxSequenceNumber,
-      chainIdOrL2Provider,
-      1
-    )
-  }
+  // static calculateRetryableAutoRedeemTxnHash = async (
+  //   inboxSequenceNumber: BigNumber,
+  //   chainIdOrL2Provider: ChainIdOrProvider
+  // ): Promise<string> => {
+  //   return BridgeHelper._calculateRetryableHashInternal(
+  //     inboxSequenceNumber,
+  //     chainIdOrL2Provider,
+  //     1
+  //   )
+  // }
 
-  static waitForRetryableReceipt = async (
-    seqNum: BigNumber,
-    l2Provider: Provider,
-    confirmations?: number
-  ): Promise<TransactionReceipt> => {
-    const l2RetryableHash =
-      await BridgeHelper.calculateL2RetryableTransactionHash(seqNum, l2Provider)
-    return l2Provider.waitForTransaction(l2RetryableHash, confirmations)
-  }
+  // static getL2Transaction = async (
+  //   l2TransactionHash: string,
+  //   l2Provider: Provider
+  // ): Promise<TransactionReceipt> => {
+  //   const txReceipt = await l2Provider.getTransactionReceipt(l2TransactionHash)
+  //   if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
+  //   return txReceipt
+  // }
 
-  static getL2Transaction = async (
-    l2TransactionHash: string,
-    l2Provider: Provider
-  ): Promise<TransactionReceipt> => {
-    const txReceipt = await l2Provider.getTransactionReceipt(l2TransactionHash)
-    if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
-    return txReceipt
-  }
+  // static getL1Transaction = async (
+  //   l1TransactionHash: string,
+  //   l1Provider: Provider
+  // ): Promise<TransactionReceipt> => {
+  //   const txReceipt = await l1Provider.getTransactionReceipt(l1TransactionHash)
+  //   if (!txReceipt) throw new Error("Can't find L1 transaction receipt?")
+  //   return txReceipt
+  // }
 
-  static getL1Transaction = async (
-    l1TransactionHash: string,
-    l1Provider: Provider
-  ): Promise<TransactionReceipt> => {
-    const txReceipt = await l1Provider.getTransactionReceipt(l1TransactionHash)
-    if (!txReceipt) throw new Error("Can't find L1 transaction receipt?")
-    return txReceipt
-  }
+  //  static getWithdrawalsInL2Transaction = (
+  //    l2Transaction: TransactionReceipt
+  //  ): Array<L2ToL1EventResult> => {
+  //    const iface = ArbSys__factory.createInterface()
+  //    const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
+  //    const eventTopic = iface.getEventTopic(l2ToL1Event)
+  //      const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
+  //      return logs.map(
+  //      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
+  //    )
+  //  }
 
-  static getDepositTokenEventData = async (
-    l1Transaction: TransactionReceipt
-  ): Promise<Array<DepositInitiated>> => {
-    const iface = L1ERC20Gateway__factory.createInterface()
-    const event = iface.getEvent('DepositInitiated')
-    const eventTopic = iface.getEventTopic(event)
-    const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(
-      log => iface.parseLog(log).args as unknown as DepositInitiated
-    )
-  }
+  // static waitForRetryableReceipt = async (
+  //   seqNum: BigNumber,
+  //   l2Provider: Provider,
+  //   confirmations?: number
+  // ): Promise<TransactionReceipt> => {
+  //   const l2RetryableHash = await BridgeHelper.calculateL2RetryableTransactionHash(
+  //     seqNum,
+  //     l2Provider
+  //   )
+  //   return l2Provider.waitForTransaction(l2RetryableHash, confirmations)
+  // }
+
+  // static getDepositTokenEventData = async (
+  //   l1Transaction: TransactionReceipt
+  // ): Promise<Array<DepositInitiated>> => {
+  //   const iface = L1ERC20Gateway__factory.createInterface()
+  //   const event = iface.getEvent('DepositInitiated')
+  //   const eventTopic = iface.getEventTopic(event)
+  //   const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
+  //   return logs.map(
+  //     log => (iface.parseLog(log).args as unknown) as DepositInitiated
+  //   )
+  // }
 
   /**
    * All withdrawals from given token
@@ -290,7 +203,7 @@ export class BridgeHelper {
         ...iface.parseLog(log).args,
         txHash: log.transactionHash,
       }
-      return data as unknown as WithdrawalInitiated
+      return (data as unknown) as WithdrawalInitiated
     })
     // TODO: use l1TokenAddress as filter in topics instead of here
     return l1TokenAddress
@@ -335,305 +248,305 @@ export class BridgeHelper {
       iface,
       gatewayRouterAddress
     )
-    return logs.map(log => iface.parseLog(log).args as unknown as GatewaySet)
+    return logs.map(log => (iface.parseLog(log).args as unknown) as GatewaySet)
   }
 
-  static getWithdrawalsInL2Transaction = (
-    l2Transaction: TransactionReceipt
-  ): Array<L2ToL1EventResult> => {
-    const iface = ArbSys__factory.createInterface()
-    const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
-    const eventTopic = iface.getEventTopic(l2ToL1Event)
+  // static getCoreBridgeFromInbox = (
+  //   inboxAddress: string,
+  //   l1Provider: Provider
+  // ): Promise<string> => {
+  //   const contract = Inbox__factory.connect(inboxAddress, l1Provider)
+  //   return contract.functions.bridge().then(([res]) => res)
+  // }
 
-    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
+  // static getInboxSeqNumFromContractTransaction = async (
+  //   l1Transaction: TransactionReceipt
+  // ): Promise<BigNumber[] | undefined> => {
+  //   const iface = Inbox__factory.createInterface()
+  //   const messageDelivered = iface.getEvent('InboxMessageDelivered')
+  //   const messageDeliveredFromOrigin = iface.getEvent(
+  //     'InboxMessageDeliveredFromOrigin'
+  //   )
 
-    return logs.map(
-      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
-    )
-  }
+  //   const eventTopics = {
+  //     InboxMessageDelivered: iface.getEventTopic(messageDelivered),
+  //     InboxMessageDeliveredFromOrigin: iface.getEventTopic(
+  //       messageDeliveredFromOrigin
+  //     ),
+  //   }
 
-  static getCoreBridgeFromInbox = (
-    inboxAddress: string,
-    l1Provider: Provider
-  ): Promise<string> => {
-    const contract = Inbox__factory.connect(inboxAddress, l1Provider)
-    return contract.functions.bridge().then(([res]) => res)
-  }
+  //   const logs = l1Transaction.logs.filter(
+  //     log =>
+  //       log.topics[0] === eventTopics.InboxMessageDelivered ||
+  //       log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
+  //   )
 
-  static getInboxSeqNumFromContractTransaction = async (
-    l1Transaction: TransactionReceipt
-  ): Promise<BigNumber[] | undefined> => {
-    const iface = Inbox__factory.createInterface()
-    const messageDelivered = iface.getEvent('InboxMessageDelivered')
-    const messageDeliveredFromOrigin = iface.getEvent(
-      'InboxMessageDeliveredFromOrigin'
-    )
-
-    const eventTopics = {
-      InboxMessageDelivered: iface.getEventTopic(messageDelivered),
-      InboxMessageDeliveredFromOrigin: iface.getEventTopic(
-        messageDeliveredFromOrigin
-      ),
-    }
-
-    const logs = l1Transaction.logs.filter(
-      log =>
-        log.topics[0] === eventTopics.InboxMessageDelivered ||
-        log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
-    )
-
-    if (logs.length === 0) return undefined
-    return logs.map(log => BigNumber.from(log.topics[1]))
-  }
+  //   if (logs.length === 0) return undefined
+  //   return logs.map(log => BigNumber.from(log.topics[1]))
+  // }
 
   /**
    * Attempt to retrieve data necessary to execute outbox message; available before outbox entry is created /confirmed
    */
-  static tryGetProof = async (
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
-    l2Provider: Provider,
-    retryDelay = 500
-  ): Promise<MessageBatchProofInfo> => {
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      l2Provider
-    )
-    try {
-      return nodeInterface.lookupMessageBatchProof(batchNumber, indexInBatch)
-    } catch (e) {
-      const expectedError = "batch doesn't exist"
-      const err = e as any
-      const actualError =
-        err && (err.message || (err.error && err.error.message))
-      if (actualError.includes(expectedError)) {
-        console.log(
-          'Withdrawal detected, but batch not created yet. Going to wait a bit.'
-        )
-      } else {
-        console.log("Withdrawal proof didn't work. Not sure why")
-        console.log(e)
-        console.log('Going to try again after waiting')
-      }
-      await BridgeHelper.wait(retryDelay)
-      console.log('New attempt starting')
-      // TODO: should exponential backoff?
-      return BridgeHelper.tryGetProof(
-        batchNumber,
-        indexInBatch,
-        l2Provider,
-        retryDelay
-      )
-    }
-  }
+  // static tryGetProof = async (
+  //   batchNumber: BigNumber,
+  //   indexInBatch: BigNumber,
+  //   l2Provider: Provider,
+  //   retryDelay = 500
+  // ): Promise<MessageBatchProofInfo> => {
+  //   const nodeInterface = NodeInterface__factory.connect(
+  //     NODE_INTERFACE_ADDRESS,
+  //     l2Provider
+  //   )
+  //   try {
+  //     return nodeInterface.lookupMessageBatchProof(batchNumber, indexInBatch)
+  //   } catch (e) {
+  //     const expectedError = "batch doesn't exist"
+  //     const err = e as any
+  //     const actualError =
+  //       err && (err.message || (err.error && err.error.message))
+  //     if (actualError.includes(expectedError)) {
+  //       console.log(
+  //         'Withdrawal detected, but batch not created yet. Going to wait a bit.'
+  //       )
+  //     } else {
+  //       console.log("Withdrawal proof didn't work. Not sure why")
+  //       console.log(e)
+  //       console.log('Going to try again after waiting')
+  //     }
+  //     await BridgeHelper.wait(retryDelay)
+  //     console.log('New attempt starting')
+  //     // TODO: should exponential backoff?
+  //     return BridgeHelper.tryGetProof(
+  //       batchNumber,
+  //       indexInBatch,
+  //       l2Provider,
+  //       retryDelay
+  //     )
+  //   }
+  // }
 
   static wait = (ms: number): Promise<unknown> =>
     new Promise(res => setTimeout(res, ms))
 
-  static tryGetProofOnce = async (
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
-    l2Provider: Provider
-  ): Promise<MessageBatchProofInfo | null> => {
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      l2Provider
-    )
-    try {
-      return nodeInterface.lookupMessageBatchProof(batchNumber, indexInBatch)
-    } catch (e) {
-      const expectedError = "batch doesn't exist"
-      const err = e as any
-      const actualError =
-        err && (err.message || (err.error && err.error.message))
-      if (actualError.includes(expectedError)) {
-        console.log('Withdrawal detected, but batch not created yet.')
-      } else {
-        console.log("Withdrawal proof didn't work. Not sure why")
-        console.log(e)
-      }
-    }
-    return null
-  }
+  // static tryGetProofOnce = async (
+  //   batchNumber: BigNumber,
+  //   indexInBatch: BigNumber,
+  //   l2Provider: Provider
+  // ): Promise<MessageBatchProofInfo | null> => {
+  //   const nodeInterface = NodeInterface__factory.connect(
+  //     NODE_INTERFACE_ADDRESS,
+  //     l2Provider
+  //   )
+  //   try {
+  //     return nodeInterface.lookupMessageBatchProof(batchNumber, indexInBatch)
+  //   } catch (e) {
+  //     const expectedError = "batch doesn't exist"
+  //     const err = e as any
+  //     const actualError =
+  //       err && (err.message || (err.error && err.error.message))
+  //     if (actualError.includes(expectedError)) {
+  //       console.log('Withdrawal detected, but batch not created yet.')
+  //     } else {
+  //       console.log("Withdrawal proof didn't work. Not sure why")
+  //       console.log(e)
+  //     }
+  //   }
+  //   return null
+  // }
 
-  static outboxEntryExists = (
-    batchNumber: BigNumber,
-    outboxAddress: string,
-    l1Provider: Provider
-  ): Promise<boolean> => {
-    const outbox = IOutbox__factory.connect(outboxAddress, l1Provider)
-    return outbox.outboxEntryExists(batchNumber)
-  }
+  // static outboxEntryExists = (
+  //   batchNumber: BigNumber,
+  //   outboxAddress: string,
+  //   l1Provider: Provider
+  // ): Promise<boolean> => {
+  //   const outbox = IOutbox__factory.connect(outboxAddress, l1Provider)
+  //   return outbox.outboxEntryExists(batchNumber)
+  // }
 
-  static waitUntilOutboxEntryCreated = async (
-    batchNumber: BigNumber,
-    outboxAddress: string,
-    l1Provider: Provider,
-    retryDelay = 500
-  ): Promise<void> => {
-    const exists = await BridgeHelper.outboxEntryExists(
-      batchNumber,
-      outboxAddress,
-      l1Provider
-    )
-    if (exists) {
-      console.log('Found outbox entry!')
-      return
-    } else {
-      console.log("can't find entry, lets wait a bit?")
+  // static waitUntilOutboxEntryCreated = async (
+  //   batchNumber: BigNumber,
+  //   outboxAddress: string,
+  //   l1Provider: Provider,
+  //   retryDelay = 500
+  // ): Promise<void> => {
+  //   const exists = await BridgeHelper.outboxEntryExists(
+  //     batchNumber,
+  //     outboxAddress,
+  //     l1Provider
+  //   )
+  //   if (exists) {
+  //     console.log('Found outbox entry!')
+  //     return
+  //   } else {
+  //     console.log("can't find entry, lets wait a bit?")
 
-      await BridgeHelper.wait(retryDelay)
-      console.log('Starting new attempt')
-      await BridgeHelper.waitUntilOutboxEntryCreated(
-        batchNumber,
-        outboxAddress,
-        l1Provider,
-        retryDelay
-      )
-    }
-  }
+  //     await BridgeHelper.wait(retryDelay)
+  //     console.log('Starting new attempt')
+  //     await BridgeHelper.waitUntilOutboxEntryCreated(
+  //       batchNumber,
+  //       outboxAddress,
+  //       l1Provider,
+  //       retryDelay
+  //     )
+  //   }
+  // }
 
-  static getActiveOutbox = async (
-    rollupAddress: string,
-    l1Provider: Provider
-  ): Promise<string> => {
-    return Rollup__factory.connect(rollupAddress, l1Provider).outbox()
-  }
+  // static getActiveOutbox = async (
+  //   rollupAddress: string,
+  //   l1Provider: Provider
+  // ): Promise<string> => {
+  //   return Rollup__factory.connect(rollupAddress, l1Provider).outbox()
+  // }
 
-  static tryOutboxExecute = async (
-    outboxProofData: OutboxProofData,
-    outboxAddress: string,
-    l1Signer: Signer
-  ): Promise<ContractTransaction> => {
-    if (!l1Signer.provider) throw new Error('No L1 provider in L1 signer')
-    await BridgeHelper.waitUntilOutboxEntryCreated(
-      outboxProofData.batchNumber,
-      outboxAddress,
-      l1Signer.provider
-    )
+  // static tryOutboxExecute = async (
+  //   outboxProofData: OutboxProofData,
+  //   outboxAddress: string,
+  //   l1Signer: Signer
+  // ): Promise<ContractTransaction> => {
+  //   if (!l1Signer.provider) throw new Error('No L1 provider in L1 signer')
+  //   await BridgeHelper.waitUntilOutboxEntryCreated(
+  //     outboxProofData.batchNumber,
+  //     outboxAddress,
+  //     l1Signer.provider
+  //   )
 
-    const outbox = Outbox__factory.connect(outboxAddress, l1Signer)
-    try {
-      // TODO: wait until assertion is confirmed before execute
-      // We can predict and print number of missing blocks
-      // if not challenged
-      const outboxExecute = await outbox.functions.executeTransaction(
-        outboxProofData.batchNumber,
-        outboxProofData.proof,
-        outboxProofData.path,
-        outboxProofData.l2Sender,
-        outboxProofData.l1Dest,
-        outboxProofData.l2Block,
-        outboxProofData.l1Block,
-        outboxProofData.timestamp,
-        outboxProofData.amount,
-        outboxProofData.calldataForL1
-      )
-      console.log(`Transaction hash: ${outboxExecute.hash}`)
-      return outboxExecute
-    } catch (e) {
-      console.log('failed to execute tx in layer 1')
-      console.log(e)
-      // TODO: should we just try again after delay instead of throwing?
-      throw e
-    }
-  }
+  //   const outbox = Outbox__factory.connect(outboxAddress, l1Signer)
+  //   try {
+  //     // TODO: wait until assertion is confirmed before execute
+  //     // We can predict and print number of missing blocks
+  //     // if not challenged
+  //     const outboxExecute = await outbox.functions.executeTransaction(
+  //       outboxProofData.batchNumber,
+  //       outboxProofData.proof,
+  //       outboxProofData.path,
+  //       outboxProofData.l2Sender,
+  //       outboxProofData.l1Dest,
+  //       outboxProofData.l2Block,
+  //       outboxProofData.l1Block,
+  //       outboxProofData.timestamp,
+  //       outboxProofData.amount,
+  //       outboxProofData.calldataForL1
+  //     )
+  //     console.log(`Transaction hash: ${outboxExecute.hash}`)
+  //     return outboxExecute
+  //   } catch (e) {
+  //     console.log('failed to execute tx in layer 1')
+  //     console.log(e)
+  //     // TODO: should we just try again after delay instead of throwing?
+  //     throw e
+  //   }
+  // }
 
-  static triggerL2ToL1Transaction = async (
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
-    outboxAddress: string,
-    l2Provider: Provider,
-    l1Signer: Signer,
-    singleAttempt = false
-  ): Promise<ContractTransaction> => {
-    const l1Provider = l1Signer.provider
-    if (!l1Provider) throw new Error('Signer must be connected to L2 provider')
+  // static triggerL2ToL1Transaction = async (
+  //   batchNumber: BigNumber,
+  //   indexInBatch: BigNumber,
+  //   outboxAddress: string,
+  //   l2Provider: Provider,
+  //   l1Signer: Signer,
+  //   singleAttempt = false
+  // ): Promise<ContractTransaction> => {
+  //   const l1Provider = l1Signer.provider
+  //   if (!l1Provider) throw new Error('Signer must be connected to L2 provider')
 
-    console.log('going to get proof')
-    let res: {
-      proof: Array<string>
-      path: BigNumber
-      l2Sender: string
-      l1Dest: string
-      l2Block: BigNumber
-      l1Block: BigNumber
-      timestamp: BigNumber
-      amount: BigNumber
-      calldataForL1: string
-    }
+  //   console.log('going to get proof')
+  //   let res: {
+  //     proof: Array<string>
+  //     path: BigNumber
+  //     l2Sender: string
+  //     l1Dest: string
+  //     l2Block: BigNumber
+  //     l1Block: BigNumber
+  //     timestamp: BigNumber
+  //     amount: BigNumber
+  //     calldataForL1: string
+  //   }
 
-    if (singleAttempt) {
-      const outGoingMessageState = await BridgeHelper.getOutGoingMessageState(
-        batchNumber,
-        indexInBatch,
-        outboxAddress,
-        l1Provider,
-        l2Provider
-      )
+  //   if (singleAttempt) {
+  //     const outGoingMessageState = await BridgeHelper.getOutGoingMessageState(
+  //       batchNumber,
+  //       indexInBatch,
+  //       outboxAddress,
+  //       l1Provider,
+  //       l2Provider
+  //     )
 
-      const infoString = `batchNumber: ${batchNumber.toNumber()} indexInBatch: ${indexInBatch.toNumber()}`
+  //     const infoString = `batchNumber: ${batchNumber.toNumber()} indexInBatch: ${indexInBatch.toNumber()}`
 
-      switch (outGoingMessageState) {
-        case OutgoingMessageState.NOT_FOUND:
-          throw new Error(`Outgoing message not found. ${infoString}`)
-        case OutgoingMessageState.UNCONFIRMED:
-          throw new Error(
-            `Attempting to execute message that isn't yet confirmed. ${infoString}`
-          )
-        case OutgoingMessageState.EXECUTED:
-          throw new Error(`Message already executed ${infoString}`)
-        case OutgoingMessageState.CONFIRMED: {
-          const _res = await BridgeHelper.tryGetProofOnce(
-            batchNumber,
-            indexInBatch,
-            l2Provider
-          )
-          if (_res === null)
-            throw new Error(
-              `666: message is in a confirmed node but lookupMessageBatchProof returned null (!) ${infoString}`
-            )
-          res = _res
-          break
-        }
-      }
-    } else {
-      res = await BridgeHelper.tryGetProof(
-        batchNumber,
-        indexInBatch,
-        l2Provider
-      )
-    }
+  //     switch (outGoingMessageState) {
+  //       case OutgoingMessageState.NOT_FOUND:
+  //         throw new Error(`Outgoing message not found. ${infoString}`)
+  //       case OutgoingMessageState.UNCONFIRMED:
+  //         throw new Error(
+  //           `Attempting to execute message that isn't yet confirmed. ${infoString}`
+  //         )
+  //       case OutgoingMessageState.EXECUTED:
+  //         throw new Error(`Message already executed ${infoString}`)
+  //       case OutgoingMessageState.CONFIRMED: {
+  //         const _res = await BridgeHelper.tryGetProofOnce(
+  //           batchNumber,
+  //           indexInBatch,
+  //           l2Provider
+  //         )
+  //         if (_res === null)
+  //           throw new Error(
+  //             `666: message is in a confirmed node but lookupMessageBatchProof returned null (!) ${infoString}`
+  //           )
+  //         res = _res
+  //         break
+  //       }
+  //     }
+  //   } else {
+  //     res = await BridgeHelper.tryGetProof(
+  //       batchNumber,
+  //       indexInBatch,
+  //       l2Provider
+  //     )
+  //   }
 
-    const proofData: OutboxProofData = {
-      ...res,
-      batchNumber,
-    }
+  //   const proofData: OutboxProofData = {
+  //     ...res,
+  //     batchNumber,
+  //   }
 
-    console.log('got proof')
+  //   console.log('got proof')
 
-    return BridgeHelper.tryOutboxExecute(proofData, outboxAddress, l1Signer)
-  }
+  //   return BridgeHelper.tryOutboxExecute(proofData, outboxAddress, l1Signer)
+  // }
 
-  static getL2ToL1EventData = async (
-    fromAddress: string,
-    l2Provider: Provider,
-    filter?: Filter
-  ): Promise<L2ToL1EventResult[]> => {
-    const iface = ArbSys__factory.createInterface()
-    const logs = await BridgeHelper.getEventLogs(
-      'L2ToL1Transaction',
-      l2Provider,
-      iface,
-      ARB_SYS_ADDRESS,
-      [hexZeroPad(fromAddress, 32)],
-      filter
-    )
+  // static getWithdrawalsInL2Transaction = (
+  //   l2Transaction: TransactionReceipt
+  // ): Array<L2ToL1EventResult> => {
+  //   const iface = ArbSys__factory.createInterface()
+  //   const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
+  //   const eventTopic = iface.getEventTopic(l2ToL1Event)
 
-    return logs.map(
-      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
-    )
-  }
+  //   const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
+
+  //   return logs.map(
+  //     log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+  //   )
+  // }
+
+  // static getL2ToL1EventData = async (
+  //   fromAddress: string,
+  //   l2Provider: Provider,
+  //   filter?: Filter
+  // ): Promise<L2ToL1EventResult[]> => {
+  //   const iface = ArbSys__factory.createInterface()
+  //   const logs = await BridgeHelper.getEventLogs(
+  //     'L2ToL1Transaction',
+  //     l2Provider,
+  //     iface,
+  //     ARB_SYS_ADDRESS,
+  //     [hexZeroPad(fromAddress, 32)],
+  //     filter
+  //   )
+
+  //   return logs.map(
+  //     log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+  //   )
+  // }
 
   /**
    * Check if given assertion has been confirmed
@@ -667,146 +580,147 @@ export class BridgeHelper {
     )
   }
 
-  static getOutgoingMessage = async (
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
-    l2Provider: Provider
-  ): Promise<L2ToL1EventResult[]> => {
-    const iface = ArbSys__factory.createInterface()
+  // static getOutgoingMessage = async (
+  //   batchNumber: BigNumber,
+  //   indexInBatch: BigNumber,
+  //   l2Provider: Provider
+  // ): Promise<L2ToL1EventResult[]> => {
+  //   const iface = ArbSys__factory.createInterface()
 
-    const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
+  //   const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
 
-    const logs = await BridgeHelper.getEventLogs(
-      'L2ToL1Transaction',
-      l2Provider,
-      iface,
-      ARB_SYS_ADDRESS,
-      topics
-    )
+  //   const logs = await BridgeHelper.getEventLogs(
+  //     'L2ToL1Transaction',
+  //     l2Provider,
+  //     iface,
+  //     ARB_SYS_ADDRESS,
+  //     topics
+  //   )
 
-    const parsedData = logs.map(
-      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
-    )
+  //   const parsedData = logs.map(
+  //     log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+  //   )
 
-    return parsedData.filter(log => log.indexInBatch.eq(indexInBatch))
-  }
+  //   return parsedData.filter(log => log.indexInBatch.eq(indexInBatch))
+  // }
 
   /**
    * Get outgoing message Id (key to in OutboxEntry.spentOutput)
    */
-  static calculateOutgoingMessageId = (
-    path: BigNumber,
-    proofLength: BigNumber
-  ): string => {
-    return keccak256(
-      defaultAbiCoder.encode(['uint256', 'uint256'], [path, proofLength])
-    )
-  }
+  // static calculateOutgoingMessageId = (
+  //   path: BigNumber,
+  //   proofLength: BigNumber
+  // ): string => {
+  //   return keccak256(
+  //     defaultAbiCoder.encode(['uint256', 'uint256'], [path, proofLength])
+  //   )
+  // }
+
   /**
    * Check if given outbox message has already been executed
    */
-  static messageHasExecutedV2 = async (
-    batchNumber: BigNumber,
-    outboxProofData: MessageBatchProofInfo,
-    outboxAddress: string,
-    l1Provider: Provider
-  ): Promise<boolean> => {
-    const outbox = Outbox__factory.connect(outboxAddress, l1Provider)
-    try {
-      const outboxExecute = await outbox.callStatic.executeTransaction(
-        batchNumber,
-        outboxProofData.proof,
-        outboxProofData.path,
-        outboxProofData.l2Sender,
-        outboxProofData.l1Dest,
-        outboxProofData.l2Block,
-        outboxProofData.l1Block,
-        outboxProofData.timestamp,
-        outboxProofData.amount,
-        outboxProofData.calldataForL1
-      )
-      return false
-    } catch (e: any) {
-      if (e && e.message && e.message.toString().includes('ALREADY_SPENT')) {
-        return true
-      }
-      if (e && e.message && e.message.toString().includes('NO_OUTBOX_ENTRY')) {
-        return false
-      }
-      throw e
-    }
-  }
+  // static messageHasExecutedV2 = async (
+  //   batchNumber: BigNumber,
+  //   outboxProofData: MessageBatchProofInfo,
+  //   outboxAddress: string,
+  //   l1Provider: Provider
+  // ): Promise<boolean> => {
+  //   const outbox = Outbox__factory.connect(outboxAddress, l1Provider)
+  //   try {
+  //     const outboxExecute = await outbox.callStatic.executeTransaction(
+  //       batchNumber,
+  //       outboxProofData.proof,
+  //       outboxProofData.path,
+  //       outboxProofData.l2Sender,
+  //       outboxProofData.l1Dest,
+  //       outboxProofData.l2Block,
+  //       outboxProofData.l1Block,
+  //       outboxProofData.timestamp,
+  //       outboxProofData.amount,
+  //       outboxProofData.calldataForL1
+  //     )
+  //     return false
+  //   } catch (e) {
+  //     if (e && e.message && e.message.toString().includes('ALREADY_SPENT')) {
+  //       return true
+  //     }
+  //     if (e && e.message && e.message.toString().includes('NO_OUTBOX_ENTRY')) {
+  //       return false
+  //     }
+  //     throw e
+  //   }
+  // }
 
   /**
    * @deprecated The method should not be used
    */
-  static messageHasExecuted = async (
-    batchNumber: BigNumber,
-    path: BigNumber,
-    outboxAddress: string,
-    l1Provider: Provider
-  ): Promise<boolean> => {
-    const iface = Outbox__factory.createInterface()
-    const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
-    const logs = await BridgeHelper.getEventLogs(
-      'OutBoxTransactionExecuted',
-      l1Provider,
-      iface,
-      outboxAddress,
-      topics
-    )
-    const parsedData = logs.map(
-      log => iface.parseLog(log).args as unknown as OutBoxTransactionExecuted
-    )
-    return (
-      parsedData.filter(executedEvent =>
-        executedEvent.transactionIndex.eq(path)
-      ).length === 1
-    )
-  }
+  // static messageHasExecuted = async (
+  //   batchNumber: BigNumber,
+  //   path: BigNumber,
+  //   outboxAddress: string,
+  //   l1Provider: Provider
+  // ): Promise<boolean> => {
+  //   const iface = Outbox__factory.createInterface()
+  //   const topics = [null, null, hexZeroPad(batchNumber.toHexString(), 32)]
+  //   const logs = await BridgeHelper.getEventLogs(
+  //     'OutBoxTransactionExecuted',
+  //     l1Provider,
+  //     iface,
+  //     outboxAddress,
+  //     topics
+  //   )
+  //   const parsedData = logs.map(
+  //     log => (iface.parseLog(log).args as unknown) as OutBoxTransactionExecuted
+  //   )
+  //   return (
+  //     parsedData.filter(executedEvent =>
+  //       executedEvent.transactionIndex.eq(path)
+  //     ).length === 1
+  //   )
+  // }
 
-  static getOutGoingMessageState = async (
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
-    outBoxAddress: string,
-    l1Provider: Provider,
-    l2Provider: Provider
-  ): Promise<OutgoingMessageState> => {
-    try {
-      const proofData = await BridgeHelper.tryGetProofOnce(
-        batchNumber,
-        indexInBatch,
-        l2Provider
-      )
+  // static getOutGoingMessageState = async (
+  //   batchNumber: BigNumber,
+  //   indexInBatch: BigNumber,
+  //   outBoxAddress: string,
+  //   l1Provider: Provider,
+  //   l2Provider: Provider
+  // ): Promise<OutgoingMessageState> => {
+  //   try {
+  //     const proofData = await BridgeHelper.tryGetProofOnce(
+  //       batchNumber,
+  //       indexInBatch,
+  //       l2Provider
+  //     )
 
-      if (!proofData) {
-        return OutgoingMessageState.UNCONFIRMED
-      }
+  //     if (!proofData) {
+  //       return OutgoingMessageState.UNCONFIRMED
+  //     }
 
-      const messageExecuted = await BridgeHelper.messageHasExecutedV2(
-        batchNumber,
-        proofData,
-        outBoxAddress,
-        l1Provider
-      )
-      if (messageExecuted) {
-        return OutgoingMessageState.EXECUTED
-      }
+  //     const messageExecuted = await BridgeHelper.messageHasExecutedV2(
+  //       batchNumber,
+  //       proofData,
+  //       outBoxAddress,
+  //       l1Provider
+  //     )
+  //     if (messageExecuted) {
+  //       return OutgoingMessageState.EXECUTED
+  //     }
 
-      const outboxEntryExists = await BridgeHelper.outboxEntryExists(
-        batchNumber,
-        outBoxAddress,
-        l1Provider
-      )
+  //     const outboxEntryExists = await BridgeHelper.outboxEntryExists(
+  //       batchNumber,
+  //       outBoxAddress,
+  //       l1Provider
+  //     )
 
-      return outboxEntryExists
-        ? OutgoingMessageState.CONFIRMED
-        : OutgoingMessageState.UNCONFIRMED
-    } catch (e) {
-      console.warn('666: error in getOutGoingMessageState:', e)
-      return OutgoingMessageState.NOT_FOUND
-    }
-  }
+  //     return outboxEntryExists
+  //       ? OutgoingMessageState.CONFIRMED
+  //       : OutgoingMessageState.UNCONFIRMED
+  //   } catch (e) {
+  //     console.warn('666: error in getOutGoingMessageState:', e)
+  //     return OutgoingMessageState.NOT_FOUND
+  //   }
+  // }
   static isWhiteListed(
     address: string,
     whiteListAddress: string,

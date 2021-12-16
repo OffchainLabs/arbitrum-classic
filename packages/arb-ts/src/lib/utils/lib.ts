@@ -13,3 +13,5 @@ export const getTxnReceipt = async (
     return txn
   }
 }
+
+export const wait = (ms: number) => new Promise(res => setTimeout(res, ms))

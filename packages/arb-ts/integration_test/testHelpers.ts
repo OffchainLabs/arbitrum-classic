@@ -33,6 +33,8 @@ import { Network } from '../src/lib/networks'
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 
 import config from './config'
+import { L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
+import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
 
 const argv = yargs(process.argv.slice(2))
   .options({
@@ -63,27 +65,27 @@ export const testRetryableTicket = async (
 ): Promise<void> => {
   prettyLog(`testing retryable for ${rec.transactionHash}`)
 
-  const seqNums = await bridge.getInboxSeqNumFromContractTransaction(rec)
-  const seqNum = seqNums && seqNums[0]
-  if (!seqNum) {
+  const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
+    bridge.l1Provider
+  )
+
+  const message = messages && messages[0]
+  if (!message) {
     throw new Error('Seq num not found')
   }
-  const retryableTicket = await bridge.calculateL2TransactionHash(seqNum)
-  const autoRedeem = await bridge.calculateRetryableAutoRedeemTxnHash(seqNum)
-  const redeemTransaction = await bridge.calculateL2RetryableTransactionHash(
-    seqNum
-  )
+  // CHRIS: this mismatch in names adds to the confusion
+  const retryableTicket = message.l2TicketCreationTxnHash
+  const autoRedeem = message.autoRedeemHash
+  const redeemTransaction = message.userTxnHash
+
   prettyLog(
     `retryableTicket: ${retryableTicket} autoredeem: ${autoRedeem}, redeem: ${redeemTransaction}`
   )
   prettyLog('Waiting for retryable ticket')
 
-  const retryableTicketReceipt =
-    await bridge.l2Bridge.l2Provider.waitForTransaction(
-      retryableTicket,
-      undefined,
-      1000 * 60 * 15
-    )
+  const waitResult = await message.wait(1000 * 60 * 15)
+
+  const retryableTicketReceipt = waitResult.ticketCreationReceipt
 
   prettyLog('retryableTicketReceipt found:')
 
@@ -93,17 +95,14 @@ export const testRetryableTicket = async (
   )
 
   prettyLog(`Waiting for auto redeem transaction (this shouldn't take long`)
-  const autoRedeemReceipt = await bridge.l2Bridge.l2Provider.waitForTransaction(
-    autoRedeem,
-    undefined,
-    1000 * 60
-  )
+  const autoRedeemReceipt = waitResult.autoRedeemReceipt
+
   prettyLog('autoRedeem receipt found!')
 
   expect(autoRedeemReceipt.status).to.equal(1, 'autoredeem txn failed')
   prettyLog('Getting redemption')
-  const redemptionReceipt =
-    await bridge.l2Bridge.l2Provider.getTransactionReceipt(redeemTransaction)
+
+  const redemptionReceipt = waitResult.userTxnReceipt
 
   expect(redemptionReceipt && redemptionReceipt.status).equals(
     1,

@@ -37,7 +37,8 @@ import {
 } from './precompile_addresses'
 import { Network } from './networks'
 import { ArbMulticall2__factory } from './abi/factories/ArbMulticall2__factory'
-import { MulticallFunctionInput, BridgeHelper } from './bridge_helpers'
+import { BridgeHelper } from './bridge_helpers'
+import { MulticallFunctionInput } from './dataEntities'
 
 export interface L2TokenData {
   contract: StandardArbERC20

@@ -29,12 +29,14 @@ export { ArbAddressTable__factory } from './lib/abi/factories/ArbAddressTable__f
 
 export { Bridge } from './lib/bridge'
 export {
+  BridgeHelper,
+} from './lib/bridge_helpers'
+export {
   DepositInitiated,
   WithdrawalInitiated,
   L2ToL1EventResult,
   OutgoingMessageState,
-  BridgeHelper,
-} from './lib/bridge_helpers'
+} from "./lib/dataEntities"
 export { L1Bridge, L1TokenData } from './lib/l1Bridge'
 export { L2Bridge, L2TokenData } from './lib/l2Bridge'
 export { networks } from './lib/networks'

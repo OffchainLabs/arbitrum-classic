@@ -23,7 +23,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 
 import { Bridge } from '../src/lib/bridge'
-import { OutgoingMessageState } from '../src/lib/bridge_helpers'
+import { OutgoingMessageState } from '../src/lib/dataEntities'
 
 import {
   fundL1,
@@ -36,6 +36,7 @@ import {
   skipIfMainnet,
   existentTestCustomToken,
 } from './testHelpers'
+import { L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
 
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', function () {
@@ -70,15 +71,11 @@ describe('Custom ERC20', () => {
     const withdrawRec = await withdrawRes.wait()
 
     expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
-    const withdrawEventData =
-      bridge.getWithdrawalsInL2Transaction(withdrawRec)[0]
+    
+    const message = (await new L2TransactionReceipt(withdrawRec).getL2ToL1Messages(bridge.l1Provider))[0]
+    expect(message, 'withdrawEventData not found').to.exist
 
-    expect(withdrawEventData, 'withdrawEventData not found').to.exist
-
-    const outgoingMessageState = await bridge.getOutGoingMessageState(
-      withdrawEventData.batchNumber,
-      withdrawEventData.indexInBatch
-    )
+    const outgoingMessageState = await message.status(null)
     expect(
       outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
         outgoingMessageState === OutgoingMessageState.NOT_FOUND,

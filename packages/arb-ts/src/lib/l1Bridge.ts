@@ -34,11 +34,8 @@ import { Multicall2__factory } from './abi/factories/Multicall2__factory'
 import { L1ERC20Gateway } from './abi/L1ERC20Gateway'
 
 import { Network } from './networks'
-import {
-  addressToSymbol,
-  MulticallFunctionInput,
-  BridgeHelper,
-} from './bridge_helpers'
+import { addressToSymbol, BridgeHelper } from './bridge_helpers'
+import { MulticallFunctionInput } from './dataEntities'
 
 const MIN_APPROVAL = MaxUint256
 //TODO handle address update / lowercase
@@ -176,35 +173,35 @@ export class L1Bridge {
     const balance = (() => {
       if (!balanceResult) throw new Error('No balance method available')
       if (isString(balanceResult)) throw new Error('Not able to decode balance')
-      return (
-        balanceResult as Await<ReturnType<ERC20['functions']['balanceOf']>>
-      )[0]
+      return (balanceResult as Await<
+        ReturnType<ERC20['functions']['balanceOf']>
+      >)[0]
     })()
 
     const allowance = (() => {
       if (!allowanceResult) throw new Error('No allowance method available')
       if (isString(allowanceResult))
         throw new Error('Not able to decode allowance')
-      return (
-        allowanceResult as Await<ReturnType<ERC20['functions']['allowance']>>
-      )[0]
+      return (allowanceResult as Await<
+        ReturnType<ERC20['functions']['allowance']>
+      >)[0]
     })()
 
     const symbol = (() => {
       if (!symbolResult) return addressToSymbol(erc20L1Address)
       if (isString(symbolResult)) return symbolResult
-      return (
-        symbolResult as Await<ReturnType<ERC20['functions']['symbol']>>
-      )[0]
+      return (symbolResult as Await<
+        ReturnType<ERC20['functions']['symbol']>
+      >)[0]
     })()
 
     const decimals = (() => {
       if (!decimalsResult) return 18
       if (isString(decimalsResult))
         throw new Error('Not able to decode decimals')
-      return (
-        decimalsResult as Await<ReturnType<ERC20['functions']['decimals']>>
-      )[0]
+      return (decimalsResult as Await<
+        ReturnType<ERC20['functions']['decimals']>
+      >)[0]
     })()
 
     const name = (() => {

@@ -33,7 +33,10 @@ import {
 } from './testHelpers'
 import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
 import { ARB_GAS_INFO } from '../src/lib/precompile_addresses'
-import { OutgoingMessageState } from '../src/lib/bridge_helpers'
+import { OutgoingMessageState } from '../src/lib/dataEntities'
+import { L1ToL2Message, L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
+import { L2ToL1Message, L2ToL1MessageReader, L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
+import { hexZeroPad } from '@ethersproject/bytes'
 dotenv.config()
 
 describe('Ether', async () => {
@@ -79,21 +82,22 @@ describe('Ether', async () => {
       'balance failed to update after eth deposit'
     )
 
-    const seqNumArr = await bridge.getInboxSeqNumFromContractTransaction(rec)
-    if (seqNumArr === undefined) {
-      throw new Error('no seq num')
-    }
-    expect(seqNumArr.length, 'eth deposit seqNum not found').to.exist
+    const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(bridge.l2Provider)
 
-    const seqNum = seqNumArr[0]
-    const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)
-    prettyLog('l2TxHash: ' + l2TxHash)
+    // const seqNumArr = await bridge.getInboxSeqNumFromContractTransaction(rec)
+    if (messages === undefined) {
+      throw new Error('no messages')
+    }
+    expect(messages.length, 'eth deposit message not found').to.exist
+    expect(messages.length, 'eth deposit message empty array').to.not.eq(0)
+
+    const message = messages[0]
+    // L1ToL2Message.fromL2Ticket()
+    // const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)
+    prettyLog('l2TxHash: ' + message.l2TicketCreationTxnHash)
     prettyLog('waiting for l2 transaction:')
-    const l2TxnRec = await bridge.l2Bridge.l2Provider.waitForTransaction(
-      l2TxHash,
-      undefined,
-      1000 * 60 * 12
-    )
+    const waitResult = await message.wait(1000 * 60 * 12)
+    const l2TxnRec = waitResult.ticketCreationReceipt
     prettyLog('l2 transaction found!')
     expect(l2TxnRec.status).to.equal(1, 'eth deposit l2 transaction not found')
 
@@ -133,28 +137,26 @@ describe('Ether', async () => {
     const inWei = await arbGasInfo.getPricesInWei({
       blockTag: withdrawEthRec.blockNumber,
     })
-    const withdrawEventData =
-      bridge.getWithdrawalsInL2Transaction(withdrawEthRec)[0]
-
+    const withdrawMessage = (await new L2TransactionReceipt(withdrawEthRec).getL2ToL1Messages(bridge.l1Provider))[0]
     expect(
-      withdrawEventData,
+      withdrawMessage,
       'eth withdraw getWithdrawalsInL2Transaction query came back empty'
     ).to.exist
 
     const myAddress = await bridge.l1Signer.getAddress()
 
-    const withdrawEvents = await bridge.getL2ToL1EventData(myAddress, {
+    // CHRIS: convenience method for this
+    const withdrawEvents = await L2ToL1Message.getL2ToL1MessageLogs(bridge.l2Provider, {
       fromBlock: withdrawEthRec.blockNumber,
+      topics: [hexZeroPad(myAddress, 32)],
     })
+
     expect(withdrawEvents.length).to.equal(
       1,
       'eth withdraw getL2ToL1EventData failed'
     )
 
-    const outgoingMessageState = await bridge.getOutGoingMessageState(
-      withdrawEventData.batchNumber,
-      withdrawEventData.indexInBatch
-    )
+    const outgoingMessageState = await withdrawMessage.status(null)
     expect(
       outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
         outgoingMessageState === OutgoingMessageState.NOT_FOUND,
