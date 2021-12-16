@@ -309,4 +309,5 @@ packages/issues
 packages/**/issues
 
 scripts/tmpRPC.sh
+scripts/tmpVAL.sh
 ganache-db
