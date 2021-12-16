@@ -1,4 +1,4 @@
-import { config } from 'arb-bridge-eth/hardhat.default-config'
+import { config } from 'arb-bridge-eth/hardhat.dev-config'
 
 try {
   require('arb-upgrades/peripheralsTasks')

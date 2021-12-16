@@ -1,6 +1,3 @@
-import { task } from 'hardhat/config'
-import '@nomiclabs/hardhat-ethers'
-
 import '@typechain/hardhat'
 import '@nomiclabs/hardhat-waffle'
 import 'dotenv/config'
@@ -8,6 +5,10 @@ import 'solidity-coverage'
 import 'hardhat-gas-reporter'
 import '@nomiclabs/hardhat-etherscan'
 import 'hardhat-deploy'
+
+import baseConfig from './hardhat.base-config.json'
+import { task } from 'hardhat/config'
+import '@nomiclabs/hardhat-ethers'
 
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   const accounts = await bre.ethers.getSigners()
@@ -18,28 +19,7 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
 })
 
 const config = {
-  defaultNetwork: 'hardhat',
-  paths: {
-    artifacts: 'build/contracts',
-  },
-  typechain: {
-    outDir: 'build/types',
-    target: 'ethers-v5',
-  },
-  spdxLicenseIdentifier: {
-    overwrite: false,
-    runOnCompile: true,
-  },
-  gasReporter: {
-    currency: 'USD',
-    gasPrice: 20,
-    enabled: process.env.REPORT_GAS ? true : false,
-  },
-  namedAccounts: {
-    deployer: {
-      default: 0,
-    },
-  },
+  ...baseConfig,
   networks: {
     hardhat: {
       chainId: 1337,
@@ -108,34 +88,30 @@ const config = {
       timeout: 100000,
     },
   },
+  typechain: {
+    outDir: 'build/types',
+    target: 'ethers-v5',
+  },
+  spdxLicenseIdentifier: {
+    overwrite: false,
+    runOnCompile: true,
+  },
+  gasReporter: {
+    currency: 'USD',
+    gasPrice: 20,
+    enabled: process.env.REPORT_GAS ? true : false,
+  },
+  namedAccounts: {
+    deployer: {
+      default: 0,
+    },
+  },
   mocha: {
     timeout: 0,
     bail: true,
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],
-  },
-  solidity: {
-    compilers: [
-      {
-        version: '0.6.11',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 100,
-          },
-        },
-      },
-      {
-        version: '0.8.7',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 100,
-          },
-        },
-      },
-    ],
   },
 }
 
