@@ -307,3 +307,5 @@ packages/arb-bridge-eth/password.txt
 # GitHub CI
 packages/issues
 packages/**/issues
+
+scripts/tmpRPC.sh
