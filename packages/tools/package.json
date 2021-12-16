@@ -7,7 +7,9 @@
   "scripts": {
     "demo:initialize": "ts-node ./scripts/setup_validators_demo.ts init",
     "prod:initialize": "ts-node ./scripts/setup_validators.ts init",
-    "arbos:upgrade": "ts-node ./scripts/update-arbos.ts init"
+    "arbos:upgrade": "ts-node ./scripts/update-arbos.ts init",
+    "mine-local-chain-blocks": "ts-node ./scripts/mine_blocks.ts",
+    "fund:l2": "ts-node ./scripts/fund_l2.ts"    
   },
   "devDependencies": {
     "@ethersproject/providers": "^5.4.5",

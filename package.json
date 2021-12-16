@@ -18,8 +18,9 @@
     "deploy": "yarn workspace arb-bridge-eth deploy:contracts",
     "initialize": "yarn workspace tools demo:initialize",
     "run:rpc": "ts-node ./scripts/run-rpc.ts && ./scripts/tmpRPC.sh",
-    "mine": "ts-node ./scripts/mine-blocks.ts"
-
+    "mine": "yarn workspace tools mine-local-chain-blocks",
+    "fund": "yarn workspace tools fundWallet",
+    "fund:l2": "yarn workspace tools fund:l2"
   },
   "engines": {
     "node": ">= 8.0.0",
