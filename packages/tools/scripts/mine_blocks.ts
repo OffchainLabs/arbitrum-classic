@@ -1,7 +1,6 @@
-import { findEnv } from '../find-env';
 import { config } from "dotenv"; 
 import {ethers} from "ethers";
-config({ path: findEnv() });
+config({ path: '../../.env' });
 
 const network:string = process.env['DEPLOY_ON'] || '';
 const network_url:string = process.env[network.toUpperCase() + "_NETWORK"] || '';
