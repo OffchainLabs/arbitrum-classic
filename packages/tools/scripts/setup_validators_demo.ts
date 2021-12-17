@@ -9,7 +9,7 @@ import { setupValidatorStates } from './setup_validators'
 import * as addresses from '../../arb-bridge-eth/bridge_eth_addresses.json'
 import { execSync } from 'child_process'
 import { config } from "dotenv"; 
-config({ path: "../../../.env" });
+config({ path: "../../.env" });
 
 
 const network:string = process.env['DEPLOY_ON'] || '';
