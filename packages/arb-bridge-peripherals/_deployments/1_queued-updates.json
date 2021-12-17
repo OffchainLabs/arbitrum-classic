@@ -4,17 +4,5 @@
     "deployTxn": "0x0db4fd99600533113346de3a6081d83d103fe3d4ab4f58dff80a91365aa67616",
     "arbitrumCommitHash": "8eb4685d3e44fa059901e423a70e6dd5c80508a3",
     "buildInfo": ""
-  },
-  "L1CustomGateway": {
-    "address": "0xe8B0e562269EF963AA7b4c92645ff06E72CA02E6",
-    "deployTxn": "0xed05d3e52cd2bed8787f830f876a0d1a90d6657a6b12b2b9890777a0e8319bbb",
-    "arbitrumCommitHash": "a85414fd515632b750707bd8aa19fb3045d29759",
-    "buildInfo": ""
-  },
-  "L1ERC20Gateway": {
-    "address": "0xa83520Ae8d05bDBd20770c3d7268F66AcAcb6d43",
-    "deployTxn": "0xa6533e1364994c80b7b701789c4d1997e6545ec6512c2ff8175a454f79619759",
-    "arbitrumCommitHash": "a85414fd515632b750707bd8aa19fb3045d29759",
-    "buildInfo": ""
   }
 }
