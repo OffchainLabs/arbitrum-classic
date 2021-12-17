@@ -1,8 +1,1 @@
-{
-  "L1GatewayRouter": {
-    "address": "0x32f39fa08c1e0bba551cbda4197e543c53b3fc53",
-    "deployTxn": "0x0db4fd99600533113346de3a6081d83d103fe3d4ab4f58dff80a91365aa67616",
-    "arbitrumCommitHash": "8eb4685d3e44fa059901e423a70e6dd5c80508a3",
-    "buildInfo": ""
-  }
-}
+{}
