@@ -194,7 +194,7 @@ export const initUpgrades = (
           message: `Update already queued up for ${contractName}; would you redeploy it? ('Yes' to redeploy, otherwise we'll skip and used the queued update)`,
           initial: true,
         })
-        if (res.value.trim().toLowerCase() !== 'yes') {
+        if (!res.value) {
           console.log('Skipping redeploy and using the queued update')
           continue
         } else {
