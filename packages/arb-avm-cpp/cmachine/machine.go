@@ -73,6 +73,7 @@ func WrapCMachine(cMachine unsafe.Pointer) *Machine {
 }
 
 func (m *Machine) Hash() (ret common.Hash) {
+	defer runtime.KeepAlive(m)
 	success := C.machineHash(m.c, unsafe.Pointer(&ret[0]))
 	if success == 0 {
 		// This should never occur
@@ -82,11 +83,13 @@ func (m *Machine) Hash() (ret common.Hash) {
 }
 
 func (m *Machine) CodePointHash() (ret common.Hash) {
+	defer runtime.KeepAlive(m)
 	C.machineCodePointHash(m.c, unsafe.Pointer(&ret[0]))
 	return
 }
 
 func (m *Machine) Clone() machine.Machine {
+	defer runtime.KeepAlive(m)
 	cMachine := C.machineClone(m.c)
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
@@ -94,6 +97,7 @@ func (m *Machine) Clone() machine.Machine {
 }
 
 func (m *Machine) CurrentStatus() machine.Status {
+	defer runtime.KeepAlive(m)
 	cStatus := C.machineCurrentStatus(m.c)
 	switch cStatus {
 	case C.STATUS_EXTENSIVE:
@@ -109,11 +113,8 @@ func (m *Machine) CurrentStatus() machine.Status {
 }
 
 func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
-	newMessagesInt := 0
-	if newMessages {
-		newMessagesInt = 1
-	}
-	cBlockReason := C.machineIsBlocked(m.c, C.int(newMessagesInt))
+	defer runtime.KeepAlive(m)
+	cBlockReason := C.machineIsBlocked(m.c, boolToCInt(newMessages))
 	switch cBlockReason.blockType {
 	case C.BLOCK_TYPE_NOT_BLOCKED:
 		return nil
@@ -131,6 +132,7 @@ func (m *Machine) IsBlocked(newMessages bool) machine.BlockReason {
 }
 
 func (m *Machine) String() string {
+	defer runtime.KeepAlive(m)
 	cStr := C.machineInfo(m.c)
 	defer C.free(unsafe.Pointer(cStr))
 	return C.GoString(cStr)
@@ -139,19 +141,19 @@ func (m *Machine) String() string {
 func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	sendsRaw := receiveByteSlice(assertion.sends)
 	logsRaw := receiveByteSlice(assertion.logs)
-	debugPrints, err := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
+	debugPrints, err := protocol.BytesArrayToVals(receiveByteSlice(assertion.debug_prints), uint64(assertion.debug_print_count))
 	if err != nil {
 		return nil, nil, 0, err
 	}
 	goAssertion, err := protocol.NewExecutionAssertion(
-		uint64(assertion.numGas),
+		uint64(assertion.num_gas),
 		uint64(assertion.inbox_messages_consumed),
 		sendsRaw,
-		uint64(assertion.sendCount),
+		uint64(assertion.send_count),
 		logsRaw,
-		uint64(assertion.logCount),
+		uint64(assertion.log_count),
 	)
-	return goAssertion, debugPrints, uint64(assertion.numSteps), err
+	return goAssertion, debugPrints, uint64(assertion.num_steps), err
 }
 
 func (m *Machine) ExecuteAssertion(
@@ -159,6 +161,7 @@ func (m *Machine) ExecuteAssertion(
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
+	defer runtime.KeepAlive(m)
 	return m.ExecuteAssertionAdvanced(
 		maxGas,
 		goOverGas,
@@ -168,16 +171,6 @@ func (m *Machine) ExecuteAssertion(
 	)
 }
 
-func bytesArrayToByteSliceArray(bytes [][]byte) C.struct_ByteSliceArrayStruct {
-	byteSlices := encodeByteSliceList(bytes)
-	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
-	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
-	for i, data := range byteSlices {
-		sliceArray[i] = data
-	}
-	return C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
-}
-
 func (m *Machine) ExecuteAssertionAdvanced(
 	maxGas uint64,
 	goOverGas bool,
@@ -185,44 +178,41 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	sideloads []inbox.InboxMessage,
 	stopOnSideload bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
+	defer runtime.KeepAlive(m)
 	conf := C.machineExecutionConfigCreate()
+	defer C.machineExecutionConfigDestroy(conf)
 
-	goOverGasInt := C.int(0)
-	if goOverGas {
-		goOverGasInt = 1
-	}
-	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), goOverGasInt)
+	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), boolToCInt(goOverGas))
 
 	msgData := bytesArrayToByteSliceArray(encodeMachineInboxMessages(messages))
-	defer C.free(msgData.slices)
-	C.machineExecutionConfigSetInboxMessages(conf, msgData)
-
+	defer freeByteSliceArray(msgData)
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
 
 	sideloadsData := bytesArrayToByteSliceArray(encodeInboxMessages(sideloads))
-	defer C.free(sideloadsData.slices)
+	defer freeByteSliceArray(sideloadsData)
 	C.machineExecutionConfigSetSideloads(conf, sideloadsData)
 
-	stopOnSideloadInt := C.int(0)
-	if stopOnSideload {
-		stopOnSideloadInt = 1
+	C.machineExecutionConfigSetStopOnSideload(conf, boolToCInt(stopOnSideload))
+
+	assertionResult := C.executeAssertion(m.c, conf)
+	if assertionResult.shutting_down == 1 {
+		return nil, nil, 0, errors.New("Shutting down")
 	}
-	C.machineExecutionConfigSetStopOnSideload(conf, stopOnSideloadInt)
 
-	assertion := C.executeAssertion(m.c, conf)
-
-	executionAssertion, values, steps, err := makeExecutionAssertion(assertion)
+	executionAssertion, values, steps, err := makeExecutionAssertion(assertionResult.assertion)
 	GasCounter.Inc(int64(executionAssertion.NumGas))
 	StepsCounter.Inc(int64(steps))
 	return executionAssertion, values, steps, err
 }
 
 func (m *Machine) MarshalForProof() ([]byte, []byte, error) {
+	defer runtime.KeepAlive(m)
 	rawProof := C.machineMarshallForProof(m.c)
 	return receiveByteSlice(rawProof.standard_proof), receiveByteSlice(rawProof.buffer_proof), nil
 }
 
 func (m *Machine) MarshalState() ([]byte, error) {
+	defer runtime.KeepAlive(m)
 	stateData := C.machineMarshallState(m.c)
 	return receiveByteSlice(stateData), nil
 }

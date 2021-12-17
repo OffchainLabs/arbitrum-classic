@@ -54,6 +54,14 @@ type FeeStatsResult struct {
 	Paid      *FeeSetResult `json:"paid"`
 }
 
+type L1InboxBatchInfo struct {
+	Confirmations *hexutil.Big   `json:"confirmations"`
+	BlockNumber   *hexutil.Big   `json:"blockNumber"`
+	LogAddress    common.Address `json:"logAddress"`
+	LogTopics     []common.Hash  `json:"logTopics"`
+	LogData       hexutil.Bytes  `json:"logData"`
+}
+
 // Receipt represents the results of a transaction.
 type GetTransactionReceiptResult struct {
 	TransactionHash   common.Hash     `json:"transactionHash"`
@@ -64,16 +72,22 @@ type GetTransactionReceiptResult struct {
 	To                *common.Address `json:"to"`
 	CumulativeGasUsed hexutil.Uint64  `json:"cumulativeGasUsed"`
 	GasUsed           hexutil.Uint64  `json:"gasUsed"`
+	EffectiveGasPrice hexutil.Uint64  `json:"effectiveGasPrice"`
 	ContractAddress   *common.Address `json:"contractAddress"`
 	Logs              []*types.Log    `json:"logs"`
 	LogsBloom         hexutil.Bytes   `json:"logsBloom"`
 	Status            hexutil.Uint64  `json:"status"`
 
 	// Arbitrum Specific Fields
-	ReturnCode    hexutil.Uint64  `json:"returnCode"`
-	ReturnData    hexutil.Bytes   `json:"returnData"`
-	FeeStats      *FeeStatsResult `json:"feeStats"`
-	L1BlockNumber *hexutil.Big    `json:"l1BlockNumber"`
+	ReturnCode       hexutil.Uint64    `json:"returnCode"`
+	ReturnData       hexutil.Bytes     `json:"returnData"`
+	FeeStats         *FeeStatsResult   `json:"feeStats"`
+	L1BlockNumber    *hexutil.Big      `json:"l1BlockNumber"`
+	L1InboxBatchInfo *L1InboxBatchInfo `json:"l1InboxBatchInfo"`
+}
+
+type ArbGetTxReceiptOpts struct {
+	ReturnL1InboxBatchInfo bool `json:"returnL1InboxBatchInfo"`
 }
 
 type TransactionResult struct {

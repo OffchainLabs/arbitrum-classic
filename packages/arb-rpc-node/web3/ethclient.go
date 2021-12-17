@@ -26,8 +26,16 @@ type EthClient struct {
 }
 
 func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
+	mode := NormalMode
+	if ganacheMode {
+		mode = GanacheMode
+	}
+	config := ServerConfig{
+		Mode:          mode,
+		MaxCallAVMGas: DefaultMaxAVMGas,
+	}
 	return &EthClient{
-		srv:    NewServer(srv, ganacheMode),
+		srv:    NewServer(srv, config, nil),
 		events: filters.NewEventSystem(srv, false),
 		filter: filters.NewPublicFilterAPI(srv, false, 2*time.Minute),
 	}
@@ -66,7 +74,7 @@ func (c *EthClient) CallContract(_ context.Context, call ethereum.CallMsg, block
 		Value:    (*hexutil.Big)(call.Value),
 		Data:     (*hexutil.Bytes)(&call.Data),
 	}
-	return c.srv.Call(args, blockNum(blockNumber))
+	return c.srv.Call(args, blockNum(blockNumber), nil)
 }
 
 func (c *EthClient) PendingCodeAt(_ context.Context, account common.Address) ([]byte, error) {
@@ -163,7 +171,7 @@ func (c *EthClient) SubscribeFilterLogs(_ context.Context, query ethereum.Filter
 }
 
 func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*types.Receipt, error) {
-	res, block, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
+	res, block, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -171,7 +179,7 @@ func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*
 }
 
 func (c *EthClient) TransactionByHash(_ context.Context, txHash common.Hash) (*types.Transaction, bool, error) {
-	res, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
+	res, _, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
 	if err != nil || res == nil {
 		return nil, false, err
 	}

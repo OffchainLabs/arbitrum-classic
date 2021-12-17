@@ -22,7 +22,8 @@ MachineThread::machine_status_enum MachineThread::status() {
     return machine_status;
 }
 
-bool MachineThread::runMachine(MachineExecutionConfig config) {
+bool MachineThread::runMachine(MachineExecutionConfig config,
+                               bool asynchronous) {
     if (machine_status != MACHINE_NONE) {
         return false;
     }
@@ -36,13 +37,17 @@ bool MachineThread::runMachine(MachineExecutionConfig config) {
 
     machine_status = MACHINE_RUNNING;
 
-    machine_thread = std::make_unique<std::thread>(
-        (std::reference_wrapper<MachineThread>(*this)));
+    if (asynchronous) {
+        machine_thread = std::make_unique<std::thread>(
+            (std::reference_wrapper<MachineThread>(*this)));
+    } else {
+        this->operator()();
+    }
 
     return true;
 }
 
-bool MachineThread::continueRunningMachine() {
+bool MachineThread::continueRunningMachine(bool asynchronous) {
     if (machine_status != MACHINE_NONE) {
         return false;
     }
@@ -51,8 +56,12 @@ bool MachineThread::continueRunningMachine() {
 
     machine_status = MACHINE_RUNNING;
 
-    machine_thread = std::make_unique<std::thread>(
-        (std::reference_wrapper<MachineThread>(*this)));
+    if (asynchronous) {
+        machine_thread = std::make_unique<std::thread>(
+            (std::reference_wrapper<MachineThread>(*this)));
+    } else {
+        this->operator()();
+    }
 
     return true;
 }
@@ -71,8 +80,10 @@ Assertion MachineThread::nextAssertion() {
     if (machine_status != MACHINE_SUCCESS) {
         return {};
     }
-    machine_thread->join();
-    machine_thread = nullptr;
+    if (machine_thread != nullptr) {
+        machine_thread->join();
+        machine_thread = nullptr;
+    }
     machine_status = MACHINE_NONE;
     return std::move(last_assertion);
 }

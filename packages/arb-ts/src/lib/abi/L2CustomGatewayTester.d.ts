@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
   functions: {
@@ -116,6 +116,39 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TxToL1'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawalInitiated'): EventFragment
 }
+
+export type DepositFinalizedEvent = TypedEvent<
+  [string, string, string, BigNumber] & {
+    l1Token: string
+    _from: string
+    _to: string
+    _amount: BigNumber
+  }
+>
+
+export type TokenSetEvent = TypedEvent<
+  [string, string] & { l1Address: string; l2Address: string }
+>
+
+export type TxToL1Event = TypedEvent<
+  [string, string, BigNumber, string] & {
+    _from: string
+    _to: string
+    _id: BigNumber
+    _data: string
+  }
+>
+
+export type WithdrawalInitiatedEvent = TypedEvent<
+  [string, string, string, BigNumber, BigNumber, BigNumber] & {
+    l1Token: string
+    _from: string
+    _to: string
+    _l2ToL1Id: BigNumber
+    _exitNum: BigNumber
+    _amount: BigNumber
+  }
+>
 
 export class L2CustomGatewayTester extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -358,6 +391,16 @@ export class L2CustomGatewayTester extends BaseContract {
   }
 
   filters: {
+    'DepositFinalized(address,address,address,uint256)'(
+      l1Token?: string | null,
+      _from?: string | null,
+      _to?: string | null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber],
+      { l1Token: string; _from: string; _to: string; _amount: BigNumber }
+    >
+
     DepositFinalized(
       l1Token?: string | null,
       _from?: string | null,
@@ -368,12 +411,30 @@ export class L2CustomGatewayTester extends BaseContract {
       { l1Token: string; _from: string; _to: string; _amount: BigNumber }
     >
 
+    'TokenSet(address,address)'(
+      l1Address?: string | null,
+      l2Address?: string | null
+    ): TypedEventFilter<
+      [string, string],
+      { l1Address: string; l2Address: string }
+    >
+
     TokenSet(
       l1Address?: string | null,
       l2Address?: string | null
     ): TypedEventFilter<
       [string, string],
       { l1Address: string; l2Address: string }
+    >
+
+    'TxToL1(address,address,uint256,bytes)'(
+      _from?: string | null,
+      _to?: string | null,
+      _id?: BigNumberish | null,
+      _data?: null
+    ): TypedEventFilter<
+      [string, string, BigNumber, string],
+      { _from: string; _to: string; _id: BigNumber; _data: string }
     >
 
     TxToL1(
@@ -384,6 +445,25 @@ export class L2CustomGatewayTester extends BaseContract {
     ): TypedEventFilter<
       [string, string, BigNumber, string],
       { _from: string; _to: string; _id: BigNumber; _data: string }
+    >
+
+    'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)'(
+      l1Token?: null,
+      _from?: string | null,
+      _to?: string | null,
+      _l2ToL1Id?: BigNumberish | null,
+      _exitNum?: null,
+      _amount?: null
+    ): TypedEventFilter<
+      [string, string, string, BigNumber, BigNumber, BigNumber],
+      {
+        l1Token: string
+        _from: string
+        _to: string
+        _l2ToL1Id: BigNumber
+        _exitNum: BigNumber
+        _amount: BigNumber
+      }
     >
 
     WithdrawalInitiated(

@@ -15,15 +15,22 @@
  */
 
 #include <data_storage/datastorage.hpp>
+#include <data_storage/readtransaction.hpp>
+#include <data_storage/storageresult.hpp>
 
+#include <openssl/rand.h>
 #include <rocksdb/convenience.h>
 #include <rocksdb/filter_policy.h>
-#include <data_storage/storageresult.hpp>
 
 #include <iostream>
 #include <string>
+#include <thread>
+#include <utility>
 
 DataStorage::DataStorage(const std::string& db_path) {
+    // Make sure database isn't closed while constructor still running
+    auto counter = tryLockShared();
+
     rocksdb::TransactionDBOptions txn_options{};
     rocksdb::Options options{};
     rocksdb::ColumnFamilyOptions cf_options{};
@@ -106,31 +113,113 @@ DataStorage::DataStorage(const std::string& db_path) {
     //    }
 
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
+
+    status = updateSecretHashSeed();
+    if (!status.ok()) {
+        throw std::runtime_error(status.ToString());
+    }
+}
+
+DataStorage::~DataStorage() {
+    auto status = closeDb();
+    if (!status.ok()) {
+        std::cerr << "error closing DataStorage: " << status.ToString()
+                  << std::endl;
+    }
 }
 
 rocksdb::Status DataStorage::flushNextColumn() {
+    // Make sure database isn't closed while it is being used
+    auto counter = tryLockShared();
+
     next_column_to_flush = (next_column_to_flush + 1) % column_handles.size();
     return txn_db->Flush(flush_options, column_handles[next_column_to_flush]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
-    column_handles.clear();
     if (txn_db) {
+        std::cerr << "closing ArbStorage" << std::endl;
+        shutting_down = true;
+        auto last_concurrent_counter =
+            concurrent_database_access_counter.load();
+        for (std::chrono::seconds counter_seconds_left =
+                 std::chrono::minutes(10);
+             last_concurrent_counter > 0 && counter_seconds_left.count() > 0;
+             counter_seconds_left -= std::chrono::seconds(1)) {
+            if (counter_seconds_left.count() % 10 == 0) {
+                // Print message every 10 seconds
+                auto output_minutes =
+                    std::chrono::duration_cast<std::chrono::minutes>(
+                        counter_seconds_left)
+                        .count();
+                auto output_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>(
+                        counter_seconds_left % std::chrono::minutes(1))
+                        .count();
+                std::cerr
+                    << "waiting up to " << output_minutes << " minutes, "
+                    << output_seconds << " seconds for "
+                    << last_concurrent_counter
+                    << " database operation(s) to finish before shutting down"
+                    << std::endl;
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            last_concurrent_counter = concurrent_database_access_counter.load();
+        }
+        for (auto handle : column_handles) {
+            auto status = txn_db->DestroyColumnFamilyHandle(handle);
+            if (!status.ok()) {
+                return status;
+            }
+        }
+
+        txn_db->SyncWAL();
         auto s = txn_db->Close();
+        for (std::chrono::seconds close_seconds_left = std::chrono::minutes(10);
+             s.IsAborted() && close_seconds_left.count() > 0;
+             close_seconds_left -= std::chrono::seconds(1)) {
+            // Try to close database once a second for 30 minutes
+            if (close_seconds_left.count() % 10 == 0) {
+                // Print message every 10 seconds
+                auto output_minutes =
+                    std::chrono::duration_cast<std::chrono::minutes>(
+                        close_seconds_left)
+                        .count();
+                auto output_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>(
+                        close_seconds_left % std::chrono::minutes(1))
+                        .count();
+                std::cerr << "waiting up to " << output_minutes << " minutes, "
+                          << output_seconds
+                          << " seconds for rocksdb snapshots to be freed"
+                          << std::endl;
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            s = txn_db->Close();
+        }
+        if (s.IsAborted()) {
+            std::cerr << "rocksdb snapshots not freed" << std::endl;
+        }
         txn_db.reset();
+        std::cerr << "closed ArbStorage" << std::endl;
         return s;
     }
-
     return rocksdb::Status::OK();
 }
 
 std::unique_ptr<Transaction> Transaction::makeTransaction(
     std::shared_ptr<DataStorage> store) {
+    // Make sure database isn't closed while it is being used
+    auto counter = store->tryLockShared();
+
     auto tx = store->beginTransaction();
     return std::make_unique<Transaction>(std::move(store), std::move(tx));
 }
 
 rocksdb::Status DataStorage::clearDBExceptInbox() {
+    // Make sure database isn't closed while it is being used
+    auto counter = tryLockShared();
+
     for (int i = 0; i < FAMILY_COLUMN_COUNT; i++) {
         if (i == DEFAULT_COLUMN || i == DELAYEDMESSAGE_COLUMN ||
             i == SEQUENCERBATCHITEM_COLUMN || i == SEQUENCERBATCH_COLUMN) {
@@ -142,4 +231,70 @@ rocksdb::Status DataStorage::clearDBExceptInbox() {
         }
     }
     return rocksdb::Status::OK();
+}
+
+rocksdb::Status DataStorage::updateSecretHashSeed() {
+    std::string key("secretHashSeed");
+
+    // Make sure database isn't closed while it is being used
+    auto counter = tryLockShared();
+
+    rocksdb::PinnableSlice value;
+    rocksdb::ReadOptions read_opts;
+    auto status =
+        txn_db->Get(read_opts, column_handles[STATE_COLUMN], key, &value);
+    if (status.IsNotFound()) {
+        secret_hash_seed.resize(32);
+        RAND_bytes(secret_hash_seed.data(),
+                   static_cast<int>(secret_hash_seed.size()));
+        rocksdb::WriteOptions write_opts;
+        rocksdb::Slice value_slice(
+            reinterpret_cast<const char*>(secret_hash_seed.data()),
+            secret_hash_seed.size());
+        status = txn_db->Put(write_opts, column_handles[STATE_COLUMN], key,
+                             value_slice);
+    } else if (status.ok()) {
+        secret_hash_seed = std::vector<unsigned char>(
+            value.data(), value.data() + value.size());
+        value.Reset();
+    }
+    return status;
+}
+
+DbLockShared DataStorage::tryLockShared() const {
+    if (shutting_down) {
+        throw DataStorage::shutting_down_exception();
+    }
+    return DbLockShared(this);
+}
+
+DbLockShared::DbLockShared(const DataStorage* _storage) : storage(_storage) {
+    storage->concurrent_database_access_counter++;
+    if (storage->shutting_down) {
+        // Destructor will take care of decrementing counter
+        throw DataStorage::shutting_down_exception();
+    }
+}
+
+DbLockShared::~DbLockShared() {
+    if (storage == nullptr) {
+        // Don't do anything if counter was moved
+        return;
+    }
+    auto new_counter = --storage->concurrent_database_access_counter;
+    assert(new_counter >= 0);
+    (void)new_counter;  // silence unused variable warning on release builds
+                        // where assert is disabled
+}
+
+DbLockShared::DbLockShared(DbLockShared&& other) noexcept
+    : storage(other.storage) {
+    other.storage = nullptr;
+}
+
+DbLockShared& DbLockShared::operator=(DbLockShared&& other) noexcept {
+    this->~DbLockShared();
+    storage = other.storage;
+    other.storage = nullptr;
+    return *this;
 }

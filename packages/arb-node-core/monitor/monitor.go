@@ -22,7 +22,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -30,6 +29,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -51,10 +51,14 @@ func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Cor
 		return nil, err
 	}
 
+	logger.Info().Str("directory", dbDir).Msg("database opened")
+
 	err = storage.Initialize(contractFile)
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Info().Msg("storage initialized")
 
 	arbCore := storage.GetArbCore()
 	started := arbCore.StartThread()
@@ -84,6 +88,7 @@ func (m *Monitor) StartInboxReader(
 	bridgeUtilsAddress common.Address,
 	healthChan chan nodehealth.Log,
 	sequencerFeed chan broadcaster.BroadcastFeedMessage,
+	inboxReaderConfig configuration.InboxReader,
 ) (*InboxReader, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), fromBlock, ethClient, bind.CallOpts{})
 	if err != nil {
@@ -93,7 +98,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking initial chain state")
 	}
-	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0))
+	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
 		return nil, errors.Wrap(err, "error loading initial ArbCore machine")
 	}
@@ -122,11 +127,20 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, bridgeUtils, m.Core, healthChan, sequencerFeed)
+	reader, err := NewInboxReader(
+		ctx,
+		delayedBridgeWatcher,
+		sequencerInboxWatcher,
+		bridgeUtils,
+		m.Core,
+		healthChan,
+		sequencerFeed,
+		inboxReaderConfig.Paranoid,
+	)
 	if err != nil {
 		return nil, err
 	}
-	reader.Start(ctx)
+	reader.Start(ctx, inboxReaderConfig.DelayBlocks)
 	m.Reader = reader
 	return reader, nil
 }

@@ -73,8 +73,8 @@ func executeChallenge(
 	seqInbox, err := ethbridge.NewSequencerInboxWatcher(seqInboxAddr, client)
 	test.FailIfError(t, err)
 
-	challenger := NewChallenger(challengerChallengeCon, seqInbox, correctLookup, challengedAssertion, challengerWallet.Address())
-	asserter := NewChallenger(asserterChallengeCon, seqInbox, falseLookup, challengedAssertion, asserterWallet.Address())
+	challenger := NewChallenger(challengerChallengeCon, seqInbox, correctLookup, challengedAssertion, common.NewAddressFromEth(*challengerWallet.Address()))
+	asserter := NewChallenger(asserterChallengeCon, seqInbox, falseLookup, challengedAssertion, common.NewAddressFromEth(*asserterWallet.Address()))
 
 	var moves []Move
 
@@ -124,7 +124,7 @@ func executeChallenge(
 		checkTurn(t, challenge, turn)
 	}
 
-	checkChallengeCompleted(t, tester, challengerWallet.Address().ToEthAddress(), asserterWallet.Address().ToEthAddress())
+	checkChallengeCompleted(t, tester, *challengerWallet.Address(), *asserterWallet.Address())
 	return moves, nil
 }
 
@@ -163,7 +163,7 @@ func checkChallengeCompleted(t *testing.T, tester *ethbridgetestcontracts.Challe
 }
 
 func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *big.Int, endGas *big.Int) (*core.Assertion, error) {
-	cursor, err := lookup.GetExecutionCursor(startGas)
+	cursor, err := lookup.GetExecutionCursor(startGas, true)
 	test.FailIfError(t, err)
 	inboxMaxCount, err := lookup.GetMessageCount()
 	test.FailIfError(t, err)
@@ -175,7 +175,7 @@ func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *
 		ExecutionState: prevExecState,
 	}
 
-	err = lookup.AdvanceExecutionCursor(cursor, endGas, true)
+	err = lookup.AdvanceExecutionCursor(cursor, endGas, true, true)
 	test.FailIfError(t, err)
 	after, err := core.NewExecutionState(cursor)
 	test.FailIfError(t, err)
@@ -304,12 +304,12 @@ func initializeChallengeTest(
 
 	asserterAuth, err := transactauth.NewTransactAuth(ctx, client, asserter)
 	test.FailIfError(t, err)
-	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, asserterAuth)
+	asserterWallet, err := ethbridge.NewValidator(&asserterWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, asserterAuth, 0, nil)
 	test.FailIfError(t, err)
 
 	challengerAuth, err := transactauth.NewTransactAuth(ctx, client, challenger)
 	test.FailIfError(t, err)
-	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, challengerAuth)
+	challengerWallet, err := ethbridge.NewValidator(&challengerWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, challengerAuth, 0, nil)
 	test.FailIfError(t, err)
 
 	startChallenge := func(assertion *core.Assertion) {
@@ -317,8 +317,8 @@ func initializeChallengeTest(
 			deployer,
 			assertion.ExecutionHash(),
 			assertion.After.TotalMessagesRead,
-			asserterWallet.Address().ToEthAddress(),
-			challengerWallet.Address().ToEthAddress(),
+			*asserterWallet.Address(),
+			*challengerWallet.Address(),
 			asserterTime,
 			challengerTime,
 			sequencerBridgeAddr,

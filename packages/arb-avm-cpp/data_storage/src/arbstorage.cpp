@@ -63,7 +63,7 @@ std::shared_ptr<ArbCore> ArbStorage::getArbCore() {
 }
 
 std::unique_ptr<Machine> ArbStorage::getInitialMachine() {
-    auto cursor = arb_core->getExecutionCursor(0);
+    auto cursor = arb_core->getExecutionCursor(0, true);
     if (!cursor.status.ok()) {
         throw std::runtime_error(
             "failed to get initial machine. Database not initialized of "
@@ -77,10 +77,10 @@ std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
     return arb_core->getMachine<Machine>(machineHash, value_cache);
 }
 
-DbResult<value> ArbStorage::getValue(uint256_t value_hash,
+DbResult<Value> ArbStorage::getValue(uint256_t value_hash,
                                      ValueCache& value_cache) const {
     ReadTransaction tx(datastorage);
-    return ::getValue(tx, value_hash, value_cache);
+    return ::getValue(tx, value_hash, value_cache, false);
 }
 
 std::unique_ptr<ReadTransaction> ArbStorage::makeReadTransaction() {

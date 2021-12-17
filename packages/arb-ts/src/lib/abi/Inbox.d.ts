@@ -18,7 +18,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface InboxInterface extends ethers.utils.Interface {
   functions: {
@@ -223,6 +223,22 @@ interface InboxInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'RewriteToggled'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
 }
+
+export type InboxMessageDeliveredEvent = TypedEvent<
+  [BigNumber, string] & { messageNum: BigNumber; data: string }
+>
+
+export type InboxMessageDeliveredFromOriginEvent = TypedEvent<
+  [BigNumber] & { messageNum: BigNumber }
+>
+
+export type PauseToggledEvent = TypedEvent<[boolean] & { enabled: boolean }>
+
+export type RewriteToggledEvent = TypedEvent<[boolean] & { enabled: boolean }>
+
+export type WhitelistSourceUpdatedEvent = TypedEvent<
+  [string] & { newSource: string }
+>
 
 export class Inbox extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -600,6 +616,14 @@ export class Inbox extends BaseContract {
   }
 
   filters: {
+    'InboxMessageDelivered(uint256,bytes)'(
+      messageNum?: BigNumberish | null,
+      data?: null
+    ): TypedEventFilter<
+      [BigNumber, string],
+      { messageNum: BigNumber; data: string }
+    >
+
     InboxMessageDelivered(
       messageNum?: BigNumberish | null,
       data?: null
@@ -608,17 +632,33 @@ export class Inbox extends BaseContract {
       { messageNum: BigNumber; data: string }
     >
 
+    'InboxMessageDeliveredFromOrigin(uint256)'(
+      messageNum?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { messageNum: BigNumber }>
+
     InboxMessageDeliveredFromOrigin(
       messageNum?: BigNumberish | null
     ): TypedEventFilter<[BigNumber], { messageNum: BigNumber }>
 
+    'PauseToggled(bool)'(
+      enabled?: null
+    ): TypedEventFilter<[boolean], { enabled: boolean }>
+
     PauseToggled(
+      enabled?: null
+    ): TypedEventFilter<[boolean], { enabled: boolean }>
+
+    'RewriteToggled(bool)'(
       enabled?: null
     ): TypedEventFilter<[boolean], { enabled: boolean }>
 
     RewriteToggled(
       enabled?: null
     ): TypedEventFilter<[boolean], { enabled: boolean }>
+
+    'WhitelistSourceUpdated(address)'(
+      newSource?: null
+    ): TypedEventFilter<[string], { newSource: string }>
 
     WhitelistSourceUpdated(
       newSource?: null

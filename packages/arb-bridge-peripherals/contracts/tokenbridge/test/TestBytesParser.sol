@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,4 +16,18 @@
  * limitations under the License.
  */
 
-#include <avm_values/code.hpp>
+import "../libraries/BytesParser.sol";
+
+contract TestBytesParser {
+    function bytesToString(bytes memory input)
+        public
+        pure
+        returns (bool success, string memory res)
+    {
+        return BytesParser.toString(input);
+    }
+
+    function bytesToUint8(bytes memory input) public pure returns (bool, uint8) {
+        return BytesParser.toUint8(input);
+    }
+}

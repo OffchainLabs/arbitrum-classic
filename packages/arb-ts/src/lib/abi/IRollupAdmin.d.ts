@@ -17,7 +17,7 @@ import {
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
-import { TypedEventFilter, TypedEvent, TypedListener } from './commons'
+import type { TypedEventFilter, TypedEvent, TypedListener } from './common'
 
 interface IRollupAdminInterface extends ethers.utils.Interface {
   functions: {
@@ -236,6 +236,10 @@ interface IRollupAdminInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'OwnerFunctionCalled'): EventFragment
 }
+
+export type OwnerFunctionCalledEvent = TypedEvent<
+  [BigNumber] & { id: BigNumber }
+>
 
 export class IRollupAdmin extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this
@@ -713,6 +717,10 @@ export class IRollupAdmin extends BaseContract {
   }
 
   filters: {
+    'OwnerFunctionCalled(uint256)'(
+      id?: BigNumberish | null
+    ): TypedEventFilter<[BigNumber], { id: BigNumber }>
+
     OwnerFunctionCalled(
       id?: BigNumberish | null
     ): TypedEventFilter<[BigNumber], { id: BigNumber }>

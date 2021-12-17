@@ -28,13 +28,13 @@
 #include <vector>
 
 struct Assertion {
-    uint64_t stepCount;
-    uint64_t gasCount;
+    uint64_t step_count;
+    uint64_t gas_count;
     uint64_t inbox_messages_consumed;
-    std::vector<std::vector<uint8_t>> sends;
-    std::vector<value> logs;
-    std::vector<value> debugPrints;
-    std::optional<uint256_t> sideloadBlockNumber;
+    std::vector<MachineEmission<std::vector<uint8_t>>> sends;
+    std::vector<MachineEmission<Value>> logs;
+    std::vector<MachineEmission<Value>> debug_prints;
+    std::optional<uint256_t> sideload_block_number;
 };
 
 class MachineExecutionConfig {
@@ -55,16 +55,12 @@ class MachineExecutionConfig {
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
-    Assertion runImpl();
-
    public:
     MachineState machine_state;
 
     Machine() = default;
     explicit Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
-    Machine(std::shared_ptr<Code> code, value static_val)
-        : machine_state(std::move(code), std::move(static_val)) {}
 
     static Machine loadFromFile(const std::string& executable_filename) {
         return Machine{MachineState::loadFromFile(executable_filename)};

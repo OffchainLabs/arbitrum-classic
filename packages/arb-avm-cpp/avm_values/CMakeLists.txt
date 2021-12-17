@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.9)
 
 set (CMAKE_CXX_STANDARD 17)
 
@@ -23,6 +23,7 @@ set(LIB_HEADERS
   include/avm_values/exceptions.hpp
   include/avm_values/tuple.hpp
   include/avm_values/tuplestub.hpp
+  include/avm_values/unloadedvalue.hpp
   include/avm_values/value.hpp
   include/avm_values/valuetype.hpp
   include/avm_values/bigint.hpp
@@ -38,7 +39,6 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   src/bigint.cpp
   src/buffer.cpp
-  src/code.cpp
   src/codepoint.cpp
   src/codepointstub.cpp
   src/exceptions.cpp
@@ -47,6 +47,7 @@ set(LIB_SOURCES
   src/tuplestub.cpp
   src/value.cpp
   src/vmValueParser.cpp
+  src/unloadedvalue.cpp
 )
 
 add_library(avm_values STATIC ${LIB_HEADERS} ${LIB_SOURCES})
@@ -75,7 +76,7 @@ target_include_directories(avm_values PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm_values PUBLIC Threads::Threads nlohmann_json::nlohmann_json ethash::keccak intx::intx ${JEMALLOC_LIBRARIES} PRIVATE Boost::boost)
+target_link_libraries(avm_values PUBLIC Threads::Threads nlohmann_json::nlohmann_json ethash::keccak intx::intx PRIVATE Boost::boost)
 
 target_code_coverage(avm_values AUTO ALL)
 
