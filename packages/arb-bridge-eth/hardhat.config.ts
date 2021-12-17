@@ -1,8 +1,7 @@
 import { task } from 'hardhat/config'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { findEnv } from './find-env';
 import { config } from "dotenv"; 
-config({ path: findEnv() });
+config({ path:"../../.env" });
 import * as fs from 'fs'
 
 
