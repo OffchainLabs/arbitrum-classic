@@ -439,7 +439,7 @@ func TestChallengeToOSP(t *testing.T) {
 
 func TestChallengeToInboxOSP(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(7*400-10), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(8*400-10), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {
