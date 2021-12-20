@@ -7,7 +7,7 @@ import {
 } from './L1ToL2MessageGasEstimator'
 import { L1ToL2Message } from './L1ToL2Message'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { l2Networks } from '../utils/networks'
+import { NetworksInfo, CustomNetworks } from '../utils/networks'
 import { ContractReceipt, PayableOverrides } from '@ethersproject/contracts'
 import { BigNumber } from 'ethers'
 
@@ -17,13 +17,35 @@ interface CreateRetryableTicketOpptions {
 }
 export class L1ToL2MessageCreator {
   sender?: string
-  constructor(public readonly l1Signer: Signer) {}
+  constructor(
+    public readonly l1Signer: Signer,
+    public readonly networksInfo: NetworksInfo
+  ) {}
+  static async init(
+    l1Signer: Signer,
+    l2ProviderOrChainID: Provider | number,
+    customNetworks?: CustomNetworks
+  ): Promise<L1ToL2MessageCreator> {
+    const networksInfo = await (async () => {
+      if (typeof l2ProviderOrChainID === 'number') {
+        return NetworksInfo.initFromL2ChainID(
+          l2ProviderOrChainID,
+          customNetworks
+        )
+      } else {
+        return NetworksInfo.initFromL2Provider(
+          l2ProviderOrChainID,
+          customNetworks
+        )
+      }
+    })()
+    return new L1ToL2MessageCreator(l1Signer, networksInfo)
+  }
 
   public async createRetryableTicketFromGasParams(
     gasParams: L1toL2MessageGasValues,
     destAddr: string,
     callDataHex: string,
-    l2ChainID: string,
     options: CreateRetryableTicketOpptions = {
       excessFeeRefundAddress: undefined,
       callValueRefundAddress: undefined,
@@ -41,7 +63,7 @@ export class L1ToL2MessageCreator {
     const excessFeeRefundAddress = options.excessFeeRefundAddress || sender
     const callValueRefundAddress = options.callValueRefundAddress || sender
 
-    const inboxAddress = l2Networks[l2ChainID].ethBridge.inbox
+    const inboxAddress = this.networksInfo.ethBridge.inbox
     const inbox = Inbox__factory.connect(inboxAddress, this.l1Signer)
 
     const res = await inbox.createRetryableTicket(
@@ -76,12 +98,10 @@ export class L1ToL2MessageCreator {
       callDataHex,
       l2CallValue
     )
-    const l2ChainID = (await l2Provider.getNetwork()).chainId.toString()
     const rec = await this.createRetryableTicketFromGasParams(
       gasParams,
       destAddr,
       callDataHex,
-      l2ChainID,
       options
     )
 

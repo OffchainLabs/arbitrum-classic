@@ -17,22 +17,24 @@
 'use strict'
 
 import dotenv from 'dotenv'
+import { Provider } from '@ethersproject/providers'
+
 dotenv.config()
 
 export interface L1Network extends Network {
-  partnerChainIDs: string[]
+  partnerChainIDs: number[]
   blockTime: number //seconds
 }
 
 export interface L2Network extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
-  partnerChainID: string
+  partnerChainID: number
   isArbitrum: true
   confirmPeriodBlocks: number
 }
 export interface Network {
-  chainID: string
+  chainID: number
   name: string
   explorerUrl: string
   rpcURL: string
@@ -66,11 +68,11 @@ export interface EthBridge {
 }
 
 export interface L1Networks {
-  [id: string]: L1Network
+  [id: number]: L1Network
 }
 
 export interface L2Networks {
-  [id: string]: L2Network
+  [id: number]: L2Network
 }
 
 const mainnetTokenBridge: TokenBridge = {
@@ -126,49 +128,49 @@ const mainnetETHBridge: EthBridge = {
 }
 
 export const l1Networks: L1Networks = {
-  '1': {
-    chainID: '1',
+  1: {
+    chainID: 1,
     name: 'Mainnet',
     explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: ['42161'],
+    partnerChainIDs: [42161],
     blockTime: 15,
     rpcURL: process.env['MAINNET_RPC'] as string,
   },
-  '1337': {
-    chainID: '1337',
+  1337: {
+    chainID: 1337,
     name: 'Hardhat_Mainnet_Fork',
     explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: ['42161'], // TODO: use sequencer fork ID
+    partnerChainIDs: [42161], // TODO: use sequencer fork ID
     blockTime: 15,
     rpcURL: process.env['HARDHAT_RPC'] || 'http://127.0.0.1:8545/',
   },
-  '4': {
-    chainID: '4',
+  4: {
+    chainID: 4,
     name: 'Rinkeby',
     explorerUrl: 'https://rinkeby.etherscan.io',
-    partnerChainIDs: ['421611'],
+    partnerChainIDs: [421611],
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
   },
 }
 
 export const l2Networks: L2Networks = {
-  '42161': {
-    chainID: '42161',
+  42161: {
+    chainID: 42161,
     name: 'Arbitrum One',
     explorerUrl: 'https://mainnet-arb-explorer.netlify.app',
-    partnerChainID: '1',
+    partnerChainID: 1,
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
   },
-  '421611': {
-    chainID: '421611',
+  421611: {
+    chainID: 421611,
     name: 'ArbRinkeby',
     explorerUrl: 'https://rinkeby-explorer.arbitrum.io',
-    partnerChainID: '4',
+    partnerChainID: 4,
     isArbitrum: true,
     tokenBridge: rinkebyTokenBridge,
     ethBridge: rinkebyETHBridge,
@@ -177,33 +179,109 @@ export const l2Networks: L2Networks = {
   },
 }
 
-const addCustomNetwork = ({
-  customL1Network,
-  customL2Network,
-}: {
+export interface CustomNetworks {
   customL1Network?: L1Network
-  customL2Network: L2Network
-}): void => {
-  if (customL1Network) {
-    if (l1Networks[customL1Network.chainID]) {
-      throw new Error(`Network ${customL1Network.chainID} already included`)
+  customL2Network?: L2Network
+}
+
+interface ProviderWithNetworkCache extends Provider {
+  _network?: {
+    chainId: number
+  }
+}
+export class NetworksInfo {
+  constructor(
+    public readonly l1Network: L1Network,
+    public readonly l2Network: L2Network
+  ) {}
+
+  static async initFromL2Provider(
+    l2Provider: ProviderWithNetworkCache,
+    customNetworks?: CustomNetworks
+  ): Promise<NetworksInfo> {
+    const l2ChainID = await this.chainIdFromProvider(l2Provider)
+    return this.initFromL2ChainID(l2ChainID, customNetworks)
+  }
+
+  static initFromL2ChainID(
+    l2ChainID: number,
+    customNetworks?: CustomNetworks
+  ): NetworksInfo {
+    const l2Network = this.l2NetworkFromChainID(
+      l2ChainID,
+      customNetworks && customNetworks.customL2Network
+    )
+
+    const l1Network = this.l1NetworkFromL2Network(
+      l2Network,
+      customNetworks && customNetworks.customL1Network
+    )
+    return new NetworksInfo(l1Network, l2Network)
+  }
+
+  get l1ChainID(): number {
+    return this.l1Network.chainID
+  }
+
+  get l2ChainID(): number {
+    return this.l2Network.chainID
+  }
+
+  get tokenBridge(): TokenBridge {
+    return this.l2Network.tokenBridge
+  }
+  get ethBridge(): EthBridge {
+    return this.l2Network.ethBridge
+  }
+
+  static async chainIdFromProvider(
+    provider: ProviderWithNetworkCache
+  ): Promise<number> {
+    if (provider._network && provider._network.chainId) {
+      return provider._network.chainId
     } else {
-      l1Networks[customL1Network.chainID] = customL1Network
+      return (await provider.getNetwork()).chainId
     }
   }
 
-  if (l2Networks[customL2Network.chainID])
-    throw new Error(`Network ${customL2Network.chainID} already included`)
+  static l2NetworkFromChainID(
+    chainID: number,
+    customL2Network?: L2Network
+  ): L2Network {
+    if (l2Networks[chainID]) {
+      return l2Networks[chainID]
+    }
+    if (!customL2Network) {
+      throw new Error('L2 network not found and no custom network provided')
+    }
+    return customL2Network
+  }
 
-  l2Networks[customL2Network.chainID] = customL2Network
+  static l1NetworkFromL2Network(
+    l2Network: L2Network,
+    customL1Network?: L1Network
+  ): L1Network {
+    if (l1Networks[l2Network.partnerChainID]) {
+      const l1Network = { ...l1Networks[l2Network.partnerChainID] }
+      if (!l1Network.partnerChainIDs.includes(l2Network.chainID)) {
+        l1Network.partnerChainIDs.push(l2Network.chainID)
+      }
+      return l1Network
+    }
 
-  const l1PartnerChain = l1Networks[customL2Network.partnerChainID]
-  if (!l1PartnerChain)
-    throw new Error(
-      `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized`
-    )
-
-  l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
+    if (!customL1Network) {
+      throw new Error('L1 network not found and no custom network provided')
+    }
+    if (!customL1Network.partnerChainIDs.includes(l2Network.chainID)) {
+      throw new Error(
+        `L1/L2 Networks ${customL1Network.chainID} and ${l2Network.chainID} are not connected`
+      )
+    }
+    if (l2Network.partnerChainID !== customL1Network.chainID) {
+      throw new Error(
+        `L1/L2 Networks ${customL1Network.chainID} and ${l2Network.chainID} are not connected`
+      )
+    }
+    return customL1Network
+  }
 }
-
-export default { l1Networks, l2Networks, addCustomNetwork }
