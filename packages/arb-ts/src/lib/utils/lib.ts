@@ -1,4 +1,5 @@
 import { TransactionReceipt, Provider } from '@ethersproject/providers'
+import { BigNumber } from '@ethersproject/bignumber'
 
 export const getTxnReceipt = async (
   txn: string | TransactionReceipt,
@@ -12,4 +13,11 @@ export const getTxnReceipt = async (
   } else {
     return txn
   }
+}
+
+export const percentIncrease = (
+  num: BigNumber,
+  increase: BigNumber
+): BigNumber => {
+  return num.add(num.mul(increase).div(100))
 }

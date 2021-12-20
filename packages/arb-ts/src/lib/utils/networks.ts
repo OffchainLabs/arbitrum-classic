@@ -177,4 +177,33 @@ export const l2Networks: L2Networks = {
   },
 }
 
-export default { l1Networks, l2Networks }
+const addCustomNetwork = ({
+  customL1Network,
+  customL2Network,
+}: {
+  customL1Network?: L1Network
+  customL2Network: L2Network
+}): void => {
+  if (customL1Network) {
+    if (l1Networks[customL1Network.chainID]) {
+      throw new Error(`Network ${customL1Network.chainID} already included`)
+    } else {
+      l1Networks[customL1Network.chainID] = customL1Network
+    }
+  }
+
+  if (l2Networks[customL2Network.chainID])
+    throw new Error(`Network ${customL2Network.chainID} already included`)
+
+  l2Networks[customL2Network.chainID] = customL2Network
+
+  const l1PartnerChain = l1Networks[customL2Network.partnerChainID]
+  if (!l1PartnerChain)
+    throw new Error(
+      `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized`
+    )
+
+  l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
+}
+
+export default { l1Networks, l2Networks, addCustomNetwork }
