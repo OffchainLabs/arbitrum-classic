@@ -154,7 +154,10 @@ export class Bridge {
     return new Bridge(l1BridgeObj, l2BridgeObj, isCustomNetwork)
   }
 
-  public async setSigner(newEthSigner: Signer, newArbSigner: Signer) {
+  public async setSigner(
+    newEthSigner: Signer,
+    newArbSigner: Signer
+  ): Promise<void> {
     await this.l1Bridge.setSigner(newEthSigner)
     await this.l2Bridge.setSigner(newArbSigner)
   }
@@ -236,7 +239,12 @@ export class Bridge {
     destinationAddress: string,
     _l2CallValue?: BigNumber,
     options: RetryableParamsOptions = {}
-  ) {
+  ): Promise<{
+    gasPriceBid: BigNumber
+    submissionPriceBid: any
+    maxGasBid: any
+    totalDepositValue: any
+  }> {
     const maxGasPriceIncrease =
       options.maxGasPricePercentIncrease || BigNumber.from(0)
     const maxGasIncrease = options.maxGasPercentIncrease || BigNumber.from(0)
@@ -441,7 +449,7 @@ export class Bridge {
   public async estimateGasDeposit(
     params: DepositParams | DepositInputParams,
     overrides: PayableOverrides = {}
-  ) {
+  ): Promise<BigNumber> {
     const depositInput: DepositParams = isDepositInputParams(params)
       ? await this.getDepositTxParams(params)
       : params

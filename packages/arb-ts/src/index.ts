@@ -28,16 +28,14 @@ export { ArbSys__factory } from './lib/abi/factories/ArbSys__factory'
 export { ArbAddressTable__factory } from './lib/abi/factories/ArbAddressTable__factory'
 
 export { Bridge } from './lib/bridge'
-export {
-  BridgeHelper,
-} from './lib/bridge_helpers'
+export { BridgeHelper } from './lib/bridge_helpers'
 export {
   DepositInitiated,
   WithdrawalInitiated,
   L2ToL1EventResult,
   OutgoingMessageState,
-} from "./lib/dataEntities"
-export { L1Bridge, L1TokenData } from './lib/l1Bridge'
-export { L2Bridge, L2TokenData } from './lib/l2Bridge'
+} from './lib/dataEntities'
+export { L1TokenData } from './lib/l1Bridge'
+export { L2TokenData } from './lib/l2Bridge'
 export { networks } from './lib/networks'
 export { argSerializerConstructor } from './lib/byte_serialize_params'

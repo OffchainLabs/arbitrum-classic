@@ -97,6 +97,8 @@ export class L2TransactionReceipt implements TransactionReceipt {
   private getOutboxAddr(network: Network, batchNumber: BigNumber) {
     // CHRIS: add the old network to the networks object, and look it up here
     // CHRIS: null check? this shouldn't be possible
+    // CHRIS: disable linting by just using the batchnumber here
+    batchNumber
     return network.ethBridge!.outbox
   }
 
@@ -183,7 +185,7 @@ export class L2ToL1Message {
     })
 
     return logs.map(
-      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
     )
   }
 

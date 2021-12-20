@@ -93,7 +93,7 @@ export class L1Bridge {
     )
   }
 
-  public async setSigner(newSigner: Signer) {
+  public async setSigner(newSigner: Signer): Promise<void> {
     const newL1Provider = newSigner.provider
     if (newL1Provider === undefined) {
       throw new Error('Signer must be connected to an Ethereum provider')
@@ -169,39 +169,41 @@ export class L1Bridge {
       nameResult,
     ] = await this.getMulticallAggregate(functionCalls)
 
-    const isString = (x: any): x is string => typeof x === 'string'
+    const isString = (x: unknown): x is string => typeof x === 'string'
     const balance = (() => {
       if (!balanceResult) throw new Error('No balance method available')
       if (isString(balanceResult)) throw new Error('Not able to decode balance')
-      return (balanceResult as Await<
-        ReturnType<ERC20['functions']['balanceOf']>
-      >)[0]
+      const res = (
+        balanceResult as Await<ReturnType<ERC20['functions']['balanceOf']>>
+      )[0]
+      return res
     })()
 
     const allowance = (() => {
       if (!allowanceResult) throw new Error('No allowance method available')
-      if (isString(allowanceResult))
+      if (isString(allowanceResult)) {
         throw new Error('Not able to decode allowance')
-      return (allowanceResult as Await<
-        ReturnType<ERC20['functions']['allowance']>
-      >)[0]
+      }
+      return (
+        allowanceResult as Await<ReturnType<ERC20['functions']['allowance']>>
+      )[0]
     })()
 
     const symbol = (() => {
       if (!symbolResult) return addressToSymbol(erc20L1Address)
       if (isString(symbolResult)) return symbolResult
-      return (symbolResult as Await<
-        ReturnType<ERC20['functions']['symbol']>
-      >)[0]
+      return (
+        symbolResult as Await<ReturnType<ERC20['functions']['symbol']>>
+      )[0]
     })()
 
     const decimals = (() => {
       if (!decimalsResult) return 18
       if (isString(decimalsResult))
         throw new Error('Not able to decode decimals')
-      return (decimalsResult as Await<
-        ReturnType<ERC20['functions']['decimals']>
-      >)[0]
+      return (
+        decimalsResult as Await<ReturnType<ERC20['functions']['decimals']>>
+      )[0]
     })()
 
     const name = (() => {

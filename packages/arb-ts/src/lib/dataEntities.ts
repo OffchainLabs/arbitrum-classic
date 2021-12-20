@@ -105,7 +105,7 @@ export interface MessageBatchProofInfo {
 export type MulticallFunctionInput = Array<{
   target: string
   funcFragment: FunctionFragment
-  values?: Array<any>
+  values?: Array<unknown>
 }>
 
 export enum OutgoingMessageState {

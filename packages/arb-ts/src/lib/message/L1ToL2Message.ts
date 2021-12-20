@@ -160,7 +160,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const eventTopic = iface.getEventTopic(event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
-      log => (iface.parseLog(log).args as unknown) as DepositInitiated
+      log => iface.parseLog(log).args as unknown as DepositInitiated
     )
   }
 }
@@ -186,9 +186,8 @@ export interface L1ToL2MessageReceipt {
  * If T is of type Signer then L1ToL2MessageReaderOrWriter<T> will be of
  * type L1ToL2MessageWriter.
  */
-export type L1ToL2MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
+export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export class L1ToL2Message {
   public static fromL2Ticket<T extends SignerOrProvider>(
