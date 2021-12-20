@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "arbos-contracts/arbos/builtin/ArbSys.sol";
+import "arbos-precompiles/arbos/builtin/ArbSys.sol";
 
 /// @notice L2 utility contract to assist with L1 <=> L2 interactions
 /// @dev this is an abstract contract instead of library so the functions can be easily overriden when testing

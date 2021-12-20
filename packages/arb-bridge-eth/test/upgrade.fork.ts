@@ -97,10 +97,8 @@ describe('Mainnet fork', () => {
       .connect(ownerSigner)
       .upgrade(sequencerInbox.address, newSequencerInbox.address)
 
-    const externalCall = rollupDispatch.interface.encodeFunctionData(
-      'postUpgradeInit',
-      [newAdminFacet.address]
-    )
+    const externalCall =
+      rollupDispatch.interface.encodeFunctionData('postUpgradeInit')
 
     await proxyAdmin
       .connect(ownerSigner)
@@ -130,8 +128,8 @@ describe('Mainnet fork', () => {
     const newerAdminFacet = await NewAdminFacet.deploy()
     await newerAdminFacet.deployed()
 
-    await expect(
-      rollupDispatch.postUpgradeInit(newerAdminFacet.address)
-    ).to.be.revertedWith('NOT_FROM_ADMIN')
+    await expect(rollupDispatch.postUpgradeInit()).to.be.revertedWith(
+      'NOT_FROM_ADMIN'
+    )
   })
 })
