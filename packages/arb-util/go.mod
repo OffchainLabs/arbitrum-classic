@@ -7,7 +7,7 @@ require (
 	github.com/gobwas/ws v1.1.0
 	github.com/gobwas/ws-examples v0.0.0-20190625122829-a9e8908d9484
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/knadh/koanf v1.3.2
+	github.com/knadh/koanf v1.3.3
 	github.com/mailru/easygo v0.0.0-20190618140210-3c14a0dc985f
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.8.0
