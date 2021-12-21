@@ -31,7 +31,6 @@ import {
 import { Logger } from '@ethersproject/logger'
 import { Zero } from '@ethersproject/constants'
 import { parseEther } from '@ethersproject/units'
-import { utils } from 'ethers'
 
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
@@ -39,6 +38,10 @@ import { L1WethGateway__factory } from './abi/factories/L1WethGateway__factory'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { OldOutbox__factory } from './abi/factories/OldOutbox__factory'
+import { ERC20__factory } from './abi/factories/ERC20__factory'
+import { L1ERC20Gateway } from './abi/L1ERC20Gateway'
+import { L1GatewayRouter } from './abi/L1GatewayRouter'
+import { ERC20 } from './abi/ERC20'
 
 import { Await, DepositParams, L1Bridge, L1TokenData } from './l1Bridge'
 import { L2Bridge, L2TokenData } from './l2Bridge'
@@ -54,15 +57,8 @@ import {
 } from './bridge_helpers'
 import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks, { Network } from './networks'
-import {
-  L1ERC20Gateway,
-  L1GatewayRouter,
-  Multicall2__factory,
-  ArbMulticall2__factory,
-  ERC20__factory,
-  ERC20,
-} from './abi'
-import { Result } from '@ethersproject/abi'
+import { hexDataLength } from '@ethersproject/bytes'
+
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
   maxGas?: BigNumber
@@ -282,9 +278,7 @@ export class Bridge {
     )
 
     const submissionPrice = (
-      await this.l2Bridge.getTxnSubmissionPrice(
-        utils.hexDataLength(callDataHex)
-      )
+      await this.l2Bridge.getTxnSubmissionPrice(hexDataLength(callDataHex))
     )[0]
     const submissionPriceBid = BridgeHelper.percentIncrease(
       submissionPrice,
