@@ -511,8 +511,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Bool("core.database.exit-after", false, "exit after loading or manipulating database")
 	f.Duration("core.database.save-interval", 0, "duration between saving database backups, 0 to disable")
 	f.String("core.database.save-path", "db_checkpoints", "path to save database backups in")
-	f.Int("core.database.threads", 2, "maximum number of threads database can use")
-	f.Int("core.database.l0-files", 4, "target number of files for layer zero")
 
 	f.Duration("core.idle-sleep", 5*time.Millisecond, "how long core thread should sleep when idle")
 
