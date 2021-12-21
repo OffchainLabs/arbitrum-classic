@@ -66,8 +66,6 @@ CArbStorage* createArbStorage(const char* db_path,
         arb_core_config.checkpoint_max_to_prune;
     coreConfig.database_compact = arb_core_config.database_compact;
     coreConfig.database_exit_after = arb_core_config.database_exit_after;
-    coreConfig.database_threads = arb_core_config.database_threads;
-    coreConfig.database_l0_files = arb_core_config.database_l0_files;
     coreConfig.test_reorg_to_l1_block = arb_core_config.test_reorg_to_l1_block;
     coreConfig.test_reorg_to_l2_block = arb_core_config.test_reorg_to_l2_block;
     coreConfig.test_reorg_to_log = arb_core_config.test_reorg_to_log;

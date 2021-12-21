@@ -105,12 +105,6 @@ struct ArbCoreConfig {
     // Exit after manipulating database
     bool database_exit_after{false};
 
-    // Number of threads to allow database to use
-    uint64_t database_threads{2};
-
-    // Number of files on layer zero
-    uint64_t database_l0_files{4};
-
     // Number of seconds to keep checkpoints
     uint64_t checkpoint_pruning_age_seconds{0};
 

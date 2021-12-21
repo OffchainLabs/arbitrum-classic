@@ -40,11 +40,7 @@ DataStorage::DataStorage(const std::string& db_path,
     rocksdb::BlockBasedTableOptions table_options{};
     options.create_if_missing = true;
     options.create_missing_column_families = true;
-    options.delete_obsolete_files_period_micros = 1;
-    options.max_background_jobs = coreConfig.database_threads;
-    options.max_subcompactions = coreConfig.database_threads;
     options.allow_data_in_errors = true;
-    options.level0_file_num_compaction_trigger = coreConfig.database_l0_files;
 
     options.avoid_unnecessary_blocking_io = true;
     options.compression = rocksdb::CompressionType::kLZ4Compression;
