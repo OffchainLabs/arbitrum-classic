@@ -46,8 +46,6 @@ typedef struct {
     int32_t database_save_interval;
     const char* database_save_path;
     int32_t database_exit_after;
-    int32_t database_threads;
-    int32_t database_l0_files;
     int32_t test_reorg_to_l1_block;
     int32_t test_reorg_to_l2_block;
     int32_t test_reorg_to_log;
