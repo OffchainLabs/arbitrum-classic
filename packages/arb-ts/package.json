@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "1.0.2",
+  "version": "2.0.0-beta.8",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -16,6 +16,7 @@
   },
   "homepage": "https://offchainlabs.com",
   "scripts": {
+    "postinstall": "$npm_execpath run gen:abi",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
     "build": "./scripts/builder",
@@ -25,8 +26,9 @@
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
-    "update:abi": "./scripts/update-abi && yarn format",
-    "test:integration": "yarn run mocha integration_test/ --timeout 30000000 --bail",
+    "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
+    "gen:abi": "node ./scripts/genAbi.js",
+    "test:integration": "mocha integration_test/ --timeout 30000000 --bail",
     "generate_docs": "typedoc --plugin none",
     "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
     "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
@@ -41,9 +43,14 @@
     "@ethersproject/bytes": "^5.0.8",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@types/prompts": "^2.0.14",
+    "typechain": "^5.2.0",
+    "@typechain/ethers-v5": "^7.2.0",
+    "arb-bridge-eth": "0.7.4",
+    "arb-bridge-peripherals": "1.0.5",
+    "arbos-precompiles": "1.0.1",
     "dotenv": "^10.0.0",
-    "ethers": "^5.1.0",
-    "prompts": "^2.4.2"
+    "ts-node": "^10.2.1",
+    "ethers": "^5.1.0"
   },
   "resolutions": {
     "@ethersproject/bignumber": "^5.1.1"
@@ -51,6 +58,7 @@
   "devDependencies": {
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",
+    "@types/prompts": "^2.0.14",
     "@typescript-eslint/eslint-plugin": "^4.29.0",
     "@typescript-eslint/parser": "^4.29.0",
     "axios": "^0.21.3",
@@ -59,13 +67,14 @@
     "ethereum-waffle": "^3.4.0",
     "mocha": "^9.1.1",
     "nyc": "^15.1.0",
-    "ts-node": "^10.2.1",
+    "prompts": "^2.4.2",
     "typedoc": "^0.21.5",
     "typedoc-plugin-markdown": "^3.10.4",
     "typescript": "^4.2.2",
     "yargs": "^17.1.1"
   },
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "scripts/genAbi.js"
   ]
 }
