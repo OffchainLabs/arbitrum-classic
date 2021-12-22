@@ -108,6 +108,9 @@ struct ArbCoreConfig {
     // Number of seconds to keep checkpoints
     uint64_t checkpoint_pruning_age_seconds{0};
 
+    // Number of seconds to keep checkpoints
+    std::string checkpoint_pruning_mode{};
+
     // Maximum number of checkpoints to prune at a time
     uint64_t checkpoint_max_to_prune{0};
 

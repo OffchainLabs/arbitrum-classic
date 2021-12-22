@@ -73,6 +73,7 @@ type Core struct {
 	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution-gas"`
 	CheckpointMaxToPrune      int           `koanf:"checkpoint-max-to-prune"`
 	CheckpointPruningAge      time.Duration `koanf:"checkpoint-pruning-age"`
+	CheckpointPruningMode     string        `koanf:"checkpoint-pruning-mode"`
 	CheckpointPruneOnStartup  bool          `koanf:"checkpoint-prune-on-startup"`
 	Database                  Database      `koanf:"database"`
 	Debug                     bool          `koanf:"debug"`
@@ -502,8 +503,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")
 	f.Int("core.checkpoint-max-execution-gas", maxExecutionGas, "maximum amount of gas any given checkpoint is allowed to execute")
 	f.Int("core.checkpoint-max-to-prune", 2, "number of checkpoints to delete at a time, 0 for no limit")
-	f.Duration("core.checkpoint-pruning-age", checkpointPruningAge, "how long to keep snapshots, 0 to disable time based pruning, always disabled if node.cache.allow-slow-lookup is set")
 	f.Bool("core.checkpoint-prune-on-startup", false, "perform full database pruning on startup")
+	f.Duration("core.checkpoint-pruning-age", checkpointPruningAge, "how long to keep snapshots, 0 to disable time based pruning, always disabled if node.cache.allow-slow-lookup is set")
+	f.String("core.checkpoint-pruning-mode", "default", "Prune old checkpoints: 'on', 'off', or 'default'")
 
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
 

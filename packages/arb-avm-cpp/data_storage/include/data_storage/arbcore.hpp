@@ -166,6 +166,9 @@ class ArbCore {
         ReadTransaction& tx) const;
     rocksdb::Status updateSchemaVersion(ReadWriteTransaction& tx,
                                         const uint256_t& schema_version);
+    ValueResult<std::string> pruningMode(ReadTransaction& tx) const;
+    rocksdb::Status updatePruningMode(ReadWriteTransaction& tx,
+                                      const std::string& pruning_mode);
     rocksdb::Status saveAssertion(ReadWriteTransaction& tx,
                                   const Assertion& assertion,
                                   uint256_t arb_gas_used);

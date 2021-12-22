@@ -46,6 +46,7 @@
 
 namespace {
 constexpr uint256_t arbcore_schema_version = 3;
+constexpr auto pruning_mode_key = std::array<char, 1>{-59};
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
@@ -162,13 +163,21 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
 
+    bool database_exists = false;
+    ValueResult<std::string> pruning_mode_result;
     {
         // Validate database schema version
         ReadTransaction tx(data_storage);
+
+        auto logs_result = logInsertedCountImpl(tx);
+        if (logs_result.status.ok()) {
+            // Database exists
+            database_exists = true;
+        }
+
         auto schema_result = schemaVersion(tx);
         if (!schema_result.status.ok()) {
-            auto logs_result = logInsertedCountImpl(tx);
-            if (logs_result.status.ok()) {
+            if (database_exists) {
                 // Old database that does not have schema version
                 std::cerr << "Error getting schema version: "
                           << schema_result.status.ToString()
@@ -182,6 +191,31 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
                       << arbcore_schema_version
                       << ", delete database and try again" << std::endl;
             return rocksdb::Status::Corruption();
+        }
+
+        pruning_mode_result = pruningMode(tx);
+    }
+
+    if (database_exists) {
+        if (!pruning_mode_result.status.ok()) {
+            // Old database, does not have pruning mode set
+            std::string mode;
+            if (coreConfig.checkpoint_pruning_mode == "on") {
+                // Command line explicitly enabled pruning
+                mode = "on";
+            } else {
+                // Default old database to archive mode, no pruning
+                mode = "off";
+            }
+            ReadWriteTransaction tx(data_storage);
+            updatePruningMode(tx, mode);
+            pruning_mode_result.data = mode;
+            pruning_mode_result.status = rocksdb::Status::OK();
+        }
+
+        if (pruning_mode_result.data == "off") {
+            // Disable pruning
+            coreConfig.checkpoint_pruning_age_seconds = 0;
         }
     }
 
@@ -2569,6 +2603,16 @@ rocksdb::Status ArbCore::updateSchemaVersion(ReadWriteTransaction& tx,
     marshal_uint256_t(schema_version, value);
 
     return tx.statePut(vecToSlice(schema_version_key), vecToSlice(value));
+}
+
+ValueResult<std::string> ArbCore::pruningMode(ReadTransaction& tx) const {
+    std::string mode;
+    auto status = tx.stateGet(vecToSlice(pruning_mode_key), &mode);
+    return {status, mode};
+}
+rocksdb::Status ArbCore::updatePruningMode(ReadWriteTransaction& tx,
+                                           const std::string& pruning_mode) {
+    return tx.statePut(vecToSlice(pruning_mode_key), pruning_mode);
 }
 
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {

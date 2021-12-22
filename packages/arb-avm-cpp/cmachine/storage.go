@@ -52,6 +52,9 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	cDatabaseSavePath := C.CString(coreConfig.Database.SavePath)
 	defer C.free(unsafe.Pointer(cDatabaseSavePath))
 
+	cCheckpointPruningMode := C.CString(coreConfig.CheckpointPruningMode)
+	defer C.free(unsafe.Pointer(cCheckpointPruningMode))
+
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
 	sleepMilliseconds := int(coreConfig.IdleSleep.Milliseconds())
 	databaseSaveIntervalSeconds := int(coreConfig.Database.SaveInterval.Seconds())
@@ -71,8 +74,9 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		debug:                          boolToCInt(coreConfig.Debug),
 		lazy_load_core_machine:         boolToCInt(coreConfig.LazyLoadCoreMachine),
 		lazy_load_archive_queries:      boolToCInt(coreConfig.LazyLoadArchiveQueries),
-		checkpoint_pruning_age_seconds: C.int(checkpointPruningAgeSeconds),
 		checkpoint_prune_on_startup:    boolToCInt(coreConfig.CheckpointPruneOnStartup),
+		checkpoint_pruning_age_seconds: C.int(checkpointPruningAgeSeconds),
+		checkpoint_pruning_mode:        cCheckpointPruningMode,
 		checkpoint_max_to_prune:        C.int(coreConfig.CheckpointMaxToPrune),
 		database_compact:               boolToCInt(coreConfig.Database.Compact),
 		database_exit_after:            boolToCInt(coreConfig.Database.ExitAfter),
