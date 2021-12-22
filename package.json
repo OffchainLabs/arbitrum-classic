@@ -13,13 +13,14 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
+    "preq": "chmod +x ./scripts/preq.sh &&  ./scripts/preq.sh",
     "build": "yarn workspace arb-ts build",
     "install:validator": "./scripts/install-validator",
     "ganache": "./scripts/run-ganache.sh",
     "deploy": "yarn workspace arb-bridge-eth deploy:contracts",
     "initialize": "yarn workspace tools demo:initialize",
-    "run:rpc": "ts-node ./scripts/run-rpc.ts && ./scripts/tmpRPC.sh",
-    "run:val": "ts-node ./scripts/run-validator.ts && ./scripts/tmpVAL.sh",
+    "run:rpc": "ts-node ./scripts/run-rpc.ts && chmod +x ./scripts/tmpRPC.sh && ./scripts/tmpRPC.sh",
+    "run:val": "ts-node ./scripts/run-validator.ts && chmod +x ./scripts/tmpVAL.sh && ./scripts/tmpVAL.sh",
     "mine": "yarn workspace tools mine-local-chain-blocks",
     "fund:l2": "yarn workspace tools fund:l2",
     "setValidator": "yarn workspace arb-bridge-eth setValidator"

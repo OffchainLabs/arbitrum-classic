@@ -2,14 +2,12 @@
 
 ### How to use:
 
-Install depdencies using:
+Initialize submodules and install required depenencies by running:
 ```
-git checkout myym/ganache-deployment
-git submodule update --init --recursive
-yarn 
-yarn build
-yarn install:validator
+chmod +x ./scripts/preq.sh && ./scripts/preq.sh
 ```
+To install the validator node run: `yarn install:validator`
+
 
 Update `.env` file and perform deployment using:
 ```
@@ -21,3 +19,8 @@ yarn run:rpc // to run the rpc node
 
 yarn run:validator // to run the validator node
 ```
+
+#### FAQ:
+
+- If getting storage initialization erorr when runing rpc/validator node copy arbose.mexe to arbitrum directory by:
+`mv /home/ubuntu/arbitrum/rollups/local_ganache/validator0/arbos.mexe ./home/ubuntu/arbitrum`
