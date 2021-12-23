@@ -196,27 +196,11 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         pruning_mode_result = pruningMode(tx);
     }
 
-    if (database_exists) {
-        if (!pruning_mode_result.status.ok()) {
-            // Old database, does not have pruning mode set
-            std::string mode;
-            if (coreConfig.checkpoint_pruning_mode == "on") {
-                // Command line explicitly enabled pruning
-                mode = "on";
-            } else {
-                // Default old database to archive mode, no pruning
-                mode = "off";
-            }
-            ReadWriteTransaction tx(data_storage);
-            updatePruningMode(tx, mode);
-            pruning_mode_result.data = mode;
-            pruning_mode_result.status = rocksdb::Status::OK();
-        }
-
-        if (pruning_mode_result.data == "off") {
-            // Disable pruning
-            coreConfig.checkpoint_pruning_age_seconds = 0;
-        }
+    auto pruning_status =
+        initializePruningMode(database_exists, pruning_mode_result);
+    if (!pruning_status.ok()) {
+        // Error message already output in initializePruningMode
+        return pruning_status;
     }
 
     if (coreConfig.test_reset_db_except_inbox) {
@@ -365,6 +349,13 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         }
     }
 
+    status = updatePruningMode(tx, "on");
+    if (!status.ok()) {
+        std::cerr << "failed to initialize pruning mode to on: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
+
     status = tx.commit();
     if (!status.ok()) {
         std::cerr << "failed to commit initial state into db: "
@@ -383,6 +374,75 @@ bool ArbCore::initialized() const {
     std::vector<unsigned char> key;
     marshal_uint256_t(0, key);
     return tx.checkpointGetVector(vecToSlice(key)).status.ok();
+}
+
+rocksdb::Status ArbCore::initializePruningMode(
+    bool database_exists,
+    ValueResult<std::string>& pruning_mode_result) {
+    if (database_exists) {
+        if (!pruning_mode_result.status.ok()) {
+            // Old database, does not have pruning mode set
+            std::string mode;
+            if (coreConfig.checkpoint_pruning_mode == "on") {
+                // Command line explicitly enabled pruning
+                mode = "on";
+            } else {
+                // Default old database to archive mode, no pruning
+                mode = "off";
+                coreConfig.checkpoint_pruning_mode = "off";
+            }
+            ReadWriteTransaction tx(data_storage);
+            auto status = updatePruningMode(tx, mode);
+            if (!status.ok()) {
+                std::cerr << "error saving pruning mode to existing database: "
+                          << status.ToString() << std::endl;
+                return status;
+            }
+            tx.commit();
+            pruning_mode_result.data = mode;
+            pruning_mode_result.status = rocksdb::Status::OK();
+        } else {
+            // Use setting from database unless command line overrides
+            if (pruning_mode_result.data != "on" &&
+                pruning_mode_result.data != "off") {
+                std::cerr << "unexpected database pruning mode: "
+                          << pruning_mode_result.data << std::endl;
+                return rocksdb::Status::Corruption();
+            } else if (coreConfig.checkpoint_pruning_mode == "on" &&
+                       pruning_mode_result.data == "off") {
+                // Command line forced pruning, so mark database as being pruned
+                std::cerr << "enabling pruning on previously unpruned database"
+                          << "\n";
+                ReadWriteTransaction tx(data_storage);
+                auto status = updatePruningMode(tx, "on");
+                if (!status.ok()) {
+                    std::cerr << "Error updating pruning mode to off: "
+                              << status.ToString() << std::endl;
+                    return status;
+                }
+                tx.commit();
+                pruning_mode_result.data = "on";
+            } else if (coreConfig.checkpoint_pruning_mode == "off" &&
+                       pruning_mode_result.data == "on") {
+                // Database set to pruned but command line forcing no pruning
+                std::cerr
+                    << "warning: disabling pruning on already pruned database"
+                    << "\n";
+                pruning_mode_result.data = "off";
+            } else if (coreConfig.checkpoint_pruning_mode != "on" &&
+                       coreConfig.checkpoint_pruning_mode != "off") {
+                // Default to database settings
+                coreConfig.checkpoint_pruning_mode = pruning_mode_result.data;
+            }
+        }
+    }
+
+    if (coreConfig.checkpoint_pruning_mode == "off") {
+        // Disable pruning
+        coreConfig.checkpoint_pruning_age_seconds = 0;
+    }
+
+    return rocksdb::Status::OK();
 }
 
 template <class T>

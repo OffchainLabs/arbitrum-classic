@@ -723,7 +723,16 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		out.Core.CheckpointMaxExecutionGas = 0
 
 		// Never prune checkpoints
+		out.Core.CheckpointPruningMode = "off"
+	}
+
+	if out.Core.CheckpointPruningMode == "off" {
+		// Never prune checkpoints
 		out.Core.CheckpointPruningAge = 0
+	} else if (out.Core.CheckpointPruningMode != "on") &&
+		(out.Core.CheckpointPruningMode != "default") {
+		return nil, nil, nil, nil,
+			fmt.Errorf("value '%v' for core.checkpoint-pruning-mode is not 'on', 'off', or 'default'", out.Core.CheckpointPruningMode)
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil
