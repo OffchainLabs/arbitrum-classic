@@ -155,6 +155,11 @@ class ArbCore {
 
     void printCoreThreadBacktrace();
 
+   private:
+    rocksdb::Status initializePruningMode(
+        bool database_exists,
+        ValueResult<std::string>& pruning_mode_result);
+
    public:
     // Public Thread interaction
     bool startThread();
