@@ -21,6 +21,7 @@ import yargs from 'yargs/yargs'
 import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
+import { Provider } from '@ethersproject/providers'
 import { ContractReceipt } from '@ethersproject/contracts'
 import { Wallet } from '@ethersproject/wallet'
 import { formatBytes32String } from '@ethersproject/strings'
@@ -34,6 +35,8 @@ import { instantiateBridge } from '../scripts/instantiate_bridge'
 
 import config from './config'
 import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
+import { Signer } from 'ethers'
+import { EthBridger, TokenBridger } from '../src'
 
 const argv = yargs(process.argv.slice(2))
   .options({
@@ -59,13 +62,13 @@ export const existentTestCustomToken = _existentTestCustomToken as string
 export const preFundAmount = parseEther('0.001')
 
 export const testRetryableTicket = async (
-  bridge: Bridge,
+  l1Provider: Provider,
   rec: ContractReceipt
 ): Promise<void> => {
   prettyLog(`testing retryable for ${rec.transactionHash}`)
 
   const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
-    bridge.l1Provider
+    l1Provider
   )
 
   const message = messages && messages[0]
@@ -121,8 +124,12 @@ export const warn = (text: string): void => {
 
 export const instantiateBridgeWithRandomWallet = (): Promise<{
   bridge: Bridge
-  l1Network: Network
-  l2Network: Network
+  tokenBridger: TokenBridger
+  ethBridger: EthBridger
+  l1Network: Network,
+  l2Network: Network,
+  l1Signer: Signer
+  l2Signer: Signer
 }> => {
   const testPk = formatBytes32String(Math.random().toString())
   prettyLog(
@@ -136,9 +143,9 @@ const _preFundedL2Wallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
 
 console.warn('using prefunded wallet ', _preFundedWallet.address)
 
-export const fundL1 = async (bridge: Bridge): Promise<void> => {
-  const testWalletAddress = await bridge.l1Bridge.getWalletAddress()
-  const preFundedWallet = _preFundedWallet.connect(bridge.l1Provider)
+export const fundL1 = async (l1Signer: Signer): Promise<void> => {
+  const testWalletAddress = await l1Signer.getAddress()
+  const preFundedWallet = _preFundedWallet.connect(l1Signer.provider!)
   const res = await preFundedWallet.sendTransaction({
     to: testWalletAddress,
     value: preFundAmount,
@@ -146,9 +153,9 @@ export const fundL1 = async (bridge: Bridge): Promise<void> => {
   await res.wait()
   prettyLog('Funded L1 account')
 }
-export const fundL2 = async (bridge: Bridge): Promise<void> => {
-  const testWalletAddress = await bridge.l2Bridge.getWalletAddress()
-  const preFundedL2Wallet = _preFundedL2Wallet.connect(bridge.l2Provider)
+export const fundL2 = async (l2Signer: Signer): Promise<void> => {
+  const testWalletAddress = await l2Signer.getAddress()
+  const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider!)
   const res = await preFundedL2Wallet.sendTransaction({
     to: testWalletAddress,
     value: preFundAmount,
@@ -159,13 +166,17 @@ export const fundL2 = async (bridge: Bridge): Promise<void> => {
 
 export const tokenFundAmount = BigNumber.from(2)
 export const fundL2Token = async (
-  bridge: Bridge,
+  l2Signer: Signer,
+  tokenBridger: TokenBridger,
   tokenAddress: string
 ): Promise<boolean> => {
   try {
-    const testWalletAddress = await bridge.l2Bridge.getWalletAddress()
-    const preFundedL2Wallet = _preFundedL2Wallet.connect(bridge.l2Provider)
-    const l2Address = await bridge.getERC20L2Address(tokenAddress)
+    const testWalletAddress = await l2Signer.getAddress()
+    const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider)
+    const l2Address = await tokenBridger.getERC20L2Address(
+      tokenAddress,
+      l2Signer.provider
+    )
     const testToken = TestERC20__factory.connect(l2Address, preFundedL2Wallet)
 
     const res = await testToken.transfer(testWalletAddress, tokenFundAmount)

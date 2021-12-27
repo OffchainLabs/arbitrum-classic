@@ -62,7 +62,7 @@ export interface DepositParams {
   l1CallValue: BigNumber
   maxSubmissionCost: BigNumber
   maxGas: BigNumber
-  gasPriceBid: BigNumber
+  maxGasPrice: BigNumber
   destinationAddress: string
 }
 
@@ -116,11 +116,12 @@ export class L1Bridge {
     this.l1GatewayRouter = this.l1GatewayRouter.connect(newSigner)
   }
 
-  public getERC20L2Address(erc20L1Address: string): Promise<string> {
-    return this.l1GatewayRouter.functions
-      .calculateL2TokenAddress(erc20L1Address)
-      .then(([res]) => res)
-  }
+  // CHRIS: now on tokenbridger
+  // public getERC20L2Address(erc20L1Address: string): Promise<string> {
+  //   return this.l1GatewayRouter.functions
+  //     .calculateL2TokenAddress(erc20L1Address)
+  //     .then(([res]) => res)
+  // }
 
   public async contractExists(contractAddress: string): Promise<boolean> {
     const contractCode = await this.l1Provider.getCode(contractAddress)
@@ -173,9 +174,9 @@ export class L1Bridge {
     const balance = (() => {
       if (!balanceResult) throw new Error('No balance method available')
       if (isString(balanceResult)) throw new Error('Not able to decode balance')
-      const res = (
-        balanceResult as Await<ReturnType<ERC20['functions']['balanceOf']>>
-      )[0]
+      const res = (balanceResult as Await<
+        ReturnType<ERC20['functions']['balanceOf']>
+      >)[0]
       return res
     })()
 
@@ -184,26 +185,26 @@ export class L1Bridge {
       if (isString(allowanceResult)) {
         throw new Error('Not able to decode allowance')
       }
-      return (
-        allowanceResult as Await<ReturnType<ERC20['functions']['allowance']>>
-      )[0]
+      return (allowanceResult as Await<
+        ReturnType<ERC20['functions']['allowance']>
+      >)[0]
     })()
 
     const symbol = (() => {
       if (!symbolResult) return addressToSymbol(erc20L1Address)
       if (isString(symbolResult)) return symbolResult
-      return (
-        symbolResult as Await<ReturnType<ERC20['functions']['symbol']>>
-      )[0]
+      return (symbolResult as Await<
+        ReturnType<ERC20['functions']['symbol']>
+      >)[0]
     })()
 
     const decimals = (() => {
       if (!decimalsResult) return 18
       if (isString(decimalsResult))
         throw new Error('Not able to decode decimals')
-      return (
-        decimalsResult as Await<ReturnType<ERC20['functions']['decimals']>>
-      )[0]
+      return (decimalsResult as Await<
+        ReturnType<ERC20['functions']['decimals']>
+      >)[0]
     })()
 
     const name = (() => {
@@ -226,121 +227,129 @@ export class L1Bridge {
     }
   }
 
-  public async estimateGasDepositEth(
-    value: BigNumber,
-    maxSubmissionPrice: BigNumber,
-    overrides: PayableOverrides = {}
-  ) {
-    if (overrides.value)
-      console.warn(
-        'You are overriding value argument in an eth deposit. Be careful.'
-      )
-    const inbox = await this.getInbox()
-    return inbox.estimateGas.depositEth(maxSubmissionPrice, {
-      value,
-      ...overrides,
-    })
-  }
+  // CHRIS: moved to Eth bridge
+  // public async estimateGasDepositEth(
+  //   value: BigNumber,
+  //   maxSubmissionPrice: BigNumber,
+  //   overrides: PayableOverrides = {}
+  // ) {
+  //   if (overrides.value)
+  //     console.warn(
+  //       'You are overriding value argument in an eth deposit. Be careful.'
+  //     )
 
-  public async depositETH(
-    value: BigNumber,
-    maxSubmissionPrice: BigNumber,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    if (overrides.value)
-      console.warn(
-        'You are overriding value argument in an eth deposit. Be careful.'
-      )
-    const inbox = await this.getInbox()
-    return inbox.functions.depositEth(maxSubmissionPrice, {
-      value,
-      ...overrides,
-    })
-  }
+  //   const inbox = this.network.ethBridge?.inbox // await this.getInbox()
+  //   return inbox.estimateGas.depositEth(maxSubmissionPrice, {
+  //     value,
+  //     ...overrides,
+  //   })
+  // }
 
+  // CHRIS: now on eth bridger
+  // public async depositETH(
+  //   value: BigNumber,
+  //   maxSubmissionPrice: BigNumber,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   if (overrides.value)
+  //     console.warn(
+  //       'You are overriding value argument in an eth deposit. Be careful.'
+  //     )
+  //   const inbox = await this.getInbox()
+  //   return inbox.functions.depositEth(maxSubmissionPrice, {
+  //     value,
+  //     ...overrides,
+  //   })
+  // }
+
+  // CHRIS: moved to erc20 bridger
   public async getGatewayAddress(erc20L1Address: string): Promise<string> {
     return (await this.l1GatewayRouter.functions.getGateway(erc20L1Address))
       .gateway
   }
-  public async getDefaultL1Gateway(): Promise<L1ERC20Gateway> {
-    const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
 
-    if (defaultGatewayAddress === AddressZero) {
-      console.log(
-        'No default network assigned in contract, using standard l1ERC20Gateway:'
-      )
+  // CHRIS: now on erc20 bridger
+  // public async getDefaultL1Gateway(): Promise<L1ERC20Gateway> {
+  //   const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
 
-      return L1ERC20Gateway__factory.connect(
-        this.network.tokenBridge.l1ERC20Gateway,
-        this.l1Provider
-      )
-    }
+  //   if (defaultGatewayAddress === AddressZero) {
+  //     console.log(
+  //       'No default network assigned in contract, using standard l1ERC20Gateway:'
+  //     )
 
-    return L1ERC20Gateway__factory.connect(
-      defaultGatewayAddress,
-      this.l1Provider
-    )
-  }
+  //     return L1ERC20Gateway__factory.connect(
+  //       this.network.tokenBridge.l1ERC20Gateway,
+  //       this.l1Provider
+  //     )
+  //   }
 
-  public async approveToken(
-    erc20L1Address: string,
-    amount?: BigNumber,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    // you approve tokens to the gateway that the router will use
-    const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
-    const contract = await ERC20__factory.connect(erc20L1Address, this.l1Signer)
-    return contract.functions.approve(
-      gatewayAddress,
-      amount || MIN_APPROVAL,
-      overrides
-    )
-  }
+  //   return L1ERC20Gateway__factory.connect(
+  //     defaultGatewayAddress,
+  //     this.l1Provider
+  //   )
+  // }
 
-  public async estimateGasDeposit(
-    depositParams: DepositParams,
-    overrides: PayableOverrides = {}
-  ): Promise<BigNumber> {
-    const data = defaultAbiCoder.encode(
-      ['uint256', 'bytes'],
-      [depositParams.maxSubmissionCost, '0x']
-    )
-    return this.l1GatewayRouter.estimateGas.outboundTransfer(
-      depositParams.erc20L1Address,
-      depositParams.destinationAddress,
-      depositParams.amount,
-      depositParams.maxGas,
-      depositParams.gasPriceBid,
-      data,
-      { ...overrides, value: depositParams.l1CallValue }
-    )
-  }
+  // public async approveToken(
+  //   erc20L1Address: string,
+  //   amount?: BigNumber,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   // you approve tokens to the gateway that the router will use
+  //   const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
+  //   const contract = await ERC20__factory.connect(erc20L1Address, this.l1Signer)
+  //   return contract.functions.approve(
+  //     gatewayAddress,
+  //     amount || MIN_APPROVAL,
+  //     overrides
+  //   )
+  // }
 
-  public async deposit(
-    depositParams: DepositParams,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    const data = defaultAbiCoder.encode(
-      ['uint256', 'bytes'],
-      [depositParams.maxSubmissionCost, '0x']
-    )
-    if (overrides.value)
-      throw new Error('L1 call value should be set through l1CallValue param')
-    if (depositParams.l1CallValue.eq(0))
-      throw new Error('L1 call value should not be zero')
-    if (depositParams.maxSubmissionCost.eq(0))
-      throw new Error('Max submission cost should not be zero')
+  // CHRIS: now on bridger
+  // public async estimateGasDeposit(
+  //   depositParams: DepositParams,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<BigNumber> {
+  //   const data = defaultAbiCoder.encode(
+  //     ['uint256', 'bytes'],
+  //     [depositParams.maxSubmissionCost, '0x']
+  //   )
+  //   return this.l1GatewayRouter.estimateGas.outboundTransfer(
+  //     depositParams.erc20L1Address,
+  //     depositParams.destinationAddress,
+  //     depositParams.amount,
+  //     depositParams.maxGas,
+  //     depositParams.gasPriceBid,
+  //     data,
+  //     { ...overrides, value: depositParams.l1CallValue }
+  //   )
+  // }
 
-    return this.l1GatewayRouter.functions.outboundTransfer(
-      depositParams.erc20L1Address,
-      depositParams.destinationAddress,
-      depositParams.amount,
-      depositParams.maxGas,
-      depositParams.gasPriceBid,
-      data,
-      { ...overrides, value: depositParams.l1CallValue }
-    )
-  }
+  // CHRIS: now on bridger
+  // public async deposit(
+  //   depositParams: DepositParams,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   const data = defaultAbiCoder.encode(
+  //     ['uint256', 'bytes'],
+  //     [depositParams.maxSubmissionCost, '0x']
+  //   )
+  //   if (overrides.value)
+  //     throw new Error('L1 call value should be set through l1CallValue param')
+  //   if (depositParams.l1CallValue.eq(0))
+  //     throw new Error('L1 call value should not be zero')
+  //   if (depositParams.maxSubmissionCost.eq(0))
+  //     throw new Error('Max submission cost should not be zero')
+
+  //   return this.l1GatewayRouter.functions.outboundTransfer(
+  //     depositParams.erc20L1Address,
+  //     depositParams.destinationAddress,
+  //     depositParams.amount,
+  //     depositParams.maxGas,
+  //     depositParams.gasPriceBid,
+  //     data,
+  //     { ...overrides, value: depositParams.l1CallValue }
+  //   )
+  // }
 
   public async getWalletAddress(): Promise<string> {
     if (this.walletAddressCache) {
@@ -350,20 +359,21 @@ export class L1Bridge {
     return this.walletAddressCache
   }
 
-  public async getInbox(): Promise<Inbox> {
-    if (this.inboxCached) {
-      return this.inboxCached
-    }
-    const gateway = await this.getDefaultL1Gateway()
+  // CHRIS: now in network config object
+  // public async getInbox(): Promise<Inbox> {
+  //   if (this.inboxCached) {
+  //     return this.inboxCached
+  //   }
+  //   const gateway = await this.getDefaultL1Gateway()
 
-    const inboxAddress = await gateway.inbox()
-    this.inboxCached = Inbox__factory.connect(inboxAddress, this.l1Signer)
-    return this.inboxCached
-  }
+  //   const inboxAddress = await gateway.inbox()
+  //   this.inboxCached = Inbox__factory.connect(inboxAddress, this.l1Signer)
+  //   return this.inboxCached
+  // }
 
-  public getL1EthBalance(): Promise<BigNumber> {
-    return this.l1Signer.getBalance()
-  }
+  // public getL1EthBalance(): Promise<BigNumber> {
+  //   return this.l1Signer.getBalance()
+  // }
 
   public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
     const multicall = Multicall2__factory.connect(

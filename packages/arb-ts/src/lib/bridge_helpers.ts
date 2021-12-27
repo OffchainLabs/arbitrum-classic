@@ -161,43 +161,44 @@ export class BridgeHelper {
   //   )
   // }
 
+  // CHRIS: now on token bridger
   /**
    * All withdrawals from given token
    */
-  static async getTokenWithdrawEventData(
-    l2Provider: Provider,
-    gatewayAddress: string,
-    l1TokenAddress?: string,
-    fromAddress?: string,
-    filter?: Filter
-  ): Promise<WithdrawalInitiated[]> {
-    const iface = L2ArbitrumGateway__factory.createInterface()
+  // static async getTokenWithdrawEventData(
+  //   l2Provider: Provider,
+  //   gatewayAddress: string,
+  //   l1TokenAddress?: string,
+  //   fromAddress?: string,
+  //   filter?: Filter
+  // ): Promise<WithdrawalInitiated[]> {
+  //   const iface = L2ArbitrumGateway__factory.createInterface()
 
-    const topics = [null, fromAddress ? hexZeroPad(fromAddress, 32) : null]
-    const logs = await BridgeHelper.getEventLogs(
-      'WithdrawalInitiated',
-      l2Provider,
-      iface,
-      gatewayAddress,
-      topics,
-      filter
-    )
-    const parsedLogs = logs.map(log => {
-      const data = {
-        ...iface.parseLog(log).args,
-        txHash: log.transactionHash,
-      }
-      return data as unknown as WithdrawalInitiated
-    })
-    // TODO: use l1TokenAddress as filter in topics instead of here
-    return l1TokenAddress
-      ? parsedLogs.filter(
-          (log: WithdrawalInitiated) =>
-            log.l1Token.toLocaleLowerCase() ===
-            l1TokenAddress.toLocaleLowerCase()
-        )
-      : parsedLogs
-  }
+  //   const topics = [null, fromAddress ? hexZeroPad(fromAddress, 32) : null]
+  //   const logs = await BridgeHelper.getEventLogs(
+  //     'WithdrawalInitiated',
+  //     l2Provider,
+  //     iface,
+  //     gatewayAddress,
+  //     topics,
+  //     filter
+  //   )
+  //   const parsedLogs = logs.map(log => {
+  //     const data = {
+  //       ...iface.parseLog(log).args,
+  //       txHash: log.transactionHash,
+  //     }
+  //     return data as unknown as WithdrawalInitiated
+  //   })
+  //   // TODO: use l1TokenAddress as filter in topics instead of here
+  //   return l1TokenAddress
+  //     ? parsedLogs.filter(
+  //         (log: WithdrawalInitiated) =>
+  //           log.l1Token.toLocaleLowerCase() ===
+  //           l1TokenAddress.toLocaleLowerCase()
+  //       )
+  //     : parsedLogs
+  // }
 
   public static getEventLogs = <T extends Interface>(
     eventName: string,
@@ -635,9 +636,9 @@ export class BridgeHelper {
   //   }
   // }
 
-  /**
-   * @deprecated The method should not be used
-   */
+  // /**
+  //  * @deprecated The method should not be used
+  //  */
   // static messageHasExecuted = async (
   //   batchNumber: BigNumber,
   //   path: BigNumber,
@@ -705,6 +706,7 @@ export class BridgeHelper {
   //     return OutgoingMessageState.NOT_FOUND
   //   }
   // }
+
   static isWhiteListed(
     address: string,
     whiteListAddress: string,

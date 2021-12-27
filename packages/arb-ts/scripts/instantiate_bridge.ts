@@ -21,8 +21,10 @@ import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
 import args from './getCLargs'
-import { Bridge, networks } from '../src'
+import { Bridge, EthBridger, networks, TokenBridger } from '../src'
+import { l2Networks } from '../src/lib/utils/networks'
 import { Network } from '../src/lib/networks'
+import { Signer } from 'ethers'
 
 dotenv.config()
 
@@ -35,7 +37,15 @@ const defaultNetworkId = 4
 export const instantiateBridge = async (
   l1pkParam?: string,
   l2PkParam?: string
-): Promise<{ bridge: Bridge; l1Network: Network; l2Network: Network }> => {
+): Promise<{
+  bridge: Bridge
+  l1Network: Network,
+  l2Network: Network,
+  l1Signer: Signer
+  l2Signer: Signer
+  tokenBridger: TokenBridger
+  ethBridger: EthBridger
+}> => {
   if (!l1pkParam) {
     if (!pk && !mnemonic)
       throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
@@ -64,13 +74,13 @@ export const instantiateBridge = async (
   const l1Network = network.isArbitrum
     ? networks[network.partnerChainID]
     : network
-  const l2Network = networks[l1Network.partnerChainID]
+  const l2Network = l2Networks[l1Network.partnerChainID]
 
   if (!l1Network.rpcURL) {
     throw new Error('L1 rpc url not set (see .env.sample or networks.ts)')
   }
   if (!l2Network.rpcURL) {
-    throw new Error('L2 rpc url not set (see .env.sample or networks.ts)')
+    throw new Error('L2 rpc url not set (see .env.sample or utils/networks.ts)')
   }
   const ethProvider = new JsonRpcProvider(l1Network.rpcURL)
 
@@ -107,5 +117,16 @@ export const instantiateBridge = async (
     console.log('')
   }
 
-  return { bridge, l1Network, l2Network }
+  const tokenBridger = new TokenBridger(l2Network)
+  const ethBridger = new EthBridger(l2Network)
+
+  return {
+    bridge,
+    l1Network,
+    l2Network,
+    l1Signer,
+    l2Signer,
+    tokenBridger,
+    ethBridger,
+  }
 }

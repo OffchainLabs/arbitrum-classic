@@ -23,3 +23,7 @@ export const percentIncrease = (
 ): BigNumber => {
   return num.add(num.mul(increase).div(100))
 }
+
+export function isError(error: Error): error is NodeJS.ErrnoException {
+  return error instanceof Error
+}

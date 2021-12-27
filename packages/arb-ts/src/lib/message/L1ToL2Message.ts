@@ -35,7 +35,7 @@ import {
 import { DepositInitiated } from '../dataEntities'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../precompile_addresses'
 import {
-  SignerOrProviderUtils,
+  SignerProviderUtils,
   SignerOrProvider,
 } from '../utils/signerOrProvider'
 
@@ -104,7 +104,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
   ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
-    const provider = SignerOrProviderUtils.getProvider(l2SignerOrProvider)
+    const provider = SignerProviderUtils.getProvider(l2SignerOrProvider)
     if (!provider) throw new Error('Signer not connected to provider.')
 
     const chainID = (await provider.getNetwork()).chainId.toString()

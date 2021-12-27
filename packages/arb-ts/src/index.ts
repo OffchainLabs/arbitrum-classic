@@ -27,6 +27,8 @@ export { ERC20__factory } from './lib/abi/factories/ERC20__factory'
 export { ArbSys__factory } from './lib/abi/factories/ArbSys__factory'
 export { ArbAddressTable__factory } from './lib/abi/factories/ArbAddressTable__factory'
 
+export { TokenBridger, EthBridger } from './lib/assetBridger'
+
 export { Bridge } from './lib/bridge'
 export { BridgeHelper } from './lib/bridge_helpers'
 export {

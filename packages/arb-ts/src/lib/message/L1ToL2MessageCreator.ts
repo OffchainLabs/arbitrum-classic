@@ -78,7 +78,7 @@ export class L1ToL2MessageCreator {
     )
     const l2ChainID = (await l2Provider.getNetwork()).chainId.toString()
     const rec = await this.createRetryableTicketFromGasParams(
-      gasParams,
+      { ...gasParams, l2CallValue },
       destAddr,
       callDataHex,
       l2ChainID,

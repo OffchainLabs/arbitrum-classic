@@ -105,64 +105,69 @@ export class L2Bridge {
     this.arbRetryableTx = this.arbRetryableTx.connect(newSigner)
   }
 
+  // CHRIS: on the bridger now
   /**
    * Initiate Ether withdrawal (via ArbSys)
    */
-  public async withdrawETH(
-    value: BigNumber,
-    destinationAddress?: string,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    const address = destinationAddress || (await this.getWalletAddress())
-    return this.arbSys.functions.withdrawEth(address, {
-      value,
-      ...overrides,
-    })
-  }
+  // public async withdrawETH(
+  //   value: BigNumber,
+  //   destinationAddress?: string,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   const address = destinationAddress || (await this.getWalletAddress())
+  //   return this.arbSys.functions.withdrawEth(address, {
+  //     value,
+  //     ...overrides,
+  //   })
+  // }
 
-  public async estimateGasWithdrawETH(
-    value: BigNumber,
-    destinationAddress?: string,
-    overrides: PayableOverrides = {}
-  ): Promise<BigNumber> {
-    const address = destinationAddress || (await this.getWalletAddress())
-    return this.arbSys.estimateGas.withdrawEth(address, {
-      value,
-      ...overrides,
-    })
-  }
+  // CHRIS: now on ethbridger
+  // public async estimateGasWithdrawETH(
+  //   value: BigNumber,
+  //   destinationAddress?: string,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<BigNumber> {
+  //   const address = destinationAddress || (await this.getWalletAddress())
+  //   return this.arbSys.estimateGas.withdrawEth(address, {
+  //     value,
+  //     ...overrides,
+  //   })
+  // }
 
   public getLatestBlock(): Promise<Block> {
     return this.l2Provider.getBlock('latest')
   }
+
+  // CHRIS: now on bridger
   /**
    * Initiate token withdrawal (via l2ERC20Gateway)
    */
-  public async withdrawERC20(
-    erc20l1Address: string,
-    amount: BigNumber,
-    destinationAddress?: string,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    const to = destinationAddress || (await this.getWalletAddress())
+  // public async withdrawERC20(
+  //   erc20l1Address: string,
+  //   amount: BigNumber,
+  //   destinationAddress?: string,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   const to = destinationAddress || (await this.getWalletAddress())
 
-    return this.l2GatewayRouter.functions[
-      'outboundTransfer(address,address,uint256,bytes)'
-    ](erc20l1Address, to, amount, '0x', overrides)
-  }
+  //   return this.l2GatewayRouter.functions[
+  //     'outboundTransfer(address,address,uint256,bytes)'
+  //   ](erc20l1Address, to, amount, '0x', overrides)
+  // }
 
-  public async estimateGasWithdrawERC20(
-    erc20l1Address: string,
-    amount: BigNumber,
-    destinationAddress?: string,
-    overrides: PayableOverrides = {}
-  ): Promise<BigNumber> {
-    const to = destinationAddress || (await this.getWalletAddress())
+  // CHRIS: now on bridger
+  // public async estimateGasWithdrawERC20(
+  //   erc20l1Address: string,
+  //   amount: BigNumber,
+  //   destinationAddress?: string,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<BigNumber> {
+  //   const to = destinationAddress || (await this.getWalletAddress())
 
-    return this.l2GatewayRouter.estimateGas[
-      'outboundTransfer(address,address,uint256,bytes)'
-    ](erc20l1Address, to, amount, '0x', overrides)
-  }
+  //   return this.l2GatewayRouter.estimateGas[
+  //     'outboundTransfer(address,address,uint256,bytes)'
+  //   ](erc20l1Address, to, amount, '0x', overrides)
+  // }
 
   public async getL2TokenData(l2ERC20Address: string): Promise<L2TokenData> {
     const walletAddress = await this.getWalletAddress()
@@ -182,23 +187,25 @@ export class L2Bridge {
     }
   }
 
-  public async getGatewayAddress(erc20L1Address: string): Promise<string> {
-    return (await this.l2GatewayRouter.functions.getGateway(erc20L1Address))
-      .gateway
-  }
+  // CHRIS: now on token bridger
+  // public async getGatewayAddress(erc20L1Address: string): Promise<string> {
+  //   return (await this.l2GatewayRouter.functions.getGateway(erc20L1Address))
+  //     .gateway
+  // }
 
-  public getERC20L1Address(erc20L2Address: string): Promise<string | null> {
-    const arbERC20 = StandardArbERC20__factory.connect(
-      erc20L2Address,
-      this.l2Signer
-    )
-    return arbERC20.functions
-      .l1Address()
-      .then(([res]) => res)
-      .catch(e => {
-        return null
-      })
-  }
+  // CHRIS: now on token bridger
+  // public getERC20L1Address(erc20L2Address: string): Promise<string | null> {
+  //   const arbERC20 = StandardArbERC20__factory.connect(
+  //     erc20L2Address,
+  //     this.l2Signer
+  //   )
+  //   return arbERC20.functions
+  //     .l1Address()
+  //     .then(([res]) => res)
+  //     .catch(e => {
+  //       return null
+  //     })
+  // }
 
   public getTxnSubmissionPrice(
     dataSize: BigNumber | number
@@ -214,9 +221,9 @@ export class L2Bridge {
     return this.walletAddressCache
   }
 
-  public getL2EthBalance(): Promise<BigNumber> {
-    return this.l2Signer.getBalance()
-  }
+  // public getL2EthBalance(): Promise<BigNumber> {
+  //   return this.l2Signer.getBalance()
+  // }
 
   public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
     const multicall = ArbMulticall2__factory.connect(

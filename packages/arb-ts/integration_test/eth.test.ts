@@ -48,48 +48,51 @@ describe('Ether', async () => {
   })
 
   it('transfers ether on l2', async () => {
-    const { bridge } = await instantiateBridgeWithRandomWallet()
-    await fundL2(bridge)
+    const { l2Signer } = await instantiateBridgeWithRandomWallet()
+    await fundL2(l2Signer)
     const randomAddress = Wallet.createRandom().address
     const amountToSend = parseEther('0.000005')
-    const res = await bridge.l2Signer.sendTransaction({
+    const res = await l2Signer.sendTransaction({
       to: randomAddress,
       value: amountToSend,
     })
     const rec = await res.wait()
 
     expect(rec.status).to.equal(1, 'ether transfer failed')
-    const newBalance = await bridge.l2Provider.getBalance(randomAddress)
+    const newBalance = await l2Signer.provider.getBalance(randomAddress)
     expect(newBalance.eq(amountToSend), "ether balance didn't update").to.be
       .true
   })
   it('deposits ether', async () => {
-    const { bridge } = await instantiateBridgeWithRandomWallet()
-    await fundL1(bridge)
+    const {
+      ethBridger,
+      l1Signer,
+      l2Signer,
+    } = await instantiateBridgeWithRandomWallet()
+    await fundL1(l1Signer)
 
-    const inbox = await bridge.l1Bridge.getInbox()
+    const inboxAddress = ethBridger.l2Network.ethBridge.inbox
 
-    const initialInboxBalance = await bridge.l1Bridge.l1Provider.getBalance(
-      inbox.address
-    )
+    const initialInboxBalance = await l1Signer.provider.getBalance(inboxAddress)
     const ethToDeposit = parseEther('0.0002')
-    const res = await bridge.depositETH(ethToDeposit)
+    const res = await ethBridger.deposit({
+      amount: ethToDeposit,
+      l1Signer: l1Signer,
+      l2Provider: l2Signer.provider!,
+    })
     const rec = await res.wait()
 
     expect(rec.status).to.equal(1, 'eth deposit L1 txn failed')
-    const finalInboxBalance = await bridge.l1Bridge.l1Provider.getBalance(
-      inbox.address
-    )
+    const finalInboxBalance = await l1Signer.provider.getBalance(inboxAddress)
     expect(
       initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),
       'balance failed to update after eth deposit'
     )
 
     const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
-      bridge.l2Provider
+      l2Signer.provider
     )
 
-    // const seqNumArr = await bridge.getInboxSeqNumFromContractTransaction(rec)
     if (messages === undefined) {
       throw new Error('no messages')
     }
@@ -109,7 +112,7 @@ describe('Ether', async () => {
     for (let i = 0; i < 60; i++) {
       prettyLog('balance check attempt ' + (i + 1))
       await wait(5000)
-      const testWalletL2EthBalance = await bridge.getL2EthBalance()
+      const testWalletL2EthBalance = await l2Signer.getBalance()
       if (testWalletL2EthBalance.gt(Zero)) {
         prettyLog(`balance updated!  ${testWalletL2EthBalance.toString()}`)
         expect(true).to.be.true
@@ -121,18 +124,25 @@ describe('Ether', async () => {
   })
 
   it('withdraw Ether transaction succeeds', async () => {
-    const { bridge } = await instantiateBridgeWithRandomWallet()
-    await fundL2(bridge)
+    const {
+      l2Signer,
+      l1Signer,
+      ethBridger,
+    } = await instantiateBridgeWithRandomWallet()
+    await fundL2(l2Signer)
     const ethToWithdraw = parseEther('0.00002')
 
-    const initialBalance = await bridge.l2Bridge.getL2EthBalance()
+    const initialBalance = await l2Signer.getBalance()
 
-    const withdrawEthRes = await bridge.withdrawETH(ethToWithdraw)
+    const withdrawEthRes = await ethBridger.withdraw({
+      amount: ethToWithdraw,
+      l2Signer: l2Signer,
+    })
     const withdrawEthRec = await withdrawEthRes.wait()
 
     const arbGasInfo = ArbGasInfo__factory.connect(
       ARB_GAS_INFO,
-      bridge.l2Provider
+      l2Signer.provider
     )
     expect(withdrawEthRec.status).to.equal(
       1,
@@ -144,7 +154,7 @@ describe('Ether', async () => {
     })
     const withdrawMessage = (
       await new L2TransactionReceipt(withdrawEthRec).getL2ToL1Messages(
-        bridge.l1Provider
+        l2Signer.provider
       )
     )[0]
     expect(
@@ -152,11 +162,11 @@ describe('Ether', async () => {
       'eth withdraw getWithdrawalsInL2Transaction query came back empty'
     ).to.exist
 
-    const myAddress = await bridge.l1Signer.getAddress()
+    const myAddress = await l1Signer.getAddress()
 
     // CHRIS: convenience method for this
     const withdrawEvents = await L2ToL1Message.getL2ToL1MessageLogs(
-      bridge.l2Provider,
+      l2Signer.provider,
       {
         fromBlock: withdrawEthRec.blockNumber,
         topics: [hexZeroPad(myAddress, 32)],
@@ -175,7 +185,7 @@ describe('Ether', async () => {
       `eth withdraw getOutGoingMessageState returned ${outgoingMessageState}`
     ).to.be.true
 
-    const etherBalance = await bridge.getL2EthBalance()
+    const etherBalance = await l2Signer.getBalance()
 
     const totalEth = etherBalance
       .add(ethToWithdraw)

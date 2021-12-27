@@ -37,12 +37,15 @@ import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks, { Network } from './networks'
 import { L1ERC20Gateway, L1GatewayRouter, ERC20__factory, ERC20 } from './abi'
 
-interface RetryableGasArgs {
-  maxSubmissionPrice?: BigNumber
+export interface RetryableGasArgs {
   maxGas?: BigNumber
-  gasPriceBid?: BigNumber
-  maxSubmissionPricePercentIncrease?: BigNumber
   maxGasPercentIncrease?: BigNumber
+  
+  maxSubmissionPrice?: BigNumber
+  
+  maxSubmissionPricePercentIncrease?: BigNumber
+  
+  gasPriceBid?: BigNumber
 }
 
 interface InitOptions {
@@ -52,7 +55,7 @@ interface InitOptions {
   }
 }
 
-interface DepositInputParams {
+export interface DepositInputParams {
   erc20L1Address: string
   amount: BigNumber
   retryableGasArgs?: RetryableGasArgs
@@ -166,9 +169,10 @@ export class Bridge {
     return this.l1Bridge.l1GatewayRouter
   }
 
-  defaultL1Gateway(): Promise<L1ERC20Gateway> {
-    return this.l1Bridge.getDefaultL1Gateway()
-  }
+  // CHRIS: now on bridger
+  // defaultL1Gateway(): Promise<L1ERC20Gateway> {
+  //   return this.l1Bridge.getDefaultL1Gateway()
+  // }
   get l1Signer(): Signer {
     return this.l1Bridge.l1Signer
   }
@@ -182,287 +186,294 @@ export class Bridge {
     return this.l2Bridge.l2Signer
   }
 
-  /**
-   * Set allowance for L1 router contract
-   */
-  public async approveToken(
-    erc20L1Address: string,
-    amount?: BigNumber,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    return this.l1Bridge.approveToken(erc20L1Address, amount, overrides)
-  }
+  // CHRIS: now on bridger
+  // /**
+  //  * Set allowance for L1 router contract
+  //  */
+  // public async approveToken(
+  //   erc20L1Address: string,
+  //   amount?: BigNumber,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   return this.l1Bridge.approveToken(erc20L1Address, amount, overrides)
+  // }
 
+  // CHRIS: now on eth bridger
   /**
    * Deposit ether from L1 to L2.
    */
-  public async depositETH(
-    value: BigNumber,
-    _maxSubmissionPricePercentIncrease?: BigNumber,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    const maxSubmissionPricePercentIncrease =
-      _maxSubmissionPricePercentIncrease || DEFAULT_SUBMISSION_PERCENT_INCREASE
+  // public async depositETH(
+  //   value: BigNumber,
+  //   _maxSubmissionPricePercentIncrease?: BigNumber,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   const maxSubmissionPricePercentIncrease =
+  //     _maxSubmissionPricePercentIncrease || DEFAULT_SUBMISSION_PERCENT_INCREASE
 
-    const maxSubmissionPrice = BridgeHelper.percentIncrease(
-      (await this.l2Bridge.getTxnSubmissionPrice(0))[0],
-      maxSubmissionPricePercentIncrease
-    )
+  //   const maxSubmissionPrice = BridgeHelper.percentIncrease(
+  //     (await this.l2Bridge.getTxnSubmissionPrice(0))[0],
+  //     maxSubmissionPricePercentIncrease
+  //   )
 
-    return this.l1Bridge.depositETH(value, maxSubmissionPrice, overrides)
-  }
+  //   return this.l1Bridge.depositETH(value, maxSubmissionPrice, overrides)
+  // }
 
-  private async looksLikeWethGateway(potentialWethGatewayAddress: string) {
-    try {
-      const potentialWethGateway = L1WethGateway__factory.connect(
-        potentialWethGatewayAddress,
-        this.l1Provider
-      )
-      await potentialWethGateway.l1Weth()
-      return true
-    } catch (err) {
-      if (
-        err instanceof Error &&
-        isError(err) &&
-        err.code === Logger.errors.CALL_EXCEPTION
-      ) {
-        return false
-      } else {
-        throw err
-      }
-    }
-  }
+  //CHRIS: moved to erc20 bridger
+  // private async looksLikeWethGateway(potentialWethGatewayAddress: string) {
+  //   try {
+  //     const potentialWethGateway = L1WethGateway__factory.connect(
+  //       potentialWethGatewayAddress,
+  //       this.l1Provider
+  //     )
+  //     await potentialWethGateway.l1Weth()
+  //     return true
+  //   } catch (err) {
+  //     if (
+  //       err instanceof Error &&
+  //       isError(err) &&
+  //       err.code === Logger.errors.CALL_EXCEPTION
+  //     ) {
+  //       return false
+  //     } else {
+  //       throw err
+  //     }
+  //   }
+  // }
 
-  public async getRetryableTxnParams(
-    callDataHex: string,
-    sender: string,
-    destinationAddress: string,
-    _l2CallValue?: BigNumber,
-    options: RetryableParamsOptions = {}
-  ): Promise<{
-    gasPriceBid: BigNumber
-    submissionPriceBid: any
-    maxGasBid: any
-    totalDepositValue: any
-  }> {
-    const maxGasPriceIncrease =
-      options.maxGasPricePercentIncrease || BigNumber.from(0)
-    const maxGasIncrease = options.maxGasPercentIncrease || BigNumber.from(0)
-    const maxSubmissionFeeIncrease =
-      options.maxSubmissionFeePercentIncrease ||
-      DEFAULT_SUBMISSION_PERCENT_INCREASE
-    const l2CallValue = _l2CallValue || BigNumber.from(0)
+  // CHRIS: should be put on base asset bridger - this is already on the estimator?
+  // public async getRetryableTxnParams(
+  //   callDataHex: string,
+  //   sender: string,
+  //   destinationAddress: string,
+  //   _l2CallValue?: BigNumber,
+  //   options: RetryableParamsOptions = {}
+  // ): Promise<{
+  //   gasPriceBid: BigNumber
+  //   submissionPriceBid: any
+  //   maxGasBid: any
+  //   totalDepositValue: any
+  // }> {
+  //   const maxGasPriceIncrease =
+  //     options.maxGasPricePercentIncrease || BigNumber.from(0)
+  //   const maxGasIncrease = options.maxGasPercentIncrease || BigNumber.from(0)
+  //   const maxSubmissionFeeIncrease =
+  //     options.maxSubmissionFeePercentIncrease ||
+  //     DEFAULT_SUBMISSION_PERCENT_INCREASE
+  //   const l2CallValue = _l2CallValue || BigNumber.from(0)
 
-    const includeL2Callvalue =
-      typeof options.includeL2Callvalue === 'boolean'
-        ? options.includeL2Callvalue
-        : true
+  //   const includeL2Callvalue =
+  //     typeof options.includeL2Callvalue === 'boolean'
+  //       ? options.includeL2Callvalue
+  //       : true
 
-    const gasPriceBid = BridgeHelper.percentIncrease(
-      await this.l2Provider.getGasPrice(),
-      maxGasPriceIncrease
-    )
+  //   const gasPriceBid = BridgeHelper.percentIncrease(
+  //     await this.l2Provider.getGasPrice(),
+  //     maxGasPriceIncrease
+  //   )
 
-    const submissionPrice = (
-      await this.l2Bridge.getTxnSubmissionPrice(
-        utils.hexDataLength(callDataHex)
-      )
-    )[0]
-    const submissionPriceBid = BridgeHelper.percentIncrease(
-      submissionPrice,
-      maxSubmissionFeeIncrease
-    )
+  //   const submissionPrice = (
+  //     await this.l2Bridge.getTxnSubmissionPrice(
+  //       utils.hexDataLength(callDataHex)
+  //     )
+  //   )[0]
+  //   const submissionPriceBid = BridgeHelper.percentIncrease(
+  //     submissionPrice,
+  //     maxSubmissionFeeIncrease
+  //   )
 
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      this.l2Provider
-    )
+  //   const nodeInterface = NodeInterface__factory.connect(
+  //     NODE_INTERFACE_ADDRESS,
+  //     this.l2Provider
+  //   )
 
-    const maxGas = (
-      await nodeInterface.estimateRetryableTicket(
-        sender,
-        parseEther('1').add(
-          l2CallValue
-        ) /** we add a 1 ether "deposit" buffer to pay for execution in the gas estimation  */,
-        destinationAddress,
-        l2CallValue,
-        submissionPriceBid,
-        sender,
-        sender,
-        0,
-        gasPriceBid,
-        callDataHex
-      )
-    )[0]
+  //   const maxGas = (
+  //     await nodeInterface.estimateRetryableTicket(
+  //       sender,
+  //       parseEther('1').add(
+  //         l2CallValue
+  //       ) /** we add a 1 ether "deposit" buffer to pay for execution in the gas estimation  */,
+  //       destinationAddress,
+  //       l2CallValue,
+  //       submissionPriceBid,
+  //       sender,
+  //       sender,
+  //       0,
+  //       gasPriceBid,
+  //       callDataHex
+  //     )
+  //   )[0]
 
-    const maxGasBid = BridgeHelper.percentIncrease(maxGas, maxGasIncrease)
+  //   const maxGasBid = BridgeHelper.percentIncrease(maxGas, maxGasIncrease)
 
-    let totalDepositValue = submissionPriceBid.add(gasPriceBid.mul(maxGas))
-    if (includeL2Callvalue) {
-      totalDepositValue = totalDepositValue.add(l2CallValue)
-    }
-    return {
-      gasPriceBid,
-      submissionPriceBid,
-      maxGasBid,
-      totalDepositValue,
-    }
-  }
+  //   let totalDepositValue = submissionPriceBid.add(gasPriceBid.mul(maxGas))
+  //   if (includeL2Callvalue) {
+  //     totalDepositValue = totalDepositValue.add(l2CallValue)
+  //   }
+  //   return {
+  //     gasPriceBid,
+  //     submissionPriceBid,
+  //     maxGasBid,
+  //     totalDepositValue,
+  //   }
+  // }
 
-  public async getDepositTxParams(
-    {
-      erc20L1Address,
-      amount,
-      retryableGasArgs = {},
-      destinationAddress,
-    }: DepositInputParams,
-    overrides: PayableOverrides = {}
-  ): Promise<DepositParams> {
-    const {
-      l1WethGateway: l1WethGatewayAddress,
-      l1CustomGateway: l1CustomGatewayAddress,
-    } = this.l1Bridge.network.tokenBridge
+  // CHRIS: now on bridger
+  // public async getDepositTxParams(
+  //   {
+  //     erc20L1Address,
+  //     amount,
+  //     retryableGasArgs = {},
+  //     destinationAddress,
+  //   }: DepositInputParams,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<DepositParams> {
+  //   const {
+  //     l1WethGateway: l1WethGatewayAddress,
+  //     l1CustomGateway: l1CustomGatewayAddress,
+  //   } = this.l1Bridge.network.tokenBridge
 
-    // 1. Get gas price
-    const gasPriceBid =
-      retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
+  //   // 1. Get gas price
+  //   const gasPriceBid =
+  //     retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
 
-    const l1GatewayAddress = await this.l1Bridge.getGatewayAddress(
-      erc20L1Address
-    )
+  //   const l1GatewayAddress = await this.l1Bridge.getGatewayAddress(
+  //     erc20L1Address
+  //   )
 
-    // 2. Get submission price (this depends on size of calldata used in deposit)
-    const l1Gateway = L1ERC20Gateway__factory.connect(
-      l1GatewayAddress,
-      this.l1Provider
-    )
-    const sender = await this.l1Bridge.getWalletAddress()
-    const to = destinationAddress ? destinationAddress : sender
-    const depositCalldata = await l1Gateway.getOutboundCalldata(
-      erc20L1Address,
-      sender,
-      to,
-      amount,
-      '0x'
-    )
+  //   // 2. Get submission price (this depends on size of calldata used in deposit)
+  //   const l1Gateway = L1ERC20Gateway__factory.connect(
+  //     l1GatewayAddress,
+  //     this.l1Provider
+  //   )
+  //   const sender = await this.l1Bridge.getWalletAddress()
+  //   const to = destinationAddress ? destinationAddress : sender
+  //   const depositCalldata = await l1Gateway.getOutboundCalldata(
+  //     erc20L1Address,
+  //     sender,
+  //     to,
+  //     amount,
+  //     '0x'
+  //   )
 
-    const maxSubmissionPricePercentIncrease =
-      retryableGasArgs.maxSubmissionPricePercentIncrease ||
-      DEFAULT_SUBMISSION_PERCENT_INCREASE
+  //   const maxSubmissionPricePercentIncrease =
+  //     retryableGasArgs.maxSubmissionPricePercentIncrease ||
+  //     DEFAULT_SUBMISSION_PERCENT_INCREASE
 
-    const maxSubmissionPrice = BridgeHelper.percentIncrease(
-      (
-        await this.l2Bridge.getTxnSubmissionPrice(depositCalldata.length - 2)
-      )[0],
-      maxSubmissionPricePercentIncrease
-    )
+  //   const maxSubmissionPrice = BridgeHelper.percentIncrease(
+  //     (
+  //       await this.l2Bridge.getTxnSubmissionPrice(depositCalldata.length - 2)
+  //     )[0],
+  //     maxSubmissionPricePercentIncrease
+  //   )
 
-    // 3. Estimate gas
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      this.l2Provider
-    )
-    const l2Dest = await l1Gateway.counterpartGateway()
+  //   // 3. Estimate gas
+  //   const nodeInterface = NodeInterface__factory.connect(
+  //     NODE_INTERFACE_ADDRESS,
+  //     this.l2Provider
+  //   )
+  //   const l2Dest = await l1Gateway.counterpartGateway()
 
-    /** The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
-     * Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
-     */
-    const estimateGasCallValue = await (async () => {
-      if (this.isCustomNetwork) {
-        // For custom network, we do an ad-hoc check to see if it's a WETH gateway
-        if (await this.looksLikeWethGateway(l1GatewayAddress)) {
-          return amount
-        }
-        // ...otherwise we directly check it against the config file
-      } else if (l1WethGatewayAddress === l1GatewayAddress) {
-        return amount
-      }
+  //   /** The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+  //    * Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
+  //    */
+  //   const estimateGasCallValue = await (async () => {
+  //     if (this.isCustomNetwork) {
+  //       // For custom network, we do an ad-hoc check to see if it's a WETH gateway
+  //       if (await this.looksLikeWethGateway(l1GatewayAddress)) {
+  //         return amount
+  //       }
+  //       // ...otherwise we directly check it against the config file
+  //     } else if (l1WethGatewayAddress === l1GatewayAddress) {
+  //       return amount
+  //     }
 
-      return Zero
-    })()
+  //     return Zero
+  //   })()
 
-    let maxGas =
-      retryableGasArgs.maxGas ||
-      BridgeHelper.percentIncrease(
-        (
-          await nodeInterface.estimateRetryableTicket(
-            l1GatewayAddress,
-            parseEther('0.05').add(
-              estimateGasCallValue
-            ) /** we add a 0.05 "deposit" buffer to pay for execution in the gas estimation  */,
-            l2Dest,
-            estimateGasCallValue,
-            maxSubmissionPrice,
-            sender,
-            sender,
-            0,
-            gasPriceBid,
-            depositCalldata
-          )
-        )[0],
-        retryableGasArgs.maxGasPercentIncrease ||
-          BigNumber.from(DEFAULT_MAX_GAS_PERCENT_INCREASE)
-      )
-    if (
-      l1GatewayAddress === l1CustomGatewayAddress &&
-      maxGas.lt(MIN_CUSTOM_DEPOSIT_MAXGAS)
-    ) {
-      // For insurance, we set a sane minimum max gas for the custom gateway
-      maxGas = MIN_CUSTOM_DEPOSIT_MAXGAS
-    }
-    // 4. Calculate total required callvalue
-    let totalEthCallvalueToSend = overrides && (await overrides.value)
-    if (
-      !totalEthCallvalueToSend ||
-      BigNumber.from(totalEthCallvalueToSend).isZero()
-    ) {
-      totalEthCallvalueToSend = await maxSubmissionPrice.add(
-        gasPriceBid.mul(maxGas)
-      )
-    }
+  //   let maxGas =
+  //     retryableGasArgs.maxGas ||
+  //     BridgeHelper.percentIncrease(
+  //       (
+  //         await nodeInterface.estimateRetryableTicket(
+  //           l1GatewayAddress,
+  //           parseEther('0.05').add(
+  //             estimateGasCallValue
+  //           ) /** we add a 0.05 "deposit" buffer to pay for execution in the gas estimation  */,
+  //           l2Dest,
+  //           estimateGasCallValue,
+  //           maxSubmissionPrice,
+  //           sender,
+  //           sender,
+  //           0,
+  //           gasPriceBid,
+  //           depositCalldata
+  //         )
+  //       )[0],
+  //       retryableGasArgs.maxGasPercentIncrease ||
+  //         BigNumber.from(DEFAULT_MAX_GAS_PERCENT_INCREASE)
+  //     )
+  //   if (
+  //     l1GatewayAddress === l1CustomGatewayAddress &&
+  //     maxGas.lt(MIN_CUSTOM_DEPOSIT_MAXGAS)
+  //   ) {
+  //     // For insurance, we set a sane minimum max gas for the custom gateway
+  //     maxGas = MIN_CUSTOM_DEPOSIT_MAXGAS
+  //   }
+  //   // 4. Calculate total required callvalue
+  //   let totalEthCallvalueToSend = overrides && (await overrides.value)
+  //   if (
+  //     !totalEthCallvalueToSend ||
+  //     BigNumber.from(totalEthCallvalueToSend).isZero()
+  //   ) {
+  //     totalEthCallvalueToSend = await maxSubmissionPrice.add(
+  //       gasPriceBid.mul(maxGas)
+  //     )
+  //   }
 
-    return {
-      maxGas,
-      gasPriceBid,
-      l1CallValue: BigNumber.from(totalEthCallvalueToSend),
-      maxSubmissionCost: maxSubmissionPrice,
-      destinationAddress: to,
-      amount,
-      erc20L1Address,
-    }
-  }
+  //   return {
+  //     maxGas,
+  //     gasPriceBid,
+  //     l1CallValue: BigNumber.from(totalEthCallvalueToSend),
+  //     maxSubmissionCost: maxSubmissionPrice,
+  //     destinationAddress: to,
+  //     amount,
+  //     erc20L1Address,
+  //   }
+  // }
 
+  // CHRIS: now on bridger
   /**
    * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
    */
-  public async deposit(
-    params: DepositParams | DepositInputParams,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    const depositInput: DepositParams = isDepositInputParams(params)
-      ? await this.getDepositTxParams(params)
-      : params
+  // public async deposit(
+  //   params: DepositParams | DepositInputParams,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   const depositInput: DepositParams = isDepositInputParams(params)
+  //     ? await this.getDepositTxParams(params)
+  //     : params
 
-    return this.l1Bridge.deposit(depositInput, overrides)
-  }
+  //   return this.l1Bridge.deposit(depositInput, overrides)
+  // }
 
-  public async estimateGasDeposit(
-    params: DepositParams | DepositInputParams,
-    overrides: PayableOverrides = {}
-  ): Promise<BigNumber> {
-    const depositInput: DepositParams = isDepositInputParams(params)
-      ? await this.getDepositTxParams(params)
-      : params
-    return this.l1Bridge.estimateGasDeposit(depositInput, overrides)
-  }
+  // CHRIS: now on brider?
+  // public async estimateGasDeposit(
+  //   params: DepositParams | DepositInputParams,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<BigNumber> {
+  //   const depositInput: DepositParams = isDepositInputParams(params)
+  //     ? await this.getDepositTxParams(params)
+  //     : params
+  //   return this.l1Bridge.estimateGasDeposit(depositInput, overrides)
+  // }
 
-  public async getL1EthBalance(): Promise<BigNumber> {
-    return this.l1Bridge.getL1EthBalance()
-  }
+  // public async getL1EthBalance(): Promise<BigNumber> {
+  //   return this.l1Bridge.getL1EthBalance()
+  // }
 
-  public async getL2EthBalance(): Promise<BigNumber> {
-    return this.l2Bridge.getL2EthBalance()
-  }
+  // public async getL2EthBalance(): Promise<BigNumber> {
+  //   return this.l2Bridge.getL2EthBalance()
+  // }
 
   // public getL2Transaction(
   //   l2TransactionHash: string
@@ -731,43 +742,44 @@ export class Bridge {
   //   return this.l2Bridge.arbRetryableTx.cancel(redemptionTxHash, overrides)
   // }
 
-  /**
-   * All withdrawals from given token
-   */
-  public async getTokenWithdrawEventData(
-    l1TokenAddress: string,
-    fromAddress?: string,
-    filter?: Filter
-  ): Promise<WithdrawalInitiated[]> {
-    const gatewayAddress = await this.l2Bridge.l2GatewayRouter.getGateway(
-      l1TokenAddress
-    )
+  // /**
+  //  * All withdrawals from given token
+  //  */
+  // public async getTokenWithdrawEventData(
+  //   l1TokenAddress: string,
+  //   fromAddress?: string,
+  //   filter?: Filter
+  // ): Promise<WithdrawalInitiated[]> {
+  //   const gatewayAddress = await this.l2Bridge.l2GatewayRouter.getGateway(
+  //     l1TokenAddress
+  //   )
 
-    return BridgeHelper.getTokenWithdrawEventData(
-      this.l2Provider,
-      gatewayAddress,
-      l1TokenAddress,
-      fromAddress,
-      filter
-    )
-  }
+  //   return BridgeHelper.getTokenWithdrawEventData(
+  //     this.l2Provider,
+  //     gatewayAddress,
+  //     l1TokenAddress,
+  //     fromAddress,
+  //     filter
+  //   )
+  // }
 
-  /**
-   * All withdrawals from given gateway
-   */
-  public async getGatewayWithdrawEventData(
-    gatewayAddress: string,
-    fromAddress?: string,
-    filter?: Filter
-  ): Promise<WithdrawalInitiated[]> {
-    return BridgeHelper.getTokenWithdrawEventData(
-      this.l2Provider,
-      gatewayAddress,
-      undefined,
-      fromAddress,
-      filter
-    )
-  }
+  // CHRIS: now on token bridger
+  // /**
+  //  * All withdrawals from given gateway
+  //  */
+  // public async getGatewayWithdrawEventData(
+  //   gatewayAddress: string,
+  //   fromAddress?: string,
+  //   filter?: Filter
+  // ): Promise<WithdrawalInitiated[]> {
+  //   return BridgeHelper.getTokenWithdrawEventData(
+  //     this.l2Provider,
+  //     gatewayAddress,
+  //     undefined,
+  //     fromAddress,
+  //     filter
+  //   )
+  // }
 
   // public async getL2ToL1EventData(
   //   fromAddress: string,
@@ -822,37 +834,39 @@ export class Bridge {
   //   )
   // }
 
-  public async getERC20L2Address(erc20L1Address: string): Promise<string> {
-    return this.l1Bridge.getERC20L2Address(erc20L1Address)
-  }
+  // public async getERC20L2Address(erc20L1Address: string): Promise<string> {
+  //   return this.l1Bridge.getERC20L2Address(erc20L1Address)
+  // }
 
-  public async getERC20L1Address(
-    erc20L2Address: string
-  ): Promise<string | null> {
-    return this.l2Bridge.getERC20L1Address(erc20L2Address)
-  }
+  // public async getERC20L1Address(
+  //   erc20L2Address: string
+  // ): Promise<string | null> {
+  //   return this.l2Bridge.getERC20L1Address(erc20L2Address)
+  // }
 
-  public async withdrawETH(
-    value: BigNumber,
-    destinationAddress?: string,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    return this.l2Bridge.withdrawETH(value, destinationAddress, overrides)
-  }
+  // CHRIS: now on eth bridger
+  // public async withdrawETH(
+  //   value: BigNumber,
+  //   destinationAddress?: string,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   return this.l2Bridge.withdrawETH(value, destinationAddress, overrides)
+  // }
 
-  public async withdrawERC20(
-    erc20l1Address: string,
-    amount: BigNumber,
-    destinationAddress?: string,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    return this.l2Bridge.withdrawERC20(
-      erc20l1Address,
-      amount,
-      destinationAddress,
-      overrides
-    )
-  }
+  // CHRIS: moved to bridger
+  // public async withdrawERC20(
+  //   erc20l1Address: string,
+  //   amount: BigNumber,
+  //   destinationAddress?: string,
+  //   overrides: PayableOverrides = {}
+  // ): Promise<ContractTransaction> {
+  //   return this.l2Bridge.withdrawERC20(
+  //     erc20l1Address,
+  //     amount,
+  //     destinationAddress,
+  //     overrides
+  //   )
+  // }
 
   public isWhiteListed(
     address: string,
@@ -865,6 +879,7 @@ export class Bridge {
     )
   }
 
+  // CHRIS: l1Signer, l2Provider
   public async setGateways(
     tokenAddresses: string[],
     gatewayAddresses: string[]
@@ -888,6 +903,7 @@ export class Bridge {
       }
     )
   }
+  // CHRIS: l1Provider
   public async getL1GatewaySetEventData(
     _l1GatewayRouterAddress?: string
   ): Promise<GatewaySet[]> {
@@ -906,6 +922,7 @@ export class Bridge {
     )
   }
 
+  // CHRIS: l2Provider
   public async getL2GatewaySetEventData(
     _l2GatewayRouterAddress?: string
   ): Promise<GatewaySet[]> {
@@ -924,26 +941,27 @@ export class Bridge {
     )
   }
 
-  public async getTokenBalanceBatch(
-    userAddr: string,
-    tokenAddrs: Array<string>,
-    targetNetwork: 'L1' | 'L2'
-  ): Promise<Array<{ tokenAddr: string; balance: BigNumber | undefined }>> {
-    const iface = ERC20__factory.createInterface()
+  // CHRIS: now on token bridger
+  // public async getTokenBalanceBatch(
+  //   userAddr: string,
+  //   tokenAddrs: Array<string>,
+  //   targetNetwork: 'L1' | 'L2'
+  // ): Promise<Array<{ tokenAddr: string; balance: BigNumber | undefined }>> {
+  //   const iface = ERC20__factory.createInterface()
 
-    const balanceCalls = tokenAddrs.map(token => ({
-      target: token,
-      funcFragment: iface.functions['balanceOf(address)'],
-      values: [userAddr],
-    }))
+  //   const balanceCalls = tokenAddrs.map(token => ({
+  //     target: token,
+  //     funcFragment: iface.functions['balanceOf(address)'],
+  //     values: [userAddr],
+  //   }))
 
-    type ExpectedReturnType = Await<ReturnType<ERC20['functions']['balanceOf']>>
+  //   type ExpectedReturnType = Await<ReturnType<ERC20['functions']['balanceOf']>>
 
-    const bridge = targetNetwork === 'L1' ? this.l1Bridge : this.l2Bridge
-    const res = await bridge.getMulticallAggregate(balanceCalls)
-    return res.map((bal, index) => ({
-      tokenAddr: tokenAddrs[index],
-      balance: bal ? (bal as ExpectedReturnType)[0] : undefined,
-    }))
-  }
+  //   const bridge = targetNetwork === 'L1' ? this.l1Bridge : this.l2Bridge
+  //   const res = await bridge.getMulticallAggregate(balanceCalls)
+  //   return res.map((bal, index) => ({
+  //     tokenAddr: tokenAddrs[index],
+  //     balance: bal ? (bal as ExpectedReturnType)[0] : undefined,
+  //   }))
+  // }
 }

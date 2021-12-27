@@ -32,7 +32,7 @@ import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import {
-  SignerOrProviderUtils,
+  SignerProviderUtils,
   SignerOrProvider,
 } from '../utils/signerOrProvider'
 import { wait } from '../utils/lib'
@@ -108,7 +108,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
   public async getL2ToL1Messages<T extends SignerOrProvider>(
     l1SignerOrProvider: T
   ): Promise<L2ToL1MessageReader[] | L2ToL1MessageWriter[]> {
-    const provider = SignerOrProviderUtils.getProvider(l1SignerOrProvider)
+    const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
     if (!provider) throw new Error('Signer not connected to provider.')
 
     const providerNetwork = await provider.getNetwork()

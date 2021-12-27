@@ -42,13 +42,19 @@ describe('WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToWithdraw = parseEther('0.00000001')
 
-    const { bridge, l1Network, l2Network } =
-      await instantiateBridgeWithRandomWallet()
-    await fundL2(bridge)
+    const {
+      bridge,
+      l1Network,
+      l2Network,
+      l1Signer,
+      l2Signer,
+      tokenBridger,
+    } = await instantiateBridgeWithRandomWallet()
+    await fundL2(l2Signer)
 
     const l2Weth = AeWETH__factory.connect(
       l2Network.tokenBridge.l2Weth,
-      bridge.l2Bridge.l2Signer
+      l2Signer
     )
     const res = await l2Weth.deposit({
       value: wethToWrap,
@@ -56,16 +62,17 @@ describe('WETH', async () => {
     const rec = await res.wait()
     expect(rec.status).to.equal(1, 'deposit txn failed')
 
-    const withdrawRes = await bridge.withdrawERC20(
-      l1Network.tokenBridge.l1Weth,
-      wethToWithdraw
-    )
+    const withdrawRes = await tokenBridger.withdraw({
+      amount: wethToWithdraw,
+      erc20l1Address: l1Network.tokenBridge.l1Weth,
+      l2Signer: l2Signer,
+    })
     const withdrawRec = await withdrawRes.wait()
     expect(withdrawRec.status).to.equal(1, 'withdraw txn failed')
 
     const outgoingMessages = await new L2TransactionReceipt(
       withdrawRec
-    ).getL2ToL1Messages(bridge.l2Provider)
+    ).getL2ToL1Messages(l2Signer.provider)
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
       .exist
@@ -86,7 +93,7 @@ describe('WETH', async () => {
       'balance not properly updated after weth withdraw'
     ).to.be.true
 
-    const walletAddress = await bridge.l1Signer.getAddress()
+    const walletAddress = await l1Signer.getAddress()
     const gatewayWithdrawEvents = await bridge.getGatewayWithdrawEventData(
       l2Network.tokenBridge.l2WethGateway,
       walletAddress,
@@ -109,17 +116,23 @@ describe('WETH', async () => {
   })
 
   it('deposits WETH', async () => {
-    const { bridge, l1Network } = await instantiateBridgeWithRandomWallet()
+    const {
+      bridge,
+      l1Network,
+      l1Signer,
+      l2Signer,
+      tokenBridger,
+    } = await instantiateBridgeWithRandomWallet()
     const l1WethAddress = l1Network.tokenBridge.l1Weth
 
     const wethToWrap = parseEther('0.0001')
     const wethToDeposit = parseEther('0.00001')
 
-    await fundL1(bridge)
+    await fundL1(l1Signer)
 
     const l1WETH = AeWETH__factory.connect(
       l1Network.tokenBridge.l1Weth,
-      bridge.l1Signer
+      l1Signer
     )
     const res = await l1WETH.deposit({
       value: wethToWrap,
@@ -127,7 +140,10 @@ describe('WETH', async () => {
     await res.wait()
     prettyLog('wrapped some ether')
 
-    const approveRes = await bridge.approveToken(l1WethAddress)
+    const approveRes = await tokenBridger.approveToken({
+      erc20L1Address: l1WethAddress,
+      l1Signer: l1Signer,
+    })
     const approveRec = await approveRes.wait()
     expect(approveRec.status).to.equal(1, 'allowance txn failed')
 
@@ -135,12 +151,14 @@ describe('WETH', async () => {
     const allowed = data.allowed
     expect(allowed, 'failed to set allowance').to.be.true
 
-    const depositRes = await bridge.deposit({
-      erc20L1Address: l1WethAddress,
+    const depositRes = await tokenBridger.deposit({
       amount: wethToDeposit,
+      erc20L1Address: l1WethAddress,
+      l1Signer: l1Signer,
+      l2Provider: l2Signer.provider,
     })
     const depositRec = await depositRes.wait()
-    await testRetryableTicket(bridge, depositRec)
+    await testRetryableTicket(l1Signer.provider, depositRec)
 
     const l2Data = await bridge.l2Bridge.getL2TokenData(
       l1Network.tokenBridge.l2Weth
