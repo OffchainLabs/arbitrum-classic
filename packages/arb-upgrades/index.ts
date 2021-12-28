@@ -194,7 +194,7 @@ export const initUpgrades = (
           message: `Update already queued up for ${contractName}; would you redeploy it? ('Yes' to redeploy, otherwise we'll skip and used the queued update)`,
           initial: true,
         })
-        if (res.value.trim().toLowerCase() !== 'yes') {
+        if (!res.value) {
           console.log('Skipping redeploy and using the queued update')
           continue
         } else {
@@ -428,7 +428,7 @@ export const initUpgrades = (
     )
     const proxyAdmin = ProxyAdmin__factory.attach(
       deploymentsJsonData.proxyAdminAddress
-    )
+    ).connect(hre.ethers.provider)
     const proxyAdminOwner = await proxyAdmin.owner()
     console.log('proxyAdmin owner:', proxyAdminOwner)
 
@@ -446,7 +446,9 @@ export const initUpgrades = (
       if (isBeacon(contractName)) {
         const UpgradeableBeacon = (
           await hre.ethers.getContractFactory('UpgradeableBeacon')
-        ).attach(deploymentData.proxyAddress)
+        )
+          .attach(deploymentData.proxyAddress)
+          .connect(hre.ethers.provider)
 
         const implementation = await UpgradeableBeacon.implementation()
         const beaconOwner = await UpgradeableBeacon.owner()
@@ -480,7 +482,9 @@ export const initUpgrades = (
       if (isRollupAdminFacet(contractName) || isRollupUserFacet(contractName)) {
         const Rollup = (
           await hre.ethers.getContractFactory(ContractNames.Rollup)
-        ).attach(deploymentsJsonData.contracts.Rollup.proxyAddress)
+        )
+          .attach(deploymentsJsonData.contracts.Rollup.proxyAddress)
+          .connect(hre.ethers.provider)
         const facet = isRollupUserFacet(contractName)
           ? await Rollup.getUserFacet()
           : await Rollup.getAdminFacet()
