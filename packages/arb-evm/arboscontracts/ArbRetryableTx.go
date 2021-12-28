@@ -30,7 +30,7 @@ var (
 
 // ArbRetryableTxMetaData contains all meta data concerning the ArbRetryableTx contract.
 var ArbRetryableTxMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"ticketId\",\"type\":\"bytes32\"}],\"name\":\"Canceled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"ticketId\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newTimeout\",\"type\":\"uint256\"}],\"name\":\"LifetimeExtended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"ticketId\",\"type\":\"bytes32\"}],\"name\":\"Redeemed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"ticketId\",\"type\":\"bytes32\"}],\"name\":\"TicketCreated\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"ticketId\",\"type\":\"bytes32\"}],\"name\":\"cancel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"ticketId\",\"type\":\"bytes32\"}],\"name\":\"getBeneficiary\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"ticketId\",\"type\":\"bytes32\"}],\"name\":\"getKeepalivePrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getLifetime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"calldataSize\",\"type\":\"uint256\"}],\"name\":\"getSubmissionPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"ticketId\",\"type\":\"bytes32\"}],\"name\":\"getTimeout\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"ticketId\",\"type\":\"bytes32\"}],\"name\":\"keepalive\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"redeem\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"}],\"name\":\"Canceled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newTimeout\",\"type\":\"uint256\"}],\"name\":\"LifetimeExtended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"}],\"name\":\"Redeemed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"}],\"name\":\"TicketCreated\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"}],\"name\":\"cancel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"}],\"name\":\"getBeneficiary\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"}],\"name\":\"getKeepalivePrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getLifetime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"calldataSize\",\"type\":\"uint256\"}],\"name\":\"getSubmissionPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"}],\"name\":\"getTimeout\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"}],\"name\":\"keepalive\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"userTxHash\",\"type\":\"bytes32\"}],\"name\":\"redeem\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // ArbRetryableTxABI is the input ABI used to generate the binding from.
@@ -181,10 +181,10 @@ func (_ArbRetryableTx *ArbRetryableTxTransactorRaw) Transact(opts *bind.Transact
 
 // GetBeneficiary is a free data retrieval call binding the contract method 0xba20dda4.
 //
-// Solidity: function getBeneficiary(bytes32 ticketId) view returns(address)
-func (_ArbRetryableTx *ArbRetryableTxCaller) GetBeneficiary(opts *bind.CallOpts, ticketId [32]byte) (common.Address, error) {
+// Solidity: function getBeneficiary(bytes32 userTxHash) view returns(address)
+func (_ArbRetryableTx *ArbRetryableTxCaller) GetBeneficiary(opts *bind.CallOpts, userTxHash [32]byte) (common.Address, error) {
 	var out []interface{}
-	err := _ArbRetryableTx.contract.Call(opts, &out, "getBeneficiary", ticketId)
+	err := _ArbRetryableTx.contract.Call(opts, &out, "getBeneficiary", userTxHash)
 
 	if err != nil {
 		return *new(common.Address), err
@@ -198,24 +198,24 @@ func (_ArbRetryableTx *ArbRetryableTxCaller) GetBeneficiary(opts *bind.CallOpts,
 
 // GetBeneficiary is a free data retrieval call binding the contract method 0xba20dda4.
 //
-// Solidity: function getBeneficiary(bytes32 ticketId) view returns(address)
-func (_ArbRetryableTx *ArbRetryableTxSession) GetBeneficiary(ticketId [32]byte) (common.Address, error) {
-	return _ArbRetryableTx.Contract.GetBeneficiary(&_ArbRetryableTx.CallOpts, ticketId)
+// Solidity: function getBeneficiary(bytes32 userTxHash) view returns(address)
+func (_ArbRetryableTx *ArbRetryableTxSession) GetBeneficiary(userTxHash [32]byte) (common.Address, error) {
+	return _ArbRetryableTx.Contract.GetBeneficiary(&_ArbRetryableTx.CallOpts, userTxHash)
 }
 
 // GetBeneficiary is a free data retrieval call binding the contract method 0xba20dda4.
 //
-// Solidity: function getBeneficiary(bytes32 ticketId) view returns(address)
-func (_ArbRetryableTx *ArbRetryableTxCallerSession) GetBeneficiary(ticketId [32]byte) (common.Address, error) {
-	return _ArbRetryableTx.Contract.GetBeneficiary(&_ArbRetryableTx.CallOpts, ticketId)
+// Solidity: function getBeneficiary(bytes32 userTxHash) view returns(address)
+func (_ArbRetryableTx *ArbRetryableTxCallerSession) GetBeneficiary(userTxHash [32]byte) (common.Address, error) {
+	return _ArbRetryableTx.Contract.GetBeneficiary(&_ArbRetryableTx.CallOpts, userTxHash)
 }
 
 // GetKeepalivePrice is a free data retrieval call binding the contract method 0xb16607e5.
 //
-// Solidity: function getKeepalivePrice(bytes32 ticketId) view returns(uint256, uint256)
-func (_ArbRetryableTx *ArbRetryableTxCaller) GetKeepalivePrice(opts *bind.CallOpts, ticketId [32]byte) (*big.Int, *big.Int, error) {
+// Solidity: function getKeepalivePrice(bytes32 userTxHash) view returns(uint256, uint256)
+func (_ArbRetryableTx *ArbRetryableTxCaller) GetKeepalivePrice(opts *bind.CallOpts, userTxHash [32]byte) (*big.Int, *big.Int, error) {
 	var out []interface{}
-	err := _ArbRetryableTx.contract.Call(opts, &out, "getKeepalivePrice", ticketId)
+	err := _ArbRetryableTx.contract.Call(opts, &out, "getKeepalivePrice", userTxHash)
 
 	if err != nil {
 		return *new(*big.Int), *new(*big.Int), err
@@ -230,16 +230,16 @@ func (_ArbRetryableTx *ArbRetryableTxCaller) GetKeepalivePrice(opts *bind.CallOp
 
 // GetKeepalivePrice is a free data retrieval call binding the contract method 0xb16607e5.
 //
-// Solidity: function getKeepalivePrice(bytes32 ticketId) view returns(uint256, uint256)
-func (_ArbRetryableTx *ArbRetryableTxSession) GetKeepalivePrice(ticketId [32]byte) (*big.Int, *big.Int, error) {
-	return _ArbRetryableTx.Contract.GetKeepalivePrice(&_ArbRetryableTx.CallOpts, ticketId)
+// Solidity: function getKeepalivePrice(bytes32 userTxHash) view returns(uint256, uint256)
+func (_ArbRetryableTx *ArbRetryableTxSession) GetKeepalivePrice(userTxHash [32]byte) (*big.Int, *big.Int, error) {
+	return _ArbRetryableTx.Contract.GetKeepalivePrice(&_ArbRetryableTx.CallOpts, userTxHash)
 }
 
 // GetKeepalivePrice is a free data retrieval call binding the contract method 0xb16607e5.
 //
-// Solidity: function getKeepalivePrice(bytes32 ticketId) view returns(uint256, uint256)
-func (_ArbRetryableTx *ArbRetryableTxCallerSession) GetKeepalivePrice(ticketId [32]byte) (*big.Int, *big.Int, error) {
-	return _ArbRetryableTx.Contract.GetKeepalivePrice(&_ArbRetryableTx.CallOpts, ticketId)
+// Solidity: function getKeepalivePrice(bytes32 userTxHash) view returns(uint256, uint256)
+func (_ArbRetryableTx *ArbRetryableTxCallerSession) GetKeepalivePrice(userTxHash [32]byte) (*big.Int, *big.Int, error) {
+	return _ArbRetryableTx.Contract.GetKeepalivePrice(&_ArbRetryableTx.CallOpts, userTxHash)
 }
 
 // GetLifetime is a free data retrieval call binding the contract method 0x81e6e083.
@@ -307,10 +307,10 @@ func (_ArbRetryableTx *ArbRetryableTxCallerSession) GetSubmissionPrice(calldataS
 
 // GetTimeout is a free data retrieval call binding the contract method 0x9f1025c6.
 //
-// Solidity: function getTimeout(bytes32 ticketId) view returns(uint256)
-func (_ArbRetryableTx *ArbRetryableTxCaller) GetTimeout(opts *bind.CallOpts, ticketId [32]byte) (*big.Int, error) {
+// Solidity: function getTimeout(bytes32 userTxHash) view returns(uint256)
+func (_ArbRetryableTx *ArbRetryableTxCaller) GetTimeout(opts *bind.CallOpts, userTxHash [32]byte) (*big.Int, error) {
 	var out []interface{}
-	err := _ArbRetryableTx.contract.Call(opts, &out, "getTimeout", ticketId)
+	err := _ArbRetryableTx.contract.Call(opts, &out, "getTimeout", userTxHash)
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -324,79 +324,79 @@ func (_ArbRetryableTx *ArbRetryableTxCaller) GetTimeout(opts *bind.CallOpts, tic
 
 // GetTimeout is a free data retrieval call binding the contract method 0x9f1025c6.
 //
-// Solidity: function getTimeout(bytes32 ticketId) view returns(uint256)
-func (_ArbRetryableTx *ArbRetryableTxSession) GetTimeout(ticketId [32]byte) (*big.Int, error) {
-	return _ArbRetryableTx.Contract.GetTimeout(&_ArbRetryableTx.CallOpts, ticketId)
+// Solidity: function getTimeout(bytes32 userTxHash) view returns(uint256)
+func (_ArbRetryableTx *ArbRetryableTxSession) GetTimeout(userTxHash [32]byte) (*big.Int, error) {
+	return _ArbRetryableTx.Contract.GetTimeout(&_ArbRetryableTx.CallOpts, userTxHash)
 }
 
 // GetTimeout is a free data retrieval call binding the contract method 0x9f1025c6.
 //
-// Solidity: function getTimeout(bytes32 ticketId) view returns(uint256)
-func (_ArbRetryableTx *ArbRetryableTxCallerSession) GetTimeout(ticketId [32]byte) (*big.Int, error) {
-	return _ArbRetryableTx.Contract.GetTimeout(&_ArbRetryableTx.CallOpts, ticketId)
+// Solidity: function getTimeout(bytes32 userTxHash) view returns(uint256)
+func (_ArbRetryableTx *ArbRetryableTxCallerSession) GetTimeout(userTxHash [32]byte) (*big.Int, error) {
+	return _ArbRetryableTx.Contract.GetTimeout(&_ArbRetryableTx.CallOpts, userTxHash)
 }
 
 // Cancel is a paid mutator transaction binding the contract method 0xc4d252f5.
 //
-// Solidity: function cancel(bytes32 ticketId) returns()
-func (_ArbRetryableTx *ArbRetryableTxTransactor) Cancel(opts *bind.TransactOpts, ticketId [32]byte) (*types.Transaction, error) {
-	return _ArbRetryableTx.contract.Transact(opts, "cancel", ticketId)
+// Solidity: function cancel(bytes32 userTxHash) returns()
+func (_ArbRetryableTx *ArbRetryableTxTransactor) Cancel(opts *bind.TransactOpts, userTxHash [32]byte) (*types.Transaction, error) {
+	return _ArbRetryableTx.contract.Transact(opts, "cancel", userTxHash)
 }
 
 // Cancel is a paid mutator transaction binding the contract method 0xc4d252f5.
 //
-// Solidity: function cancel(bytes32 ticketId) returns()
-func (_ArbRetryableTx *ArbRetryableTxSession) Cancel(ticketId [32]byte) (*types.Transaction, error) {
-	return _ArbRetryableTx.Contract.Cancel(&_ArbRetryableTx.TransactOpts, ticketId)
+// Solidity: function cancel(bytes32 userTxHash) returns()
+func (_ArbRetryableTx *ArbRetryableTxSession) Cancel(userTxHash [32]byte) (*types.Transaction, error) {
+	return _ArbRetryableTx.Contract.Cancel(&_ArbRetryableTx.TransactOpts, userTxHash)
 }
 
 // Cancel is a paid mutator transaction binding the contract method 0xc4d252f5.
 //
-// Solidity: function cancel(bytes32 ticketId) returns()
-func (_ArbRetryableTx *ArbRetryableTxTransactorSession) Cancel(ticketId [32]byte) (*types.Transaction, error) {
-	return _ArbRetryableTx.Contract.Cancel(&_ArbRetryableTx.TransactOpts, ticketId)
+// Solidity: function cancel(bytes32 userTxHash) returns()
+func (_ArbRetryableTx *ArbRetryableTxTransactorSession) Cancel(userTxHash [32]byte) (*types.Transaction, error) {
+	return _ArbRetryableTx.Contract.Cancel(&_ArbRetryableTx.TransactOpts, userTxHash)
 }
 
 // Keepalive is a paid mutator transaction binding the contract method 0xf0b21a41.
 //
-// Solidity: function keepalive(bytes32 ticketId) payable returns(uint256)
-func (_ArbRetryableTx *ArbRetryableTxTransactor) Keepalive(opts *bind.TransactOpts, ticketId [32]byte) (*types.Transaction, error) {
-	return _ArbRetryableTx.contract.Transact(opts, "keepalive", ticketId)
+// Solidity: function keepalive(bytes32 userTxHash) payable returns(uint256)
+func (_ArbRetryableTx *ArbRetryableTxTransactor) Keepalive(opts *bind.TransactOpts, userTxHash [32]byte) (*types.Transaction, error) {
+	return _ArbRetryableTx.contract.Transact(opts, "keepalive", userTxHash)
 }
 
 // Keepalive is a paid mutator transaction binding the contract method 0xf0b21a41.
 //
-// Solidity: function keepalive(bytes32 ticketId) payable returns(uint256)
-func (_ArbRetryableTx *ArbRetryableTxSession) Keepalive(ticketId [32]byte) (*types.Transaction, error) {
-	return _ArbRetryableTx.Contract.Keepalive(&_ArbRetryableTx.TransactOpts, ticketId)
+// Solidity: function keepalive(bytes32 userTxHash) payable returns(uint256)
+func (_ArbRetryableTx *ArbRetryableTxSession) Keepalive(userTxHash [32]byte) (*types.Transaction, error) {
+	return _ArbRetryableTx.Contract.Keepalive(&_ArbRetryableTx.TransactOpts, userTxHash)
 }
 
 // Keepalive is a paid mutator transaction binding the contract method 0xf0b21a41.
 //
-// Solidity: function keepalive(bytes32 ticketId) payable returns(uint256)
-func (_ArbRetryableTx *ArbRetryableTxTransactorSession) Keepalive(ticketId [32]byte) (*types.Transaction, error) {
-	return _ArbRetryableTx.Contract.Keepalive(&_ArbRetryableTx.TransactOpts, ticketId)
+// Solidity: function keepalive(bytes32 userTxHash) payable returns(uint256)
+func (_ArbRetryableTx *ArbRetryableTxTransactorSession) Keepalive(userTxHash [32]byte) (*types.Transaction, error) {
+	return _ArbRetryableTx.Contract.Keepalive(&_ArbRetryableTx.TransactOpts, userTxHash)
 }
 
 // Redeem is a paid mutator transaction binding the contract method 0xeda1122c.
 //
-// Solidity: function redeem(bytes32 txId) returns()
-func (_ArbRetryableTx *ArbRetryableTxTransactor) Redeem(opts *bind.TransactOpts, txId [32]byte) (*types.Transaction, error) {
-	return _ArbRetryableTx.contract.Transact(opts, "redeem", txId)
+// Solidity: function redeem(bytes32 userTxHash) returns()
+func (_ArbRetryableTx *ArbRetryableTxTransactor) Redeem(opts *bind.TransactOpts, userTxHash [32]byte) (*types.Transaction, error) {
+	return _ArbRetryableTx.contract.Transact(opts, "redeem", userTxHash)
 }
 
 // Redeem is a paid mutator transaction binding the contract method 0xeda1122c.
 //
-// Solidity: function redeem(bytes32 txId) returns()
-func (_ArbRetryableTx *ArbRetryableTxSession) Redeem(txId [32]byte) (*types.Transaction, error) {
-	return _ArbRetryableTx.Contract.Redeem(&_ArbRetryableTx.TransactOpts, txId)
+// Solidity: function redeem(bytes32 userTxHash) returns()
+func (_ArbRetryableTx *ArbRetryableTxSession) Redeem(userTxHash [32]byte) (*types.Transaction, error) {
+	return _ArbRetryableTx.Contract.Redeem(&_ArbRetryableTx.TransactOpts, userTxHash)
 }
 
 // Redeem is a paid mutator transaction binding the contract method 0xeda1122c.
 //
-// Solidity: function redeem(bytes32 txId) returns()
-func (_ArbRetryableTx *ArbRetryableTxTransactorSession) Redeem(txId [32]byte) (*types.Transaction, error) {
-	return _ArbRetryableTx.Contract.Redeem(&_ArbRetryableTx.TransactOpts, txId)
+// Solidity: function redeem(bytes32 userTxHash) returns()
+func (_ArbRetryableTx *ArbRetryableTxTransactorSession) Redeem(userTxHash [32]byte) (*types.Transaction, error) {
+	return _ArbRetryableTx.Contract.Redeem(&_ArbRetryableTx.TransactOpts, userTxHash)
 }
 
 // ArbRetryableTxCanceledIterator is returned from FilterCanceled and is used to iterate over the raw logs and unpacked data for Canceled events raised by the ArbRetryableTx contract.
@@ -468,21 +468,21 @@ func (it *ArbRetryableTxCanceledIterator) Close() error {
 
 // ArbRetryableTxCanceled represents a Canceled event raised by the ArbRetryableTx contract.
 type ArbRetryableTxCanceled struct {
-	TicketId [32]byte
-	Raw      types.Log // Blockchain specific contextual infos
+	UserTxHash [32]byte
+	Raw        types.Log // Blockchain specific contextual infos
 }
 
 // FilterCanceled is a free log retrieval operation binding the contract event 0x134fdd648feeaf30251f0157f9624ef8608ff9a042aad6d13e73f35d21d3f88d.
 //
-// Solidity: event Canceled(bytes32 indexed ticketId)
-func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterCanceled(opts *bind.FilterOpts, ticketId [][32]byte) (*ArbRetryableTxCanceledIterator, error) {
+// Solidity: event Canceled(bytes32 indexed userTxHash)
+func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterCanceled(opts *bind.FilterOpts, userTxHash [][32]byte) (*ArbRetryableTxCanceledIterator, error) {
 
-	var ticketIdRule []interface{}
-	for _, ticketIdItem := range ticketId {
-		ticketIdRule = append(ticketIdRule, ticketIdItem)
+	var userTxHashRule []interface{}
+	for _, userTxHashItem := range userTxHash {
+		userTxHashRule = append(userTxHashRule, userTxHashItem)
 	}
 
-	logs, sub, err := _ArbRetryableTx.contract.FilterLogs(opts, "Canceled", ticketIdRule)
+	logs, sub, err := _ArbRetryableTx.contract.FilterLogs(opts, "Canceled", userTxHashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -491,15 +491,15 @@ func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterCanceled(opts *bind.FilterO
 
 // WatchCanceled is a free log subscription operation binding the contract event 0x134fdd648feeaf30251f0157f9624ef8608ff9a042aad6d13e73f35d21d3f88d.
 //
-// Solidity: event Canceled(bytes32 indexed ticketId)
-func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchCanceled(opts *bind.WatchOpts, sink chan<- *ArbRetryableTxCanceled, ticketId [][32]byte) (event.Subscription, error) {
+// Solidity: event Canceled(bytes32 indexed userTxHash)
+func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchCanceled(opts *bind.WatchOpts, sink chan<- *ArbRetryableTxCanceled, userTxHash [][32]byte) (event.Subscription, error) {
 
-	var ticketIdRule []interface{}
-	for _, ticketIdItem := range ticketId {
-		ticketIdRule = append(ticketIdRule, ticketIdItem)
+	var userTxHashRule []interface{}
+	for _, userTxHashItem := range userTxHash {
+		userTxHashRule = append(userTxHashRule, userTxHashItem)
 	}
 
-	logs, sub, err := _ArbRetryableTx.contract.WatchLogs(opts, "Canceled", ticketIdRule)
+	logs, sub, err := _ArbRetryableTx.contract.WatchLogs(opts, "Canceled", userTxHashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -533,7 +533,7 @@ func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchCanceled(opts *bind.WatchOpt
 
 // ParseCanceled is a log parse operation binding the contract event 0x134fdd648feeaf30251f0157f9624ef8608ff9a042aad6d13e73f35d21d3f88d.
 //
-// Solidity: event Canceled(bytes32 indexed ticketId)
+// Solidity: event Canceled(bytes32 indexed userTxHash)
 func (_ArbRetryableTx *ArbRetryableTxFilterer) ParseCanceled(log types.Log) (*ArbRetryableTxCanceled, error) {
 	event := new(ArbRetryableTxCanceled)
 	if err := _ArbRetryableTx.contract.UnpackLog(event, "Canceled", log); err != nil {
@@ -612,22 +612,22 @@ func (it *ArbRetryableTxLifetimeExtendedIterator) Close() error {
 
 // ArbRetryableTxLifetimeExtended represents a LifetimeExtended event raised by the ArbRetryableTx contract.
 type ArbRetryableTxLifetimeExtended struct {
-	TicketId   [32]byte
+	UserTxHash [32]byte
 	NewTimeout *big.Int
 	Raw        types.Log // Blockchain specific contextual infos
 }
 
 // FilterLifetimeExtended is a free log retrieval operation binding the contract event 0xf4c40a5f930e1469fcc053bf25f045253a7bad2fcc9b88c05ec1fca8e2066b83.
 //
-// Solidity: event LifetimeExtended(bytes32 indexed ticketId, uint256 newTimeout)
-func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterLifetimeExtended(opts *bind.FilterOpts, ticketId [][32]byte) (*ArbRetryableTxLifetimeExtendedIterator, error) {
+// Solidity: event LifetimeExtended(bytes32 indexed userTxHash, uint256 newTimeout)
+func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterLifetimeExtended(opts *bind.FilterOpts, userTxHash [][32]byte) (*ArbRetryableTxLifetimeExtendedIterator, error) {
 
-	var ticketIdRule []interface{}
-	for _, ticketIdItem := range ticketId {
-		ticketIdRule = append(ticketIdRule, ticketIdItem)
+	var userTxHashRule []interface{}
+	for _, userTxHashItem := range userTxHash {
+		userTxHashRule = append(userTxHashRule, userTxHashItem)
 	}
 
-	logs, sub, err := _ArbRetryableTx.contract.FilterLogs(opts, "LifetimeExtended", ticketIdRule)
+	logs, sub, err := _ArbRetryableTx.contract.FilterLogs(opts, "LifetimeExtended", userTxHashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -636,15 +636,15 @@ func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterLifetimeExtended(opts *bind
 
 // WatchLifetimeExtended is a free log subscription operation binding the contract event 0xf4c40a5f930e1469fcc053bf25f045253a7bad2fcc9b88c05ec1fca8e2066b83.
 //
-// Solidity: event LifetimeExtended(bytes32 indexed ticketId, uint256 newTimeout)
-func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchLifetimeExtended(opts *bind.WatchOpts, sink chan<- *ArbRetryableTxLifetimeExtended, ticketId [][32]byte) (event.Subscription, error) {
+// Solidity: event LifetimeExtended(bytes32 indexed userTxHash, uint256 newTimeout)
+func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchLifetimeExtended(opts *bind.WatchOpts, sink chan<- *ArbRetryableTxLifetimeExtended, userTxHash [][32]byte) (event.Subscription, error) {
 
-	var ticketIdRule []interface{}
-	for _, ticketIdItem := range ticketId {
-		ticketIdRule = append(ticketIdRule, ticketIdItem)
+	var userTxHashRule []interface{}
+	for _, userTxHashItem := range userTxHash {
+		userTxHashRule = append(userTxHashRule, userTxHashItem)
 	}
 
-	logs, sub, err := _ArbRetryableTx.contract.WatchLogs(opts, "LifetimeExtended", ticketIdRule)
+	logs, sub, err := _ArbRetryableTx.contract.WatchLogs(opts, "LifetimeExtended", userTxHashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -678,7 +678,7 @@ func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchLifetimeExtended(opts *bind.
 
 // ParseLifetimeExtended is a log parse operation binding the contract event 0xf4c40a5f930e1469fcc053bf25f045253a7bad2fcc9b88c05ec1fca8e2066b83.
 //
-// Solidity: event LifetimeExtended(bytes32 indexed ticketId, uint256 newTimeout)
+// Solidity: event LifetimeExtended(bytes32 indexed userTxHash, uint256 newTimeout)
 func (_ArbRetryableTx *ArbRetryableTxFilterer) ParseLifetimeExtended(log types.Log) (*ArbRetryableTxLifetimeExtended, error) {
 	event := new(ArbRetryableTxLifetimeExtended)
 	if err := _ArbRetryableTx.contract.UnpackLog(event, "LifetimeExtended", log); err != nil {
@@ -757,21 +757,21 @@ func (it *ArbRetryableTxRedeemedIterator) Close() error {
 
 // ArbRetryableTxRedeemed represents a Redeemed event raised by the ArbRetryableTx contract.
 type ArbRetryableTxRedeemed struct {
-	TicketId [32]byte
-	Raw      types.Log // Blockchain specific contextual infos
+	UserTxHash [32]byte
+	Raw        types.Log // Blockchain specific contextual infos
 }
 
 // FilterRedeemed is a free log retrieval operation binding the contract event 0x27fc6cca2a0e9eb6f4876c01fc7779b00cdeb7277a770ac2b844db5932449578.
 //
-// Solidity: event Redeemed(bytes32 indexed ticketId)
-func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterRedeemed(opts *bind.FilterOpts, ticketId [][32]byte) (*ArbRetryableTxRedeemedIterator, error) {
+// Solidity: event Redeemed(bytes32 indexed userTxHash)
+func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterRedeemed(opts *bind.FilterOpts, userTxHash [][32]byte) (*ArbRetryableTxRedeemedIterator, error) {
 
-	var ticketIdRule []interface{}
-	for _, ticketIdItem := range ticketId {
-		ticketIdRule = append(ticketIdRule, ticketIdItem)
+	var userTxHashRule []interface{}
+	for _, userTxHashItem := range userTxHash {
+		userTxHashRule = append(userTxHashRule, userTxHashItem)
 	}
 
-	logs, sub, err := _ArbRetryableTx.contract.FilterLogs(opts, "Redeemed", ticketIdRule)
+	logs, sub, err := _ArbRetryableTx.contract.FilterLogs(opts, "Redeemed", userTxHashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -780,15 +780,15 @@ func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterRedeemed(opts *bind.FilterO
 
 // WatchRedeemed is a free log subscription operation binding the contract event 0x27fc6cca2a0e9eb6f4876c01fc7779b00cdeb7277a770ac2b844db5932449578.
 //
-// Solidity: event Redeemed(bytes32 indexed ticketId)
-func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchRedeemed(opts *bind.WatchOpts, sink chan<- *ArbRetryableTxRedeemed, ticketId [][32]byte) (event.Subscription, error) {
+// Solidity: event Redeemed(bytes32 indexed userTxHash)
+func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchRedeemed(opts *bind.WatchOpts, sink chan<- *ArbRetryableTxRedeemed, userTxHash [][32]byte) (event.Subscription, error) {
 
-	var ticketIdRule []interface{}
-	for _, ticketIdItem := range ticketId {
-		ticketIdRule = append(ticketIdRule, ticketIdItem)
+	var userTxHashRule []interface{}
+	for _, userTxHashItem := range userTxHash {
+		userTxHashRule = append(userTxHashRule, userTxHashItem)
 	}
 
-	logs, sub, err := _ArbRetryableTx.contract.WatchLogs(opts, "Redeemed", ticketIdRule)
+	logs, sub, err := _ArbRetryableTx.contract.WatchLogs(opts, "Redeemed", userTxHashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -822,7 +822,7 @@ func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchRedeemed(opts *bind.WatchOpt
 
 // ParseRedeemed is a log parse operation binding the contract event 0x27fc6cca2a0e9eb6f4876c01fc7779b00cdeb7277a770ac2b844db5932449578.
 //
-// Solidity: event Redeemed(bytes32 indexed ticketId)
+// Solidity: event Redeemed(bytes32 indexed userTxHash)
 func (_ArbRetryableTx *ArbRetryableTxFilterer) ParseRedeemed(log types.Log) (*ArbRetryableTxRedeemed, error) {
 	event := new(ArbRetryableTxRedeemed)
 	if err := _ArbRetryableTx.contract.UnpackLog(event, "Redeemed", log); err != nil {
@@ -901,21 +901,21 @@ func (it *ArbRetryableTxTicketCreatedIterator) Close() error {
 
 // ArbRetryableTxTicketCreated represents a TicketCreated event raised by the ArbRetryableTx contract.
 type ArbRetryableTxTicketCreated struct {
-	TicketId [32]byte
-	Raw      types.Log // Blockchain specific contextual infos
+	UserTxHash [32]byte
+	Raw        types.Log // Blockchain specific contextual infos
 }
 
 // FilterTicketCreated is a free log retrieval operation binding the contract event 0x7c793cced5743dc5f531bbe2bfb5a9fa3f40adef29231e6ab165c08a29e3dd89.
 //
-// Solidity: event TicketCreated(bytes32 indexed ticketId)
-func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterTicketCreated(opts *bind.FilterOpts, ticketId [][32]byte) (*ArbRetryableTxTicketCreatedIterator, error) {
+// Solidity: event TicketCreated(bytes32 indexed userTxHash)
+func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterTicketCreated(opts *bind.FilterOpts, userTxHash [][32]byte) (*ArbRetryableTxTicketCreatedIterator, error) {
 
-	var ticketIdRule []interface{}
-	for _, ticketIdItem := range ticketId {
-		ticketIdRule = append(ticketIdRule, ticketIdItem)
+	var userTxHashRule []interface{}
+	for _, userTxHashItem := range userTxHash {
+		userTxHashRule = append(userTxHashRule, userTxHashItem)
 	}
 
-	logs, sub, err := _ArbRetryableTx.contract.FilterLogs(opts, "TicketCreated", ticketIdRule)
+	logs, sub, err := _ArbRetryableTx.contract.FilterLogs(opts, "TicketCreated", userTxHashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -924,15 +924,15 @@ func (_ArbRetryableTx *ArbRetryableTxFilterer) FilterTicketCreated(opts *bind.Fi
 
 // WatchTicketCreated is a free log subscription operation binding the contract event 0x7c793cced5743dc5f531bbe2bfb5a9fa3f40adef29231e6ab165c08a29e3dd89.
 //
-// Solidity: event TicketCreated(bytes32 indexed ticketId)
-func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchTicketCreated(opts *bind.WatchOpts, sink chan<- *ArbRetryableTxTicketCreated, ticketId [][32]byte) (event.Subscription, error) {
+// Solidity: event TicketCreated(bytes32 indexed userTxHash)
+func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchTicketCreated(opts *bind.WatchOpts, sink chan<- *ArbRetryableTxTicketCreated, userTxHash [][32]byte) (event.Subscription, error) {
 
-	var ticketIdRule []interface{}
-	for _, ticketIdItem := range ticketId {
-		ticketIdRule = append(ticketIdRule, ticketIdItem)
+	var userTxHashRule []interface{}
+	for _, userTxHashItem := range userTxHash {
+		userTxHashRule = append(userTxHashRule, userTxHashItem)
 	}
 
-	logs, sub, err := _ArbRetryableTx.contract.WatchLogs(opts, "TicketCreated", ticketIdRule)
+	logs, sub, err := _ArbRetryableTx.contract.WatchLogs(opts, "TicketCreated", userTxHashRule)
 	if err != nil {
 		return nil, err
 	}
@@ -966,7 +966,7 @@ func (_ArbRetryableTx *ArbRetryableTxFilterer) WatchTicketCreated(opts *bind.Wat
 
 // ParseTicketCreated is a log parse operation binding the contract event 0x7c793cced5743dc5f531bbe2bfb5a9fa3f40adef29231e6ab165c08a29e3dd89.
 //
-// Solidity: event TicketCreated(bytes32 indexed ticketId)
+// Solidity: event TicketCreated(bytes32 indexed userTxHash)
 func (_ArbRetryableTx *ArbRetryableTxFilterer) ParseTicketCreated(log types.Log) (*ArbRetryableTxTicketCreated, error) {
 	event := new(ArbRetryableTxTicketCreated)
 	if err := _ArbRetryableTx.contract.UnpackLog(event, "TicketCreated", log); err != nil {
