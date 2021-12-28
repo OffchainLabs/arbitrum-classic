@@ -63,7 +63,7 @@ func TestZeroPriceGasEstimationCall(t *testing.T) {
 		t.Fatal("EstimateGas returned 0")
 	}
 
-	if math.Abs(float64(fundedGas-unfundedGas)) > 100 {
+	if math.Abs(float64(fundedGas)-float64(unfundedGas)) > 100 {
 		t.Fatal("EstimateGas depends on balance", fundedGas, unfundedGas)
 	}
 }
@@ -92,7 +92,7 @@ func TestZeroPriceGasEstimationDeploy(t *testing.T) {
 		t.Fatal("EstimateGas returned 0")
 	}
 
-	if math.Abs(float64(fundedGas-unfundedGas)) > 100 {
+	if math.Abs(float64(fundedGas)-float64(unfundedGas)) > 100 {
 		t.Fatal("EstimateGas depends on balance", fundedGas, unfundedGas)
 	}
 }
