@@ -89,11 +89,11 @@ export class L1ToL2MessageCreator {
   }
 
   public async getSender(): Promise<string> {
-    if (this.sender) {
-      return this.sender
+    if (!this.sender) {
+      const sender = await this.l1Signer.getAddress()
+      this.sender = sender
+      return sender
     }
-    const sender = await this.l1Signer.getAddress()
-    this.sender = sender
-    return sender
+    return this.sender
   }
 }
