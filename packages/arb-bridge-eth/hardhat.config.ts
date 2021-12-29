@@ -55,6 +55,32 @@ task('create-chain', 'Creates a rollup chain')
     )
   })
 
+task('update-whitelist-consumers', 'Updates rollup whitelist consumers')
+  .addParam('rollup', 'rollup address')
+  .addParam('oldwhitelist', 'old whitelist address')
+  .addParam('newwhitelist', 'new whitelist address')
+  .addParam('whitelistconsumers', 'list of whitelist consumer addresses')
+  .setAction(async (taskArguments, hre) => {
+    const { ethers } = hre
+    // Assume deployer is the RollupAdmin owner
+    const [deployer] = await ethers.getSigners()
+
+    const RollupAdmin = await ethers.getContractFactory('RollupAdminFacet')
+    const rollupAdmin = RollupAdmin.attach(
+      taskArguments.rollup
+    ).connect(deployer)
+
+    const tx = await rollupAdmin.updateWhitelistConsumers(
+      taskArguments.oldwhitelist,
+      taskArguments.newwhitelist,
+      taskArguments.whitelistconsumers.split(',')
+    )
+
+    await tx.wait()
+
+    console.log(`Whitelist consumers updated to use ${taskArguments.newwhitelist}`)
+  })
+
 task('deposit', 'Deposit coins into ethbridge')
   .addPositionalParam('inboxAddress', "The rollup chain's address")
   .addPositionalParam('privkey', 'The private key of the depositer')
