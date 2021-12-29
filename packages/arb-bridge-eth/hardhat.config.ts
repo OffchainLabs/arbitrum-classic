@@ -66,9 +66,9 @@ task('update-whitelist-consumers', 'Updates rollup whitelist consumers')
     const [deployer] = await ethers.getSigners()
 
     const RollupAdmin = await ethers.getContractFactory('RollupAdminFacet')
-    const rollupAdmin = RollupAdmin.attach(
-      taskArguments.rollup
-    ).connect(deployer)
+    const rollupAdmin = RollupAdmin.attach(taskArguments.rollup).connect(
+      deployer
+    )
 
     const tx = await rollupAdmin.updateWhitelistConsumers(
       taskArguments.oldwhitelist,
@@ -78,7 +78,9 @@ task('update-whitelist-consumers', 'Updates rollup whitelist consumers')
 
     await tx.wait()
 
-    console.log(`Whitelist consumers updated to use ${taskArguments.newwhitelist}`)
+    console.log(
+      `Whitelist consumers updated to use ${taskArguments.newwhitelist}`
+    )
   })
 
 task('deposit', 'Deposit coins into ethbridge')
