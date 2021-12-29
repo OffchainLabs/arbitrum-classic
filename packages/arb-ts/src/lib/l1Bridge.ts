@@ -35,7 +35,6 @@ import { L1ERC20Gateway } from './abi/L1ERC20Gateway'
 
 import { Network } from './networks'
 import { addressToSymbol, BridgeHelper } from './bridge_helpers'
-import { MulticallFunctionInput } from './dataEntities'
 
 const MIN_APPROVAL = MaxUint256
 //TODO handle address update / lowercase
@@ -128,104 +127,105 @@ export class L1Bridge {
     return !(contractCode.length > 2)
   }
 
-  public async getL1TokenData(erc20L1Address: string): Promise<L1TokenData> {
-    const walletAddress = await this.getWalletAddress()
-    const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
+  // CHRIS: unused now?
+  // public async getL1TokenData(erc20L1Address: string): Promise<L1TokenData> {
+  //   const walletAddress = await this.getWalletAddress()
+  //   const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
 
-    const ethERC20TokenContract = await ERC20__factory.connect(
-      erc20L1Address,
-      this.l1Signer
-    )
-    // If this will throw if not a contract / ERC20, which is what we *want*.
-    const iface = ERC20__factory.createInterface()
-    const functionCalls: MulticallFunctionInput = [
-      {
-        target: erc20L1Address,
-        funcFragment: iface.functions['balanceOf(address)'],
-        values: [walletAddress],
-      },
-      {
-        target: erc20L1Address,
-        funcFragment: iface.functions['allowance(address,address)'],
-        values: [walletAddress, gatewayAddress],
-      },
-      {
-        target: erc20L1Address,
-        funcFragment: iface.functions['symbol()'],
-      },
-      {
-        target: erc20L1Address,
-        funcFragment: iface.functions['decimals()'],
-      },
-      {
-        target: erc20L1Address,
-        funcFragment: iface.functions['name()'],
-      },
-    ]
-    const [
-      balanceResult,
-      allowanceResult,
-      symbolResult,
-      decimalsResult,
-      nameResult,
-    ] = await this.getMulticallAggregate(functionCalls)
+  //   const ethERC20TokenContract = await ERC20__factory.connect(
+  //     erc20L1Address,
+  //     this.l1Signer
+  //   )
+  //   // If this will throw if not a contract / ERC20, which is what we *want*.
+  //   const iface = ERC20__factory.createInterface()
+  //   const functionCalls: MulticallFunctionInput = [
+  //     {
+  //       target: erc20L1Address,
+  //       funcFragment: iface.functions['balanceOf(address)'],
+  //       values: [walletAddress],
+  //     },
+  //     {
+  //       target: erc20L1Address,
+  //       funcFragment: iface.functions['allowance(address,address)'],
+  //       values: [walletAddress, gatewayAddress],
+  //     },
+  //     {
+  //       target: erc20L1Address,
+  //       funcFragment: iface.functions['symbol()'],
+  //     },
+  //     {
+  //       target: erc20L1Address,
+  //       funcFragment: iface.functions['decimals()'],
+  //     },
+  //     {
+  //       target: erc20L1Address,
+  //       funcFragment: iface.functions['name()'],
+  //     },
+  //   ]
+  //   const [
+  //     balanceResult,
+  //     allowanceResult,
+  //     symbolResult,
+  //     decimalsResult,
+  //     nameResult,
+  //   ] = await this.getMulticallAggregate(functionCalls)
 
-    const isString = (x: unknown): x is string => typeof x === 'string'
-    const balance = (() => {
-      if (!balanceResult) throw new Error('No balance method available')
-      if (isString(balanceResult)) throw new Error('Not able to decode balance')
-      const res = (balanceResult as Await<
-        ReturnType<ERC20['functions']['balanceOf']>
-      >)[0]
-      return res
-    })()
+  //   const isString = (x: unknown): x is string => typeof x === 'string'
+  //   const balance = (() => {
+  //     if (!balanceResult) throw new Error('No balance method available')
+  //     if (isString(balanceResult)) throw new Error('Not able to decode balance')
+  //     const res = (balanceResult as Await<
+  //       ReturnType<ERC20['functions']['balanceOf']>
+  //     >)[0]
+  //     return res
+  //   })()
 
-    const allowance = (() => {
-      if (!allowanceResult) throw new Error('No allowance method available')
-      if (isString(allowanceResult)) {
-        throw new Error('Not able to decode allowance')
-      }
-      return (allowanceResult as Await<
-        ReturnType<ERC20['functions']['allowance']>
-      >)[0]
-    })()
+  //   const allowance = (() => {
+  //     if (!allowanceResult) throw new Error('No allowance method available')
+  //     if (isString(allowanceResult)) {
+  //       throw new Error('Not able to decode allowance')
+  //     }
+  //     return (allowanceResult as Await<
+  //       ReturnType<ERC20['functions']['allowance']>
+  //     >)[0]
+  //   })()
 
-    const symbol = (() => {
-      if (!symbolResult) return addressToSymbol(erc20L1Address)
-      if (isString(symbolResult)) return symbolResult
-      return (symbolResult as Await<
-        ReturnType<ERC20['functions']['symbol']>
-      >)[0]
-    })()
+  //   const symbol = (() => {
+  //     if (!symbolResult) return addressToSymbol(erc20L1Address)
+  //     if (isString(symbolResult)) return symbolResult
+  //     return (symbolResult as Await<
+  //       ReturnType<ERC20['functions']['symbol']>
+  //     >)[0]
+  //   })()
 
-    const decimals = (() => {
-      if (!decimalsResult) return 18
-      if (isString(decimalsResult))
-        throw new Error('Not able to decode decimals')
-      return (decimalsResult as Await<
-        ReturnType<ERC20['functions']['decimals']>
-      >)[0]
-    })()
+  //   const decimals = (() => {
+  //     if (!decimalsResult) return 18
+  //     if (isString(decimalsResult))
+  //       throw new Error('Not able to decode decimals')
+  //     return (decimalsResult as Await<
+  //       ReturnType<ERC20['functions']['decimals']>
+  //     >)[0]
+  //   })()
 
-    const name = (() => {
-      if (!nameResult) return symbol + '_Token'
-      if (isString(nameResult)) return nameResult
-      return (nameResult as Await<ReturnType<ERC20['functions']['name']>>)[0]
-    })()
+  //   const name = (() => {
+  //     if (!nameResult) return symbol + '_Token'
+  //     if (isString(nameResult)) return nameResult
+  //     return (nameResult as Await<ReturnType<ERC20['functions']['name']>>)[0]
+  //   })()
 
-    const allowanceLimit = BigNumber.from(
-      '0xffffffffffffffffffffffff'
-    ) /** for ERC20s that cap approve at 96 bits  */
-    const allowed = allowance.gte(allowanceLimit.div(2))
-    return {
-      contract: ethERC20TokenContract,
-      balance,
-      allowed,
-      symbol,
-      decimals,
-      name,
-    }
-  }
+  //   const allowanceLimit = BigNumber.from(
+  //     '0xffffffffffffffffffffffff'
+  //   ) /** for ERC20s that cap approve at 96 bits  */
+  //   const allowed = allowance.gte(allowanceLimit.div(2))
+  //   return {
+  //     contract: ethERC20TokenContract,
+  //     balance,
+  //     allowed,
+  //     symbol,
+  //     decimals,
+  //     name,
+  //   }
+  // }
 
   // CHRIS: moved to Eth bridge
   // public async estimateGasDepositEth(
@@ -263,10 +263,10 @@ export class L1Bridge {
   // }
 
   // CHRIS: moved to erc20 bridger
-  public async getGatewayAddress(erc20L1Address: string): Promise<string> {
-    return (await this.l1GatewayRouter.functions.getGateway(erc20L1Address))
-      .gateway
-  }
+  // public async getGatewayAddress(erc20L1Address: string): Promise<string> {
+  //   return (await this.l1GatewayRouter.functions.getGateway(erc20L1Address))
+  //     .gateway
+  // }
 
   // CHRIS: now on erc20 bridger
   // public async getDefaultL1Gateway(): Promise<L1ERC20Gateway> {
@@ -351,13 +351,13 @@ export class L1Bridge {
   //   )
   // }
 
-  public async getWalletAddress(): Promise<string> {
-    if (this.walletAddressCache) {
-      return this.walletAddressCache
-    }
-    this.walletAddressCache = await this.l1Signer.getAddress()
-    return this.walletAddressCache
-  }
+  // public async getWalletAddress(): Promise<string> {
+  //   if (this.walletAddressCache) {
+  //     return this.walletAddressCache
+  //   }
+  //   this.walletAddressCache = await this.l1Signer.getAddress()
+  //   return this.walletAddressCache
+  // }
 
   // CHRIS: now in network config object
   // public async getInbox(): Promise<Inbox> {
@@ -375,16 +375,17 @@ export class L1Bridge {
   //   return this.l1Signer.getBalance()
   // }
 
-  public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
-    const multicall = Multicall2__factory.connect(
-      this.network.tokenBridge.l1MultiCall,
-      this.l1Provider
-    )
+  // public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
+  //   const multicall = Multicall2__factory.connect(
+  //     this.network.tokenBridge.l1MultiCall,
+  //     this.l1Provider
+  //   )
 
-    return BridgeHelper.getMulticallTryAggregate(functionCalls, multicall)
-  }
+  //   return BridgeHelper.getMulticallTryAggregate(functionCalls, multicall)
+  // }
 
   public async tokenIsDisabled(l1TokenAddress: string): Promise<boolean> {
+    
     return (
       (await this.l1GatewayRouter.l1TokenToGateway(l1TokenAddress)) ===
       '0x0000000000000000000000000000000000000001'

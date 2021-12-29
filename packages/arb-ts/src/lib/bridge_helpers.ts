@@ -27,11 +27,7 @@ import { L2ArbitrumGateway__factory } from './abi/factories/L2ArbitrumGateway__f
 import { Whitelist__factory } from './abi/factories/Whitelist__factory'
 
 import { ArbMulticall2, Multicall2 } from './abi'
-import {
-  GatewaySet,
-  WithdrawalInitiated,
-  MulticallFunctionInput,
-} from './dataEntities'
+import { GatewaySet, WithdrawalInitiated } from './dataEntities'
 
 export const addressToSymbol = (erc20L1Address: string): string => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
@@ -222,19 +218,19 @@ export class BridgeHelper {
     })
   }
 
-  static getGatewaySetEventData = async (
-    gatewayRouterAddress: string,
-    provider: Provider
-  ): Promise<GatewaySet[]> => {
-    const iface = L1GatewayRouter__factory.createInterface()
-    const logs = await BridgeHelper.getEventLogs(
-      'GatewaySet',
-      provider,
-      iface,
-      gatewayRouterAddress
-    )
-    return logs.map(log => iface.parseLog(log).args as unknown as GatewaySet)
-  }
+  // static getGatewaySetEventData = async (
+  //   gatewayRouterAddress: string,
+  //   provider: Provider
+  // ): Promise<GatewaySet[]> => {
+  //   const iface = L1GatewayRouter__factory.createInterface()
+  //   const logs = await BridgeHelper.getEventLogs(
+  //     'GatewaySet',
+  //     provider,
+  //     iface,
+  //     gatewayRouterAddress
+  //   )
+  //   return logs.map(log => iface.parseLog(log).args as unknown as GatewaySet)
+  // }
 
   // static getCoreBridgeFromInbox = (
   //   inboxAddress: string,
@@ -724,45 +720,45 @@ export class BridgeHelper {
     return BigNumber.from(l2Address).sub(ADDRESS_ALIAS_OFFSET)
   }
 
-  static percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
-    return num.add(num.mul(increase).div(100))
-  }
+  // static percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
+  //   return num.add(num.mul(increase).div(100))
+  // }
 
-  static async getMulticallTryAggregate(
-    functionCalls: MulticallFunctionInput,
-    multicall: Multicall2 | ArbMulticall2,
-    requireSuccess = false
-  ) {
-    const iface = new Interface(functionCalls.map(curr => curr.funcFragment))
+  // static async getMulticallTryAggregate(
+  //   functionCalls: MulticallFunctionInput,
+  //   multicall: Multicall2 | ArbMulticall2,
+  //   requireSuccess = false
+  // ) {
+  //   const iface = new Interface(functionCalls.map(curr => curr.funcFragment))
 
-    const encodedCalls = functionCalls.map(
-      ({ target, funcFragment, values }) => ({
-        target: target,
-        callData: iface.encodeFunctionData(funcFragment, values),
-      })
-    )
+  //   const encodedCalls = functionCalls.map(
+  //     ({ target, funcFragment, values }) => ({
+  //       target: target,
+  //       callData: iface.encodeFunctionData(funcFragment, values),
+  //     })
+  //   )
 
-    const outputs = await multicall.callStatic.tryAggregate(
-      requireSuccess,
-      encodedCalls
-    )
+  //   const outputs = await multicall.callStatic.tryAggregate(
+  //     requireSuccess,
+  //     encodedCalls
+  //   )
 
-    return outputs.map(([success, returnData], index) => {
-      if (success) {
-        try {
-          return iface.decodeFunctionResult(
-            functionCalls[index].funcFragment,
-            returnData
-          )
-        } catch (e) {
-          // the interface has wrong expected return type
-          console.warn(
-            'interface to decode output does not have matching signature to decode'
-          )
-          return returnData
-        }
-      }
-      return undefined
-    })
-  }
+  //   return outputs.map(([success, returnData], index) => {
+  //     if (success) {
+  //       try {
+  //         return iface.decodeFunctionResult(
+  //           functionCalls[index].funcFragment,
+  //           returnData
+  //         )
+  //       } catch (e) {
+  //         // the interface has wrong expected return type
+  //         console.warn(
+  //           'interface to decode output does not have matching signature to decode'
+  //         )
+  //         return returnData
+  //       }
+  //     }
+  //     return undefined
+  //   })
+  // }
 }

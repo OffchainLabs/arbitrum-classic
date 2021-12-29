@@ -29,7 +29,6 @@ import { parseEther } from '@ethersproject/units'
 
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 
-import { Bridge } from '../src/lib/bridge'
 import { Network } from '../src/lib/networks'
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 
@@ -123,7 +122,6 @@ export const warn = (text: string): void => {
 }
 
 export const instantiateBridgeWithRandomWallet = (): Promise<{
-  bridge: Bridge
   tokenBridger: TokenBridger
   ethBridger: EthBridger
   l1Network: Network,
@@ -173,7 +171,7 @@ export const fundL2Token = async (
   try {
     const testWalletAddress = await l2Signer.getAddress()
     const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider)
-    const l2Address = await tokenBridger.getERC20L2Address(
+    const l2Address = await tokenBridger.getL2ERC20Address(
       tokenAddress,
       l2Signer.provider
     )

@@ -10,20 +10,21 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { percentIncrease } from '../utils/lib'
 import { constants } from 'ethers'
 import { utils } from 'ethers'
+import { ArbTsError } from '../errors'
 
 const DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE = BigNumber.from(340)
 const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
 
-export type PercentBigNumber = {
+export type PercentIncrease = {
   base?: BigNumber
   percentIncrease?: BigNumber
 }
 
 // CHRIS: better name for this
 export interface GasOverrides {
-  maxGas?: PercentBigNumber
-  maxSubmissionPrice?: PercentBigNumber
-  maxGasPrice?: PercentBigNumber
+  maxGas?: PercentIncrease
+  maxSubmissionPrice?: PercentIncrease
+  maxGasPrice?: PercentIncrease
   sendL2CallValueFromL1?: boolean
 }
 
@@ -58,7 +59,7 @@ export interface L1toL2MessageGasValues {
 export class L1ToL2MessageGasEstimator {
   constructor(public readonly l2Provider: Provider) {}
 
-  private applySubmissionPriceDefaults(maxSubmissionPrice?: PercentBigNumber) {
+  private applySubmissionPriceDefaults(maxSubmissionPrice?: PercentIncrease) {
     return {
       base: maxSubmissionPrice?.base,
       percentIncrease:
@@ -155,8 +156,6 @@ export class L1ToL2MessageGasEstimator {
     sender: string,
     destAddr: string,
     callDataHex: string,
-    // CHRIS: we have some interesting variations of what's required in this function args, we could try to enforce it
-    // CHRIS: we should at least have runtime checks?
     l2CallValue: BigNumber,
     options?: GasOverrides
   ) {

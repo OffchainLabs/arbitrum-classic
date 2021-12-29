@@ -37,16 +37,16 @@ import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import networks, { Network } from './networks'
 import { L1ERC20Gateway, L1GatewayRouter, ERC20__factory, ERC20 } from './abi'
 
-export interface RetryableGasArgs {
-  maxGas?: BigNumber
-  maxGasPercentIncrease?: BigNumber
+// export interface RetryableGasArgs {
+//   maxGas?: BigNumber
+//   maxGasPercentIncrease?: BigNumber
   
-  maxSubmissionPrice?: BigNumber
+//   maxSubmissionPrice?: BigNumber
   
-  maxSubmissionPricePercentIncrease?: BigNumber
+//   maxSubmissionPricePercentIncrease?: BigNumber
   
-  gasPriceBid?: BigNumber
-}
+//   gasPriceBid?: BigNumber
+// }
 
 interface InitOptions {
   customNetwork?: {
@@ -55,30 +55,30 @@ interface InitOptions {
   }
 }
 
-export interface DepositInputParams {
-  erc20L1Address: string
-  amount: BigNumber
-  retryableGasArgs?: RetryableGasArgs
-  destinationAddress?: string
-}
+// export interface DepositInputParams {
+//   erc20L1Address: string
+//   amount: BigNumber
+//   retryableGasArgs?: RetryableGasArgs
+//   destinationAddress?: string
+// }
 
-const isDepositInputParams = (obj: any): obj is DepositInputParams =>
-  !obj['l1CallValue']
+// const isDepositInputParams = (obj: any): obj is DepositInputParams =>
+//   !obj['l1CallValue']
 
-function isError(error: Error): error is NodeJS.ErrnoException {
-  return error instanceof Error
-}
+// function isError(error: Error): error is NodeJS.ErrnoException {
+//   return error instanceof Error
+// }
 
-const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
-const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
-const MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
+// const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
+// const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
+// const MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
 
-interface RetryableParamsOptions {
-  maxSubmissionFeePercentIncrease?: BigNumber
-  maxGasPercentIncrease?: BigNumber
-  maxGasPricePercentIncrease?: BigNumber
-  includeL2Callvalue?: boolean
-}
+// interface RetryableParamsOptions {
+//   maxSubmissionFeePercentIncrease?: BigNumber
+//   maxGasPercentIncrease?: BigNumber
+//   maxGasPricePercentIncrease?: BigNumber
+//   includeL2Callvalue?: boolean
+// }
 
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
@@ -165,26 +165,26 @@ export class Bridge {
     await this.l2Bridge.setSigner(newArbSigner)
   }
 
-  get l1GatewayRouter(): L1GatewayRouter {
-    return this.l1Bridge.l1GatewayRouter
-  }
+  // get l1GatewayRouter(): L1GatewayRouter {
+  //   return this.l1Bridge.l1GatewayRouter
+  // }
 
   // CHRIS: now on bridger
   // defaultL1Gateway(): Promise<L1ERC20Gateway> {
   //   return this.l1Bridge.getDefaultL1Gateway()
   // }
-  get l1Signer(): Signer {
-    return this.l1Bridge.l1Signer
-  }
-  get l1Provider(): Provider {
-    return this.l1Bridge.l1Provider
-  }
-  get l2Provider(): Provider {
-    return this.l2Bridge.l2Provider
-  }
-  get l2Signer(): Signer {
-    return this.l2Bridge.l2Signer
-  }
+  // get l1Signer(): Signer {
+  //   return this.l1Bridge.l1Signer
+  // }
+  // get l1Provider(): Provider {
+  //   return this.l1Bridge.l1Provider
+  // }
+  // get l2Provider(): Provider {
+  //   return this.l2Bridge.l2Provider
+  // }
+  // get l2Signer(): Signer {
+  //   return this.l2Bridge.l2Signer
+  // }
 
   // CHRIS: now on bridger
   // /**
@@ -868,78 +868,79 @@ export class Bridge {
   //   )
   // }
 
-  public isWhiteListed(
-    address: string,
-    whiteListAddress: string
-  ): Promise<boolean> {
-    return BridgeHelper.isWhiteListed(
-      address,
-      whiteListAddress,
-      this.l1Provider
-    )
-  }
+  // CHRIS: Should go on an admin tools object? 
+  // public isWhiteListed(
+  //   address: string,
+  //   whiteListAddress: string
+  // ): Promise<boolean> {
+  //   return BridgeHelper.isWhiteListed(
+  //     address,
+  //     whiteListAddress,
+  //     this.l1Provider
+  //   )
+  // }
 
-  // CHRIS: l1Signer, l2Provider
-  public async setGateways(
-    tokenAddresses: string[],
-    gatewayAddresses: string[]
-  ): Promise<ContractTransaction> {
-    const gasPriceBid = await this.l2Provider.getGasPrice()
+  // // CHRIS: l1Signer, l2Provider
+  // public async setGateways(
+  //   tokenAddresses: string[],
+  //   gatewayAddresses: string[]
+  // ): Promise<ContractTransaction> {
+  //   const gasPriceBid = await this.l2Provider.getGasPrice()
 
-    const maxSubmissionPrice = (
-      await this.l2Bridge.getTxnSubmissionPrice(
-        // 20 per address, 100 as buffer/ estimate for any additional calldata
-        300 + 20 * (tokenAddresses.length + gatewayAddresses.length)
-      )
-    )[0]
-    return this.l1GatewayRouter.functions.setGateways(
-      tokenAddresses,
-      gatewayAddresses,
-      0,
-      gasPriceBid,
-      maxSubmissionPrice,
-      {
-        value: maxSubmissionPrice,
-      }
-    )
-  }
-  // CHRIS: l1Provider
-  public async getL1GatewaySetEventData(
-    _l1GatewayRouterAddress?: string
-  ): Promise<GatewaySet[]> {
-    if (this.isCustomNetwork && !_l1GatewayRouterAddress)
-      throw new Error('Must supply _l1GatewayRouterAddress for custom network ')
+  //   const maxSubmissionPrice = (
+  //     await this.l2Bridge.getTxnSubmissionPrice(
+  //       // 20 per address, 100 as buffer/ estimate for any additional calldata
+  //       300 + 20 * (tokenAddresses.length + gatewayAddresses.length)
+  //     )
+  //   )[0]
+  //   return this.l1GatewayRouter.functions.setGateways(
+  //     tokenAddresses,
+  //     gatewayAddresses,
+  //     0,
+  //     gasPriceBid,
+  //     maxSubmissionPrice,
+  //     {
+  //       value: maxSubmissionPrice,
+  //     }
+  //   )
+  // }
+  // // CHRIS: l1Provider
+  // public async getL1GatewaySetEventData(
+  //   _l1GatewayRouterAddress?: string
+  // ): Promise<GatewaySet[]> {
+  //   if (this.isCustomNetwork && !_l1GatewayRouterAddress)
+  //     throw new Error('Must supply _l1GatewayRouterAddress for custom network ')
 
-    const l1GatewayRouterAddress =
-      _l1GatewayRouterAddress ||
-      this.l1Bridge.network.tokenBridge.l1GatewayRouter
-    if (!l1GatewayRouterAddress)
-      throw new Error('No l2GatewayRouterAddress provided')
+  //   const l1GatewayRouterAddress =
+  //     _l1GatewayRouterAddress ||
+  //     this.l1Bridge.network.tokenBridge.l1GatewayRouter
+  //   if (!l1GatewayRouterAddress)
+  //     throw new Error('No l2GatewayRouterAddress provided')
 
-    return BridgeHelper.getGatewaySetEventData(
-      l1GatewayRouterAddress,
-      this.l1Provider
-    )
-  }
+  //   return BridgeHelper.getGatewaySetEventData(
+  //     l1GatewayRouterAddress,
+  //     this.l1Provider
+  //   )
+  // }
 
-  // CHRIS: l2Provider
-  public async getL2GatewaySetEventData(
-    _l2GatewayRouterAddress?: string
-  ): Promise<GatewaySet[]> {
-    if (this.isCustomNetwork && !_l2GatewayRouterAddress)
-      throw new Error('Must supply _l2GatewayRouterAddress for custom network ')
+  // // CHRIS: l2Provider
+  // public async getL2GatewaySetEventData(
+  //   _l2GatewayRouterAddress?: string
+  // ): Promise<GatewaySet[]> {
+  //   if (this.isCustomNetwork && !_l2GatewayRouterAddress)
+  //     throw new Error('Must supply _l2GatewayRouterAddress for custom network ')
 
-    const l2GatewayRouterAddress =
-      _l2GatewayRouterAddress ||
-      this.l1Bridge.network.tokenBridge.l2GatewayRouter
-    if (!l2GatewayRouterAddress)
-      throw new Error('No l2GatewayRouterAddress provided')
+  //   const l2GatewayRouterAddress =
+  //     _l2GatewayRouterAddress ||
+  //     this.l1Bridge.network.tokenBridge.l2GatewayRouter
+  //   if (!l2GatewayRouterAddress)
+  //     throw new Error('No l2GatewayRouterAddress provided')
 
-    return BridgeHelper.getGatewaySetEventData(
-      l2GatewayRouterAddress,
-      this.l2Provider
-    )
-  }
+  //   return BridgeHelper.getGatewaySetEventData(
+  //     l2GatewayRouterAddress,
+  //     this.l2Provider
+  //   )
+  // }
 
   // CHRIS: now on token bridger
   // public async getTokenBalanceBatch(

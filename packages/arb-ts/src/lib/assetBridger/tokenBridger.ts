@@ -18,9 +18,10 @@
 
 import { defaultAbiCoder } from '@ethersproject/abi'
 import { Signer } from '@ethersproject/abstract-signer'
-import { Provider } from '@ethersproject/abstract-provider'
+import { Provider, Filter, EventFilter } from '@ethersproject/abstract-provider'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { Zero, MaxUint256 } from '@ethersproject/constants'
+import { hexZeroPad } from '@ethersproject/bytes'
 import { Logger } from '@ethersproject/logger'
 import { BigNumber, ethers } from 'ethers'
 
@@ -30,11 +31,14 @@ import {
   L1ERC20Gateway__factory,
   L1WethGateway__factory,
   StandardArbERC20__factory,
+  L2ArbitrumGateway__factory,
+  L2ArbitrumGateway,
   ERC20__factory,
-  ERC20,
-  Multicall2__factory,
+  L1GatewayRouter,
 } from '../abi'
-import { BridgeHelper } from '../bridge_helpers'
+import { WithdrawalInitiatedEvent } from '../abi/L2ArbitrumGateway'
+import { GatewaySetEvent } from '../abi/L1GatewayRouter'
+
 import { DepositParams } from '../l1Bridge'
 import {
   GasOverrides,
@@ -43,12 +47,13 @@ import {
 import { SignerProviderUtils } from '../utils/signerOrProvider'
 import { L2Network } from '../utils/networks'
 import { isError } from '../utils/lib'
+import { MultiCaller } from '../utils/multicall'
 import { ArbTsError } from '../errors'
 
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 
-// CHRIS: do something better with these? we have different defaults
+// CHRIS: do something better with these? we have different defaults in the estimator now
 // const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
 // const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
 
@@ -110,6 +115,7 @@ export class TokenBridger extends AssetBridger<
 
   public constructor(
     l2Network: L2Network,
+    // CHRIS: this should move onto the network object itself?
     public readonly isCustomNetwork: boolean = false
   ) {
     super(l2Network)
@@ -152,7 +158,7 @@ export class TokenBridger extends AssetBridger<
     return (await l2GatewayRouter.functions.getGateway(erc20L1Address)).gateway
   }
 
-  // CHRIS: aren't we missing an approve on L2?
+  // CHRIS: aren't we missing an approve on L2? and a getL1WIthdrawalEvents, getL1DepositEvents, getL2depositEVents
   /**
    * Approve tokens for deposit to the bridge. The tokens will be approved for the relevant gateway.
    * @param params
@@ -181,170 +187,67 @@ export class TokenBridger extends AssetBridger<
     )
   }
 
-  // public async getTokenWithdrawEventData(
-  //   l2Provider: Provider,
-  //   l1TokenAddress: string,
-  //   fromAddress?: string,
-  //   filter?: Filter
-  // ): Promise<WithdrawalInitiated[]> {
-  //   // CHRIS: network
-  //   const tokenBridge = networks['1'].tokenBridge
-  //   const l2GatewayRouter = L2GatewayRouter__factory.connect(
-  //     tokenBridge.l2GatewayRouter,
-  //     l2Provider
-  //   )
+  protected async getEvents<TContract extends ethers.Contract, TEvent>(
+    provider: Provider,
+    addr: string,
+    contractFactory: {
+      connect(address: string, provider: Provider): TContract
+    },
+    topicGenerator: (t: TContract) => EventFilter,
+    filter?: Omit<Filter, 'topics' | 'address'>
+  ): Promise<TEvent[]> {
+    const contract = contractFactory.connect(addr, provider)
+    const eventFilter = topicGenerator(contract)
+    const fullFilter = {
+      ...eventFilter,
+      fromBlock: filter?.fromBlock || 0,
+      toBlock: filter?.toBlock || 'latest',
+    }
+    const logs = await provider.getLogs(fullFilter)
+    return (logs.map(l =>
+      contract.interface.parseLog(l)
+    ) as unknown) as TEvent[]
+  }
 
-  //   const gatewayAddress = await l2GatewayRouter.getGateway(l1TokenAddress)
-
-  //   return this.getTWithdrawalEventData(
-  //     l2Provider,
-  //     gatewayAddress,
-  //     l1TokenAddress,
-  //     fromAddress,
-  //     filter
-  //   )
-  // }
-
-  // CHRIS: reconcile this method with getTokenWithdrawEventData
   /**
-   * All withdrawals from given gateway
+   * Get the L2 events created by a withdrawal
+   * @param l2Provider
+   * @param gatewayAddress
+   * @param l1TokenAddress
+   * @param fromAddress
+   * @param filter
+   * @returns
    */
-  // public async getGatewayWithdrawEventData(
-  //   l2Provider: Provider,
-  //   gatewayAddress: string,
-  //   fromAddress?: string,
-  //   filter?: Filter
-  // ): Promise<WithdrawalInitiated[]> {
-  //   return this.getTWithdrawalEventData(
-  //     l2Provider,
-  //     gatewayAddress,
-  //     undefined,
-  //     fromAddress,
-  //     filter
-  //   )
-  // }
+  public async getL2WithdrawalEvents(
+    l2Provider: Provider,
+    gatewayAddress: string,
+    l1TokenAddress?: string,
+    fromAddress?: string,
+    filter?: Omit<Filter, 'topics' | 'address'>
+  ) {
+    const events = await this.getEvents<
+      L2ArbitrumGateway,
+      WithdrawalInitiatedEvent
+    >(
+      l2Provider,
+      gatewayAddress,
+      L2ArbitrumGateway__factory,
+      contract =>
+        contract.filters.WithdrawalInitiated(
+          null,
+          fromAddress ? hexZeroPad(fromAddress, 32) : null
+        ),
+      filter
+    )
 
-  // // CHRIS: do we need functions for this? shoud we have an event log getter?
-  // private async getEventLogs<T extends Interface>(
-  //   eventName: string,
-  //   provider: Provider,
-  //   iface: T,
-  //   contractAddress: string,
-  //   topics: (string | string[] | null)[] = [],
-  //   filter: Filter = {}
-  // ): Promise<Log[]> {
-  //   // TODO: can we make eventName typesafe?
-  //   const event = iface.getEvent(eventName)
-  //   const eventTopic = iface.getEventTopic(event)
-
-  //   if (!filter.fromBlock && !filter.toBlock)
-  //     console.warn('Attempting to query from 0 to block latest')
-  //   return await provider.getLogs({
-  //     address: contractAddress,
-  //     topics: [eventTopic, ...topics],
-  //     fromBlock: filter.fromBlock || 0,
-  //     toBlock: filter.toBlock || 'latest',
-  //   })
-  // }
-
-  // private async getLogs<TInterface extends ethers.utils.Interface, TEvent extends Readonly<any[]>>(
-  //   provider: Provider,
-  //   interfaceGenerator: () => TInterface,
-  //   eventSelector: (i: TInterface) => ethers.utils.EventFragment,
-  //   ,
-  //   topics: TEvent,
-  //   filter: Omit<Filter, "topics">,
-  // ) {
-  //   // static createInterface(): L2ArbitrumGatewayInterface {
-  //   //   return new utils.Interface(_abi) as L2ArbitrumGatewayInterface
-  //   // }
-  //   // static connect(
-  //   //   address: string,
-  //   //   signerOrProvider: Signer | Provider
-  //   // ): L2ArbitrumGateway {
-  //   //   return new Contract(address, _abi, signerOrProvider) as L2ArbitrumGateway
-  //   // }
-
-  //   const iFace = interfaceGenerator();
-  //   const eventFrag = eventSelector(iFace);
-
-  //   const encodedTopics = iFace.encodeFilterTopics(eventFrag, topics);
-  //   const res = await provider.getLogs({...filter, topics: encodedTopics })
-  //   return res.map(l => {
-  //     const parsed = iFace.parseLog(l).args
-  //     return (parsed as unknown) as TEvent
-  //   })
-  // }
-
-  // CHRIS: needs a better name, was called getTokenWithdrawEventData
-  // CHRIS: these vent log functions are pretty yuck?
-  // private async getTWithdrawalEventData(
-  //   l2Provider: Provider,
-  //   gatewayAddress: string,
-  //   l1TokenAddress?: string,
-  //   fromAddress?: string,
-  //   filter?: Filter
-  // ): Promise<WithdrawalInitiated[]> {
-  //   // this.getLogs<L2ArbitrumGatewayInterface, WithdrawalInitiatedEvent>(prvider,
-  //   //   () => L2ArbitrumGateway__factory.createInterface(),
-  //   //   i => i.events['WithdrawalInitiated(address,address,address,uint256,uint256,uint256)'],
-  //   //   {
-  //   //     topics
-  //   //   }
-
-  //   // )
-
-  //   const iface = L2ArbitrumGateway__factory.createInterface()
-
-  //   const gatway = L2ArbitrumGateway__factory.connect(
-  //     gatewayAddress,
-  //     l2Provider
-  //   )
-  //   const a = gatway.filters.WithdrawalInitiated(
-  //     null,
-  //     fromAddress ? hexZeroPad(fromAddress, 32) : null
-  //   )
-
-  //   const frag =
-  //     iface.events[
-  //       'WithdrawalInitiated(address,address,address,uint256,uint256,uint256)'
-  //     ]
-  //     const topics = [null, fromAddress ? hexZeroPad(fromAddress, 32) : null]
-  //   const f2 = iface.encodeFilterTopics(frag, topics)
-  //   const r2 = await l2Provider.getLogs({...filter, ...f2})
-
-  //   const res = await l2Provider.getLogs({ ...filter, ...a }) // should be "as something?"
-
-  //   const logs = await this.getEventLogs(
-  //     'WithdrawalInitiated',
-  //     l2Provider,
-  //     iface,
-  //     gatewayAddress,
-  //     topics,
-  //     filter
-  //   )
-  //   res.map(l => {
-  //     const parsed = gatway.interface.parseLog(l).args
-  //     const q = (parsed as unknown) as WithdrawalInitiatedEvent
-  //     return q
-  //   })
-
-  //   const parsedLogs = logs.map(log => {
-  //     const data = {
-  //       ...iface.parseLog(log).args,
-  //       txHash: log.transactionHash,
-  //     }
-  //     return (data as unknown) as WithdrawalInitiated
-  //   })
-  //   // TODO: use l1TokenAddress as filter in topics instead of here
-  //   return l1TokenAddress
-  //     ? parsedLogs.filter(
-  //         (log: WithdrawalInitiated) =>
-  //           log.l1Token.toLocaleLowerCase() ===
-  //           l1TokenAddress.toLocaleLowerCase()
-  //       )
-  //     : parsedLogs
-  // }
+    return l1TokenAddress
+      ? events.filter(
+          log =>
+            log.args.l1Token.toLocaleLowerCase() ===
+            l1TokenAddress.toLocaleLowerCase()
+        )
+      : events
+  }
 
   /**
    * Does the provided address look like a weth gateway
@@ -400,12 +303,32 @@ export class TokenBridger extends AssetBridger<
   }
 
   /**
+   * Get the L2 token contract at the provided address
+   * @param l1Provider
+   * @param l1TokenAddr
+   * @returns
+   */
+  public getL2TokenContract(l2Provider: Provider, l2TokenAddr: string) {
+    return StandardArbERC20__factory.connect(l2TokenAddr, l2Provider)
+  }
+
+  /**
+   * Get the L1 token contract at the provided address
+   * @param l1Provider
+   * @param l1TokenAddr
+   * @returns
+   */
+  public getL1TokenContract(l1Provider: Provider, l1TokenAddr: string) {
+    return ERC20__factory.connect(l1TokenAddr, l1Provider)
+  }
+
+  /**
    * Get the corresponding L2 for the provided L1 token
    * @param erc20L1Address
    * @param l1Provider
    * @returns
    */
-  public getERC20L2Address(erc20L1Address: string, l1Provider: Provider) {
+  public getL2ERC20Address(erc20L1Address: string, l1Provider: Provider) {
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
       l1Provider
@@ -422,7 +345,7 @@ export class TokenBridger extends AssetBridger<
    * @param l1Provider
    * @returns
    */
-  public getERC20L1Address(erc20L2Address: string, l2Provider: Provider) {
+  public getL1ERC20Address(erc20L2Address: string, l2Provider: Provider) {
     const arbERC20 = StandardArbERC20__factory.connect(
       erc20L2Address,
       l2Provider
@@ -632,43 +555,168 @@ export class TokenBridger extends AssetBridger<
     return this.withdrawTxOrGas(params, false)
   }
 
-  // CHRIS: move this off here
+  /**
+   * Fetch a batch of token balances
+   * @param l1OrL2Provider 
+   * @param userAddr 
+   * @param tokenAddrs 
+   * @returns 
+   */
   public async getTokenBalanceBatch(
     l1OrL2Provider: Provider,
     userAddr: string,
-    tokenAddrs: Array<string>,
-    targetNetwork: 'L1' | 'L2'
-  ): Promise<Array<{ tokenAddr: string; balance: BigNumber | undefined }>> {
-    const iface = ERC20__factory.createInterface()
-
-    const balanceCalls = tokenAddrs.map(token => ({
-      target: token,
-      funcFragment: iface.functions['balanceOf(address)'],
-      values: [userAddr],
-    }))
-
-    type Await<T> = T extends {
-      then(onfulfilled?: (value: infer U) => unknown): unknown
+    tokenAddrs: Array<string>
+  ): Promise<(BigNumber | undefined)[]> {
+    const network = await l1OrL2Provider.getNetwork()
+    let isL1: boolean
+    if (network.chainId === Number.parseInt(this.l2Network.chainID)) {
+      isL1 = false
+    } else if (
+      network.chainId === Number.parseInt(this.l2Network.partnerChainID)
+    ) {
+      isL1 = true
+    } else {
+      throw new ArbTsError(
+        `Unexpected chain id. Provider chain id: ${network.chainId} matches neither l1Network: ${this.l2Network.partnerChainID} not l2Network: ${this.l2Network.chainID}.`
+      )
     }
-      ? U
-      : T
-    type ExpectedReturnType = Await<ReturnType<ERC20['functions']['balanceOf']>>
 
-    const tokenBridge = this.l2Network.tokenBridge
-    const multicall = Multicall2__factory.connect(
-      targetNetwork === 'L1'
-        ? tokenBridge.l1MultiCall
-        : tokenBridge.l2Multicall,
-      l1OrL2Provider
+    const multiCaller = new MultiCaller(
+      l1OrL2Provider,
+      isL1
+        ? this.l2Network.tokenBridge.l1MultiCall
+        : this.l2Network.tokenBridge.l2Multicall
     )
 
-    const res = await BridgeHelper.getMulticallTryAggregate(
-      balanceCalls,
-      multicall
+    const callInputs = tokenAddrs
+      .map(t =>
+        isL1
+          ? this.getL1TokenContract(l1OrL2Provider, t)
+          : this.getL2TokenContract(l1OrL2Provider, t)
+      )
+      .map(t => ({
+        targetAddr: t.address,
+        encoder: () => t.interface.encodeFunctionData('balanceOf', [userAddr]),
+        decoder: (returnData: string) =>
+          t.interface.decodeFunctionResult(
+            'balanceOf',
+            returnData
+          )[0] as Awaited<ReturnType<typeof t['balanceOf']>>,
+      }))
+
+    return await multiCaller.call(callInputs)
+  }
+}
+
+
+/**
+ * A token-gateway pair
+ */
+interface TokenGateway {
+  tokenAddr: string
+  gatewayAddr: string
+}
+
+/**
+ * Admin functionality for the token bridge
+ */
+export class AdminTokenBridger extends TokenBridger {
+  /**
+   * Get all the gateway set events on the L1 gateway router
+   * @param l1Provider
+   * @param customNetworkL1GatewayRouter
+   * @returns
+   */
+  public async getL1GatewaySetEvents(
+    l1Provider: Provider,
+    customNetworkL1GatewayRouter?: string
+  ) {
+    if (this.isCustomNetwork && !customNetworkL1GatewayRouter)
+      throw new Error(
+        'Must supply customNetworkL1GatewayRouter for custom network '
+      )
+
+    const l1GatewayRouterAddress =
+      customNetworkL1GatewayRouter || this.l2Network.tokenBridge.l1GatewayRouter
+
+    return await this.getEvents<L1GatewayRouter, GatewaySetEvent>(
+      l1Provider,
+      l1GatewayRouterAddress,
+      L1GatewayRouter__factory,
+      t => t.filters.GatewaySet()
     )
-    return res.map((bal, index) => ({
-      tokenAddr: tokenAddrs[index],
-      balance: bal ? (bal as ExpectedReturnType)[0] : undefined,
-    }))
+  }
+
+  /**
+   * Get all the gateway set events on the L2 gateway router
+   * @param l1Provider
+   * @param customNetworkL1GatewayRouter
+   * @returns
+   */
+  public async getL2GatewaySetEvents(
+    l2Provider: Provider,
+    customNetworkL2GatewayRouter?: string
+  ) {
+    if (this.isCustomNetwork && !customNetworkL2GatewayRouter)
+      throw new Error(
+        'Must supply customNetworkL2GatewayRouter for custom network '
+      )
+
+    const l2GatewayRouterAddress =
+      customNetworkL2GatewayRouter || this.l2Network.tokenBridge.l2GatewayRouter
+
+    return await this.getEvents<L1GatewayRouter, GatewaySetEvent>(
+      l2Provider,
+      l2GatewayRouterAddress,
+      L1GatewayRouter__factory,
+      t => t.filters.GatewaySet()
+    )
+  }
+
+  /**
+   * Register the provided token addresses against the provided gateways
+   * @param l1Signer
+   * @param l2Provider
+   * @param tokenGateways
+   * @returns
+   */
+  public async setGateways(
+    l1Signer: Signer,
+    l2Provider: Provider,
+    tokenGateways: TokenGateway[]
+  ) {
+    if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
+      throw new ArbTsError(
+        'l1Signer does not have a connected provider and one is required.'
+      )
+    }
+
+    const l2GasPrice = await l2Provider.getGasPrice()
+
+    const estimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const { submissionPrice } = await estimator.getSubmissionPrice(
+      // 20 per address, 100 as buffer/ estimate for any additional calldata
+      300 + 20 * (tokenGateways.length * 2),
+      // CHRIS: should we allow the default increase here - before there was none
+      {
+        percentIncrease: BigNumber.from(0),
+      }
+    )
+
+    const l1GatewayRouter = L1GatewayRouter__factory.connect(
+      this.l2Network.tokenBridge.l1GatewayRouter,
+      l1Signer.provider
+    )
+
+    return await l1GatewayRouter.functions.setGateways(
+      tokenGateways.map(tG => tG.tokenAddr),
+      tokenGateways.map(tG => tG.gatewayAddr),
+      0,
+      l2GasPrice,
+      submissionPrice,
+      {
+        value: submissionPrice,
+      }
+    )
   }
 }

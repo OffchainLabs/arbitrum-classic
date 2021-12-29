@@ -37,7 +37,6 @@ import {
 import { Network } from './networks'
 import { ArbMulticall2__factory } from './abi/factories/ArbMulticall2__factory'
 import { BridgeHelper } from './bridge_helpers'
-import { MulticallFunctionInput } from './dataEntities'
 
 export interface L2TokenData {
   contract: StandardArbERC20
@@ -134,9 +133,9 @@ export class L2Bridge {
   //   })
   // }
 
-  public getLatestBlock(): Promise<Block> {
-    return this.l2Provider.getBlock('latest')
-  }
+  // public getLatestBlock(): Promise<Block> {
+  //   return this.l2Provider.getBlock('latest')
+  // }
 
   // CHRIS: now on bridger
   /**
@@ -169,23 +168,23 @@ export class L2Bridge {
   //   ](erc20l1Address, to, amount, '0x', overrides)
   // }
 
-  public async getL2TokenData(l2ERC20Address: string): Promise<L2TokenData> {
-    const walletAddress = await this.getWalletAddress()
+  // public async getL2TokenData(l2ERC20Address: string): Promise<L2TokenData> {
+  //   const walletAddress = await this.getWalletAddress()
 
-    const arbERC20TokenContract = StandardArbERC20__factory.connect(
-      l2ERC20Address,
-      this.l2Signer
-    )
-    // this will throw if not a contract / ERC20
-    const [balance] = await arbERC20TokenContract.functions.balanceOf(
-      walletAddress
-    )
-    // TODO: should we include extra data? ie: `l2ERC20Address.l1Address()` and `l2GatewayRouter.getGateway(erc20L1Address)`
-    return {
-      contract: arbERC20TokenContract,
-      balance,
-    }
-  }
+  //   const arbERC20TokenContract = StandardArbERC20__factory.connect(
+  //     l2ERC20Address,
+  //     this.l2Signer
+  //   )
+  //   // this will throw if not a contract / ERC20
+  //   const [balance] = await arbERC20TokenContract.functions.balanceOf(
+  //     walletAddress
+  //   )
+  //   // TODO: should we include extra data? ie: `l2ERC20Address.l1Address()` and `l2GatewayRouter.getGateway(erc20L1Address)`
+  //   return {
+  //     contract: arbERC20TokenContract,
+  //     balance,
+  //   }
+  // }
 
   // CHRIS: now on token bridger
   // public async getGatewayAddress(erc20L1Address: string): Promise<string> {
@@ -207,30 +206,30 @@ export class L2Bridge {
   //     })
   // }
 
-  public getTxnSubmissionPrice(
-    dataSize: BigNumber | number
-  ): Promise<[BigNumber, BigNumber]> {
-    return this.arbRetryableTx.functions.getSubmissionPrice(dataSize)
-  }
+  // public getTxnSubmissionPrice(
+  //   dataSize: BigNumber | number
+  // ): Promise<[BigNumber, BigNumber]> {
+  //   return this.arbRetryableTx.functions.getSubmissionPrice(dataSize)
+  // }
 
-  public async getWalletAddress(): Promise<string> {
-    if (this.walletAddressCache) {
-      return this.walletAddressCache
-    }
-    this.walletAddressCache = await this.l2Signer.getAddress()
-    return this.walletAddressCache
-  }
+  // public async getWalletAddress(): Promise<string> {
+  //   if (this.walletAddressCache) {
+  //     return this.walletAddressCache
+  //   }
+  //   this.walletAddressCache = await this.l2Signer.getAddress()
+  //   return this.walletAddressCache
+  // }
 
   // public getL2EthBalance(): Promise<BigNumber> {
   //   return this.l2Signer.getBalance()
   // }
 
-  public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
-    const multicall = ArbMulticall2__factory.connect(
-      this.network.tokenBridge.l2Multicall,
-      this.l2Provider
-    )
+  // public async getMulticallAggregate(functionCalls: MulticallFunctionInput) {
+  //   const multicall = ArbMulticall2__factory.connect(
+  //     this.network.tokenBridge.l2Multicall,
+  //     this.l2Provider
+  //   )
 
-    return BridgeHelper.getMulticallTryAggregate(functionCalls, multicall)
-  }
+  //   return BridgeHelper.getMulticallTryAggregate(functionCalls, multicall)
+  // }
 }

@@ -26,7 +26,7 @@ import { ArbSys__factory } from '../abi'
 import { ARB_SYS_ADDRESS } from '../precompile_addresses'
 import {
   L1ToL2MessageGasEstimator,
-  PercentBigNumber,
+  PercentIncrease,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../utils/signerOrProvider'
 import { ArbTsError } from '../errors'
@@ -81,7 +81,7 @@ export interface EthDepositParams extends EthDepositBase {
    * Retryable transaction overrides
    */
   retryableGasOverrides?: {
-    maxSubmissionPrice?: PercentBigNumber
+    maxSubmissionPrice?: PercentIncrease
   }
 }
 

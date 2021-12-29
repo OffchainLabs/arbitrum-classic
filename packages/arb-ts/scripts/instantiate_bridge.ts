@@ -21,7 +21,7 @@ import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
 import args from './getCLargs'
-import { Bridge, EthBridger, networks, TokenBridger } from '../src'
+import { EthBridger, networks, TokenBridger } from '../src'
 import { l2Networks } from '../src/lib/utils/networks'
 import { Network } from '../src/lib/networks'
 import { Signer } from 'ethers'
@@ -38,9 +38,8 @@ export const instantiateBridge = async (
   l1pkParam?: string,
   l2PkParam?: string
 ): Promise<{
-  bridge: Bridge
-  l1Network: Network,
-  l2Network: Network,
+  l1Network: Network
+  l2Network: Network
   l1Signer: Signer
   l2Signer: Signer
   tokenBridger: TokenBridger
@@ -110,10 +109,13 @@ export const instantiateBridge = async (
     }
   })()
 
-  const bridge = await Bridge.init(l1Signer, l2Signer)
   if (verbose) {
     console.log('')
-    console.log('**** Bridge instantiated w/ address', l1Signer.address, '****')
+    console.log(
+      '**** Bridger instantiated w/ address',
+      l1Signer.address,
+      '****'
+    )
     console.log('')
   }
 
@@ -121,7 +123,6 @@ export const instantiateBridge = async (
   const ethBridger = new EthBridger(l2Network)
 
   return {
-    bridge,
     l1Network,
     l2Network,
     l1Signer,
