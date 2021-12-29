@@ -107,7 +107,7 @@ func (s *Snapshot) MaxGasPriceBid() *big.Int {
 // If an error is returned, s is unmodified
 func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
 	mach := s.mach.Clone()
-	res, err := s.addMessage(msg, sender, targetHash)
+	res, _, err := s.addMessage(msg, sender, targetHash, addMessageMaxAVMGas)
 	if err != nil {
 		// Revert the machine
 		s.mach = mach
@@ -115,23 +115,25 @@ func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, target
 	return res, err
 }
 
+const addMessageMaxAVMGas = 100000000000
+
 // addMessage can only be called if the snapshot is uniquely owned
 // leaves the machine in an undefined state on error
-func (s *Snapshot) addMessage(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
+func (s *Snapshot) addMessage(msg message.Message, sender common.Address, targetHash common.Hash, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), chainTime)
-	res, _, err := runTxUnchecked(s.mach, inboxMsg, 100000000000)
+	res, debugPrints, err := runTxUnchecked(s.mach, inboxMsg, maxAVMGas)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if res.IncomingRequest.MessageID != targetHash {
-		return nil, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
+		return nil, nil, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}
 	s.nextInboxSeqNum = new(big.Int).Add(s.nextInboxSeqNum, big.NewInt(1))
-	return res, nil
+	return res, debugPrints, nil
 }
 
 // AdvanceTime can only be called if the snapshot is uniquely owned
@@ -413,11 +415,19 @@ func (s *Snapshot) basicAddMessage(data []byte, dest common.Address) (*evm.TxRes
 			Data:        data,
 		},
 	}
+	res, _, err := s.AddContractMessage(msg, common.Address{}, addMessageMaxAVMGas)
+	return res, err
+}
+
+func (s *Snapshot) AddContractMessage(msg message.ContractTransaction, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+	if s.arbosRemappingEnabled && sender != (common.Address{}) {
+		sender = message.L1RemapAccount(sender)
+	}
 	var targetHash common.Hash
 	if s.chainId != nil {
 		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
 	}
-	return s.addMessage(message.NewSafeL2Message(msg), common.Address{}, targetHash)
+	return s.addMessage(message.NewSafeL2Message(msg), sender, targetHash, maxAVMGas)
 }
 
 func (s *Snapshot) addArbosTestMessage(data []byte) error {
