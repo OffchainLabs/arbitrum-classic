@@ -41,14 +41,17 @@ func TestTrace(t *testing.T) {
 
 	client := web3.NewEthClient(srv, true)
 
-	simpleAddr, _, simple, err := arbostestcontracts.DeploySimple(senderAuth, client)
+	simpleAddr, _, _, err := arbostestcontracts.DeploySimple(senderAuth, client)
 	test.FailIfError(t, err)
 
-	tx, err := simple.Trace(senderAuth, big.NewInt(42356))
+	simpleABI, err := arbostestcontracts.SimpleMetaData.GetAbi()
 	test.FailIfError(t, err)
 
+	traceMethod := simpleABI.Methods["trace"]
+	traceInpData, err := traceMethod.Inputs.Pack(big.NewInt(4234))
+	test.FailIfError(t, err)
 	blockNum := rpc.LatestBlockNumber
-	data := hexutil.Bytes(tx.Data())
+	data := hexutil.Bytes(append(traceMethod.ID, traceInpData...))
 	traceData, err := tracer.Call(web3.CallTxArgs{
 		From: &senderAuth.From,
 		To:   &simpleAddr,

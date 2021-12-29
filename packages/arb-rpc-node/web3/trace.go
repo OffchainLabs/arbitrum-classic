@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -34,20 +35,20 @@ import (
 )
 
 type TraceAction struct {
-	CallType string         `json:"callType,omitempty"`
-	From     common.Address `json:"from"`
-	Gas      hexutil.Uint64 `json:"gas"`
-	Input    hexutil.Bytes  `json:"input,omitempty"`
-	Init     hexutil.Bytes  `json:"init,omitempty"`
-	To       hexutil.Bytes  `json:"to"`
-	Value    *hexutil.Big   `json:"value"`
+	CallType string          `json:"callType,omitempty"`
+	From     common.Address  `json:"from"`
+	Gas      hexutil.Uint64  `json:"gas"`
+	Input    hexutil.Bytes   `json:"input,omitempty"`
+	Init     hexutil.Bytes   `json:"init,omitempty"`
+	To       *common.Address `json:"to,omitempty"`
+	Value    *hexutil.Big    `json:"value"`
 }
 
 type TraceCallResult struct {
 	Address *common.Address `json:"address,omitempty"`
-	Code    hexutil.Bytes   `json:"code,omitempty"`
+	Code    *hexutil.Bytes  `json:"code,omitempty"`
 	GasUsed hexutil.Uint64  `json:"gasUsed"`
-	Output  hexutil.Bytes   `json:"output,omitempty"`
+	Output  *hexutil.Bytes  `json:"output,omitempty"`
 }
 
 type TraceFrame struct {
@@ -64,10 +65,11 @@ type TraceFrame struct {
 }
 
 type TraceResult struct {
-	Output    hexutil.Bytes `json:"output"`
-	StateDiff *int          `json:"stateDiff"`
-	Trace     []TraceFrame  `json:"trace"`
-	VmTrace   *int          `json:"vmTrace"`
+	Output             hexutil.Bytes     `json:"output"`
+	StateDiff          *int              `json:"stateDiff"`
+	Trace              []TraceFrame      `json:"trace"`
+	VmTrace            *int              `json:"vmTrace"`
+	DestroyedContracts *[]common.Address `json:"destroyedContracts"`
 }
 
 type Trace struct {
@@ -116,6 +118,31 @@ func extractTrace(debugPrints []value.Value) (*evm.EVMTrace, error) {
 	return trace, nil
 }
 
+func getDestroyedContracts(snap *snapshot.Snapshot, frames []TraceFrame) ([]common.Address, error) {
+	maybeDestroyedContracts := make(map[common.Address]struct{})
+	for _, frame := range frames {
+		if frame.Type == "call" && frame.Action.CallType == "call" {
+			maybeDestroyedContracts[*frame.Action.To] = struct{}{}
+		}
+		if frame.Type == "create" && frame.Result != nil {
+			maybeDestroyedContracts[*frame.Result.Address] = struct{}{}
+		}
+	}
+
+	deletedContracts := make([]common.Address, 0, len(maybeDestroyedContracts))
+	for con := range maybeDestroyedContracts {
+		txCount, err := snap.GetTransactionCount(arbcommon.NewAddressFromEth(con))
+		if err != nil {
+			return nil, err
+		}
+		if txCount.Sign() == 0 {
+			// If nonce is 0, contract must have been destroyed and if it was destroyed, the nonce must be 0
+			deletedContracts = append(deletedContracts, con)
+		}
+	}
+	return deletedContracts, nil
+}
+
 func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, error) {
 	receipt := txRes.ToEthReceipt(arbcommon.Hash{})
 	frame, err := trace.FrameTree()
@@ -133,20 +160,6 @@ func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, 
 	for len(frames) > 0 {
 		frame := frames[0]
 		frames = frames[1:]
-		var emptyAddress common.Address
-		var createdContractAddress *common.Address
-		switch frame := frame.f.(type) {
-		case *evm.CallFrame:
-			if len(resFrames) == 0 && receipt.ContractAddress != emptyAddress {
-				createdContractAddress = &receipt.ContractAddress
-			}
-		case *evm.CreateFrame:
-			tmp := frame.Create.ContractAddress.ToEthAddress()
-			createdContractAddress = &tmp
-		case *evm.Create2Frame:
-			tmp := frame.Create.ContractAddress.ToEthAddress()
-			createdContractAddress = &tmp
-		}
 
 		callFrame := frame.f.GetCallFrame()
 		action := TraceAction{
@@ -155,37 +168,56 @@ func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, 
 			Value: (*hexutil.Big)(callFrame.Call.Value),
 		}
 
-		if createdContractAddress != nil {
-			action.Init = callFrame.Call.Data
-		} else {
-			if callFrame.Call.To == nil {
-				return nil, errors.New("expected call to have destination")
-			}
-			action.Input = callFrame.Call.Data
-			action.To = callFrame.Call.To.Bytes()
-			action.CallType = callFrame.Call.Type.RPCString()
-		}
-
 		var result *TraceCallResult
 		var callErr *string
 		if callFrame.Return.Result == evm.ReturnCode {
 			result = &TraceCallResult{
 				GasUsed: hexutil.Uint64(callFrame.Return.GasUsed.Uint64()),
 			}
-			if createdContractAddress != nil {
-				result.Address = createdContractAddress
-				result.Code = callFrame.Return.ReturnData
-			} else {
-				result.Output = callFrame.Return.ReturnData
-			}
 		} else {
 			tmp := callFrame.Return.Result.String()
 			callErr = &tmp
 		}
-		frameType := "call"
-		if createdContractAddress != nil {
+
+		var frameType string
+		switch frame := frame.f.(type) {
+		case *evm.CallFrame:
+			// Top level call could actually be contract creation
+			if len(resFrames) == 0 && callFrame.Call.To == nil {
+				frameType = "create"
+				action.Init = callFrame.Call.Data
+				if result != nil {
+					result.Address = &receipt.ContractAddress
+					result.Code = (*hexutil.Bytes)(&callFrame.Return.ReturnData)
+				}
+			} else {
+				frameType = "call"
+				action.Input = callFrame.Call.Data
+				toTmp := callFrame.Call.To.ToEthAddress()
+				action.To = &toTmp
+				action.CallType = callFrame.Call.Type.RPCString()
+				if result != nil {
+					result.Output = (*hexutil.Bytes)(&callFrame.Return.ReturnData)
+				}
+			}
+		case *evm.CreateFrame:
 			frameType = "create"
+			action.Init = frame.Create.Code
+			if result != nil {
+				tmp := frame.Create.ContractAddress.ToEthAddress()
+				result.Address = &tmp
+				result.Code = (*hexutil.Bytes)(&callFrame.Return.ReturnData)
+			}
+		case *evm.Create2Frame:
+			frameType = "create"
+			action.Init = frame.Create.Code
+			if result != nil {
+				tmp := frame.Create.ContractAddress.ToEthAddress()
+				result.Address = &tmp
+				result.Code = (*hexutil.Bytes)(&callFrame.Return.ReturnData)
+			}
 		}
+
 		resFrames = append(resFrames, TraceFrame{
 			Action:       action,
 			Result:       result,
@@ -204,18 +236,19 @@ func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, 
 	return resFrames, nil
 }
 
-func authenticateTraceType(traceTypes []string) error {
-	foundTrace := false
+func authenticateTraceType(traceTypes []string) (bool, error) {
+	types := make(map[string]struct{})
 	for _, typ := range traceTypes {
-		if typ != "trace" {
-			return errors.Errorf("unsupported trace type: %v", typ)
+		if typ != "trace" && typ != "deletedContracts" {
+			return false, errors.Errorf("unsupported trace type: %v", typ)
 		}
-		foundTrace = true
+		types[typ] = struct{}{}
 	}
-	if !foundTrace {
-		return errors.New("must specify trace type as 'trace'")
+	if _, found := types["trace"]; !found {
+		return false, errors.New("must specify trace type as 'trace'")
 	}
-	return nil
+	_, traceDestroys := types["deletedContracts"]
+	return traceDestroys, nil
 }
 
 type CallTraceRequest struct {
@@ -338,21 +371,15 @@ func (t *Trace) block(blockNum rpc.BlockNumberOrHash) ([]*rawTxTrace, *machine.B
 	return res, blockInfo, nil
 }
 
-func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.BlockNumberOrHash) (*TraceResult, error) {
-	if err := authenticateTraceType(traceTypes); err != nil {
-		return nil, err
-	}
-	snap, err := t.s.getSnapshotForNumberOrHash(blockNum)
-	if err != nil {
-		return nil, err
-	}
+func (t *Trace) handleCallRequest(callArgs CallTxArgs, traceDestroys bool, snap *snapshot.Snapshot) (*TraceResult, error) {
 	from, msg := buildCallMsg(callArgs)
-
-	callRes, debugPrints, err := snap.Call(msg, from, t.s.maxAVMGas)
+	// We're mutating so we need unique ownership
+	snap = snap.Clone()
+	callRes, debugPrints, err := snap.AddContractMessage(msg, from, t.s.maxAVMGas)
 	if err != nil {
 		return nil, err
 	}
-	if callRes.ResultCode != evm.ReturnCode {
+	if callRes.ResultCode != evm.ReturnCode && callRes.ResultCode != evm.RevertCode {
 		return nil, evm.HandleCallError(callRes, t.s.ganacheMode)
 	}
 	vmTrace, err := extractTrace(debugPrints)
@@ -363,17 +390,43 @@ func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.Bloc
 	if err != nil {
 		return nil, err
 	}
+	var destroyed *[]common.Address
+	if traceDestroys {
+		destroyedTmp, err := getDestroyedContracts(snap, frames)
+		if err != nil {
+			return nil, err
+		}
+		destroyed = &destroyedTmp
+	}
+
 	return &TraceResult{
-		Output: callRes.ReturnData,
-		Trace:  frames,
+		Output:             callRes.ReturnData,
+		Trace:              frames,
+		DestroyedContracts: destroyed,
 	}, nil
 }
 
+func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.BlockNumberOrHash) (*TraceResult, error) {
+	traceDestroys, err := authenticateTraceType(traceTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	snap, err := t.s.getSnapshotForNumberOrHash(blockNum)
+	if err != nil {
+		return nil, err
+	}
+	return t.handleCallRequest(callArgs, traceDestroys, snap)
+}
+
 func (t *Trace) CallMany(calls []*CallTraceRequest, blockNum rpc.BlockNumberOrHash) ([]*TraceResult, error) {
+	traceDestroys := make([]bool, 0, len(calls))
 	for _, call := range calls {
-		if err := authenticateTraceType(call.traceTypes); err != nil {
+		traceDestroy, err := authenticateTraceType(call.traceTypes)
+		if err != nil {
 			return nil, err
 		}
+		traceDestroys = append(traceDestroys, traceDestroy)
 	}
 	snap, err := t.s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
@@ -381,35 +434,23 @@ func (t *Trace) CallMany(calls []*CallTraceRequest, blockNum rpc.BlockNumberOrHa
 	}
 
 	traces := make([]*TraceResult, 0, len(calls))
-	for _, call := range calls {
-		from, msg := buildCallMsg(call.callArgs)
-		callRes, debugPrints, err := snap.Call(msg, from, t.s.maxAVMGas)
+	for i, call := range calls {
+		frame, err := t.handleCallRequest(call.callArgs, traceDestroys[i], snap)
 		if err != nil {
 			return nil, err
 		}
-		if callRes.ResultCode != evm.ReturnCode {
-			return nil, evm.HandleCallError(callRes, t.s.ganacheMode)
-		}
-		vmTrace, err := extractTrace(debugPrints)
-		if err != nil {
-			return nil, err
-		}
-		frames, err := renderTraceFrames(callRes, vmTrace)
-		if err != nil {
-			return nil, err
-		}
-		traces = append(traces, &TraceResult{
-			Output: callRes.ReturnData,
-			Trace:  frames,
-		})
+		traces = append(traces, frame)
 	}
 	return traces, nil
 }
 
 func (t *Trace) ReplayBlockTransactions(blockNum rpc.BlockNumberOrHash, traceTypes []string) ([]*TraceResult, error) {
-	if err := authenticateTraceType(traceTypes); err != nil {
+	traceDestroys, err := authenticateTraceType(traceTypes)
+	if err != nil {
 		return nil, err
 	}
+	// TODO: Handle destroyed contract tracing
+	_ = traceDestroys
 	txTraces, blockInfo, err := t.block(blockNum)
 	if err != nil {
 		return nil, err
@@ -429,9 +470,12 @@ func (t *Trace) ReplayBlockTransactions(blockNum rpc.BlockNumberOrHash, traceTyp
 }
 
 func (t *Trace) ReplayTransaction(txHash hexutil.Bytes, traceTypes []string) (*TraceResult, error) {
-	if err := authenticateTraceType(traceTypes); err != nil {
+	traceDestroys, err := authenticateTraceType(traceTypes)
+	if err != nil {
 		return nil, err
 	}
+	// TODO: Handle destroyed contract tracing
+	_ = traceDestroys
 	txTrace, _, err := t.transaction(txHash)
 	if err != nil || txTrace.res == nil {
 		return nil, err
