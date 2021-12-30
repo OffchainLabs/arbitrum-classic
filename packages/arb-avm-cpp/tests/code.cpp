@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ TEST_CASE("Code serialization") {
         auto save_ret = saveTestMachine(*tx, *mach);
         REQUIRE(save_ret.status.ok());
 
-        auto mach2 = *mach;
+        auto mach2{*mach};
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 7;
         mach2.machine_state.context = AssertionContext(execConfig);

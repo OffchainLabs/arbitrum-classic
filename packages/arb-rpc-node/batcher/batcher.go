@@ -61,11 +61,11 @@ type l2TxSender interface {
 
 type batch interface {
 	newFromExisting() batch
-	validateTx(tx *types.Transaction) (txResponse, error)
+	validateTx(ctx context.Context, tx *types.Transaction) (txResponse, error)
 	isFull() bool
 	getAppliedTxes() []*types.Transaction
-	addIncludedTx(tx *types.Transaction) error
-	updateCurrentSnap(pendingSentBatches *list.List) error
+	addIncludedTx(ctx context.Context, tx *types.Transaction) error
+	updateCurrentSnap(ctx context.Context, pendingSentBatches *list.List) error
 	getLatestSnap() *snapshot.Snapshot
 }
 
@@ -76,7 +76,7 @@ type TransactionBatcher interface {
 	SendTransaction(ctx context.Context, tx *types.Transaction) error
 
 	// Return nil if no pending snapshot is available
-	PendingSnapshot() (*snapshot.Snapshot, error)
+	PendingSnapshot(ctx context.Context) (*snapshot.Snapshot, error)
 
 	Aggregator() *common.Address
 
@@ -108,7 +108,7 @@ func NewStatefulBatcher(
 	maxBatchTime time.Duration,
 ) (*Batcher, error) {
 	signer := types.NewEIP155Signer(chainId)
-	batch, err := newStatefulBatch(db, maxBatchSize, signer)
+	batch, err := newStatefulBatch(ctx, db, maxBatchSize, signer)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func newBatcher(
 				checkForFinish = false
 			}
 			server.Lock()
-			moreTxesWaiting := server.handleNextTx()
+			moreTxesWaiting := server.handleNextTx(ctx)
 			submittedBatch, err := server.maybeSubmitBatch(ctx, maxBatchTime, lastBatch, globalInbox, moreTxesWaiting)
 			if err != nil {
 				logger.Error().Err(err).Msg("failed submitting batch")
@@ -212,10 +212,10 @@ func newBatcher(
 	return server
 }
 
-func (m *Batcher) handleNextTx() bool {
-	tx, accountIndex, cont := popRandomTx(m.pendingBatch, m.queuedTxes)
+func (m *Batcher) handleNextTx(ctx context.Context) bool {
+	tx, accountIndex, cont := popRandomTx(ctx, m.pendingBatch, m.queuedTxes)
 	if tx != nil {
-		err := m.pendingBatch.addIncludedTx(tx)
+		err := m.pendingBatch.addIncludedTx(ctx, tx)
 		m.queuedTxes.maybeRemoveAccountAtIndex(accountIndex)
 		if err != nil {
 			logger.Error().Err(err).Msg("Aggregator ignored invalid tx")
@@ -302,10 +302,10 @@ func (m *Batcher) checkForNextBatch(ctx context.Context, receiptFetcher transact
 	return nil
 }
 
-func (m *Batcher) PendingSnapshot() (*snapshot.Snapshot, error) {
+func (m *Batcher) PendingSnapshot(ctx context.Context) (*snapshot.Snapshot, error) {
 	m.Lock()
 	defer m.Unlock()
-	if err := m.pendingBatch.updateCurrentSnap(m.pendingSentBatches); err != nil {
+	if err := m.pendingBatch.updateCurrentSnap(ctx, m.pendingSentBatches); err != nil {
 		return nil, err
 	}
 	return m.pendingBatch.getLatestSnap(), nil
@@ -324,7 +324,7 @@ func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Addr
 
 // SendTransaction takes a request signed transaction l2message from a client
 // and puts it in a queue to be included in the next transaction batch
-func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) error {
+func (m *Batcher) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	sender, err := types.Sender(m.signer, tx)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error processing user transaction")
@@ -336,12 +336,12 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	m.Lock()
 	defer m.Unlock()
 
-	action, err := m.pendingBatch.validateTx(tx)
+	action, err := m.pendingBatch.validateTx(ctx, tx)
 	if action == REMOVE {
 		return err
 	}
 
-	if err := m.pendingBatch.updateCurrentSnap(m.pendingSentBatches); err != nil {
+	if err := m.pendingBatch.updateCurrentSnap(ctx, m.pendingSentBatches); err != nil {
 		return err
 	}
 

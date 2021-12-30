@@ -17,6 +17,7 @@
 package arbosmachine
 
 import (
+	"context"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -40,11 +41,12 @@ func (m *TestMachine) Clone() machine.Machine {
 }
 
 func (m *TestMachine) ExecuteAssertion(
+	ctx context.Context,
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
-	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages)
+	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(ctx, maxGas, goOverGas, messages)
 	if err != nil {
 		return nil, nil, 0, err
 	}

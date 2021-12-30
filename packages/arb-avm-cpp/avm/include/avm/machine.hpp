@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,16 +55,36 @@ class MachineExecutionConfig {
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
+   private:
+    std::atomic<bool> is_aborted{false};
+
    public:
     MachineState machine_state;
 
     Machine() = default;
     explicit Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
+    explicit Machine(const Machine& machine)
+        : is_aborted(machine.is_aborted.load()),
+          machine_state(machine.machine_state) {}
+    explicit Machine(Machine&& machine) noexcept
+        : is_aborted(machine.is_aborted.load()),
+          machine_state(std::move(machine.machine_state)) {}
+    Machine& operator=(const Machine& machine) {
+        return *this = Machine(machine);
+    }
+    Machine& operator=(Machine&& machine) noexcept {
+        is_aborted = machine.is_aborted.load();
+        machine_state = std::move(machine.machine_state);
+        return *this;
+    }
+    ~Machine() = default;
 
     static Machine loadFromFile(const std::string& executable_filename) {
         return Machine{MachineState::loadFromFile(executable_filename)};
     }
+
+    void abort();
 
     Assertion run();
 

@@ -17,6 +17,7 @@
 package arbosmachine
 
 import (
+	"context"
 	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -41,11 +42,12 @@ func (m *Machine) Clone() machine.Machine {
 }
 
 func (m *Machine) ExecuteAssertion(
+	ctx context.Context,
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
-	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages)
+	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(ctx, maxGas, goOverGas, messages)
 	if err != nil {
 		return nil, nil, 0, err
 	}

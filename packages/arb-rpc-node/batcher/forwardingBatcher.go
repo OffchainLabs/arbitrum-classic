@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ func (b *Forwarder) SendTransaction(ctx context.Context, tx *types.Transaction) 
 	return b.client.SendTransaction(ctx, tx)
 }
 
-func (b *Forwarder) PendingSnapshot() (*snapshot.Snapshot, error) {
+func (b *Forwarder) PendingSnapshot(_ context.Context) (*snapshot.Snapshot, error) {
 	return nil, nil
 }
 

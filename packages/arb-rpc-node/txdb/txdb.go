@@ -515,7 +515,7 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 	return nil, errors.New("can't get latest block because there are no blocks")
 }
 
-func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
+func (db *TxDB) getSnapshotForInfo(ctx context.Context, info *machine.BlockInfo) (*snapshot.Snapshot, error) {
 	if db.snapshotLRUCache != nil {
 		cachedSnap, found := db.snapshotLRUCache.Get(info.Header.Number.Uint64())
 		if found {
@@ -534,7 +534,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(info.Header.Number)),
 		Timestamp: new(big.Int).SetUint64(info.Header.Time),
 	}
-	snap, err := snapshot.NewSnapshot(mach, currentTime, big.NewInt(1<<60))
+	snap, err := snapshot.NewSnapshot(ctx, mach, currentTime, big.NewInt(1<<60))
 	if err != nil {
 		return nil, err
 	}
@@ -545,20 +545,20 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	return snap, nil
 }
 
-func (db *TxDB) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
+func (db *TxDB) GetSnapshot(ctx context.Context, blockHeight uint64) (*snapshot.Snapshot, error) {
 	info, err := db.GetBlock(blockHeight)
 	if err != nil || info == nil {
 		return nil, err
 	}
-	return db.getSnapshotForInfo(info)
+	return db.getSnapshotForInfo(ctx, info)
 }
 
-func (db *TxDB) LatestSnapshot() (*snapshot.Snapshot, error) {
+func (db *TxDB) LatestSnapshot(ctx context.Context) (*snapshot.Snapshot, error) {
 	block, err := db.LatestBlock()
 	if err != nil {
 		return nil, err
 	}
-	snap, err := db.getSnapshotForInfo(block)
+	snap, err := db.getSnapshotForInfo(ctx, block)
 	if err != nil {
 		if strings.Contains(err.Error(), "block not in cache") {
 			logger.Error().Hex("block", block.Header.Number.Bytes()).Msg("latest block is not in cache")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ package cmachine
 import "C"
 
 import (
+	"context"
 	"runtime"
 	"unsafe"
 
@@ -70,6 +71,11 @@ func WrapCMachine(cMachine unsafe.Pointer) *Machine {
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
 	return ret
+}
+
+func (m *Machine) Abort() {
+	defer runtime.KeepAlive(m)
+	C.machineAbort(m.c)
 }
 
 func (m *Machine) Hash() (ret common.Hash) {
@@ -157,12 +163,14 @@ func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssert
 }
 
 func (m *Machine) ExecuteAssertion(
+	ctx context.Context,
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	defer runtime.KeepAlive(m)
 	return m.ExecuteAssertionAdvanced(
+		ctx,
 		maxGas,
 		goOverGas,
 		messages,
@@ -172,6 +180,7 @@ func (m *Machine) ExecuteAssertion(
 }
 
 func (m *Machine) ExecuteAssertionAdvanced(
+	ctx context.Context,
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
@@ -194,12 +203,34 @@ func (m *Machine) ExecuteAssertionAdvanced(
 
 	C.machineExecutionConfigSetStopOnSideload(conf, boolToCInt(stopOnSideload))
 
-	assertionResult := C.executeAssertion(m.c, conf)
+	resultChan := make(chan C.RawAssertionResult, 1)
+	go func() {
+		defer close(resultChan)
+		resultChan <- C.executeAssertion(m.c, conf)
+	}()
+
+	aborted := false
+	var assertionResult C.RawAssertionResult
+	select {
+	case <-ctx.Done():
+		m.Abort()
+		aborted = true
+		// Still need to clean up result, so wait until returned
+		assertionResult = <-resultChan
+	case assertionResult = <-resultChan:
+	}
+
+	// Make sure result is cleaned up properly
+	executionAssertion, values, steps, err := makeExecutionAssertion(assertionResult.assertion)
+
+	if aborted {
+		return nil, nil, 0, errors.New("aborted")
+	}
+
 	if assertionResult.shutting_down == 1 {
 		return nil, nil, 0, errors.New("Shutting down")
 	}
 
-	executionAssertion, values, steps, err := makeExecutionAssertion(assertionResult.assertion)
 	GasCounter.Inc(int64(executionAssertion.NumGas))
 	StepsCounter.Inc(int64(steps))
 	return executionAssertion, values, steps, err
