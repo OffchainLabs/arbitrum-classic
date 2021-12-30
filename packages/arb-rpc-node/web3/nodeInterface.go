@@ -18,6 +18,7 @@ package web3
 
 import (
 	"bytes"
+	"context"
 	"math/big"
 	"strings"
 
@@ -46,7 +47,7 @@ func init() {
 	estimateRetryableTicket = parsedABI.Methods["estimateRetryableTicket"]
 }
 
-func HandleNodeInterfaceCall(srv *Server, calldata []byte, blockNum rpc.BlockNumberOrHash) ([]byte, error) {
+func HandleNodeInterfaceCall(ctx context.Context, srv *Server, calldata []byte, blockNum rpc.BlockNumberOrHash) ([]byte, error) {
 	if len(calldata) < 4 {
 		return nil, errors.New("calldata too short")
 	}
@@ -54,7 +55,7 @@ func HandleNodeInterfaceCall(srv *Server, calldata []byte, blockNum rpc.BlockNum
 	if bytes.Equal(funcID, lookupMessageBatchProof.ID) {
 		return handleLookupMessageBatch(srv.srv, calldata)
 	} else if bytes.Equal(funcID, estimateRetryableTicket.ID) {
-		return handleEstimateRetryableTicket(srv, calldata, blockNum)
+		return handleEstimateRetryableTicket(ctx, srv, calldata, blockNum)
 	}
 	return nil, errors.New("invalid function")
 }
@@ -92,7 +93,7 @@ func handleLookupMessageBatch(srv *aggregator.Server, calldata []byte) ([]byte, 
 	})
 }
 
-func handleEstimateRetryableTicket(srv *Server, calldata []byte, blockNum rpc.BlockNumberOrHash) ([]byte, error) {
+func handleEstimateRetryableTicket(ctx context.Context, srv *Server, calldata []byte, blockNum rpc.BlockNumberOrHash) ([]byte, error) {
 	inputs, err := estimateRetryableTicket.Inputs.Unpack(calldata[4:])
 	if err != nil {
 		return nil, err
@@ -108,7 +109,7 @@ func handleEstimateRetryableTicket(srv *Server, calldata []byte, blockNum rpc.Bl
 	gasPriceBid := inputs[8].(*big.Int)
 	data := inputs[9].([]byte)
 
-	snap, err := srv.getSnapshotForNumberOrHash(blockNum)
+	snap, err := srv.getSnapshotForNumberOrHash(ctx, blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +129,7 @@ func handleEstimateRetryableTicket(srv *Server, calldata []byte, blockNum rpc.Bl
 		Data:              data,
 	}
 
-	res, _, err := snap.EstimateRetryableGas(createTicket, common.NewAddressFromEth(sender), srv.maxAVMGas)
+	res, _, err := snap.EstimateRetryableGas(ctx, createTicket, common.NewAddressFromEth(sender), srv.maxAVMGas)
 	if err != nil {
 		return nil, err
 	}

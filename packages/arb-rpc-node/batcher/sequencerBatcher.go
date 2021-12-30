@@ -510,7 +510,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	return <-startResultChan
 }
 
-func (b *SequencerBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
+func (b *SequencerBatcher) PendingSnapshot(_ context.Context) (*snapshot.Snapshot, error) {
 	// TODO: return latest machine state?
 	return nil, nil
 }

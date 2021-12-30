@@ -106,6 +106,7 @@ func getEVMTrace(debugPrints []value.Value) (*evm.EVMTrace, error) {
 }
 
 func TestTransfer(t *testing.T) {
+	ctx := context.Background()
 	skipBelowVersion(t, 42)
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
@@ -141,9 +142,9 @@ func TestTransfer(t *testing.T) {
 	// Figure out gas required in stipend
 	arbTx, err := arbTransferCon.Send4(senderAuth, big.NewInt(10000))
 	test.FailIfError(t, err)
-	snap, err := srv.PendingSnapshot()
+	snap, err := srv.PendingSnapshot(ctx)
 	test.FailIfError(t, err)
-	_, debugPrints, err := snap.EstimateGas(arbTx, common.Address{}, common.NewAddressFromEth(senderAuth.From), 100000000)
+	_, debugPrints, err := snap.EstimateGas(ctx, arbTx, common.Address{}, common.NewAddressFromEth(senderAuth.From), 100000000)
 	test.FailIfError(t, err)
 	trace, err := getEVMTrace(debugPrints)
 	test.FailIfError(t, err)
@@ -161,7 +162,7 @@ func TestTransfer(t *testing.T) {
 	if err != nil {
 		transferABI, err := arbostestcontracts.TransferMetaData.GetAbi()
 		test.FailIfError(t, err)
-		_, debugPrints, err := snap.Call(message.ContractTransaction{
+		_, debugPrints, err := snap.Call(ctx, message.ContractTransaction{
 			BasicTx: message.BasicTx{
 				MaxGas:      big.NewInt(1000000),
 				GasPriceBid: big.NewInt(0),
