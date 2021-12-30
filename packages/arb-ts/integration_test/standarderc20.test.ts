@@ -35,7 +35,6 @@ import {
   skipIfMainnet,
   existentTestERC20,
 } from './testHelpers'
-import { L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
 import { TokenBridger } from '../src'
 import { Signer } from 'ethers'
 

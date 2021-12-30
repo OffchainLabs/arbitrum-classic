@@ -31,7 +31,6 @@ import {
   prettyLog,
 } from './testHelpers'
 import { OutgoingMessageState } from '../src/lib/dataEntities'
-import { L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
 import { TokenBridger } from '../src'
 
 describe('WETH', async () => {

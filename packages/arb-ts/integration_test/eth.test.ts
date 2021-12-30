@@ -34,11 +34,7 @@ import {
 import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
 import { ARB_GAS_INFO } from '../src/lib/precompile_addresses'
 import { OutgoingMessageState } from '../src/lib/dataEntities'
-import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
-import {
-  L2ToL1Message,
-  L2TransactionReceipt,
-} from '../src/lib/message/L2ToL1Message'
+import { L2ToL1Message } from '../src/lib/message/L2ToL1Message'
 import { hexZeroPad } from '@ethersproject/bytes'
 dotenv.config()
 
