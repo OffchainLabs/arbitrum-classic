@@ -17,6 +17,8 @@
 'use strict'
 
 import { BigNumber, ethers } from 'ethers'
+import { L1ContractTransaction } from '../message/L1ToL2Message'
+import { L2ContractTransaction } from '../message/L2ToL1Message'
 
 import { L2Network } from '../utils/networks'
 
@@ -36,9 +38,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * Transfer assets from L1 to L2
    * @param params
    */
-  public abstract deposit(
-    params: DepositParams
-  ): Promise<ethers.ContractTransaction>
+  public abstract deposit(params: DepositParams): Promise<L1ContractTransaction>
 
   /**
    * Estimate gas for transfering assets from L2 to L1
@@ -54,5 +54,5 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    */
   public abstract withdraw(
     params: WithdrawParams
-  ): Promise<ethers.ContractTransaction>
+  ): Promise<L2ContractTransaction>
 }

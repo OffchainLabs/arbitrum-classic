@@ -38,7 +38,6 @@ import {
 import { L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
 import { TokenBridger } from '../src'
 import { Signer } from 'ethers'
-import { Provider } from '@ethersproject/abstract-provider'
 
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', function () {
@@ -92,11 +91,7 @@ describe('Custom ERC20', () => {
 
     expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
 
-    const message = (
-      await new L2TransactionReceipt(withdrawRec).getL2ToL1Messages(
-        l1Signer.provider
-      )
-    )[0]
+    const message = (await withdrawRec.getL2ToL1Messages(l1Signer.provider))[0]
     expect(message, 'withdrawEventData not found').to.exist
 
     const outgoingMessageState = await message.status(null)
@@ -107,12 +102,15 @@ describe('Custom ERC20', () => {
     ).to.be.true
 
     const l2Token = tokenBridger.getL2TokenContract(
-      l2Signer.provider, await tokenBridger.getL2ERC20Address(
+      l2Signer.provider,
+      await tokenBridger.getL2ERC20Address(
         existentTestCustomToken,
         l1Signer.provider
       )
     )
-    const testWalletL2Balance = (await l2Token.functions.balanceOf(await l2Signer.getAddress()))[0]
+    const testWalletL2Balance = (
+      await l2Token.functions.balanceOf(await l2Signer.getAddress())
+    )[0]
     expect(
       testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenFundAmount),
       'wallet balance not properly deducted after withdraw'

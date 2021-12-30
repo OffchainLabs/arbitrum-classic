@@ -91,9 +91,9 @@ describe('standard ERC20', () => {
       'token withdraw initiation txn failed'
     )
 
-    const outgoingMessages = await new L2TransactionReceipt(
-      withdrawRec
-    ).getL2ToL1Messages(l2Signer.provider)
+    const outgoingMessages = await withdrawRec.getL2ToL1Messages(
+      l2Signer.provider
+    )
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
       .exist

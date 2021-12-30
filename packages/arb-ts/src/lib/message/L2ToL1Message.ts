@@ -42,6 +42,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { hexZeroPad } from '@ethersproject/bytes'
+import { ContractTransaction } from 'ethers'
 
 export class L2TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -126,6 +127,27 @@ export class L2TransactionReceipt implements TransactionReceipt {
   }
 }
 
+
+/**
+ * Replaces the wait function with one that returns an L2TransactionReceipt
+ * @param contractTransaction 
+ * @returns 
+ */
+ export const swivelWaitL2 = (
+  contractTransaction: ContractTransaction
+): L2ContractTransaction => {
+  const wait = contractTransaction.wait
+  contractTransaction.wait = async (confirmations?: number) => {
+    const result = await wait(confirmations)
+    return new L2TransactionReceipt(result)
+  }
+  return contractTransaction as L2ContractTransaction
+}
+
+export interface L2ContractTransaction extends ContractTransaction {
+  wait(confirmations?: number): Promise<L2TransactionReceipt>
+}
+
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
  * then L2ToL1MessageReaderOrWriter<T> will be of type L2ToL1MessageReader.
@@ -185,7 +207,7 @@ export class L2ToL1Message {
     })
 
     return logs.map(
-      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
+      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
     )
   }
 

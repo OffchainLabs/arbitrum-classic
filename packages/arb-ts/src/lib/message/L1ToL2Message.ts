@@ -19,9 +19,9 @@
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider, Log } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { ContractTransaction } from '@ethersproject/contracts'
+import { ContractTransaction, ContractReceipt } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { constants } from 'ethers'
+import { constants, ethers } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
@@ -160,9 +160,29 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const eventTopic = iface.getEventTopic(event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
-      log => iface.parseLog(log).args as unknown as DepositInitiated
+      log => (iface.parseLog(log).args as unknown) as DepositInitiated
     )
   }
+}
+
+/**
+ * Replaces the wait function with one that returns an L1TransactionReceipt
+ * @param contractTransaction
+ * @returns
+ */
+export const swivelWaitL1 = (
+  contractTransaction: ContractTransaction
+): L1ContractTransaction => {
+  const wait = contractTransaction.wait
+  contractTransaction.wait = async (confirmations?: number) => {
+    const result = await wait(confirmations)
+    return new L1TransactionReceipt(result)
+  }
+  return contractTransaction as L1ContractTransaction
+}
+
+export interface L1ContractTransaction extends ContractTransaction {
+  wait(confirmations?: number): Promise<L1TransactionReceipt>
 }
 
 export enum L1ToL2MessageStatus {
@@ -186,8 +206,9 @@ export interface L1ToL2MessageReceipt {
  * If T is of type Signer then L1ToL2MessageReaderOrWriter<T> will be of
  * type L1ToL2MessageWriter.
  */
-export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
+export type L1ToL2MessageReaderOrWriter<
+  T extends SignerOrProvider
+> = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export class L1ToL2Message {
   public static fromL2Ticket<T extends SignerOrProvider>(

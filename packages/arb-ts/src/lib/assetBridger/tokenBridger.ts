@@ -52,6 +52,8 @@ import { ArbTsError } from '../errors'
 
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
+import { swivelWaitL1 } from '../message/L1ToL2Message'
+import { swivelWaitL2 } from '../message/L2ToL1Message'
 
 // CHRIS: do something better with these? we have different defaults in the estimator now
 // const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
@@ -508,7 +510,8 @@ export class TokenBridger extends AssetBridger<
    * @returns
    */
   public async deposit(params: TokenDepositParams) {
-    return await this.depositTxOrGas(params, false)
+    const tx = await this.depositTxOrGas(params, false)
+    return swivelWaitL1(tx)
   }
 
   private async withdrawTxOrGas<T extends boolean>(
@@ -552,15 +555,16 @@ export class TokenBridger extends AssetBridger<
    * @returns
    */
   public async withdraw(params: TokenWithdrawParams) {
-    return this.withdrawTxOrGas(params, false)
+    const tx = await this.withdrawTxOrGas(params, false)
+    return swivelWaitL2(tx)
   }
 
   /**
    * Fetch a batch of token balances
-   * @param l1OrL2Provider 
-   * @param userAddr 
-   * @param tokenAddrs 
-   * @returns 
+   * @param l1OrL2Provider
+   * @param userAddr
+   * @param tokenAddrs
+   * @returns
    */
   public async getTokenBalanceBatch(
     l1OrL2Provider: Provider,
@@ -607,7 +611,6 @@ export class TokenBridger extends AssetBridger<
     return await multiCaller.call(callInputs)
   }
 }
-
 
 /**
  * A token-gateway pair

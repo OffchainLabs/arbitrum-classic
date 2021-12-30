@@ -31,6 +31,8 @@ import {
 import { SignerProviderUtils } from '../utils/signerOrProvider'
 import { ArbTsError } from '../errors'
 import { AssetBridger } from './assetBridger'
+import { swivelWaitL2 } from '../message/L2ToL1Message'
+import { swivelWaitL1 } from '../message/L1ToL2Message'
 
 export interface EthWithdrawParams {
   /**
@@ -144,7 +146,8 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public async deposit(params: EthDepositParams) {
-    return this.depositTxOrGas(params, false)
+    const tx = await this.depositTxOrGas(params, false)
+    return swivelWaitL1(tx)
   }
 
   private async withdrawTxOrGas<T extends boolean>(
@@ -189,6 +192,7 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public async withdraw(params: EthWithdrawParams) {
-    return await this.withdrawTxOrGas(params, false)
+    const tx = await this.withdrawTxOrGas(params, false)
+    return swivelWaitL2(tx)
   }
 }

@@ -89,9 +89,7 @@ describe('Ether', async () => {
       'balance failed to update after eth deposit'
     )
 
-    const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
-      l2Signer.provider
-    )
+    const messages = await rec.getL1ToL2Messages(l2Signer.provider)
 
     if (messages === undefined) {
       throw new Error('no messages')
@@ -153,9 +151,7 @@ describe('Ether', async () => {
       blockTag: withdrawEthRec.blockNumber,
     })
     const withdrawMessage = (
-      await new L2TransactionReceipt(withdrawEthRec).getL2ToL1Messages(
-        l2Signer.provider
-      )
+      await withdrawEthRec.getL2ToL1Messages(l2Signer.provider)
     )[0]
     expect(
       withdrawMessage,
