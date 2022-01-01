@@ -45,9 +45,9 @@ sidebar_label: Running a Node
 
 ### Optional parameters
 
-- `--feed.url=<feed address>`
+- `--feed.input.url=<feed address>`
   - Will default to `https://arb1.arbitrum.io/feed` or `https://rinkeby.arbitrum.io/feed` depending on chain ID reported by ethereum node provided. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
-- `--forward-url=<sequencer RPC>`
+- `--node.forwarder.target=<sequencer RPC>`
   - Will default to `https://arb1.arbitrum.io/rpc` or `https://rinkeby.arbitrum.io/rpc` depending on chain ID reported by ethereum node provided.
 - `--core.cache.timed-expire`
   - Defaults to `20m`, or 20 minutes. Age of oldest blocks to hold in cache so that disk lookups are not required
