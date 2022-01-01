@@ -66,7 +66,7 @@ TEST_CASE("ARBOS test vectors") {
             auto total_gas_target = j.at("total_gas").get<uint64_t>();
 
             ArbStorage storage(dbpath, coreConfig);
-            REQUIRE(storage.initialize(arb_os_path).ok());
+            REQUIRE(storage.initialize(arb_os_path).status.ok());
             auto mach = storage.getInitialMachine();
             MachineExecutionConfig config;
             config.inbox_messages = messages;

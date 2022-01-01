@@ -723,6 +723,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		out.Core.CheckpointMaxExecutionGas = 0
 
 		// Never prune checkpoints
+		if out.Core.CheckpointPruningMode != "off" {
+			logger.Warn().Msg("Disable checkpoint pruning because allow-slow-lookup enabled")
+		}
 		out.Core.CheckpointPruningMode = "off"
 	}
 
