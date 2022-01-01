@@ -50,6 +50,11 @@ struct Slice;
 class ColumnFamilyHandle;
 }  // namespace rocksdb
 
+struct InitializeResult {
+    rocksdb::Status status;
+    bool finished;
+};
+
 struct RawMessageInfo {
     std::vector<unsigned char> message;
     uint256_t sequence_number;
@@ -149,7 +154,7 @@ class ArbCore {
             ArbCoreConfig coreConfig);
 
     ~ArbCore() { abortThread(); }
-    rocksdb::Status initialize(const LoadedExecutable& executable);
+    InitializeResult initialize(const LoadedExecutable& executable);
     [[nodiscard]] bool initialized() const;
     void operator()();
 
