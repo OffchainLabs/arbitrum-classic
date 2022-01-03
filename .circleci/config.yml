@@ -188,6 +188,7 @@ jobs:
             - ./.hunter
             - ./project/packages/arb-avm-cpp/cmachine/flags.go
             - ./project/packages/arb-avm-cpp/build/*
+
   cpp-avm-asan:
     docker:
       - image: offchainlabs/cpp-asan-base:0.4.1
