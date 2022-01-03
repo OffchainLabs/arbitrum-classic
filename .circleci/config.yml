@@ -119,6 +119,9 @@ jobs:
           command: |
             yarn typechain
             yarn test:ci
+            ls -al
+            ls -al ..
+            ls -al ../..
             npx codechecks
           working_directory: /home/user/project/packages/arb-bridge-eth
       # TODO
