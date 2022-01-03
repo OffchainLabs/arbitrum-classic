@@ -17,16 +17,12 @@
 'use strict'
 
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
-import {
-  L2ToL1EventResult,
-  MessageBatchProofInfo,
-  OutgoingMessageState,
-} from '../dataEntities'
+import { ArbSys } from '../abi'
+import { MessageBatchProofInfo, OutgoingMessageState } from '../dataEntities'
 import {
   ARB_SYS_ADDRESS,
   NODE_INTERFACE_ADDRESS,
 } from '../precompile_addresses'
-import networks, { Network } from '../networks'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
@@ -41,8 +37,11 @@ import { Log } from '@ethersproject/abstract-provider'
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { hexZeroPad } from '@ethersproject/bytes'
+import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { ContractTransaction } from 'ethers'
+import { EventFetcher } from '../utils/eventFetcher'
+import { L2Network } from '../utils/networks'
+import { ArbTsError } from '../errors'
 
 export class L2TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -83,39 +82,44 @@ export class L2TransactionReceipt implements TransactionReceipt {
     this.status = tx.status
   }
 
-  public getL2ToL1Events() {
+  /**
+   * Get an L2ToL1Transaction events created by this transaction
+   * @returns
+   */
+  public getL2ToL1Events(): L2ToL1TransactionEvent['args'][] {
     const iface = ArbSys__factory.createInterface()
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
-
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
 
     return logs.map(
-      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+      log => iface.parseLog(log).args as L2ToL1TransactionEvent['args']
     )
   }
 
-  private getOutboxAddr(network: Network, batchNumber: BigNumber) {
-    // CHRIS: add the old network to the networks object, and look it up here
-    // CHRIS: null check? this shouldn't be possible
-    // CHRIS: disable linting by just using the batchnumber here
+  private getOutboxAddr(network: L2Network, batchNumber: BigNumber) {
+    // CHRIS: add the old address to the networks object, and look it up here
     batchNumber
-    return network.ethBridge!.outbox
+    return network.ethBridge.outbox
   }
 
+  /**
+   * Get any l2tol1 messages created by this transaction
+   * @param l2SignerOrProvider
+   */
   public async getL2ToL1Messages<T extends SignerOrProvider>(
-    l1SignerOrProvider: T
+    l1SignerOrProvider: T,
+    l2Network: L2Network
   ): Promise<L2ToL1MessageReaderOrWriter<T>[]>
   public async getL2ToL1Messages<T extends SignerOrProvider>(
-    l1SignerOrProvider: T
+    l1SignerOrProvider: T,
+    l2Network: L2Network
   ): Promise<L2ToL1MessageReader[] | L2ToL1MessageWriter[]> {
     const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
     if (!provider) throw new Error('Signer not connected to provider.')
 
-    const providerNetwork = await provider.getNetwork()
-    const arbNetwork = networks[providerNetwork.chainId]
     return this.getL2ToL1Events().map(log => {
-      const outboxAddr = this.getOutboxAddr(arbNetwork, log.batchNumber)
+      const outboxAddr = this.getOutboxAddr(l2Network, log.batchNumber)
 
       return L2ToL1Message.fromBatchNumber(
         l1SignerOrProvider,
@@ -125,23 +129,22 @@ export class L2TransactionReceipt implements TransactionReceipt {
       )
     })
   }
-}
 
-
-/**
- * Replaces the wait function with one that returns an L2TransactionReceipt
- * @param contractTransaction 
- * @returns 
- */
- export const swivelWaitL2 = (
-  contractTransaction: ContractTransaction
-): L2ContractTransaction => {
-  const wait = contractTransaction.wait
-  contractTransaction.wait = async (confirmations?: number) => {
-    const result = await wait(confirmations)
-    return new L2TransactionReceipt(result)
+  /**
+   * Replaces the wait function with one that returns an L2TransactionReceipt
+   * @param contractTransaction
+   * @returns
+   */
+  public static swivelWait = (
+    contractTransaction: ContractTransaction
+  ): L2ContractTransaction => {
+    const wait = contractTransaction.wait
+    contractTransaction.wait = async (confirmations?: number) => {
+      const result = await wait(confirmations)
+      return new L2TransactionReceipt(result)
+    }
+    return contractTransaction as L2ContractTransaction
   }
-  return contractTransaction as L2ContractTransaction
 }
 
 export interface L2ContractTransaction extends ContractTransaction {
@@ -171,14 +174,14 @@ export class L2ToL1Message {
     batchNumber: BigNumber,
     indexInBatch: BigNumber
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
-    return l1SignerOrProvider instanceof Provider
-      ? new L2ToL1MessageReader(
+    return SignerProviderUtils.isSigner(l1SignerOrProvider)
+      ? new L2ToL1MessageWriter(
           l1SignerOrProvider,
           outboxAddress,
           batchNumber,
           indexInBatch
         )
-      : new L2ToL1MessageWriter(
+      : new L2ToL1MessageReader(
           l1SignerOrProvider,
           outboxAddress,
           batchNumber,
@@ -186,48 +189,31 @@ export class L2ToL1Message {
         )
   }
 
-  // CHRIS: consider what else to move onto the base
   public static async getL2ToL1MessageLogs(
     l2Provider: Provider,
-    filter: Filter
+    filter: Filter,
+    batchNumber?: BigNumber,
+    destination?: string,
+    uniqueId?: BigNumber,
+    indexInBatch?: BigNumber
   ) {
-    const iface = ArbSys__factory.createInterface()
-    const event = iface.getEvent('L2ToL1Transaction')
-    const eventTopic = iface.getEventTopic(event)
-
-    const topics = filter.topics ? filter.topics : []
-    // CHRIS: keep the warn?
-    // if (!filter.fromBlock && !filter.toBlock)
-    // console.warn('Attempting to query from 0 to block latest')
-    const logs = await l2Provider.getLogs({
-      address: ARB_SYS_ADDRESS,
-      topics: [eventTopic, ...topics],
-      fromBlock: filter.fromBlock || 0,
-      toBlock: filter.toBlock || 'latest',
-    })
-
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+    const eventFetcher = new EventFetcher(l2Provider)
+    const events = await eventFetcher.getEvents<ArbSys, L2ToL1TransactionEvent>(
+      ARB_SYS_ADDRESS,
+      ArbSys__factory,
+      t =>
+        t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
+      filter
     )
-  }
 
-  public static async getL2ToL1MessageLog(
-    l2Provider: Provider,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
-  ) {
-    const batch = await this.getL2ToL1MessageLogs(l2Provider, {
-      topics: [null, null, hexZeroPad(batchNumber.toHexString(), 32)],
-    })
-
-    const indexItem = batch.filter(b => b.indexInBatch.eq(indexInBatch))
-    if (indexItem.length === 1) {
-      return indexItem[0]
-    } else if (indexItem.length > 1) {
-      // CHRIS: warn, error?
-    }
-
-    return null
+    if (indexInBatch) {
+      const indexItems = events.filter(b => b.indexInBatch.eq(indexInBatch))
+      if (indexItems.length === 1) {
+        return indexItems
+      } else if (indexItems.length > 1) {
+        throw new ArbTsError('More than one indexed item found in batch.')
+      } else return []
+    } else return events
   }
 }
 
@@ -326,16 +312,12 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         ? OutgoingMessageState.CONFIRMED
         : OutgoingMessageState.UNCONFIRMED
     } catch (e) {
-      // CHRIS: discuss all the console logs going on in here and elsewhere, should we keep them?
-      // CHRIS: this error needs updating. also 666?
       console.warn('666: error in getOutGoingMessageState:', e)
       return OutgoingMessageState.NOT_FOUND
     }
   }
 
   public async waitUntilOutboxEntryCreated(retryDelay = 500): Promise<void> {
-    // CHRIS: should we even be doing this? what's the use case? it could be a long wait
-
     const exists = await this.outboxEntryExists()
     if (exists) {
       console.log('Found outbox entry!')

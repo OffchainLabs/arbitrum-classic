@@ -37,6 +37,7 @@ export interface Network {
   explorerUrl: string
   rpcURL: string
   gif?: string
+  isCustom: boolean
 }
 
 export interface TokenBridge {
@@ -133,6 +134,7 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: ['42161'],
     blockTime: 15,
     rpcURL: process.env['MAINNET_RPC'] as string,
+    isCustom: false,
   },
   '1337': {
     chainID: '1337',
@@ -141,6 +143,7 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: ['42161'], // TODO: use sequencer fork ID
     blockTime: 15,
     rpcURL: process.env['HARDHAT_RPC'] || 'http://127.0.0.1:8545/',
+    isCustom: false,
   },
   '4': {
     chainID: '4',
@@ -149,6 +152,7 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: ['421611'],
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
+    isCustom: false,
   },
 }
 
@@ -163,6 +167,7 @@ export const l2Networks: L2Networks = {
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
+    isCustom: false,
   },
   '421611': {
     chainID: '421611',
@@ -174,6 +179,7 @@ export const l2Networks: L2Networks = {
     ethBridge: rinkebyETHBridge,
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
+    isCustom: false,
   },
 }
 
@@ -187,6 +193,10 @@ const addCustomNetwork = ({
   if (customL1Network) {
     if (l1Networks[customL1Network.chainID]) {
       throw new Error(`Network ${customL1Network.chainID} already included`)
+    } else if (!customL1Network.isCustom) {
+      throw new Error(
+        `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
+      )
     } else {
       l1Networks[customL1Network.chainID] = customL1Network
     }
@@ -194,6 +204,11 @@ const addCustomNetwork = ({
 
   if (l2Networks[customL2Network.chainID])
     throw new Error(`Network ${customL2Network.chainID} already included`)
+  else if (!customL2Network.isCustom) {
+    throw new Error(
+      `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
+    )
+  }
 
   l2Networks[customL2Network.chainID] = customL2Network
 

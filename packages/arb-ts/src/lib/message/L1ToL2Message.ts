@@ -32,12 +32,12 @@ import {
   calculateL2MessageFromTicketTxnHash,
   L2TxnType,
 } from './lib'
-import { DepositInitiated } from '../dataEntities'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../precompile_addresses'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../utils/signerOrProvider'
+import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -78,6 +78,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
     this.status = tx.status
   }
 
+  /**
+   * Get the numbers of any messages created by this transaction
+   * @returns
+   */
   public getMessageNumbers(): BigNumber[] {
     const iface = Inbox__factory.createInterface()
     const messageDelivered = iface.getEvent('InboxMessageDelivered')
@@ -98,6 +102,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
     return logs.map(log => BigNumber.from(log.topics[1]))
   }
 
+  /**
+   * Get any l1tol2 messages created by this transaction
+   * @param l2SignerOrProvider
+   */
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
   ): Promise<L1ToL2MessageReaderOrWriter<T>[]>
@@ -128,57 +136,35 @@ export class L1TransactionReceipt implements TransactionReceipt {
     })
   }
 
-  // CHRIS: should we offer this select function?
-  public async getL1ToL2Message<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
-    messageNumberIndex?: number
-  ): Promise<L1ToL2MessageReaderOrWriter<T>>
-  public async getL1ToL2Message<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
-    messageNumberIndex?: number
-  ): Promise<L1ToL2MessageReader | L1ToL2MessageWriter> {
-    const allL1ToL2Messages = await this.getL1ToL2Messages(l2SignerOrProvider)
-    const messageCount = allL1ToL2Messages.length
-    if (!messageCount)
-      throw new Error(`No l1 to L2 message found for ${this.transactionHash}`)
-
-    if (messageNumberIndex !== undefined && messageNumberIndex >= messageCount)
-      throw new Error(
-        `Provided message number out of range for ${this.transactionHash}; index was ${messageNumberIndex}, but only ${messageCount} messages`
-      )
-    if (messageNumberIndex === undefined && messageCount > 1)
-      throw new Error(
-        `${messageCount} L2 messages for ${this.transactionHash}; must provide messageNumberIndex (or use (signersAndProviders, l1Txn))`
-      )
-
-    return allL1ToL2Messages[messageNumberIndex || 0]
-  }
-
-  public getDepositEvents(): DepositInitiated[] {
+  /**
+   * Get any deposit events created by this transaction
+   * @returns
+   */
+  public getDepositEvents(): DepositInitiatedEvent['args'][] {
     const iface = L1ERC20Gateway__factory.createInterface()
     const event = iface.getEvent('DepositInitiated')
     const eventTopic = iface.getEventTopic(event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
-      log => (iface.parseLog(log).args as unknown) as DepositInitiated
+      log => iface.parseLog(log).args as DepositInitiatedEvent['args']
     )
   }
-}
 
-/**
- * Replaces the wait function with one that returns an L1TransactionReceipt
- * @param contractTransaction
- * @returns
- */
-export const swivelWaitL1 = (
-  contractTransaction: ContractTransaction
-): L1ContractTransaction => {
-  const wait = contractTransaction.wait
-  contractTransaction.wait = async (confirmations?: number) => {
-    const result = await wait(confirmations)
-    return new L1TransactionReceipt(result)
+  /**
+   * Replaces the wait function with one that returns an L1TransactionReceipt
+   * @param contractTransaction
+   * @returns
+   */
+  public static swivelWait = (
+    contractTransaction: ContractTransaction
+  ): L1ContractTransaction => {
+    const wait = contractTransaction.wait
+    contractTransaction.wait = async (confirmations?: number) => {
+      const result = await wait(confirmations)
+      return new L1TransactionReceipt(result)
+    }
+    return contractTransaction as L1ContractTransaction
   }
-  return contractTransaction as L1ContractTransaction
 }
 
 export interface L1ContractTransaction extends ContractTransaction {
@@ -221,13 +207,13 @@ export class L1ToL2Message {
     l2TicketCreationHash: string,
     messageNumber: BigNumber
   ): L1ToL2MessageReader | L1ToL2MessageWriter {
-    return l2SignerOrProvider instanceof Provider
-      ? new L1ToL2MessageReader(
+    return SignerProviderUtils.isSigner(l2SignerOrProvider)
+      ? new L1ToL2MessageWriter(
           l2SignerOrProvider,
           l2TicketCreationHash,
           messageNumber
         )
-      : new L1ToL2MessageWriter(
+      : new L1ToL2MessageReader(
           l2SignerOrProvider,
           l2TicketCreationHash,
           messageNumber
@@ -302,8 +288,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return this.receiptsToStatus(userTxnReceipt, ticketCreationReceipt)
   }
 
-  // CHRIS: this wait function should be broken up?
-  // CHRIS: all the hashes on this object are a bit confusing - we need to get clear with them
   public async wait(
     timeout = 900000,
     confirmations?: number
@@ -353,7 +337,6 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public constructor(
     private readonly l2Signer: Signer,
     l2TicketCreationTxnHash: string,
-    // CHRIS: do we really need this? it's never used
     messageNumber: BigNumber
   ) {
     super(l2Signer.provider!, l2TicketCreationTxnHash, messageNumber)
@@ -365,12 +348,8 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
    * in the correct state. Safe to call on an already redeemed message
    */
   public async redeemSafe(
-    waitTimeForL2Receipt = 900000
+    waitTimeForL2Receipt = 900000 // 15 mins
   ): Promise<ContractTransaction> {
-    // CHRIS: we need way better messaging about what;s going on here
-    // CHRIS: we should go over the user flow to see if this is the best way
-    // CHRIS: also for the cancel flow
-    // CHRIS: also check the execute flow on the L2ToL1Message - we dont check status in there, should we?
     console.log('waiting for retryable ticket...', this.userTxnHash)
     const result = await this.wait(waitTimeForL2Receipt)
     if (result.ticketCreationReceipt?.status == 0) {
@@ -380,7 +359,6 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       )
       throw new Error('l2 txn failed')
     }
-    // CHRIS: double check these hashes
     return await this.redeem()
   }
 

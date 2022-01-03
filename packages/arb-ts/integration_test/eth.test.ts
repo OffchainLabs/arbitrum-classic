@@ -119,6 +119,7 @@ describe('Ether', async () => {
 
   it('withdraw Ether transaction succeeds', async () => {
     const {
+      l2Network,
       l2Signer,
       l1Signer,
       ethBridger,
@@ -147,7 +148,7 @@ describe('Ether', async () => {
       blockTag: withdrawEthRec.blockNumber,
     })
     const withdrawMessage = (
-      await withdrawEthRec.getL2ToL1Messages(l2Signer.provider)
+      await withdrawEthRec.getL2ToL1Messages(l2Signer.provider, l2Network)
     )[0]
     expect(
       withdrawMessage,
@@ -155,14 +156,11 @@ describe('Ether', async () => {
     ).to.exist
 
     const myAddress = await l1Signer.getAddress()
-
-    // CHRIS: convenience method for this
     const withdrawEvents = await L2ToL1Message.getL2ToL1MessageLogs(
       l2Signer.provider,
-      {
-        fromBlock: withdrawEthRec.blockNumber,
-        topics: [hexZeroPad(myAddress, 32)],
-      }
+      { fromBlock: withdrawEthRec.blockNumber },
+      undefined,
+      myAddress
     )
 
     expect(withdrawEvents.length).to.equal(

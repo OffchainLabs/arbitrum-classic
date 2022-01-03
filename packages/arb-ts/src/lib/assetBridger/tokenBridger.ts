@@ -18,7 +18,7 @@
 
 import { defaultAbiCoder } from '@ethersproject/abi'
 import { Signer } from '@ethersproject/abstract-signer'
-import { Provider, Filter, EventFilter } from '@ethersproject/abstract-provider'
+import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { Zero, MaxUint256 } from '@ethersproject/constants'
 import { hexZeroPad } from '@ethersproject/bytes'
@@ -38,8 +38,6 @@ import {
 } from '../abi'
 import { WithdrawalInitiatedEvent } from '../abi/L2ArbitrumGateway'
 import { GatewaySetEvent } from '../abi/L1GatewayRouter'
-
-import { DepositParams } from '../l1Bridge'
 import {
   GasOverrides,
   L1ToL2MessageGasEstimator,
@@ -48,16 +46,13 @@ import { SignerProviderUtils } from '../utils/signerOrProvider'
 import { L2Network } from '../utils/networks'
 import { isError } from '../utils/lib'
 import { MultiCaller } from '../utils/multicall'
-import { ArbTsError } from '../errors'
+import { ArbTsError, MissingProviderArbTsError } from '../errors'
+import { EventFetcher } from '../utils/eventFetcher'
 
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
-import { swivelWaitL1 } from '../message/L1ToL2Message'
-import { swivelWaitL2 } from '../message/L2ToL1Message'
-
-// CHRIS: do something better with these? we have different defaults in the estimator now
-// const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
-// const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
+import { L1TransactionReceipt } from '../message/L1ToL2Message'
+import { L2TransactionReceipt } from '../message/L2ToL1Message'
 
 export interface TokenApproveParams {
   /**
@@ -115,11 +110,7 @@ export class TokenBridger extends AssetBridger<
   public static MAX_APPROVAL = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
 
-  public constructor(
-    l2Network: L2Network,
-    // CHRIS: this should move onto the network object itself?
-    public readonly isCustomNetwork: boolean = false
-  ) {
+  public constructor(l2Network: L2Network) {
     super(l2Network)
   }
 
@@ -148,7 +139,6 @@ export class TokenBridger extends AssetBridger<
    * @returns
    */
   public async getL2GatewayAddress(
-    // CHRIS: was this a mistake in the old code? should this be l2 erc20 addr?
     erc20L1Address: string,
     l2Provider: Provider
   ): Promise<string> {
@@ -160,7 +150,6 @@ export class TokenBridger extends AssetBridger<
     return (await l2GatewayRouter.functions.getGateway(erc20L1Address)).gateway
   }
 
-  // CHRIS: aren't we missing an approve on L2? and a getL1WIthdrawalEvents, getL1DepositEvents, getL2depositEVents
   /**
    * Approve tokens for deposit to the bridge. The tokens will be approved for the relevant gateway.
    * @param params
@@ -168,9 +157,7 @@ export class TokenBridger extends AssetBridger<
    */
   public async approveToken(params: TokenApproveParams) {
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new ArbTsError(
-        'l1Signer does not have a connected provider and one is required.'
-      )
+      throw new MissingProviderArbTsError('l1Signer')
     }
 
     // you approve tokens to the gateway that the router will use
@@ -189,28 +176,6 @@ export class TokenBridger extends AssetBridger<
     )
   }
 
-  protected async getEvents<TContract extends ethers.Contract, TEvent>(
-    provider: Provider,
-    addr: string,
-    contractFactory: {
-      connect(address: string, provider: Provider): TContract
-    },
-    topicGenerator: (t: TContract) => EventFilter,
-    filter?: Omit<Filter, 'topics' | 'address'>
-  ): Promise<TEvent[]> {
-    const contract = contractFactory.connect(addr, provider)
-    const eventFilter = topicGenerator(contract)
-    const fullFilter = {
-      ...eventFilter,
-      fromBlock: filter?.fromBlock || 0,
-      toBlock: filter?.toBlock || 'latest',
-    }
-    const logs = await provider.getLogs(fullFilter)
-    return (logs.map(l =>
-      contract.interface.parseLog(l)
-    ) as unknown) as TEvent[]
-  }
-
   /**
    * Get the L2 events created by a withdrawal
    * @param l2Provider
@@ -227,11 +192,11 @@ export class TokenBridger extends AssetBridger<
     fromAddress?: string,
     filter?: Omit<Filter, 'topics' | 'address'>
   ) {
-    const events = await this.getEvents<
+    const eventFetcher = new EventFetcher(l2Provider)
+    const events = await eventFetcher.getEvents<
       L2ArbitrumGateway,
       WithdrawalInitiatedEvent
     >(
-      l2Provider,
       gatewayAddress,
       L2ArbitrumGateway__factory,
       contract =>
@@ -245,7 +210,7 @@ export class TokenBridger extends AssetBridger<
     return l1TokenAddress
       ? events.filter(
           log =>
-            log.args.l1Token.toLocaleLowerCase() ===
+            log.l1Token.toLocaleLowerCase() ===
             l1TokenAddress.toLocaleLowerCase()
         )
       : events
@@ -292,7 +257,7 @@ export class TokenBridger extends AssetBridger<
     l1Provider: Provider
   ): Promise<boolean> {
     const wethAddress = this.l2Network.tokenBridge.l1WethGateway
-    if (this.isCustomNetwork) {
+    if (this.l2Network.isCustom) {
       // For custom network, we do an ad-hoc check to see if it's a WETH gateway
       if (await this.isUnkownWethGateway(gatewayAddress, l1Provider)) {
         return true
@@ -355,14 +320,38 @@ export class TokenBridger extends AssetBridger<
     return arbERC20.functions.l1Address().then(([res]) => res)
   }
 
+  /**
+   * Whether the token has been disabled on the router
+   * @param l1TokenAddress
+   * @param l1Provider
+   * @returns
+   */
+  public async getL1TokenIsDisabled(
+    l1TokenAddress: string,
+    l1Provider: Provider
+  ): Promise<boolean> {
+    const l1GatewayRouter = L1GatewayRouter__factory.connect(
+      this.l2Network.tokenBridge.l1GatewayRouter,
+      l1Provider
+    )
+
+    return (
+      (await l1GatewayRouter.l1TokenToGateway(l1TokenAddress)) ===
+      '0x0000000000000000000000000000000000000001'
+    )
+  }
+
   private async getDepositParams(
     params: TokenDepositParams
-  ): Promise<DepositParams> {
-    // // CHRIS: '1' vs '0.05'? why? should we parameterise the gas estimator?
-    // parseEther('0.05').add(
-    //   estimateGasCallValue
-    // ) /** we add a 0.05 "deposit" buffer to pay for execution in the gas estimation  */,
-
+  ): Promise<{
+    erc20L1Address: string
+    amount: BigNumber
+    l1CallValue: BigNumber
+    maxSubmissionCost: BigNumber
+    maxGas: BigNumber
+    maxGasPrice: BigNumber
+    destinationAddress: string
+  }> {
     const {
       erc20L1Address,
       amount,
@@ -374,9 +363,7 @@ export class TokenBridger extends AssetBridger<
     } = params
 
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
-      throw new ArbTsError(
-        'l1Signer does not have a connected provider and one is required.'
-      )
+      throw new MissingProviderArbTsError('l1Signer')
     }
 
     // 1. get the params for a gas estimate
@@ -431,7 +418,6 @@ export class TokenBridger extends AssetBridger<
 
     let totalEthCallvalueToSend = (overrides && (await overrides.value)) || Zero
     if (
-      // CHRIS: I dont think this is correct for weth where we need to send value? ppl may populate the value param
       !totalEthCallvalueToSend ||
       BigNumber.from(totalEthCallvalueToSend).isZero()
     ) {
@@ -458,9 +444,7 @@ export class TokenBridger extends AssetBridger<
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new ArbTsError(
-        'l1Signer does not have a connected provider and one is required.'
-      )
+      throw new MissingProviderArbTsError('l1Signer')
     }
 
     const depositParams = await this.getDepositParams(params)
@@ -511,7 +495,7 @@ export class TokenBridger extends AssetBridger<
    */
   public async deposit(params: TokenDepositParams) {
     const tx = await this.depositTxOrGas(params, false)
-    return swivelWaitL1(tx)
+    return L1TransactionReceipt.swivelWait(tx)
   }
 
   private async withdrawTxOrGas<T extends boolean>(
@@ -523,9 +507,7 @@ export class TokenBridger extends AssetBridger<
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new ArbTsError(
-        'l2Signer does not have a connected provider and one is required.'
-      )
+      throw new MissingProviderArbTsError('l2Signer')
     }
 
     const to = params.destinationAddress || (await params.l2Signer.getAddress())
@@ -556,7 +538,7 @@ export class TokenBridger extends AssetBridger<
    */
   public async withdraw(params: TokenWithdrawParams) {
     const tx = await this.withdrawTxOrGas(params, false)
-    return swivelWaitL2(tx)
+    return L2TransactionReceipt.swivelWait(tx)
   }
 
   /**
@@ -634,16 +616,17 @@ export class AdminTokenBridger extends TokenBridger {
     l1Provider: Provider,
     customNetworkL1GatewayRouter?: string
   ) {
-    if (this.isCustomNetwork && !customNetworkL1GatewayRouter)
+    if (this.l2Network.isCustom && !customNetworkL1GatewayRouter) {
       throw new Error(
         'Must supply customNetworkL1GatewayRouter for custom network '
       )
+    }
 
     const l1GatewayRouterAddress =
       customNetworkL1GatewayRouter || this.l2Network.tokenBridge.l1GatewayRouter
 
-    return await this.getEvents<L1GatewayRouter, GatewaySetEvent>(
-      l1Provider,
+    const eventFetcher = new EventFetcher(l1Provider)
+    return await eventFetcher.getEvents<L1GatewayRouter, GatewaySetEvent>(
       l1GatewayRouterAddress,
       L1GatewayRouter__factory,
       t => t.filters.GatewaySet()
@@ -660,7 +643,7 @@ export class AdminTokenBridger extends TokenBridger {
     l2Provider: Provider,
     customNetworkL2GatewayRouter?: string
   ) {
-    if (this.isCustomNetwork && !customNetworkL2GatewayRouter)
+    if (this.l2Network.isCustom && !customNetworkL2GatewayRouter)
       throw new Error(
         'Must supply customNetworkL2GatewayRouter for custom network '
       )
@@ -668,8 +651,8 @@ export class AdminTokenBridger extends TokenBridger {
     const l2GatewayRouterAddress =
       customNetworkL2GatewayRouter || this.l2Network.tokenBridge.l2GatewayRouter
 
-    return await this.getEvents<L1GatewayRouter, GatewaySetEvent>(
-      l2Provider,
+    const eventFetcher = new EventFetcher(l2Provider)
+    return await eventFetcher.getEvents<L1GatewayRouter, GatewaySetEvent>(
       l2GatewayRouterAddress,
       L1GatewayRouter__factory,
       t => t.filters.GatewaySet()
@@ -689,9 +672,7 @@ export class AdminTokenBridger extends TokenBridger {
     tokenGateways: TokenGateway[]
   ) {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
-      throw new ArbTsError(
-        'l1Signer does not have a connected provider and one is required.'
-      )
+      throw new MissingProviderArbTsError('l1Signer')
     }
 
     const l2GasPrice = await l2Provider.getGasPrice()
@@ -700,10 +681,7 @@ export class AdminTokenBridger extends TokenBridger {
     const { submissionPrice } = await estimator.getSubmissionPrice(
       // 20 per address, 100 as buffer/ estimate for any additional calldata
       300 + 20 * (tokenGateways.length * 2),
-      // CHRIS: should we allow the default increase here - before there was none
-      {
-        percentIncrease: BigNumber.from(0),
-      }
+      { percentIncrease: BigNumber.from(0) }
     )
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(

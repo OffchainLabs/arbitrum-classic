@@ -36,6 +36,7 @@ import config from './config'
 import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
 import { Signer } from 'ethers'
 import { EthBridger, TokenBridger } from '../src'
+import { L1Network, L2Network } from '../src/lib/utils/networks'
 
 const argv = yargs(process.argv.slice(2))
   .options({
@@ -74,7 +75,6 @@ export const testRetryableTicket = async (
   if (!message) {
     throw new Error('Seq num not found')
   }
-  // CHRIS: this mismatch in names adds to the confusion
   const retryableTicket = message.l2TicketCreationTxnHash
   const autoRedeem = message.autoRedeemHash
   const redeemTransaction = message.userTxnHash
@@ -124,8 +124,8 @@ export const warn = (text: string): void => {
 export const instantiateBridgeWithRandomWallet = (): Promise<{
   tokenBridger: TokenBridger
   ethBridger: EthBridger
-  l1Network: Network,
-  l2Network: Network,
+  l1Network: L1Network,
+  l2Network: L2Network,
   l1Signer: Signer
   l2Signer: Signer
 }> => {

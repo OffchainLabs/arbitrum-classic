@@ -1,6 +1,5 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { ArbTsError } from '../errors'
 
 export type SignerOrProvider = Signer | Provider
 

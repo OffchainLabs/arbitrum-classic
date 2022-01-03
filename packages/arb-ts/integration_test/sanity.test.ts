@@ -46,7 +46,7 @@ describe('sanity checks (read-only)', async () => {
       l2Network,
     } = await instantiateBridge()
     const l1Gateway = await L1ERC20Gateway__factory.connect(
-      l1Network.tokenBridge.l1ERC20Gateway,
+      l2Network.tokenBridge.l1ERC20Gateway,
       l1Signer
     )
     const l2Gateway = await L2ERC20Gateway__factory.connect(
@@ -69,7 +69,7 @@ describe('sanity checks (read-only)', async () => {
     expect(l2GatewayCounterParty).to.equal(l2Network.tokenBridge.l1ERC20Gateway)
 
     const l1Router = await l1Gateway.router()
-    expect(l1Router).to.equal(l1Network.tokenBridge.l1GatewayRouter)
+    expect(l1Router).to.equal(l2Network.tokenBridge.l1GatewayRouter)
 
     const l2Router = await l2Gateway.router()
     expect(l2Router).to.equal(l2Network.tokenBridge.l2GatewayRouter)
@@ -83,7 +83,7 @@ describe('sanity checks (read-only)', async () => {
       l2Network,
     } = await instantiateBridge()
     const l1Gateway = await L1CustomGateway__factory.connect(
-      l1Network.tokenBridge.l1CustomGateway,
+      l2Network.tokenBridge.l1CustomGateway,
       l1Signer
     )
     const l2Gateway = await L2CustomGateway__factory.connect(
@@ -101,7 +101,7 @@ describe('sanity checks (read-only)', async () => {
     )
 
     const l1Router = await l1Gateway.router()
-    expect(l1Router).to.equal(l1Network.tokenBridge.l1GatewayRouter)
+    expect(l1Router).to.equal(l2Network.tokenBridge.l1GatewayRouter)
 
     const l2Router = await l2Gateway.router()
     expect(l2Router).to.equal(l2Network.tokenBridge.l2GatewayRouter)
@@ -109,7 +109,7 @@ describe('sanity checks (read-only)', async () => {
 
   it('customtoken gateway properly set', async () => {
     const {
-      l1Network,
+      l2Network,
       tokenBridger,
       l1Signer,
       l2Signer,
@@ -121,7 +121,7 @@ describe('sanity checks (read-only)', async () => {
     )
 
     expect(l1customGatewayAddress).to.equal(
-      l1Network.tokenBridge.l1CustomGateway
+      l2Network.tokenBridge.l1CustomGateway
     )
 
     const l2Address = await tokenBridger.getL2ERC20Address(
@@ -130,7 +130,7 @@ describe('sanity checks (read-only)', async () => {
     )
 
     const l2CustomGateway = await L2CustomGateway__factory.connect(
-      l1Network.tokenBridge.l2CustomGateway,
+      l2Network.tokenBridge.l2CustomGateway,
       l2Signer
     )
     expect(l2Address === AddressZero).to.be.false
@@ -158,7 +158,7 @@ describe('sanity checks (read-only)', async () => {
       l2CustomGateway,
       l2WethGateway,
       l1Weth,
-    } = l1Network.tokenBridge
+    } = l2Network.tokenBridge
 
     const l2GatewayRouter = L2GatewayRouter__factory.connect(
       l2Network.tokenBridge.l2GatewayRouter,
@@ -193,7 +193,7 @@ describe('sanity checks (read-only)', async () => {
     } = await instantiateBridge()
 
     const l1Gateway = await L1WethGateway__factory.connect(
-      l1Network.tokenBridge.l1WethGateway,
+      l2Network.tokenBridge.l1WethGateway,
       l1Signer
     )
     const l2Gateway = await L2WethGateway__factory.connect(
@@ -202,10 +202,10 @@ describe('sanity checks (read-only)', async () => {
     )
 
     const l1Weth = await l1Gateway.l1Weth()
-    expectIgnoreCase(l1Weth, l1Network.tokenBridge.l1Weth)
+    expectIgnoreCase(l1Weth, l2Network.tokenBridge.l1Weth)
 
     const l2Weth = await l2Gateway.l2Weth()
-    expectIgnoreCase(l2Weth, l1Network.tokenBridge.l2Weth)
+    expectIgnoreCase(l2Weth, l2Network.tokenBridge.l2Weth)
 
     const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
     expectIgnoreCase(l1GatewayCounterParty, l2Network.tokenBridge.l2WethGateway)
@@ -236,14 +236,14 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('l1 gateway router points to right gateways', async () => {
-    const { tokenBridger, l1Signer, l1Network } = await instantiateBridge()
+    const { tokenBridger, l1Signer, l2Network } = await instantiateBridge()
 
     const gateway = await tokenBridger.getL1GatewayAddress(
-      l1Network.tokenBridge.l1Weth,
+      l2Network.tokenBridge.l1Weth,
       l1Signer.provider
     )
 
-    expect(gateway).to.equal(l1Network.tokenBridge.l1WethGateway)
+    expect(gateway).to.equal(l2Network.tokenBridge.l1WethGateway)
   })
 
   it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {

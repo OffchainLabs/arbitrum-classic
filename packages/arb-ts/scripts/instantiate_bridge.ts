@@ -22,7 +22,12 @@ import { Wallet } from '@ethersproject/wallet'
 import dotenv from 'dotenv'
 import args from './getCLargs'
 import { EthBridger, networks, TokenBridger } from '../src'
-import { l2Networks } from '../src/lib/utils/networks'
+import {
+  L1Network,
+  l1Networks,
+  L2Network,
+  l2Networks,
+} from '../src/lib/utils/networks'
 import { Network } from '../src/lib/networks'
 import { Signer } from 'ethers'
 
@@ -38,8 +43,8 @@ export const instantiateBridge = async (
   l1pkParam?: string,
   l2PkParam?: string
 ): Promise<{
-  l1Network: Network
-  l2Network: Network
+  l1Network: L1Network
+  l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
   tokenBridger: TokenBridger
@@ -65,15 +70,23 @@ export const instantiateBridge = async (
 
     networkID = defaultNetworkId
   }
-  const network = networks[networkID]
-  if (!network) {
+  const isL1 = !!l1Networks[networkID]
+  const isL2 = !!l2Networks[networkID]
+  if (!isL1 && !isL2) {
     throw new Error(`Unrecognized network ID: ${networkID}`)
   }
+  if (!isL2) {
+    throw new Error(`Tests must specify an L2 network ID: ${networkID}`)
+  }
 
-  const l1Network = network.isArbitrum
-    ? networks[network.partnerChainID]
-    : network
-  const l2Network = l2Networks[l1Network.partnerChainID]
+  const l2Network = l2Networks[networkID]
+  const l1Network = l1Networks[l2Network.partnerChainID]
+
+  if (!l1Network) {
+    throw new Error(
+      `Unrecognised partner chain id: ${l2Network.partnerChainID}`
+    )
+  }
 
   if (!l1Network.rpcURL) {
     throw new Error('L1 rpc url not set (see .env.sample or networks.ts)')

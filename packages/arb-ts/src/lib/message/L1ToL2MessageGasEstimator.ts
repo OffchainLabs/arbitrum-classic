@@ -10,35 +10,31 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { percentIncrease } from '../utils/lib'
 import { constants } from 'ethers'
 import { utils } from 'ethers'
-import { ArbTsError } from '../errors'
 
 const DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE = BigNumber.from(340)
 const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
 
+/**
+ * An optional big number percentage increase
+ */
 export type PercentIncrease = {
+  /**
+   * If provided, will override the estimated base
+   */
   base?: BigNumber
+
+  /**
+   * How much to increase the base by. If not provided system defaults may be used.
+   */
   percentIncrease?: BigNumber
 }
 
-// CHRIS: better name for this
 export interface GasOverrides {
   maxGas?: PercentIncrease
   maxSubmissionPrice?: PercentIncrease
   maxGasPrice?: PercentIncrease
   sendL2CallValueFromL1?: boolean
 }
-
-// CHRIS: remove this
-// interface L1ToL2MessageEstimateOptions {
-//   maxSubmissionFeePercentIncrease?: BigNumber
-//   maxGasPercentIncrease?: BigNumber
-
-//   // CHRIS: naming here?
-//   gasPriceBid?: BigNumber
-//   maxGasPricePercentIncrease?: BigNumber
-
-//   sendL2CallValueFromL1?: boolean
-// }
 
 const defaultL1ToL2MessageEstimateOptions = {
   maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE,

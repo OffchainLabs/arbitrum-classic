@@ -63,14 +63,15 @@ describe('WETH', async () => {
 
     const withdrawRes = await tokenBridger.withdraw({
       amount: wethToWithdraw,
-      erc20l1Address: l1Network.tokenBridge.l1Weth,
+      erc20l1Address: l2Network.tokenBridge.l1Weth,
       l2Signer: l2Signer,
     })
     const withdrawRec = await withdrawRes.wait()
     expect(withdrawRec.status).to.equal(1, 'withdraw txn failed')
 
     const outgoingMessages = await withdrawRec.getL2ToL1Messages(
-      l2Signer.provider
+      l2Signer.provider,
+      l2Network
     )
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
@@ -110,13 +111,13 @@ describe('WETH', async () => {
     )
 
     const gatewayAddress = await tokenBridger.getL2GatewayAddress(
-      l1Network.tokenBridge.l1Weth,
+      l2Network.tokenBridge.l1Weth,
       l2Signer.provider
     )
     const tokenWithdrawEvents = await tokenBridger.getL2WithdrawalEvents(
       l2Signer.provider,
       gatewayAddress,
-      l1Network.tokenBridge.l1Weth,
+      l2Network.tokenBridge.l1Weth,
       walletAddress,
       { fromBlock: withdrawRec.blockNumber }
     )
@@ -128,12 +129,12 @@ describe('WETH', async () => {
 
   it('deposits WETH', async () => {
     const {
-      l1Network,
+      l2Network,
       l1Signer,
       l2Signer,
       tokenBridger,
     } = await instantiateBridgeWithRandomWallet()
-    const l1WethAddress = l1Network.tokenBridge.l1Weth
+    const l1WethAddress = l2Network.tokenBridge.l1Weth
 
     const wethToWrap = parseEther('0.0001')
     const wethToDeposit = parseEther('0.00001')
@@ -141,7 +142,7 @@ describe('WETH', async () => {
     await fundL1(l1Signer)
 
     const l1WETH = AeWETH__factory.connect(
-      l1Network.tokenBridge.l1Weth,
+      l2Network.tokenBridge.l1Weth,
       l1Signer
     )
     const res = await l1WETH.deposit({
@@ -164,7 +165,7 @@ describe('WETH', async () => {
     const allowance = (
       await l1Token.functions.allowance(
         await l1Signer.getAddress(),
-        l1Network.tokenBridge.l1WethGateway
+        l2Network.tokenBridge.l1WethGateway
       )
     )[0]
     expect(allowance.eq(TokenBridger.MAX_APPROVAL), 'failed to set allowance')
@@ -181,7 +182,7 @@ describe('WETH', async () => {
 
     const l2Token = tokenBridger.getL2TokenContract(
       l2Signer.provider,
-      l1Network.tokenBridge.l2Weth
+      l2Network.tokenBridge.l2Weth
     )
     const testWalletL2Balance = (
       await l2Token.functions.balanceOf(await l2Signer.getAddress())

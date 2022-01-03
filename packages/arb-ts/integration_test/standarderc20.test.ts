@@ -91,7 +91,8 @@ describe('standard ERC20', () => {
     )
 
     const outgoingMessages = await withdrawRec.getL2ToL1Messages(
-      l2Signer.provider
+      l2Signer.provider,
+      l2Network
     )
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to

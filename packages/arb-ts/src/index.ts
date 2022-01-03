@@ -29,15 +29,6 @@ export { ArbAddressTable__factory } from './lib/abi/factories/ArbAddressTable__f
 
 export { TokenBridger, EthBridger } from './lib/assetBridger'
 
-export { Bridge } from './lib/bridge'
-export { BridgeHelper } from './lib/bridge_helpers'
-export {
-  DepositInitiated,
-  WithdrawalInitiated,
-  L2ToL1EventResult,
-  OutgoingMessageState,
-} from './lib/dataEntities'
-export { L1TokenData } from './lib/l1Bridge'
-export { L2TokenData } from './lib/l2Bridge'
+export { OutgoingMessageState } from './lib/dataEntities'
 export { networks } from './lib/networks'
 export { argSerializerConstructor } from './lib/byte_serialize_params'

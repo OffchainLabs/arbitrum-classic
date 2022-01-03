@@ -67,6 +67,7 @@ describe('Custom ERC20', () => {
   it('withdraws erc20', async function () {
     const tokenWithdrawAmount = BigNumber.from(1)
     const {
+      l2Network,
       l2Signer,
       l1Signer,
       tokenBridger,
@@ -91,7 +92,7 @@ describe('Custom ERC20', () => {
 
     expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
 
-    const message = (await withdrawRec.getL2ToL1Messages(l1Signer.provider))[0]
+    const message = (await withdrawRec.getL2ToL1Messages(l1Signer.provider, l2Network))[0]
     expect(message, 'withdrawEventData not found').to.exist
 
     const outgoingMessageState = await message.status(null)

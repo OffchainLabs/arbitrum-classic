@@ -29,10 +29,10 @@ import {
   PercentIncrease,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../utils/signerOrProvider'
-import { ArbTsError } from '../errors'
+import { ArbTsError, MissingProviderArbTsError } from '../errors'
 import { AssetBridger } from './assetBridger'
-import { swivelWaitL2 } from '../message/L2ToL1Message'
-import { swivelWaitL1 } from '../message/L1ToL2Message'
+import { L1TransactionReceipt } from '../message/L1ToL2Message'
+import { L2TransactionReceipt } from '../message/L2ToL1Message'
 
 export interface EthWithdrawParams {
   /**
@@ -103,9 +103,7 @@ export class EthBridger extends AssetBridger<
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new ArbTsError(
-        'l1Signer does not have a connected provider and one is required.'
-      )
+      throw new MissingProviderArbTsError('l1Signer')
     }
 
     const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
@@ -147,7 +145,7 @@ export class EthBridger extends AssetBridger<
    */
   public async deposit(params: EthDepositParams) {
     const tx = await this.depositTxOrGas(params, false)
-    return swivelWaitL1(tx)
+    return L1TransactionReceipt.swivelWait(tx)
   }
 
   private async withdrawTxOrGas<T extends boolean>(
@@ -159,9 +157,7 @@ export class EthBridger extends AssetBridger<
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new ArbTsError(
-        'l2Signer does not have a connected provider and one is required.'
-      )
+      throw new MissingProviderArbTsError('l2Signer')
     }
 
     const addr =
@@ -193,6 +189,6 @@ export class EthBridger extends AssetBridger<
    */
   public async withdraw(params: EthWithdrawParams) {
     const tx = await this.withdrawTxOrGas(params, false)
-    return swivelWaitL2(tx)
+    return L2TransactionReceipt.swivelWait(tx)
   }
 }

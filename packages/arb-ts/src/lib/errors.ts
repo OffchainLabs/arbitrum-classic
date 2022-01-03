@@ -16,8 +16,22 @@
 /* eslint-env node */
 'use strict'
 
+/**
+ * Errors originating in ArbTs
+ */
 export class ArbTsError extends Error {
   constructor(message?: string) {
     super(message)
+  }
+}
+
+/**
+ * Thrown when a signer does not have a connected provider
+ */
+export class MissingProviderArbTsError extends ArbTsError {
+  constructor(signerName: string) {
+    super(
+      `${signerName} does not have a connected provider and one is required.`
+    )
   }
 }

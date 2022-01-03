@@ -17,78 +17,6 @@
 'use strict'
 
 import { BigNumber } from '@ethersproject/bignumber'
-import { FunctionFragment } from 'ethers/lib/utils'
-
-// CHRIS: TODO: break this file up and put the interfaces with their relevant functionality
-
-// TODO: can we import these interfaces directly from typechain?
-export interface L2ToL1EventResult {
-  caller: string
-  destination: string
-  uniqueId: BigNumber
-  batchNumber: BigNumber
-  indexInBatch: BigNumber
-  arbBlockNum: BigNumber
-  ethBlockNum: BigNumber
-  timestamp: string
-  callvalue: BigNumber
-  data: string
-}
-
-export interface WithdrawalInitiated {
-  l1Token: string
-  _from: string
-  _to: string
-  _l2ToL1Id: BigNumber
-  _exitNum: BigNumber
-  _amount: BigNumber
-  txHash: string
-}
-
-export interface DepositInitiated {
-  l1Token: string
-  _from: string
-  _to: string
-  _sequenceNumber: BigNumber
-  amount: BigNumber
-}
-export interface BuddyDeployEventResult {
-  _sender: string
-  _contract: string
-  withdrawalId: BigNumber
-  success: boolean
-}
-
-export interface OutboxProofData {
-  batchNumber: BigNumber
-  proof: string[]
-  path: BigNumber
-  l2Sender: string
-  l1Dest: string
-  l2Block: BigNumber
-  l1Block: BigNumber
-  timestamp: BigNumber
-  amount: BigNumber
-  calldataForL1: string
-}
-
-export interface ActivateCustomTokenResult {
-  seqNum: BigNumber
-  l1Addresss: string
-  l2Address: string
-}
-
-export interface OutBoxTransactionExecuted {
-  destAddr: string
-  l2Sender: string
-  outboxIndex: BigNumber
-  transactionIndex: BigNumber
-}
-
-export interface GatewaySet {
-  l1Token: string
-  gateway: string
-}
 
 export interface MessageBatchProofInfo {
   proof: string[]
@@ -102,15 +30,9 @@ export interface MessageBatchProofInfo {
   calldataForL1: string
 }
 
-// export type MulticallFunctionInput = Array<{
-//   target: string
-//   funcFragment: FunctionFragment
-//   values?: Array<unknown>
-// }>
-
 export enum OutgoingMessageState {
   /**
-   * No corresponding {@link L2ToL1EventResult} emitted
+   * No corresponding L2ToL1Event emitted
    */
   NOT_FOUND,
   /**
