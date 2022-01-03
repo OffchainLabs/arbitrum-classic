@@ -29,6 +29,7 @@
 #include <data_storage/value/value.hpp>
 #include <data_storage/value/valuecache.hpp>
 
+#include <sys/stat.h>
 #include <ethash/keccak.hpp>
 #include <filesystem>
 #include <iomanip>
@@ -1022,7 +1023,14 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
     ValueCache& value_cache,
     bool lazy_load) const;
 
+static std::atomic<bool> save_rocksdb_checkpoint_signal;
 #ifdef __linux__
+void sigUsr1Handler(int signal) {
+    if (signal != SIGUSR1)
+        return;
+    save_rocksdb_checkpoint_signal = true;
+}
+
 static void* backtrace_buffer[1024];
 void sigUsr2Handler(int signal) {
     if (signal != SIGUSR2)
@@ -1055,6 +1063,7 @@ constexpr size_t old_machine_cache_max_size = 20;
 void ArbCore::operator()() {
 #ifdef __linux__
     prctl(PR_SET_NAME, "ArbCore", 0, 0, 0);
+    signal(SIGUSR1, sigUsr1Handler);
     signal(SIGUSR2, sigUsr2Handler);
     core_pthread = pthread_self();
 #endif
@@ -1066,6 +1075,7 @@ void ArbCore::operator()() {
     auto begin_time = std::chrono::steady_clock::now();
     auto begin_message =
         core_machine->machine_state.output.fully_processed_inbox.count;
+    save_rocksdb_checkpoint_signal = false;
 
     if (coreConfig.save_rocksdb_interval > 0) {
         next_rocksdb_save_timestamp =
@@ -1199,31 +1209,46 @@ void ArbCore::operator()() {
 
                         // Check if database copy needs to be saved to disk
                         auto current_seconds = seconds_since_epoch();
-                        if (next_rocksdb_save_timestamp != 0 &&
-                            current_seconds >= next_rocksdb_save_timestamp) {
-                            auto timestamp_dir =
-                                std::to_string(current_seconds);
-                            auto checkpoint_dir =
-                                save_rocksdb_path / timestamp_dir;
-                            status = tx.createRocksdbCheckpoint(
-                                checkpoint_dir.string());
-                            if (!status.ok()) {
+                        if (save_rocksdb_checkpoint_signal ||
+                            (next_rocksdb_save_timestamp != 0 &&
+                             current_seconds >= next_rocksdb_save_timestamp)) {
+                            save_rocksdb_checkpoint_signal = false;
+
+                            struct stat info;
+                            if ((stat(save_rocksdb_path.c_str(), &info) != 0) &&
+                                (info.st_mode & S_IFDIR) == 0) {
                                 std::cerr << "Unable to save checkpoint into "
-                                          << checkpoint_dir
-                                          << ", error: " << status.ToString()
+                                          << save_rocksdb_path
+                                          << " because directory doesn't exist"
                                           << std::endl;
                             } else {
-                                auto save_elapsed =
-                                    seconds_since_epoch() - current_seconds;
-                                std::cerr << "Saving rocksdb checkpoint in "
-                                          << checkpoint_dir << " took "
-                                          << save_elapsed << " seconds"
-                                          << std::endl;
+                                auto timestamp_dir =
+                                    std::to_string(current_seconds);
+                                auto checkpoint_dir =
+                                    save_rocksdb_path / timestamp_dir;
+                                status = tx.createRocksdbCheckpoint(
+                                    checkpoint_dir.string());
+                                if (!status.ok()) {
+                                    std::cerr
+                                        << "Unable to save checkpoint into "
+                                        << checkpoint_dir
+                                        << ", error: " << status.ToString()
+                                        << std::endl;
+                                } else {
+                                    auto save_elapsed =
+                                        seconds_since_epoch() - current_seconds;
+                                    std::cerr << "Saving rocksdb checkpoint in "
+                                              << checkpoint_dir << " took "
+                                              << save_elapsed << " seconds"
+                                              << std::endl;
+                                }
                             }
 
-                            next_rocksdb_save_timestamp =
-                                current_seconds +
-                                coreConfig.save_rocksdb_interval;
+                            if (next_rocksdb_save_timestamp != 0) {
+                                next_rocksdb_save_timestamp =
+                                    current_seconds +
+                                    coreConfig.save_rocksdb_interval;
+                            }
                         }
                     }
 
