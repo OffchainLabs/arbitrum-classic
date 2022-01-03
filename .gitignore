@@ -23,7 +23,7 @@ keys.json
 /workspace
 arbitrum_flat.sol
 vconan
-gasReporterOutput.json
+# gasReporterOutput.json
 rollups
 /packages/arb-node-core/arb-validator
 /packages/arb-node-core/proof_test_server
