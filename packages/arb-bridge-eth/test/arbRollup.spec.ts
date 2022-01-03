@@ -39,6 +39,9 @@ import {
 } from './common/rolluplib'
 import { bisectExecution } from './common/challenge'
 
+console.log('PROCESS ARGS')
+console.log(process.argv)
+
 const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
 const zerobytes32 = ethers.constants.HashZero
