@@ -10,9 +10,10 @@ contract TestERC721 is ERC721 {
     function mint(
         address to,
         uint256 tokenId,
-        bytes calldata _data
+        string calldata tokenUri
     ) external {
         // TODO: what if we try minting on the L2 and this reverts?
-        _safeMint(to, tokenId, _data);
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, tokenUri);
     }
 }

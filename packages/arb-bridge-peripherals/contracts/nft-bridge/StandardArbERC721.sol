@@ -51,6 +51,7 @@ contract StandardArbERC721 is ERC721Upgradeable {
         bytes calldata tokenUri
     ) external onlyGateway {
         _mint(to, tokenId);
+        _rawTokenUri[tokenId] = tokenUri;
     }
 
     function burn(uint256 tokenId) external onlyGateway {
@@ -59,23 +60,31 @@ contract StandardArbERC721 is ERC721Upgradeable {
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         bytes memory data = _rawTokenUri[tokenId];
-        // TODO: write a unit test for this
         assembly {
-            return(data, mload(data))
+            return(add(data, 0x20), data)
         }
     }
 
     function name() public view override returns (string memory) {
         bytes memory data = rawName;
         assembly {
-            return(data, mload(data))
+            return(add(data, 0x20), data)
         }
     }
 
     function symbol() public view override returns (string memory) {
         bytes memory data = rawSymbol;
         assembly {
-            return(data, mload(data))
+            return(add(data, 0x20), data)
         }
+    }
+
+    function baseURI() public view override returns (string memory) {
+        revert("BASE_URI_NOT_IMPLEMENTED");
+    }
+
+    function _burn(uint256 tokenId) internal override {
+        super._burn(tokenId);
+        delete _rawTokenUri[tokenId];
     }
 }

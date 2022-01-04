@@ -23,31 +23,30 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
-import "../tokenbridge/libraries/Escrow721.sol";
 import "../tokenbridge/libraries/ClonableBeaconProxy.sol";
-import "./L1NftGateway.sol";
 import "../tokenbridge/arbitrum/L2ArbitrumMessenger.sol";
+import "./L1NftGateway.sol";
 import "./StandardArbERC721.sol";
 
-/**
- * @title Common interface for L1 and L2 Gateway Routers
- */
 contract L2NftGateway is L2ArbitrumMessenger, IERC721Receiver {
     address public counterpartGateway;
-    address public router;
     address public beaconProxyFactory;
 
-    function initialize(
-        address _counterpartGateway,
-        address _router,
-        address _beaconProxyFactory
-    ) public {
+    function initialize(address _counterpartGateway, address _beaconProxyFactory) public {
         require(counterpartGateway == address(0), "ALREADY_INIT");
         require(_counterpartGateway != address(0), "BAD_COUNTERPART");
-        require(_router != address(0), "BAD_ROUTER");
         counterpartGateway = _counterpartGateway;
-        router = _router;
         beaconProxyFactory = _beaconProxyFactory;
+    }
+
+    modifier onlyCounterpartGateway() {
+        // TODO: we can precompute aliased addr to make it cheaper
+        require(
+            msg.sender == AddressAliasHelper.applyL1ToL2Alias(counterpartGateway) ||
+                msg.sender == counterpartGateway,
+            "ONLY_COUNTERPART_GATEWAY"
+        );
+        _;
     }
 
     function withdraw(
@@ -62,12 +61,8 @@ contract L2NftGateway is L2ArbitrumMessenger, IERC721Receiver {
 
         require(StandardArbERC721(expectedAddress).l1Address() == l1Token, "INVALID_TOKEN");
 
-        require(!shouldCreate2Escrow, "EXTERNAL_ESCROW_DISABLED");
         if (shouldCreate2Escrow) {
-            // TODO: can we just check if the token is escrowed there, and allow this to be deployed during an eventual withdrawal?
-            // TODO: should we allow the user to deploy their own escrow logic?
-            address escrow = Escrow721Handler.create2Deploy(l1Token, tokenId);
-            require(Escrow721(escrow).requestEscrow(from, l1Token, tokenId), "NO_ESCROW");
+            revert("DISABLED_EXTERNAL_ESCROW");
         } else {
             StandardArbERC721(l1Token).burn(tokenId);
         }
@@ -86,8 +81,7 @@ contract L2NftGateway is L2ArbitrumMessenger, IERC721Receiver {
         bytes calldata symbol,
         bytes calldata tokenURI,
         bytes calldata /* data */
-    ) external {
-        require(msg.sender == AddressAliasHelper.applyL1ToL2Alias(counterpartGateway));
+    ) external onlyCounterpartGateway {
         address expectedAddress = calculateL2TokenAddress(l1Token);
 
         if (!Address.isContract(expectedAddress)) {
@@ -119,16 +113,9 @@ contract L2NftGateway is L2ArbitrumMessenger, IERC721Receiver {
         return this.onERC721Received.selector;
     }
 
-    function getCreate2EscrowAddress(address l1Token, uint256 tokenId)
-        external
-        view
-        returns (address)
-    {
-        return Escrow721Handler.getCreate2EscrowAddress(l1Token, tokenId);
-    }
-
     function updateTokenUriToL2() external {
-        // TODO: take in batch
+        // TODO: take in update
+        revert("NOT_IMPLEMENTED");
     }
 
     function getOutboundCalldata(

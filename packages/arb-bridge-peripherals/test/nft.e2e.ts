@@ -19,12 +19,11 @@ import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
-import { L1NftGateway, L1NftRouter, L2NftGateway } from '../build/types'
+import { L1NftGateway, L2NftGateway } from '../build/types'
 
 describe('Bridge peripherals end-to-end', () => {
   let accounts: SignerWithAddress[]
 
-  let l1RouterTestBridge: L1NftRouter
   let l1TestBridge: L1NftGateway
   let l2TestBridge: L2NftGateway
 
@@ -36,9 +35,6 @@ describe('Bridge peripherals end-to-end', () => {
     accounts = await ethers.getSigners()
 
     // l1 side deploy
-    const L1RouterTestBridge = await ethers.getContractFactory('L1NftRouter')
-    l1RouterTestBridge = await L1RouterTestBridge.deploy()
-
     const L1TestBridge = await ethers.getContractFactory('L1NftGatewayTester')
     l1TestBridge = await L1TestBridge.deploy()
 
@@ -73,7 +69,6 @@ describe('Bridge peripherals end-to-end', () => {
 
     await l1TestBridge.functions.initialize(
       l2TestBridge.address,
-      l1RouterTestBridge.address,
       accounts[0].address // inbox
       //   cloneableProxyHash,
       //   beaconProxyFactory.address
@@ -81,44 +76,28 @@ describe('Bridge peripherals end-to-end', () => {
 
     await l2TestBridge.initialize(
       l1TestBridge.address,
-      accounts[1].address, //   router
       beaconProxyFactory.address
     )
-
-    // address _counterpartGateway,
-    // address _defaultGateway,
-    // address _inbox
-
-    await l1RouterTestBridge.functions.initialize(
-      accounts[1].address, // l2RouterTestBridge.address, // counterparty
-      l1TestBridge.address, // defaultGateway
-      accounts[0].address // inbox
-    )
-
-    // const l2DefaultGateway = await l1TestBridge.counterpartGateway()
-    // await l2RouterTestBridge.functions.initialize(
-    //   l1RouterTestBridge.address,
-    //   l2DefaultGateway
-    // )
-
-    // assert.equal(
-    //   await l2TestBridge.cloneableProxyHash(),
-    //   await l1TestBridge.cloneableProxyHash(),
-    //   'Wrong cloneable Proxy Hash'
-    // )
   })
 
   it('should deposit tokens', async function () {
+    const StandardArbERC721 = await ethers.getContractFactory(
+      'StandardArbERC721'
+    )
     const Token = await ethers.getContractFactory('TestERC721')
-    const token = await Token.deploy('mock', 'mck')
+    const name = 'mock'
+    const symbol = 'mck'
+    const token = await Token.deploy(name, symbol)
     // send escrowed tokens to bridge
     const tokenId = 3
-    await token.mint(accounts[0].address, tokenId, '0x')
+    const tokenUri = '0xasdasdasd'
+    await token.mint(accounts[0].address, tokenId, tokenUri)
     await token.approve(l1TestBridge.address, tokenId)
 
+    assert.equal(await token.tokenURI(tokenId), tokenUri, 'wrong l1 uri')
     const data = '0x'
 
-    await l1RouterTestBridge.deposit(
+    await l1TestBridge.deposit(
       token.address,
       tokenId,
       accounts[0].address,
@@ -137,17 +116,21 @@ describe('Bridge peripherals end-to-end', () => {
     const l2TokenAddress = await l2TestBridge.calculateL2TokenAddress(
       token.address
     )
-    const l2TokenAddressFromL1Router =
-      await l1RouterTestBridge.calculateL2TokenAddress(token.address, tokenId)
-    assert.equal(
-      l2TokenAddressFromL1Router,
-      l2TokenAddress,
-      'Wrong address oracle'
-    )
+    // const l2TokenAddressFromL1Router =
+    //   await l1RouterTestBridge.calculateL2TokenAddress(token.address, tokenId)
+    // assert.equal(
+    //   l2TokenAddressFromL1Router,
+    //   l2TokenAddress,
+    //   'Wrong address oracle'
+    // )
 
-    const l2Token = await Token.attach(l2TokenAddress)
+    const l2Token = await StandardArbERC721.attach(l2TokenAddress)
     const l2Balance = await l2Token.balanceOf(accounts[0].address)
     assert.equal(l2Balance.toNumber(), 1, 'Tokens not minted')
+
+    assert.equal(await l2Token.tokenURI(tokenId), tokenUri, 'wrong L2 uri')
+    assert.equal(await l2Token.name(), name, 'wrong L2 name')
+    assert.equal(await l2Token.symbol(), symbol, 'wrong L2 name')
   })
 
   //   it('should withdraw erc20 tokens from L2 without router', async function () {

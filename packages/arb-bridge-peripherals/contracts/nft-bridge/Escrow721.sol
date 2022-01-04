@@ -25,6 +25,7 @@ import "@openzeppelin/contracts/utils/Create2.sol";
 library Escrow721Handler {
     // TODO: be careful, these break through upgrades
     bytes constant bytecode = type(Escrow721).creationCode;
+    // this doesn't get evaluated during compile time, instead use immutable and calculate in constructor?
     bytes32 constant bytecodeHash = keccak256(type(Escrow721).creationCode);
 
     function getCreate2EscrowAddress(address l1Token, uint256 tokenId)

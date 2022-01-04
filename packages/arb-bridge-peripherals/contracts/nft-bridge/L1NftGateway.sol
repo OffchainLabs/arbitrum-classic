@@ -29,29 +29,17 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
 import "./L2NftGateway.sol";
 import "../tokenbridge/libraries/gateway/GatewayMessageHandler.sol";
-import "../tokenbridge/libraries/Escrow721.sol";
 import "../tokenbridge/ethereum/L1ArbitrumMessenger.sol";
-import "./L1NftRouter.sol";
 
-/**
- * @title Common interface for L1 and L2 Gateway Routers
- */
 contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
     address public counterpartGateway;
     address public inbox;
-    address public router;
 
-    function initialize(
-        address _counterpartGateway,
-        address _router,
-        address _inbox
-    ) public {
+    function initialize(address _counterpartGateway, address _inbox) public {
         require(counterpartGateway == address(0), "ALREADY_INIT");
         require(_counterpartGateway != address(0), "BAD_COUNTERPART");
-        require(_router != address(0), "BAD_ROUTER");
         require(_inbox != address(0), "BAD_INBOX");
         counterpartGateway = _counterpartGateway;
-        router = _router;
         inbox = _inbox;
     }
 
@@ -76,43 +64,7 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
     ) external onlyCounterpartGateway {
         // TODO: implement tradeable exits?
         // TODO: what if NFT is L2 native?
-
-        address escrow = Escrow721Handler.getCreate2EscrowAddress(l1Token, tokenId);
-        if (Address.isContract(escrow)) {
-            Escrow721(escrow).releaseEscrow(to, l1Token, tokenId, data);
-        } else {
-            IERC721(l1Token).safeTransferFrom(address(this), to, tokenId, data);
-        }
-    }
-
-    function depositFromRouter(
-        address l1Token,
-        uint256 tokenId,
-        address from,
-        address to,
-        bool shouldUseNewEscrowAddress,
-        uint256 maxGas,
-        uint256 gasPrice,
-        uint256 maxSubmissionCost,
-        address creditBackAddress,
-        bytes calldata data
-    ) external payable returns (uint256) {
-        require(msg.sender == router, "ONLY_ROUTER");
-        return
-            depositImpl(
-                l1Token,
-                tokenId,
-                from,
-                to,
-                shouldUseNewEscrowAddress,
-                L1ArbitrumMessenger.L2GasParams({
-                    _maxSubmissionCost: maxSubmissionCost,
-                    _gasPriceBid: gasPrice,
-                    _maxGas: maxGas
-                }),
-                creditBackAddress,
-                data
-            );
+        IERC721(l1Token).safeTransferFrom(address(this), to, tokenId, data);
     }
 
     function deposit(
@@ -126,9 +78,7 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
         address creditBackAddress,
         bytes calldata data
     ) external payable returns (uint256) {
-        address expectedGateway = L1NftRouter(router).getGateway(l1Token, tokenId);
-        require(expectedGateway == address(this), "INVALID_GATEWAY");
-
+        // TODO: add l1Token whitelist?
         return
             depositImpl(
                 l1Token,
@@ -164,13 +114,9 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
                 (l2GasParams._maxGas * l2GasParams._gasPriceBid) + l2GasParams._maxSubmissionCost,
             "WRONG_MSG_VAL"
         );
-        require(!shouldCreate2Escrow, "EXTERNAL_ESCROW_DISABLED");
 
         if (shouldCreate2Escrow) {
-            // TODO: can we just check if the token is escrowed there, and allow this to be deployed during an eventual withdrawal?
-            // TODO: should we allow the user to deploy their own escrow logic?
-            address escrow = Escrow721Handler.create2Deploy(l1Token, tokenId);
-            require(Escrow721(escrow).requestEscrow(from, l1Token, tokenId), "NO_ESCROW");
+            revert("DISABLED_EXTERNAL_ESCROW");
         } else {
             IERC721(l1Token).transferFrom(from, address(this), tokenId);
         }
@@ -188,14 +134,6 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
             );
     }
 
-    function getCreate2EscrowAddress(address l1Token, uint256 tokenId)
-        external
-        view
-        returns (address)
-    {
-        return Escrow721Handler.getCreate2EscrowAddress(l1Token, tokenId);
-    }
-
     function onERC721Received(
         address operator,
         address from,
@@ -209,6 +147,7 @@ contract L1NftGateway is L1ArbitrumMessenger, IERC721Receiver {
 
     function updateTokenUriToL2() external {
         // TODO: allow permissionless updating of URI in L2
+        revert("NOT_IMPLEMENTED");
     }
 
     function getOutboundCalldata(
