@@ -42,6 +42,9 @@ import { bisectExecution } from './common/challenge'
 console.log('PROCESS ARGS')
 console.log(process.argv)
 
+console.log('PROCESS ENV')
+console.log(process.env)
+
 const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
 const zerobytes32 = ethers.constants.HashZero
