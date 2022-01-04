@@ -251,22 +251,6 @@ func authenticateTraceType(traceTypes []string) (bool, error) {
 	return traceDestroys, nil
 }
 
-type CallTraceRequest struct {
-	callArgs   CallTxArgs
-	traceTypes []string
-}
-
-func (at *CallTraceRequest) UnmarshalJSON(b []byte) error {
-	fields := []interface{}{&at.callArgs, &at.traceTypes}
-	if err := json.Unmarshal(b, &fields); err != nil {
-		return err
-	}
-	if len(fields) != 2 {
-		return errors.New("expected two arguments per call")
-	}
-	return nil
-}
-
 func (t *Trace) traceDestroyed(cursor core.ExecutionCursor, frames []TraceFrame) ([]common.Address, error) {
 	mach, err := t.s.srv.GetLookup().TakeMachine(cursor)
 	if err != nil {
@@ -452,6 +436,22 @@ func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.Bloc
 	return t.handleCallRequest(callArgs, traceDestroys, snap)
 }
 
+type CallTraceRequest struct {
+	callArgs   CallTxArgs
+	traceTypes []string
+}
+
+func (at *CallTraceRequest) UnmarshalJSON(b []byte) error {
+	fields := []interface{}{&at.callArgs, &at.traceTypes}
+	if err := json.Unmarshal(b, &fields); err != nil {
+		return err
+	}
+	if len(fields) != 2 {
+		return errors.New("expected two arguments per call")
+	}
+	return nil
+}
+
 func (t *Trace) CallMany(calls []*CallTraceRequest, blockNum rpc.BlockNumberOrHash) ([]*TraceResult, error) {
 	traceDestroys := make([]bool, 0, len(calls))
 	for _, call := range calls {
@@ -506,8 +506,6 @@ func (t *Trace) ReplayTransaction(txHash hexutil.Bytes, traceTypes []string) (*T
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Handle destroyed contract tracing
-	_ = traceDestroys
 	txTrace, _, err := t.transaction(txHash, traceDestroys)
 	if err != nil || txTrace.res == nil {
 		return nil, err
@@ -590,6 +588,104 @@ func (t *Trace) Block(blockNum rpc.BlockNumberOrHash) ([]TraceFrame, error) {
 			addChainContext(&txTrace.frames[i], chainContext)
 		}
 		traces = append(traces, txTrace.frames...)
+	}
+	return traces, nil
+}
+
+type FilterRequest struct {
+	FromBlock   *rpc.BlockNumberOrHash `json:"fromBlock"`
+	ToBlock     *rpc.BlockNumberOrHash `json:"toBlock"`
+	FromAddress *[]common.Address      `json:"fromAddress"`
+	ToAddress   *[]common.Address      `json:"toAddress"`
+	After       *uint64                `json:"after"`
+	Count       *uint64                `json:"count"`
+}
+
+func (t *Trace) Filter(filter *FilterRequest) ([]TraceFrame, error) {
+	fromBlock := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
+	if filter.FromBlock != nil {
+		fromBlock = *filter.FromBlock
+	}
+	toBlock := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
+	if filter.ToBlock != nil {
+		toBlock = *filter.ToBlock
+	}
+	fromBlockInfo, err := t.s.blockInfoForNumberOrHash(fromBlock)
+	if err != nil {
+		return nil, err
+	}
+	toBlockInfo, err := t.s.blockInfoForNumberOrHash(toBlock)
+	if err != nil {
+		return nil, err
+	}
+	if fromBlockInfo.LogCount > toBlockInfo.LogCount {
+		return nil, nil
+	}
+	start := rpc.BlockNumber(fromBlockInfo.Header.Number.Int64())
+	end := rpc.BlockNumber(toBlockInfo.Header.Number.Int64())
+
+	fromAddrFilter := make(map[common.Address]struct{})
+	if filter.FromAddress != nil {
+		for _, addr := range *filter.FromAddress {
+			fromAddrFilter[addr] = struct{}{}
+		}
+	}
+
+	toAddrFilter := make(map[common.Address]struct{})
+	if filter.ToAddress != nil {
+		for _, addr := range *filter.ToAddress {
+			toAddrFilter[addr] = struct{}{}
+		}
+	}
+
+	totalTraces := uint64(0)
+	if filter.After != nil {
+		totalTraces += *filter.After
+	}
+	if filter.Count != nil {
+		totalTraces += *filter.Count
+	} else {
+		totalTraces = math.MaxUint64
+	}
+	traces := make([]TraceFrame, 0)
+blockLoop:
+	for blockNum := start; blockNum <= end; blockNum++ {
+		txTraces, blockInfo, _, err := t.block(rpc.BlockNumberOrHashWithNumber(blockNum), false)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, txTrace := range txTraces {
+			chainContext := newChainContext(txTrace.res, blockInfo)
+			for _, frame := range txTrace.frames {
+				if len(fromAddrFilter) != 0 {
+					if _, found := fromAddrFilter[frame.Action.From]; !found {
+						continue
+					}
+				}
+				if len(toAddrFilter) != 0 {
+					if frame.Action.To == nil {
+						continue
+					}
+					if _, found := toAddrFilter[*frame.Action.To]; !found {
+						continue
+					}
+				}
+
+				addChainContext(&frame, chainContext)
+				traces = append(traces, frame)
+				if uint64(len(traces)) >= totalTraces {
+					break blockLoop
+				}
+			}
+		}
+	}
+
+	if filter.After != nil {
+		traces = traces[*filter.After:]
+	}
+	if filter.Count != nil {
+		return traces[:*filter.Count], nil
 	}
 	return traces, nil
 }
