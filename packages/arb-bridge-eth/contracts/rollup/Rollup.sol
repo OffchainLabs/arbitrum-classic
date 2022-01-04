@@ -87,8 +87,6 @@ contract Rollup is Proxy, RollupBase {
         return confirmPeriodBlocks != 0;
     }
 
-    uint256 public fivo;
-
     // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, avmGasSpeedLimitPerBlock, baseStake ]
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
@@ -164,10 +162,6 @@ contract Rollup is Proxy, RollupBase {
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
-        for (uint256 i = 0; i < 100; i++) {
-            fivo = i;
-        }
-
         bytes32 state = RollupLib.stateHash(
             RollupLib.ExecutionState(
                 0, // total gas used

@@ -61,6 +61,9 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         emit NodeRejected(firstUnresolvedNodeNum);
     }
 
+    uint256 fivo;
+    event Emitter(uint256 face);
+
     /**
      * @notice Confirm the next unresolved node
      * @param beforeSendAcc Accumulator of the AVM sends from the beginning of time up to the end of the previous confirmed node
@@ -78,6 +81,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         bytes32 afterLogAcc,
         uint256 afterLogCount
     ) external onlyValidator whenNotPaused {
+        for (uint256 i = 0; i < 100; i++) {
+            fivo = i;
+            emit Emitter(fivo);
+        }
+
         requireUnresolvedExists();
 
         // There is at least one non-zombie staker
