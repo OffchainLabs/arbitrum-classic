@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef ARB_AVM_CPP_CPRUNINGMODE_H
-#define ARB_AVM_CPP_CPRUNINGMODE_H
+#ifndef ARB_AVM_CPP_PRUNINGMODE_H
+#define ARB_AVM_CPP_PRUNINGMODE_H
 
 typedef enum {
     PRUNING_MODE_OFF = 0,
     PRUNING_MODE_ON = 1,
     PRUNING_MODE_DEFAULT = 2
-} CPruningMode;
+} PruningMode;
 
-#endif  // ARB_AVM_CPP_CPRUNINGMODE_H
+#endif  // ARB_AVM_CPP_PRUNINGMODE_H

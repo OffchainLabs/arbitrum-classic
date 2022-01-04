@@ -17,7 +17,7 @@
 #ifndef ARB_AVM_CPP_UTIL_HPP
 #define ARB_AVM_CPP_UTIL_HPP
 
-#include "cpruningmode.h"
+#include "pruningmode.h"
 
 struct ArbCoreConfig {
     // Maximum number of messages to process at a time
@@ -111,7 +111,7 @@ struct ArbCoreConfig {
     uint64_t checkpoint_pruning_age_seconds{0};
 
     // Number of seconds to keep checkpoints
-    CPruningMode checkpoint_pruning_mode{PRUNING_MODE_DEFAULT};
+    PruningMode checkpoint_pruning_mode{PRUNING_MODE_DEFAULT};
 
     // Maximum number of checkpoints to prune at a time
     uint64_t checkpoint_max_to_prune{0};

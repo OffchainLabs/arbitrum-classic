@@ -1364,6 +1364,9 @@ void ArbCore::operator()() {
                                   << "\n";
                         break;
                     }
+
+                    // Perform pruning soon
+                    perform_pruning = true;
                 }
 
                 status = tx.commit();
@@ -1483,6 +1486,8 @@ void ArbCore::operator()() {
                         std::cerr << "Error pruning checkpoints: "
                                   << prune_status.ToString() << "\n";
                     }
+
+                    perform_pruning = false;
                 }
 
                 uint256_t checkpoint_pruning_gas_used = 0;
