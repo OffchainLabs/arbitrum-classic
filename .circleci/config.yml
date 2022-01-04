@@ -118,7 +118,7 @@ jobs:
           name: test arb-bridge-eth
           command: |
             yarn typechain
-            yarn test:ci
+            yarn test:ci2
             ls -al
             ls -al ..
             ls -al ../..
