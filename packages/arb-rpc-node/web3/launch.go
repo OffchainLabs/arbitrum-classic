@@ -84,7 +84,7 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 
 		if config.Tracing {
 			tracer := NewTracer(ethServer, coreConfig)
-			if err := s.RegisterName("trace", tracer); err != nil {
+			if err := s.RegisterName("arbtrace", tracer); err != nil {
 				return nil, err
 			}
 		}
