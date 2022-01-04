@@ -36,6 +36,7 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
       stop_on_sideload(config.stop_on_sideload),
       max_gas(config.max_gas),
       go_over_gas(config.go_over_gas),
+      stop_after_log_count(config.stop_after_log_count),
       inbox_messages_consumed(0) {}
 
 MachineStateKeys::MachineStateKeys(const MachineState& machine)

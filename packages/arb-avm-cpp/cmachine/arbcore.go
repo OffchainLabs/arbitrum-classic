@@ -440,7 +440,7 @@ func (ac *ArbCore) AdvanceExecutionCursorWithTracing(executionCursor core.Execut
 			LogCount: new(big.Int).SetBytes(logCountData[:]),
 		})
 	}
-	return vals, nil
+	return vals, cursor.updateValues()
 }
 
 func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {

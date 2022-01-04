@@ -44,6 +44,7 @@ class MachineExecutionConfig {
     std::vector<MachineMessage> inbox_messages;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload;
+    std::optional<uint256_t> stop_after_log_count;
 
     MachineExecutionConfig();
 

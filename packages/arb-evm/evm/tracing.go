@@ -488,6 +488,9 @@ func (e *EVMTrace) MarshalZerologObject(event *zerolog.Event) {
 }
 
 func (e *EVMTrace) FrameTree() (Frame, error) {
+	if len(e.Items) == 0 {
+		return nil, nil
+	}
 	items := e.Items
 	var frames []Frame
 	for i := 0; i < len(items); i++ {
