@@ -74,7 +74,15 @@ Assertion Machine::run() {
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
     uint256_t initialConsumed = machine_state.getTotalMessagesRead();
-    while (!is_aborted) {
+    uint32_t delayAbortCheckCounter = 0;
+    while (true) {
+        if (delayAbortCheckCounter >= 100) {
+            if (is_aborted.load(std::memory_order_relaxed)) {
+                break;
+            }
+            delayAbortCheckCounter = 0;
+        }
+        delayAbortCheckCounter++;
         if (has_gas_limit) {
             if (!machine_state.context.go_over_gas) {
                 if (machine_state.nextGasCost() +
