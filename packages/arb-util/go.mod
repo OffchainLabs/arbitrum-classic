@@ -13,9 +13,9 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.8.0
 	github.com/offchainlabs/go-solidity-sha3 v0.1.2
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.26.0
+	github.com/rs/zerolog v1.26.1
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
