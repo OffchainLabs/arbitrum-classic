@@ -17,10 +17,18 @@
 #ifndef ARB_AVM_CPP_PRUNINGMODE_H
 #define ARB_AVM_CPP_PRUNINGMODE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     PRUNING_MODE_OFF = 0,
     PRUNING_MODE_ON = 1,
     PRUNING_MODE_DEFAULT = 2
 } PruningMode;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // ARB_AVM_CPP_PRUNINGMODE_H
