@@ -17,19 +17,24 @@
 package web3
 
 import (
+	"bytes"
 	"encoding/json"
 	"math/big"
+	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
@@ -79,14 +84,6 @@ type Trace struct {
 
 func NewTracer(s *Server, coreConfig *configuration.Core) *Trace {
 	return &Trace{s: s, coreConfig: coreConfig}
-}
-
-func splitEmissionsByLog(emissions []core.MachineEmission) map[uint64][]value.Value {
-	splitEmissions := make(map[uint64][]value.Value)
-	for _, emission := range emissions {
-		splitEmissions[emission.LogCount.Uint64()] = append(splitEmissions[emission.LogCount.Uint64()], emission.Value)
-	}
-	return splitEmissions
 }
 
 func extractValuesFromEmissions(emissions []core.MachineEmission) []value.Value {
@@ -140,13 +137,15 @@ func getDestroyedContracts(snap *snapshot.Snapshot, frames []TraceFrame) ([]comm
 			deletedContracts = append(deletedContracts, con)
 		}
 	}
+	sort.Slice(deletedContracts, func(i, j int) bool {
+		return bytes.Compare(deletedContracts[i].Bytes(), deletedContracts[j].Bytes()) < 0
+	})
 	return deletedContracts, nil
 }
 
 func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, error) {
-	receipt := txRes.ToEthReceipt(arbcommon.Hash{})
 	frame, err := trace.FrameTree()
-	if err != nil {
+	if err != nil || frame == nil {
 		return nil, err
 	}
 
@@ -179,15 +178,16 @@ func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, 
 			callErr = &tmp
 		}
 
+		topLevelContractAddress, topLevelContractCreation := txRes.GetContractCreation()
 		var frameType string
 		switch frame := frame.f.(type) {
 		case *evm.CallFrame:
 			// Top level call could actually be contract creation
-			if len(resFrames) == 0 && callFrame.Call.To == nil {
+			if len(resFrames) == 0 && topLevelContractCreation {
 				frameType = "create"
 				action.Init = callFrame.Call.Data
 				if result != nil {
-					result.Address = &receipt.ContractAddress
+					result.Address = &topLevelContractAddress
 					result.Code = (*hexutil.Bytes)(&callFrame.Return.ReturnData)
 				}
 			} else {
@@ -267,21 +267,49 @@ func (at *CallTraceRequest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (t *Trace) transaction(txHash hexutil.Bytes) (*rawTxTrace, *machine.BlockInfo, error) {
-	res, blockInfo, _, logNumber, err := t.s.getTransactionInfoByHash(txHash)
-	if err != nil || res == nil {
-		return nil, nil, err
-	}
-	blockNumber := res.IncomingRequest.L2BlockNumber.Uint64()
-	cursor, err := t.s.srv.GetExecutionCursorAtEndOfBlock(blockNumber-1, true)
+func (t *Trace) traceDestroyed(cursor core.ExecutionCursor, frames []TraceFrame) ([]common.Address, error) {
+	mach, err := t.s.srv.GetLookup().TakeMachine(cursor)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+	snapTime := inbox.ChainTime{
+		BlockNum:  arbcommon.NewTimeBlocksInt(0),
+		Timestamp: big.NewInt(0),
+	}
+	endOfBlock := message.NewInboxMessage(
+		message.EndBlockMessage{},
+		arbcommon.Address{},
+		big.NewInt(0),
+		big.NewInt(0),
+		inbox.ChainTime{
+			BlockNum:  arbcommon.NewTimeBlocksInt(0),
+			Timestamp: big.NewInt(0),
+		},
+	)
+
+	_, _, _, err = mach.ExecuteAssertionAdvanced(
+		1000000000000,
+		true,
+		[]inbox.InboxMessage{endOfBlock},
+		nil,
+		true,
+	)
+	if err != nil {
+		return nil, err
+	}
+	snap, err := snapshot.NewSnapshot(mach, snapTime, big.NewInt(math.MaxInt64))
+	if err != nil {
+		return nil, err
+	}
+	return getDestroyedContracts(snap, frames)
+}
+
+func (t *Trace) traceTransaction(cursor core.ExecutionCursor, res *evm.TxResult, logNumber *big.Int, traceDestroyed bool) (*rawTxTrace, error) {
 	maxGas := int64(t.coreConfig.CheckpointMaxExecutionGas)
 	if maxGas == 0 {
 		maxGas = 100000000000
 	}
-	debugPrints, err := t.s.srv.AdvanceExecutionCursorWithTracing(
+	debugPrints, err := t.s.srv.GetLookup().AdvanceExecutionCursorWithTracing(
 		cursor,
 		big.NewInt(maxGas),
 		true,
@@ -290,85 +318,90 @@ func (t *Trace) transaction(txHash hexutil.Bytes) (*rawTxTrace, *machine.BlockIn
 		new(big.Int).Add(logNumber, big.NewInt(1)),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	vmTrace, err := extractTrace(extractValuesFromEmissions(debugPrints))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	frames, err := renderTraceFrames(res, vmTrace)
+	if err != nil {
+		return nil, err
+	}
+
+	var destroyed *[]common.Address
+	if traceDestroyed {
+		destroyedTmp, err := t.traceDestroyed(cursor.Clone(), frames)
+		if err != nil {
+			return nil, err
+		}
+		destroyed = &destroyedTmp
+	}
+
 	return &rawTxTrace{
-		frames: frames,
-		res:    res,
-	}, blockInfo, err
+		frames:    frames,
+		res:       res,
+		destroyed: destroyed,
+	}, nil
+}
+
+func (t *Trace) transaction(txHash hexutil.Bytes, traceDestroyed bool) (*rawTxTrace, *machine.BlockInfo, error) {
+	res, blockInfo, _, logNumber, err := t.s.getTransactionInfoByHash(txHash)
+	if err != nil || res == nil {
+		return nil, nil, err
+	}
+	blockNumber := res.IncomingRequest.L2BlockNumber.Uint64()
+	cursor, err := t.s.srv.GetLookup().GetExecutionCursorAtEndOfBlock(blockNumber-1, true)
+	if err != nil {
+		return nil, nil, err
+	}
+	txTrace, err := t.traceTransaction(cursor, res, logNumber, traceDestroyed)
+	return txTrace, blockInfo, err
 }
 
 type rawTxTrace struct {
-	frames []TraceFrame
-	res    *evm.TxResult
+	frames    []TraceFrame
+	res       *evm.TxResult
+	destroyed *[]common.Address
 }
 
-func (t *Trace) block(blockNum rpc.BlockNumberOrHash) ([]*rawTxTrace, *machine.BlockInfo, error) {
+func (t *Trace) block(blockNum rpc.BlockNumberOrHash, traceDestroyed bool) ([]*rawTxTrace, *machine.BlockInfo, core.ExecutionCursor, error) {
 	blockInfo, err := t.s.blockInfoForNumberOrHash(blockNum)
 	if err != nil || blockInfo == nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	blockLog, txResults, err := t.s.srv.GetMachineBlockResults(blockInfo)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	cursor, err := t.s.srv.GetExecutionCursorAtEndOfBlock(blockInfo.Header.Number.Uint64()-1, true)
+	cursor, err := t.s.srv.GetLookup().GetExecutionCursorAtEndOfBlock(blockInfo.Header.Number.Uint64()-1, true)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	maxGas := int64(t.coreConfig.CheckpointMaxExecutionGas)
 	if maxGas == 0 {
 		maxGas = 100000000000
 	}
 
-	firstIndex := blockLog.FirstAVMLog()
-	lastIndex := new(big.Int).Add(blockLog.FirstAVMLog(), blockLog.BlockStats.TxCount)
-	debugPrints, err := t.s.srv.AdvanceExecutionCursorWithTracing(
-		cursor,
-		big.NewInt(maxGas),
-		true,
-		true,
-		firstIndex,
-		lastIndex,
-	)
-
-	res := make([]*rawTxTrace, 0, len(debugPrints))
-	for logIndex, debugPrints := range splitEmissionsByLog(debugPrints) {
-		if logIndex < firstIndex.Uint64() {
-			return nil, nil, errors.New("expected log index to be greater the first in the block")
-		}
-		if logIndex >= lastIndex.Uint64() {
-			return nil, nil, errors.Errorf("expected log index to be less then the last in the block")
-		}
-		logOffset := logIndex - firstIndex.Uint64()
-		txRes := txResults[logOffset]
-		trace, err := extractTrace(debugPrints)
+	logIndex := blockLog.FirstAVMLog()
+	res := make([]*rawTxTrace, 0, len(txResults))
+	for i := uint64(0); i < blockLog.BlockStats.TxCount.Uint64(); i++ {
+		txRes := txResults[i]
 		failMsg := logger.
 			Warn().
 			Uint64("block", blockInfo.Header.Number.Uint64()).
 			Str("txhash", txRes.IncomingRequest.MessageID.String()).
 			Err(err)
+		txTrace, err := t.traceTransaction(cursor, txRes, logIndex, traceDestroyed)
 		if err != nil {
 			failMsg.Msg("error getting trace for transaction")
 			continue
 		}
-		frames, err := renderTraceFrames(txRes, trace)
-		if err != nil {
-			failMsg.Msg("error rending trace for transaction")
-			continue
-		}
-		res = append(res, &rawTxTrace{
-			frames: frames,
-			res:    txRes,
-		})
+		res = append(res, txTrace)
+		logIndex.Add(logIndex, big.NewInt(1))
 	}
-	return res, blockInfo, nil
+	return res, blockInfo, cursor, nil
 }
 
 func (t *Trace) handleCallRequest(callArgs CallTxArgs, traceDestroys bool, snap *snapshot.Snapshot) (*TraceResult, error) {
@@ -449,9 +482,7 @@ func (t *Trace) ReplayBlockTransactions(blockNum rpc.BlockNumberOrHash, traceTyp
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Handle destroyed contract tracing
-	_ = traceDestroys
-	txTraces, blockInfo, err := t.block(blockNum)
+	txTraces, blockInfo, _, err := t.block(blockNum, traceDestroys)
 	if err != nil {
 		return nil, err
 	}
@@ -462,8 +493,9 @@ func (t *Trace) ReplayBlockTransactions(blockNum rpc.BlockNumberOrHash, traceTyp
 			txTrace.frames[i].TransactionHash = chainContext.transactionHash
 		}
 		results = append(results, &TraceResult{
-			Output: txTrace.res.ReturnData,
-			Trace:  txTrace.frames,
+			Output:             txTrace.res.ReturnData,
+			Trace:              txTrace.frames,
+			DestroyedContracts: txTrace.destroyed,
 		})
 	}
 	return results, nil
@@ -476,13 +508,15 @@ func (t *Trace) ReplayTransaction(txHash hexutil.Bytes, traceTypes []string) (*T
 	}
 	// TODO: Handle destroyed contract tracing
 	_ = traceDestroys
-	txTrace, _, err := t.transaction(txHash)
+	txTrace, _, err := t.transaction(txHash, traceDestroys)
 	if err != nil || txTrace.res == nil {
 		return nil, err
 	}
+
 	return &TraceResult{
-		Output: txTrace.res.ReturnData,
-		Trace:  txTrace.frames,
+		Output:             txTrace.res.ReturnData,
+		Trace:              txTrace.frames,
+		DestroyedContracts: txTrace.destroyed,
 	}, nil
 }
 
@@ -514,7 +548,7 @@ func addChainContext(frame *TraceFrame, context *chainContext) {
 }
 
 func (t *Trace) Transaction(txHash hexutil.Bytes) ([]TraceFrame, error) {
-	txTrace, blockInfo, err := t.transaction(txHash)
+	txTrace, blockInfo, err := t.transaction(txHash, false)
 	if err != nil || txTrace == nil {
 		return nil, err
 	}
@@ -545,7 +579,7 @@ func (t *Trace) Get(txHash hexutil.Bytes, path []hexutil.Uint64) (*TraceFrame, e
 }
 
 func (t *Trace) Block(blockNum rpc.BlockNumberOrHash) ([]TraceFrame, error) {
-	txTraces, blockInfo, err := t.block(blockNum)
+	txTraces, blockInfo, _, err := t.block(blockNum, false)
 	if err != nil {
 		return nil, err
 	}

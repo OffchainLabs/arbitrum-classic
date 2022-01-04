@@ -86,6 +86,12 @@ Assertion Machine::run() {
             }
         }
 
+        if (machine_state.context.stop_after_log_count &&
+            machine_state.output.log_count >=
+                *machine_state.context.stop_after_log_count) {
+            break;
+        }
+
         block_reason = machine_state.runOne();
         if (!std::get_if<NotBlocked>(&block_reason)) {
             break;

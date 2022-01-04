@@ -159,22 +159,6 @@ func (m *Server) GetTxInBlockAtIndexResults(res *machine.BlockInfo, index uint64
 	return evmRes, nil
 }
 
-func (m *Server) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (core.ExecutionCursor, error) {
-	return m.db.Lookup.GetExecutionCursor(totalGasUsed, allowSlowLookup)
-}
-
-func (m *Server) GetExecutionCursorAtEndOfBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
-	return m.db.Lookup.GetExecutionCursorAtEndOfBlock(blockNumber, allowSlowLookup)
-}
-
-func (m *Server) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
-	return m.db.Lookup.AdvanceExecutionCursor(executionCursor, maxGas, goOverGas, allowSlowLookup)
-}
-
-func (m *Server) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumberStart, logNumberEnd *big.Int) ([]core.MachineEmission, error) {
-	return m.db.Lookup.AdvanceExecutionCursorWithTracing(executionCursor, maxGas, goOverGas, allowSlowLookup, logNumberStart, logNumberEnd)
-}
-
 func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
 	return m.db.GetSnapshot(blockHeight)
 }

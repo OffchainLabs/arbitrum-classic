@@ -2252,6 +2252,10 @@ ArbCore::advanceExecutionCursorImpl(
             MachineExecutionConfig execConfig;
             execConfig.max_gas = total_gas_used;
             execConfig.go_over_gas = go_over_gas;
+            if (collectionOptions) {
+                execConfig.stop_after_log_count =
+                    collectionOptions->log_number_end;
+            }
 
             {
                 ReadSnapshotTransaction tx(data_storage);

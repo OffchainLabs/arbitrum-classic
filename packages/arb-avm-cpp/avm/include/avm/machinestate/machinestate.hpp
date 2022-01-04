@@ -64,6 +64,7 @@ struct AssertionContext {
     uint256_t max_gas;
     bool go_over_gas{false};
     bool first_instruction{true};
+    std::optional<uint256_t> stop_after_log_count;
 
    private:
     size_t inbox_messages_consumed{0};

@@ -147,7 +147,7 @@ func (s *Snapshot) Clone() *Snapshot {
 		chainId = new(big.Int).Set(s.chainId)
 	}
 	return &Snapshot{
-		mach: s.mach,
+		mach: s.mach.Clone(),
 		time: inbox.ChainTime{
 			BlockNum:  s.time.BlockNum.Clone(),
 			Timestamp: new(big.Int).Set(s.time.Timestamp),
