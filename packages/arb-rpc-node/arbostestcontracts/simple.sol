@@ -104,7 +104,7 @@ contract Simple {
     }
 
     function trace(uint256 arg) external payable returns (uint256) {
-        //        ComplexConstructorCon con = new ComplexConstructorCon{ value: msg.value / 2 }("0x43254");
+        ComplexConstructorCon con = new ComplexConstructorCon{ value: msg.value / 2 }("0x43254");
         try new Reverter() {} catch {}
         new Destroyer1();
         Destroyer2 test = new Destroyer2();
@@ -112,9 +112,7 @@ contract Simple {
         (bool success, bytes memory data) = address(test).delegatecall(
             abi.encodeWithSelector(Destroyer2.destroy.selector)
         );
-        require(success, "destroy failed");
-        return 0;
-        //        return con.getVal();
+        return con.getVal();
     }
 
     event Variable(bool[10] _variable);
