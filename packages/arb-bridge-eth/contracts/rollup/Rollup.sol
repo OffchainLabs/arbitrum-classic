@@ -87,6 +87,8 @@ contract Rollup is Proxy, RollupBase {
         return confirmPeriodBlocks != 0;
     }
 
+    uint256 public fivo;
+
     // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, avmGasSpeedLimitPerBlock, baseStake ]
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
@@ -100,6 +102,8 @@ contract Rollup is Proxy, RollupBase {
         uint256[2] calldata sequencerInboxParams
     ) public {
         require(!isInit(), "ALREADY_INIT");
+
+        fivo = 100 + 100;
 
         // calls initialize method in user facet
         require(_facets[0].isContract(), "FACET_0_NOT_CONTRACT");
