@@ -45,7 +45,7 @@ contract StandardArbERC721 is ERC721Upgradeable {
         _;
     }
 
-    function mint(
+    function bridgeMint(
         address to,
         uint256 tokenId,
         bytes calldata tokenUri
@@ -54,7 +54,7 @@ contract StandardArbERC721 is ERC721Upgradeable {
         _rawTokenUri[tokenId] = tokenUri;
     }
 
-    function burn(uint256 tokenId) external onlyGateway {
+    function bridgeBurn(uint256 tokenId) external onlyGateway {
         _burn(tokenId);
     }
 

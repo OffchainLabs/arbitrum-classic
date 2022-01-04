@@ -19,13 +19,13 @@ import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
-import { L1NftGateway, L2NftGateway } from '../build/types'
+import { L1NftGatewayTester, L2NftGatewayTester } from '../build/types'
 
 describe('Bridge peripherals end-to-end', () => {
   let accounts: SignerWithAddress[]
 
-  let l1TestBridge: L1NftGateway
-  let l2TestBridge: L2NftGateway
+  let l1TestBridge: L1NftGatewayTester
+  let l2TestBridge: L2NftGatewayTester
 
   const maxSubmissionCost = 1
   const maxGas = 1000000000
@@ -133,43 +133,47 @@ describe('Bridge peripherals end-to-end', () => {
     assert.equal(await l2Token.symbol(), symbol, 'wrong L2 name')
   })
 
-  //   it('should withdraw erc20 tokens from L2 without router', async function () {
-  //     const Token = await ethers.getContractFactory('TestERC20')
-  //     const token = await Token.deploy()
-  //     // send escrowed tokens to bridge
-  //     const tokenAmount = 100
-  //     await token.mint()
-  //     await token.approve(l1TestBridge.address, tokenAmount)
+  it('should withdraw nft tokens from L2', async function () {
+    const Token = await ethers.getContractFactory('TestERC721')
+    const name = 'mock'
+    const symbol = 'mck'
+    const token = await Token.deploy(name, symbol)
+    // send escrowed tokens to bridge
+    const tokenId = 3
+    const tokenUri = '0xasdasdasd'
+    await token.mint(accounts[0].address, tokenId, tokenUri)
+    await token.approve(l1TestBridge.address, tokenId)
+    const data = '0x'
 
-  //     const data = ethers.utils.defaultAbiCoder.encode(
-  //       ['uint256', 'bytes'],
-  //       [maxSubmissionCost, '0x']
-  //     )
+    await l1TestBridge.deposit(
+      token.address,
+      tokenId,
+      accounts[0].address,
+      false,
+      maxGas,
+      gasPrice,
+      maxSubmissionCost,
+      accounts[0].address,
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
+    )
 
-  //     await l1RouterTestBridge.outboundTransfer(
-  //       token.address,
-  //       accounts[0].address,
-  //       tokenAmount,
-  //       maxGas,
-  //       gasPrice,
-  //       data,
-  //       { value: maxSubmissionCost + maxGas * gasPrice }
-  //     )
+    const prevUserBalance = await token.balanceOf(accounts[0].address)
+    assert.equal(prevUserBalance.toNumber(), 0, 'wrong prev')
 
-  //     const prevUserBalance = await token.balanceOf(accounts[0].address)
+    await l2TestBridge.withdraw(
+      token.address,
+      tokenId,
+      accounts[0].address,
+      accounts[0].address,
+      false,
+      '0x'
+    )
+    await l2TestBridge.triggerTxToL1()
 
-  //     await l2TestBridge.functions[
-  //       'outboundTransfer(address,address,uint256,bytes)'
-  //     ](token.address, accounts[0].address, tokenAmount, '0x')
-
-  //     const postUserBalance = await token.balanceOf(accounts[0].address)
-
-  //     assert.equal(
-  //       prevUserBalance.toNumber() + tokenAmount,
-  //       postUserBalance.toNumber(),
-  //       'Tokens not escrowed'
-  //     )
-  //   })
+    const postUserBalance = await token.balanceOf(accounts[0].address)
+    assert.equal(postUserBalance.toNumber(), 1, 'Tokens not received')
+  })
 
   //   it('should withdraw erc20 tokens from L2 using router', async function () {
   //     const Token = await ethers.getContractFactory('TestERC20')

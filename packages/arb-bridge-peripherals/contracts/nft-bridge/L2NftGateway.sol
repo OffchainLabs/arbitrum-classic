@@ -60,16 +60,16 @@ contract L2NftGateway is L2ArbitrumMessenger, IERC721Receiver {
         address expectedAddress = calculateL2TokenAddress(l1Token);
 
         require(StandardArbERC721(expectedAddress).l1Address() == l1Token, "INVALID_TOKEN");
-
         if (shouldCreate2Escrow) {
             revert("DISABLED_EXTERNAL_ESCROW");
         } else {
-            StandardArbERC721(l1Token).burn(tokenId);
+            // TODO: optional escrow instead of burn
+            StandardArbERC721(expectedAddress).bridgeBurn(tokenId);
         }
 
         bytes memory outboundCalldata = getOutboundCalldata(l1Token, from, to, tokenId, data);
         // TODO: add exitId for tradeable exits?
-        return sendTxToL1(0, from, to, outboundCalldata);
+        return sendTxToL1(0, from, counterpartGateway, outboundCalldata);
     }
 
     function finalizeDeposit(
@@ -101,7 +101,7 @@ contract L2NftGateway is L2ArbitrumMessenger, IERC721Receiver {
                 // return;
             }
         }
-        StandardArbERC721(expectedAddress).mint(to, tokenId, tokenURI);
+        StandardArbERC721(expectedAddress).bridgeMint(to, tokenId, tokenURI);
     }
 
     function onERC721Received(
