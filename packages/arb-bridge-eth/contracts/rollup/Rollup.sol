@@ -103,8 +103,6 @@ contract Rollup is Proxy, RollupBase {
     ) public {
         require(!isInit(), "ALREADY_INIT");
 
-        fivo = 100 + 100;
-
         // calls initialize method in user facet
         require(_facets[0].isContract(), "FACET_0_NOT_CONTRACT");
         require(_facets[1].isContract(), "FACET_1_NOT_CONTRACT");
@@ -166,6 +164,10 @@ contract Rollup is Proxy, RollupBase {
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
+        for (uint256 i = 0; i < 100; i++) {
+            fivo = i;
+        }
+
         bytes32 state = RollupLib.stateHash(
             RollupLib.ExecutionState(
                 0, // total gas used
