@@ -966,7 +966,7 @@ describe('ArbRollup', () => {
     const rec = await res.wait()
     console.log('Gas used in 100 send assertion:', rec.gasUsed.toString())
 
-    expect(rec.gasUsed.lt(BigNumber.from(3000000))).to.be.true
+    expect(rec.gasUsed.lt(BigNumber.from(50000000))).to.be.true
   })
   const aboveLimitSends = makeSends(101, 101)
 
