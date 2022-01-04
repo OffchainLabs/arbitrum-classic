@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-#include "cpruningmode.h"
+#include <data_storage/pruningmode.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,7 +43,7 @@ typedef struct {
     int32_t lazy_load_archive_queries;
     int32_t checkpoint_prune_on_startup;
     int32_t checkpoint_pruning_age_seconds;
-    CPruningMode checkpoint_pruning_mode;
+    PruningMode checkpoint_pruning_mode;
     int32_t checkpoint_max_to_prune;
     int32_t database_compact;
     int32_t database_save_interval;

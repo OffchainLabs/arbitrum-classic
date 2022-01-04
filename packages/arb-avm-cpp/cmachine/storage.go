@@ -45,14 +45,16 @@ func boolToCInt(b bool) C.int {
 	return C.int(x)
 }
 
-func stringToPruningMode(mode string) C.CPruningMode {
+func stringToPruningMode(mode string) (C.PruningMode, error) {
 	if mode == "on" {
-		return C.PRUNING_MODE_ON
+		return C.PRUNING_MODE_ON, nil
 	} else if mode == "off" {
-		return C.PRUNING_MODE_OFF
+		return C.PRUNING_MODE_OFF, nil
+	} else if mode == "default" {
+		return C.PRUNING_MODE_DEFAULT, nil
 	}
 
-	return C.PRUNING_MODE_DEFAULT
+	return C.PRUNING_MODE_DEFAULT, errors.Errorf("unrecognized checkpoint pruning mode: '%s'", mode)
 }
 
 func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, error) {
@@ -61,6 +63,11 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 
 	cDatabaseSavePath := C.CString(coreConfig.Database.SavePath)
 	defer C.free(unsafe.Pointer(cDatabaseSavePath))
+
+	checkpointPruningMode, err := stringToPruningMode(coreConfig.CheckpointPruningMode)
+	if err != nil {
+		return nil, err
+	}
 
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
 	sleepMilliseconds := int(coreConfig.IdleSleep.Milliseconds())
@@ -83,7 +90,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		lazy_load_archive_queries:      boolToCInt(coreConfig.LazyLoadArchiveQueries),
 		checkpoint_prune_on_startup:    boolToCInt(coreConfig.CheckpointPruneOnStartup),
 		checkpoint_pruning_age_seconds: C.int(checkpointPruningAgeSeconds),
-		checkpoint_pruning_mode:        stringToPruningMode(coreConfig.CheckpointPruningMode),
+		checkpoint_pruning_mode:        checkpointPruningMode,
 		checkpoint_max_to_prune:        C.int(coreConfig.CheckpointMaxToPrune),
 		database_compact:               boolToCInt(coreConfig.Database.Compact),
 		database_exit_after:            boolToCInt(coreConfig.Database.ExitAfter),
