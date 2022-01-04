@@ -224,7 +224,7 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	executionAssertion, values, steps, err := makeExecutionAssertion(assertionResult.assertion)
 
 	if aborted {
-		return nil, nil, 0, errors.New("aborted")
+		return nil, nil, 0, ctx.Err()
 	}
 
 	if assertionResult.shutting_down == 1 {
