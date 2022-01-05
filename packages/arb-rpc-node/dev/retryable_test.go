@@ -756,7 +756,7 @@ func checkRetryableCreationTx(t *testing.T, client *web3.EthClient, retryableTx 
 	}
 	ticketEvent, err := retryable.ParseTicketCreated(*evmLog)
 	test.FailIfError(t, err)
-	if ticketEvent.TicketId != ticketId {
+	if ticketEvent.UserTxHash != ticketId {
 		t.Error("wrong ticket id in event")
 	}
 
@@ -834,7 +834,7 @@ func checkRetryableRedeem(t *testing.T, client *web3.EthClient, requestId, redee
 	}
 	redeemedEvent, err := retryable.ParseRedeemed(*evmLog)
 	test.FailIfError(t, err)
-	if redeemedEvent.TicketId != ticketId {
+	if redeemedEvent.UserTxHash != ticketId {
 		t.Error("wrong ticket id in redeem event")
 	}
 }
