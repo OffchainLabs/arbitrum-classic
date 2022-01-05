@@ -17,6 +17,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 type EthClient struct {
@@ -33,6 +34,11 @@ func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
 	config := ServerConfig{
 		Mode:          mode,
 		MaxCallAVMGas: DefaultMaxAVMGas,
+		Tracing: configuration.Tracing{
+			Enable:    true,
+			Namespace: "arbtrace",
+		},
+		DevopsStubs: false,
 	}
 	return &EthClient{
 		srv:    NewServer(srv, config, nil),

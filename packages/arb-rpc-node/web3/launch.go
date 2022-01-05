@@ -46,7 +46,7 @@ var (
 type ServerConfig struct {
 	Mode          RpcMode
 	MaxCallAVMGas uint64
-	Tracing       bool
+	Tracing       configuration.Tracing
 	DevopsStubs   bool
 }
 
@@ -82,9 +82,9 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 			return nil, err
 		}
 
-		if config.Tracing {
+		if config.Tracing.Enable {
 			tracer := NewTracer(ethServer, coreConfig)
-			if err := s.RegisterName("arbtrace", tracer); err != nil {
+			if err := s.RegisterName(config.Tracing.Namespace, tracer); err != nil {
 				return nil, err
 			}
 		}
