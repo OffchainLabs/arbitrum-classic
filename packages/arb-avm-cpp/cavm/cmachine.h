@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ typedef struct {
 
 CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
+void machineAbort(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
 int machineHash(CMachine* m, void* ret);

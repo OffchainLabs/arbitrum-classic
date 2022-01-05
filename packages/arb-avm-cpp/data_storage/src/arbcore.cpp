@@ -2422,7 +2422,7 @@ ArbCore::advanceExecutionCursorImpl(
         }
         reorg_attempts++;
 
-        while (true) {
+        while (!execution_cursor.isAborted()) {
             // Run machine until specified gas is reached
             MachineExecutionConfig execConfig;
             execConfig.max_gas = total_gas_used;
@@ -2438,11 +2438,17 @@ ArbCore::advanceExecutionCursorImpl(
                 auto& mach =
                     resolveExecutionCursorMachine(tx, execution_cursor);
 
+                if (execution_cursor.isAborted()) {
+                    // Extra check in case machine was not resolved before abort
+                    return rocksdb::Status::Aborted();
+                }
+
                 uint256_t gas_used = execution_cursor.getOutput().arb_gas_used;
                 if ((gas_used >= total_gas_used) ||
                     (!go_over_gas &&
                      gas_used + mach->machine_state.nextGasCost() >
                          total_gas_used)) {
+                    // Gas target reached
                     break;
                 }
 
@@ -2492,8 +2498,13 @@ ArbCore::advanceExecutionCursorImpl(
                 }
             }
             if (assertion.gas_count == 0) {
+                // Didn't make any progress
                 break;
             }
+        }
+
+        if (execution_cursor.isAborted()) {
+            return rocksdb::Status::Aborted();
         }
 
         if (handle_reorg) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package speedtest
 
 import (
+	"context"
 	"io/ioutil"
 	"math/big"
 	"strconv"
@@ -48,6 +49,7 @@ func getInsnMultiplier(b *testing.B, filePath string) uint64 {
 }
 
 func runExecutableFile(b *testing.B, filePath string) {
+	ctx := context.Background()
 	insnMultiplier := getInsnMultiplier(b, filePath)
 	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 	ckp, err := cmachine.NewArbStorage(b.TempDir(), coreConfig)
@@ -70,7 +72,7 @@ func runExecutableFile(b *testing.B, filePath string) {
 	b.ResetTimer()
 
 	// Last parameter returned is number of steps executed
-	_, _, _, err = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, true, nil)
+	_, _, _, err = mach.ExecuteAssertion(ctx, uint64(b.N)*insnMultiplier, true, nil)
 	if err != nil {
 		b.Fatal(err)
 	}

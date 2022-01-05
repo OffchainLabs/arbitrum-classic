@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,12 @@ void machineDestroy(CMachine* m) {
         return;
     }
     delete static_cast<Machine*>(m);
+}
+
+void machineAbort(CMachine* m) {
+    assert(m);
+    auto machine = static_cast<ExecutionCursor*>(m);
+    machine->abort();
 }
 
 int machineHash(CMachine* m, void* ret) {

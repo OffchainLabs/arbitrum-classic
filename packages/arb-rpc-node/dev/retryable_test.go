@@ -407,30 +407,31 @@ func balanceCheck(
 	correctDestinationBalance *big.Int,
 ) {
 	t.Helper()
-	snap, err := srv.PendingSnapshot()
+	ctx := context.Background()
+	snap, err := srv.PendingSnapshot(ctx)
 	test.FailIfError(t, err)
 
-	senderBalance, err := snap.GetBalance(sender)
+	senderBalance, err := snap.GetBalance(ctx, sender)
 	test.FailIfError(t, err)
 
 	if senderBalance.Cmp(correctSenderBalance) != 0 {
 		t.Error("unexpected sender balance", senderBalance, "instead of", correctSenderBalance)
 	}
 
-	beneficiaryBalance, err := snap.GetBalance(retryableTx.Beneficiary)
+	beneficiaryBalance, err := snap.GetBalance(ctx, retryableTx.Beneficiary)
 	test.FailIfError(t, err)
 
 	if beneficiaryBalance.Cmp(correctBeneficiaryBalance) != 0 {
 		t.Error("unexpected beneficiary balance", beneficiaryBalance, "instead of", correctBeneficiaryBalance)
 	}
 
-	creditBackBalance, err := snap.GetBalance(retryableTx.CreditBack)
+	creditBackBalance, err := snap.GetBalance(ctx, retryableTx.CreditBack)
 	test.FailIfError(t, err)
 	if creditBackBalance.Cmp(correctCreditBackBalance) != 0 {
 		t.Error("unexpected credit back balance", creditBackBalance, "instead of", correctCreditBackBalance)
 	}
 
-	destinationBalance, err := snap.GetBalance(retryableTx.Destination)
+	destinationBalance, err := snap.GetBalance(ctx, retryableTx.Destination)
 	test.FailIfError(t, err)
 
 	if destinationBalance.Cmp(correctDestinationBalance) != 0 {
