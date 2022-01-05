@@ -108,7 +108,7 @@ func (s *Snapshot) MaxGasPriceBid() *big.Int {
 // If an error is returned, s is unmodified
 func (s *Snapshot) AddMessage(ctx context.Context, msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
 	mach := s.mach.Clone()
-	res, _, err := s.addMessage(ctx, sg, sender, targetHash, addMessageMaxAVMGas)
+	res, _, err := s.addMessage(ctx, msg, sender, targetHash, addMessageMaxAVMGas)
 	if err != nil {
 		// Revert the machine
 		s.mach = mach
@@ -417,11 +417,11 @@ func (s *Snapshot) basicAddMessage(ctx context.Context, data []byte, dest common
 			Data:        data,
 		},
 	}
-	res, _, err := s.AddContractMessage(msg, common.Address{}, addMessageMaxAVMGas)
+	res, _, err := s.AddContractMessage(ctx, msg, common.Address{}, addMessageMaxAVMGas)
 	return res, err
 }
 
-func (s *Snapshot) AddContractMessage(msg message.ContractTransaction, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) AddContractMessage(ctx context.Context, msg message.ContractTransaction, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
 	if s.arbosRemappingEnabled && sender != (common.Address{}) {
 		sender = message.L1RemapAccount(sender)
 	}

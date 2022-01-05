@@ -2440,7 +2440,7 @@ ArbCore::advanceExecutionCursorImpl(
 
                 if (execution_cursor.isAborted()) {
                     // Extra check in case machine was not resolved before abort
-                    return rocksdb::Status::Aborted();
+                    return {rocksdb::Status::Aborted(), {}};
                 }
 
                 uint256_t gas_used = execution_cursor.getOutput().arb_gas_used;
@@ -2504,7 +2504,7 @@ ArbCore::advanceExecutionCursorImpl(
         }
 
         if (execution_cursor.isAborted()) {
-            return rocksdb::Status::Aborted();
+            return {rocksdb::Status::Aborted(), {}};
         }
 
         if (handle_reorg) {

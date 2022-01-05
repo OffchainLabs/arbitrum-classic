@@ -2,6 +2,7 @@ package dev
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -23,6 +24,7 @@ import (
 
 func TestTrace(t *testing.T) {
 	skipBelowVersion(t, 25)
+	ctx := context.Background()
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
@@ -57,7 +59,7 @@ func TestTrace(t *testing.T) {
 	gas := hexutil.Uint64(100000000)
 	blockNum := rpc.LatestBlockNumber
 	data := hexutil.Bytes(append(traceMethod.ID, traceInpData...))
-	callTraceData, err := tracer.Call(web3.CallTxArgs{
+	callTraceData, err := tracer.Call(ctx, web3.CallTxArgs{
 		From: &senderAuth.From,
 		To:   &simpleAddr,
 		Data: &data,
@@ -96,17 +98,17 @@ func TestTrace(t *testing.T) {
 	_, err = backend.AddInboxMessage(message.NewSafeL2Message(arbMsg), common.Address{})
 	test.FailIfError(t, err)
 
-	tx1TraceData, err := tracer.ReplayTransaction(userTx1.Hash().Bytes(), []string{"trace", "deletedContracts"})
+	tx1TraceData, err := tracer.ReplayTransaction(ctx, userTx1.Hash().Bytes(), []string{"trace", "deletedContracts"})
 	test.FailIfError(t, err)
 
-	tx2TraceData, err := tracer.ReplayTransaction(userTx2.Hash().Bytes(), []string{"trace", "deletedContracts"})
+	tx2TraceData, err := tracer.ReplayTransaction(ctx, userTx2.Hash().Bytes(), []string{"trace", "deletedContracts"})
 	test.FailIfError(t, err)
 
 	txReq, _, _, err := backend.db.GetRequest(common.NewHashFromEth(userTx1.Hash()))
 	test.FailIfError(t, err)
 	l2BlockNum := rpc.BlockNumber(txReq.IncomingRequest.L2BlockNumber.Int64())
 
-	blockTraceData, err := tracer.ReplayBlockTransactions(rpc.BlockNumberOrHash{BlockNumber: &l2BlockNum}, []string{"trace", "deletedContracts"})
+	blockTraceData, err := tracer.ReplayBlockTransactions(ctx, rpc.BlockNumberOrHash{BlockNumber: &l2BlockNum}, []string{"trace", "deletedContracts"})
 	test.FailIfError(t, err)
 
 	for i := range blockTraceData {

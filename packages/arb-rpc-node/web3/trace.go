@@ -18,6 +18,7 @@ package web3
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"math/big"
 	"sort"
@@ -115,7 +116,7 @@ func extractTrace(debugPrints []value.Value) (*evm.EVMTrace, error) {
 	return trace, nil
 }
 
-func getDestroyedContracts(snap *snapshot.Snapshot, frames []TraceFrame) ([]common.Address, error) {
+func getDestroyedContracts(ctx context.Context, snap *snapshot.Snapshot, frames []TraceFrame) ([]common.Address, error) {
 	maybeDestroyedContracts := make(map[common.Address]struct{})
 	for _, frame := range frames {
 		if frame.Type == "call" && frame.Action.CallType == "call" {
@@ -128,7 +129,7 @@ func getDestroyedContracts(snap *snapshot.Snapshot, frames []TraceFrame) ([]comm
 
 	deletedContracts := make([]common.Address, 0, len(maybeDestroyedContracts))
 	for con := range maybeDestroyedContracts {
-		txCount, err := snap.GetTransactionCount(arbcommon.NewAddressFromEth(con))
+		txCount, err := snap.GetTransactionCount(ctx, arbcommon.NewAddressFromEth(con))
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +252,7 @@ func authenticateTraceType(traceTypes []string) (bool, error) {
 	return traceDestroys, nil
 }
 
-func (t *Trace) traceDestroyed(cursor core.ExecutionCursor, frames []TraceFrame) ([]common.Address, error) {
+func (t *Trace) traceDestroyed(ctx context.Context, cursor core.ExecutionCursor, frames []TraceFrame) ([]common.Address, error) {
 	mach, err := t.s.srv.GetLookup().TakeMachine(cursor)
 	if err != nil {
 		return nil, err
@@ -272,6 +273,7 @@ func (t *Trace) traceDestroyed(cursor core.ExecutionCursor, frames []TraceFrame)
 	)
 
 	_, _, _, err = mach.ExecuteAssertionAdvanced(
+		ctx,
 		1000000000000,
 		true,
 		[]inbox.InboxMessage{endOfBlock},
@@ -281,14 +283,14 @@ func (t *Trace) traceDestroyed(cursor core.ExecutionCursor, frames []TraceFrame)
 	if err != nil {
 		return nil, err
 	}
-	snap, err := snapshot.NewSnapshot(mach, snapTime, big.NewInt(math.MaxInt64))
+	snap, err := snapshot.NewSnapshot(ctx, mach, snapTime, big.NewInt(math.MaxInt64))
 	if err != nil {
 		return nil, err
 	}
-	return getDestroyedContracts(snap, frames)
+	return getDestroyedContracts(ctx, snap, frames)
 }
 
-func (t *Trace) traceTransaction(cursor core.ExecutionCursor, res *evm.TxResult, logNumber *big.Int, traceDestroyed bool) (*rawTxTrace, error) {
+func (t *Trace) traceTransaction(ctx context.Context, cursor core.ExecutionCursor, res *evm.TxResult, logNumber *big.Int, traceDestroyed bool) (*rawTxTrace, error) {
 	maxGas := int64(t.coreConfig.CheckpointMaxExecutionGas)
 	if maxGas == 0 {
 		maxGas = 100000000000
@@ -315,7 +317,7 @@ func (t *Trace) traceTransaction(cursor core.ExecutionCursor, res *evm.TxResult,
 
 	var destroyed *[]common.Address
 	if traceDestroyed {
-		destroyedTmp, err := t.traceDestroyed(cursor.Clone(), frames)
+		destroyedTmp, err := t.traceDestroyed(ctx, cursor.Clone(), frames)
 		if err != nil {
 			return nil, err
 		}
@@ -329,7 +331,7 @@ func (t *Trace) traceTransaction(cursor core.ExecutionCursor, res *evm.TxResult,
 	}, nil
 }
 
-func (t *Trace) transaction(txHash hexutil.Bytes, traceDestroyed bool) (*rawTxTrace, *machine.BlockInfo, error) {
+func (t *Trace) transaction(ctx context.Context, txHash hexutil.Bytes, traceDestroyed bool) (*rawTxTrace, *machine.BlockInfo, error) {
 	res, blockInfo, _, logNumber, err := t.s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, nil, err
@@ -339,7 +341,7 @@ func (t *Trace) transaction(txHash hexutil.Bytes, traceDestroyed bool) (*rawTxTr
 	if err != nil {
 		return nil, nil, err
 	}
-	txTrace, err := t.traceTransaction(cursor, res, logNumber, traceDestroyed)
+	txTrace, err := t.traceTransaction(ctx, cursor, res, logNumber, traceDestroyed)
 	return txTrace, blockInfo, err
 }
 
@@ -349,7 +351,7 @@ type rawTxTrace struct {
 	destroyed *[]common.Address
 }
 
-func (t *Trace) block(blockNum rpc.BlockNumberOrHash, traceDestroyed bool) ([]*rawTxTrace, *machine.BlockInfo, core.ExecutionCursor, error) {
+func (t *Trace) block(ctx context.Context, blockNum rpc.BlockNumberOrHash, traceDestroyed bool) ([]*rawTxTrace, *machine.BlockInfo, core.ExecutionCursor, error) {
 	blockInfo, err := t.s.blockInfoForNumberOrHash(blockNum)
 	if err != nil || blockInfo == nil {
 		return nil, nil, nil, err
@@ -377,7 +379,7 @@ func (t *Trace) block(blockNum rpc.BlockNumberOrHash, traceDestroyed bool) ([]*r
 			Uint64("block", blockInfo.Header.Number.Uint64()).
 			Str("txhash", txRes.IncomingRequest.MessageID.String()).
 			Err(err)
-		txTrace, err := t.traceTransaction(cursor, txRes, logIndex, traceDestroyed)
+		txTrace, err := t.traceTransaction(ctx, cursor, txRes, logIndex, traceDestroyed)
 		if err != nil {
 			failMsg.Msg("error getting trace for transaction")
 			continue
@@ -388,11 +390,11 @@ func (t *Trace) block(blockNum rpc.BlockNumberOrHash, traceDestroyed bool) ([]*r
 	return res, blockInfo, cursor, nil
 }
 
-func (t *Trace) handleCallRequest(callArgs CallTxArgs, traceDestroys bool, snap *snapshot.Snapshot) (*TraceResult, error) {
+func (t *Trace) handleCallRequest(ctx context.Context, callArgs CallTxArgs, traceDestroys bool, snap *snapshot.Snapshot) (*TraceResult, error) {
 	from, msg := buildCallMsg(callArgs)
 	// We're mutating so we need unique ownership
 	snap = snap.Clone()
-	callRes, debugPrints, err := snap.AddContractMessage(msg, from, t.s.maxAVMGas)
+	callRes, debugPrints, err := snap.AddContractMessage(ctx, msg, from, t.s.maxAVMGas)
 	if err != nil {
 		return nil, err
 	}
@@ -409,7 +411,7 @@ func (t *Trace) handleCallRequest(callArgs CallTxArgs, traceDestroys bool, snap 
 	}
 	var destroyed *[]common.Address
 	if traceDestroys {
-		destroyedTmp, err := getDestroyedContracts(snap, frames)
+		destroyedTmp, err := getDestroyedContracts(ctx, snap, frames)
 		if err != nil {
 			return nil, err
 		}
@@ -423,17 +425,17 @@ func (t *Trace) handleCallRequest(callArgs CallTxArgs, traceDestroys bool, snap 
 	}, nil
 }
 
-func (t *Trace) Call(callArgs CallTxArgs, traceTypes []string, blockNum rpc.BlockNumberOrHash) (*TraceResult, error) {
+func (t *Trace) Call(ctx context.Context, callArgs CallTxArgs, traceTypes []string, blockNum rpc.BlockNumberOrHash) (*TraceResult, error) {
 	traceDestroys, err := authenticateTraceType(traceTypes)
 	if err != nil {
 		return nil, err
 	}
 
-	snap, err := t.s.getSnapshotForNumberOrHash(blockNum)
+	snap, err := t.s.getSnapshotForNumberOrHash(ctx, blockNum)
 	if err != nil {
 		return nil, err
 	}
-	return t.handleCallRequest(callArgs, traceDestroys, snap)
+	return t.handleCallRequest(ctx, callArgs, traceDestroys, snap)
 }
 
 type CallTraceRequest struct {
@@ -452,7 +454,7 @@ func (at *CallTraceRequest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (t *Trace) CallMany(calls []*CallTraceRequest, blockNum rpc.BlockNumberOrHash) ([]*TraceResult, error) {
+func (t *Trace) CallMany(ctx context.Context, calls []*CallTraceRequest, blockNum rpc.BlockNumberOrHash) ([]*TraceResult, error) {
 	traceDestroys := make([]bool, 0, len(calls))
 	for _, call := range calls {
 		traceDestroy, err := authenticateTraceType(call.traceTypes)
@@ -461,14 +463,14 @@ func (t *Trace) CallMany(calls []*CallTraceRequest, blockNum rpc.BlockNumberOrHa
 		}
 		traceDestroys = append(traceDestroys, traceDestroy)
 	}
-	snap, err := t.s.getSnapshotForNumberOrHash(blockNum)
+	snap, err := t.s.getSnapshotForNumberOrHash(ctx, blockNum)
 	if err != nil {
 		return nil, err
 	}
 
 	traces := make([]*TraceResult, 0, len(calls))
 	for i, call := range calls {
-		frame, err := t.handleCallRequest(call.callArgs, traceDestroys[i], snap)
+		frame, err := t.handleCallRequest(ctx, call.callArgs, traceDestroys[i], snap)
 		if err != nil {
 			return nil, err
 		}
@@ -477,12 +479,12 @@ func (t *Trace) CallMany(calls []*CallTraceRequest, blockNum rpc.BlockNumberOrHa
 	return traces, nil
 }
 
-func (t *Trace) ReplayBlockTransactions(blockNum rpc.BlockNumberOrHash, traceTypes []string) ([]*TraceResult, error) {
+func (t *Trace) ReplayBlockTransactions(ctx context.Context, blockNum rpc.BlockNumberOrHash, traceTypes []string) ([]*TraceResult, error) {
 	traceDestroys, err := authenticateTraceType(traceTypes)
 	if err != nil {
 		return nil, err
 	}
-	txTraces, blockInfo, _, err := t.block(blockNum, traceDestroys)
+	txTraces, blockInfo, _, err := t.block(ctx, blockNum, traceDestroys)
 	if err != nil {
 		return nil, err
 	}
@@ -501,12 +503,12 @@ func (t *Trace) ReplayBlockTransactions(blockNum rpc.BlockNumberOrHash, traceTyp
 	return results, nil
 }
 
-func (t *Trace) ReplayTransaction(txHash hexutil.Bytes, traceTypes []string) (*TraceResult, error) {
+func (t *Trace) ReplayTransaction(ctx context.Context, txHash hexutil.Bytes, traceTypes []string) (*TraceResult, error) {
 	traceDestroys, err := authenticateTraceType(traceTypes)
 	if err != nil {
 		return nil, err
 	}
-	txTrace, _, err := t.transaction(txHash, traceDestroys)
+	txTrace, _, err := t.transaction(ctx, txHash, traceDestroys)
 	if err != nil || txTrace.res == nil {
 		return nil, err
 	}
@@ -545,8 +547,8 @@ func addChainContext(frame *TraceFrame, context *chainContext) {
 	frame.BlockHash = context.blockHash
 }
 
-func (t *Trace) Transaction(txHash hexutil.Bytes) ([]TraceFrame, error) {
-	txTrace, blockInfo, err := t.transaction(txHash, false)
+func (t *Trace) Transaction(ctx context.Context, txHash hexutil.Bytes) ([]TraceFrame, error) {
+	txTrace, blockInfo, err := t.transaction(ctx, txHash, false)
 	if err != nil || txTrace == nil {
 		return nil, err
 	}
@@ -557,8 +559,8 @@ func (t *Trace) Transaction(txHash hexutil.Bytes) ([]TraceFrame, error) {
 	return txTrace.frames, nil
 }
 
-func (t *Trace) Get(txHash hexutil.Bytes, path []hexutil.Uint64) (*TraceFrame, error) {
-	frames, err := t.Transaction(txHash)
+func (t *Trace) Get(ctx context.Context, txHash hexutil.Bytes, path []hexutil.Uint64) (*TraceFrame, error) {
+	frames, err := t.Transaction(ctx, txHash)
 	if err != nil {
 		return nil, err
 	}
@@ -576,8 +578,8 @@ func (t *Trace) Get(txHash hexutil.Bytes, path []hexutil.Uint64) (*TraceFrame, e
 	return nil, nil
 }
 
-func (t *Trace) Block(blockNum rpc.BlockNumberOrHash) ([]TraceFrame, error) {
-	txTraces, blockInfo, _, err := t.block(blockNum, false)
+func (t *Trace) Block(ctx context.Context, blockNum rpc.BlockNumberOrHash) ([]TraceFrame, error) {
+	txTraces, blockInfo, _, err := t.block(ctx, blockNum, false)
 	if err != nil {
 		return nil, err
 	}
@@ -601,7 +603,7 @@ type FilterRequest struct {
 	Count       *uint64                `json:"count"`
 }
 
-func (t *Trace) Filter(filter *FilterRequest) ([]TraceFrame, error) {
+func (t *Trace) Filter(ctx context.Context, filter *FilterRequest) ([]TraceFrame, error) {
 	fromBlock := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	if filter.FromBlock != nil {
 		fromBlock = *filter.FromBlock
@@ -650,7 +652,7 @@ func (t *Trace) Filter(filter *FilterRequest) ([]TraceFrame, error) {
 	traces := make([]TraceFrame, 0)
 blockLoop:
 	for blockNum := start; blockNum <= end; blockNum++ {
-		txTraces, blockInfo, _, err := t.block(rpc.BlockNumberOrHashWithNumber(blockNum), false)
+		txTraces, blockInfo, _, err := t.block(ctx, rpc.BlockNumberOrHashWithNumber(blockNum), false)
 		if err != nil {
 			return nil, err
 		}
