@@ -74,8 +74,10 @@ TEST_CASE("Code works correctly") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
-                                        Value{Tuple()}));
+    auto result = storage.initialize(LoadedExecutable(
+        std::make_shared<UnsafeCodeSegment>(0), Value{Tuple()}));
+    REQUIRE(result.status.ok());
+    REQUIRE(result.finished == false);
     auto mach = storage.getInitialMachine();
     generateTestMachine(mach);
     checkRun(*mach);
@@ -85,8 +87,10 @@ TEST_CASE("Code serialization") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
-                                        Value{Tuple()}));
+    auto result = storage.initialize(LoadedExecutable(
+        std::make_shared<UnsafeCodeSegment>(0), Value{Tuple()}));
+    REQUIRE(result.status.ok());
+    REQUIRE(result.finished == false);
     ValueCache value_cache{1, 0};
 
     auto mach = storage.getInitialMachine();

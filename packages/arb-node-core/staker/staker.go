@@ -57,6 +57,7 @@ type Staker struct {
 	config              configuration.Validator
 	highGasBlocksBuffer *big.Int
 	lastActCalledBlock  *big.Int
+	lookup              core.ArbCoreLookup
 }
 
 func NewStaker(
@@ -84,6 +85,7 @@ func NewStaker(
 		config:              config,
 		highGasBlocksBuffer: big.NewInt(config.L1PostingStrategy.HighGasDelayBlocks),
 		lastActCalledBlock:  nil,
+		lookup:              lookup,
 	}, val.delayedBridge, nil
 }
 
@@ -118,8 +120,13 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			} else {
 				backoff = time.Second
 			}
-			// Force a GC run to clean up any execution cursors while we wait
 			delay := time.After(stakerDelay)
+			// Prune any stale database entries while we wait
+			err = s.pruneDatabase(ctx)
+			if err == nil {
+				logger.Error().Err(err).Msg("error pruning database")
+			}
+			// Force a GC run to clean up any execution cursors while we wait
 			runtime.GC()
 			select {
 			case <-ctx.Done():
@@ -291,6 +298,25 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 		logger.Info().Msg("Staking to execute transactions")
 	}
 	return s.wallet.ExecuteTransactions(ctx, s.builder)
+}
+
+func (s *Staker) pruneDatabase(ctx context.Context) error {
+	latestNode, err := s.rollup.LatestConfirmedNode(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Prune checkpoints up to confirmed node before last confirmed node
+	previousConfirmedNode := new(big.Int).Sub(latestNode, big.NewInt(1))
+	previousNodeInfo, err := s.rollup.LookupNode(ctx, previousConfirmedNode)
+	if err != nil {
+		return err
+	}
+
+	confirmedGas := previousNodeInfo.AfterState().TotalGasConsumed
+	s.lookup.UpdateCheckpointPruningGas(confirmedGas)
+
+	return nil
 }
 
 func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) error {

@@ -113,6 +113,9 @@ CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
                                         uint64_t block_number,
                                         int allow_slow_lookup);
 
+void arbCoreUpdateCheckpointPruningGas(CArbCore* arbcore_ptr,
+                                       const void* gas_ptr);
+
 void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr);
 
 #ifdef __cplusplus

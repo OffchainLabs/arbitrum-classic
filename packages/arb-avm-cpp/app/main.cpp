@@ -63,14 +63,22 @@ int main(int argc, char* argv[]) {
         }
 
         auto code = std::make_shared<UnsafeCodeSegment>(0, ops);
-        auto status =
+        auto result =
             storage.initialize(LoadedExecutable{std::move(code), Tuple()});
-        if (!status.ok()) {
+        if (result.finished) {
+            // Nothing more to do
+            return 0;
+        }
+        if (!result.status.ok()) {
             throw std::runtime_error("Error initializing storage");
         }
     } else {
-        auto status = storage.initialize(filename);
-        if (!status.ok()) {
+        auto result = storage.initialize(filename);
+        if (result.finished) {
+            // Nothing left to do
+            return 0;
+        }
+        if (!result.status.ok()) {
             throw std::runtime_error("Error initializing storage");
         }
     }

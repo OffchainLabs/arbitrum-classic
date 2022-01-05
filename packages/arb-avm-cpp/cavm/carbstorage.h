@@ -20,6 +20,8 @@
 
 #include <stdint.h>
 
+#include <data_storage/pruningmode.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,10 +39,16 @@ typedef struct {
     int32_t idle_sleep_milliseconds;
     int32_t seed_cache_on_startup;
     int32_t debug;
-    int32_t save_rocksdb_interval;
-    const char* save_rocksdb_path;
     int32_t lazy_load_core_machine;
     int32_t lazy_load_archive_queries;
+    int32_t checkpoint_prune_on_startup;
+    int32_t checkpoint_pruning_age_seconds;
+    PruningMode checkpoint_pruning_mode;
+    int32_t checkpoint_max_to_prune;
+    int32_t database_compact;
+    int32_t database_save_interval;
+    const char* database_save_path;
+    int32_t database_exit_after;
     int32_t test_reorg_to_l1_block;
     int32_t test_reorg_to_l2_block;
     int32_t test_reorg_to_log;

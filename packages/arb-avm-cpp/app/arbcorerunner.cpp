@@ -42,10 +42,14 @@ int main(int argc, char* argv[]) {
     std::cout << "Loading db\n";
     ArbStorage storage{dbpath, coreConfig};
     std::cout << "Initializing arbstorage\n";
-    auto status = storage.initialize(arbospath);
-    if (!status.ok()) {
-        std::cerr << "Failed to get initialize storage" << status.ToString()
-                  << std::endl;
+    auto result = storage.initialize(arbospath);
+    if (result.finished) {
+        // Nothing left to do
+        return 0;
+    }
+    if (!result.status.ok()) {
+        std::cerr << "Failed to get initialize storage"
+                  << result.status.ToString() << std::endl;
         return -1;
     }
     auto core = storage.getArbCore();

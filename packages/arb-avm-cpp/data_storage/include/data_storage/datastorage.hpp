@@ -24,6 +24,7 @@
 
 #include <avm_values/bigint.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/util.hpp>
 
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -70,19 +71,18 @@ class DataStorage {
     std::string txn_db_path;
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
     std::vector<rocksdb::ColumnFamilyHandle*> column_handles;
-    rocksdb::FlushOptions flush_options;
-    size_t next_column_to_flush{0};
     std::vector<uint8_t> secret_hash_seed;
 
     class shutting_down_exception : public std::exception {};
 
-    explicit DataStorage(const std::string& db_path);
+    explicit DataStorage(const std::string& db_path,
+                         const ArbCoreConfig& coreConfig);
     ~DataStorage();
 
-    rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
     rocksdb::Status clearDBExceptInbox();
     [[nodiscard]] DbLockShared tryLockShared() const;
+    rocksdb::Status compact(bool aggressive);
 
    private:
     std::atomic<bool> shutting_down{false};
