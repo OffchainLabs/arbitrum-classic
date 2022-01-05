@@ -351,6 +351,7 @@ func DefaultCoreSettingsNoMaxExecution() *Core {
 		CheckpointLoadGasCost:     1_000_000,
 		CheckpointLoadGasFactor:   4,
 		CheckpointMaxExecutionGas: 0,
+		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
 	}
 }
@@ -368,6 +369,7 @@ func DefaultCoreSettingsMaxExecution() *Core {
 		CheckpointLoadGasCost:     1_000_000,
 		CheckpointLoadGasFactor:   4,
 		CheckpointMaxExecutionGas: 1_000_000_000,
+		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
 	}
 }
