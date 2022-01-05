@@ -49,6 +49,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
@@ -646,6 +647,31 @@ func setupGasParams() error {
 		return err
 	}
 	return waitForTx(tx, "SetChainParameters")
+}
+
+func readL2Param(varName string) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	val, err := arbOwner.GetChainParameter(&bind.CallOpts{}, hashing.SoliditySHA3([]byte(varName)))
+	if err != nil {
+		return err
+	}
+	fmt.Println(varName, "value is", val)
+	return nil
+}
+
+func writeL2Param(varName string, val *big.Int) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.SetChainParameter(config.auth, hashing.SoliditySHA3([]byte(varName)), val)
+	if err != nil {
+		return err
+	}
+	return waitForTx(tx, "SetChainParameter")
 }
 
 func setFeeCollector(sender, feeCollector ethcommon.Address) error {
@@ -1358,6 +1384,20 @@ func handleCommand(fields []string) error {
 		return setAVMGasLimit(rollup)
 	case "allow-all-senders":
 		return allowAllSenders()
+	case "read-l2-param":
+		if len(fields) != 2 {
+			return errors.New("Expected [field name]")
+		}
+		return readL2Param(fields[1])
+	case "set-l2-param":
+		if len(fields) != 3 {
+			return errors.New("Expected [field name] [value]")
+		}
+		val, ok := new(big.Int).SetString(fields[2], 10)
+		if !ok {
+			return errors.New("expected arg to be int")
+		}
+		return writeL2Param(fields[1], val)
 	case "set-fee-collector":
 		if len(fields) != 3 {
 			return errors.New("Expected [sender] [feeCollector]")
