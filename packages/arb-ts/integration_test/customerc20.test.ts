@@ -45,20 +45,14 @@ describe('Custom ERC20', () => {
   })
 
   it('deposits erc20 (no L2 Eth funding)', async () => {
-    const {
-      l1Signer,
-      l2Signer,
-      tokenBridger,
-    } = await instantiateBridgeWithRandomWallet()
+    const { l1Signer, l2Signer, tokenBridger } =
+      await instantiateBridgeWithRandomWallet()
     await fundL1(l2Signer)
     await depositTokenTest(tokenBridger, l1Signer, l2Signer)
   })
   it.skip('deposits erc20 (with L2 Eth funding)', async () => {
-    const {
-      l1Signer,
-      l2Signer,
-      tokenBridger,
-    } = await instantiateBridgeWithRandomWallet()
+    const { l1Signer, l2Signer, tokenBridger } =
+      await instantiateBridgeWithRandomWallet()
     await fundL1(l1Signer)
     await fundL2(l2Signer)
     await depositTokenTest(tokenBridger, l1Signer, l2Signer)
@@ -66,12 +60,8 @@ describe('Custom ERC20', () => {
 
   it('withdraws erc20', async function () {
     const tokenWithdrawAmount = BigNumber.from(1)
-    const {
-      l2Network,
-      l2Signer,
-      l1Signer,
-      tokenBridger,
-    } = await instantiateBridgeWithRandomWallet()
+    const { l2Network, l2Signer, l1Signer, tokenBridger } =
+      await instantiateBridgeWithRandomWallet()
     await fundL2(l2Signer)
     const result = await fundL2Token(
       l2Signer,
@@ -92,7 +82,9 @@ describe('Custom ERC20', () => {
 
     expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
 
-    const message = (await withdrawRec.getL2ToL1Messages(l1Signer.provider, l2Network))[0]
+    const message = (
+      await withdrawRec.getL2ToL1Messages(l1Signer.provider!, l2Network)
+    )[0]
     expect(message, 'withdrawEventData not found').to.exist
 
     const outgoingMessageState = await message.status(null)
@@ -103,10 +95,10 @@ describe('Custom ERC20', () => {
     ).to.be.true
 
     const l2Token = tokenBridger.getL2TokenContract(
-      l2Signer.provider,
+      l2Signer.provider!,
       await tokenBridger.getL2ERC20Address(
         existentTestCustomToken,
-        l1Signer.provider
+        l1Signer.provider!
       )
     )
     const testWalletL2Balance = (
@@ -119,7 +111,7 @@ describe('Custom ERC20', () => {
     const walletAddress = await l1Signer.getAddress()
 
     const gatewayWithdrawEvents = await tokenBridger.getL2WithdrawalEvents(
-      l2Signer.provider,
+      l2Signer.provider!,
       tokenBridger.l2Network.tokenBridge.l2CustomGateway,
       undefined,
       walletAddress,
@@ -132,10 +124,10 @@ describe('Custom ERC20', () => {
 
     const gatewayAddress = await tokenBridger.getL2GatewayAddress(
       existentTestCustomToken,
-      l2Signer.provider
+      l2Signer.provider!
     )
     const tokenWithdrawEvents = await tokenBridger.getL2WithdrawalEvents(
-      l2Signer.provider,
+      l2Signer.provider!,
       gatewayAddress,
       existentTestCustomToken,
       walletAddress,
@@ -170,10 +162,10 @@ const depositTokenTest = async (
 
   const expectedL1GatewayAddress = await tokenBridger.getL1GatewayAddress(
     testToken.address,
-    l1Signer.provider
+    l1Signer.provider!
   )
   const l1Token = tokenBridger.getL1TokenContract(
-    l1Signer.provider,
+    l1Signer.provider!,
     existentTestCustomToken
   )
   const allowance = (
@@ -194,7 +186,7 @@ const depositTokenTest = async (
     erc20L1Address: existentTestCustomToken,
     amount: tokenDepositAmount,
     l1Signer: l1Signer,
-    l2Provider: l2Signer.provider,
+    l2Provider: l2Signer.provider!,
   })
 
   const depositRec = await depositRes.wait()
@@ -209,13 +201,13 @@ const depositTokenTest = async (
       .eq(finalBridgeTokenBalance),
     'bridge balance not properly updated after deposit'
   ).to.be.true
-  await testRetryableTicket(l1Signer.provider, depositRec)
+  await testRetryableTicket(l1Signer.provider!, depositRec)
 
   const l2Token = tokenBridger.getL2TokenContract(
-    l2Signer.provider,
+    l2Signer.provider!,
     await tokenBridger.getL2ERC20Address(
       existentTestCustomToken,
-      l1Signer.provider
+      l1Signer.provider!
     )
   )
   const testWalletL2Balance = (

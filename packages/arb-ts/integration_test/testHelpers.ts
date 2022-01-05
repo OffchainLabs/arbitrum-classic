@@ -90,7 +90,7 @@ export const testRetryableTicket = async (
 
   prettyLog('retryableTicketReceipt found:')
 
-  expect(retryableTicketReceipt.status).to.equal(
+  expect(retryableTicketReceipt && retryableTicketReceipt.status).to.equal(
     1,
     'retryable ticket txn failed'
   )
@@ -100,7 +100,10 @@ export const testRetryableTicket = async (
 
   prettyLog('autoRedeem receipt found!')
 
-  expect(autoRedeemReceipt.status).to.equal(1, 'autoredeem txn failed')
+  expect(autoRedeemReceipt && autoRedeemReceipt.status).to.equal(
+    1,
+    'autoredeem txn failed'
+  )
   prettyLog('Getting redemption')
 
   const redemptionReceipt = waitResult.userTxnReceipt
@@ -124,8 +127,8 @@ export const warn = (text: string): void => {
 export const instantiateBridgeWithRandomWallet = (): Promise<{
   tokenBridger: TokenBridger
   ethBridger: EthBridger
-  l1Network: L1Network,
-  l2Network: L2Network,
+  l1Network: L1Network
+  l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
 }> => {
@@ -170,10 +173,10 @@ export const fundL2Token = async (
 ): Promise<boolean> => {
   try {
     const testWalletAddress = await l2Signer.getAddress()
-    const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider)
+    const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider!)
     const l2Address = await tokenBridger.getL2ERC20Address(
       tokenAddress,
-      l2Signer.provider
+      l2Signer.provider!
     )
     const testToken = TestERC20__factory.connect(l2Address, preFundedL2Wallet)
 
@@ -191,7 +194,7 @@ export const fundL2Token = async (
   }
 }
 
-export const wait = (ms = 0): Promise<undefined> => {
+export const wait = (ms = 0): Promise<void> => {
   return new Promise(res => setTimeout(res, ms))
 }
 
