@@ -362,7 +362,7 @@ func startup() error {
 	serverConfig := web3.ServerConfig{
 		Mode:          rpcMode,
 		MaxCallAVMGas: config.Node.RPC.MaxCallGas * 100, // Multiply by 100 for arb gas to avm gas conversion
-		Tracing:       config.Node.RPC.EnableTracing,
+		Tracing:       config.Node.RPC.Tracing,
 		DevopsStubs:   config.Node.RPC.EnableDevopsStubs,
 	}
 	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, mon.CoreConfig, nil, web3InboxReaderRef)

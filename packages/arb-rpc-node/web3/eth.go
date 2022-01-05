@@ -35,6 +35,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
@@ -63,7 +64,11 @@ const DefaultMaxAVMGas = 500000000
 var DefaultConfig = ServerConfig{
 	Mode:          NormalMode,
 	MaxCallAVMGas: DefaultMaxAVMGas,
-	Tracing:       true,
+	Tracing: configuration.Tracing{
+		Enable:    true,
+		Namespace: "arbtrace",
+	},
+	DevopsStubs: false,
 }
 
 func NewServer(
