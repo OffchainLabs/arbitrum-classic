@@ -46,6 +46,7 @@
 
 namespace {
 constexpr uint256_t arbcore_schema_version = 3;
+constexpr auto pruning_mode_key = std::array<char, 1>{-59};
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
@@ -158,21 +159,30 @@ ValueLoader ArbCore::makeValueLoader() const {
         data_storage, core_code, ValueCache{1, 0})};
 }
 
-rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
+InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
 
+    bool database_exists = false;
+    ValueResult<std::string> pruning_mode_result;
     {
+        // Validate database schema version
         ReadTransaction tx(data_storage);
+
+        auto logs_result = logInsertedCountImpl(tx);
+        if (logs_result.status.ok()) {
+            // Database exists
+            database_exists = true;
+        }
+
         auto schema_result = schemaVersion(tx);
         if (!schema_result.status.ok()) {
-            auto logs_result = logInsertedCountImpl(tx);
-            if (logs_result.status.ok()) {
+            if (database_exists) {
                 // Old database that does not have schema version
                 std::cerr << "Error getting schema version: "
                           << schema_result.status.ToString()
                           << ", delete database and try again" << std::endl;
-                return rocksdb::Status::Corruption();
+                return {rocksdb::Status::Corruption(), false};
             }
         } else if (schema_result.data != arbcore_schema_version) {
             // Database has schema version that does not match
@@ -180,11 +190,21 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
                       << " does not match expected version "
                       << arbcore_schema_version
                       << ", delete database and try again" << std::endl;
-            return rocksdb::Status::Corruption();
+            return {rocksdb::Status::Corruption(), false};
         }
+
+        pruning_mode_result = pruningMode(tx);
+    }
+
+    auto pruning_status =
+        initializePruningMode(database_exists, pruning_mode_result);
+    if (!pruning_status.ok()) {
+        // Error message already output in initializePruningMode
+        return {pruning_status, false};
     }
 
     if (coreConfig.test_reset_db_except_inbox) {
+        // For testing, delete everything from database except inbox
         {
             ReadWriteTransaction tx(data_storage);
             saveNextSegmentID(tx, 0);
@@ -192,7 +212,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
             if (!s.ok()) {
                 std::cerr << "Error resetting segment: " << s.ToString()
                           << std::endl;
-                return s;
+                return {s, false};
             }
         }
 
@@ -200,8 +220,51 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         if (!s.ok()) {
             std::cerr << "Error deleting columns: " << s.ToString()
                       << std::endl;
-            return s;
+            return {s, false};
         }
+    }
+
+    if (coreConfig.checkpoint_prune_on_startup) {
+        // Delete all out of date checkpoints before proceeding.
+        // This could take a while if pruning hasn't been done before.
+        std::cerr << "Pruning database"
+                  << "\n";
+        auto checkpoint_pruning_age_timestamp =
+            seconds_since_epoch() - coreConfig.checkpoint_pruning_age_seconds;
+        // Delete in batches to prevent too much RAM from being used
+        while (true) {
+            auto status =
+                pruneToTimestampOrBefore(checkpoint_pruning_age_timestamp, 100);
+            if (status.IsNotFound()) {
+                // Nothing left to delete
+                break;
+            }
+            if (!status.ok()) {
+                std::cerr << "Error pruning checkpoints: " << status.ToString()
+                          << std::endl;
+                break;
+            }
+        }
+
+        if (coreConfig.database_compact) {
+            // Optimize database
+            // Second compaction only done if pruning was done on startup
+            std::cerr << "Compacting database"
+                      << "\n";
+            auto status = data_storage->compact(true);
+            if (!status.ok()) {
+                std::cerr << "Database failed compacting: " << status.ToString()
+                          << "\n";
+            }
+            std::cerr << "Database finished compacting"
+                      << "\n";
+        }
+    }
+
+    if (coreConfig.database_exit_after) {
+        // Exit program, nothing else to do.  Must return some type of error
+        // so startup is cancelled
+        return {rocksdb::Status::OK(), true};
     }
 
     rocksdb::Status status = rocksdb::Status::OK();
@@ -230,13 +293,13 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
 
     if (status.ok()) {
         // Database already initialized
-        return status;
+        return {status, false};
     }
 
     if (!status.IsNotFound()) {
         std::cerr << "Error with initial reorg: " << status.ToString()
                   << std::endl;
-        return status;
+        return {status, false};
     }
 
     // Need to initialize database from scratch
@@ -254,27 +317,27 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     if (!status.ok()) {
         std::cerr << "failed to save schema version into db: "
                   << status.ToString() << std::endl;
-        return status;
+        return {status, false};
     }
 
     status = saveCheckpoint(tx);
     if (!status.ok()) {
         std::cerr << "failed to save initial checkpoint into db: "
                   << status.ToString() << std::endl;
-        return status;
+        return {status, false};
     }
 
     status = updateLogInsertedCount(tx, 0);
     if (!status.ok()) {
         std::cerr << "failed to initialize log inserted count: "
                   << status.ToString() << std::endl;
-        return status;
+        return {status, false};
     }
     status = updateSendInsertedCount(tx, 0);
     if (!status.ok()) {
         std::cerr << "failed to initialize send inserted count: "
                   << status.ToString() << std::endl;
-        return status;
+        return {status, false};
     }
 
     for (size_t i = 0; i < logs_cursors.size(); i++) {
@@ -282,7 +345,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         if (!status.ok()) {
             std::cerr << "failed to initialize logscursor counts: "
                       << status.ToString() << std::endl;
-            return status;
+            return {status, false};
         }
     }
 
@@ -290,13 +353,13 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     if (!status.ok()) {
         std::cerr << "failed to commit initial state into db: "
                   << status.ToString() << std::endl;
-        return status;
+        return {status, false};
     }
 
     // Save initial state to cache
     combined_machine_cache.basic_add(std::make_unique<Machine>(*core_machine));
 
-    return rocksdb::Status::OK();
+    return {rocksdb::Status::OK(), false};
 }
 
 bool ArbCore::initialized() const {
@@ -304,6 +367,79 @@ bool ArbCore::initialized() const {
     std::vector<unsigned char> key;
     marshal_uint256_t(0, key);
     return tx.checkpointGetVector(vecToSlice(key)).status.ok();
+}
+
+rocksdb::Status ArbCore::initializePruningMode(
+    bool database_exists,
+    ValueResult<std::string>& pruning_mode_result) {
+    if (database_exists) {
+        if (!pruning_mode_result.status.ok()) {
+            // Old database, does not have pruning mode set
+            std::string mode;
+            if (coreConfig.checkpoint_pruning_mode == PRUNING_MODE_ON) {
+                // Command line explicitly enabled pruning
+                mode = "on";
+            } else {
+                // Default old database to archive mode, no pruning
+                mode = "off";
+                coreConfig.checkpoint_pruning_mode = PRUNING_MODE_OFF;
+            }
+            ReadWriteTransaction tx(data_storage);
+            auto status = updatePruningMode(tx, mode);
+            if (!status.ok()) {
+                std::cerr << "error saving pruning mode to existing database: "
+                          << status.ToString() << std::endl;
+                return status;
+            }
+            tx.commit();
+            pruning_mode_result.data = mode;
+            pruning_mode_result.status = rocksdb::Status::OK();
+        } else {
+            // Use setting from database unless command line overrides
+            if (pruning_mode_result.data != "on" &&
+                pruning_mode_result.data != "off") {
+                std::cerr << "unexpected database pruning mode: "
+                          << pruning_mode_result.data << std::endl;
+                return rocksdb::Status::Corruption();
+            } else if (coreConfig.checkpoint_pruning_mode == PRUNING_MODE_ON &&
+                       pruning_mode_result.data == "off") {
+                // Command line forced pruning, so mark database as being pruned
+                std::cerr << "enabling pruning on previously unpruned database"
+                          << "\n";
+                ReadWriteTransaction tx(data_storage);
+                auto status = updatePruningMode(tx, "on");
+                if (!status.ok()) {
+                    std::cerr << "Error updating pruning mode to off: "
+                              << status.ToString() << std::endl;
+                    return status;
+                }
+                tx.commit();
+                pruning_mode_result.data = "on";
+            } else if (coreConfig.checkpoint_pruning_mode == PRUNING_MODE_OFF &&
+                       pruning_mode_result.data == "on") {
+                // Database set to pruned but command line forcing no pruning
+                std::cerr
+                    << "warning: disabling pruning on already pruned database"
+                    << "\n";
+                pruning_mode_result.data = "off";
+            } else if (coreConfig.checkpoint_pruning_mode != PRUNING_MODE_ON &&
+                       coreConfig.checkpoint_pruning_mode != PRUNING_MODE_OFF) {
+                // Default to database settings
+                if (pruning_mode_result.data == "on") {
+                    coreConfig.checkpoint_pruning_mode = PRUNING_MODE_ON;
+                } else {
+                    coreConfig.checkpoint_pruning_mode = PRUNING_MODE_OFF;
+                }
+            }
+        }
+    }
+
+    if (coreConfig.checkpoint_pruning_mode == PRUNING_MODE_OFF) {
+        // Disable pruning
+        coreConfig.checkpoint_pruning_age_seconds = 0;
+    }
+
+    return rocksdb::Status::OK();
 }
 
 template <class T>
@@ -796,7 +932,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
             return std::get<rocksdb::Status>(output_or_status);
         }
 
-        // Save selected machine output so we know how long to execute machine
+        // Save selected machine output, so we know how long to execute machine
         // to match selected checkpoint.  This will be necessary if selected
         // checkpoint does not include machine or if entry from machine cache is
         // behind the selected checkpoint
@@ -912,10 +1048,6 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
     auto key_slice = vecToSlice(key);
     it->SeekForPrev(key_slice);
     while (it->Valid()) {
-        if (!it->status().ok()) {
-            return it->status();
-        }
-
         std::vector<unsigned char> saved_value(
             it->value().data(), it->value().data() + it->value().size());
         auto variantkeys = extractMachineStateKeys(saved_value);
@@ -1052,9 +1184,6 @@ void ArbCore::printCoreThreadBacktrace() {
     std::cerr << "Core thread backtrace not available" << std::endl;
 }
 
-constexpr uint256_t old_machine_cache_interval = 1'000'000;
-constexpr size_t old_machine_cache_max_size = 20;
-
 // operator() runs the main thread for ArbCore.  It is responsible for adding
 // messages to the queue, starting machine thread when needed and collecting
 // results of machine thread.
@@ -1071,15 +1200,16 @@ void ArbCore::operator()() {
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
     uint64_t next_rocksdb_save_timestamp = 0;
-    std::filesystem::path save_rocksdb_path(coreConfig.save_rocksdb_path);
+    std::filesystem::path save_rocksdb_path(coreConfig.database_save_path);
     auto begin_time = std::chrono::steady_clock::now();
     auto begin_message =
         core_machine->machine_state.output.fully_processed_inbox.count;
     save_rocksdb_checkpoint_signal = false;
+    auto perform_pruning = false;
 
-    if (coreConfig.save_rocksdb_interval > 0) {
+    if (coreConfig.database_save_interval > 0) {
         next_rocksdb_save_timestamp =
-            seconds_since_epoch() + coreConfig.save_rocksdb_interval;
+            seconds_since_epoch() + coreConfig.database_save_interval;
         std::filesystem::create_directories(save_rocksdb_path);
     }
 
@@ -1178,11 +1308,14 @@ void ArbCore::operator()() {
 
                 // Cache pre-sideload machines
                 if (last_assertion.sideload_block_number) {
+                    auto& output = core_machine->machine_state.output;
+
                     combined_machine_cache.timed_add(
                         std::make_unique<Machine>(*core_machine));
 
-                    if (core_machine->machine_state.output.arb_gas_used >=
-                        next_checkpoint_gas) {
+                    if (output.arb_gas_used >= next_checkpoint_gas) {
+                        auto save_checkpoint_begin_time =
+                            std::chrono::steady_clock::now();
                         // Save checkpoint after checkpoint_gas_frequency gas
                         // used
                         status = saveCheckpoint(tx);
@@ -1193,63 +1326,31 @@ void ArbCore::operator()() {
                             break;
                         }
                         next_checkpoint_gas =
-                            core_machine->machine_state.output.arb_gas_used +
+                            output.arb_gas_used +
                             coreConfig.checkpoint_gas_frequency;
-                        // Clear oldest cache and start populating next cache
+                        auto save_checkpoint_end_time =
+                            std::chrono::steady_clock::now();
+                        auto duration =
+                            std::chrono::duration_cast<std::chrono::seconds>(
+                                save_checkpoint_end_time -
+                                save_checkpoint_begin_time)
+                                .count();
                         std::cout
-                            << "Last checkpoint gas used: "
-                            << core_machine->machine_state.output.arb_gas_used
-                            << ", L1 block: "
-                            << core_machine->machine_state.output
-                                   .l1_block_number
+                            << "Saved checkpoint, total gas used: "
+                            << output.arb_gas_used
+                            << ", L1 block: " << output.l1_block_number
                             << ", L2 block: "
                             << *last_assertion.sideload_block_number
-                            << std::endl;
+                            << ", log count: " << output.log_count << ", took "
+                            << duration
+                            << " second(s) to save, inbox timestamp: "
+                            << std::put_time(
+                                   std::localtime(
+                                       (time_t*)&output.last_inbox_timestamp),
+                                   "%c")
+                            << "\n";
+                        // Clear oldest cache and start populating next cache
                         cache.nextCache();
-
-                        // Check if database copy needs to be saved to disk
-                        auto current_seconds = seconds_since_epoch();
-                        if (save_rocksdb_checkpoint_signal ||
-                            (next_rocksdb_save_timestamp != 0 &&
-                             current_seconds >= next_rocksdb_save_timestamp)) {
-                            save_rocksdb_checkpoint_signal = false;
-
-                            struct stat info;
-                            if ((stat(save_rocksdb_path.c_str(), &info) != 0) &&
-                                (info.st_mode & S_IFDIR) == 0) {
-                                std::cerr << "Unable to save checkpoint into "
-                                          << save_rocksdb_path
-                                          << " because directory doesn't exist"
-                                          << std::endl;
-                            } else {
-                                auto timestamp_dir =
-                                    std::to_string(current_seconds);
-                                auto checkpoint_dir =
-                                    save_rocksdb_path / timestamp_dir;
-                                status = tx.createRocksdbCheckpoint(
-                                    checkpoint_dir.string());
-                                if (!status.ok()) {
-                                    std::cerr
-                                        << "Unable to save checkpoint into "
-                                        << checkpoint_dir
-                                        << ", error: " << status.ToString()
-                                        << std::endl;
-                                } else {
-                                    auto save_elapsed =
-                                        seconds_since_epoch() - current_seconds;
-                                    std::cerr << "Saving rocksdb checkpoint in "
-                                              << checkpoint_dir << " took "
-                                              << save_elapsed << " seconds"
-                                              << std::endl;
-                                }
-                            }
-
-                            if (next_rocksdb_save_timestamp != 0) {
-                                next_rocksdb_save_timestamp =
-                                    current_seconds +
-                                    coreConfig.save_rocksdb_interval;
-                            }
-                        }
                     }
 
                     // Machine was stopped to save sideload, update execConfig
@@ -1263,6 +1364,9 @@ void ArbCore::operator()() {
                                   << "\n";
                         break;
                     }
+
+                    // Perform pruning soon
+                    perform_pruning = true;
                 }
 
                 status = tx.commit();
@@ -1272,6 +1376,47 @@ void ArbCore::operator()() {
                     std::cerr << "ArbCore database update failed: "
                               << core_error_string << "\n";
                     break;
+                }
+
+                // Check if checkpoint of full database needs to be saved to
+                // disk
+                auto current_seconds = seconds_since_epoch();
+                if (save_rocksdb_checkpoint_signal ||
+                    (next_rocksdb_save_timestamp != 0 &&
+                     current_seconds >= next_rocksdb_save_timestamp)) {
+                    save_rocksdb_checkpoint_signal = false;
+
+                    struct stat info;
+                    if ((stat(save_rocksdb_path.c_str(), &info) != 0) &&
+                        (info.st_mode & S_IFDIR) == 0) {
+                        std::cerr << "Unable to save checkpoint into "
+                                  << save_rocksdb_path
+                                  << " because directory doesn't exist"
+                                  << std::endl;
+                    } else {
+                        auto timestamp_dir = std::to_string(current_seconds);
+                        auto checkpoint_dir = save_rocksdb_path / timestamp_dir;
+                        status =
+                            tx.createRocksdbCheckpoint(checkpoint_dir.string());
+                        if (!status.ok()) {
+                            std::cerr << "Unable to save checkpoint into "
+                                      << checkpoint_dir
+                                      << ", error: " << status.ToString()
+                                      << std::endl;
+                        } else {
+                            auto save_elapsed =
+                                seconds_since_epoch() - current_seconds;
+                            std::cerr << "Saving rocksdb checkpoint in "
+                                      << checkpoint_dir << " took "
+                                      << save_elapsed << " seconds"
+                                      << std::endl;
+                        }
+                    }
+
+                    if (next_rocksdb_save_timestamp != 0) {
+                        next_rocksdb_save_timestamp =
+                            current_seconds + coreConfig.database_save_interval;
+                    }
                 }
 
                 if (coreConfig.test_run_until != 0 &&
@@ -1327,6 +1472,45 @@ void ArbCore::operator()() {
                 }
             }
 
+            if (perform_pruning) {
+                if (coreConfig.checkpoint_pruning_age_seconds > 0) {
+                    // Prune checkpoints that are too old
+                    auto checkpoint_pruning_age_timestamp =
+                        seconds_since_epoch() -
+                        coreConfig.checkpoint_pruning_age_seconds;
+                    auto prune_status = pruneToTimestampOrBefore(
+                        checkpoint_pruning_age_timestamp,
+                        coreConfig.checkpoint_max_to_prune);
+                    if (!prune_status.ok() && !prune_status.IsNotFound()) {
+                        // Non-fatal error
+                        std::cerr << "Error pruning checkpoints: "
+                                  << prune_status.ToString() << "\n";
+                    }
+
+                    perform_pruning = false;
+                }
+
+                uint256_t checkpoint_pruning_gas_used = 0;
+                {
+                    std::lock_guard<std::mutex> lock(checkpoint_pruning_mutex);
+                    checkpoint_pruning_gas_used =
+                        unsafe_checkpoint_pruning_gas_used;
+                }
+
+                // Prune checkpoints that have used less gas
+                // than specified
+                if (checkpoint_pruning_gas_used > 0) {
+                    auto prune_status =
+                        pruneToGasOrBefore(checkpoint_pruning_gas_used,
+                                           coreConfig.checkpoint_max_to_prune);
+                    if (!prune_status.ok() && !prune_status.IsNotFound()) {
+                        // Non-fatal error
+                        std::cerr << "Error pruning checkpoints: "
+                                  << prune_status.ToString() << "\n";
+                    }
+                }
+            }
+
             if (core_machine->status() == MachineThread::MACHINE_ABORTED) {
                 // Just reset status so machine can be restarted
                 core_machine->clearError();
@@ -1349,6 +1533,7 @@ void ArbCore::operator()() {
             }
 
             if (save_checkpoint) {
+                // Force checkpoint save for unit test purposes
                 ReadWriteTransaction tx(data_storage);
                 save_checkpoint_status = saveCheckpoint(tx);
                 tx.commit();
@@ -1406,17 +1591,6 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
             machine_error = true;
             std::cerr << "ArbCore error: " << core_error_string << "\n";
             return false;
-        }
-
-        if (delete_checkpoints_before_message != uint256_t(0)) {
-            /*
-            deleteOldCheckpoints(delete_checkpoints_before_message,
-                                 save_checkpoint_message_interval,
-                                 ignore_checkpoints_after_message);
-            */
-            ignore_checkpoints_after_message = 0;
-            save_checkpoint_message_interval = 0;
-            delete_checkpoints_before_message = 0;
         }
     } else {
         // Machine all caught up, no messages to process
@@ -2116,7 +2290,8 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
         auto closest_checkpoint = findCloserExecutionCursor(
             tx, std::nullopt, total_gas_used, allow_slow_lookup);
         if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
-            std::cerr << "No execution machine available" << std::endl;
+            std::cerr << "No execution machine available close to gas: "
+                      << total_gas_used << std::endl;
             return {std::get<rocksdb::Status>(closest_checkpoint), nullptr};
         }
 
@@ -2327,7 +2502,8 @@ ArbCore::advanceExecutionCursorImpl(
             auto closest_checkpoint = findCloserExecutionCursor(
                 tx, std::nullopt, total_gas_used, allow_slow_lookup);
             if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
-                std::cerr << "No execution machine available" << std::endl;
+                std::cerr << "No execution machine available close to gas: "
+                          << total_gas_used << std::endl;
                 return {std::get<rocksdb::Status>(closest_checkpoint), {}};
             }
             execution_cursor =
@@ -2533,6 +2709,16 @@ rocksdb::Status ArbCore::updateSchemaVersion(ReadWriteTransaction& tx,
     marshal_uint256_t(schema_version, value);
 
     return tx.statePut(vecToSlice(schema_version_key), vecToSlice(value));
+}
+
+ValueResult<std::string> ArbCore::pruningMode(ReadTransaction& tx) const {
+    std::string mode;
+    auto status = tx.stateGet(vecToSlice(pruning_mode_key), &mode);
+    return {status, mode};
+}
+rocksdb::Status ArbCore::updatePruningMode(ReadWriteTransaction& tx,
+                                           const std::string& pruning_mode) {
+    return tx.statePut(vecToSlice(pruning_mode_key), pruning_mode);
 }
 
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {
@@ -3355,4 +3541,119 @@ uint64_t seconds_since_epoch() {
     return std::chrono::duration_cast<std::chrono::seconds>(
                std::chrono::system_clock::now().time_since_epoch())
         .count();
+}
+
+rocksdb::Status ArbCore::pruneCheckpoints(
+    const std::function<bool(const MachineOutput&)>& check_output,
+    uint64_t checkpoint_max_to_prune) {
+    ReadWriteTransaction tx(data_storage);
+    auto it = tx.checkpointGetIterator();
+    if (!it->status().ok()) {
+        std::cerr << "unable to prune old checkpoints, iterator error: "
+                  << it->status().ToString() << std::endl;
+        return it->status();
+    }
+
+    it->SeekToFirst();
+    if (!it->Valid()) {
+        if (!it->status().ok()) {
+            std::cerr << "unable to prune old checkpoints, SeekToFirst error: "
+                      << it->status().ToString() << std::endl;
+            return it->status();
+        }
+
+        std::cerr << "unable to prune old checkpoints, invalid SeekToFirst."
+                  << std::endl;
+        return rocksdb::Status::Corruption();
+    }
+
+    // Do not delete initial snapshot
+    it->Next();
+    if (!it->Valid()) {
+        // No data
+        return rocksdb::Status::OK();
+    }
+
+    uint64_t deleted_count = 0;
+    while (it->Valid() && (checkpoint_max_to_prune == 0 ||
+                           deleted_count < checkpoint_max_to_prune)) {
+        // Save current checkpoint entry
+        std::vector<unsigned char> checkpoint_vector(
+            it->value().data(), it->value().data() + it->value().size());
+        auto checkpoint_variant = extractMachineStateKeys(checkpoint_vector);
+        auto machine_output = getMachineOutput(checkpoint_variant);
+
+        if (check_output(machine_output)) {
+            // No more checkpoints to delete
+            break;
+        }
+
+        // Check to see if current checkpoint is the last entry
+        it->Next();
+        if (!it->Valid()) {
+            // Don't delete the last entry
+            break;
+        }
+
+        auto prune_checkpoint_begin_time = std::chrono::steady_clock::now();
+        deleteCheckpoint(tx, checkpoint_variant);
+        auto prune_checkpoint_end_time = std::chrono::steady_clock::now();
+        auto duration =
+            std::chrono::duration_cast<std::chrono::seconds>(
+                prune_checkpoint_end_time - prune_checkpoint_begin_time)
+                .count();
+        std::cout << "Pruned checkpoint, total gas used: "
+                  << machine_output.arb_gas_used
+                  << ", L1 block: " << machine_output.l1_block_number
+                  << ", L2 block: " << machine_output.l2_block_number
+                  << ", log count: " << machine_output.log_count << ", took "
+                  << duration << " second(s) to prune, inbox timestamp: "
+                  << std::put_time(
+                         std::localtime(
+                             (time_t*)&machine_output.last_inbox_timestamp),
+                         "%c")
+                  << "\n";
+        deleted_count++;
+    }
+    if (!it->status().ok()) {
+        std::cerr << "unable to delete old checkpoints, "
+                  << "error iterating: " << it->status().ToString()
+                  << std::endl;
+        return it->status();
+    }
+
+    auto status = tx.commit();
+    if (!status.ok()) {
+        std::cerr << "unable to delete old checkpoints, "
+                  << "error calling commit: " << status.ToString() << std::endl;
+        return status;
+    }
+
+    if (deleted_count == 0) {
+        return rocksdb::Status::NotFound();
+    }
+
+    return rocksdb::Status::OK();
+}
+
+rocksdb::Status ArbCore::pruneToTimestampOrBefore(
+    const uint256_t& timestamp,
+    uint64_t checkpoint_max_to_prune) {
+    return pruneCheckpoints(
+        [&](const MachineOutput& output) {
+            return output.last_inbox_timestamp >= timestamp;
+        },
+        checkpoint_max_to_prune);
+}
+
+rocksdb::Status ArbCore::pruneToGasOrBefore(const uint256_t& gas,
+                                            uint64_t checkpoint_max_to_prune) {
+    return pruneCheckpoints(
+        [&](const MachineOutput& output) { return output.arb_gas_used >= gas; },
+        checkpoint_max_to_prune);
+}
+
+void ArbCore::updateCheckpointPruningGas(uint256_t gas) {
+    std::lock_guard<std::mutex> lock(checkpoint_pruning_mutex);
+    unsafe_checkpoint_pruning_gas_used = gas;
 }

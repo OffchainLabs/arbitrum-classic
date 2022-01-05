@@ -465,6 +465,12 @@ func (ac *ArbCore) GetLastMachineTotalGas() (*big.Int, error) {
 	return receiveBigInt(result.value), nil
 }
 
+func (ac *ArbCore) UpdateCheckpointPruningGas(gas *big.Int) {
+	defer runtime.KeepAlive(ac)
+	gasData := math.U256Bytes(gas)
+	C.arbCoreUpdateCheckpointPruningGas(ac.c, unsafeDataPointer(gasData))
+}
+
 func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
 	defer runtime.KeepAlive(ac)
 	defer runtime.KeepAlive(executionCursor)
