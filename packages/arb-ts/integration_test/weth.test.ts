@@ -168,8 +168,6 @@ describe('WETH', async () => {
       l1Signer: l1Signer,
       l2Provider: l2Signer.provider!,
       retryableGasOverrides: {
-        // CHRIS: this seems backwards - except in neither case do we actually want to add value right?
-        // CHRIS: so what's the purpose of it?
         sendL2CallValueFromL1: false,
       },
     })
