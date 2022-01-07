@@ -372,9 +372,9 @@ export class TokenBridger extends AssetBridger<
       l2Provider,
       l1Signer,
       destinationAddress,
-      retryableGasOverrides,
       overrides,
     } = params
+    let { retryableGasOverrides } = params
 
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
@@ -409,6 +409,14 @@ export class TokenBridger extends AssetBridger<
 
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+
+    // we add a hardcoded minimum maxgas for custom gateway deposits
+    if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
+      if (!retryableGasOverrides) retryableGasOverrides = {}
+      if (!retryableGasOverrides.maxGas) retryableGasOverrides.maxGas = {}
+      retryableGasOverrides.maxGas.min = TokenBridger.MIN_CUSTOM_DEPOSIT_MAXGAS
+    }
+
     // 2. get the gas estimates
     const estimates = await gasEstimator.estimateGasValuesL1ToL2Creation(
       l1GatewayAddress,
@@ -417,17 +425,7 @@ export class TokenBridger extends AssetBridger<
       estimateGasCallValue,
       retryableGasOverrides
     )
-    // 3. Some special token deposit defaults and overrides
-    let maxGas = estimates.maxGasBid
-    if (
-      l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway &&
-      // CHRIS: this needs to be done inside the estimate as we need to adjust the value accordingly
-      estimates.maxGasBid.lt(TokenBridger.MIN_CUSTOM_DEPOSIT_MAXGAS)
-    ) {
-      // For insurance, we set a sane minimum max gas for the custom gateway
-      maxGas = TokenBridger.MIN_CUSTOM_DEPOSIT_MAXGAS
-    }
-
+    // 3. Some special token deposit overrides
     let totalEthCallvalueToSend = (overrides && (await overrides.value)) || Zero
     if (
       !totalEthCallvalueToSend ||
@@ -437,7 +435,7 @@ export class TokenBridger extends AssetBridger<
     }
 
     return {
-      maxGas,
+      maxGas: estimates.maxGasBid,
       maxSubmissionCost: estimates.maxSubmissionPriceBid,
       maxGasPrice: estimates.maxGasPriceBid,
       l1CallValue: BigNumber.from(totalEthCallvalueToSend),

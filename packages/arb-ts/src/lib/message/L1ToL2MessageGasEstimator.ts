@@ -30,7 +30,12 @@ export type PercentIncrease = {
 }
 
 export interface GasOverrides {
-  maxGas?: PercentIncrease
+  maxGas?: PercentIncrease & {
+    /**
+     * Set a minimum max gas
+     */
+    min?: BigNumber
+  }
   maxSubmissionPrice?: PercentIncrease
   maxGasPrice?: PercentIncrease
   sendL2CallValueFromL1?: boolean
@@ -132,6 +137,7 @@ export class L1ToL2MessageGasEstimator {
         percentIncrease:
           options?.maxGas?.percentIncrease ||
           defaultL1ToL2MessageEstimateOptions.maxGasPercentIncrease,
+        min: options?.maxGas?.min || constants.Zero,
       },
       maxGasPrice: {
         base: options?.maxGasPrice?.base,
@@ -173,7 +179,7 @@ export class L1ToL2MessageGasEstimator {
       )
     ).submissionPrice
 
-    const maxGasBid = percentIncrease(
+    const calculatedMaxGas = percentIncrease(
       defaultedOptions.maxGas.base ||
         (await this.estimateGasRetryableTicket(
           sender,
@@ -193,16 +199,20 @@ export class L1ToL2MessageGasEstimator {
         )),
       defaultedOptions.maxGas.percentIncrease
     )
+    // always ensure the max gas is greater than the min
+    const maxGas = calculatedMaxGas.gt(defaultedOptions.maxGas.min)
+      ? calculatedMaxGas
+      : defaultedOptions.maxGas.min
 
     let totalDepositValue = maxSubmissionPriceBid.add(
-      maxGasPriceBid.mul(maxGasBid)
+      maxGasPriceBid.mul(maxGas)
     )
 
     if (defaultedOptions.sendL2CallValueFromL1) {
       totalDepositValue = totalDepositValue.add(l2CallValue)
     }
     return {
-      maxGasBid,
+      maxGasBid: maxGas,
       maxSubmissionPriceBid,
       maxGasPriceBid,
       totalDepositValue,

@@ -304,8 +304,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         3000 // autoredeem gets attempted immediately after ticket creation, but could never get attempted if not calldata; we leave a few seconds of buffer
       )
     } catch (err) {
-      console.error('Couldnt fetch redeem receipt')
-      // CHRIS: do something with this
+      // an auto redeem receipt should be available immediately
+      // if it's not it could be because there was no call data - like an ETH deposit
     }
 
     const userTxnReceipt = await this.getUserTxnReceipt()
