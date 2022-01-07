@@ -357,7 +357,7 @@ InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
     }
 
     // Save initial state to cache
-    combined_machine_cache.basic_add(std::make_unique<Machine>(*core_machine));
+    combined_machine_cache.basicAdd(std::make_unique<Machine>(*core_machine));
 
     return {rocksdb::Status::OK(), false};
 }
@@ -744,7 +744,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         }
 
         while (core_machine->nextAssertion().sideload_block_number) {
-            combined_machine_cache.timed_add(
+            combined_machine_cache.timedAdd(
                 std::make_unique<Machine>(*core_machine));
 
             if (core_machine->machine_state.output.arb_gas_used >=
@@ -1287,14 +1287,14 @@ void ArbCore::operator()() {
 
                 if (core_machine->machine_state.output.arb_gas_used >
                     next_basic_cache_gas) {
-                    combined_machine_cache.basic_add(
+                    combined_machine_cache.basicAdd(
                         std::make_unique<Machine>(*core_machine));
 
                     next_basic_cache_gas =
                         core_machine->machine_state.output.arb_gas_used +
                         coreConfig.basic_machine_cache_interval;
                 } else if (coreConfig.last_machine_cache) {
-                    combined_machine_cache.last_add(
+                    combined_machine_cache.lastAdd(
                         std::make_unique<Machine>(*core_machine));
                 }
 
@@ -1313,7 +1313,7 @@ void ArbCore::operator()() {
                 if (last_assertion.sideload_block_number) {
                     auto& output = core_machine->machine_state.output;
 
-                    combined_machine_cache.timed_add(
+                    combined_machine_cache.timedAdd(
                         std::make_unique<Machine>(*core_machine));
 
                     if (output.arb_gas_used >= next_checkpoint_gas) {
@@ -2479,7 +2479,7 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
             execution_cursor.machine)) {
         auto& mach =
             std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
-        combined_machine_cache.lru_add(std::make_unique<Machine>(*mach));
+        combined_machine_cache.lruAdd(std::make_unique<Machine>(*mach));
     }
 
     return rocksdb::Status::OK();

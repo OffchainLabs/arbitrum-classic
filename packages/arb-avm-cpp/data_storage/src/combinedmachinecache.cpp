@@ -16,58 +16,53 @@
 
 #include <data_storage/combinedmachinecache.hpp>
 
-void CombinedMachineCache::last_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::checkLastMachine(uint256_t& arb_gas_used) {
+    if (last_machine != nullptr &&
+        last_machine->machine_state.output.arb_gas_used < arb_gas_used) {
+        last_machine = nullptr;
+    }
+}
+
+void CombinedMachineCache::lastAdd(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
     last_machine = std::move(machine);
 }
 
-void CombinedMachineCache::basic_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::basicAdd(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
-    if (last_machine != nullptr &&
-        last_machine->machine_state.arb_gas_remaining <
-            machine->machine_state.arb_gas_remaining) {
-        last_machine = nullptr;
-    }
+    checkLastMachine(machine->machine_state.output.arb_gas_used);
     basic.add(std::move(machine));
 }
 
-void CombinedMachineCache::lru_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::lruAdd(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
-    if (last_machine != nullptr &&
-        last_machine->machine_state.arb_gas_remaining <
-            machine->machine_state.arb_gas_remaining) {
-        last_machine = nullptr;
-    }
+    checkLastMachine(machine->machine_state.output.arb_gas_used);
     lru.add(std::move(machine));
 }
 
-void CombinedMachineCache::timed_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::timedAdd(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
-    if (last_machine != nullptr &&
-        last_machine->machine_state.arb_gas_remaining <
-            machine->machine_state.arb_gas_remaining) {
-        last_machine = nullptr;
-    }
+    checkLastMachine(machine->machine_state.output.arb_gas_used);
     timed.add(std::move(machine));
 }
 
-size_t CombinedMachineCache::basic_size() {
+size_t CombinedMachineCache::basicSize() {
     std::shared_lock lock(mutex);
 
     return basic.size();
 }
 
-size_t CombinedMachineCache::lru_size() {
+size_t CombinedMachineCache::lruSize() {
     std::shared_lock lock(mutex);
 
     return lru.size();
 }
 
-size_t CombinedMachineCache::timed_size() {
+size_t CombinedMachineCache::timedSize() {
     std::shared_lock lock(mutex);
 
     return timed.size();

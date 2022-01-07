@@ -39,11 +39,11 @@ TEST_CASE("CombinedMachineCache add and get") {
     // Test that basic entry is added
     auto machine40 = std::make_unique<Machine>(getComplexMachine());
     machine40->machine_state.output.arb_gas_used = 40;
-    cache.last_add(std::move(machine40));
+    cache.lastAdd(std::move(machine40));
     auto machine41 = std::make_unique<Machine>(getComplexMachine());
     machine41->machine_state.output.arb_gas_used = 41;
-    cache.basic_add(std::move(machine41));
-    REQUIRE(cache.basic_size() == 1);
+    cache.basicAdd(std::move(machine41));
+    REQUIRE(cache.basicSize() == 1);
     auto machine41a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine41a.machine != nullptr);
     REQUIRE(machine41a.machine->machine_state.output.arb_gas_used == 41);
@@ -51,8 +51,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     // Test that lru entry is added
     auto machine42 = std::make_unique<Machine>(getComplexMachine());
     machine42->machine_state.output.arb_gas_used = 42;
-    cache.lru_add(std::move(machine42));
-    REQUIRE(cache.lru_size() == 1);
+    cache.lruAdd(std::move(machine42));
+    REQUIRE(cache.lruSize() == 1);
     auto machine42a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine42a.machine != nullptr);
     REQUIRE(machine41a.machine->machine_state.output.arb_gas_used == 41);
@@ -62,8 +62,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     auto machine43 = std::make_unique<Machine>(getComplexMachine());
     machine43->machine_state.output.arb_gas_used = 43;
     machine43->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    cache.timed_add(std::move(machine43));
-    REQUIRE(cache.timed_size() == 1);
+    cache.timedAdd(std::move(machine43));
+    REQUIRE(cache.timedSize() == 1);
     auto machine43a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine43a.machine != nullptr);
     REQUIRE(machine41a.machine->machine_state.output.arb_gas_used == 41);
@@ -87,8 +87,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     auto machine44 = std::make_unique<Machine>(getComplexMachine());
     machine44->machine_state.output.arb_gas_used = 44;
     machine44->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    cache.timed_add(std::move(machine44));
-    cache.last_add(std::move(machine44));
+    cache.timedAdd(std::move(machine44));
+    cache.lastAdd(std::move(machine44));
     auto machine44a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine44a.machine != nullptr);
     REQUIRE(machine44a.machine->machine_state.output.arb_gas_used == 44);
@@ -97,10 +97,10 @@ TEST_CASE("CombinedMachineCache add and get") {
     cache.reorg(0);
     machine41 = std::make_unique<Machine>(getComplexMachine());
     machine41->machine_state.output.arb_gas_used = 41;
-    cache.last_add(std::move(machine41));
+    cache.lastAdd(std::move(machine41));
     machine42 = std::make_unique<Machine>(getComplexMachine());
     machine42->machine_state.output.arb_gas_used = 42;
-    cache.lru_add(std::move(machine42));
+    cache.lruAdd(std::move(machine42));
     machine42a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine42a.machine != nullptr);
 
@@ -108,11 +108,11 @@ TEST_CASE("CombinedMachineCache add and get") {
     cache.reorg(0);
     machine41 = std::make_unique<Machine>(getComplexMachine());
     machine41->machine_state.output.arb_gas_used = 41;
-    cache.last_add(std::move(machine41));
+    cache.lastAdd(std::move(machine41));
     machine43 = std::make_unique<Machine>(getComplexMachine());
     machine43->machine_state.output.arb_gas_used = 42;
     machine43->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    cache.timed_add(std::move(machine43));
+    cache.timedAdd(std::move(machine43));
     machine43a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine43a.machine != nullptr);
 }
