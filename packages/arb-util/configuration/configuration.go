@@ -88,6 +88,7 @@ type CoreCache struct {
 	BasicInterval int           `koanf:"basic-interval"`
 	BasicSize     int           `koanf:"basic-size"`
 	Disable       bool          `koanf:"disable"`
+	Last          bool          `koanf:"last"`
 	LRUSize       int           `koanf:"lru-size"`
 	SeedOnStartup bool          `koanf:"seed-on-startup"`
 	TimedExpire   time.Duration `koanf:"timed-expire"`
@@ -493,8 +494,9 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string, maxExecutionGas int, checkpointPruningAge time.Duration) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
+	f.Bool("core.cache.last", false, "whether to always cache the machine from last block")
 	f.Int("core.cache.basic-interval", 100_000_000, "amount of gas to wait between saving to basic cache")
-	f.Int("core.cache.basic-size", 100, "number of recently used L2 blocks to hold in basic memory cache")
+	f.Int("core.cache.basic-size", 100, "number of basic cache entries to save")
 	f.Bool("core.cache.disable", false, "disable saving to cache while in core thread")
 	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
 	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")
@@ -726,7 +728,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 		// Never prune checkpoints
 		if out.Core.CheckpointPruningMode != "off" {
-			logger.Warn().Msg("Disable checkpoint pruning because allow-slow-lookup enabled")
+			logger.Warn().Msg("disabling checkpoint pruning because allow-slow-lookup enabled")
 		}
 		out.Core.CheckpointPruningMode = "off"
 	}
@@ -738,6 +740,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		(out.Core.CheckpointPruningMode != "default") {
 		return nil, nil, nil, nil,
 			fmt.Errorf("value '%v' for core.checkpoint-pruning-mode is not 'on', 'off', or 'default'", out.Core.CheckpointPruningMode)
+	}
+
+	if out.Node.Type == "sequencer" && !out.Core.Cache.Last {
+		logger.Info().Msg("enabling last machine cache for sequencer")
+		out.Core.Cache.Last = true
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil

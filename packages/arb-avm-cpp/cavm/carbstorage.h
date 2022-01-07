@@ -32,6 +32,7 @@ typedef struct {
     int32_t checkpoint_load_gas_factor;
     int32_t checkpoint_max_execution_gas;
     int32_t checkpoint_gas_frequency;
+    int32_t last_cache;
     int32_t basic_cache_interval;
     int32_t basic_cache_size;
     int32_t lru_cache_size;

@@ -1293,6 +1293,9 @@ void ArbCore::operator()() {
                     next_basic_cache_gas =
                         core_machine->machine_state.output.arb_gas_used +
                         coreConfig.basic_machine_cache_interval;
+                } else if (coreConfig.last_machine_cache) {
+                    combined_machine_cache.last_add(
+                        std::make_unique<Machine>(*core_machine));
                 }
 
                 // Save logs and sends

@@ -38,6 +38,9 @@ struct ArbCoreConfig {
     // Frequency to save checkpoint to database
     uint256_t checkpoint_gas_frequency{1'000'000};
 
+    // If last machine should be cached for each block
+    bool last_machine_cache{false};
+
     // Amount of gas between basic cache entries
     uint32_t basic_machine_cache_interval{1'000'000};
 

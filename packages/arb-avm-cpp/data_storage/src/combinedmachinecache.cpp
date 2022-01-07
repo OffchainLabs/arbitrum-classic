@@ -16,21 +16,42 @@
 
 #include <data_storage/combinedmachinecache.hpp>
 
+void CombinedMachineCache::last_add(std::unique_ptr<Machine> machine) {
+    std::unique_lock lock(mutex);
+
+    last_machine = std::move(machine);
+}
+
 void CombinedMachineCache::basic_add(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
+    if (last_machine != nullptr &&
+        last_machine->machine_state.arb_gas_remaining <
+            machine->machine_state.arb_gas_remaining) {
+        last_machine = nullptr;
+    }
     basic.add(std::move(machine));
 }
 
 void CombinedMachineCache::lru_add(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
+    if (last_machine != nullptr &&
+        last_machine->machine_state.arb_gas_remaining <
+            machine->machine_state.arb_gas_remaining) {
+        last_machine = nullptr;
+    }
     lru.add(std::move(machine));
 }
 
 void CombinedMachineCache::timed_add(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
+    if (last_machine != nullptr &&
+        last_machine->machine_state.arb_gas_remaining <
+            machine->machine_state.arb_gas_remaining) {
+        last_machine = nullptr;
+    }
     timed.add(std::move(machine));
 }
 
@@ -61,6 +82,12 @@ CombinedMachineCache::atOrBeforeGasImpl(uint256_t& gas_used) {
     auto basic_it = basic.atOrBeforeGas(gas_used);
     auto lru_it = lru.atOrBeforeGas(gas_used);
     auto timed_it = timed.atOrBeforeGas(gas_used);
+
+    if (last_machine != nullptr &&
+        last_machine->machine_state.output.arb_gas_used <= gas_used) {
+        // Last machine will always have the greatest amount of gas used
+        return std::cref(*last_machine);
+    }
 
     if (basic_it.has_value()) {
         basic_gas = basic_it.value()->second->machine_state.output.arb_gas_used;
@@ -164,6 +191,10 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
 void CombinedMachineCache::reorg(uint256_t next_gas_used) {
     std::unique_lock lock(mutex);
 
+    if (last_machine != nullptr &&
+        last_machine->machine_state.output.arb_gas_used >= next_gas_used) {
+        last_machine = nullptr;
+    }
     basic.reorg(next_gas_used);
     lru.reorg(next_gas_used);
     timed.reorg(next_gas_used);
