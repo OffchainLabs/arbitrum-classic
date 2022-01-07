@@ -42,6 +42,7 @@ class CombinedMachineCache {
    private:
     std::shared_mutex mutex;
     std::unique_ptr<Machine> last_machine;
+    std::unique_ptr<Machine> last_last_machine;
     BasicMachineCache basic;
     LRUMachineCache lru;
     TimedMachineCache timed;
