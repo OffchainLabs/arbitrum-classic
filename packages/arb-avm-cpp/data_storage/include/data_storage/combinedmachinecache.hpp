@@ -41,6 +41,7 @@ class CombinedMachineCache {
 
    private:
     std::shared_mutex mutex;
+    std::unique_ptr<Machine> last_machine;
     BasicMachineCache basic;
     LRUMachineCache lru;
     TimedMachineCache timed;
@@ -55,6 +56,7 @@ class CombinedMachineCache {
           database_load_gas_cost{coreConfig.checkpoint_load_gas_cost},
           max_execution_gas{coreConfig.checkpoint_max_execution_gas} {}
 
+    void last_add(std::unique_ptr<Machine> machine);
     void basic_add(std::unique_ptr<Machine> machine);
     void lru_add(std::unique_ptr<Machine> machine);
     void timed_add(std::unique_ptr<Machine> machine);
