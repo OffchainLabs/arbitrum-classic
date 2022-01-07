@@ -115,8 +115,7 @@ export class TokenBridger extends AssetBridger<
   TokenWithdrawParams
 > {
   public static MAX_APPROVAL = MaxUint256
-  // CHRIS: we need to pass this in to the estimate - atm we're doing it outside which doesnt work
-  public static MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(1)
+  public static MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
 
   public constructor(l2Network: L2Network) {
     super(l2Network)
