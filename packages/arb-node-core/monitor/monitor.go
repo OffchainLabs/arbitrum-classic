@@ -138,7 +138,7 @@ func (m *Monitor) StartInboxReader(
 		m.Core,
 		healthChan,
 		sequencerFeed,
-		inboxReaderConfig.Paranoid,
+		inboxReaderConfig,
 	)
 	if err != nil {
 		return nil, err

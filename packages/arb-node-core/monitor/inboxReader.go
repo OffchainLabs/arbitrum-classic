@@ -22,6 +22,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/pkg/errors"
 
@@ -29,7 +32,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -52,7 +57,8 @@ type InboxReader struct {
 	lastAcc            common.Hash
 	sequencerFeedQueue []broadcaster.SequencerFeedItem
 	recentFeedItems    map[common.Hash]time.Time
-	paranoid           bool
+	inboxReaderConfig  configuration.InboxReader
+	sequencerAddresses map[ethcommon.Address]time.Time
 
 	// Only in main thread
 	running    bool
@@ -76,7 +82,7 @@ func NewInboxReader(
 	db core.ArbCore,
 	healthChan chan nodehealth.Log,
 	broadcastFeed chan broadcaster.BroadcastFeedMessage,
-	paranoid bool,
+	inboxReaderConfig configuration.InboxReader,
 ) (*InboxReader, error) {
 	firstMessageBlock := bridge.FromBlock()
 	if firstMessageBlock <= 1 {
@@ -87,17 +93,18 @@ func NewInboxReader(
 		firstMessageBlock = start.Height.AsInt().Int64()
 	}
 	return &InboxReader{
-		delayedBridge:     bridge,
-		sequencerInbox:    sequencerInbox,
-		bridgeUtils:       bridgeUtils,
-		db:                db,
-		firstMessageBlock: big.NewInt(firstMessageBlock),
-		recentFeedItems:   make(map[common.Hash]time.Time),
-		completed:         make(chan bool, 1),
-		caughtUpChan:      make(chan bool, 1),
-		healthChan:        healthChan,
-		BroadcastFeed:     broadcastFeed,
-		paranoid:          paranoid,
+		delayedBridge:      bridge,
+		sequencerInbox:     sequencerInbox,
+		bridgeUtils:        bridgeUtils,
+		db:                 db,
+		firstMessageBlock:  big.NewInt(firstMessageBlock),
+		recentFeedItems:    make(map[common.Hash]time.Time),
+		completed:          make(chan bool, 1),
+		caughtUpChan:       make(chan bool, 1),
+		healthChan:         healthChan,
+		BroadcastFeed:      broadcastFeed,
+		inboxReaderConfig:  inboxReaderConfig,
+		sequencerAddresses: make(map[ethcommon.Address]time.Time),
 	}, nil
 }
 
@@ -152,6 +159,54 @@ func (ir *InboxReader) GetSequencerInboxWatcher() *ethbridge.SequencerInboxWatch
 	return ir.sequencerInbox
 }
 
+func (ir *InboxReader) isValidSignature(ctx context.Context, message broadcaster.BroadcastFeedMessage) bool {
+	accHash := hashing.SoliditySHA3WithPrefix(hashing.Bytes32(message.FeedItem.BatchItem.Accumulator))
+	sigPublicKey, err := crypto.SigToPub(accHash.Bytes(), message.Signature)
+	if err != nil {
+		logger.Error().Err(err).Msg("error recovering sequencer feed signing key")
+		return false
+	}
+
+	address := crypto.PubkeyToAddress(*sigPublicKey)
+	keyExpiryDate, keyFound := ir.sequencerAddresses[address]
+	if time.Now().After(keyExpiryDate) {
+		// Key expired, so lookup valid keys again
+		keyFound = false
+	}
+
+	if !keyFound {
+		// Get current sequencer key
+		callOpts := &bind.CallOpts{Context: ctx}
+		isSequencer, err := ir.sequencerInbox.IsSequencer(callOpts, address)
+		if err != nil {
+			logger.
+				Error().
+				Err(err).
+				Hex("address", address.Bytes()).
+				Msg("error validating sequencer feed signing address")
+			return false
+		}
+
+		if !isSequencer {
+			logger.
+				Error().
+				Hex("address", address.Bytes()).
+				Msg("invalid sequencer feed signing address")
+			return false
+		}
+
+		expired := time.Now().Add(ir.inboxReaderConfig.SequencerSignatureExpiry)
+		logger.
+			Info().
+			Hex("address", address.Bytes()).
+			Str("expires", expired.String()).
+			Msg("sequencer feed signing address validated")
+		ir.sequencerAddresses[address] = expired
+	}
+
+	return true
+}
+
 func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool, inboxReaderDelayBlocks int64) error {
 	from, err := ir.getNextBlockToRead()
 	if err != nil {
@@ -173,8 +228,8 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			return err
 		}
 
-		reorgingDelayed := ir.paranoid || temporarilyParanoid
-		reorgingSequencer := ir.paranoid || temporarilyParanoid
+		reorgingDelayed := ir.inboxReaderConfig.Paranoid || temporarilyParanoid
+		reorgingSequencer := ir.inboxReaderConfig.Paranoid || temporarilyParanoid
 		if ir.caughtUp {
 			latestDelayed, latestSeq, err := ir.bridgeUtils.GetCountsAndAccumulators(ctx)
 			if err != nil {
@@ -355,8 +410,14 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			case <-ctx.Done():
 				return nil
 			case broadcastItem := <-ir.BroadcastFeed:
+				if !ir.isValidSignature(ctx, broadcastItem) {
+					// Log message already output, skip feed item with invalid signature
+					continue
+				}
+
 				newAcc := broadcastItem.FeedItem.BatchItem.Accumulator
 				if ir.recentFeedItems[newAcc] != (time.Time{}) {
+					// Skip duplicate feed item
 					continue
 				}
 				ir.recentFeedItems[newAcc] = time.Now()
@@ -375,7 +436,10 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 				}
 				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
 				if len(ir.BroadcastFeed) == 0 {
-					ir.deliverQueueItems()
+					err := ir.deliverQueueItems()
+					if err != nil {
+						logger.Warn().Err(err).Msg("error delivering broadcast feed items")
+					}
 				}
 			case <-sleepChan:
 				break FeedReadLoop
