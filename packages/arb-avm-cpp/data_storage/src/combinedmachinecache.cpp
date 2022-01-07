@@ -17,11 +17,11 @@
 #include <data_storage/combinedmachinecache.hpp>
 
 void CombinedMachineCache::checkLastMachine(uint256_t& arb_gas_used) {
-    if (last_machine != nullptr &&
+    if (last_machine &&
         last_machine->machine_state.output.arb_gas_used < arb_gas_used) {
         last_machine = nullptr;
     }
-    if (last_last_machine != nullptr &&
+    if (last_last_machine &&
         last_last_machine->machine_state.output.arb_gas_used < arb_gas_used) {
         last_last_machine = nullptr;
     }
@@ -30,7 +30,9 @@ void CombinedMachineCache::checkLastMachine(uint256_t& arb_gas_used) {
 void CombinedMachineCache::lastAdd(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
-    last_last_machine = std::move(last_machine);
+    if (last_machine) {
+        last_last_machine = std::move(last_machine);
+    }
     last_machine = std::move(machine);
 }
 
@@ -83,13 +85,13 @@ CombinedMachineCache::atOrBeforeGasImpl(uint256_t& gas_used) {
     auto lru_it = lru.atOrBeforeGas(gas_used);
     auto timed_it = timed.atOrBeforeGas(gas_used);
 
-    if (last_machine != nullptr &&
+    if (last_machine &&
         last_machine->machine_state.output.arb_gas_used <= gas_used) {
         // Last machine will always have the greatest amount of gas used
         return std::cref(*last_machine);
     }
 
-    if (last_last_machine != nullptr &&
+    if (last_last_machine &&
         last_last_machine->machine_state.output.arb_gas_used <= gas_used) {
         // Last last machine will always have the next greatest amount of gas
         // used
@@ -198,11 +200,11 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
 void CombinedMachineCache::reorg(uint256_t next_gas_used) {
     std::unique_lock lock(mutex);
 
-    if (last_machine != nullptr &&
+    if (last_machine &&
         last_machine->machine_state.output.arb_gas_used >= next_gas_used) {
         last_machine = nullptr;
     }
-    if (last_last_machine != nullptr &&
+    if (last_last_machine &&
         last_last_machine->machine_state.output.arb_gas_used >= next_gas_used) {
         last_last_machine = nullptr;
     }
