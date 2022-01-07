@@ -208,8 +208,9 @@ type Forwarder struct {
 }
 
 type InboxReader struct {
-	DelayBlocks int64 `koanf:"delay-blocks"`
-	Paranoid    bool  `koanf:"paranoid"`
+	DelayBlocks              int64         `koanf:"delay-blocks"`
+	Paranoid                 bool          `koanf:"paranoid"`
+	SequencerSignatureExpiry time.Duration `koanf:"sequencer-signature-expiry"`
 }
 
 type Node struct {
@@ -442,6 +443,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 
 	f.Int64("node.inbox-reader.delay-blocks", 4, "number of L1 blocks to wait for confirmation before updating L2 state")
 	f.Bool("node.inbox-reader.paranoid", false, "if enabled, check for reorgs before searching for messages")
+	f.Duration("node.inbox-reader.sequencer-signature-expiry", 10*time.Minute, "length of time between verifying sequencer feed signing address on-chain")
 
 	f.Duration("node.log-idle-sleep", 100*time.Millisecond, "milliseconds for log reader to sleep between reading logs")
 	f.Int("node.log-process-count", 100, "maximum number of logs to process at a time")
