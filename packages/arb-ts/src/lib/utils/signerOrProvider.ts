@@ -10,7 +10,7 @@ export class SignerProviderUtils {
   public static isSigner(
     signerOrProvider: SignerOrProvider
   ): signerOrProvider is Signer {
-    return (signerOrProvider as Signer).sendTransaction !== undefined
+    return (signerOrProvider as Signer).signMessage !== undefined
   }
 
   /**
@@ -19,7 +19,9 @@ export class SignerProviderUtils {
    * @param signerOrProvider
    * @returns
    */
-  public static getProvider(signerOrProvider: SignerOrProvider) {
+  public static getProvider(
+    signerOrProvider: SignerOrProvider
+  ): Provider | undefined {
     return this.isSigner(signerOrProvider)
       ? signerOrProvider.provider
       : signerOrProvider

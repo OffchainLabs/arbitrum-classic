@@ -21,14 +21,13 @@ import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
 import args from './getCLargs'
-import { EthBridger, networks, TokenBridger } from '../src'
+import { EthBridger, TokenBridger } from '../src'
 import {
   L1Network,
   l1Networks,
   L2Network,
   l2Networks,
 } from '../src/lib/utils/networks'
-import { Network } from '../src/lib/networks'
 import { Signer } from 'ethers'
 
 dotenv.config()
@@ -37,7 +36,7 @@ const pk = process.env['DEVNET_PRIVKEY'] as string
 const mnemonic = process.env['DEV_MNEMONIC'] as string
 const verbose = process.env['VERBOSE'] as string
 
-const defaultNetworkId = 4
+const defaultNetworkId = 421611
 
 export const instantiateBridge = async (
   l1pkParam?: string,

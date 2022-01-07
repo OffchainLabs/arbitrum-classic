@@ -59,10 +59,16 @@ describe('standard ERC20', () => {
 
   it('withdraws erc20', async function () {
     const tokenWithdrawAmount = BigNumber.from(1)
+
     const { l2Network, l1Signer, l2Signer, tokenBridger } =
       await instantiateBridgeWithRandomWallet()
-    await fundL2(l1Signer)
-    const result = await fundL2Token(l2Signer, tokenBridger, existentTestERC20)
+    await fundL2(l2Signer)
+    const result = await fundL2Token(
+      l1Signer.provider!,
+      l2Signer,
+      tokenBridger,
+      existentTestERC20
+    )
     if (!result) {
       warn('Prefunded wallet not funded with tokens; skipping ERC20 withdraw')
       this.skip()
@@ -152,19 +158,19 @@ describe('standard ERC20', () => {
       queriedL2Address,
       l2Signer.provider!
     )
-
     expect(queriedL1Address).to.equal(
       existentTestERC20,
       'getERC20L1Address/getERC20L2Address failed with proper token address'
     )
 
     const randomAddress = await l1Signer.getAddress()
-    const notAnL1Address = await tokenBridger.getL1ERC20Address(
-      randomAddress,
-      l2Signer.provider!
-    )
-    expect(notAnL1Address).to.be.null,
-      "getERC20L1Address didn't return null for random input"
+    try {
+      await tokenBridger.getL1ERC20Address(randomAddress, l2Signer.provider!)
+      expect(true, 'expected getERC20L1Address to throw for random address').to
+        .be.false
+    } catch (err) {
+      // expected result
+    }
   })
 })
 
@@ -225,7 +231,7 @@ const depositTokenTest = async (
       .eq(finalBridgeTokenBalance),
     'bridge balance not updated after L1 token deposit txn'
   ).to.be.true
-  await testRetryableTicket(l1Signer.provider!, depositRec)
+  await testRetryableTicket(l2Signer.provider!, depositRec)
 
   const l2Token = tokenBridger.getL2TokenContract(
     l2Signer.provider!,

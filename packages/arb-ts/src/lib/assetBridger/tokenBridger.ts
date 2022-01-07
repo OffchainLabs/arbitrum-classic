@@ -21,7 +21,6 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { Zero, MaxUint256 } from '@ethersproject/constants'
-import { hexZeroPad } from '@ethersproject/bytes'
 import { Logger } from '@ethersproject/logger'
 import { BigNumber, ethers } from 'ethers'
 
@@ -35,6 +34,8 @@ import {
   L2ArbitrumGateway,
   ERC20__factory,
   L1GatewayRouter,
+  StandardArbERC20,
+  ERC20,
 } from '../abi'
 import { WithdrawalInitiatedEvent } from '../abi/L2ArbitrumGateway'
 import { GatewaySetEvent } from '../abi/L1GatewayRouter'
@@ -51,8 +52,26 @@ import { EventFetcher } from '../utils/eventFetcher'
 
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
-import { L1TransactionReceipt } from '../message/L1ToL2Message'
-import { L2TransactionReceipt } from '../message/L2ToL1Message'
+import {
+  L1ContractTransaction,
+  L1TransactionReceipt,
+} from '../message/L1ToL2Message'
+import {
+  L2ContractTransaction,
+  L2TransactionReceipt,
+} from '../message/L2ToL1Message'
+
+// taken from lib.es5.d.ts, for some reason I cant get this to be included in the default types
+// /**
+//  * Recursively unwraps the "awaited type" of a type. Non-promise "thenables" should resolve to `never`. This emulates the behavior of `await`.
+//  */
+// type Awaited<T> = T extends null | undefined
+//   ? T // special case for `null | undefined` when not in `--strictNullChecks` mode
+//   : T extends object & { then(onfulfilled: infer F): any } // `await` only unwraps object types with a callable `then`. Non-object types are not unwrapped
+//   ? F extends (value: infer V) => any // if the argument to `then` is callable, extracts the argument
+//     ? Awaited<V> // recursively unwrap the value
+//     : never // the argument to `then` was not callable
+//   : T // non-object or non-thenable
 
 export interface TokenApproveParams {
   /**
@@ -108,7 +127,8 @@ export class TokenBridger extends AssetBridger<
   TokenWithdrawParams
 > {
   public static MAX_APPROVAL = MaxUint256
-  public static MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
+  // CHRIS: we need to pass this in to the estimate - atm we're doing it outside which doesnt work
+  public static MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(1)
 
   public constructor(l2Network: L2Network) {
     super(l2Network)
@@ -155,7 +175,9 @@ export class TokenBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async approveToken(params: TokenApproveParams) {
+  public async approveToken(
+    params: TokenApproveParams
+  ): Promise<ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
@@ -191,7 +213,7 @@ export class TokenBridger extends AssetBridger<
     l1TokenAddress?: string,
     fromAddress?: string,
     filter?: Omit<Filter, 'topics' | 'address'>
-  ) {
+  ): Promise<WithdrawalInitiatedEvent['args'][]> {
     const eventFetcher = new EventFetcher(l2Provider)
     const events = await eventFetcher.getEvents<
       L2ArbitrumGateway,
@@ -200,10 +222,7 @@ export class TokenBridger extends AssetBridger<
       gatewayAddress,
       L2ArbitrumGateway__factory,
       contract =>
-        contract.filters.WithdrawalInitiated(
-          null,
-          fromAddress ? hexZeroPad(fromAddress, 32) : null
-        ),
+        contract.filters.WithdrawalInitiated(null, fromAddress || null),
       filter
     )
 
@@ -275,7 +294,10 @@ export class TokenBridger extends AssetBridger<
    * @param l1TokenAddr
    * @returns
    */
-  public getL2TokenContract(l2Provider: Provider, l2TokenAddr: string) {
+  public getL2TokenContract(
+    l2Provider: Provider,
+    l2TokenAddr: string
+  ): StandardArbERC20 {
     return StandardArbERC20__factory.connect(l2TokenAddr, l2Provider)
   }
 
@@ -285,7 +307,7 @@ export class TokenBridger extends AssetBridger<
    * @param l1TokenAddr
    * @returns
    */
-  public getL1TokenContract(l1Provider: Provider, l1TokenAddr: string) {
+  public getL1TokenContract(l1Provider: Provider, l1TokenAddr: string): ERC20 {
     return ERC20__factory.connect(l1TokenAddr, l1Provider)
   }
 
@@ -295,7 +317,10 @@ export class TokenBridger extends AssetBridger<
    * @param l1Provider
    * @returns
    */
-  public getL2ERC20Address(erc20L1Address: string, l1Provider: Provider) {
+  public getL2ERC20Address(
+    erc20L1Address: string,
+    l1Provider: Provider
+  ): Promise<string> {
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
       l1Provider
@@ -312,7 +337,10 @@ export class TokenBridger extends AssetBridger<
    * @param l1Provider
    * @returns
    */
-  public getL1ERC20Address(erc20L2Address: string, l2Provider: Provider) {
+  public getL1ERC20Address(
+    erc20L2Address: string,
+    l2Provider: Provider
+  ): Promise<string> {
     const arbERC20 = StandardArbERC20__factory.connect(
       erc20L2Address,
       l2Provider
@@ -341,9 +369,7 @@ export class TokenBridger extends AssetBridger<
     )
   }
 
-  private async getDepositParams(
-    params: TokenDepositParams
-  ): Promise<{
+  private async getDepositParams(params: TokenDepositParams): Promise<{
     erc20L1Address: string
     amount: BigNumber
     l1CallValue: BigNumber
@@ -384,7 +410,6 @@ export class TokenBridger extends AssetBridger<
       amount,
       '0x'
     )
-
     // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
     // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
     const estimateGasCallValue = (await this.isWethGateway(
@@ -396,7 +421,6 @@ export class TokenBridger extends AssetBridger<
 
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-
     // 2. get the gas estimates
     const estimates = await gasEstimator.estimateGasValuesL1ToL2Creation(
       l1GatewayAddress,
@@ -405,11 +429,11 @@ export class TokenBridger extends AssetBridger<
       estimateGasCallValue,
       retryableGasOverrides
     )
-
     // 3. Some special token deposit defaults and overrides
     let maxGas = estimates.maxGasBid
     if (
       l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway &&
+      // CHRIS: this needs to be done inside the estimate as we need to adjust the value accordingly
       estimates.maxGasBid.lt(TokenBridger.MIN_CUSTOM_DEPOSIT_MAXGAS)
     ) {
       // For insurance, we set a sane minimum max gas for the custom gateway
@@ -448,7 +472,6 @@ export class TokenBridger extends AssetBridger<
     }
 
     const depositParams = await this.getDepositParams(params)
-
     const data = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [depositParams.maxSubmissionCost, '0x']
@@ -465,7 +488,7 @@ export class TokenBridger extends AssetBridger<
       params.l1Signer
     )
 
-    return (estimate
+    return await (estimate
       ? l1GatewayRouter.estimateGas
       : l1GatewayRouter.functions
     ).outboundTransfer(
@@ -484,7 +507,9 @@ export class TokenBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async depositEstimateGas(params: TokenDepositParams) {
+  public async depositEstimateGas(
+    params: TokenDepositParams
+  ): Promise<BigNumber> {
     return await this.depositTxOrGas(params, true)
   }
 
@@ -493,7 +518,9 @@ export class TokenBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async deposit(params: TokenDepositParams) {
+  public async deposit(
+    params: TokenDepositParams
+  ): Promise<L1ContractTransaction> {
     const tx = await this.depositTxOrGas(params, false)
     return L1TransactionReceipt.swivelWait(tx)
   }
@@ -527,7 +554,9 @@ export class TokenBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async withdrawEstimateGas(params: TokenWithdrawParams) {
+  public async withdrawEstimateGas(
+    params: TokenWithdrawParams
+  ): Promise<BigNumber> {
     return this.withdrawTxOrGas(params, true)
   }
 
@@ -536,7 +565,9 @@ export class TokenBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async withdraw(params: TokenWithdrawParams) {
+  public async withdraw(
+    params: TokenWithdrawParams
+  ): Promise<L2ContractTransaction> {
     const tx = await this.withdrawTxOrGas(params, false)
     return L2TransactionReceipt.swivelWait(tx)
   }
@@ -615,7 +646,7 @@ export class AdminTokenBridger extends TokenBridger {
   public async getL1GatewaySetEvents(
     l1Provider: Provider,
     customNetworkL1GatewayRouter?: string
-  ) {
+  ): Promise<GatewaySetEvent['args'][]> {
     if (this.l2Network.isCustom && !customNetworkL1GatewayRouter) {
       throw new Error(
         'Must supply customNetworkL1GatewayRouter for custom network '
@@ -642,7 +673,7 @@ export class AdminTokenBridger extends TokenBridger {
   public async getL2GatewaySetEvents(
     l2Provider: Provider,
     customNetworkL2GatewayRouter?: string
-  ) {
+  ): Promise<GatewaySetEvent['args'][]> {
     if (this.l2Network.isCustom && !customNetworkL2GatewayRouter)
       throw new Error(
         'Must supply customNetworkL2GatewayRouter for custom network '
@@ -670,7 +701,7 @@ export class AdminTokenBridger extends TokenBridger {
     l1Signer: Signer,
     l2Provider: Provider,
     tokenGateways: TokenGateway[]
-  ) {
+  ): Promise<ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }

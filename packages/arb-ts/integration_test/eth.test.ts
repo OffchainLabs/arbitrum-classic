@@ -35,7 +35,6 @@ import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factor
 import { ARB_GAS_INFO } from '../src/lib/precompile_addresses'
 import { OutgoingMessageState } from '../src/lib/dataEntities'
 import { L2ToL1Message } from '../src/lib/message/L2ToL1Message'
-import { hexZeroPad } from '@ethersproject/bytes'
 dotenv.config()
 
 describe('Ether', async () => {
@@ -93,8 +92,6 @@ describe('Ether', async () => {
     expect(messages.length, 'eth deposit message empty array').to.not.eq(0)
 
     const message = messages[0]
-    // L1ToL2Message.fromL2Ticket()
-    // const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)
     prettyLog('l2TxHash: ' + message.l2TicketCreationTxnHash)
     prettyLog('waiting for l2 transaction:')
     const waitResult = await message.wait(1000 * 60 * 12)
@@ -124,7 +121,6 @@ describe('Ether', async () => {
       await instantiateBridgeWithRandomWallet()
     await fundL2(l2Signer)
     const ethToWithdraw = parseEther('0.00002')
-
     const initialBalance = await l2Signer.getBalance()
 
     const withdrawEthRes = await ethBridger.withdraw({
@@ -145,6 +141,7 @@ describe('Ether', async () => {
     const inWei = await arbGasInfo.getPricesInWei({
       blockTag: withdrawEthRec.blockNumber,
     })
+
     const withdrawMessage = (
       await withdrawEthRec.getL2ToL1Messages(l2Signer.provider!, l2Network)
     )[0]
@@ -174,7 +171,6 @@ describe('Ether', async () => {
     ).to.be.true
 
     const etherBalance = await l2Signer.getBalance()
-
     const totalEth = etherBalance
       .add(ethToWithdraw)
       .add(withdrawEthRec.gasUsed.mul(inWei[5]))

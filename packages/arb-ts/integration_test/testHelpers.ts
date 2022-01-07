@@ -29,7 +29,6 @@ import { parseEther } from '@ethersproject/units'
 
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 
-import { Network } from '../src/lib/networks'
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 
 import config from './config'
@@ -62,13 +61,13 @@ export const existentTestCustomToken = _existentTestCustomToken as string
 export const preFundAmount = parseEther('0.001')
 
 export const testRetryableTicket = async (
-  l1Provider: Provider,
+  l2Provider: Provider,
   rec: ContractReceipt
 ): Promise<void> => {
   prettyLog(`testing retryable for ${rec.transactionHash}`)
 
   const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
-    l1Provider
+    l2Provider
   )
 
   const message = messages && messages[0]
@@ -141,7 +140,6 @@ export const instantiateBridgeWithRandomWallet = (): Promise<{
 
 const _preFundedWallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
 const _preFundedL2Wallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
-
 console.warn('using prefunded wallet ', _preFundedWallet.address)
 
 export const fundL1 = async (l1Signer: Signer): Promise<void> => {
@@ -167,6 +165,7 @@ export const fundL2 = async (l2Signer: Signer): Promise<void> => {
 
 export const tokenFundAmount = BigNumber.from(2)
 export const fundL2Token = async (
+  l1Provider: Provider,
   l2Signer: Signer,
   tokenBridger: TokenBridger,
   tokenAddress: string
@@ -176,13 +175,11 @@ export const fundL2Token = async (
     const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider!)
     const l2Address = await tokenBridger.getL2ERC20Address(
       tokenAddress,
-      l2Signer.provider!
+      l1Provider
     )
     const testToken = TestERC20__factory.connect(l2Address, preFundedL2Wallet)
-
     const res = await testToken.transfer(testWalletAddress, tokenFundAmount)
     const rec = await res.wait()
-
     const result = rec.status === 1
     result && prettyLog('Funded L2 account w/ tokens')
 

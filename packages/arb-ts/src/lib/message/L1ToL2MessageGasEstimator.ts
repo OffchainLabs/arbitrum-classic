@@ -12,7 +12,7 @@ import { constants } from 'ethers'
 import { utils } from 'ethers'
 
 const DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE = BigNumber.from(340)
-const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
+// const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
 
 /**
  * An optional big number percentage increase
@@ -80,10 +80,8 @@ export class L1ToL2MessageGasEstimator {
       ARB_RETRYABLE_TX_ADDRESS,
       this.l2Provider
     )
-    const [
-      currentSubmissionPrice,
-      nextUpdateTimestamp,
-    ] = await arbRetryableTx.getSubmissionPrice(callDataSize)
+    const [currentSubmissionPrice, nextUpdateTimestamp] =
+      await arbRetryableTx.getSubmissionPrice(callDataSize)
     // Apply percent increase
     const submissionPrice = percentIncrease(
       defaultedOptions.base || currentSubmissionPrice,
@@ -154,7 +152,12 @@ export class L1ToL2MessageGasEstimator {
     callDataHex: string,
     l2CallValue: BigNumber,
     options?: GasOverrides
-  ) {
+  ): Promise<{
+    maxGasBid: BigNumber
+    maxSubmissionPriceBid: BigNumber
+    maxGasPriceBid: BigNumber
+    totalDepositValue: BigNumber
+  }> {
     const defaultedOptions = this.applyDefaults(options)
 
     const maxGasPriceBid = percentIncrease(
@@ -194,6 +197,7 @@ export class L1ToL2MessageGasEstimator {
     let totalDepositValue = maxSubmissionPriceBid.add(
       maxGasPriceBid.mul(maxGasBid)
     )
+
     if (defaultedOptions.sendL2CallValueFromL1) {
       totalDepositValue = totalDepositValue.add(l2CallValue)
     }

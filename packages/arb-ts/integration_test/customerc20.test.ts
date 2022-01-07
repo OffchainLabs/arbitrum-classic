@@ -35,7 +35,6 @@ import {
   skipIfMainnet,
   existentTestCustomToken,
 } from './testHelpers'
-import { L2TransactionReceipt } from '../src/lib/message/L2ToL1Message'
 import { TokenBridger } from '../src'
 import { Signer } from 'ethers'
 
@@ -47,7 +46,7 @@ describe('Custom ERC20', () => {
   it('deposits erc20 (no L2 Eth funding)', async () => {
     const { l1Signer, l2Signer, tokenBridger } =
       await instantiateBridgeWithRandomWallet()
-    await fundL1(l2Signer)
+    await fundL1(l1Signer)
     await depositTokenTest(tokenBridger, l1Signer, l2Signer)
   })
   it.skip('deposits erc20 (with L2 Eth funding)', async () => {
@@ -62,8 +61,10 @@ describe('Custom ERC20', () => {
     const tokenWithdrawAmount = BigNumber.from(1)
     const { l2Network, l2Signer, l1Signer, tokenBridger } =
       await instantiateBridgeWithRandomWallet()
+
     await fundL2(l2Signer)
     const result = await fundL2Token(
+      l1Signer.provider!,
       l2Signer,
       tokenBridger,
       existentTestCustomToken
@@ -146,7 +147,6 @@ const depositTokenTest = async (
   l2Signer: Signer
 ) => {
   const tokenDepositAmount = BigNumber.from(1)
-
   const testToken = TestERC20__factory.connect(
     existentTestCustomToken,
     l1Signer
@@ -201,7 +201,7 @@ const depositTokenTest = async (
       .eq(finalBridgeTokenBalance),
     'bridge balance not properly updated after deposit'
   ).to.be.true
-  await testRetryableTicket(l1Signer.provider!, depositRec)
+  await testRetryableTicket(l2Signer.provider!, depositRec)
 
   const l2Token = tokenBridger.getL2TokenContract(
     l2Signer.provider!,

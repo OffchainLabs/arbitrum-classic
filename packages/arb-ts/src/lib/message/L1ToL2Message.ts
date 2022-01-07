@@ -19,9 +19,9 @@
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider, Log } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { ContractTransaction, ContractReceipt } from '@ethersproject/contracts'
+import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { constants, ethers } from 'ethers'
+import { constants } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
@@ -192,9 +192,8 @@ export interface L1ToL2MessageReceipt {
  * If T is of type Signer then L1ToL2MessageReaderOrWriter<T> will be of
  * type L1ToL2MessageWriter.
  */
-export type L1ToL2MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
+export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export class L1ToL2Message {
   public static fromL2Ticket<T extends SignerOrProvider>(
@@ -297,12 +296,17 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       confirmations,
       timeout
     )
-
-    const autoRedeemReceipt = await this.l2Provider.waitForTransaction(
-      this.autoRedeemHash,
-      confirmations,
-      3000 // autoredeem gets attempted immediately after ticket creation, but could never get attempted if not calldata; we leave a few seconds of buffer
-    )
+    let autoRedeemReceipt
+    try {
+      autoRedeemReceipt = await this.l2Provider.waitForTransaction(
+        this.autoRedeemHash,
+        confirmations,
+        3000 // autoredeem gets attempted immediately after ticket creation, but could never get attempted if not calldata; we leave a few seconds of buffer
+      )
+    } catch (err) {
+      console.error('Couldnt fetch redeem receipt')
+      // CHRIS: do something with this
+    }
 
     const userTxnReceipt = await this.getUserTxnReceipt()
 

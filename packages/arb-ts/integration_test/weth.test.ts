@@ -42,7 +42,7 @@ describe('WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToWithdraw = parseEther('0.00000001')
 
-    const { l1Network, l2Network, l1Signer, l2Signer, tokenBridger } =
+    const { l2Network, l1Signer, l2Signer, tokenBridger } =
       await instantiateBridgeWithRandomWallet()
     await fundL2(l2Signer)
 
@@ -127,8 +127,8 @@ describe('WETH', async () => {
       await instantiateBridgeWithRandomWallet()
     const l1WethAddress = l2Network.tokenBridge.l1Weth
 
-    const wethToWrap = parseEther('0.0001')
-    const wethToDeposit = parseEther('0.00001')
+    const wethToWrap = parseEther('0.00001')
+    const wethToDeposit = parseEther('0.0000001')
 
     await fundL1(l1Signer)
 
@@ -167,9 +167,14 @@ describe('WETH', async () => {
       erc20L1Address: l1WethAddress,
       l1Signer: l1Signer,
       l2Provider: l2Signer.provider!,
+      retryableGasOverrides: {
+        // CHRIS: this seems backwards - except in neither case do we actually want to add value right?
+        // CHRIS: so what's the purpose of it?
+        sendL2CallValueFromL1: false,
+      },
     })
     const depositRec = await depositRes.wait()
-    await testRetryableTicket(l1Signer.provider!, depositRec)
+    await testRetryableTicket(l2Signer.provider!, depositRec)
 
     const l2Token = tokenBridger.getL2TokenContract(
       l2Signer.provider!,
