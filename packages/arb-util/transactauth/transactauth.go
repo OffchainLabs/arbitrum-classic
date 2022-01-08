@@ -119,15 +119,31 @@ func makeContractImpl(
 	// Actually send transaction
 	arbTx, err := t.SendTransaction(ctx, tx, "")
 	if err != nil {
-		logger.
+		tx.GasPrice()
+		ev := logger.
 			Error().
 			Err(err).
 			Str("nonce", auth.Nonce.String()).
 			Hex("sender", auth.From.Bytes()).
 			Hex("to", tx.To().Bytes()).
 			Hex("data", tx.Data()).
-			Str("nonce", auth.Nonce.String()).
-			Msg("unable to send transaction")
+			Str("nonce", auth.Nonce.String())
+		if tx.GasPrice() != nil {
+			ev = ev.Str("gasprice", tx.GasPrice().String())
+		} else {
+			ev = ev.Str("gasprice", "none")
+		}
+		if tx.GasTipCap() != nil {
+			ev = ev.Str("gastipcap", tx.GasTipCap().String())
+		} else {
+			ev = ev.Str("gastipcap", "none")
+		}
+		if tx.GasFeeCap() != nil {
+			ev = ev.Str("gasfeecap", tx.GasFeeCap().String())
+		} else {
+			ev = ev.Str("gasfeecap", "none")
+		}
+		ev.Msg("unable to send transaction")
 		return addr, nil, err
 	}
 
