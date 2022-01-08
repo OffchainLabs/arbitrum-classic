@@ -119,7 +119,6 @@ func makeContractImpl(
 	// Actually send transaction
 	arbTx, err := t.SendTransaction(ctx, tx, "")
 	if err != nil {
-		tx.GasPrice()
 		ev := logger.
 			Error().
 			Err(err).
