@@ -56,26 +56,39 @@ type Conf struct {
 	String    string `koanf:"string"`
 }
 
+type Database struct {
+	Compact      bool          `koanf:"compact"`
+	ExitAfter    bool          `koanf:"exit-after"`
+	L0Files      int           `koanf:"l0-files"`
+	SaveInterval time.Duration `koanf:"save-interval"`
+	SavePath     string        `koanf:"save-path"`
+	Threads      int           `koanf:"threads"`
+}
+
 type Core struct {
 	Cache                     CoreCache     `koanf:"cache"`
 	CheckpointGasFrequency    int           `koanf:"checkpoint-gas-frequency"`
 	CheckpointLoadGasCost     int           `koanf:"checkpoint-load-gas-cost"`
 	CheckpointLoadGasFactor   int           `koanf:"checkpoint-load-gas-factor"`
 	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution-gas"`
-	Test                      CoreTest      `koanf:"test"`
+	CheckpointMaxToPrune      int           `koanf:"checkpoint-max-to-prune"`
+	CheckpointPruningAge      time.Duration `koanf:"checkpoint-pruning-age"`
+	CheckpointPruningMode     string        `koanf:"checkpoint-pruning-mode"`
+	CheckpointPruneOnStartup  bool          `koanf:"checkpoint-prune-on-startup"`
+	Database                  Database      `koanf:"database"`
 	Debug                     bool          `koanf:"debug"`
 	IdleSleep                 time.Duration `koanf:"idle-sleep"`
 	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
 	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
 	MessageProcessCount       int           `koanf:"message-process-count"`
-	SaveRocksdbInterval       time.Duration `koanf:"save-rocksdb-interval"`
-	SaveRocksdbPath           string        `koanf:"save-rocksdb-path"`
+	Test                      CoreTest      `koanf:"test"`
 }
 
 type CoreCache struct {
 	BasicInterval int           `koanf:"basic-interval"`
 	BasicSize     int           `koanf:"basic-size"`
 	Disable       bool          `koanf:"disable"`
+	Last          bool          `koanf:"last"`
 	LRUSize       int           `koanf:"lru-size"`
 	SeedOnStartup bool          `koanf:"seed-on-startup"`
 	TimedExpire   time.Duration `koanf:"timed-expire"`
@@ -194,18 +207,23 @@ type Forwarder struct {
 	RpcMode   string `koanf:"rpc-mode"`
 }
 
+type InboxReader struct {
+	DelayBlocks int64 `koanf:"delay-blocks"`
+	Paranoid    bool  `koanf:"paranoid"`
+}
+
 type Node struct {
-	Aggregator          Aggregator    `koanf:"aggregator"`
-	Cache               NodeCache     `koanf:"cache"`
-	ChainID             uint64        `koanf:"chain-id"`
-	Forwarder           Forwarder     `koanf:"forwarder"`
-	LogProcessCount     int           `koanf:"log-process-count"`
-	LogIdleSleep        time.Duration `koanf:"log-idle-sleep"`
-	RPC                 RPC           `koanf:"rpc"`
-	Sequencer           Sequencer     `koanf:"sequencer"`
-	Type                string        `koanf:"type"`
-	WS                  WS            `koanf:"ws"`
-	ParanoidInboxReader bool          `koanf:"paranoid-inbox-reader"`
+	Aggregator      Aggregator    `koanf:"aggregator"`
+	Cache           NodeCache     `koanf:"cache"`
+	ChainID         uint64        `koanf:"chain-id"`
+	Forwarder       Forwarder     `koanf:"forwarder"`
+	InboxReader     InboxReader   `koanf:"inbox-reader"`
+	LogProcessCount int           `koanf:"log-process-count"`
+	LogIdleSleep    time.Duration `koanf:"log-idle-sleep"`
+	RPC             RPC           `koanf:"rpc"`
+	Sequencer       Sequencer     `koanf:"sequencer"`
+	Type            string        `koanf:"type"`
+	WS              WS            `koanf:"ws"`
 }
 
 type NodeCache struct {
@@ -322,7 +340,7 @@ type Config struct {
 	MetricsServer Metrics `koanf:"metrics-server"`
 }
 
-// DefaultCoreSettings is useful in unit tests
+// DefaultCoreSettingsNoMaxExecution is useful in unit tests
 func DefaultCoreSettingsNoMaxExecution() *Core {
 	return &Core{
 		Cache: CoreCache{
@@ -335,10 +353,12 @@ func DefaultCoreSettingsNoMaxExecution() *Core {
 		CheckpointLoadGasCost:     1_000_000,
 		CheckpointLoadGasFactor:   4,
 		CheckpointMaxExecutionGas: 0,
+		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
 	}
 }
 
+// DefaultCoreSettingsMaxExecution is useful in unit tests
 func DefaultCoreSettingsMaxExecution() *Core {
 	return &Core{
 		Cache: CoreCache{
@@ -351,6 +371,7 @@ func DefaultCoreSettingsMaxExecution() *Core {
 		CheckpointLoadGasCost:     1_000_000,
 		CheckpointLoadGasFactor:   4,
 		CheckpointMaxExecutionGas: 1_000_000_000,
+		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
 	}
 }
@@ -363,10 +384,19 @@ func DefaultNodeSettings() *Node {
 			LRUSize:         1000,
 			TimedExpire:     20 * time.Minute,
 		},
+		InboxReader: InboxReader{
+			DelayBlocks: 4,
+			Paranoid:    false,
+		},
 		LogProcessCount: 100,
 		LogIdleSleep:    10 * time.Millisecond, // 10 for dev, 100 for server
+		Sequencer: Sequencer{
+			CreateBatchBlockInterval:   40,
+			DelayedMessagesTargetDelay: 1,
+			MaxBatchGasCost:            2_000_000,
+			GasRefunderAddress:         "",
+		},
 	}
-
 }
 
 func (c *Config) GetNodeDatabasePath() string {
@@ -382,7 +412,7 @@ func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *b
 
 	AddForwarderTarget(f)
 
-	return ParseNonRelay(ctx, f, "cli-wallet", 0)
+	return ParseNonRelay(ctx, f, "cli-wallet", 0, 0)
 }
 
 func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
@@ -410,6 +440,9 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 
 	f.String("node.forwarder.submitter-address", "", "address of the node that will submit your transaction to the chain")
 	f.String("node.forwarder.rpc-mode", "full", "RPC mode: either full, non-mutating (no eth_sendRawTransaction), or forwarding-only (only requests forwarded upstream are permitted)")
+
+	f.Int64("node.inbox-reader.delay-blocks", 4, "number of L1 blocks to wait for confirmation before updating L2 state")
+	f.Bool("node.inbox-reader.paranoid", false, "if enabled, check for reorgs before searching for messages")
 
 	f.Duration("node.log-idle-sleep", 100*time.Millisecond, "milliseconds for log reader to sleep between reading logs")
 	f.Int("node.log-process-count", 100, "maximum number of logs to process at a time")
@@ -440,9 +473,8 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
-	f.Bool("node.paranoid-inbox-reader", false, "if enabled, check for reorgs before searching for messages")
 
-	return ParseNonRelay(ctx, f, "rpc-wallet", 250_000_000)
+	return ParseNonRelay(ctx, f, "rpc-wallet", 250_000_000, time.Hour*48)
 }
 
 func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -458,14 +490,15 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	f.Bool("validator.dont-challenge", false, "don't challenge any other validators' assertions")
 	f.String("validator.withdraw-destination", "", "the address to withdraw funds to (defaults to the wallet address)")
 
-	return ParseNonRelay(ctx, f, "validator-wallet", 0)
+	return ParseNonRelay(ctx, f, "validator-wallet", 0, 0)
 }
 
-func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string, maxExecutionGas int) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string, maxExecutionGas int, checkpointPruningAge time.Duration) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
+	f.Bool("core.cache.last", false, "whether to always cache the machine from last block")
 	f.Int("core.cache.basic-interval", 100_000_000, "amount of gas to wait between saving to basic cache")
-	f.Int("core.cache.basic-size", 100, "number of recently used L2 blocks to hold in basic memory cache")
+	f.Int("core.cache.basic-size", 100, "number of basic cache entries to save")
 	f.Bool("core.cache.disable", false, "disable saving to cache while in core thread")
 	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
 	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")
@@ -475,8 +508,17 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
 	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")
 	f.Int("core.checkpoint-max-execution-gas", maxExecutionGas, "maximum amount of gas any given checkpoint is allowed to execute")
+	f.Int("core.checkpoint-max-to-prune", 2, "number of checkpoints to delete at a time, 0 for no limit")
+	f.Bool("core.checkpoint-prune-on-startup", false, "perform full database pruning on startup")
+	f.Duration("core.checkpoint-pruning-age", checkpointPruningAge, "how long to keep snapshots, 0 to disable time based pruning, always disabled if node.cache.allow-slow-lookup is set")
+	f.String("core.checkpoint-pruning-mode", "default", "Prune old checkpoints: 'on', 'off', or 'default'")
 
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
+
+	f.Bool("core.database.compact", false, "perform database compaction")
+	f.Bool("core.database.exit-after", false, "exit after loading or manipulating database")
+	f.Duration("core.database.save-interval", 0, "duration between saving database backups, 0 to disable")
+	f.String("core.database.save-path", "db_checkpoints", "path to save database backups in")
 
 	f.Duration("core.idle-sleep", 5*time.Millisecond, "how long core thread should sleep when idle")
 
@@ -484,9 +526,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Bool("core.lazy-load-archive-queries", true, "if the archive queries should be loaded as they're run")
 
 	f.Int("core.message-process-count", 100, "maximum number of messages to process at a time")
-
-	f.Duration("core.save-rocksdb-interval", 0, "duration between saving database backups, 0 to disable")
-	f.String("core.save-rocksdb-path", "db_checkpoints", "path to save database backups in")
 
 	f.Bool("core.test.just-metadata", false, "just print database metadata and exit")
 	f.Int("core.test.load-count", 0, "number of snapshots to load from database for profile test, zero to disable")
@@ -635,8 +674,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	}
 
 	// Make rocksdb backup directory relative to persistent storage directory if not already absolute
-	if !filepath.IsAbs(out.Core.SaveRocksdbPath) {
-		out.Core.SaveRocksdbPath = path.Join(out.Persistent.Chain, out.Core.SaveRocksdbPath)
+	if !filepath.IsAbs(out.Core.Database.SavePath) {
+		out.Core.Database.SavePath = path.Join(out.Persistent.Chain, out.Core.Database.SavePath)
 	}
 
 	// Make machine relative to storage directory if not already absolute
@@ -688,6 +727,26 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	if out.Node.Cache.AllowSlowLookup {
 		// Force unlimited execution
 		out.Core.CheckpointMaxExecutionGas = 0
+
+		// Never prune checkpoints
+		if out.Core.CheckpointPruningMode != "off" {
+			logger.Warn().Msg("disabling checkpoint pruning because allow-slow-lookup enabled")
+		}
+		out.Core.CheckpointPruningMode = "off"
+	}
+
+	if out.Core.CheckpointPruningMode == "off" {
+		// Never prune checkpoints
+		out.Core.CheckpointPruningAge = 0
+	} else if (out.Core.CheckpointPruningMode != "on") &&
+		(out.Core.CheckpointPruningMode != "default") {
+		return nil, nil, nil, nil,
+			fmt.Errorf("value '%v' for core.checkpoint-pruning-mode is not 'on', 'off', or 'default'", out.Core.CheckpointPruningMode)
+	}
+
+	if out.Node.Type == "sequencer" && !out.Core.Cache.Last {
+		logger.Info().Msg("enabling last machine cache for sequencer")
+		out.Core.Cache.Last = true
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil

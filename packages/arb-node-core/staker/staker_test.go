@@ -216,9 +216,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
-	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
+	val, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, client, valAuth, 0, nil)
 	test.FailIfError(t, err)
-	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
+	val2, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, client, val2Auth, 0, nil)
 	test.FailIfError(t, err)
 
 	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth, configuration.Validator{})
@@ -290,6 +290,8 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: "0.0.0.0:8080"}
 	nodehealth.Init(healthChan)
 
+	nodeConfig := *configuration.DefaultNodeSettings()
+
 	go func() {
 		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, registry)
 		test.FailIfError(t, err)
@@ -298,7 +300,16 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	// Make a dummy feed for now
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), rollupBlock.Int64(), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed, false)
+	_, err = mon.StartInboxReader(
+		ctx,
+		client,
+		common.NewAddressFromEth(rollupAddr),
+		rollupBlock.Int64(),
+		common.NewAddressFromEth(bridgeUtilsAddr),
+		healthChan,
+		sequencerFeed,
+		nodeConfig.InboxReader,
+	)
 	test.FailIfError(t, err)
 
 	for i := 1; i <= 10; i++ {
@@ -427,12 +438,12 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 }
 
 func TestChallengeToOSP(t *testing.T) {
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(390), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(790), OneStepProof)
 }
 
 func TestChallengeToInboxOSP(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(7*400-10), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(8*400-10), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {

@@ -111,14 +111,15 @@ jobs:
           name: install and audit
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            if [[ ! -z $CIRCLE_PULL_REQUEST ]] ; then yarn audit ; fi
+            if [[ ! -z $CIRCLE_PULL_REQUEST ]] ; then yarn audit:ci ; fi
             yarn build
           working_directory: /home/user/project
       - run:
           name: test arb-bridge-eth
           command: |
             yarn typechain
-            yarn test:ci
+            yarn test:gas:ci
+            npx codechecks
           working_directory: /home/user/project/packages/arb-bridge-eth
       # TODO
       # - run:

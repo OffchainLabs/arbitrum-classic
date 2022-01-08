@@ -1,16 +1,4 @@
 #!/bin/bash
 
 rm -rf ./dist
-
 tsc
-
-skip_list="index.d.ts|"
-for filepath in ./src/lib/abi/*.d.ts; do
-    filename=$(basename -- "$filepath")
-    if [[ $skip_list == *"$filename"* ]]
-    then
-        echo "skipping copy of ${filename}"
-    else
-        cp $filepath "./dist/lib/abi/$filename"
-    fi
-done

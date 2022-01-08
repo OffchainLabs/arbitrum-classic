@@ -18,10 +18,10 @@ package arbostest
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -78,17 +78,18 @@ type txTemplate struct {
 	Data     []byte
 
 	// Data to verify tx
-	resultType         []evm.ResultType
-	nonzeroComputation []bool
-	correctStorageUsed int
+	resultType             []evm.ResultType
+	nonzeroComputation     []bool
+	correctStorageUsed     int
 	correctStorageEstimate int
-	calldata           int
-	ranOutOfFunds      bool
+	calldata               int
+	ranOutOfFunds          bool
 }
 
 func TestArbOSFees(t *testing.T) {
 	skipBelowVersion(t, 35)
 
+	ctx := context.Background()
 	countCalldataUnits := func(data []byte) int {
 		units := 0
 		for _, val := range data {
@@ -140,9 +141,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     conDataSuccess,
 
-			resultType:         []evm.ResultType{evm.ReturnCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: (conDeployedLength + 31) / 32,
+			resultType:             []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     (conDeployedLength + 31) / 32,
 			correctStorageEstimate: (conDeployedLength + 31) / 32,
 		},
 		// Successful call to method without storage
@@ -153,9 +154,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     makeFuncData(t, gasUsedABI.Methods["noop"]),
 
-			resultType:         []evm.ResultType{evm.ReturnCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 0,
 		},
 		// Successful call to storage allocating method
@@ -166,9 +167,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     makeFuncData(t, gasUsedABI.Methods["sstore"]),
 
-			resultType:         []evm.ResultType{evm.ReturnCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: 1,
+			resultType:             []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     1,
 			correctStorageEstimate: 1,
 		},
 		// Successful eth transfer to EOA
@@ -178,9 +179,9 @@ func TestArbOSFees(t *testing.T) {
 			To:       &eoaDest,
 			Value:    big.NewInt(100000),
 
-			resultType:         []evm.ResultType{evm.ReturnCode},
-			nonzeroComputation: []bool{false},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation:     []bool{false},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 0,
 		},
 		// Reverted constructor
@@ -190,9 +191,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     conDataFailure,
 
-			resultType:         []evm.ResultType{evm.RevertCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.RevertCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 0,
 		},
 		// Reverted storage allocating function call
@@ -203,9 +204,9 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     makeFuncData(t, gasUsedABI.Methods["fail"]),
 
-			resultType:         []evm.ResultType{evm.RevertCode},
-			nonzeroComputation: []bool{true},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.RevertCode},
+			nonzeroComputation:     []bool{true},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 1,
 		},
 		// Reverted since insufficient funds
@@ -216,18 +217,18 @@ func TestArbOSFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     common.RandBytes(100000),
 
-			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode},
-			nonzeroComputation: []bool{true, false, false, false},
-			correctStorageUsed: 0,
+			resultType:             []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode},
+			nonzeroComputation:     []bool{true, false, false, false},
+			correctStorageUsed:     0,
 			correctStorageEstimate: 0,
 		},
 	}
 
 	if arbosVersion == 43 || arbosVersion == 44 {
 		// We charge for storage even when reverting in these versions
-		rawTxes[5].correctStorageUsed = 1;
+		rawTxes[5].correctStorageUsed = 1
 	}
-	
+
 	valueTransfered := big.NewInt(0)
 	for _, tx := range rawTxes {
 		valueTransfered = valueTransfered.Add(valueTransfered, tx.Value)
@@ -526,7 +527,7 @@ func TestArbOSFees(t *testing.T) {
 			}
 		}
 
-		txCount, err := snap.GetTransactionCount(userAddress)
+		txCount, err := snap.GetTransactionCount(ctx, userAddress)
 		test.FailIfError(t, err)
 
 		if txCount.Cmp(big.NewInt(correctCount)) != 0 {
@@ -537,15 +538,15 @@ func TestArbOSFees(t *testing.T) {
 	checkPaid := func(snap *snapshot.Snapshot, results []*evm.TxResult) *big.Int {
 		t.Helper()
 
-		userBal, err := snap.GetBalance(userAddress)
+		userBal, err := snap.GetBalance(ctx, userAddress)
 		test.FailIfError(t, err)
 
-		aggBal, err := snap.GetBalance(aggregator)
+		aggBal, err := snap.GetBalance(ctx, aggregator)
 		test.FailIfError(t, err)
 
 		t.Log("netFeeRecipient", netFeeRecipient)
 
-		netFeeRecipientBal, err := snap.GetBalance(netFeeRecipient)
+		netFeeRecipientBal, err := snap.GetBalance(ctx, netFeeRecipient)
 		test.FailIfError(t, err)
 
 		reportedPaid := big.NewInt(0)
@@ -569,7 +570,7 @@ func TestArbOSFees(t *testing.T) {
 
 	checkNoCongestionFee := func(snap *snapshot.Snapshot) {
 		t.Helper()
-		congestionFeeRecipientBal, err := snap.GetBalance(congestionFeeRecipient)
+		congestionFeeRecipientBal, err := snap.GetBalance(ctx, congestionFeeRecipient)
 		test.FailIfError(t, err)
 		if congestionFeeRecipientBal.Cmp(big.NewInt(0)) != 0 {
 			t.Error("wrong congestion fee balance got", congestionFeeRecipientBal, "but expected 0")
@@ -578,7 +579,7 @@ func TestArbOSFees(t *testing.T) {
 
 	checkNoNonPreferredAggFee := func(snap *snapshot.Snapshot) {
 		t.Helper()
-		otherAggBal, err := snap.GetBalance(otherAgg)
+		otherAggBal, err := snap.GetBalance(ctx, otherAgg)
 		test.FailIfError(t, err)
 		if otherAggBal.Cmp(big.NewInt(0)) != 0 {
 			t.Error("wrong other agg balance", otherAggBal, "but expected 0")
@@ -587,7 +588,7 @@ func TestArbOSFees(t *testing.T) {
 
 	checkNoAggFee := func(snap *snapshot.Snapshot) {
 		t.Helper()
-		aggBal, err := snap.GetBalance(aggregator)
+		aggBal, err := snap.GetBalance(ctx, aggregator)
 		test.FailIfError(t, err)
 		if aggBal.Cmp(big.NewInt(0)) != 0 {
 			t.Error("wrong other agg balance", aggBal, "but expected 0")
@@ -596,10 +597,10 @@ func TestArbOSFees(t *testing.T) {
 
 	checkTotalReceived := func(snap *snapshot.Snapshot, results []*evm.TxResult) (*big.Int, *big.Int, *big.Int) {
 		t.Helper()
-		aggBal, err := snap.GetBalance(aggregator)
+		aggBal, err := snap.GetBalance(ctx, aggregator)
 		test.FailIfError(t, err)
 
-		netFeeRecipientBal, err := snap.GetBalance(netFeeRecipient)
+		netFeeRecipientBal, err := snap.GetBalance(ctx, netFeeRecipient)
 		test.FailIfError(t, err)
 
 		totalPaidL1Tx := big.NewInt(0)
@@ -658,7 +659,7 @@ func TestArbOSFees(t *testing.T) {
 	checkTxCount(feeSnap, noFeeResults)
 	checkTxCount(feeWithAggSnap, feeWithAggResults)
 
-	estimateUserBal, err := estimateFeeSnap.GetBalance(userAddress)
+	estimateUserBal, err := estimateFeeSnap.GetBalance(ctx, userAddress)
 	test.FailIfError(t, err)
 	t.Log("Remaining balance", estimateUserBal)
 
@@ -667,10 +668,10 @@ func TestArbOSFees(t *testing.T) {
 	l1PaidWithAgg, l2PaidWithAgg, l1PaidUnderfunded := checkTotalReceived(feeWithAggSnap, feeWithAggResults)
 	{
 		t.Helper()
-		aggBal, err := feeWithAggSnap.GetBalance(aggregator)
+		aggBal, err := feeWithAggSnap.GetBalance(ctx, aggregator)
 		test.FailIfError(t, err)
 
-		netFeeRecipientBal, err := feeWithAggSnap.GetBalance(netFeeRecipient)
+		netFeeRecipientBal, err := feeWithAggSnap.GetBalance(ctx, netFeeRecipient)
 		test.FailIfError(t, err)
 
 		l1RatioToAgg := big.NewRat(100, 115)
@@ -699,9 +700,9 @@ func TestArbOSFees(t *testing.T) {
 		}
 	}
 
-	_, err = feeSnap.GetPricesInWei()
+	_, err = feeSnap.GetPricesInWei(ctx)
 	test.FailIfError(t, err)
-	_, err = feeWithAggSnap.GetPricesInWei()
+	_, err = feeWithAggSnap.GetPricesInWei(ctx)
 	test.FailIfError(t, err)
 }
 
@@ -777,13 +778,13 @@ func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, call
 		}
 	}
 
-	var correctStorage int64;
+	var correctStorage int64
 	if estimationCase {
-		correctStorage = int64(correct.correctStorageEstimate);
+		correctStorage = int64(correct.correctStorageEstimate)
 	} else {
-		correctStorage = int64(correct.correctStorageUsed);
+		correctStorage = int64(correct.correctStorageUsed)
 	}
-	
+
 	if unitsUsed.L2Storage.Cmp(big.NewInt(correctStorage)) != 0 {
 		t.Error("wrong storage count used got", unitsUsed.L2Storage, "but expected", correct.correctStorageUsed, "for test", debugMessage)
 	}

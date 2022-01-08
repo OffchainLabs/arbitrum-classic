@@ -66,6 +66,7 @@ type Staker struct {
 	inactiveLastCheckedNode *nodeAndHash
 	bringActiveUntilNode    core.NodeID
 	withdrawDestination     common.Address
+	lookup                  core.ArbCoreLookup
 }
 
 func NewStaker(
@@ -98,6 +99,7 @@ func NewStaker(
 		highGasBlocksBuffer: big.NewInt(config.L1PostingStrategy.HighGasDelayBlocks),
 		lastActCalledBlock:  nil,
 		withdrawDestination: withdrawDestination,
+		lookup:              lookup,
 	}, val.delayedBridge, nil
 }
 
@@ -132,8 +134,13 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			} else {
 				backoff = time.Second
 			}
-			// Force a GC run to clean up any execution cursors while we wait
 			delay := time.After(stakerDelay)
+			// Prune any stale database entries while we wait
+			err = s.pruneDatabase(ctx)
+			if err == nil {
+				logger.Error().Err(err).Msg("error pruning database")
+			}
+			// Force a GC run to clean up any execution cursors while we wait
 			runtime.GC()
 			select {
 			case <-ctx.Done():
@@ -200,11 +207,22 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 		return nil, nil
 	}
 	s.builder.ClearTransactions()
-	rawInfo, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
-	if err != nil {
-		return nil, err
+	var rawInfo *ethbridge.StakerInfo
+	walletAddress := s.wallet.Address()
+	var walletAddressOrZero common.Address
+	if walletAddress != nil {
+		walletAddressOrZero = common.NewAddressFromEth(*walletAddress)
 	}
-	latestStakedNode, latestStakedNodeHash, err := s.validatorUtils.LatestStaked(ctx, s.wallet.Address())
+	if walletAddress != nil {
+		var err error
+		rawInfo, err = s.rollup.StakerInfo(ctx, walletAddressOrZero)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// If the wallet address is zero, or the wallet address isn't staked,
+	// this will return the latest node and its hash (atomically).
+	latestStakedNode, latestStakedNodeHash, err := s.validatorUtils.LatestStaked(ctx, walletAddressOrZero)
 	if err != nil {
 		return nil, err
 	}
@@ -298,16 +316,20 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 			return nil, err
 		}
 	}
-	withdrawable, err := s.rollup.WithdrawableFunds(ctx, s.wallet.Address())
-	if err != nil {
-		return nil, err
-	}
-	if withdrawable.Sign() > 0 && s.withdrawDestination != (common.Address{}) {
-		err = s.rollup.WithdrawFunds(ctx, s.withdrawDestination)
+	addr := s.wallet.Address()
+	if addr != nil {
+		withdrawable, err := s.rollup.WithdrawableFunds(ctx, common.NewAddressFromEth(*addr))
 		if err != nil {
 			return nil, err
 		}
+		if withdrawable.Sign() > 0 && s.withdrawDestination != (common.Address{}) {
+			err = s.rollup.WithdrawFunds(ctx, s.withdrawDestination)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
+
 	txCount := s.builder.TransactionCount()
 	if creatingNewStake {
 		// Ignore our stake creation, as it's useless by itself
@@ -320,6 +342,25 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 		logger.Info().Msg("staking to execute transactions")
 	}
 	return s.wallet.ExecuteTransactions(ctx, s.builder)
+}
+
+func (s *Staker) pruneDatabase(ctx context.Context) error {
+	latestNode, err := s.rollup.LatestConfirmedNode(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Prune checkpoints up to confirmed node before last confirmed node
+	previousConfirmedNode := new(big.Int).Sub(latestNode, big.NewInt(1))
+	previousNodeInfo, err := s.rollup.LookupNode(ctx, previousConfirmedNode)
+	if err != nil {
+		return err
+	}
+
+	confirmedGas := previousNodeInfo.AfterState().TotalGasConsumed
+	s.lookup.UpdateCheckpointPruningGas(confirmedGas)
+
+	return nil
 }
 
 func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) error {
@@ -346,7 +387,9 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			return err
 		}
 
-		s.activeChallenge = challenge.NewChallenger(challengeCon, s.sequencerInbox, s.lookup, nodeInfo.Assertion, s.wallet.Address())
+		// This is safe to dereference, as handleConflict can only be called if we have a wallet address
+		ourAddr := common.NewAddressFromEth(*s.wallet.Address())
+		s.activeChallenge = challenge.NewChallenger(challengeCon, s.sequencerInbox, s.lookup, nodeInfo.Assertion, ourAddr)
 	}
 
 	_, err := s.activeChallenge.HandleConflict(ctx)
@@ -354,12 +397,15 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 }
 
 func (s *Staker) newStake(ctx context.Context) error {
-	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
-	if err != nil {
-		return err
-	}
-	if info != nil {
-		return nil
+	var addr = s.wallet.Address()
+	if addr != nil {
+		info, err := s.rollup.StakerInfo(ctx, common.NewAddressFromEth(*addr))
+		if err != nil {
+			return err
+		}
+		if info != nil {
+			return nil
+		}
 	}
 	stakeAmount, err := s.rollup.CurrentRequiredStake(ctx)
 	if err != nil {
@@ -437,6 +483,8 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 	if err != nil {
 		return err
 	}
+	// Safe to dereference as createConflict is only called when we have a wallet address
+	walletAddr := common.NewAddressFromEth(*s.wallet.Address())
 	for _, staker := range stakers {
 		stakerInfo, err := s.rollup.StakerInfo(ctx, staker)
 		if err != nil {
@@ -445,14 +493,14 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		if stakerInfo.CurrentChallenge != nil {
 			continue
 		}
-		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address(), staker)
+		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, walletAddr, staker)
 		if err != nil {
 			return err
 		}
 		if conflictType != ethbridge.CONFLICT_TYPE_FOUND {
 			continue
 		}
-		staker1 := s.wallet.Address()
+		staker1 := walletAddr
 		staker2 := staker
 		if node2.Cmp(node1) < 0 {
 			staker1, staker2 = staker2, staker1

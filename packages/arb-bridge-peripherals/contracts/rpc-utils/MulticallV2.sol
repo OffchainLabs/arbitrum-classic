@@ -2,7 +2,7 @@
 pragma solidity >=0.5.0;
 pragma experimental ABIEncoderV2;
 
-import "arbos-contracts/arbos/builtin/ArbSys.sol";
+import "arbos-precompiles/arbos/builtin/ArbSys.sol";
 
 // implementation from https://github.com/makerdao/multicall/blob/1e1b44362640820bef92d0ccf5eeee25d9b41474/src/Multicall2.sol MIT License
 

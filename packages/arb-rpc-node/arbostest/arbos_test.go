@@ -1,5 +1,5 @@
 /*
-* Copyright 2020, Offchain Labs, Inc.
+* Copyright 2020-2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"context"
 	"math/big"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ import (
 )
 
 func TestFib(t *testing.T) {
+	ctx := context.Background()
 	fib, err := abi.JSON(strings.NewReader(arbostestcontracts.FibonacciABI))
 	failIfError(t, err)
 
@@ -98,7 +100,7 @@ func TestFib(t *testing.T) {
 		t.Fatal("getFib had incorrect result")
 	}
 
-	code, err := snap.GetCode(connAddress1)
+	code, err := snap.GetCode(ctx, connAddress1)
 	failIfError(t, err)
 	t.Log("code", len(code))
 

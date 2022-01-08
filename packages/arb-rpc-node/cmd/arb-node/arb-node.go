@@ -222,7 +222,7 @@ func startup() error {
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	if len(config.Feed.Input.URLs) == 0 {
-		logger.Warn().Msg("Missing --feed.url so not subscribing to feed")
+		logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
 	} else {
 		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 4096)
 		for _, url := range config.Feed.Input.URLs {
@@ -230,9 +230,19 @@ func startup() error {
 			broadcastClient.ConnectInBackground(ctx, sequencerFeed)
 		}
 	}
+
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), healthChan, sequencerFeed, config.Node.ParanoidInboxReader)
+		inboxReader, err = mon.StartInboxReader(
+			ctx,
+			l1Client,
+			common.HexToAddress(config.Rollup.Address),
+			config.Rollup.FromBlock,
+			common.HexToAddress(config.BridgeUtilsAddress),
+			healthChan,
+			sequencerFeed,
+			config.Node.InboxReader,
+		)
 		if err == nil {
 			break
 		}
