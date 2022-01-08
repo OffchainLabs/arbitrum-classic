@@ -132,7 +132,7 @@ func TestSequencerBatcher(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.WarnLevel)
 	defer zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	test.FailIfError(t, err)
 
 	mach, err := cmachine.New(arbosPath)
@@ -182,15 +182,9 @@ func TestSequencerBatcher(t *testing.T) {
 	test.FailIfError(t, err)
 
 	config := configuration.Config{
-		Node: configuration.Node{
-			Sequencer: configuration.Sequencer{
-				CreateBatchBlockInterval:   40,
-				DelayedMessagesTargetDelay: 1,
-				MaxBatchGasCost:            2_000_000,
-				GasRefunderAddress:         gasRefunderAddr.String(),
-			},
-		},
+		Node: *configuration.DefaultNodeSettings(),
 	}
+	config.Node.Sequencer.GasRefunderAddress = gasRefunderAddr.String()
 
 	bridgeUtilsAddr, _, _, err := ethbridgecontracts.DeployBridgeUtils(auth, client)
 	test.FailIfError(t, err)
@@ -235,6 +229,7 @@ func TestSequencerBatcher(t *testing.T) {
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		nil,
 		dummySequencerFeed,
+		config.Node.InboxReader,
 	)
 	test.FailIfError(t, err)
 
@@ -246,6 +241,7 @@ func TestSequencerBatcher(t *testing.T) {
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		nil,
 		dummySequencerFeed,
+		config.Node.InboxReader,
 	)
 	test.FailIfError(t, err)
 

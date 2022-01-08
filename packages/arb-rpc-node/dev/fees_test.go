@@ -79,7 +79,6 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		config,
 		common.NewAddressFromEth(auth.From),
 		[]message.ChainConfigOption{feeConfigInit, aggInit},
-		false,
 	)
 
 	deposit := message.EthDepositTx{
@@ -97,7 +96,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		t.Fatal(err)
 	}
 
-	web3Server := web3.NewServer(srv, true)
+	web3Server := web3.NewServer(srv, web3.DefaultConfig, nil)
 
 	client := web3.NewEthClient(srv, true)
 
@@ -122,6 +121,11 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	otherSender := common.RandAddress()
 	_, err = arbOwner.SetFairGasPriceSender(auth, otherSender.ToEthAddress(), true)
 	test.FailIfError(t, err)
+
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, auth)
+		enableRewrites(t, backend, srv, auth)
+	}
 
 	senders, err := arbOwner.GetAllFairGasPriceSenders(&bind.CallOpts{})
 	test.FailIfError(t, err)
@@ -162,6 +166,8 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	_, err = arbOwner.SetChainParameter(auth, arbos.FeesEnabledParamId, big.NewInt(1))
 	test.FailIfError(t, err)
 	auth.GasLimit = 0
+	// Reset this, which geth mutates, but changes after fees are enabled
+	auth.GasPrice = nil
 
 	if arbosVersion < 22 {
 		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
@@ -226,7 +232,7 @@ func TestFees(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		t.Log("tx", i)
-		tx, err := arbOwner.SetChainParameter(auth, arbos.ChainOwnerParamId, new(big.Int).SetBytes(auth.From[:]))
+		tx, err := arbOwner.SetChainParameter(auth, arbos.DefaultAggregatorParamId, big.NewInt(0))
 		test.FailIfError(t, err)
 		paid := checkFees(t, backend, tx)
 		totalPaid = totalPaid.Add(totalPaid, paid)
@@ -277,7 +283,7 @@ func TestFees(t *testing.T) {
 
 func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 	t.Helper()
-	arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 	t.Log("Gas used:", arbRes.CalcGasUsed().Uint64())
 	used := new(big.Rat).SetFrac(arbRes.CalcGasUsed(), new(big.Int).SetUint64(tx.Gas()))
@@ -289,6 +295,7 @@ func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 }
 
 func TestNonAggregatorFee(t *testing.T) {
+	ctx := context.Background()
 	skipBelowVersion(t, 3)
 	backend, web3SServer, client, auth, _, _, _, _, cancel := setupFeeChain(t)
 	defer cancel()
@@ -302,7 +309,7 @@ func TestNonAggregatorFee(t *testing.T) {
 	data := simpleABI.Methods["exists"].ID
 	emptyAgg := ethcommon.Address{}
 
-	estimatedGas, err := web3SServer.EstimateGas(web3.CallTxArgs{
+	estimatedGas, err := web3SServer.EstimateGas(ctx, web3.CallTxArgs{
 		From:       &auth.From,
 		To:         &simpleAddr,
 		Data:       (*hexutil.Bytes)(&data),
@@ -360,10 +367,10 @@ func TestRetryableFee(t *testing.T) {
 	test.FailIfError(t, err)
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
-	res, err := backend.db.GetRequest(redeemId)
+	res, _, err := backend.db.GetRequest(redeemId)
 	test.FailIfError(t, err)
 
-	if new(big.Int).Mul(res.GasPrice, big.NewInt(2)).Cmp(gasPriceEstimate) != 0 {
+	if web3.ApplyGasPriceBidFactor(res.GasPrice).Cmp(gasPriceEstimate) != 0 {
 		t.Error("wrong gas price")
 	}
 
@@ -405,7 +412,7 @@ func TestDeposit(t *testing.T) {
 		t.Fatal("expected 1 tx in block")
 	}
 
-	arbRes, err := backend.db.GetRequest(txHash)
+	arbRes, _, err := backend.db.GetRequest(txHash)
 	test.FailIfError(t, err)
 
 	t.Log("arbRes", arbRes.IncomingRequest.Kind)
@@ -428,7 +435,7 @@ func TestDeploy(t *testing.T) {
 	test.FailIfError(t, err)
 	tx := types.NewTx(&types.LegacyTx{
 		Nonce:    nonce,
-		GasPrice: big.NewInt(0),
+		GasPrice: big.NewInt(1 << 60),
 		Gas:      estimatedGas * 2,
 		Value:    big.NewInt(0),
 		Data:     hexutil.MustDecode(conData),
@@ -436,7 +443,7 @@ func TestDeploy(t *testing.T) {
 	tx, err = auth.Signer(auth.From, tx)
 	err = client.SendTransaction(ctx, tx)
 	test.FailIfError(t, err)
-	arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 	t.Log(arbRes)
 }

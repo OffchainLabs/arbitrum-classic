@@ -46,7 +46,8 @@ func TestL2ToL1Tx(t *testing.T) {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil, false)
+	upgraderAuth, upgraderAccount := OwnerAuthPair(t, nil)
+	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, upgraderAccount, nil)
 	defer cancelDevNode()
 
 	client := web3.NewEthClient(srv, true)
@@ -75,6 +76,10 @@ func TestL2ToL1Tx(t *testing.T) {
 	}
 	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
 		t.Fatal(err)
+	}
+
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, upgraderAuth)
 	}
 
 	latest, err := backend.db.LatestBlock()
@@ -107,7 +112,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+		arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 		test.FailIfError(t, err)
 		if len(arbRes.ReturnData) != 32 {
 			t.Fatal("expected return data")

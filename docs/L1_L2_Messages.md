@@ -10,6 +10,7 @@ Standard, client-generated transaction calls on the Arbitrum chain are sent thro
 
 ```solidity
 function sendL2Message(address chain, bytes calldata messageData) external;
+
 ```
 
 Generally calls will come in batches from an aggregator as described in [Transaction Lifecycle](Tx_Lifecycle.md).
@@ -44,7 +45,7 @@ Retryable tickets handle all these things (and handle them well!)
 
 ### Retryable Tickets Contract API
 
-A retryable ticket is created by calling [Inbox.createRetryableTicket](./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md). Other operations involving retryable tickets are preformed via the [ArbRetryableTicket](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) precompile interface at L2 address 0x000000000000000000000000000000000000006E. (this contract won't need to be used under normal circumstances.)
+A retryable ticket is created by calling [Inbox.createRetryableTicket](./sol_contract_docs/md_docs/arb-bridge-eth/bridge/Inbox.md). Other operations involving retryable tickets are preformed via the [ArbRetryableTicket](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) precompile interface at L2 address 0x000000000000000000000000000000000000006E. (This contract won't need to be used under normal circumstances.)
 
 ### Parameters:
 
@@ -69,12 +70,19 @@ Intuitively: if a user does not desire immediate redemption, they should provide
   `Calldata:` data encoding the L2 contract call.
   `Calldata Size:` CallData size.
 
+### Important Note About Base Submission Fee
+
+If an L1 transaction underpays for a retryable ticket's base submission free, the retryable ticket creation on L2 simply fails. Given that this potentially breaks the atomicity of the L1 / L2 transactions, applications should avoid this scenario. The current base submission fee returned by `ArbRetryableTx.getSubmissionPrice` increases once every 24 hour period by at most 50% of its current value. Since any amount overpaid will be credited to the `credit-back-address`, it is highly recommended that applications judiciously overpay relative to the current price.
+
+In a future release, the base submission fee will be calculated using the 1559 `BASE_FEE` and collected directly at L1; underpayment will simply result in the L1 transaction reverting, thus avoiding the complications above entirely.
+
 ### Retryable Transaction Lifecycle:
 
 When a retryable ticket is initiated from the L1, the following things take place:
 
 - DepositValue is credited to the sender’s account on L2.
-  - If DepositValue is less than MaxSubmissionCost + Callvalue, the Retryable Ticket fails.
+  - If the L2 account's balance (which now includes the DepositValue) is less than MaxSubmissionCost + Callvalue, the Retryable Ticket creation fails.
+  - If MaxSubmissionCost is less than the submission fee, the Retryable Ticket creation fails.
 - Submission fee is collected: submission fee is deducted from the sender’s L2 account; MaxSubmissionCost - submission fee is credited to Credit-Back Address.
 
 - Callvalue is deducted from sender’s L2 account and a Retryable Ticket is successfully created.
@@ -118,7 +126,9 @@ If for some reason you need to compute the L1 address from an L2 alias on chain,
     }
 ```
 
-_Of note: the (highly) recommended convenience methods `Inbox.depositEth` and `Inbox.createRetryableTicket` handle subtracting the offset for the credit back address and beneficiary address, and using the these reverse-aliased values as the inputs for the create retryable tickets. This way, the beneficiary and credit back addresses as received on L2 will be equivalent to those provided as the L1 params._
+##### Address Aliasing & Refund Addresses In Inbox Methods
+
+Both of the convenience methods `Inbox.depositEth` and `Inbox.createRetryableTicket` include a sanity check to help minimize the risk of user error and ensure refunded Ether on L2 remains accessible. For either method, if the provided `beneficiary` or `credit-back-address` is an L1 contract address, the address will be converted to its address alias, providing a path for the L1 contract to recover the funds. A power-user who understands what they're doing may bypass this conversion by calling `Inbox.createRetryableTicketNoRefundAliasRewrite`.
 
 #### Directly Redeeming / Cancelling Retryables
 

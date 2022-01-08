@@ -25,7 +25,7 @@
 
 class HashPreImage {
    private:
-    std::array<unsigned char, 32> firstHash;
+    std::array<unsigned char, 32> firstHash{};
     uint256_t valueSize;
 
    public:
@@ -34,10 +34,14 @@ class HashPreImage {
         firstHash = _firstHash;
         valueSize = _valueSize;
     }
-    std::array<unsigned char, 32> getFirstHash() const { return firstHash; }
-    uint256_t getSize() const { return valueSize; }
+    [[nodiscard]] std::array<unsigned char, 32> getFirstHash() const {
+        return firstHash;
+    }
+    [[nodiscard]] uint256_t getSize() const { return valueSize; }
     void marshal(std::vector<unsigned char>& buf) const;
-    uint256_t hash() const;
+    [[nodiscard]] uint256_t hash() const;
+    [[nodiscard]] uint256_t secretHash(
+        const std::vector<unsigned char>& seed) const;
 };
 
 inline uint256_t hash(const HashPreImage& hv) {

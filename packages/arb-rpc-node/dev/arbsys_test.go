@@ -30,9 +30,10 @@ func TestTopLevelCall(t *testing.T) {
 	}
 	senderKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
-	owner := common.RandAddress()
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, owner, nil, false)
+	upgraderAuth, upgraderAccount := OwnerAuthPair(t, nil)
+
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, upgraderAccount, nil)
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
@@ -112,6 +113,10 @@ func TestTopLevelCall(t *testing.T) {
 		test.FailIfError(t, err)
 		ticketId2 := hashing.SoliditySHA3(hashing.Bytes32(requestId2), hashing.Uint256(big.NewInt(0)))
 		return ticketId1, ticketId2
+	}
+
+	if doUpgrade {
+		UpgradeTestDevNode(t, backend, srv, upgraderAuth)
 	}
 
 	// Immediate Redeem

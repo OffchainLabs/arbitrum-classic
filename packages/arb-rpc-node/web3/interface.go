@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package web3
 
 import (
@@ -54,6 +70,14 @@ type FeeStatsResult struct {
 	Paid      *FeeSetResult `json:"paid"`
 }
 
+type L1InboxBatchInfo struct {
+	Confirmations *hexutil.Big   `json:"confirmations"`
+	BlockNumber   *hexutil.Big   `json:"blockNumber"`
+	LogAddress    common.Address `json:"logAddress"`
+	LogTopics     []common.Hash  `json:"logTopics"`
+	LogData       hexutil.Bytes  `json:"logData"`
+}
+
 // Receipt represents the results of a transaction.
 type GetTransactionReceiptResult struct {
 	TransactionHash   common.Hash     `json:"transactionHash"`
@@ -64,16 +88,22 @@ type GetTransactionReceiptResult struct {
 	To                *common.Address `json:"to"`
 	CumulativeGasUsed hexutil.Uint64  `json:"cumulativeGasUsed"`
 	GasUsed           hexutil.Uint64  `json:"gasUsed"`
+	EffectiveGasPrice hexutil.Uint64  `json:"effectiveGasPrice"`
 	ContractAddress   *common.Address `json:"contractAddress"`
 	Logs              []*types.Log    `json:"logs"`
 	LogsBloom         hexutil.Bytes   `json:"logsBloom"`
 	Status            hexutil.Uint64  `json:"status"`
 
 	// Arbitrum Specific Fields
-	ReturnCode    hexutil.Uint64  `json:"returnCode"`
-	ReturnData    hexutil.Bytes   `json:"returnData"`
-	FeeStats      *FeeStatsResult `json:"feeStats"`
-	L1BlockNumber *hexutil.Big    `json:"l1BlockNumber"`
+	ReturnCode       hexutil.Uint64    `json:"returnCode"`
+	ReturnData       hexutil.Bytes     `json:"returnData"`
+	FeeStats         *FeeStatsResult   `json:"feeStats"`
+	L1BlockNumber    *hexutil.Big      `json:"l1BlockNumber"`
+	L1InboxBatchInfo *L1InboxBatchInfo `json:"l1InboxBatchInfo"`
+}
+
+type ArbGetTxReceiptOpts struct {
+	ReturnL1InboxBatchInfo bool `json:"returnL1InboxBatchInfo"`
 }
 
 type TransactionResult struct {

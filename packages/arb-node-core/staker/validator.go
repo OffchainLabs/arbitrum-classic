@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -97,9 +96,10 @@ func (v *Validator) removeOldStakers(ctx context.Context, dontRemoveSelf bool) (
 	if err != nil {
 		return nil, err
 	}
-	if dontRemoveSelf {
+	walletAddr := v.wallet.Address()
+	if dontRemoveSelf && walletAddr != nil {
 		for i, staker := range stakersToEliminate {
-			if staker == v.wallet.Address() {
+			if staker.ToEthAddress() == *walletAddr {
 				stakersToEliminate[i] = stakersToEliminate[len(stakersToEliminate)-1]
 				stakersToEliminate = stakersToEliminate[:len(stakersToEliminate)-1]
 				break
@@ -137,12 +137,13 @@ func (v *Validator) resolveNextNode(ctx context.Context, info *ethbridge.StakerI
 	}
 	switch confirmType {
 	case ethbridge.CONFIRM_TYPE_INVALID:
-		if info == nil || info.LatestStakedNode.Cmp(unresolvedNodeIndex) <= 0 {
+		addr := v.wallet.Address()
+		if info == nil || addr == nil || info.LatestStakedNode.Cmp(unresolvedNodeIndex) <= 0 {
 			// We aren't an example of someone staked on a competitor
 			return nil
 		}
 		logger.Info().Int("node", int(unresolvedNodeIndex.Int64())).Msg("Rejecting node")
-		return v.rollup.RejectNextNode(ctx, v.wallet.Address())
+		return v.rollup.RejectNextNode(ctx, *addr)
 	case ethbridge.CONFIRM_TYPE_VALID:
 		nodeInfo, err := v.rollup.RollupWatcher.LookupNode(ctx, unresolvedNodeIndex)
 		if err != nil {
@@ -228,12 +229,12 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	cursor := stakerInfo.latestExecutionCursor
 	if cursor == nil || startState.TotalGasConsumed.Cmp(cursor.TotalGasConsumed()) < 0 {
-		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
+		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed, true)
 		if err != nil {
 			return nil, false, err
 		}
 	} else {
-		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false)
+		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false, true)
 		if err != nil {
 			return nil, false, err
 		}
@@ -327,7 +328,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 					number: nd.NodeNum,
 					hash:   nd.NodeHash,
 				}
-				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed)
+				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed, true)
 				if err != nil {
 					return nil, false, err
 				}
@@ -354,7 +355,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	if err != nil {
 		return nil, false, err
 	}
-	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget)
+	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget, true)
 	if err != nil {
 		return nil, false, err
 	}
@@ -384,7 +385,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	var seqBatchProof []byte
 	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
-		batch, err := challenge.LookupBatchContaining(ctx, v.lookup, v.sequencerInbox, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+		batch, err := v.sequencerInbox.LookupBatchContaining(ctx, v.lookup, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
 		if err != nil {
 			return nil, false, err
 		}

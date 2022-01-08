@@ -319,8 +319,8 @@ func (b *LockoutBatcher) SendTransaction(ctx context.Context, tx *types.Transact
 	return b.getBatcher().SendTransaction(ctx, tx)
 }
 
-func (b *LockoutBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
-	return b.getBatcher().PendingSnapshot()
+func (b *LockoutBatcher) PendingSnapshot(ctx context.Context) (*snapshot.Snapshot, error) {
+	return b.getBatcher().PendingSnapshot(ctx)
 }
 
 func (b *LockoutBatcher) Aggregator() *common.Address {
@@ -344,7 +344,7 @@ func (b *errorBatcher) SendTransaction(ctx context.Context, tx *types.Transactio
 	return b.err
 }
 
-func (b *errorBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
+func (b *errorBatcher) PendingSnapshot(_ context.Context) (*snapshot.Snapshot, error) {
 	return nil, b.err
 }
 

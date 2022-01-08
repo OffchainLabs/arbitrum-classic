@@ -74,19 +74,24 @@ typedef struct HashResultStruct {
 typedef struct {
     uint64_t inbox_messages_consumed;
     ByteSlice sends;
-    int sendCount;
+    int send_count;
     ByteSlice logs;
-    int logCount;
-    ByteSlice debugPrints;
-    int debugPrintCount;
-    uint64_t numSteps;
-    uint64_t numGas;
+    int log_count;
+    ByteSlice debug_prints;
+    int debug_print_count;
+    uint64_t num_steps;
+    uint64_t num_gas;
 } RawAssertion;
 
 typedef struct {
     void* machine;
     int slow_error;
 } CMachineResult;
+
+typedef struct {
+    RawAssertion assertion;
+    int shutting_down;
+} RawAssertionResult;
 
 typedef void CAggregatorStore;
 typedef void CArbCore;

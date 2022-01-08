@@ -104,7 +104,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external payable override onlyCounterpartGateway {
+    ) public payable virtual override onlyCounterpartGateway {
+        // this function is marked as virtual so superclasses can override it to add modifiers
         (uint256 exitNum, bytes memory callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(
             _data
         );

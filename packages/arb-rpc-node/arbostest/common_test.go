@@ -45,12 +45,11 @@ type ArbOSExec struct {
 }
 
 func TestMain(m *testing.M) {
-	arbosPath, err := arbos.Path()
+	arbosPath, err := arbos.Path(false)
 	if err != nil {
 		panic(err)
 	}
-
-	arbosfile = flag.String("arbos", arbosPath, "version of arbos to run tests against")
+ 	arbosfile = flag.String("arbos", arbosPath, "version of arbos to run tests against")
 	flag.Parse()
 
 	fileData, err := ioutil.ReadFile(*arbosfile)

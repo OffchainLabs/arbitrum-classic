@@ -46,7 +46,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type SequencerLockoutManager interface {
@@ -253,10 +252,10 @@ func shouldIncludeTxResult(txRes *evm.TxResult) bool {
 	return txRes.FeeStats.Paid.L2Computation.Cmp(big.NewInt(maxExcludeComputation)) > 0
 }
 
-func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) {
+func txLogsToResults(logs []core.ValueAndInbox) (map[common.Hash]*evm.TxResult, error) {
 	resMap := make(map[common.Hash]*evm.TxResult)
 	for _, log := range logs {
-		res, err := evm.NewResultFromValue(log)
+		res, err := evm.NewResultFromValue(log.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -292,7 +291,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	return <-startResultChan
 }
 
-func (b *SequencerBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
+func (b *SequencerBatcher) PendingSnapshot(_ context.Context) (*snapshot.Snapshot, error) {
 	// TODO: return latest machine state?
 	return nil, nil
 }
@@ -302,6 +301,10 @@ func (b *SequencerBatcher) Aggregator() *common.Address {
 }
 
 func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime inbox.ChainTime, bypassLockout bool) (bool, error) {
+	if b.config.Node.Sequencer.Dangerous.DisableDelayedMessageSequencing {
+		return false, nil
+	}
+
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 	if !bypassLockout && b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
@@ -381,6 +384,8 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	postingCostEstimate := gasCostPerMessage + gasCostDelayedMessages
 	atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 
+	core.WaitForMachineIdle(b.db)
+
 	if b.feedBroadcaster != nil {
 		err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
 		if err != nil {
@@ -412,6 +417,10 @@ const maxL1BackwardsReorg int64 = 12
 
 // Updates both prevMsgCount and nonce on success
 func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum *big.Int, prevMsgCount *big.Int, nonce *big.Int) (bool, int, error) {
+	if b.config.Node.Sequencer.Dangerous.DisableBatchPosting {
+		return true, 0, nil
+	}
+
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	batchItems, err := b.db.GetSequencerBatchItems(prevMsgCount)
 	origEstimate := atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic)
@@ -425,7 +434,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	if len(batchItems[0].SequencerMessage) >= 128*1024 {
 		logger.Error().Int("size", len(batchItems[0].SequencerMessage)).Msg("Sequencer batch item is too big!")
-		if b.config.Node.Sequencer.ReorgOutHugeMessages {
+		if b.config.Node.Sequencer.Dangerous.ReorgOutHugeMessages {
 			err = b.reorgOutHugeMsg(ctx, prevMsgCount)
 			if err != nil {
 				return false, 0, err
@@ -458,7 +467,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 			// We also allow the empty address as it's used for the delayed messages end of block
 			if seqMsg.Sender != (common.Address{}) && seqMsg.Sender != b.fromAddress {
 				msg := "sequencer message in database contains messages from another sequencer"
-				if b.config.Node.Sequencer.RewriteSequencerAddress {
+				if b.config.Node.Sequencer.Dangerous.RewriteSequencerAddress {
 					msg += "! Reorganizing to compensate..."
 				}
 
@@ -469,7 +478,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 					Str("sequenceNumber", seqMsg.InboxSeqNum.String()).
 					Msg(msg)
 
-				if b.config.Node.Sequencer.RewriteSequencerAddress {
+				if b.config.Node.Sequencer.Dangerous.RewriteSequencerAddress {
 					err := b.reorgToNewSequencerAddress(ctx, prevMsgCount)
 					if err != nil {
 						return false, 0, errors.Wrap(err, "error during reorg to rewrite sequencer address")
@@ -1165,7 +1174,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
 			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= b.config.Node.Sequencer.MaxBatchGasCost*9/10 ||
 			firstBatchCreation
-		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.PublishBatchesWithoutLockout {
+		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.Dangerous.PublishBatchesWithoutLockout {
 			// We don't have the lockout and publishing batches without the lockout is disabled
 			creatingBatch = false
 			atomic.StoreInt32(&b.consecutiveBatchesPublishedAtomic, 0)

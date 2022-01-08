@@ -31,9 +31,9 @@
     },
     "StandardArbERC20": {
       "proxyAddress": "0xE72ba9418b5f2Ce0A6a40501Fe77c6839Aa37333",
-      "implAddress": "0xB4d1650Bb950A7551A1500903181b77118D81826",
-      "implDeploymentTxn": "0xb50cd657e1443816a94df18beee5a94b1e3fc7782b0f54f610c6f765edf0d88d",
-      "implArbitrumCommitHash": "917a689f2530eeb063bd8b5a7ee3487602898603",
+      "implAddress": "0x3f770Ac673856F105b586bb393d122721265aD46",
+      "implDeploymentTxn": "0xc7006f7e9f716a73ecee7e2939adacf84a122345dca581ed1f78c06be5cd8a5a",
+      "implArbitrumCommitHash": "7ac9347a41ece951af883d435cbe7d8e84329e36",
       "implBuildInfo": ""
     }
   }

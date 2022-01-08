@@ -34,17 +34,27 @@ struct DeleteResults;
 
 class Machine;
 
-DbResult<MachineStateKeys> getMachineStateKeys(
+typedef std::variant<MachineStateKeys, MachineOutput> CheckpointVariant;
+
+DbResult<CheckpointVariant> getMachineStateKeys(
     const ReadTransaction& transaction,
     uint256_t machineHash);
-MachineStateKeys extractMachineStateKeys(
-    std::vector<unsigned char>::const_iterator iter);
+MachineOutput extractMachineOutput(
+    std::vector<unsigned char>::const_iterator& iter);
+MachineOutput getMachineOutput(const CheckpointVariant checkpoint_variant);
+CheckpointVariant extractMachineStateKeys(
+    const std::vector<unsigned char>& data);
+void serializeMachineOutput(const MachineOutput& output_data,
+                            std::vector<unsigned char>& state_data_vector);
 void serializeMachineStateKeys(const MachineStateKeys& state_data,
                                std::vector<unsigned char>& state_data_vector);
-rocksdb::Status saveMachineState(ReadWriteTransaction& transaction,
-                                 const Machine& machine);
-SaveResults saveMachine(ReadWriteTransaction& transaction,
-                        const Machine& machine);
+std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
+    ReadWriteTransaction& transaction,
+    const Machine& machine);
+void saveCodeToCore(Machine& machine,
+                    const std::map<uint64_t, uint64_t>& segment_counts);
+SaveResults saveTestMachine(ReadWriteTransaction& transaction,
+                            Machine& machine);
 void deleteMachineState(ReadWriteTransaction& transaction,
                         MachineStateKeys& parsed_state);
 DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash);

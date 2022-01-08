@@ -13,7 +13,7 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
-    "audit:ci": "audit-ci -l -a 1748",
+    "audit:ci": "audit-ci -l -a 1006805 1006806",
     "install:deps": "./scripts/install-deps",
     "install:validator": "./scripts/install-validator",
     "update:abi": "yarn go:generate && yarn workspace arb-ts update:abi",
@@ -33,8 +33,7 @@
     "demo:initialize": "yarn workspace tools demo:initialize",
     "demo:deploy": "./scripts/arb_deploy.py local",
     "prod:initialize": "yarn workspace tools prod:initialize",
-    "deploy:validators": "./scripts/arb_deploy.py",
-    "sol_docs:generate": "python docs/sol_contract_docs/generate_docs.py"
+    "deploy:validators": "./scripts/arb_deploy.py"
   },
   "engines": {
     "node": ">= 8.0.0",
@@ -63,11 +62,15 @@
     "eslint-plugin-mocha": "^9.0.0",
     "eslint-plugin-prettier": "^4.0.0",
     "prettier": "^2.3.2",
-    "prettier-plugin-solidity": "^1.0.0-beta.17",
-    "solidity-docgen": "^0.5.11"
+    "prettier-plugin-solidity": "^1.0.0-beta.17"
   },
   "resolutions": {
     "eth-sig-util/ethereumjs-abi": "^0.6.8-1",
-    "typechain/web3-v1/web3": "^1.0.0"
+    "typechain/web3-v1/web3": "^1.0.0",
+    "ansi-regex": "^5.0.1",
+    "lodash": "4.17.21",
+    "underscore": "1.12.1",
+    "node-fetch": "2.6.1",
+    "yargs-parser": "5.0.1"
   }
 }
