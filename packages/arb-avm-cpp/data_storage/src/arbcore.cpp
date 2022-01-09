@@ -1494,7 +1494,7 @@ void ArbCore::operator()() {
                 }
 
                 uint256_t checkpoint_pruning_gas_used = 0;
-                {
+                if (coreConfig.checkpoint_pruning_mode != PRUNING_MODE_OFF) {
                     std::lock_guard<std::mutex> lock(checkpoint_pruning_mutex);
                     checkpoint_pruning_gas_used =
                         unsafe_checkpoint_pruning_gas_used;
