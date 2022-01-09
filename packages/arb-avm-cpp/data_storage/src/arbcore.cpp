@@ -728,8 +728,18 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         execConfig.max_gas = target_output.arb_gas_used;
 
         // Add messages and run machine
-        auto success = runMachineWithMessages(
-            execConfig, coreConfig.message_process_count, false);
+        uint256_t target_messages = target_output.fully_processed_inbox.count;
+        uint256_t have_messages =
+            core_machine->machine_state.output.fully_processed_inbox.count;
+        if (target_messages <= have_messages) {
+            break;
+        }
+        uint256_t num_messages = target_messages - have_messages;
+        if (uint256_t(num_messages) > coreConfig.message_process_count) {
+            num_messages = coreConfig.message_process_count;
+        }
+        auto success =
+            runMachineWithMessages(execConfig, size_t(num_messages), false);
         if (!success) {
             std::cerr << "runMachineWithMessages failed" << core_error_string
                       << "\n";
