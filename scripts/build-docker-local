@@ -4,5 +4,5 @@
 ### --------------------------------------------------------------------
 docker build -t offchainlabs/cpp-base:0.4.1 -f .circleci/images/cpp-base/Dockerfile .circleci/images/cpp-base
 docker build -t offchainlabs/backend-base:0.4.2 -f .circleci/images/backend-base/Dockerfile .circleci/images/backend-base
-docker build -t offchainlabs/dist-base:0.4.1 -f .circleci/images/dist-base/Dockerfile .circleci/images/dist-base
+docker build -t offchainlabs/dist-base:0.4.2 -f .circleci/images/dist-base/Dockerfile .circleci/images/dist-base
 docker build -t arb-node -f packages/arb-node.Dockerfile packages

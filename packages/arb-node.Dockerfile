@@ -67,7 +67,7 @@ COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
 RUN cd arb-node-core && go install -v ./cmd/arb-validator && go install -v ./cmd/arb-relay && \
     cd ../arb-rpc-node && go install -v ./cmd/arb-node && go install -v ./cmd/arb-dev-node
 
-FROM offchainlabs/dist-base:0.4.1 as arb-node
+FROM offchainlabs/dist-base:0.4.2 as arb-node
 # Export binary
 
 COPY --chown=user --from=arb-node-builder /home/user/go/bin /home/user/go/bin
