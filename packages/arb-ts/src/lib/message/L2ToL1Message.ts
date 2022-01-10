@@ -90,14 +90,11 @@ export class L2TransactionReceipt implements TransactionReceipt {
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
 
     return logs.map(
-      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+      log => iface.parseLog(log).args as unknown as L2ToL1EventResult
     )
   }
 
   private getOutboxAddr(network: Network, batchNumber: BigNumber) {
-    // CHRIS: add the old network to the networks object, and look it up here
-    // CHRIS: null check? this shouldn't be possible
-    // CHRIS: disable linting by just using the batchnumber here
     batchNumber
     return network.ethBridge!.outbox
   }
@@ -132,9 +129,8 @@ export class L2TransactionReceipt implements TransactionReceipt {
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 export class L2ToL1Message {
   public static fromBatchNumber<T extends SignerOrProvider>(
@@ -164,7 +160,6 @@ export class L2ToL1Message {
         )
   }
 
-  // CHRIS: consider what else to move onto the base
   public static async getL2ToL1MessageLogs(
     l2Provider: Provider,
     filter: Filter
@@ -174,9 +169,6 @@ export class L2ToL1Message {
     const eventTopic = iface.getEventTopic(event)
 
     const topics = filter.topics ? filter.topics : []
-    // CHRIS: keep the warn?
-    // if (!filter.fromBlock && !filter.toBlock)
-    // console.warn('Attempting to query from 0 to block latest')
     const logs = await l2Provider.getLogs({
       address: ARB_SYS_ADDRESS,
       topics: [eventTopic, ...topics],
@@ -202,7 +194,9 @@ export class L2ToL1Message {
     if (indexItem.length === 1) {
       return indexItem[0]
     } else if (indexItem.length > 1) {
-      // CHRIS: warn, error?
+      throw new Error(
+        `666: unexpected number of items in batch: ${JSON.stringify(indexItem)}`
+      )
     }
 
     return null
@@ -304,26 +298,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         ? OutgoingMessageState.CONFIRMED
         : OutgoingMessageState.UNCONFIRMED
     } catch (e) {
-      // CHRIS: discuss all the console logs going on in here and elsewhere, should we keep them?
-      // CHRIS: this error needs updating. also 666?
       console.warn('666: error in getOutGoingMessageState:', e)
       return OutgoingMessageState.NOT_FOUND
-    }
-  }
-
-  public async waitUntilOutboxEntryCreated(retryDelay = 500): Promise<void> {
-    // CHRIS: should we even be doing this? what's the use case? it could be a long wait
-
-    const exists = await this.outboxEntryExists()
-    if (exists) {
-      console.log('Found outbox entry!')
-      return
-    } else {
-      console.log("can't find entry, lets wait a bit?")
-
-      await wait(retryDelay)
-      console.log('Starting new attempt')
-      await this.waitUntilOutboxEntryCreated(retryDelay)
     }
   }
 }

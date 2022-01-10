@@ -19,8 +19,6 @@
 import { BigNumber } from '@ethersproject/bignumber'
 import { FunctionFragment } from 'ethers/lib/utils'
 
-// CHRIS: TODO: break this file up and put the interfaces with their relevant functionality
-
 // TODO: can we import these interfaces directly from typechain?
 export interface L2ToL1EventResult {
   caller: string

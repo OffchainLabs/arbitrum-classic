@@ -72,7 +72,6 @@ export const testRetryableTicket = async (
   if (!message) {
     throw new Error('Seq num not found')
   }
-  // CHRIS: this mismatch in names adds to the confusion
   const retryableTicket = message.l2TicketCreationTxnHash
   const autoRedeem = message.autoRedeemHash
   const redeemTransaction = message.userTxnHash

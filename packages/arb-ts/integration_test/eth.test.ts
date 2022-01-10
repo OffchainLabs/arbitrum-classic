@@ -154,7 +154,6 @@ describe('Ether', async () => {
 
     const myAddress = await bridge.l1Signer.getAddress()
 
-    // CHRIS: convenience method for this
     const withdrawEvents = await L2ToL1Message.getL2ToL1MessageLogs(
       bridge.l2Provider,
       {

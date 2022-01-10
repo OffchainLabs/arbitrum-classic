@@ -128,7 +128,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
     })
   }
 
-  // CHRIS: should we offer this select function?
   public async getL1ToL2Message<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     messageNumberIndex?: number
@@ -269,6 +268,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       return L1ToL2MessageStatus.EXPIRED
     }
     // we could sanity check that autoredeem failed, but we don't need to
+    // currently if the params (max l2 gas price) * (max l2 gas) = 0
+    // no auto-redeem receipt gets emitted at all; if the user cars about the difference
+    // between auto-redeem failed and auto-redeem never took place, they can check
+    // the receipt. But for the sake of this status method, NOT_YET_REDEEMED for both cases is okay.
     return L1ToL2MessageStatus.NOT_YET_REDEEMED
   }
 
@@ -281,8 +284,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return this.receiptsToStatus(userTxnReceipt, ticketCreationReceipt)
   }
 
-  // CHRIS: this wait function should be broken up?
-  // CHRIS: all the hashes on this object are a bit confusing - we need to get clear with them
   public async wait(
     timeout = 900000,
     confirmations?: number
@@ -332,7 +333,6 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public constructor(
     private readonly l2Signer: Signer,
     l2TicketCreationTxnHash: string,
-    // CHRIS: do we really need this? it's never used
     messageNumber: BigNumber
   ) {
     super(l2Signer.provider!, l2TicketCreationTxnHash, messageNumber)
@@ -346,20 +346,15 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public async redeemSafe(
     waitTimeForL2Receipt = 900000
   ): Promise<ContractTransaction> {
-    // CHRIS: we need way better messaging about what;s going on here
-    // CHRIS: we should go over the user flow to see if this is the best way
-    // CHRIS: also for the cancel flow
-    // CHRIS: also check the execute flow on the L2ToL1Message - we dont check status in there, should we?
     console.log('waiting for retryable ticket...', this.userTxnHash)
     const result = await this.wait(waitTimeForL2Receipt)
-    if (result.ticketCreationReceipt?.status == 0) {
+    if (result.status === L1ToL2MessageStatus.NOT_YET_CREATED) {
       console.warn(
         'retryable ticket failed',
-        result.ticketCreationReceipt.transactionHash
+        result.ticketCreationReceipt?.transactionHash
       )
       throw new Error('l2 txn failed')
     }
-    // CHRIS: double check these hashes
     return await this.redeem()
   }
 
