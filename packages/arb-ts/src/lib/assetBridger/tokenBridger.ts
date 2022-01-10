@@ -149,7 +149,7 @@ export class TokenBridger extends AssetBridger<
     erc20L1Address: string,
     l2Provider: Provider
   ): Promise<string> {
-    const l2GatewayRouter = L1GatewayRouter__factory.connect(
+    const l2GatewayRouter = L2GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2Provider
     )
