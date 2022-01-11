@@ -2,10 +2,7 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
-import {
-  ARB_RETRYABLE_TX_ADDRESS,
-  NODE_INTERFACE_ADDRESS,
-} from '../precompile_addresses'
+import { ARB_RETRYABLE_TX_ADDRESS, NODE_INTERFACE_ADDRESS } from '../constants'
 import { BigNumber } from '@ethersproject/bignumber'
 import { percentIncrease } from '../utils/lib'
 import { constants } from 'ethers'

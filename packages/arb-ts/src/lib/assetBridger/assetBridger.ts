@@ -16,17 +16,27 @@
 /* eslint-env node */
 'use strict'
 
-import { BigNumber, ethers } from 'ethers'
+import { BigNumber } from 'ethers'
+import { ArbTsError } from '../errors'
 import { L1ContractTransaction } from '../message/L1ToL2Message'
 import { L2ContractTransaction } from '../message/L2ToL1Message'
 
-import { L2Network } from '../utils/networks'
+import networks, { L1Network, L2Network } from '../utils/networks'
 
 /**
  * Base for bridging assets from l1 to l2 and back
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
-  public constructor(public readonly l2Network: L2Network) {}
+  public readonly l1Network: L1Network
+
+  public constructor(public readonly l2Network: L2Network) {
+    this.l1Network = networks.l1Networks[l2Network.partnerChainID]
+    if (!this.l1Network) {
+      throw new ArbTsError(
+        `Unknown l1 network chain id: ${l2Network.partnerChainID}`
+      )
+    }
+  }
 
   /**
    * Estimate gas for transfering assets from L1 to L2

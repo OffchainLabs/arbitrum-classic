@@ -23,14 +23,12 @@ import { Whitelist__factory } from '../abi'
 import { EventFetcher } from '../utils/eventFetcher'
 import { Rollup__factory } from '../abi/factories/Rollup__factory'
 import { NodeCreatedEvent, Rollup } from '../abi/Rollup'
+import { ADDRESS_ALIAS_OFFSET } from '../constants'
 
 /**
  * General information about the current network state
  */
 export class NetworkState {
-  public static readonly ADDRESS_ALIAS_OFFSET =
-    '0x1111000000000000000000000000000000001111'
-
   public constructor(public readonly l1Provider: Provider) {}
 
   /**
@@ -39,7 +37,7 @@ export class NetworkState {
    * @returns
    */
   public static applyL1ToL2Alias(l1Address: string): BigNumber {
-    return BigNumber.from(l1Address).add(this.ADDRESS_ALIAS_OFFSET)
+    return BigNumber.from(l1Address).add(ADDRESS_ALIAS_OFFSET)
   }
 
   /**
@@ -48,7 +46,7 @@ export class NetworkState {
    * @returns
    */
   public static undoL1ToL2Alias(l2Address: string): BigNumber {
-    return BigNumber.from(l2Address).sub(this.ADDRESS_ALIAS_OFFSET)
+    return BigNumber.from(l2Address).sub(ADDRESS_ALIAS_OFFSET)
   }
 
   /**

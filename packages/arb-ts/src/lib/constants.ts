@@ -30,3 +30,13 @@ export const ARB_ADDRESS_TABLE_ADDRESS =
 export const ARB_GAS_INFO = '0x000000000000000000000000000000000000006C'
 
 export const ARB_STATISTICS = '0x000000000000000000000000000000000000006F'
+
+/**
+ * The offset added to an L1 address to get the corresponding L2 address
+ */
+export const ADDRESS_ALIAS_OFFSET = '0x1111000000000000000000000000000000001111'
+
+/**
+ * Address of the gateway a token will be assigned to if it is disabled
+ */
+export const DISABLED_GATEWAY = '0x0000000000000000000000000000000000000001'

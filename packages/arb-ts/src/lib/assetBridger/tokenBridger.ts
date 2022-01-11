@@ -29,13 +29,13 @@ import {
   L2GatewayRouter__factory,
   L1ERC20Gateway__factory,
   L1WethGateway__factory,
-  StandardArbERC20__factory,
   L2ArbitrumGateway__factory,
   L2ArbitrumGateway,
   ERC20__factory,
   L1GatewayRouter,
-  StandardArbERC20,
   ERC20,
+  L2GatewayToken__factory,
+  L2GatewayToken,
 } from '../abi'
 import { WithdrawalInitiatedEvent } from '../abi/L2ArbitrumGateway'
 import { GatewaySetEvent } from '../abi/L1GatewayRouter'
@@ -228,7 +228,7 @@ export class TokenBridger extends AssetBridger<
    * @param l1Provider
    * @returns
    */
-  private async isUnkownWethGateway(
+  private async looksLikeWethGateway(
     potentialWethGatewayAddress: string,
     l1Provider: Provider
   ) {
@@ -265,7 +265,7 @@ export class TokenBridger extends AssetBridger<
     const wethAddress = this.l2Network.tokenBridge.l1WethGateway
     if (this.l2Network.isCustom) {
       // For custom network, we do an ad-hoc check to see if it's a WETH gateway
-      if (await this.isUnkownWethGateway(gatewayAddress, l1Provider)) {
+      if (await this.looksLikeWethGateway(gatewayAddress, l1Provider)) {
         return true
       }
       // ...otherwise we directly check it against the config file
@@ -284,8 +284,8 @@ export class TokenBridger extends AssetBridger<
   public getL2TokenContract(
     l2Provider: Provider,
     l2TokenAddr: string
-  ): StandardArbERC20 {
-    return StandardArbERC20__factory.connect(l2TokenAddr, l2Provider)
+  ): L2GatewayToken {
+    return L2GatewayToken__factory.connect(l2TokenAddr, l2Provider)
   }
 
   /**
@@ -328,10 +328,7 @@ export class TokenBridger extends AssetBridger<
     erc20L2Address: string,
     l2Provider: Provider
   ): Promise<string> {
-    const arbERC20 = StandardArbERC20__factory.connect(
-      erc20L2Address,
-      l2Provider
-    )
+    const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
     return arbERC20.functions.l1Address().then(([res]) => res)
   }
 
@@ -341,7 +338,7 @@ export class TokenBridger extends AssetBridger<
    * @param l1Provider
    * @returns
    */
-  public async getL1TokenIsDisabled(
+  public async l1TokenIsDisabled(
     l1TokenAddress: string,
     l1Provider: Provider
   ): Promise<boolean> {
@@ -611,9 +608,9 @@ export class TokenBridger extends AssetBridger<
 }
 
 /**
- * A token-gateway pair
+ * A token and gateway pair
  */
-interface TokenGateway {
+interface TokenAndGateway {
   tokenAddr: string
   gatewayAddr: string
 }
@@ -685,7 +682,7 @@ export class AdminTokenBridger extends TokenBridger {
   public async setGateways(
     l1Signer: Signer,
     l2Provider: Provider,
-    tokenGateways: TokenGateway[]
+    tokenGateways: TokenAndGateway[]
   ): Promise<ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')

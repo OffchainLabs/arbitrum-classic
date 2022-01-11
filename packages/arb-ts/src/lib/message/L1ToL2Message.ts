@@ -32,7 +32,7 @@ import {
   calculateL2MessageFromTicketTxnHash,
   L2TxnType,
 } from './lib'
-import { ARB_RETRYABLE_TX_ADDRESS } from '../precompile_addresses'
+import { ARB_RETRYABLE_TX_ADDRESS } from '../constants'
 import {
   SignerProviderUtils,
   SignerOrProvider,

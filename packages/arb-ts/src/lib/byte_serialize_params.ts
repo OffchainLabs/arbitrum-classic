@@ -55,7 +55,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { ArbAddressTable } from './abi/ArbAddressTable'
 import { ArbAddressTable__factory } from './abi/factories/ArbAddressTable__factory'
 
-import { ARB_ADDRESS_TABLE_ADDRESS } from './precompile_addresses'
+import { ARB_ADDRESS_TABLE_ADDRESS } from './constants'
 
 type PrimativeType = string | number | boolean | BigNumber
 type PrimativeOrPrimativeArray = PrimativeType | PrimativeType[]
