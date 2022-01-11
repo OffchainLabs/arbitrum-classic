@@ -126,7 +126,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
       )
 
     return messageNumbers.map((mn: BigNumber) => {
-      const ticketCreationHash = L1ToL2Message.calculateRetryableTicketId(
+      const ticketCreationHash = L1ToL2Message.calculateRetryableCreationId(
         BigNumber.from(chainID),
         mn
       )
@@ -199,8 +199,8 @@ export enum L1ToL2MessageStatus {
   EXPIRED,
 }
 
-export interface L1ToL2MessageReceipt {
-  retryableTicketReceipt: TransactionReceipt
+export interface L1ToL2WaitResult {
+  retryableCreationReceipt: TransactionReceipt
   autoRedeemReceipt?: TransactionReceipt
   l2TxReceipt?: TransactionReceipt
   status: L1ToL2MessageStatus
@@ -218,10 +218,10 @@ export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
 export class L1ToL2Message {
   /**
    * When messages are sent from L1 to L2 a retryable ticket is created on L2.
-   * An immediate attempt to redeem the ticket will be made (auto-redeem), but if this
-   * fails the ticket can be redeemed manually by anyone at a later time.
+   * The retryableCreationId can be used to retrieve information about the success or failure of the
+   * creation of the retryable ticket.
    */
-  public readonly retryableTicketId: string
+  public readonly retryableCreationId: string
 
   /**
    * When a retryable ticket is created a redeem of it will immediately be attempted.
@@ -248,18 +248,18 @@ export class L1ToL2Message {
   }
 
   private static calculateL2DerivedHash(
-    retryableTicketId: string,
+    retryableCreationId: string,
     l2TxnType: L2TxnType
   ): string {
     return keccak256(
       concat([
-        zeroPad(retryableTicketId, 32),
+        zeroPad(retryableCreationId, 32),
         zeroPad(BigNumber.from(l2TxnType).toHexString(), 32),
       ])
     )
   }
 
-  public static calculateRetryableTicketId(
+  public static calculateRetryableCreationId(
     l2ChainId: BigNumber,
     messageNumber: BigNumber
   ): string {
@@ -271,12 +271,15 @@ export class L1ToL2Message {
     )
   }
 
-  public static calculateAutoRedeemId(retryableTicketId: string): string {
-    return this.calculateL2DerivedHash(retryableTicketId, L2TxnType.AUTO_REDEEM)
+  public static calculateAutoRedeemId(retryableCreationId: string): string {
+    return this.calculateL2DerivedHash(
+      retryableCreationId,
+      L2TxnType.AUTO_REDEEM
+    )
   }
 
-  public static calculateL2TxHash(retryableTicketId: string): string {
-    return this.calculateL2DerivedHash(retryableTicketId, L2TxnType.L2_TX)
+  public static calculateL2TxHash(retryableCreationId: string): string {
+    return this.calculateL2DerivedHash(retryableCreationId, L2TxnType.L2_TX)
   }
 
   public static fromL2Ticket<T extends SignerOrProvider>(
@@ -303,33 +306,33 @@ export class L1ToL2Message {
   }
 
   public constructor(
-    retryableTicketId: string,
+    retryableCreationId: string,
     public readonly messageNumber: BigNumber
   ) {
-    this.retryableTicketId = retryableTicketId
+    this.retryableCreationId = retryableCreationId
     this.autoRedeemId = L1ToL2Message.calculateAutoRedeemId(
-      this.retryableTicketId
+      this.retryableCreationId
     )
-    this.l2TxHash = L1ToL2Message.calculateL2TxHash(this.retryableTicketId)
+    this.l2TxHash = L1ToL2Message.calculateL2TxHash(this.retryableCreationId)
   }
 }
 
 export class L1ToL2MessageReader extends L1ToL2Message {
   public constructor(
     private readonly l2Provider: Provider,
-    retryableTicketId: string,
+    retryableCreationId: string,
     messageNumber: BigNumber
   ) {
-    super(retryableTicketId, messageNumber)
+    super(retryableCreationId, messageNumber)
   }
 
   /**
-   * Try to get the receipt for the retryable ticket. See L1ToL2Message.retryableTicketId
+   * Try to get the receipt for the retryable ticket. See L1ToL2Message.retryableCreationId
    * May throw an error if retryable ticket has yet to be created
    * @returns
    */
-  public getRetryableTicketReceipt(): Promise<TransactionReceipt> {
-    return this.l2Provider.getTransactionReceipt(this.retryableTicketId)
+  public getRetryableCreationReceipt(): Promise<TransactionReceipt> {
+    return this.l2Provider.getTransactionReceipt(this.retryableCreationId)
   }
 
   /**
@@ -362,17 +365,17 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   private async receiptsToStatus(
-    retryableTicketReceipt: TransactionReceipt,
+    retryableCreationReceipt: TransactionReceipt,
     l2TxReceipt: TransactionReceipt
   ): Promise<L1ToL2MessageStatus> {
     if (l2TxReceipt && l2TxReceipt.status === 1) {
       return L1ToL2MessageStatus.REDEEMED
     }
 
-    if (!retryableTicketReceipt) {
+    if (!retryableCreationReceipt) {
       return L1ToL2MessageStatus.NOT_YET_CREATED
     }
-    if (retryableTicketReceipt.status === 0) {
+    if (retryableCreationReceipt.status === 0) {
       return L1ToL2MessageStatus.CREATION_FAILED
     }
     if (await this.isExpired()) {
@@ -384,9 +387,9 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
   public async status(): Promise<L1ToL2MessageStatus> {
     const l2TxReceipt = await this.getL2TxReceipt()
-    const retryableTicketReceipt = await this.getRetryableTicketReceipt()
+    const retryableCreationReceipt = await this.getRetryableCreationReceipt()
 
-    return this.receiptsToStatus(l2TxReceipt, retryableTicketReceipt)
+    return this.receiptsToStatus(l2TxReceipt, retryableCreationReceipt)
   }
 
   /**
@@ -404,11 +407,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
      * Amount of confirmations the retryable ticket and the auto redeem receipt should have
      */
     confirmations?: number
-  ): Promise<L1ToL2MessageReceipt> {
+  ): Promise<L1ToL2WaitResult> {
     // wait for the retryable ticket - if this doesn't exist then there's no point
     // looking for the other receipts
-    const retryableTicketReceipt = await this.l2Provider.waitForTransaction(
-      this.retryableTicketId,
+    const retryableCreationReceipt = await this.l2Provider.waitForTransaction(
+      this.retryableCreationId,
       confirmations,
       timeout
     )
@@ -439,10 +442,13 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const l2TxReceipt = await this.getL2TxReceipt()
 
     return {
-      retryableTicketReceipt: retryableTicketReceipt,
+      retryableCreationReceipt: retryableCreationReceipt,
       autoRedeemReceipt,
       l2TxReceipt: l2TxReceipt,
-      status: await this.receiptsToStatus(retryableTicketReceipt, l2TxReceipt),
+      status: await this.receiptsToStatus(
+        retryableCreationReceipt,
+        l2TxReceipt
+      ),
     }
   }
 
@@ -474,10 +480,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public constructor(
     private readonly l2Signer: Signer,
-    retryableTicketId: string,
+    retryableCreationId: string,
     messageNumber: BigNumber
   ) {
-    super(l2Signer.provider!, retryableTicketId, messageNumber)
+    super(l2Signer.provider!, retryableCreationId, messageNumber)
     if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
   }
 

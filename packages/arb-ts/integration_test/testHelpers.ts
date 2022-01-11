@@ -74,7 +74,7 @@ export const testRetryableTicket = async (
   if (!message) {
     throw new Error('Seq num not found')
   }
-  const retryableTicket = message.retryableTicketId
+  const retryableTicket = message.retryableCreationId
   const autoRedeem = message.autoRedeemId
   const redeemTransaction = message.l2TxHash
 
@@ -85,7 +85,7 @@ export const testRetryableTicket = async (
 
   const waitResult = await message.wait(1000 * 60 * 15)
 
-  const retryableTicketReceipt = waitResult.retryableTicketReceipt
+  const retryableTicketReceipt = waitResult.retryableCreationReceipt
 
   prettyLog('retryableTicketReceipt found:')
 

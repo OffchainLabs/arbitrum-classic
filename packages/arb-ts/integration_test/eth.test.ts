@@ -94,10 +94,10 @@ describe('Ether', async () => {
     expect(messages.length, 'eth deposit message empty array').to.not.eq(0)
 
     const message = messages[0]
-    prettyLog('l2TxHash: ' + message.retryableTicketId)
+    prettyLog('l2TxHash: ' + message.retryableCreationId)
     prettyLog('waiting for l2 transaction:')
     const waitResult = await message.wait(1000 * 60 * 12)
-    const l2TxnRec = waitResult.retryableTicketReceipt
+    const l2TxnRec = waitResult.retryableCreationReceipt
     prettyLog('l2 transaction found!')
     expect(l2TxnRec && l2TxnRec.status).to.equal(
       1,
