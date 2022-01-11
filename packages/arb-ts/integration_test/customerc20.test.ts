@@ -22,7 +22,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 
-import { OutgoingMessageState } from '../src/lib/dataEntities'
+import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 
 import {
   fundL1,
@@ -88,11 +88,11 @@ describe('Custom ERC20', () => {
     )[0]
     expect(message, 'withdrawEventData not found').to.exist
 
-    const outgoingMessageState = await message.status(null)
+    const messageStatus = await message.status(null)
     expect(
-      outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
-        outgoingMessageState === OutgoingMessageState.NOT_FOUND,
-      `custom token withdraw getOutGoingMessageState returned ${outgoingMessageState}`
+      messageStatus === L2ToL1MessageStatus.UNCONFIRMED ||
+        messageStatus === L2ToL1MessageStatus.NOT_FOUND,
+      `custom token withdraw status returned ${messageStatus}`
     ).to.be.true
 
     const l2Token = tokenBridger.getL2TokenContract(

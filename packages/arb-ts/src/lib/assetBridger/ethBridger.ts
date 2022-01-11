@@ -23,13 +23,13 @@ import { BigNumber, ethers } from 'ethers'
 
 import { Inbox__factory } from '../..'
 import { ArbSys__factory } from '../abi'
-import { ARB_SYS_ADDRESS } from '../precompile_addresses'
+import { ARB_SYS_ADDRESS } from '../constants'
 import {
   L1ToL2MessageGasEstimator,
   PercentIncrease,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../utils/signerOrProvider'
-import { ArbTsError, MissingProviderArbTsError } from '../errors'
+import { MissingProviderArbTsError } from '../errors'
 import { AssetBridger } from './assetBridger'
 import { L1TransactionReceipt } from '../message/L1ToL2Message'
 import { L2TransactionReceipt } from '../message/L2ToL1Message'
@@ -145,7 +145,7 @@ export class EthBridger extends AssetBridger<
    */
   public async deposit(params: EthDepositParams) {
     const tx = await this.depositTxOrGas(params, false)
-    return L1TransactionReceipt.swivelWait(tx)
+    return L1TransactionReceipt.monkeyPatchWait(tx)
   }
 
   private async withdrawTxOrGas<T extends boolean>(
@@ -189,6 +189,6 @@ export class EthBridger extends AssetBridger<
    */
   public async withdraw(params: EthWithdrawParams) {
     const tx = await this.withdrawTxOrGas(params, false)
-    return L2TransactionReceipt.swivelWait(tx)
+    return L2TransactionReceipt.monkeyPatchWait(tx)
   }
 }

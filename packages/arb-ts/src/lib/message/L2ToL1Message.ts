@@ -18,11 +18,7 @@
 
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { ArbSys } from '../abi'
-import { MessageBatchProofInfo, OutgoingMessageState } from '../dataEntities'
-import {
-  ARB_SYS_ADDRESS,
-  NODE_INTERFACE_ADDRESS,
-} from '../precompile_addresses'
+import { ARB_SYS_ADDRESS, NODE_INTERFACE_ADDRESS } from '../constants'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
@@ -42,6 +38,72 @@ import { ContractTransaction } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import { L2Network } from '../utils/networks'
 import { ArbTsError } from '../errors'
+
+export interface MessageBatchProofInfo {
+  /**
+   * Merkle proof of message inclusion in outbox entry
+   */
+  proof: string[]
+
+  /**
+   * Merkle path to message
+   */
+  path: BigNumber
+
+  /**
+   * Sender of original message (i.e., caller of ArbSys.sendTxToL1)
+   */
+  l2Sender: string
+
+  /**
+   * Destination address for L1 contract call
+   */
+  l1Dest: string
+
+  /**
+   * L2 block number at which sendTxToL1 call was made
+   */
+  l2Block: BigNumber
+
+  /**
+   * L1 block number at which sendTxToL1 call was made
+   */
+  l1Block: BigNumber
+
+  /**
+   * L2 Timestamp at which sendTxToL1 call was made
+   */
+  timestamp: BigNumber
+
+  /**
+   * Value in L1 message in wei
+   */
+  amount: BigNumber
+
+  /**
+   * ABI-encoded L1 message data
+   */
+  calldataForL1: string
+}
+
+export enum L2ToL1MessageStatus {
+  /**
+   * No corresponding L2ToL1Event emitted
+   */
+  NOT_FOUND,
+  /**
+   * ArbSys.sendTxToL1 called, but assertion not yet confirmed
+   */
+  UNCONFIRMED,
+  /**
+   * Assertion for outgoing message confirmed, but message not yet executed
+   */
+  CONFIRMED,
+  /**
+   * Outgoing message executed (terminal state)
+   */
+  EXECUTED,
+}
 
 export class L2TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -104,7 +166,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get any l2tol1 messages created by this transaction
+   * Get any l2-to-l1-messages created by this transaction
    * @param l2SignerOrProvider
    */
   public async getL2ToL1Messages<T extends SignerOrProvider>(
@@ -135,7 +197,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * @param contractTransaction
    * @returns
    */
-  public static swivelWait = (
+  public static monkeyPatchWait = (
     contractTransaction: ContractTransaction
   ): L2ContractTransaction => {
     const wait = contractTransaction.wait
@@ -157,11 +219,25 @@ export interface L2ContractTransaction extends ContractTransaction {
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 export class L2ToL1Message {
+  /**
+   * The number of the batch this message is part of
+   */
+  public readonly batchNumber: BigNumber
+
+  /**
+   * The index of this message in the batch
+   */
+  public readonly indexInBatch: BigNumber
+
+  protected constructor(batchNumber: BigNumber, indexInBatch: BigNumber) {
+    this.batchNumber = batchNumber
+    this.indexInBatch = indexInBatch
+  }
+
   public static fromBatchNumber<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     outboxAddress: string,
@@ -217,14 +293,17 @@ export class L2ToL1Message {
   }
 }
 
+/**
+ * Provides read-only access for l2-to-l1-messages
+ */
 export class L2ToL1MessageReader extends L2ToL1Message {
   constructor(
     protected readonly l1Provider: Provider,
     protected readonly outboxAddress: string,
-    public readonly batchNumber: BigNumber,
-    public readonly indexInBatch: BigNumber
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber
   ) {
-    super()
+    super(batchNumber, indexInBatch)
   }
 
   private async outboxEntryExists() {
@@ -245,21 +324,23 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       return nodeInterface.lookupMessageBatchProof(batchNumber, indexInBatch)
     } catch (e) {
       const expectedError = "batch doesn't exist"
-      const err = e as any
+      const err = e as Error & { error: Error }
       const actualError =
         err && (err.message || (err.error && err.error.message))
-      if (actualError.includes(expectedError)) {
-        console.log('Withdrawal detected, but batch not created yet.')
-      } else {
-        console.log("Withdrawal proof didn't work. Not sure why")
-        console.log(e)
-      }
+      if (actualError.includes(expectedError)) return null
+      else throw e
     }
-    return null
   }
 
-  public async tryGetProof(l2Provider: Provider) {
-    return L2ToL1MessageReader.tryGetProof(
+  /**
+   * Get the execution proof for this message. Returns null if the batch does not exist yet.
+   * @param l2Provider
+   * @returns
+   */
+  public async tryGetProof(
+    l2Provider: Provider
+  ): Promise<MessageBatchProofInfo | null> {
+    return await L2ToL1MessageReader.tryGetProof(
       l2Provider,
       this.batchNumber,
       this.indexInBatch
@@ -286,52 +367,59 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       )
       return false
     } catch (err) {
-      const e = err as any
-      if (e && e.message && e.message.toString().includes('ALREADY_SPENT')) {
-        return true
-      }
-      if (e && e.message && e.message.toString().includes('NO_OUTBOX_ENTRY')) {
-        return false
-      }
+      const e = err as Error
+      if (e?.message?.toString().includes('ALREADY_SPENT')) return true
+      if (e?.message?.toString().includes('NO_OUTBOX_ENTRY')) return false
       throw e
     }
   }
 
+  /**
+   * Get the status of this message
+   * In order to check if the message has been executed proof info must be provided.
+   * @param proofInfo
+   * @returns
+   */
   public async status(proofInfo: MessageBatchProofInfo | null) {
     try {
       if (proofInfo) {
         const messageExecuted = await this.hasExecuted(proofInfo)
         if (messageExecuted) {
-          return OutgoingMessageState.EXECUTED
+          return L2ToL1MessageStatus.EXECUTED
         }
       }
 
       const outboxEntryExists = await this.outboxEntryExists()
-
       return outboxEntryExists
-        ? OutgoingMessageState.CONFIRMED
-        : OutgoingMessageState.UNCONFIRMED
+        ? L2ToL1MessageStatus.CONFIRMED
+        : L2ToL1MessageStatus.UNCONFIRMED
     } catch (e) {
-      console.warn('666: error in getOutGoingMessageState:', e)
-      return OutgoingMessageState.NOT_FOUND
+      console.warn('666: error in fetching status:', e)
+      return L2ToL1MessageStatus.NOT_FOUND
     }
   }
 
+  /**
+   * Waits until the outbox entry has been created, and will not return until it has been.
+   * WARNING: Outbox entries are only created when the corresponding node is confirmed. Which
+   * can take 1 week+, so waiting here could be a very long operation.
+   * @param retryDelay
+   * @returns
+   */
   public async waitUntilOutboxEntryCreated(retryDelay = 500): Promise<void> {
     const exists = await this.outboxEntryExists()
     if (exists) {
-      console.log('Found outbox entry!')
       return
     } else {
-      console.log("can't find entry, lets wait a bit?")
-
       await wait(retryDelay)
-      console.log('Starting new attempt')
       await this.waitUntilOutboxEntryCreated(retryDelay)
     }
   }
 }
 
+/**
+ * Provides read and write access for l2-to-l1-messages
+ */
 export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   constructor(
     private readonly l1Signer: Signer,
@@ -344,35 +432,32 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
 
   /**
    * Executes the L2ToL1Message on L1.
+   * Will throw an error if the outbox entry has not been created, which happens when the
+   * corresponding assertion is confirmed.
    * @returns
    */
   public async execute(proofInfo: MessageBatchProofInfo) {
-    await this.waitUntilOutboxEntryCreated()
+    const status = await this.status(proofInfo)
+    if (status !== L2ToL1MessageStatus.CONFIRMED) {
+      throw new ArbTsError(
+        `Cannot execute message. Status is: ${status} but must be ${L2ToL1MessageStatus.CONFIRMED}.`
+      )
+    }
 
     const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Signer)
-    try {
-      // TODO: wait until assertion is confirmed before execute
-      // We can predict and print number of missing blocks
-      // if not challenged
-      const outboxExecute = await outbox.functions.executeTransaction(
-        this.batchNumber,
-        proofInfo.proof,
-        proofInfo.path,
-        proofInfo.l2Sender,
-        proofInfo.l1Dest,
-        proofInfo.l2Block,
-        proofInfo.l1Block,
-        proofInfo.timestamp,
-        proofInfo.amount,
-        proofInfo.calldataForL1
-      )
-      console.log(`Transaction hash: ${outboxExecute.hash}`)
-      return outboxExecute
-    } catch (e) {
-      console.log('failed to execute tx in layer 1')
-      console.log(e)
-      // TODO: should we just try again after delay instead of throwing?
-      throw e
-    }
+    // We can predict and print number of missing blocks
+    // if not challenged
+    return await outbox.functions.executeTransaction(
+      this.batchNumber,
+      proofInfo.proof,
+      proofInfo.path,
+      proofInfo.l2Sender,
+      proofInfo.l1Dest,
+      proofInfo.l2Block,
+      proofInfo.l1Block,
+      proofInfo.timestamp,
+      proofInfo.amount,
+      proofInfo.calldataForL1
+    )
   }
 }

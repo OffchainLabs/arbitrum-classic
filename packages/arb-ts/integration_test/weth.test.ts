@@ -30,7 +30,7 @@ import {
   testRetryableTicket,
   prettyLog,
 } from './testHelpers'
-import { OutgoingMessageState } from '../src/lib/dataEntities'
+import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 import { TokenBridger } from '../src'
 
 describe('WETH', async () => {
@@ -72,11 +72,11 @@ describe('WETH', async () => {
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
       .exist
 
-    const outgoingMessageState = await firstMessage.status(null)
+    const messageStatus = await firstMessage.status(null)
     expect(
-      outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
-        outgoingMessageState === OutgoingMessageState.NOT_FOUND,
-      `weth withdraw getOutGoingMessageState returned ${outgoingMessageState}`
+      messageStatus === L2ToL1MessageStatus.UNCONFIRMED ||
+        messageStatus === L2ToL1MessageStatus.NOT_FOUND,
+      `weth withdraw status returned ${messageStatus}`
     )
 
     const l2Token = await tokenBridger.getL2TokenContract(

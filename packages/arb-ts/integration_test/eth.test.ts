@@ -32,9 +32,11 @@ import {
   skipIfMainnet,
 } from './testHelpers'
 import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
-import { ARB_GAS_INFO } from '../src/lib/precompile_addresses'
-import { OutgoingMessageState } from '../src/lib/dataEntities'
-import { L2ToL1Message } from '../src/lib/message/L2ToL1Message'
+import { ARB_GAS_INFO } from '../src/lib/constants'
+import {
+  L2ToL1Message,
+  L2ToL1MessageStatus,
+} from '../src/lib/message/L2ToL1Message'
 dotenv.config()
 
 describe('Ether', async () => {
@@ -92,10 +94,10 @@ describe('Ether', async () => {
     expect(messages.length, 'eth deposit message empty array').to.not.eq(0)
 
     const message = messages[0]
-    prettyLog('l2TxHash: ' + message.l2TicketCreationTxnHash)
+    prettyLog('l2TxHash: ' + message.retryableTicketId)
     prettyLog('waiting for l2 transaction:')
     const waitResult = await message.wait(1000 * 60 * 12)
-    const l2TxnRec = waitResult.ticketCreationReceipt
+    const l2TxnRec = waitResult.retryableTicketReceipt
     prettyLog('l2 transaction found!')
     expect(l2TxnRec && l2TxnRec.status).to.equal(
       1,
@@ -163,11 +165,11 @@ describe('Ether', async () => {
       'eth withdraw getL2ToL1EventData failed'
     )
 
-    const outgoingMessageState = await withdrawMessage.status(null)
+    const messageStatus = await withdrawMessage.status(null)
     expect(
-      outgoingMessageState === OutgoingMessageState.UNCONFIRMED ||
-        outgoingMessageState === OutgoingMessageState.NOT_FOUND,
-      `eth withdraw getOutGoingMessageState returned ${outgoingMessageState}`
+      messageStatus === L2ToL1MessageStatus.UNCONFIRMED ||
+        messageStatus === L2ToL1MessageStatus.NOT_FOUND,
+      `eth withdraw status returned ${messageStatus}`
     ).to.be.true
 
     const etherBalance = await l2Signer.getBalance()

@@ -22,22 +22,24 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants } from 'ethers'
+import { keccak256 } from '@ethersproject/keccak256'
+import { concat, zeroPad } from '@ethersproject/bytes'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
-
-import {
-  calculateRetryableTicketCreationHash,
-  calculateL2MessageFromTicketTxnHash,
-  L2TxnType,
-} from './lib'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../constants'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../utils/signerOrProvider'
 import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
+import { ArbTsError } from '../errors'
+
+export enum L2TxnType {
+  L2_TX = 0,
+  AUTO_REDEEM = 1,
+}
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -124,10 +126,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
       )
 
     return messageNumbers.map((mn: BigNumber) => {
-      const ticketCreationHash = calculateRetryableTicketCreationHash({
-        l2ChainId: BigNumber.from(chainID),
-        messageNumber: mn,
-      })
+      const ticketCreationHash = L1ToL2Message.calculateRetryableTicketId(
+        BigNumber.from(chainID),
+        mn
+      )
       return L1ToL2Message.fromL2Ticket(
         l2SignerOrProvider,
         ticketCreationHash,
@@ -155,7 +157,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * @param contractTransaction
    * @returns
    */
-  public static swivelWait = (
+  public static monkeyPatchWait = (
     contractTransaction: ContractTransaction
   ): L1ContractTransaction => {
     const wait = contractTransaction.wait
@@ -172,17 +174,35 @@ export interface L1ContractTransaction extends ContractTransaction {
 }
 
 export enum L1ToL2MessageStatus {
+  /**
+   * The retryable ticket has yet to be created
+   */
   NOT_YET_CREATED,
+  /**
+   * An attempt was made to create the retryable ticket, but it failed.
+   * This could be due to not enough submission cost being paid by the L1 transaction
+   */
   CREATION_FAILED,
-  NOT_YET_REDEEMED, // i.e., autoredeem failed
+  /**
+   * The retryable ticket has been created but has not been redeemed. Since auto redeem occurs
+   * when the retryable ticket was created, this means that the auto-redeem failed.
+   */
+  NOT_YET_REDEEMED,
+  /**
+   * The retryable ticket has been redeemed (either by auto, or manually) and the
+   * l2 transaction has been executed
+   */
   REDEEMED,
-  EXPIRED, // canceled or timed out
+  /**
+   * The message has either expired or has been canceled. It can no longer be redeemed.
+   */
+  EXPIRED,
 }
 
 export interface L1ToL2MessageReceipt {
-  ticketCreationReceipt?: TransactionReceipt
+  retryableTicketReceipt: TransactionReceipt
   autoRedeemReceipt?: TransactionReceipt
-  userTxnReceipt?: TransactionReceipt
+  l2TxReceipt?: TransactionReceipt
   status: L1ToL2MessageStatus
 }
 
@@ -196,6 +216,69 @@ export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
   T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export class L1ToL2Message {
+  /**
+   * When messages are sent from L1 to L2 a retryable ticket is created on L2.
+   * An immediate attempt to redeem the ticket will be made (auto-redeem), but if this
+   * fails the ticket can be redeemed manually by anyone at a later time.
+   */
+  public readonly retryableTicketId: string
+
+  /**
+   * When a retryable ticket is created a redeem of it will immediately be attempted.
+   * The redemption may fail due to not enough gas, or the transaction may revert.
+   * The result of this auto-redeem can be accessed by requesting the receipt associated
+   * with this autoRedeemId.
+   *
+   * Note: If no call data is supplied to the retryable ticket an redemption will not be
+   * attempted, and instead any value associated with the ticket will be sent directly to the
+   * destination. In this case no receipt will be available for the autoRedeemId
+   */
+  public readonly autoRedeemId: string
+
+  /**
+   * If a retryable ticket is successfully redeemed (either via auto-redeem or manually)
+   * and l2 transaction will be executed for the payload specified in the retryable ticket.
+   * This is the hash of that transaction, and as such no receipt will exist for this hash
+   * until the ticket has been successfully redeemed.
+   */
+  public readonly l2TxHash: string
+
+  private static bitFlip(num: BigNumber): BigNumber {
+    return num.or(BigNumber.from(1).shl(255))
+  }
+
+  private static calculateL2DerivedHash(
+    retryableTicketId: string,
+    l2TxnType: L2TxnType
+  ): string {
+    return keccak256(
+      concat([
+        zeroPad(retryableTicketId, 32),
+        zeroPad(BigNumber.from(l2TxnType).toHexString(), 32),
+      ])
+    )
+  }
+
+  public static calculateRetryableTicketId(
+    l2ChainId: BigNumber,
+    messageNumber: BigNumber
+  ): string {
+    return keccak256(
+      concat([
+        zeroPad(l2ChainId.toHexString(), 32),
+        zeroPad(L1ToL2Message.bitFlip(messageNumber).toHexString(), 32),
+      ])
+    )
+  }
+
+  public static calculateAutoRedeemId(retryableTicketId: string): string {
+    return this.calculateL2DerivedHash(retryableTicketId, L2TxnType.AUTO_REDEEM)
+  }
+
+  public static calculateL2TxHash(retryableTicketId: string): string {
+    return this.calculateL2DerivedHash(retryableTicketId, L2TxnType.L2_TX)
+  }
+
   public static fromL2Ticket<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     l2TicketCreationHash: string,
@@ -218,57 +301,78 @@ export class L1ToL2Message {
           messageNumber
         )
   }
+
+  public constructor(
+    retryableTicketId: string,
+    public readonly messageNumber: BigNumber
+  ) {
+    this.retryableTicketId = retryableTicketId
+    this.autoRedeemId = L1ToL2Message.calculateAutoRedeemId(
+      this.retryableTicketId
+    )
+    this.l2TxHash = L1ToL2Message.calculateL2TxHash(this.retryableTicketId)
+  }
 }
 
 export class L1ToL2MessageReader extends L1ToL2Message {
   public constructor(
     private readonly l2Provider: Provider,
-    public readonly l2TicketCreationTxnHash: string,
-    public readonly messageNumber: BigNumber
+    retryableTicketId: string,
+    messageNumber: BigNumber
   ) {
-    super()
+    super(retryableTicketId, messageNumber)
   }
 
-  get autoRedeemHash(): string {
-    return calculateL2MessageFromTicketTxnHash(
-      this.l2TicketCreationTxnHash,
-      L2TxnType.AUTO_REDEEM
-    )
+  /**
+   * Try to get the receipt for the retryable ticket. See L1ToL2Message.retryableTicketId
+   * May throw an error if retryable ticket has yet to be created
+   * @returns
+   */
+  public getRetryableTicketReceipt(): Promise<TransactionReceipt> {
+    return this.l2Provider.getTransactionReceipt(this.retryableTicketId)
   }
 
-  get userTxnHash(): string {
-    return calculateL2MessageFromTicketTxnHash(
-      this.l2TicketCreationTxnHash,
-      L2TxnType.USER_TXN
-    )
-  }
-
-  public getTicketCreationReceipt(): Promise<TransactionReceipt> {
-    return this.l2Provider.getTransactionReceipt(this.l2TicketCreationTxnHash)
-  }
+  /**
+   * Receipt for the auto redeem attempt. See L1ToL2Message.autoRedeemId.
+   * May throw an error if no auto-redeem attempt was made. This is the case for
+   * transactions with no call data
+   * @returns
+   */
   public getAutoRedeemReceipt(): Promise<TransactionReceipt> {
-    return this.l2Provider.getTransactionReceipt(this.autoRedeemHash)
-  }
-  public getUserTxnReceipt(): Promise<TransactionReceipt> {
-    return this.l2Provider.getTransactionReceipt(this.userTxnHash)
+    return this.l2Provider.getTransactionReceipt(this.autoRedeemId)
   }
 
+  /**
+   * Receipt for the l2 transaction created by this message. See L1ToL2Message.l2TxHash
+   * May throw an error if the l2 transaction has yet to be executed, which is the case if
+   * the retryable ticket has not been created and redeemed.
+   * @returns
+   */
+  public getL2TxReceipt(): Promise<TransactionReceipt> {
+    return this.l2Provider.getTransactionReceipt(this.l2TxHash)
+  }
+
+  /**
+   * Has this message expired. Once expired the retryable ticket can no longer be executed.
+   * // CHRIS: check this
+   * @returns
+   */
   public async isExpired(): Promise<boolean> {
     return (await this.getTimeout()).eq(constants.Zero)
   }
 
   private async receiptsToStatus(
-    ticketCreationReceipt: TransactionReceipt,
-    userTxnReceipt: TransactionReceipt
+    retryableTicketReceipt: TransactionReceipt,
+    l2TxReceipt: TransactionReceipt
   ): Promise<L1ToL2MessageStatus> {
-    if (userTxnReceipt && userTxnReceipt.status === 1) {
+    if (l2TxReceipt && l2TxReceipt.status === 1) {
       return L1ToL2MessageStatus.REDEEMED
     }
 
-    if (!ticketCreationReceipt) {
+    if (!retryableTicketReceipt) {
       return L1ToL2MessageStatus.NOT_YET_CREATED
     }
-    if (ticketCreationReceipt.status === 0) {
+    if (retryableTicketReceipt.status === 0) {
       return L1ToL2MessageStatus.CREATION_FAILED
     }
     if (await this.isExpired()) {
@@ -279,120 +383,139 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   public async status(): Promise<L1ToL2MessageStatus> {
-    const userTxnReceipt = await this.l2Provider.getTransactionReceipt(
-      this.userTxnHash
-    )
+    const l2TxReceipt = await this.getL2TxReceipt()
+    const retryableTicketReceipt = await this.getRetryableTicketReceipt()
 
-    const ticketCreationReceipt = await this.getTicketCreationReceipt()
-    return this.receiptsToStatus(userTxnReceipt, ticketCreationReceipt)
+    return this.receiptsToStatus(l2TxReceipt, retryableTicketReceipt)
   }
 
+  /**
+   * Wait for the retryable ticket for the retryable ticket to be created.
+   * @param timeout
+   * @param confirmations
+   * @returns
+   */
   public async wait(
+    /**
+     * Amount of time to wait for the retryable ticket to be created
+     */
     timeout = 900000,
+    /**
+     * Amount of confirmations the retryable ticket and the auto redeem receipt should have
+     */
     confirmations?: number
   ): Promise<L1ToL2MessageReceipt> {
-    const ticketCreationReceipt = await this.l2Provider.waitForTransaction(
-      this.l2TicketCreationTxnHash,
+    // wait for the retryable ticket - if this doesn't exist then there's no point
+    // looking for the other receipts
+    const retryableTicketReceipt = await this.l2Provider.waitForTransaction(
+      this.retryableTicketId,
       confirmations,
       timeout
     )
-    let autoRedeemReceipt
+
+    // if a retryable ticket exists then an auto redeem receipt also exists
+    // except in the case that the retryable ticket specifies that the l2 transaction contract
+    // no call data (just an eth deposit).
+    let autoRedeemReceipt: TransactionReceipt | undefined
     try {
+      // CHRIS: come back and check this - do we really get an empty result here?
+      // CHRIS: check these use cases:
+      // 1. normal case
+      //    a) wait for the ticket to be created, it is automatically redeemed, and we now have an l2 receipt
+      // 2. failed to create
+      //    a) wait for creation, and check the status - we'll go no further
+      // 3. it got created, but auto redeem failed
+      //    c) now we need to manually redeem, or cancel, or do nothing
       autoRedeemReceipt = await this.l2Provider.waitForTransaction(
-        this.autoRedeemHash,
+        this.autoRedeemId,
         confirmations,
-        3000 // autoredeem gets attempted immediately after ticket creation, but could never get attempted if not calldata; we leave a few seconds of buffer
+        3000 // autoredeem should be available immediately
       )
     } catch (err) {
       // an auto redeem receipt should be available immediately
       // if it's not it could be because there was no call data - like an ETH deposit
     }
 
-    const userTxnReceipt = await this.getUserTxnReceipt()
+    const l2TxReceipt = await this.getL2TxReceipt()
 
     return {
-      ticketCreationReceipt,
+      retryableTicketReceipt: retryableTicketReceipt,
       autoRedeemReceipt,
-      userTxnReceipt,
-      status: await this.receiptsToStatus(
-        ticketCreationReceipt,
-        userTxnReceipt
-      ),
+      l2TxReceipt: l2TxReceipt,
+      status: await this.receiptsToStatus(retryableTicketReceipt, l2TxReceipt),
     }
   }
 
+  /**
+   * How long until this message expires
+   * @returns
+   */
   public getTimeout(): Promise<BigNumber> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
       this.l2Provider
     )
-    return arbRetryableTx.getTimeout(this.userTxnHash)
+    return arbRetryableTx.getTimeout(this.l2TxHash)
   }
+
+  /**
+   * // CHRIS: what's this all about?
+   * @returns
+   */
   public getBeneficiary(): Promise<string> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
       this.l2Provider
     )
-    return arbRetryableTx.getBeneficiary(this.userTxnHash)
+    return arbRetryableTx.getBeneficiary(this.l2TxHash)
   }
 }
 
 export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public constructor(
     private readonly l2Signer: Signer,
-    l2TicketCreationTxnHash: string,
+    retryableTicketId: string,
     messageNumber: BigNumber
   ) {
-    super(l2Signer.provider!, l2TicketCreationTxnHash, messageNumber)
+    super(l2Signer.provider!, retryableTicketId, messageNumber)
     if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
   }
 
   /**
-   * Checks the status of the message and only try's to redeem if
-   * in the correct state. Safe to call on an already redeemed message
+   * Manually redeem the retryable ticket.
+   * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
    */
-  public async redeemSafe(
-    waitTimeForL2Receipt = 900000 // 15 mins
-  ): Promise<ContractTransaction> {
-    console.log('waiting for retryable ticket...', this.userTxnHash)
-    const result = await this.wait(waitTimeForL2Receipt)
-    if (result.ticketCreationReceipt?.status == 0) {
-      console.warn(
-        'retryable ticket failed',
-        result.ticketCreationReceipt.transactionHash
+  public async redeem(): Promise<ContractTransaction> {
+    const status = await this.status()
+    if (status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
+      const arbRetryableTx = ArbRetryableTx__factory.connect(
+        ARB_RETRYABLE_TX_ADDRESS,
+        this.l2Signer
       )
-      throw new Error('l2 txn failed')
-    }
-    return await this.redeem()
-  }
-
-  public redeem(): Promise<ContractTransaction> {
-    const arbRetryableTx = ArbRetryableTx__factory.connect(
-      ARB_RETRYABLE_TX_ADDRESS,
-      this.l2Signer
-    )
-    return arbRetryableTx.redeem(this.userTxnHash)
-  }
-
-  public async cancelSafe(
-    waitTimeForL2Receipt = 900000
-  ): Promise<ContractTransaction> {
-    const result = await this.wait(waitTimeForL2Receipt)
-
-    if (result.ticketCreationReceipt?.status == 1) {
-      throw new Error(
-        `Can't cancel retryable, it's already been redeemed: ${result.ticketCreationReceipt?.transactionHash}`
+      return await arbRetryableTx.redeem(this.l2TxHash)
+    } else {
+      throw new ArbTsError(
+        `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.NOT_YET_REDEEMED}.`
       )
     }
-    console.log(`Hasn't been redeemed yet, calling cancel now`)
-    return await this.cancel()
   }
 
-  public cancel(): Promise<ContractTransaction> {
-    const arbRetryableTx = ArbRetryableTx__factory.connect(
-      ARB_RETRYABLE_TX_ADDRESS,
-      this.l2Signer
-    )
-    return arbRetryableTx.cancel(this.userTxnHash)
+  /**
+   * Cancel the retryable ticket.
+   * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
+   */
+  public async cancel(): Promise<ContractTransaction> {
+    const status = await this.status()
+    if (status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
+      const arbRetryableTx = ArbRetryableTx__factory.connect(
+        ARB_RETRYABLE_TX_ADDRESS,
+        this.l2Signer
+      )
+      return await arbRetryableTx.cancel(this.l2TxHash)
+    } else {
+      throw new ArbTsError(
+        `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.NOT_YET_REDEEMED}.`
+      )
+    }
   }
 }

@@ -17,34 +17,3 @@
 'use strict'
 
 import { BigNumber } from '@ethersproject/bignumber'
-
-export interface MessageBatchProofInfo {
-  proof: string[]
-  path: BigNumber
-  l2Sender: string
-  l1Dest: string
-  l2Block: BigNumber
-  l1Block: BigNumber
-  timestamp: BigNumber
-  amount: BigNumber
-  calldataForL1: string
-}
-
-export enum OutgoingMessageState {
-  /**
-   * No corresponding L2ToL1Event emitted
-   */
-  NOT_FOUND,
-  /**
-   * ArbSys.sendTxToL1 called, but assertion not yet confirmed
-   */
-  UNCONFIRMED,
-  /**
-   * Assertion for outgoing message confirmed, but message not yet executed
-   */
-  CONFIRMED,
-  /**
-   * Outgoing message executed (terminal state)
-   */
-  EXECUTED,
-}

@@ -26,9 +26,7 @@ export { ArbRetryableTx__factory } from './lib/abi/factories/ArbRetryableTx__fac
 export { ERC20__factory } from './lib/abi/factories/ERC20__factory'
 export { ArbSys__factory } from './lib/abi/factories/ArbSys__factory'
 export { ArbAddressTable__factory } from './lib/abi/factories/ArbAddressTable__factory'
-
 export { TokenBridger, EthBridger } from './lib/assetBridger'
-
-export { OutgoingMessageState } from './lib/dataEntities'
+export { L2ToL1MessageStatus } from './lib/message/L2ToL1Message'
 export { networks } from './lib/networks'
 export { argSerializerConstructor } from './lib/byte_serialize_params'

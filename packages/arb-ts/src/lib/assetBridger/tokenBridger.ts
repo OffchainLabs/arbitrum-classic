@@ -504,7 +504,7 @@ export class TokenBridger extends AssetBridger<
     params: TokenDepositParams
   ): Promise<L1ContractTransaction> {
     const tx = await this.depositTxOrGas(params, false)
-    return L1TransactionReceipt.swivelWait(tx)
+    return L1TransactionReceipt.monkeyPatchWait(tx)
   }
 
   private async withdrawTxOrGas<T extends boolean>(
@@ -551,7 +551,7 @@ export class TokenBridger extends AssetBridger<
     params: TokenWithdrawParams
   ): Promise<L2ContractTransaction> {
     const tx = await this.withdrawTxOrGas(params, false)
-    return L2TransactionReceipt.swivelWait(tx)
+    return L2TransactionReceipt.monkeyPatchWait(tx)
   }
 
   /**
@@ -693,8 +693,7 @@ export class AdminTokenBridger extends TokenBridger {
     const estimator = new L1ToL2MessageGasEstimator(l2Provider)
     const { submissionPrice } = await estimator.getSubmissionPrice(
       // 20 per address, 100 as buffer/ estimate for any additional calldata
-      300 + 20 * (tokenGateways.length * 2),
-      { percentIncrease: BigNumber.from(0) }
+      300 + 20 * (tokenGateways.length * 2)
     )
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(

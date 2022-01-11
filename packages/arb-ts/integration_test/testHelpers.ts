@@ -74,9 +74,9 @@ export const testRetryableTicket = async (
   if (!message) {
     throw new Error('Seq num not found')
   }
-  const retryableTicket = message.l2TicketCreationTxnHash
-  const autoRedeem = message.autoRedeemHash
-  const redeemTransaction = message.userTxnHash
+  const retryableTicket = message.retryableTicketId
+  const autoRedeem = message.autoRedeemId
+  const redeemTransaction = message.l2TxHash
 
   prettyLog(
     `retryableTicket: ${retryableTicket} autoredeem: ${autoRedeem}, redeem: ${redeemTransaction}`
@@ -85,7 +85,7 @@ export const testRetryableTicket = async (
 
   const waitResult = await message.wait(1000 * 60 * 15)
 
-  const retryableTicketReceipt = waitResult.ticketCreationReceipt
+  const retryableTicketReceipt = waitResult.retryableTicketReceipt
 
   prettyLog('retryableTicketReceipt found:')
 
@@ -105,7 +105,7 @@ export const testRetryableTicket = async (
   )
   prettyLog('Getting redemption')
 
-  const redemptionReceipt = waitResult.userTxnReceipt
+  const redemptionReceipt = waitResult.l2TxReceipt
 
   expect(redemptionReceipt && redemptionReceipt.status).equals(
     1,
