@@ -1,5 +1,6 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
+import { ArbTsError, MissingProviderArbTsError } from '../errors'
 
 export type SignerOrProvider = Signer | Provider
 
@@ -35,5 +36,26 @@ export class SignerProviderUtils {
     signer: Signer
   ): signer is Signer & { provider: Provider } {
     return !!signer.provider
+  }
+
+  /**
+   * Checks that the signer/provider that's provider matches the chain id
+   * Throws if not.
+   * @param signerOrProvider
+   * @param chainId
+   */
+  public static async checkNetworkMatches(
+    signerOrProvider: SignerOrProvider,
+    chainId: number
+  ): Promise<void> {
+    const provider = this.getProvider(signerOrProvider)
+    if (!provider) throw new MissingProviderArbTsError('signerOrProvider')
+
+    const providerChainId = (await provider.getNetwork()).chainId
+    if (providerChainId !== chainId) {
+      throw new ArbTsError(
+        `Signer/provider chain id: ${providerChainId} doesn't match provided chain id: ${chainId}.`
+      )
+    }
   }
 }

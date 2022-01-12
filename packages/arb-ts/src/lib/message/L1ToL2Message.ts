@@ -361,7 +361,14 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns
    */
   public async isExpired(): Promise<boolean> {
-    return (await this.getTimeout()).eq(constants.Zero)
+    const currentTimestamp = BigNumber.from(
+      (await this.l2Provider.getBlock('latest')).timestamp
+    )
+    const timeoutTimestamp = await this.getTimeout()
+
+    // timeoutTimestamp returns the timestamp at which the retryable ticket expires
+    // it can also return 0 if the ticket l2Tx does not exist
+    return currentTimestamp.gte(timeoutTimestamp)
   }
 
   private async receiptsToStatus(

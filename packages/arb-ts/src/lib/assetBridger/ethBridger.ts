@@ -105,6 +105,8 @@ export class EthBridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
+    await this.checkL1Network(params.l1Signer)
+    await this.checkL2Network(params.l2Provider)
 
     const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
 
@@ -159,6 +161,7 @@ export class EthBridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbTsError('l2Signer')
     }
+    await this.checkL2Network(params.l2Signer)
 
     const addr =
       params.destinationAddress || (await params.l2Signer.getAddress())

@@ -136,6 +136,8 @@ export class TokenBridger extends AssetBridger<
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
+    await this.checkL1Network(l1Provider)
+
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
       l1Provider
@@ -154,6 +156,8 @@ export class TokenBridger extends AssetBridger<
     erc20L1Address: string,
     l2Provider: Provider
   ): Promise<string> {
+    await this.checkL2Network(l2Provider)
+
     const l2GatewayRouter = L2GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2Provider
@@ -173,6 +177,7 @@ export class TokenBridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
+    await this.checkL1Network(params.l1Signer)
 
     // you approve tokens to the gateway that the router will use
     const gatewayAddress = await this.getL1GatewayAddress(
@@ -206,6 +211,8 @@ export class TokenBridger extends AssetBridger<
     fromAddress?: string,
     filter?: Omit<Filter, 'topics' | 'address'>
   ): Promise<WithdrawalInitiatedEvent['args'][]> {
+    await this.checkL2Network(l2Provider)
+
     const eventFetcher = new EventFetcher(l2Provider)
     const events = await eventFetcher.getEvents<
       L2ArbitrumGateway,
@@ -309,16 +316,18 @@ export class TokenBridger extends AssetBridger<
    * @param l1Provider
    * @returns
    */
-  public getL2ERC20Address(
+  public async getL2ERC20Address(
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
+    await this.checkL1Network(l1Provider)
+
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
       l1Provider
     )
 
-    return l1GatewayRouter.functions
+    return await l1GatewayRouter.functions
       .calculateL2TokenAddress(erc20L1Address)
       .then(([res]) => res)
   }
@@ -329,12 +338,15 @@ export class TokenBridger extends AssetBridger<
    * @param l1Provider
    * @returns
    */
-  public getL1ERC20Address(
+  public async getL1ERC20Address(
     erc20L2Address: string,
     l2Provider: Provider
   ): Promise<string> {
+    await this.checkL2Network(l2Provider)
+
     const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
-    return arbERC20.functions.l1Address().then(([res]) => res)
+
+    return await arbERC20.functions.l1Address().then(([res]) => res)
   }
 
   /**
@@ -347,6 +359,8 @@ export class TokenBridger extends AssetBridger<
     l1TokenAddress: string,
     l1Provider: Provider
   ): Promise<boolean> {
+    await this.checkL1Network(l1Provider)
+
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
       l1Provider
@@ -449,6 +463,8 @@ export class TokenBridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
+    await this.checkL1Network(params.l1Signer)
+    await this.checkL2Network(params.l2Provider)
     if ((params.overrides as PayableOverrides | undefined)?.value) {
       throw new Error('L1 call value should be set through l1CallValue param')
     }
@@ -512,6 +528,7 @@ export class TokenBridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbTsError('l2Signer')
     }
+    await this.checkL2Network(params.l2Signer)
 
     const to = params.destinationAddress || (await params.l2Signer.getAddress())
 
@@ -628,6 +645,7 @@ export class AdminTokenBridger extends TokenBridger {
         'Must supply customNetworkL1GatewayRouter for custom network '
       )
     }
+    await this.checkL1Network(l1Provider)
 
     const l1GatewayRouterAddress =
       customNetworkL1GatewayRouter || this.l2Network.tokenBridge.l1GatewayRouter
@@ -650,10 +668,12 @@ export class AdminTokenBridger extends TokenBridger {
     l2Provider: Provider,
     customNetworkL2GatewayRouter?: string
   ): Promise<GatewaySetEvent['args'][]> {
-    if (this.l2Network.isCustom && !customNetworkL2GatewayRouter)
+    if (this.l2Network.isCustom && !customNetworkL2GatewayRouter) {
       throw new Error(
         'Must supply customNetworkL2GatewayRouter for custom network '
       )
+    }
+    await this.checkL2Network(l2Provider)
 
     const l2GatewayRouterAddress =
       customNetworkL2GatewayRouter || this.l2Network.tokenBridge.l2GatewayRouter
@@ -681,6 +701,8 @@ export class AdminTokenBridger extends TokenBridger {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
+    await this.checkL1Network(l1Signer)
+    await this.checkL2Network(l2Provider)
 
     const l2GasPrice = await l2Provider.getGasPrice()
 

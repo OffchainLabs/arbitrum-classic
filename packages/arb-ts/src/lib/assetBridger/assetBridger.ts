@@ -22,6 +22,10 @@ import { L1ContractTransaction } from '../message/L1ToL2Message'
 import { L2ContractTransaction } from '../message/L2ToL1Message'
 
 import networks, { L1Network, L2Network } from '../utils/networks'
+import {
+  SignerOrProvider,
+  SignerProviderUtils,
+} from '../utils/signerOrProvider'
 
 /**
  * Base for bridging assets from l1 to l2 and back
@@ -36,6 +40,28 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
         `Unknown l1 network chain id: ${l2Network.partnerChainID}`
       )
     }
+  }
+
+  /**
+   * Check the signer/provider matches the l1Network, throws if not
+   * @param sop
+   */
+  protected checkL1Network(sop: SignerOrProvider): void {
+    SignerProviderUtils.checkNetworkMatches(
+      sop,
+      parseInt(this.l1Network.chainID)
+    )
+  }
+
+  /**
+   * Check the signer/provider matches the l2Network, throws if not
+   * @param sop
+   */
+  protected checkL2Network(sop: SignerOrProvider): void {
+    SignerProviderUtils.checkNetworkMatches(
+      sop,
+      parseInt(this.l2Network.chainID)
+    )
   }
 
   /**
