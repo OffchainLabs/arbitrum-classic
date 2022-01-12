@@ -193,6 +193,7 @@ type Sequencer struct {
 	GasRefunderAddress                string             `koanf:"gas-refunder-address"`
 	GasRefunderExtraGas               uint64             `koanf:"gas-refunder-extra-gas"`
 	Dangerous                         SequencerDangerous `koanf:"dangerous"`
+	DebugTiming                       bool               `koanf:"debug-timing"`
 }
 
 type WS struct {
@@ -468,6 +469,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.dangerous.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-batch-posting", false, "disable posting batches to L1 (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-delayed-message-sequencing", false, "disable sequencing delayed messages (DANGEROUS)")
+	f.Bool("node.sequencer.debug-timing", false, "log elapsed time throughout core sequencing loop")
 
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 
