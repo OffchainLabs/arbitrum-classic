@@ -68,6 +68,11 @@ func (ac *ArbCore) MachineIdle() bool {
 	return status == 1
 }
 
+func (ac *ArbCore) SaveRocksdbCheckpoint() {
+	defer runtime.KeepAlive(ac)
+	C.arbCoreSaveRocksdbCheckpoint(ac.c)
+}
+
 func (ac *ArbCore) MachineMessagesRead() *big.Int {
 	defer runtime.KeepAlive(ac)
 	return receiveBigInt(C.arbCoreMachineMessagesRead(ac.c))

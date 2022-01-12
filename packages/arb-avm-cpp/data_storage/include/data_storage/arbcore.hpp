@@ -107,6 +107,7 @@ class ArbCore {
     // Core thread input
     std::atomic<bool> save_checkpoint{false};
     rocksdb::Status save_checkpoint_status;
+    std::atomic<bool> trigger_save_rocksdb_checkpoint;
 
     // Core thread holds mutex only during reorg.
     // Routines accessing database for log entries will need to acquire mutex
@@ -236,6 +237,10 @@ class ArbCore {
     template <class T>
     std::unique_ptr<T> getMachine(uint256_t machineHash,
                                   ValueCache& value_cache);
+
+   public:
+    // To trigger saving database copy
+    void triggerSaveRocksdbCheckpoint();
 
    private:
     template <class T>

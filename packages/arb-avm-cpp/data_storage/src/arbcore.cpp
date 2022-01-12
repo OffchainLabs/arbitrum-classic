@@ -499,6 +499,12 @@ rocksdb::Status ArbCore::triggerSaveCheckpoint() {
     return save_checkpoint_status;
 }
 
+// triggerSaveRocksdbCheckpoint is used to save a copy of current database
+// without having to stop program
+void ArbCore::triggerSaveRocksdbCheckpoint() {
+    trigger_save_rocksdb_checkpoint = true;
+}
+
 rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     auto& state = core_machine->machine_state;
     if (!isValid(tx, state.output.fully_processed_inbox)) {
@@ -1165,14 +1171,7 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
     ValueCache& value_cache,
     bool lazy_load) const;
 
-static std::atomic<bool> save_rocksdb_checkpoint_signal;
 #ifdef __linux__
-void sigUsr1Handler(int signal) {
-    if (signal != SIGUSR1)
-        return;
-    save_rocksdb_checkpoint_signal = true;
-}
-
 static void* backtrace_buffer[1024];
 void sigUsr2Handler(int signal) {
     if (signal != SIGUSR2)
@@ -1202,7 +1201,6 @@ void ArbCore::printCoreThreadBacktrace() {
 void ArbCore::operator()() {
 #ifdef __linux__
     prctl(PR_SET_NAME, "ArbCore", 0, 0, 0);
-    signal(SIGUSR1, sigUsr1Handler);
     signal(SIGUSR2, sigUsr2Handler);
     core_pthread = pthread_self();
 #endif
@@ -1214,8 +1212,9 @@ void ArbCore::operator()() {
     auto begin_time = std::chrono::steady_clock::now();
     auto begin_message =
         core_machine->machine_state.output.fully_processed_inbox.count;
-    save_rocksdb_checkpoint_signal = false;
+    trigger_save_rocksdb_checkpoint = false;
     auto perform_pruning = false;
+    auto perform_save_rocksdb_checkpoint = false;
 
     if (coreConfig.database_save_interval > 0) {
         next_rocksdb_save_timestamp =
@@ -1326,7 +1325,8 @@ void ArbCore::operator()() {
                     combined_machine_cache.timedAdd(
                         std::make_unique<Machine>(*core_machine));
 
-                    if (output.arb_gas_used >= next_checkpoint_gas) {
+                    if (trigger_save_rocksdb_checkpoint ||
+                        output.arb_gas_used >= next_checkpoint_gas) {
                         auto save_checkpoint_begin_time =
                             std::chrono::steady_clock::now();
                         // Save checkpoint after checkpoint_gas_frequency gas
@@ -1364,6 +1364,15 @@ void ArbCore::operator()() {
                             << "\n";
                         // Clear oldest cache and start populating next cache
                         cache.nextCache();
+
+                        if (trigger_save_rocksdb_checkpoint) {
+                            // database is ready to be copied
+                            trigger_save_rocksdb_checkpoint = false;
+                            perform_save_rocksdb_checkpoint = true;
+                        }
+
+                        // Perform pruning soon
+                        perform_pruning = true;
                     }
 
                     // Machine was stopped to save sideload, update execConfig
@@ -1377,9 +1386,6 @@ void ArbCore::operator()() {
                                   << "\n";
                         break;
                     }
-
-                    // Perform pruning soon
-                    perform_pruning = true;
                 }
 
                 status = tx.commit();
@@ -1394,10 +1400,10 @@ void ArbCore::operator()() {
                 // Check if checkpoint of full database needs to be saved to
                 // disk
                 auto current_seconds = seconds_since_epoch();
-                if (save_rocksdb_checkpoint_signal ||
+                if (perform_save_rocksdb_checkpoint ||
                     (next_rocksdb_save_timestamp != 0 &&
                      current_seconds >= next_rocksdb_save_timestamp)) {
-                    save_rocksdb_checkpoint_signal = false;
+                    perform_save_rocksdb_checkpoint = false;
 
                     struct stat info;
                     if ((stat(save_rocksdb_path.c_str(), &info) != 0) &&

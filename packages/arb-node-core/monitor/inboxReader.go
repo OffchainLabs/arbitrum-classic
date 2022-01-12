@@ -115,7 +115,12 @@ func (ir *InboxReader) Start(parentCtx context.Context, inboxReaderDelayBlocks i
 			}
 			justErrored = true
 			logger.Warn().Stack().Err(err).Msg("Failed to read inbox messages")
-			<-time.After(time.Second * 2)
+
+			select {
+			case <-ctx.Done():
+				break
+			case <-time.After(time.Second * 2):
+			}
 		}
 	}()
 	ir.cancelFunc = cancelFunc
