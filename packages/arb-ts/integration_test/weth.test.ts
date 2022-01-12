@@ -125,6 +125,7 @@ describe('WETH', async () => {
   it('deposits WETH', async () => {
     const { l2Network, l1Signer, l2Signer, tokenBridger } =
       await instantiateBridgeWithRandomWallet()
+
     const l1WethAddress = l2Network.tokenBridge.l1Weth
 
     const wethToWrap = parseEther('0.00001')
@@ -167,9 +168,6 @@ describe('WETH', async () => {
       erc20L1Address: l1WethAddress,
       l1Signer: l1Signer,
       l2Provider: l2Signer.provider!,
-      retryableGasOverrides: {
-        sendL2CallValueFromL1: false,
-      },
     })
     const depositRec = await depositRes.wait()
     await testRetryableTicket(l2Signer.provider!, depositRec)

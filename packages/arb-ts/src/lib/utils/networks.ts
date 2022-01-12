@@ -17,6 +17,7 @@
 'use strict'
 
 import dotenv from 'dotenv'
+import { BigNumber } from 'ethers'
 dotenv.config()
 
 export interface L1Network extends Network {
@@ -62,7 +63,11 @@ export interface TokenBridge {
 export interface EthBridge {
   inbox: string
   sequencerInbox: string
-  outbox: string
+  /**
+   * Outbox addresses paired with the first batch number at which they
+   * were activated.
+   */
+  outboxes: { [address: string]: BigNumber }
   rollup: string
 }
 
@@ -115,14 +120,20 @@ const rinkebyTokenBridge: TokenBridge = {
 const rinkebyETHBridge: EthBridge = {
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
   sequencerInbox: '0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8',
-  outbox: '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3',
+  outboxes: {
+    '0xefa1a42D3c4699822eE42677515A64b658be1bFc': BigNumber.from(0),
+    '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3': BigNumber.from(326),
+  },
   rollup: '0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c',
 }
 
 const mainnetETHBridge: EthBridge = {
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
   sequencerInbox: '0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef',
-  outbox: '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40',
+  outboxes: {
+    '0x667e23ABd27E623c11d4CC00ca3EC4d0bD63337a': BigNumber.from(0),
+    '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40': BigNumber.from(30),
+  },
   rollup: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
 }
 

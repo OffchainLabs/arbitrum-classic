@@ -187,7 +187,7 @@ export enum L1ToL2MessageStatus {
    * The retryable ticket has been created but has not been redeemed. Since auto redeem occurs
    * when the retryable ticket was created, this means that the auto-redeem failed.
    */
-  NOT_YET_REDEEMED,
+  AUTO_REDEEM_FAILED,
   /**
    * The retryable ticket has been redeemed (either by auto, or manually) and the
    * l2 transaction has been executed
@@ -197,13 +197,6 @@ export enum L1ToL2MessageStatus {
    * The message has either expired or has been canceled. It can no longer be redeemed.
    */
   EXPIRED,
-}
-
-export interface L1ToL2WaitResult {
-  retryableCreationReceipt: TransactionReceipt
-  autoRedeemReceipt?: TransactionReceipt
-  l2TxReceipt?: TransactionReceipt
-  status: L1ToL2MessageStatus
 }
 
 /**
@@ -317,6 +310,14 @@ export class L1ToL2Message {
   }
 }
 
+/**
+ * If the status is redeemed an l2TxReceipt is populated.
+ * For all other statuses l2TxReceipt is not populated
+ */
+type L1ToL2MessageWaitResult =
+  | { status: L1ToL2MessageStatus.REDEEMED; l2TxReceipt: TransactionReceipt }
+  | { status: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED> }
+
 export class L1ToL2MessageReader extends L1ToL2Message {
   public constructor(
     private readonly l2Provider: Provider,
@@ -356,8 +357,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   /**
-   * Has this message expired. Once expired the retryable ticket can no longer be executed.
-   * // CHRIS: check this
+   * Has this message expired. Once expired the retryable ticket can no longer be redeemed.
    * @returns
    */
   public async isExpired(): Promise<boolean> {
@@ -365,8 +365,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   private async receiptsToStatus(
-    retryableCreationReceipt: TransactionReceipt,
-    l2TxReceipt: TransactionReceipt
+    retryableCreationReceipt: TransactionReceipt | null | undefined,
+    l2TxReceipt: TransactionReceipt | null | undefined
   ): Promise<L1ToL2MessageStatus> {
     if (l2TxReceipt && l2TxReceipt.status === 1) {
       return L1ToL2MessageStatus.REDEEMED
@@ -382,7 +382,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       return L1ToL2MessageStatus.EXPIRED
     }
     // we could sanity check that autoredeem failed, but we don't need to
-    return L1ToL2MessageStatus.NOT_YET_REDEEMED
+    return L1ToL2MessageStatus.AUTO_REDEEM_FAILED
   }
 
   public async status(): Promise<L1ToL2MessageStatus> {
@@ -393,10 +393,12 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   /**
-   * Wait for the retryable ticket for the retryable ticket to be created.
+   * Wait for the retryable ticket to be created, for it to be redeemed, and for the l2Tx to be executed.
    * @param timeout
    * @param confirmations
-   * @returns
+   * @returns The wait result contains a status, and optionally the l2TxReceipt.
+   * If the status is "REDEEMED" then a l2TxReceipt is also available on the result.
+   * If the status has any other value then l2TxReceipt is not populated.
    */
   public async wait(
     /**
@@ -407,48 +409,41 @@ export class L1ToL2MessageReader extends L1ToL2Message {
      * Amount of confirmations the retryable ticket and the auto redeem receipt should have
      */
     confirmations?: number
-  ): Promise<L1ToL2WaitResult> {
-    // wait for the retryable ticket - if this doesn't exist then there's no point
-    // looking for the other receipts
-    const retryableCreationReceipt = await this.l2Provider.waitForTransaction(
-      this.retryableCreationId,
-      confirmations,
-      timeout
-    )
-
-    // if a retryable ticket exists then an auto redeem receipt also exists
-    // except in the case that the retryable ticket specifies that the l2 transaction contract
-    // no call data (just an eth deposit).
-    let autoRedeemReceipt: TransactionReceipt | undefined
+  ): Promise<L1ToL2MessageWaitResult> {
+    // try to wait for the retryable ticket to be created
+    let retryableCreationReceipt: TransactionReceipt | undefined
     try {
-      // CHRIS: come back and check this - do we really get an empty result here?
-      // CHRIS: check these use cases:
-      // 1. normal case
-      //    a) wait for the ticket to be created, it is automatically redeemed, and we now have an l2 receipt
-      // 2. failed to create
-      //    a) wait for creation, and check the status - we'll go no further
-      // 3. it got created, but auto redeem failed
-      //    c) now we need to manually redeem, or cancel, or do nothing
-      autoRedeemReceipt = await this.l2Provider.waitForTransaction(
-        this.autoRedeemId,
+      retryableCreationReceipt = await this.l2Provider.waitForTransaction(
+        this.retryableCreationId,
         confirmations,
-        3000 // autoredeem should be available immediately
+        timeout
       )
     } catch (err) {
-      // an auto redeem receipt should be available immediately
-      // if it's not it could be because there was no call data - like an ETH deposit
+      if ((err as Error).message.includes('timeout exceeded')) {
+        // do nothing - this is dependent on the timeout passed in
+      } else throw err
     }
 
-    const l2TxReceipt = await this.getL2TxReceipt()
+    // get the l2TxReceipt, dont bother trying if we couldn't get the retryableCreationReceipt
+    const l2TxReceipt = retryableCreationReceipt
+      ? await this.getL2TxReceipt()
+      : undefined
 
-    return {
-      retryableCreationReceipt: retryableCreationReceipt,
-      autoRedeemReceipt,
-      l2TxReceipt: l2TxReceipt,
-      status: await this.receiptsToStatus(
-        retryableCreationReceipt,
-        l2TxReceipt
-      ),
+    const status = await this.receiptsToStatus(
+      retryableCreationReceipt,
+      l2TxReceipt
+    )
+
+    if (status === L1ToL2MessageStatus.REDEEMED) {
+      return {
+        // if the status is redeemed we know the l2TxReceipt must exist
+        l2TxReceipt: l2TxReceipt!,
+        status,
+      }
+    } else {
+      return {
+        status,
+      }
     }
   }
 
@@ -465,7 +460,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   /**
-   * // CHRIS: what's this all about?
+   * Address to which CallValue will be credited to on L2 if the retryable ticket times out or is cancelled.
+   * The Beneficiary is also the address with the right to cancel a Retryable Ticket (if the ticket hasn’t been redeemed yet).
    * @returns
    */
   public getBeneficiary(): Promise<string> {
@@ -493,7 +489,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
    */
   public async redeem(): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
+    if (status === L1ToL2MessageStatus.AUTO_REDEEM_FAILED) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
@@ -501,7 +497,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       return await arbRetryableTx.redeem(this.l2TxHash)
     } else {
       throw new ArbTsError(
-        `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.NOT_YET_REDEEMED}.`
+        `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.AUTO_REDEEM_FAILED}.`
       )
     }
   }
@@ -512,7 +508,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
    */
   public async cancel(): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
+    if (status === L1ToL2MessageStatus.AUTO_REDEEM_FAILED) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
@@ -520,7 +516,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       return await arbRetryableTx.cancel(this.l2TxHash)
     } else {
       throw new ArbTsError(
-        `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.NOT_YET_REDEEMED}.`
+        `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.AUTO_REDEEM_FAILED}.`
       )
     }
   }

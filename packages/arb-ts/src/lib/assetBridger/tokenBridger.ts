@@ -19,7 +19,7 @@
 import { defaultAbiCoder } from '@ethersproject/abi'
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider, Filter } from '@ethersproject/abstract-provider'
-import { PayableOverrides } from '@ethersproject/contracts'
+import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { Zero, MaxUint256 } from '@ethersproject/constants'
 import { Logger } from '@ethersproject/logger'
 import { BigNumber, ethers } from 'ethers'
@@ -46,7 +46,7 @@ import {
 import { SignerProviderUtils } from '../utils/signerOrProvider'
 import { L2Network } from '../utils/networks'
 import { isError } from '../utils/lib'
-import { MultiCaller } from '../utils/multicall'
+import { CallInput, MultiCaller } from '../utils/multicall'
 import { ArbTsError, MissingProviderArbTsError } from '../errors'
 import { EventFetcher } from '../utils/eventFetcher'
 
@@ -97,7 +97,12 @@ export interface TokenDepositParams extends EthDepositBase {
   /**
    * Overrides for the retryable ticket parameters
    */
-  retryableGasOverrides?: GasOverrides
+  retryableGasOverrides?: Omit<GasOverrides, 'sendL2CallValueFromL1'>
+
+  /**
+   * Transaction overrides
+   */
+  overrides?: Overrides
 }
 
 export interface TokenWithdrawParams extends EthWithdrawParams {
@@ -362,15 +367,9 @@ export class TokenBridger extends AssetBridger<
     maxGasPrice: BigNumber
     destinationAddress: string
   }> {
-    const {
-      erc20L1Address,
-      amount,
-      l2Provider,
-      l1Signer,
-      destinationAddress,
-      overrides,
-    } = params
-    let { retryableGasOverrides } = params
+    const { erc20L1Address, amount, l2Provider, l1Signer, destinationAddress } =
+      params
+    const { retryableGasOverrides } = params
 
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
@@ -406,11 +405,17 @@ export class TokenBridger extends AssetBridger<
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
 
-    // we add a hardcoded minimum maxgas for custom gateway deposits
+    let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
+    if (!tokenGasOverrides) tokenGasOverrides = {}
+    // we never send l2 call value from l1 for tokens
+    // since we check in the router that the value is submission cost
+    // + gas price * gas
+    tokenGasOverrides.sendL2CallValueFromL1 = false
+
+    // we also add a hardcoded minimum maxgas for custom gateway deposits
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
-      if (!retryableGasOverrides) retryableGasOverrides = {}
-      if (!retryableGasOverrides.maxGas) retryableGasOverrides.maxGas = {}
-      retryableGasOverrides.maxGas.min = TokenBridger.MIN_CUSTOM_DEPOSIT_MAXGAS
+      if (!tokenGasOverrides.maxGas) tokenGasOverrides.maxGas = {}
+      tokenGasOverrides.maxGas.min = TokenBridger.MIN_CUSTOM_DEPOSIT_MAXGAS
     }
 
     // 2. get the gas estimates
@@ -421,20 +426,12 @@ export class TokenBridger extends AssetBridger<
       estimateGasCallValue,
       retryableGasOverrides
     )
-    // 3. Some special token deposit overrides
-    let totalEthCallvalueToSend = (overrides && (await overrides.value)) || Zero
-    if (
-      !totalEthCallvalueToSend ||
-      BigNumber.from(totalEthCallvalueToSend).isZero()
-    ) {
-      totalEthCallvalueToSend = estimates.totalDepositValue
-    }
 
     return {
       maxGas: estimates.maxGasBid,
       maxSubmissionCost: estimates.maxSubmissionPriceBid,
       maxGasPrice: estimates.maxGasPriceBid,
-      l1CallValue: BigNumber.from(totalEthCallvalueToSend),
+      l1CallValue: estimates.totalDepositValue,
       destinationAddress: to,
       amount,
       erc20L1Address,
@@ -452,18 +449,15 @@ export class TokenBridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
+    if ((params.overrides as PayableOverrides | undefined)?.value) {
+      throw new Error('L1 call value should be set through l1CallValue param')
+    }
 
     const depositParams = await this.getDepositParams(params)
     const data = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [depositParams.maxSubmissionCost, '0x']
     )
-    if (params.overrides?.value)
-      throw new Error('L1 call value should be set through l1CallValue param')
-    if (depositParams.l1CallValue.eq(0))
-      throw new Error('L1 call value should not be zero')
-    if (depositParams.maxSubmissionCost.eq(0))
-      throw new Error('Max submission cost should not be zero')
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,

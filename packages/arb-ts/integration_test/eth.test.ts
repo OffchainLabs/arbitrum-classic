@@ -37,6 +37,7 @@ import {
   L2ToL1Message,
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
+import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
 dotenv.config()
 
 describe('Ether', async () => {
@@ -97,10 +98,9 @@ describe('Ether', async () => {
     prettyLog('l2TxHash: ' + message.retryableCreationId)
     prettyLog('waiting for l2 transaction:')
     const waitResult = await message.wait(1000 * 60 * 12)
-    const l2TxnRec = waitResult.retryableCreationReceipt
     prettyLog('l2 transaction found!')
-    expect(l2TxnRec && l2TxnRec.status).to.equal(
-      1,
+    expect(waitResult.status).to.eq(
+      L1ToL2MessageStatus.REDEEMED,
       'eth deposit l2 transaction not found'
     )
 

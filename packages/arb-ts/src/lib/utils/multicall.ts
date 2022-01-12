@@ -23,7 +23,7 @@ import { Multicall2__factory } from '../abi'
 /**
  * Input to multicall aggregator
  */
-type CallInput<T extends any> = {
+export type CallInput<T extends unknown> = {
   /**
    * Address of the target contract to be called
    */
@@ -42,8 +42,8 @@ type CallInput<T extends any> = {
  * For each item in T this DecoderReturnType<T> yields the return
  * type of the decoder property
  */
-type DecoderReturnType<T extends CallInput<any>[]> = {
-  [P in keyof T]: T[P] extends CallInput<any>
+type DecoderReturnType<T extends CallInput<unknown>[]> = {
+  [P in keyof T]: T[P] extends CallInput<unknown>
     ? ReturnType<T[P]['decoder']> | undefined
     : never
 }
@@ -62,8 +62,10 @@ export class MultiCaller {
    * Return values are order the same as the inputs.
    * If a call failed undefined is returned instead of the value.
    *
-   * To get better type inference create your inputs as a tuple and pass the tuple in
-   * The return type will be a tuple of the decoded return types. eg.
+   * To get better type inference when the individual calls are of different types
+   * create your inputs as a tuple and pass the tuple in. The return type will be
+   * a tuple of the decoded return types. eg.
+   *
    *
    * ```typescript
    *   const inputs: [
@@ -84,14 +86,14 @@ export class MultiCaller {
    *     },
    *   ]
    *
-   *   const res = await multiCaller.call(provider, inputs)
+   *   const res = await multiCaller.call(inputs)
    * ```
    * @param provider
    * @param params
    * @param requireSuccess Fail the whole call if any internal call fails
    * @returns
    */
-  public async call<T extends CallInput<any>[]>(
+  public async call<T extends CallInput<unknown>[]>(
     params: T,
     requireSuccess = false
   ): Promise<DecoderReturnType<T>> {

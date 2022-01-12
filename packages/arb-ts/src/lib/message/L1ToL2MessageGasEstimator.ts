@@ -9,7 +9,6 @@ import { constants } from 'ethers'
 import { utils } from 'ethers'
 
 const DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE = BigNumber.from(340)
-// const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
 
 /**
  * An optional big number percentage increase

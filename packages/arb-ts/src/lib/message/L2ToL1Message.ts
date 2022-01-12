@@ -34,7 +34,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { ContractTransaction } from 'ethers'
+import { ContractReceipt, ContractTransaction } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import { L2Network } from '../utils/networks'
 import { ArbTsError } from '../errors'
@@ -160,9 +160,28 @@ export class L2TransactionReceipt implements TransactionReceipt {
   }
 
   private getOutboxAddr(network: L2Network, batchNumber: BigNumber) {
-    // CHRIS: add the old address to the networks object, and look it up here
-    batchNumber
-    return network.ethBridge.outbox
+    // find the outbox where the activation batch number of the next outbox
+    // is greater than the supplied batch
+    const res = Object.entries(network.ethBridge.outboxes)
+      .sort((a, b) => {
+        if (a[1].lt(b[1])) return -1
+        else if (a[1].eq(b[1])) return 0
+        else return 1
+      })
+      .find(
+        (_, index, array) =>
+          array[index + 1] === undefined || array[index + 1][1].gt(batchNumber)
+      )
+
+    if (!res) {
+      throw new ArbTsError(
+        `No outbox found for batch number: ${batchNumber.toString()} on network: ${
+          network.chainID
+        }.`
+      )
+    }
+
+    return res[0]
   }
 
   /**
@@ -272,7 +291,7 @@ export class L2ToL1Message {
     destination?: string,
     uniqueId?: BigNumber,
     indexInBatch?: BigNumber
-  ) {
+  ): Promise<L2ToL1TransactionEvent['args'][]> {
     const eventFetcher = new EventFetcher(l2Provider)
     const events = await eventFetcher.getEvents<ArbSys, L2ToL1TransactionEvent>(
       ARB_SYS_ADDRESS,
@@ -380,7 +399,9 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * @param proofInfo
    * @returns
    */
-  public async status(proofInfo: MessageBatchProofInfo | null) {
+  public async status(
+    proofInfo: MessageBatchProofInfo | null
+  ): Promise<L2ToL1MessageStatus> {
     try {
       if (proofInfo) {
         const messageExecuted = await this.hasExecuted(proofInfo)
@@ -436,7 +457,9 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
    * corresponding assertion is confirmed.
    * @returns
    */
-  public async execute(proofInfo: MessageBatchProofInfo) {
+  public async execute(
+    proofInfo: MessageBatchProofInfo
+  ): Promise<ContractTransaction> {
     const status = await this.status(proofInfo)
     if (status !== L2ToL1MessageStatus.CONFIRMED) {
       throw new ArbTsError(

@@ -83,9 +83,9 @@ export const testRetryableTicket = async (
   )
   prettyLog('Waiting for retryable ticket')
 
-  const waitResult = await message.wait(1000 * 60 * 15)
+  await message.wait(1000 * 60 * 15)
 
-  const retryableTicketReceipt = waitResult.retryableCreationReceipt
+  const retryableTicketReceipt = await message.getRetryableCreationReceipt()
 
   prettyLog('retryableTicketReceipt found:')
 
@@ -95,7 +95,7 @@ export const testRetryableTicket = async (
   )
 
   prettyLog(`Waiting for auto redeem transaction (this shouldn't take long`)
-  const autoRedeemReceipt = waitResult.autoRedeemReceipt
+  const autoRedeemReceipt = await message.getAutoRedeemReceipt()
 
   prettyLog('autoRedeem receipt found!')
 
@@ -105,7 +105,7 @@ export const testRetryableTicket = async (
   )
   prettyLog('Getting redemption')
 
-  const redemptionReceipt = waitResult.l2TxReceipt
+  const redemptionReceipt = await message.getL2TxReceipt()
 
   expect(redemptionReceipt && redemptionReceipt.status).equals(
     1,
