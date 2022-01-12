@@ -232,4 +232,11 @@ const addCustomNetwork = ({
   l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
 }
 
-export default { l1Networks, l2Networks, addCustomNetwork }
+export const isL1Network = (
+  network: L1Network | L2Network
+): network is L1Network => {
+  if ((network as L1Network).partnerChainIDs) return true
+  else return false
+}
+
+export default { l1Networks, l2Networks, addCustomNetwork, isL1Network }

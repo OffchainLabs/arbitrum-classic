@@ -564,58 +564,6 @@ export class TokenBridger extends AssetBridger<
     const tx = await this.withdrawTxOrGas(params, false)
     return L2TransactionReceipt.monkeyPatchWait(tx)
   }
-
-  /**
-   * Fetch a batch of token balances
-   * @param l1OrL2Provider
-   * @param userAddr
-   * @param tokenAddrs
-   * @returns
-   */
-  public async getTokenBalanceBatch(
-    l1OrL2Provider: Provider,
-    userAddr: string,
-    tokenAddrs: Array<string>
-  ): Promise<(BigNumber | undefined)[]> {
-    const network = await l1OrL2Provider.getNetwork()
-    let isL1: boolean
-    if (network.chainId === Number.parseInt(this.l2Network.chainID)) {
-      isL1 = false
-    } else if (
-      network.chainId === Number.parseInt(this.l2Network.partnerChainID)
-    ) {
-      isL1 = true
-    } else {
-      throw new ArbTsError(
-        `Unexpected chain id. Provider chain id: ${network.chainId} matches neither l1Network: ${this.l2Network.partnerChainID} not l2Network: ${this.l2Network.chainID}.`
-      )
-    }
-
-    const multiCaller = new MultiCaller(
-      l1OrL2Provider,
-      isL1
-        ? this.l2Network.tokenBridge.l1MultiCall
-        : this.l2Network.tokenBridge.l2Multicall
-    )
-
-    const callInputs = tokenAddrs
-      .map(t =>
-        isL1
-          ? this.getL1TokenContract(l1OrL2Provider, t)
-          : this.getL2TokenContract(l1OrL2Provider, t)
-      )
-      .map(t => ({
-        targetAddr: t.address,
-        encoder: () => t.interface.encodeFunctionData('balanceOf', [userAddr]),
-        decoder: (returnData: string) =>
-          t.interface.decodeFunctionResult(
-            'balanceOf',
-            returnData
-          )[0] as Awaited<ReturnType<typeof t['balanceOf']>>,
-      }))
-
-    return await multiCaller.call(callInputs)
-  }
 }
 
 /**
