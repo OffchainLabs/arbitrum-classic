@@ -373,7 +373,7 @@ func startup() error {
 		}
 	}()
 
-	if config.Node.Forwarder.Target != "" {
+	if config.Node.Type == "forwarder" && config.Node.Forwarder.Target != "" {
 		go func() {
 			clnt, err := ethclient.DialContext(ctx, config.Node.Forwarder.Target)
 			if err != nil {
