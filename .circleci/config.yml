@@ -84,6 +84,8 @@ jobs:
           name: test arb-ts
           command: |
             yarn
+            ls -al ./packages/arb-ts/src/lib/abi
+            ls -al ./packages/arb-ts/src/lib/abi/factories
             yarn build --reporter-options output=${TEST_RESULTS}/arb-ts.xml
             yarn lint --format junit -o ${TEST_RESULTS}/arb-ts-lint.xml
           working_directory: /home/user/project/packages/arb-ts
