@@ -34,7 +34,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { ContractReceipt, ContractTransaction } from 'ethers'
+import { ContractTransaction } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import { L2Network } from '../utils/networks'
 import { ArbTsError } from '../errors'
@@ -286,7 +286,7 @@ export class L2ToL1Message {
 
   public static async getL2ToL1MessageLogs(
     l2Provider: Provider,
-    filter: Filter,
+    filter: Omit<Filter, 'topics' | 'address'>,
     batchNumber?: BigNumber,
     destination?: string,
     uniqueId?: BigNumber,

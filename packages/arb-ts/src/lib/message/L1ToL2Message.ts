@@ -21,7 +21,6 @@ import { Provider, Log } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { constants } from 'ethers'
 import { keccak256 } from '@ethersproject/keccak256'
 import { concat, zeroPad } from '@ethersproject/bytes'
 
@@ -139,6 +138,40 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
+   * Gets a single l1ToL2Message
+   * If the messageIndex is supplied the message at that index will be returned.
+   * If no messageIndex is supplied a message will be returned if this transaction only created one message
+   * All other cases throw an error
+   * @param l2SignerOrProvider
+   */
+  public async getL1ToL2Message<T extends SignerOrProvider>(
+    l2SignerOrProvider: T,
+    messageNumberIndex?: number
+  ): Promise<L1ToL2MessageReaderOrWriter<T>>
+  public async getL1ToL2Message<T extends SignerOrProvider>(
+    l2SignerOrProvider: T,
+    messageIndex?: number
+  ): Promise<L1ToL2MessageReader | L1ToL2MessageWriter> {
+    const allL1ToL2Messages = await this.getL1ToL2Messages(l2SignerOrProvider)
+    const messageCount = allL1ToL2Messages.length
+    if (!messageCount)
+      throw new ArbTsError(
+        `No l1 to L2 message found for ${this.transactionHash}`
+      )
+
+    if (messageIndex !== undefined && messageIndex >= messageCount)
+      throw new ArbTsError(
+        `Provided message number out of range for ${this.transactionHash}; index was ${messageIndex}, but only ${messageCount} messages`
+      )
+    if (messageIndex === undefined && messageCount > 1)
+      throw new ArbTsError(
+        `${messageCount} L2 messages for ${this.transactionHash}; must provide messageNumberIndex (or use (signersAndProviders, l1Txn))`
+      )
+
+    return allL1ToL2Messages[messageIndex || 0]
+  }
+
+  /**
    * Get any deposit events created by this transaction
    * @returns
    */
@@ -184,10 +217,12 @@ export enum L1ToL2MessageStatus {
    */
   CREATION_FAILED,
   /**
-   * The retryable ticket has been created but has not been redeemed. Since auto redeem occurs
-   * when the retryable ticket was created, this means that the auto-redeem failed.
+   * The retryable ticket has been created but has not been redeemed. This could be due to the
+   * auto redeem failing, or if the params (max l2 gas price) * (max l2 gas) = 0 then no auto
+   * redeem tx is ever issued. To tell the difference the l1 transaction can be checked for these
+   * parameters. An auto redeem is also never issued for ETH deposits.
    */
-  AUTO_REDEEM_FAILED,
+  NOT_YET_REDEEMED,
   /**
    * The retryable ticket has been redeemed (either by auto, or manually) and the
    * l2 transaction has been executed
@@ -389,7 +424,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       return L1ToL2MessageStatus.EXPIRED
     }
     // we could sanity check that autoredeem failed, but we don't need to
-    return L1ToL2MessageStatus.AUTO_REDEEM_FAILED
+    // currently if the params (max l2 gas price) * (max l2 gas) = 0
+    // no auto-redeem receipt gets emitted at all; if the user cars about the difference
+    // between auto-redeem failed and auto-redeem never took place, they can check
+    // the receipt. But for the sake of this status method, NOT_YET_REDEEMED for both cases is okay.
+    return L1ToL2MessageStatus.NOT_YET_REDEEMED
   }
 
   public async status(): Promise<L1ToL2MessageStatus> {
@@ -496,7 +535,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
    */
   public async redeem(): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === L1ToL2MessageStatus.AUTO_REDEEM_FAILED) {
+    if (status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
@@ -504,7 +543,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       return await arbRetryableTx.redeem(this.l2TxHash)
     } else {
       throw new ArbTsError(
-        `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.AUTO_REDEEM_FAILED}.`
+        `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.NOT_YET_REDEEMED}.`
       )
     }
   }
@@ -515,7 +554,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
    */
   public async cancel(): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === L1ToL2MessageStatus.AUTO_REDEEM_FAILED) {
+    if (status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
@@ -523,7 +562,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       return await arbRetryableTx.cancel(this.l2TxHash)
     } else {
       throw new ArbTsError(
-        `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.AUTO_REDEEM_FAILED}.`
+        `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.NOT_YET_REDEEMED}.`
       )
     }
   }
