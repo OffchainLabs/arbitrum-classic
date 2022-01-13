@@ -17,6 +17,7 @@
 'use strict'
 
 import dotenv from 'dotenv'
+import { BigNumber } from 'ethers'
 dotenv.config()
 
 export interface L1Network extends Network {
@@ -37,6 +38,7 @@ export interface Network {
   explorerUrl: string
   rpcURL: string
   gif?: string
+  isCustom: boolean
 }
 
 export interface TokenBridge {
@@ -61,7 +63,11 @@ export interface TokenBridge {
 export interface EthBridge {
   inbox: string
   sequencerInbox: string
-  outbox: string
+  /**
+   * Outbox addresses paired with the first batch number at which they
+   * were activated.
+   */
+  outboxes: { [address: string]: BigNumber }
   rollup: string
 }
 
@@ -114,14 +120,20 @@ const rinkebyTokenBridge: TokenBridge = {
 const rinkebyETHBridge: EthBridge = {
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
   sequencerInbox: '0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8',
-  outbox: '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3',
+  outboxes: {
+    '0xefa1a42D3c4699822eE42677515A64b658be1bFc': BigNumber.from(0),
+    '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3': BigNumber.from(326),
+  },
   rollup: '0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c',
 }
 
 const mainnetETHBridge: EthBridge = {
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
   sequencerInbox: '0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef',
-  outbox: '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40',
+  outboxes: {
+    '0x667e23ABd27E623c11d4CC00ca3EC4d0bD63337a': BigNumber.from(0),
+    '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40': BigNumber.from(30),
+  },
   rollup: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
 }
 
@@ -133,6 +145,7 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: ['42161'],
     blockTime: 15,
     rpcURL: process.env['MAINNET_RPC'] as string,
+    isCustom: false,
   },
   '1337': {
     chainID: '1337',
@@ -141,6 +154,7 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: ['42161'], // TODO: use sequencer fork ID
     blockTime: 15,
     rpcURL: process.env['HARDHAT_RPC'] || 'http://127.0.0.1:8545/',
+    isCustom: false,
   },
   '4': {
     chainID: '4',
@@ -149,6 +163,7 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: ['421611'],
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
+    isCustom: false,
   },
 }
 
@@ -163,6 +178,7 @@ export const l2Networks: L2Networks = {
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
+    isCustom: false,
   },
   '421611': {
     chainID: '421611',
@@ -174,6 +190,7 @@ export const l2Networks: L2Networks = {
     ethBridge: rinkebyETHBridge,
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
+    isCustom: false,
   },
 }
 
@@ -187,6 +204,10 @@ const addCustomNetwork = ({
   if (customL1Network) {
     if (l1Networks[customL1Network.chainID]) {
       throw new Error(`Network ${customL1Network.chainID} already included`)
+    } else if (!customL1Network.isCustom) {
+      throw new Error(
+        `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
+      )
     } else {
       l1Networks[customL1Network.chainID] = customL1Network
     }
@@ -194,6 +215,11 @@ const addCustomNetwork = ({
 
   if (l2Networks[customL2Network.chainID])
     throw new Error(`Network ${customL2Network.chainID} already included`)
+  else if (!customL2Network.isCustom) {
+    throw new Error(
+      `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
+    )
+  }
 
   l2Networks[customL2Network.chainID] = customL2Network
 
@@ -206,4 +232,11 @@ const addCustomNetwork = ({
   l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
 }
 
-export default { l1Networks, l2Networks, addCustomNetwork }
+export const isL1Network = (
+  network: L1Network | L2Network
+): network is L1Network => {
+  if ((network as L1Network).partnerChainIDs) return true
+  else return false
+}
+
+export default { l1Networks, l2Networks, addCustomNetwork, isL1Network }

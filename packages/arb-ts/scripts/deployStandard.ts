@@ -1,11 +1,11 @@
 import { instantiateBridge } from './instantiate_bridge'
-import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 import dotenv from 'dotenv'
 import args from './getCLargs'
 import { constants, BigNumber, utils } from 'ethers'
-import { L1TokenData } from '../src'
+import { MultiCaller } from '../src'
 import axios from 'axios'
 import prompt from 'prompts'
+import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
 dotenv.config()
 
 const privKey = process.env.PRIVKEY as string
@@ -21,13 +21,16 @@ if (!args.l1TokenAddress) {
 const { l1TokenAddress: l1TokenAddress } = args
 
 const main = async () => {
-  const { bridge } = await instantiateBridge(privKey, privKey)
-  const walletAddress = await bridge.l1Bridge.getWalletAddress()
+  const { l1Signer } = await instantiateBridge(privKey, privKey)
 
   /* Looks like an L1 token: */
-  let l1TokenData: L1TokenData | undefined
+  const multicaller = await MultiCaller.fromProvider(l1Signer.provider!)
+  let l1TokenData: { allowance: BigNumber | undefined }
   try {
-    l1TokenData = await bridge.l1Bridge.getL1TokenData(l1TokenAddress)
+    l1TokenData = await multicaller.getTokenData([l1TokenAddress], {
+      allowance: {},
+    })
+    // l1TokenData = await bridge.l1Bridge.getL1TokenData(l1TokenAddress)
   } catch (err) {
     console.warn(`${l1TokenAddress} doesn't look like an L1 ERC20 token`)
     throw err
@@ -134,20 +137,11 @@ const main = async () => {
   const res = await bridge.deposit(depositParams)
   const rec = await res.wait(2)
   console.log(`L1 deposit txn confirmed — L1 txn hash: ${rec.transactionHash}`)
-  const seqNums = await bridge.getInboxSeqNumFromContractTransaction(rec)
-  if (!seqNums) {
-    throw new Error(
-      `Sequence number not found for ${rec.transactionHash} (???)`
-    )
-  }
-  const seqNum = seqNums[0]
-
-  const userTxnHash = await bridge.calculateL2RetryableTransactionHash(seqNum)
-  console.log(
-    `Waiting for L2 txn; this takes ~10 minutes; waiting for L2 txn hash: ${userTxnHash}`
+  const message = await new L1TransactionReceipt(rec).getL1ToL2Message(
+    bridge.l2Provider
   )
 
-  await bridge.waitForRetryableReceipt(seqNum, 2)
+  await message.wait(undefined, 2)
   console.log(`Done; your token is deployed on L2 at ${l2TokenAddress}`)
 }
 

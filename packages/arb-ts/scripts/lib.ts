@@ -19,6 +19,7 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
 
 import { instantiateBridge } from './instantiate_bridge'
 
@@ -103,7 +104,10 @@ export const setGateWays = async (
   }
 
   console.log('redeeming retryable ticket:')
-  const redeemRes = await bridge.redeemRetryableTicket(rec)
+  const l2Tx = await new L1TransactionReceipt(rec).getL1ToL2Message(
+    bridge.l2Signer
+  )
+  const redeemRes = await l2Tx.redeemSafe()
   const redeemRec = await redeemRes.wait()
   console.log('Done redeeming:', redeemRec)
   console.log(redeemRec.status === 1 ? ' success!' : 'failed...')
@@ -116,22 +120,19 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
   const { l1Provider } = bridge.l1Bridge
   const { l2Provider } = bridge.l2Bridge
   const rec = await l1Provider.getTransactionReceipt(l1Hash)
-
-  const _seqNums = await bridge.getInboxSeqNumFromContractTransaction(rec)
-
-  if (!_seqNums) throw new Error('no seq nums')
-  const seqNum = _seqNums[0]
-
-  const autoRedeemHash = await bridge.calculateRetryableAutoRedeemTxnHash(
-    seqNum
+  const message = await new L1TransactionReceipt(rec).getL1ToL2Message(
+    l2Provider
   )
 
+  if (!message) throw new Error('no seq nums')
+
+  const autoRedeemHash = message.autoRedeemHash
   const autoRedeemRec = await l2Provider.getTransactionReceipt(autoRedeemHash)
 
-  const redeemTxnHash = await bridge.calculateL2RetryableTransactionHash(seqNum)
+  const redeemTxnHash = message.userTxnHash
   const redeemTxnRec = await l2Provider.getTransactionReceipt(redeemTxnHash)
 
-  const retryableTicketHash = await bridge.calculateL2TransactionHash(seqNum)
+  const retryableTicketHash = message.l2TicketCreationTxnHash
 
   const retryableTicketRec = await l2Provider.getTransactionReceipt(
     retryableTicketHash

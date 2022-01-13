@@ -5,8 +5,8 @@ import {
   L1ToL2MessageGasEstimator,
   L1toL2MessageGasValues,
 } from './L1ToL2MessageGasEstimator'
-import { L1ToL2Message } from './L1ToL2Message'
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { L1TransactionReceipt } from './L1ToL2Message'
+import { Inbox__factory } from '../abi'
 import { l2Networks } from '../utils/networks'
 import { ContractReceipt, PayableOverrides } from '@ethersproject/contracts'
 import { BigNumber } from 'ethers'
@@ -67,7 +67,7 @@ export class L1ToL2MessageCreator {
       excessFeeRefundAddress: undefined,
       callValueRefundAddress: undefined,
     }
-  ): Promise<L1ToL2Message[]> {
+  ): Promise<L1TransactionReceipt> {
     const sender = await this.getSender()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
     const gasParams = await gasEstimator.estimateGasValuesL1ToL2Creation(
@@ -78,14 +78,14 @@ export class L1ToL2MessageCreator {
     )
     const l2ChainID = (await l2Provider.getNetwork()).chainId.toString()
     const rec = await this.createRetryableTicketFromGasParams(
-      gasParams,
+      { ...gasParams, l2CallValue },
       destAddr,
       callDataHex,
       l2ChainID,
       options
     )
 
-    return L1ToL2Message.fromL1ReceiptAll(l2Provider, rec)
+    return new L1TransactionReceipt(rec)
   }
 
   public async getSender(): Promise<string> {
