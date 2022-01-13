@@ -77,6 +77,7 @@ type Core struct {
 	CheckpointPruneOnStartup  bool          `koanf:"checkpoint-prune-on-startup"`
 	Database                  Database      `koanf:"database"`
 	Debug                     bool          `koanf:"debug"`
+	DebugTiming               bool          `koanf:"debug-timing"`
 	IdleSleep                 time.Duration `koanf:"idle-sleep"`
 	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
 	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
@@ -516,6 +517,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("core.checkpoint-pruning-mode", "default", "Prune old checkpoints: 'on', 'off', or 'default'")
 
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
+	f.Bool("core.debug-timing", false, "print extra debug timing messages in arbcore")
 
 	f.Bool("core.database.compact", false, "perform database compaction")
 	f.Bool("core.database.exit-after", false, "exit after loading or manipulating database")
