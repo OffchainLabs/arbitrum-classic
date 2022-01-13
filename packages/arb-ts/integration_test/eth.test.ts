@@ -38,6 +38,8 @@ import {
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
 import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
+import { MultiCaller } from '../src'
+import { ethers } from 'ethers'
 dotenv.config()
 
 describe('Ether', async () => {

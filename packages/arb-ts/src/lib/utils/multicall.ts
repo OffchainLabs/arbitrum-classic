@@ -254,22 +254,6 @@ export class MultiCaller {
         })
       }
 
-      if (defaultedOptions.allowance) {
-        input.push({
-          targetAddr: t,
-          encoder: () =>
-            erc20Iface.encodeFunctionData('allowance', [
-              defaultedOptions.allowance!.owner,
-              defaultedOptions.allowance!.spender,
-            ]),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult(
-              'allowance',
-              returnData
-            )[0] as BigNumber,
-        })
-      }
-
       if (defaultedOptions.balanceOf) {
         input.push({
           targetAddr: t,
@@ -322,10 +306,10 @@ export class MultiCaller {
     const tokens = []
     while (i < res.length) {
       tokens.push({
-        balance: defaultedOptions.balanceOf
+        allowance: defaultedOptions.allowance
           ? (res[i++] as BigNumber)
           : undefined,
-        allowance: defaultedOptions.allowance
+        balance: defaultedOptions.balanceOf
           ? (res[i++] as BigNumber)
           : undefined,
         decimal: defaultedOptions.decimals ? (res[i++] as number) : undefined,

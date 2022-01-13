@@ -21,7 +21,7 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { Zero, MaxUint256 } from '@ethersproject/constants'
-import { Logger } from '@ethersproject/logger'
+import { ErrorCode, Logger } from '@ethersproject/logger'
 import { BigNumber, ethers } from 'ethers'
 
 import {
@@ -45,9 +45,7 @@ import {
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../utils/signerOrProvider'
 import { L2Network } from '../utils/networks'
-import { isError } from '../utils/lib'
-import { CallInput, MultiCaller } from '../utils/multicall'
-import { ArbTsError, MissingProviderArbTsError } from '../errors'
+import { MissingProviderArbTsError } from '../errors'
 import { EventFetcher } from '../utils/eventFetcher'
 
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
@@ -254,8 +252,8 @@ export class TokenBridger extends AssetBridger<
     } catch (err) {
       if (
         err instanceof Error &&
-        isError(err) &&
-        err.code === Logger.errors.CALL_EXCEPTION
+        (err as unknown as { code: ErrorCode }).code ===
+          Logger.errors.CALL_EXCEPTION
       ) {
         return false
       } else {

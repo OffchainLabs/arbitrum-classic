@@ -4,7 +4,6 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { ARB_RETRYABLE_TX_ADDRESS, NODE_INTERFACE_ADDRESS } from '../constants'
 import { BigNumber } from '@ethersproject/bignumber'
-import { percentIncrease } from '../utils/lib'
 import { constants } from 'ethers'
 import { utils } from 'ethers'
 
@@ -56,6 +55,10 @@ export interface L1toL2MessageGasValues {
 export class L1ToL2MessageGasEstimator {
   constructor(public readonly l2Provider: Provider) {}
 
+  private percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
+    return num.add(num.mul(increase).div(100))
+  }
+
   private applySubmissionPriceDefaults(maxSubmissionPrice?: PercentIncrease) {
     return {
       base: maxSubmissionPrice?.base,
@@ -84,7 +87,7 @@ export class L1ToL2MessageGasEstimator {
     const [currentSubmissionPrice, nextUpdateTimestamp] =
       await arbRetryableTx.getSubmissionPrice(callDataSize)
     // Apply percent increase
-    const submissionPrice = percentIncrease(
+    const submissionPrice = this.percentIncrease(
       defaultedOptions.base || currentSubmissionPrice,
       defaultedOptions.percentIncrease
     )
@@ -162,7 +165,7 @@ export class L1ToL2MessageGasEstimator {
   }> {
     const defaultedOptions = this.applyDefaults(options)
 
-    const maxGasPriceBid = percentIncrease(
+    const maxGasPriceBid = this.percentIncrease(
       defaultedOptions.maxGasPrice.base ||
         (await this.l2Provider.getGasPrice()),
       defaultedOptions.maxGasPrice.percentIncrease
@@ -175,7 +178,7 @@ export class L1ToL2MessageGasEstimator {
       )
     ).submissionPrice
 
-    const calculatedMaxGas = percentIncrease(
+    const calculatedMaxGas = this.percentIncrease(
       defaultedOptions.maxGas.base ||
         (await this.estimateGasRetryableTicket(
           sender,
