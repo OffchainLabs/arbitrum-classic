@@ -18,6 +18,14 @@
 
 export { TokenBridger, EthBridger } from './lib/assetBridger'
 export { L2ToL1MessageStatus } from './lib/message/L2ToL1Message'
-export { networks } from './lib/networks'
 export { argSerializerConstructor } from './lib/byte_serialize_params'
 export { CallInput, MultiCaller } from './lib/utils/multicall'
+export {
+  L1Networks,
+  L2Networks,
+  L1Network,
+  L2Network,
+  getL1Network,
+  getL2Network,
+} from './lib/utils/networks'
+export { getRawArbTransactionReceipt } from './lib/utils/lib'
