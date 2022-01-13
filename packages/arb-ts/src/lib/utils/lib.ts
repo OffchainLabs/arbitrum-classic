@@ -23,7 +23,6 @@ export interface ArbTransactionReceipt {
 
   returnData: string
   returnCode: string
-  // TODO expose this
   feeStats: {
     prices: {
       l1Transaction: string
