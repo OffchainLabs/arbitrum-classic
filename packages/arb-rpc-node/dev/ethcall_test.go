@@ -1,6 +1,23 @@
+/*
+* Copyright 2021, Offchain Labs, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+ */
+
 package dev
 
 import (
+	"context"
 	"encoding/hex"
 	"math/big"
 	"strings"
@@ -16,6 +33,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -39,6 +57,7 @@ func TestEthCall(t *testing.T) {
 	auth, owner := OwnerAuthPair(t, nil)
 	senderKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
+	ctx := context.Background()
 
 	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, owner, nil)
 	defer cancelDevNode()
@@ -85,51 +104,51 @@ func TestEthCall(t *testing.T) {
 	}
 
 	t.Log("No Overrides")
-	callRes, err := ethServer.Call(getXTxArgs, block, nil)
+	callRes, err := ethServer.Call(ctx, getXTxArgs, block, nil)
 	expectHex(t, callRes, err, "0x100")
 
-	callRes, err = ethServer.Call(sloadTxArgs, block, nil)
+	callRes, err = ethServer.Call(ctx, sloadTxArgs, block, nil)
 	expectHex(t, callRes, err, "0x0")
 
-	callRes, err = ethServer.Call(getBalanceTxArgs, block, nil)
+	callRes, err = ethServer.Call(ctx, getBalanceTxArgs, block, nil)
 	expectHex(t, callRes, err, "0x0")
 
 	t.Log("Override Balance")
-	overrideMap := make(map[ethcommon.Address]web3.EthCallOverride)
-	overrideMap[testerAddr] = web3.EthCallOverride{
+	overrideMap := make(map[ethcommon.Address]snapshot.EthCallOverride)
+	overrideMap[testerAddr] = snapshot.EthCallOverride{
 		Balance: (*hexutil.Big)(hexutil.MustDecodeBig("0x3000")),
 	}
-	callRes, err = ethServer.Call(sloadTxArgs, block, &overrideMap)
+	callRes, err = ethServer.Call(ctx, sloadTxArgs, block, &overrideMap)
 	expectHex(t, callRes, err, "0x0")
 
-	callRes, err = ethServer.Call(getBalanceTxArgs, block, &overrideMap)
+	callRes, err = ethServer.Call(ctx, getBalanceTxArgs, block, &overrideMap)
 	expectHex(t, callRes, err, "0x3000")
 
 	t.Log("StateDiff")
 	stateMap := make(map[ethcommon.Hash]ethcommon.Hash)
 	stateMap[ethcommon.HexToHash("0x0")] = ethcommon.HexToHash("0x10")
 	stateMap[ethcommon.HexToHash("0x100")] = ethcommon.HexToHash("0x90")
-	overrideMap = make(map[ethcommon.Address]web3.EthCallOverride)
-	overrideMap[testerAddr] = web3.EthCallOverride{
+	overrideMap = make(map[ethcommon.Address]snapshot.EthCallOverride)
+	overrideMap[testerAddr] = snapshot.EthCallOverride{
 		StateDiff: &stateMap,
 	}
 
-	callRes, err = ethServer.Call(sloadTxArgs, block, &overrideMap)
+	callRes, err = ethServer.Call(ctx, sloadTxArgs, block, &overrideMap)
 	expectHex(t, callRes, err, "0x90")
 
-	callRes, err = ethServer.Call(getXTxArgs, block, &overrideMap)
+	callRes, err = ethServer.Call(ctx, getXTxArgs, block, &overrideMap)
 	expectHex(t, callRes, err, "0x10")
 
 	t.Log("State")
-	overrideMap = make(map[ethcommon.Address]web3.EthCallOverride)
-	overrideMap[testerAddr] = web3.EthCallOverride{
+	overrideMap = make(map[ethcommon.Address]snapshot.EthCallOverride)
+	overrideMap[testerAddr] = snapshot.EthCallOverride{
 		State: &stateMap,
 	}
 
-	callRes, err = ethServer.Call(sloadTxArgs, block, &overrideMap)
+	callRes, err = ethServer.Call(ctx, sloadTxArgs, block, &overrideMap)
 	expectHex(t, callRes, err, "0x90")
 
-	callRes, err = ethServer.Call(getXTxArgs, block, &overrideMap)
+	callRes, err = ethServer.Call(ctx, getXTxArgs, block, &overrideMap)
 	expectHex(t, callRes, err, "0x10")
 
 	t.Log("Code over empty")
@@ -142,15 +161,15 @@ func TestEthCall(t *testing.T) {
 		To:   &newContractAddr,
 		Data: &noData,
 	}
-	codeOverride := make(map[ethcommon.Address]web3.EthCallOverride)
-	codeOverride[newContractAddr] = web3.EthCallOverride{
+	codeOverride := make(map[ethcommon.Address]snapshot.EthCallOverride)
+	codeOverride[newContractAddr] = snapshot.EthCallOverride{
 		Code: (*hexutil.Bytes)(&code),
 	}
-	callRes, err = ethServer.Call(newContractTxArgs, block, &codeOverride)
+	callRes, err = ethServer.Call(ctx, newContractTxArgs, block, &codeOverride)
 	expectHex(t, callRes, err, "0x10")
 
 	t.Log("Code + state over existing")
-	codeOverride[testerAddr] = web3.EthCallOverride{
+	codeOverride[testerAddr] = snapshot.EthCallOverride{
 		Code:  (*hexutil.Bytes)(&code),
 		State: &stateMap,
 	}
@@ -158,7 +177,7 @@ func TestEthCall(t *testing.T) {
 		To:   &testerAddr,
 		Data: &noData,
 	}
-	callRes, err = ethServer.Call(overrideTxArgs, block, &codeOverride)
+	callRes, err = ethServer.Call(ctx, overrideTxArgs, block, &codeOverride)
 	expectHex(t, callRes, err, "0x20")
 
 	t.Log("Nonce")
@@ -173,10 +192,10 @@ func TestEthCall(t *testing.T) {
 		Data: (*hexutil.Bytes)(&getInfoData),
 	}
 	nonceToTest := uint64(0x60)
-	codeOverride[newContractAddr] = web3.EthCallOverride{
+	codeOverride[newContractAddr] = snapshot.EthCallOverride{
 		Nonce: (*hexutil.Uint64)(&nonceToTest),
 	}
-	callRes, err = ethServer.Call(getInfoTxArgs, block, &codeOverride)
+	callRes, err = ethServer.Call(ctx, getInfoTxArgs, block, &codeOverride)
 	//returns some information.. 2nd uint256 is nonce for the request
 	expectHex(t, callRes[32:64], err, "0x60")
 

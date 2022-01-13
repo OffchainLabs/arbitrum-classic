@@ -55,7 +55,9 @@ TEST_CASE("TimedMachineCache add") {
     // Test that expired block is not added
     auto expired_machine = std::make_unique<Machine>(getComplexMachine());
     expired_machine->machine_state.output.last_inbox_timestamp =
-        std::time(nullptr) - expiration_seconds;
+        valid_machine_b.value()
+            ->second.machine->machine_state.output.last_inbox_timestamp -
+        (expiration_seconds);
     expired_machine->machine_state.output.arb_gas_used = 4;
     cache.add(std::move(expired_machine));
     REQUIRE(cache.size() == 1);

@@ -28,15 +28,15 @@
 
 ArbStorage::ArbStorage(const std::string& db_path,
                        const ArbCoreConfig& coreConfig)
-    : datastorage(std::make_shared<DataStorage>(db_path)),
+    : datastorage(std::make_shared<DataStorage>(db_path, coreConfig)),
       arb_core(std::make_shared<ArbCore>(datastorage, coreConfig)) {}
 
-rocksdb::Status ArbStorage::initialize(const std::string& executable_path) {
+InitializeResult ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
     return initialize(executable);
 }
 
-rocksdb::Status ArbStorage::initialize(const LoadedExecutable& executable) {
+InitializeResult ArbStorage::initialize(const LoadedExecutable& executable) {
     return arb_core->initialize(executable);
 }
 
@@ -77,7 +77,7 @@ std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
     return arb_core->getMachine<Machine>(machineHash, value_cache);
 }
 
-DbResult<value> ArbStorage::getValue(uint256_t value_hash,
+DbResult<Value> ArbStorage::getValue(uint256_t value_hash,
                                      ValueCache& value_cache) const {
     ReadTransaction tx(datastorage);
     return ::getValue(tx, value_hash, value_cache, false);

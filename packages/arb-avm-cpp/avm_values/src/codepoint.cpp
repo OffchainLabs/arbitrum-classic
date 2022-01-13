@@ -17,14 +17,15 @@
 #include <avm_values/codepoint.hpp>
 
 #include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 #include <ethash/keccak.hpp>
 
 #include <iostream>
 
-Operation::Operation(OpCode opcode_, value immediate_)
+Operation::Operation(OpCode opcode_, Value immediate_)
     : opcode(opcode_),
-      immediate(std::make_unique<value>(std::move(immediate_))) {}
+      immediate(std::make_unique<Value>(std::move(immediate_))) {}
 
 void Operation::marshalForProof(std::vector<unsigned char>& buf,
                                 size_t marshal_level,

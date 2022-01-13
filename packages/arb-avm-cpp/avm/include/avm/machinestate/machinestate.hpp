@@ -56,8 +56,8 @@ struct AssertionContext {
     std::vector<MachineMessage> inbox_messages;
 
     std::vector<MachineEmission<std::vector<uint8_t>>> sends;
-    std::vector<MachineEmission<value>> logs;
-    std::vector<MachineEmission<value>> debug_prints;
+    std::vector<MachineEmission<Value>> logs;
+    std::vector<MachineEmission<Value>> debug_prints;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload{false};
     uint256_t max_gas;
@@ -156,8 +156,8 @@ struct MachineState {
     std::shared_ptr<Code> code;
     ValueLoader value_loader;
     mutable std::optional<CodeSegmentSnapshot> loaded_segment;
-    value registerVal;
-    value static_val;
+    Value registerVal;
+    Value static_val;
     Datastack stack;
     Datastack auxstack;
     uint256_t arb_gas_remaining;
@@ -170,14 +170,14 @@ struct MachineState {
 
     MachineState();
 
-    MachineState(std::shared_ptr<CoreCode> code_, value static_val);
+    MachineState(std::shared_ptr<CoreCode> code_, Value static_val);
 
     MachineState(MachineOutput output_,
                  CodePointRef pc_,
                  std::shared_ptr<Code> code_,
                  ValueLoader value_loader_,
-                 value register_val_,
-                 value static_val,
+                 Value register_val_,
+                 Value static_val,
                  Datastack stack_,
                  Datastack auxstack_,
                  uint256_t arb_gas_remaining_,
@@ -200,7 +200,7 @@ struct MachineState {
 
     void addProcessedMessage(const MachineMessage& message);
     void addProcessedSend(std::vector<uint8_t> data);
-    void addProcessedLog(value log_val);
+    void addProcessedLog(Value log_val);
 
    private:
     void marshalBufferProof(OneStepProof& proof) const;

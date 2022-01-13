@@ -1,5 +1,5 @@
 /*
-* Copyright 2020, Offchain Labs, Inc.
+* Copyright 2020-2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"context"
 	"encoding/hex"
 	"math/big"
 	"testing"
@@ -254,6 +255,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 }
 
 func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.Result, [][]byte, [][]evm.EVMLogLine, *snapshot.Snapshot) {
+	ctx := context.Background()
 	t.Helper()
 	if inboxMessages[0].Kind != message.InitType {
 		t.Fatal("inbox must start with init message")
@@ -264,14 +266,14 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 	var logs []value.Value
 	var sends [][]byte
 	var debugPrints [][]evm.EVMLogLine
-	assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, nil)
+	assertion, _, _, err := mach.ExecuteAssertion(ctx, 10000000000, false, nil)
 	failIfError(t, err)
 	logs = append(logs, assertion.Logs...)
 	sends = append(sends, assertion.Sends...)
 	totalExecutionGas := uint64(0)
 	for i, msg := range inboxMessages {
 		t.Log("Message", i)
-		assertion, dPrints, _, err := mach.ExecuteAssertion(10000000000, false, []inbox.InboxMessage{msg})
+		assertion, dPrints, _, err := mach.ExecuteAssertion(ctx, 10000000000, false, []inbox.InboxMessage{msg})
 		failIfError(t, err)
 		totalExecutionGas += assertion.NumGas
 		parsedDebugPrints := processDebugPrints(t, dPrints)
@@ -314,9 +316,9 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 				Timestamp: big.NewInt(0),
 			},
 		)
-		_, _, _, err = mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, nil, true)
+		_, _, _, err = mach.ExecuteAssertionAdvanced(ctx, 10000000000, false, []inbox.InboxMessage{msg}, nil, true)
 		test.FailIfError(t, err)
-		snap, err = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, seq)
+		snap, err = snapshot.NewSnapshot(ctx, mach.Clone(), lastMessage.ChainTime, seq)
 		test.FailIfError(t, err)
 	}
 	if printArbOSLog {
@@ -353,7 +355,8 @@ func makeSimpleInbox(t *testing.T, messages []message.Message) []inbox.InboxMess
 
 func checkBalance(t *testing.T, snap *snapshot.Snapshot, account common.Address, balance *big.Int) {
 	t.Helper()
-	bal, err := snap.GetBalance(account)
+	ctx := context.Background()
+	bal, err := snap.GetBalance(ctx, account)
 	failIfError(t, err)
 	if bal.Cmp(balance) != 0 {
 		t.Error("unexpected balance", bal, "for account", account)

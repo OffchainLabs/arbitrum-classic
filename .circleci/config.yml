@@ -56,7 +56,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.3.6
+      - image: offchainlabs/backend-base:0.4.1
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -67,7 +67,7 @@ jobs:
       - save_cache: *save_go_cache
   arb-ts:
     docker:
-      - image: offchainlabs/frontend-base:0.3.0
+      - image: offchainlabs/frontend-base:0.4.0
     environment:
       TEST_RESULTS: *test-path
     steps:
@@ -101,7 +101,7 @@ jobs:
           path: *test-path
   ethbridge:
     docker:
-      - image: offchainlabs/frontend-base:0.3.0
+      - image: offchainlabs/frontend-base:0.4.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -117,14 +117,15 @@ jobs:
           name: install and audit
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            if [[ ! -z $CIRCLE_PULL_REQUEST ]] ; then yarn audit ; fi
+            if [[ ! -z $CIRCLE_PULL_REQUEST ]] ; then yarn audit:ci ; fi
             yarn build
           working_directory: /home/user/project
       - run:
           name: test arb-bridge-eth
           command: |
             yarn typechain
-            yarn test:ci
+            yarn test:gas:ci
+            npx codechecks
           working_directory: /home/user/project/packages/arb-bridge-eth
       # TODO
       # - run:
@@ -137,7 +138,7 @@ jobs:
 
   ethbridge-coverage:
     docker:
-      - image: offchainlabs/frontend-base:0.3.0
+      - image: offchainlabs/frontend-base:0.4.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -172,7 +173,7 @@ jobs:
           path: *test-path
   cpp-avm-build:
     docker:
-      - image: offchainlabs/cpp-base:0.3.6
+      - image: offchainlabs/cpp-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -185,7 +186,7 @@ jobs:
           command: |
             mkdir -p packages/arb-avm-cpp/build
             cd packages/arb-avm-cpp/build
-            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DENABLE_TCMALLOC=true ..
             cmake --build . -j 2
       # COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
       - persist_to_workspace: # store the built files into the workspace for other jobs.
@@ -196,7 +197,7 @@ jobs:
             - ./project/packages/arb-avm-cpp/build/*
   cpp-avm-asan:
     docker:
-      - image: offchainlabs/cpp-asan-base:0.3.6
+      - image: offchainlabs/cpp-asan-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -211,12 +212,14 @@ jobs:
           command: |
             mkdir -p packages/arb-avm-cpp/debug-asan
             cd packages/arb-avm-cpp/debug-asan
-            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address ..
-            cmake --build . -j 2
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address -DENABLE_TCMALLOC=true ..
+            echo 'leak:libtcmalloc' > /tmp/lsan-suppressions
+            LSAN_OPTIONS=suppressions=/tmp/lsan-suppressions cmake --build . -j 2
       - run:
           name: Test
           command: |
-            ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
+            echo 'leak:libtcmalloc' > /tmp/lsan-suppressions
+            LSAN_OPTIONS=suppressions=/tmp/lsan-suppressions ./bin/avm_tests -r junit > ${TEST_RESULTS}/arb-avm-cpp.xml
             lcov --capture --directory . --output-file coverage.info
             lcov --remove coverage.info --output-file coverage.info '/usr/*' '*/tests/*' '*/external/*'
             lcov --list coverage.info
@@ -224,7 +227,7 @@ jobs:
 
   cpp-avm-tsan:
     docker:
-      - image: offchainlabs/cpp-tsan-base:0.3.6
+      - image: offchainlabs/cpp-tsan-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -239,7 +242,7 @@ jobs:
           command: |
             mkdir -p packages/arb-avm-cpp/debug-tsan
             cd packages/arb-avm-cpp/debug-tsan
-            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-fsanitize=thread -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread ..
+            cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS=-fsanitize=thread -DCMAKE_CXX_FLAGS=-fsanitize=thread -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread -DENABLE_TCMALLOC=true ..
             cmake --build . -j 2
       - run:
           name: Test
@@ -251,7 +254,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.3.6
+      - image: offchainlabs/backend-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -292,7 +295,7 @@ jobs:
 
   backend-rpc:
     docker:
-      - image: offchainlabs/backend-base:0.3.6
+      - image: offchainlabs/backend-base:0.4.1
     resource_class: large
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
@@ -326,7 +329,7 @@ jobs:
 
   arb-bridge-peripherals:
     docker:
-      - image: offchainlabs/integration-base:0.3.7
+      - image: offchainlabs/integration-base:0.4.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:

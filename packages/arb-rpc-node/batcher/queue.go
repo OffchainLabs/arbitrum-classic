@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package batcher
 
 import (
 	"container/heap"
+	"context"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
@@ -123,7 +124,7 @@ func (q *txQueues) maybeRemoveAccountAtIndex(i int) {
 	}
 }
 
-func popRandomTx(b batch, queuedTxes *txQueues) (*types.Transaction, int, bool) {
+func popRandomTx(ctx context.Context, b batch, queuedTxes *txQueues) (*types.Transaction, int, bool) {
 	queuedCount := int32(len(queuedTxes.accounts))
 	if queuedCount == 0 {
 		return nil, 0, false
@@ -159,7 +160,7 @@ func popRandomTx(b batch, queuedTxes *txQueues) (*types.Transaction, int, bool) 
 		}
 
 		// err param can be ignored
-		action, _ := b.validateTx(tx)
+		action, _ := b.validateTx(ctx, tx)
 		switch action {
 		case REMOVE:
 			queuedTxes.removeTxFromAccountAtIndex(index)

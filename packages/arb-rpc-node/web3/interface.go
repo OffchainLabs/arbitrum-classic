@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package web3
 
 import (
@@ -29,14 +45,6 @@ type GetBlockResult struct {
 	Uncles           *[]hexutil.Bytes  `json:"uncles"`
 
 	L1BlockNumber *hexutil.Big `json:"l1BlockNumber"`
-}
-
-type EthCallOverride struct {
-	Nonce     *hexutil.Uint64              `json:"nonce"`
-	Code      *hexutil.Bytes               `json:"code"`
-	Balance   *hexutil.Big                 `json:"balance"`
-	State     *map[common.Hash]common.Hash `json:"state"`
-	StateDiff *map[common.Hash]common.Hash `json:"stateDiff"`
 }
 
 type CallTxArgs struct {
@@ -80,6 +88,7 @@ type GetTransactionReceiptResult struct {
 	To                *common.Address `json:"to"`
 	CumulativeGasUsed hexutil.Uint64  `json:"cumulativeGasUsed"`
 	GasUsed           hexutil.Uint64  `json:"gasUsed"`
+	EffectiveGasPrice hexutil.Uint64  `json:"effectiveGasPrice"`
 	ContractAddress   *common.Address `json:"contractAddress"`
 	Logs              []*types.Log    `json:"logs"`
 	LogsBloom         hexutil.Bytes   `json:"logsBloom"`

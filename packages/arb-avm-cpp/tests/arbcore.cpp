@@ -137,7 +137,7 @@ TEST_CASE("ArbCore tests") {
         INFO("Testing " << filename);
 
         ArbStorage storage1(dbpath, coreConfig);
-        REQUIRE(storage1.initialize(arb_os_path).ok());
+        REQUIRE(storage1.initialize(arb_os_path).status.ok());
         auto arbCore1 = storage1.getArbCore();
         REQUIRE(arbCore1->startThread());
 
@@ -150,7 +150,7 @@ TEST_CASE("ArbCore tests") {
 
         std::vector<Tuple> inbox_message_tuples;
         for (auto& json_message : j.at("inbox")) {
-            auto tup = std::get<Tuple>(simple_value_from_json(json_message));
+            auto tup = get<Tuple>(simple_value_from_json(json_message));
             inbox_message_tuples.push_back(std::move(tup));
         }
 
@@ -161,7 +161,7 @@ TEST_CASE("ArbCore tests") {
         }
 
         auto logs_json = j.at("logs");
-        std::vector<value> logs;
+        std::vector<Value> logs;
         for (auto& log_json : logs_json) {
             logs.push_back(simple_value_from_json(log_json));
         }
@@ -242,7 +242,7 @@ TEST_CASE("ArbCore tests") {
         // Create a new arbCore and verify it gets to the same point
         storage1.closeArbStorage();
         ArbStorage storage2(dbpath, coreConfig);
-        REQUIRE(storage2.initialize(arb_os_path).ok());
+        REQUIRE(storage2.initialize(arb_os_path).status.ok());
         auto arbCore2 = storage2.getArbCore();
         logs_count = uint64_t(arbCore2->getLastMachineOutput().log_count);
         if (!sends.empty()) {
@@ -300,7 +300,7 @@ TEST_CASE("ArbCore inbox") {
     ArbStorage storage(dbpath, coreConfig);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
-            .ok());
+            .status.ok());
     auto arbCore = storage.getArbCore();
     REQUIRE(arbCore->startThread());
 
@@ -343,7 +343,7 @@ TEST_CASE("ArbCore backwards reorg") {
     ArbStorage storage(dbpath, coreConfig);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
-            .ok());
+            .status.ok());
     auto arbCore = storage.getArbCore();
     REQUIRE(arbCore->startThread());
 
@@ -396,7 +396,7 @@ TEST_CASE("ArbCore duplicate code segments") {
     REQUIRE(storage
                 .initialize(std::string{machine_test_cases_path} +
                             "/dupsegments.mexe")
-                .ok());
+                .status.ok());
     auto arbCore = storage.getArbCore();
     REQUIRE(arbCore->startThread());
 
@@ -436,7 +436,7 @@ TEST_CASE("ArbCore duplicate code segments") {
             REQUIRE(storage
                         .initialize(std::string{machine_test_cases_path} +
                                     "/dupsegments.mexe")
-                        .ok());
+                        .status.ok());
             arbCore = storage.getArbCore();
             REQUIRE(arbCore->startThread());
         }

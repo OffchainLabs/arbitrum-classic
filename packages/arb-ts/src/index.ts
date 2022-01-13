@@ -16,16 +16,6 @@
 /* eslint-env node */
 'use strict'
 
-export { RollupCreator__factory } from './lib/abi/factories/RollupCreator__factory'
-export { Inbox__factory } from './lib/abi/factories/Inbox__factory'
-export { L1ERC20Gateway__factory } from './lib/abi/factories/L1ERC20Gateway__factory'
-export { L2ERC20Gateway__factory } from './lib/abi/factories/L2ERC20Gateway__factory'
-export { L1GatewayRouter__factory } from './lib/abi/factories/L1GatewayRouter__factory'
-export { L2GatewayRouter__factory } from './lib/abi/factories/L2GatewayRouter__factory'
-export { ArbRetryableTx__factory } from './lib/abi/factories/ArbRetryableTx__factory'
-export { ERC20__factory } from './lib/abi/factories/ERC20__factory'
-export { ArbSys__factory } from './lib/abi/factories/ArbSys__factory'
-export { ArbAddressTable__factory } from './lib/abi/factories/ArbAddressTable__factory'
 export { TokenBridger, EthBridger } from './lib/assetBridger'
 export { L2ToL1MessageStatus } from './lib/message/L2ToL1Message'
 export { networks } from './lib/networks'

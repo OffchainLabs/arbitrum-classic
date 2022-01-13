@@ -24,10 +24,12 @@
 TEST_CASE("CheckpointedMachine tests") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
-    auto storage = std::make_shared<DataStorage>(dbpath);
+    auto storage = std::make_shared<DataStorage>(dbpath, coreConfig);
     auto arbcore = std::make_unique<ArbCore>(storage, coreConfig);
     auto executable = loadExecutable(test_contract_path);
-    arbcore->initialize(executable);
+    auto result = arbcore->initialize(executable);
+    REQUIRE(result.status.ok());
+    REQUIRE(result.finished == false);
 
     SECTION("CheckpointedMachine basic") {
         ReadWriteTransaction tx(storage);
