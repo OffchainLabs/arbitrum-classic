@@ -19,6 +19,7 @@
 
 #include <avm_values/bigint.hpp>
 #include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 #include <utility>
 
 using Address = std::array<unsigned char, 20>;

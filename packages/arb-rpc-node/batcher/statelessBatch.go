@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package batcher
 
 import (
 	"container/list"
+	"context"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/pkg/errors"
 
@@ -64,7 +65,7 @@ func (p *statelessBatch) getAppliedTxes() []*types.Transaction {
 	return p.appliedTxes
 }
 
-func (p *statelessBatch) updateCurrentSnap(*list.List) error {
+func (p *statelessBatch) updateCurrentSnap(_ context.Context, _ *list.List) error {
 	return nil
 }
 
@@ -72,13 +73,13 @@ func (p *statelessBatch) getLatestSnap() *snapshot.Snapshot {
 	return nil
 }
 
-func (p *statelessBatch) addIncludedTx(tx *types.Transaction) error {
+func (p *statelessBatch) addIncludedTx(ctx context.Context, tx *types.Transaction) error {
 	p.appliedTxes = append(p.appliedTxes, tx)
 	p.sizeBytes += tx.Size()
 	return nil
 }
 
-func (p *statelessBatch) validateTx(tx *types.Transaction) (txResponse, error) {
+func (p *statelessBatch) validateTx(ctx context.Context, tx *types.Transaction) (txResponse, error) {
 	// If we don't have access to a db, skip this check
 	rejectLogger := logger.With().Hex("tx", tx.Hash().Bytes()).Logger()
 	rejectMsg := "rejected user tx"
@@ -88,11 +89,11 @@ func (p *statelessBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 			rejectLogger.Info().Err(err).Str("reason", "sender").Msg(rejectMsg)
 			return REMOVE, errors.New("couldn't recover sender")
 		}
-		snap, err := p.db.LatestSnapshot()
+		snap, err := p.db.LatestSnapshot(ctx)
 		if err != nil {
 			return SKIP, errors.New("couldn't fetch snapshot")
 		}
-		txCount, err := snap.GetTransactionCount(arbcommon.NewAddressFromEth(sender))
+		txCount, err := snap.GetTransactionCount(ctx, arbcommon.NewAddressFromEth(sender))
 		if err != nil {
 			rejectLogger.Info().Err(err).Str("reason", "snapshot").Msg(rejectMsg)
 			return REMOVE, errors.New("aggregator failed to verify nonce")

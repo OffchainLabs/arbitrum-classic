@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,6 +51,12 @@ void machineDestroy(CMachine* m) {
     delete static_cast<Machine*>(m);
 }
 
+void machineAbort(CMachine* m) {
+    assert(m);
+    auto machine = static_cast<ExecutionCursor*>(m);
+    machine->abort();
+}
+
 int machineHash(CMachine* m, void* ret) {
     assert(m);
     auto optionalHash = static_cast<Machine*>(m)->hash();
@@ -64,6 +70,8 @@ void* machineClone(CMachine* m) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     auto cloneMach = new Machine(*mach);
+    cloneMach->machine_state.code =
+        std::make_shared<RunningCode>(cloneMach->machine_state.code);
     return static_cast<void*>(cloneMach);
 }
 
@@ -127,7 +135,7 @@ CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
     assert(m);
     auto mach = static_cast<Machine*>(m);
     auto blockReason = mach->isBlocked(newMessages != 0);
-    return std::visit(ReasonConverter{}, blockReason);
+    return visit(ReasonConverter{}, blockReason);
 }
 
 COneStepProof machineMarshallForProof(CMachine* m) {
@@ -194,7 +202,8 @@ void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
     config->stop_on_sideload = stop_on_sideload;
 }
 
-RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
+RawAssertionResult executeAssertion(CMachine* m,
+                                    const CMachineExecutionConfig* c) {
     assert(m);
     assert(c);
     auto mach = static_cast<Machine*>(m);
@@ -226,17 +235,20 @@ RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
         }
 
         // TODO extend usage of uint256
-        return {intx::narrow_cast<uint64_t>(assertion.inbox_messages_consumed),
-                returnCharVector(sendData),
-                static_cast<int>(assertion.sends.size()),
-                returnCharVector(logData),
-                static_cast<int>(assertion.logs.size()),
-                returnCharVector(debugPrintData),
-                static_cast<int>(assertion.debug_prints.size()),
-                intx::narrow_cast<uint64_t>(assertion.step_count),
-                intx::narrow_cast<uint64_t>(assertion.gas_count)};
+        return {
+            {intx::narrow_cast<uint64_t>(assertion.inbox_messages_consumed),
+             returnCharVector(sendData),
+             static_cast<int>(assertion.sends.size()),
+             returnCharVector(logData), static_cast<int>(assertion.logs.size()),
+             returnCharVector(debugPrintData),
+             static_cast<int>(assertion.debug_prints.size()),
+             intx::narrow_cast<uint64_t>(assertion.step_count),
+             intx::narrow_cast<uint64_t>(assertion.gas_count)},
+            false};
+    } catch (const DataStorage::shutting_down_exception& e) {
+        return {makeEmptyAssertion(), true};
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";
-        return makeEmptyAssertion();
+        return {makeEmptyAssertion(), false};
     }
 }

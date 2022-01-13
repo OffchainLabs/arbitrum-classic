@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,9 @@
 #include <utility>
 
 class ExecutionCursor {
+   private:
+    std::atomic<bool> is_aborted{false};
+
    public:
     std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
@@ -67,6 +70,15 @@ class ExecutionCursor {
     }
 
     ExecutionCursor* clone();
+
+    void abort() {
+        is_aborted = true;
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            std::get<std::unique_ptr<Machine>>(machine)->abort();
+        }
+    }
+
+    bool isAborted() { return is_aborted.load(); }
 
     [[nodiscard]] std::optional<uint256_t> machineHash() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {

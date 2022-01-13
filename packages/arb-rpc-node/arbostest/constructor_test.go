@@ -110,7 +110,7 @@ func TestConstructor(t *testing.T) {
 	ethCode, err := client.CodeAt(ctx, ethReceipt.ContractAddress, nil)
 	failIfError(t, err)
 
-	arbCode, err := snap.GetCode(arbAddress)
+	arbCode, err := snap.GetCode(ctx, arbAddress)
 	failIfError(t, err)
 
 	if !bytes.Equal(arbCode, ethCode) {
@@ -154,6 +154,7 @@ func TestConstructorExistingBalance(t *testing.T) {
 func TestConstructorCallback(t *testing.T) {
 	skipBelowVersion(t, 18)
 
+	ctx := context.Background()
 	client, auths := test.SimulatedBackend(t)
 	auth := auths[0]
 	_, _, con, err := arbostestcontracts.DeployConstructorCallback2(auth, client)
@@ -216,7 +217,7 @@ func TestConstructorCallback(t *testing.T) {
 		}
 	}
 
-	bal, err := snap.GetBalance(connAddress1)
+	bal, err := snap.GetBalance(ctx, connAddress1)
 	test.FailIfError(t, err)
 	if bal.Cmp(tx2.Payment) != 0 {
 		t.Error("wrong balance")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     auto assertion = mach.run();
     REQUIRE(assertion.gas_count <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
-    REQUIRE(values_equal(val, value{uint256_t{4}}));
+    REQUIRE(values_equal(val, Value{uint256_t{4}}));
     REQUIRE(mach.machine_state.stack.stacksize() == 0);
 }
 
@@ -74,8 +74,10 @@ TEST_CASE("Code works correctly") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
-                                        value{Tuple()}));
+    auto result = storage.initialize(LoadedExecutable(
+        std::make_shared<UnsafeCodeSegment>(0), Value{Tuple()}));
+    REQUIRE(result.status.ok());
+    REQUIRE(result.finished == false);
     auto mach = storage.getInitialMachine();
     generateTestMachine(mach);
     checkRun(*mach);
@@ -85,8 +87,10 @@ TEST_CASE("Code serialization") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    storage.initialize(LoadedExecutable(std::make_shared<UnsafeCodeSegment>(0),
-                                        value{Tuple()}));
+    auto result = storage.initialize(LoadedExecutable(
+        std::make_shared<UnsafeCodeSegment>(0), Value{Tuple()}));
+    REQUIRE(result.status.ok());
+    REQUIRE(result.finished == false);
     ValueCache value_cache{1, 0};
 
     auto mach = storage.getInitialMachine();
@@ -105,7 +109,7 @@ TEST_CASE("Code serialization") {
         auto save_ret = saveTestMachine(*tx, *mach);
         REQUIRE(save_ret.status.ok());
 
-        auto mach2 = *mach;
+        auto mach2{*mach};
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 7;
         mach2.machine_state.context = AssertionContext(execConfig);

@@ -107,6 +107,9 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       0,
       0,
       0,
+      0,
+      0,
+      0,
       accounts[0].address
     )
 
@@ -197,6 +200,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     await l2TestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](l1CustomToken.address, accounts[0].address, tokenAmount, '0x')
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await l1CustomToken.balanceOf(accounts[0].address)
 
@@ -258,6 +262,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       data,
       { value: maxSubmissionCost + maxGas * gasPrice }
     )
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await l1CustomToken.balanceOf(accounts[0].address)
     const postAllowance = await l1CustomToken.allowance(

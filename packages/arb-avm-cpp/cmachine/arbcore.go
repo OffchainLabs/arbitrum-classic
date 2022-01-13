@@ -68,6 +68,11 @@ func (ac *ArbCore) MachineIdle() bool {
 	return status == 1
 }
 
+func (ac *ArbCore) SaveRocksdbCheckpoint() {
+	defer runtime.KeepAlive(ac)
+	C.arbCoreSaveRocksdbCheckpoint(ac.c)
+}
+
 func (ac *ArbCore) MachineMessagesRead() *big.Int {
 	defer runtime.KeepAlive(ac)
 	return receiveBigInt(C.arbCoreMachineMessagesRead(ac.c))
@@ -90,20 +95,14 @@ func (ac *ArbCore) PrintCoreThreadBacktrace() {
 	C.arbCorePrintCoreThreadBacktrace(ac.c)
 }
 
+// Note: the slices field of the returned struct needs manually freed by C.free
 func sequencerBatchItemsToByteSliceArray(batchItems []inbox.SequencerBatchItem) C.struct_ByteSliceArrayStruct {
 	return bytesArrayToByteSliceArray(encodeSequencerBatchItems(batchItems))
 }
 
+// Note: the slices field of the returned struct needs manually freed by C.free
 func delayedMessagesToByteSliceArray(delayedMessages []inbox.DelayedMessage) C.struct_ByteSliceArrayStruct {
 	return bytesArrayToByteSliceArray(encodeDelayedMessages(delayedMessages))
-}
-
-func u256ArrayToByteSliceArray(nums []*big.Int) C.struct_ByteSliceArrayStruct {
-	var data [][]byte
-	for _, num := range nums {
-		data = append(data, math.U256Bytes(num))
-	}
-	return bytesArrayToByteSliceArray(data)
 }
 
 func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool {
@@ -111,7 +110,9 @@ func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBat
 	previousMessageCountPtr := unsafeDataPointer(math.U256Bytes(previousMessageCount))
 	previousSeqBatchAccPtr := unsafeDataPointer(previousSeqBatchAcc.Bytes())
 	seqBatchItemsSlice := sequencerBatchItemsToByteSliceArray(seqBatchItems)
+	defer freeByteSliceArray(seqBatchItemsSlice)
 	delayedMessagesSlice := delayedMessagesToByteSliceArray(delayedMessages)
+	defer freeByteSliceArray(delayedMessagesSlice)
 
 	var cReorgSeqBatchItemCount unsafe.Pointer
 	if reorgSeqBatchItemCount != nil {
@@ -385,6 +386,7 @@ func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup boo
 
 func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error {
 	defer runtime.KeepAlive(ac)
+	defer runtime.KeepAlive(executionCursor)
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return errors.Errorf("unsupported execution cursor type %T", executionCursor)
@@ -421,8 +423,15 @@ func (ac *ArbCore) GetLastMachineTotalGas() (*big.Int, error) {
 	return receiveBigInt(result.value), nil
 }
 
+func (ac *ArbCore) UpdateCheckpointPruningGas(gas *big.Int) {
+	defer runtime.KeepAlive(ac)
+	gasData := math.U256Bytes(gas)
+	C.arbCoreUpdateCheckpointPruningGas(ac.c, unsafeDataPointer(gasData))
+}
+
 func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
 	defer runtime.KeepAlive(ac)
+	defer runtime.KeepAlive(executionCursor)
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)

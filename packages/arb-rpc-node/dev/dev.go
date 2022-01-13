@@ -373,7 +373,7 @@ func (b *Backend) AddInboxMessage(msg message.Message, sender common.Address) (c
 	return b.addInboxMessage(msg, sender, big.NewInt(0), b.l1Emulator.GenerateBlock())
 }
 
-func (b *Backend) PendingSnapshot() (*snapshot.Snapshot, error) {
+func (b *Backend) PendingSnapshot(_ context.Context) (*snapshot.Snapshot, error) {
 	b.Lock()
 	defer b.Unlock()
 	return nil, nil

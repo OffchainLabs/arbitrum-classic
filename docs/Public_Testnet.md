@@ -8,8 +8,6 @@ In order to make it easy for people to get started using Arbitrum Rollup, we've 
 
 For a general introduction to the Arbitrum Testnet, see our [announcement](https://medium.com/offchainlabs/arbitrum-rollup-testnet-full-featured-and-open-to-all-da3255b562ea).
 
-For a convenient landing page for all your testnet needs, see our [website](https://arbitrum.io/testnet/).
-
 ## Connecting to the chain
 
 If you're using Metamask, add a custom RPC network to connect to the Arbitrum testnet:

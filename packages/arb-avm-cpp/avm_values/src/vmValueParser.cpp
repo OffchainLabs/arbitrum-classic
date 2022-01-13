@@ -52,7 +52,7 @@ Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
     return Buffer::fromData(bytes);
 }
 
-value value_from_json(const nlohmann::json& full_value_json,
+Value value_from_json(const nlohmann::json& full_value_json,
                       size_t op_count,
                       const UnsafeCodeSegment& code) {
     std::vector<DeserializedValue> values;
@@ -63,7 +63,7 @@ value value_from_json(const nlohmann::json& full_value_json,
         json_values.pop_back();
 
         if (value_json.get().contains(INT_VAL_LABEL)) {
-            values.push_back(value{int_value_from_json(value_json)});
+            values.push_back(Value{int_value_from_json(value_json)});
         } else if (value_json.get().contains(TUP_VAL_LABEL)) {
             auto& json_tup = value_json.get()[TUP_VAL_LABEL];
             if (!json_tup.is_array() || json_tup.size() > 8) {
@@ -89,7 +89,7 @@ value value_from_json(const nlohmann::json& full_value_json,
             if (internal_offset != std::numeric_limits<uint64_t>::max()) {
                 pc = op_count - internal_offset;
             }
-            values.push_back(value{
+            values.push_back(Value{
                 CodePointStub({code.segmentID(), pc}, code.loadCodePoint(pc))});
         } else if (value_json.get().contains(BUF_LABEL)) {
             values.emplace_back(
@@ -120,7 +120,7 @@ Operation operation_from_json(const nlohmann::json& op_json,
 }
 }  // namespace
 
-value simple_value_from_json(const nlohmann::json& full_value_json) {
+Value simple_value_from_json(const nlohmann::json& full_value_json) {
     std::vector<DeserializedValue> values;
     std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
         full_value_json};
@@ -129,7 +129,7 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
         json_values.pop_back();
 
         if (value_json.get().contains(INT_VAL_LABEL)) {
-            values.push_back(value{int_value_from_json(value_json)});
+            values.push_back(Value{int_value_from_json(value_json)});
         } else if (value_json.get().contains(TUP_VAL_LABEL)) {
             const auto& json_tup = value_json.get()[TUP_VAL_LABEL];
             if (!json_tup.is_array() || json_tup.size() > 8) {
@@ -181,7 +181,7 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
     for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
         segment->addOperation(operation_from_json(*it, op_count, *segment));
     }
-    value static_val =
+    Value static_val =
         value_from_json(executable_json.at(STATIC_LABEL), op_count, *segment);
     return {std::move(segment), std::move(static_val)};
 }

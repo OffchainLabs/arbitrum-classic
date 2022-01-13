@@ -43,7 +43,7 @@ DataStackProof Datastack::marshalForProof(const std::vector<size_t>& stackInfo,
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;
-    std::vector<value> val;
+    std::vector<Value> val;
 
     // If the stack is underflowing, just send what's left
     uint8_t items_to_pop = stackInfo.size();
@@ -90,10 +90,10 @@ Tuple Datastack::getTupleRepresentation() const {
 
 Datastack::Datastack(Tuple tuple_rep) : Datastack() {
     Tuple ret = std::move(tuple_rep);
-    std::vector<value> vals;
+    std::vector<Value> vals;
     while (ret.tuple_size() == 2) {
         vals.push_back(ret.get_element(0));
-        ret = std::get<Tuple>(ret.get_element(1));
+        ret = get<Tuple>(ret.get_element(1));
     }
 
     for (size_t i = 0; i < vals.size(); i++) {
@@ -111,7 +111,7 @@ void Datastack::addHash() const {
     }();
 
     auto newVal = values[hashes.size()];
-    auto tup = Tuple(newVal, std::make_shared<HashPreImage>(prev));
+    auto tup = Tuple(newVal, Value(std::make_shared<HashPreImage>(prev)));
     hashes.emplace_back(tup.getHashPreImage());
 }
 
