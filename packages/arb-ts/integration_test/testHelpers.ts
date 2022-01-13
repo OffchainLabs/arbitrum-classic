@@ -27,7 +27,7 @@ import { Wallet } from '@ethersproject/wallet'
 import { formatBytes32String } from '@ethersproject/strings'
 import { parseEther } from '@ethersproject/units'
 
-import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
+import { TestERC20__factory } from '../src/lib/abi'
 
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 

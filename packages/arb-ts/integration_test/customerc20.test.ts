@@ -20,7 +20,7 @@ import { expect } from 'chai'
 
 import { BigNumber } from '@ethersproject/bignumber'
 
-import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
+import { TestERC20__factory } from '../src/lib/abi'
 
 import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 

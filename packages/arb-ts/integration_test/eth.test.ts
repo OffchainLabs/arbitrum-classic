@@ -23,6 +23,7 @@ import { Wallet } from '@ethersproject/wallet'
 import { Zero } from '@ethersproject/constants'
 import { parseEther } from '@ethersproject/units'
 
+import { ArbGasInfo__factory } from '../src/lib/abi'
 import {
   instantiateBridgeWithRandomWallet,
   fundL1,
@@ -31,15 +32,12 @@ import {
   prettyLog,
   skipIfMainnet,
 } from './testHelpers'
-import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
 import { ARB_GAS_INFO } from '../src/lib/constants'
 import {
   L2ToL1Message,
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
 import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
-import { MultiCaller } from '../src'
-import { ethers } from 'ethers'
 dotenv.config()
 
 describe('Ether', async () => {

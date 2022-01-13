@@ -29,12 +29,10 @@ async function main() {
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
-  const files = allFiles.filter(curr => !curr.toLowerCase().includes('test'))
-
   const result = await runTypeChain({
     cwd,
-    filesToProcess: files,
-    allFiles: files,
+    filesToProcess: allFiles,
+    allFiles: allFiles,
     outDir: './src/lib/abi/',
     target: 'ethers-v5',
   })
