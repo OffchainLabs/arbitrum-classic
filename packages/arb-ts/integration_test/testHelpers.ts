@@ -21,18 +21,21 @@ import yargs from 'yargs/yargs'
 import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
+import { Provider } from '@ethersproject/providers'
 import { ContractReceipt } from '@ethersproject/contracts'
 import { Wallet } from '@ethersproject/wallet'
 import { formatBytes32String } from '@ethersproject/strings'
 import { parseEther } from '@ethersproject/units'
 
-import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
+import { TestERC20__factory } from '../src/lib/abi'
 
-import { Bridge } from '../src/lib/bridge'
-import { Network } from '../src/lib/networks'
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 
 import config from './config'
+import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
+import { Signer } from 'ethers'
+import { EthBridger, TokenBridger } from '../src'
+import { L1Network, L2Network } from '../src/lib/utils/networks'
 
 const argv = yargs(process.argv.slice(2))
   .options({
@@ -58,52 +61,51 @@ export const existentTestCustomToken = _existentTestCustomToken as string
 export const preFundAmount = parseEther('0.001')
 
 export const testRetryableTicket = async (
-  bridge: Bridge,
+  l2Provider: Provider,
   rec: ContractReceipt
 ): Promise<void> => {
   prettyLog(`testing retryable for ${rec.transactionHash}`)
 
-  const seqNums = await bridge.getInboxSeqNumFromContractTransaction(rec)
-  const seqNum = seqNums && seqNums[0]
-  if (!seqNum) {
+  const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
+    l2Provider
+  )
+
+  const message = messages && messages[0]
+  if (!message) {
     throw new Error('Seq num not found')
   }
-  const retryableTicket = await bridge.calculateL2TransactionHash(seqNum)
-  const autoRedeem = await bridge.calculateRetryableAutoRedeemTxnHash(seqNum)
-  const redeemTransaction = await bridge.calculateL2RetryableTransactionHash(
-    seqNum
-  )
+  const retryableTicket = message.retryableCreationId
+  const autoRedeem = message.autoRedeemId
+  const redeemTransaction = message.l2TxHash
+
   prettyLog(
     `retryableTicket: ${retryableTicket} autoredeem: ${autoRedeem}, redeem: ${redeemTransaction}`
   )
   prettyLog('Waiting for retryable ticket')
 
-  const retryableTicketReceipt =
-    await bridge.l2Bridge.l2Provider.waitForTransaction(
-      retryableTicket,
-      undefined,
-      1000 * 60 * 15
-    )
+  await message.wait(1000 * 60 * 15)
+
+  const retryableTicketReceipt = await message.getRetryableCreationReceipt()
 
   prettyLog('retryableTicketReceipt found:')
 
-  expect(retryableTicketReceipt.status).to.equal(
+  expect(retryableTicketReceipt && retryableTicketReceipt.status).to.equal(
     1,
     'retryable ticket txn failed'
   )
 
   prettyLog(`Waiting for auto redeem transaction (this shouldn't take long`)
-  const autoRedeemReceipt = await bridge.l2Bridge.l2Provider.waitForTransaction(
-    autoRedeem,
-    undefined,
-    1000 * 60
-  )
+  const autoRedeemReceipt = await message.getAutoRedeemReceipt()
+
   prettyLog('autoRedeem receipt found!')
 
-  expect(autoRedeemReceipt.status).to.equal(1, 'autoredeem txn failed')
+  expect(autoRedeemReceipt && autoRedeemReceipt.status).to.equal(
+    1,
+    'autoredeem txn failed'
+  )
   prettyLog('Getting redemption')
-  const redemptionReceipt =
-    await bridge.l2Bridge.l2Provider.getTransactionReceipt(redeemTransaction)
+
+  const redemptionReceipt = await message.getL2TxReceipt()
 
   expect(redemptionReceipt && redemptionReceipt.status).equals(
     1,
@@ -122,9 +124,12 @@ export const warn = (text: string): void => {
 }
 
 export const instantiateBridgeWithRandomWallet = (): Promise<{
-  bridge: Bridge
-  l1Network: Network
-  l2Network: Network
+  tokenBridger: TokenBridger
+  ethBridger: EthBridger
+  l1Network: L1Network
+  l2Network: L2Network
+  l1Signer: Signer
+  l2Signer: Signer
 }> => {
   const testPk = formatBytes32String(Math.random().toString())
   prettyLog(
@@ -135,12 +140,11 @@ export const instantiateBridgeWithRandomWallet = (): Promise<{
 
 const _preFundedWallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
 const _preFundedL2Wallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
-
 console.warn('using prefunded wallet ', _preFundedWallet.address)
 
-export const fundL1 = async (bridge: Bridge): Promise<void> => {
-  const testWalletAddress = await bridge.l1Bridge.getWalletAddress()
-  const preFundedWallet = _preFundedWallet.connect(bridge.l1Provider)
+export const fundL1 = async (l1Signer: Signer): Promise<void> => {
+  const testWalletAddress = await l1Signer.getAddress()
+  const preFundedWallet = _preFundedWallet.connect(l1Signer.provider!)
   const res = await preFundedWallet.sendTransaction({
     to: testWalletAddress,
     value: preFundAmount,
@@ -148,9 +152,9 @@ export const fundL1 = async (bridge: Bridge): Promise<void> => {
   await res.wait()
   prettyLog('Funded L1 account')
 }
-export const fundL2 = async (bridge: Bridge): Promise<void> => {
-  const testWalletAddress = await bridge.l2Bridge.getWalletAddress()
-  const preFundedL2Wallet = _preFundedL2Wallet.connect(bridge.l2Provider)
+export const fundL2 = async (l2Signer: Signer): Promise<void> => {
+  const testWalletAddress = await l2Signer.getAddress()
+  const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider!)
   const res = await preFundedL2Wallet.sendTransaction({
     to: testWalletAddress,
     value: preFundAmount,
@@ -161,18 +165,21 @@ export const fundL2 = async (bridge: Bridge): Promise<void> => {
 
 export const tokenFundAmount = BigNumber.from(2)
 export const fundL2Token = async (
-  bridge: Bridge,
+  l1Provider: Provider,
+  l2Signer: Signer,
+  tokenBridger: TokenBridger,
   tokenAddress: string
 ): Promise<boolean> => {
   try {
-    const testWalletAddress = await bridge.l2Bridge.getWalletAddress()
-    const preFundedL2Wallet = _preFundedL2Wallet.connect(bridge.l2Provider)
-    const l2Address = await bridge.getERC20L2Address(tokenAddress)
+    const testWalletAddress = await l2Signer.getAddress()
+    const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider!)
+    const l2Address = await tokenBridger.getL2ERC20Address(
+      tokenAddress,
+      l1Provider
+    )
     const testToken = TestERC20__factory.connect(l2Address, preFundedL2Wallet)
-
     const res = await testToken.transfer(testWalletAddress, tokenFundAmount)
     const rec = await res.wait()
-
     const result = rec.status === 1
     result && prettyLog('Funded L2 account w/ tokens')
 
@@ -184,7 +191,7 @@ export const fundL2Token = async (
   }
 }
 
-export const wait = (ms = 0): Promise<undefined> => {
+export const wait = (ms = 0): Promise<void> => {
   return new Promise(res => setTimeout(res, ms))
 }
 

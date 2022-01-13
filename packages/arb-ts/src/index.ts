@@ -16,15 +16,8 @@
 /* eslint-env node */
 'use strict'
 
-export { Bridge } from './lib/bridge'
-export {
-  DepositInitiated,
-  WithdrawalInitiated,
-  L2ToL1EventResult,
-  OutgoingMessageState,
-  BridgeHelper,
-} from './lib/bridge_helpers'
-export { L1Bridge, L1TokenData } from './lib/l1Bridge'
-export { L2Bridge, L2TokenData } from './lib/l2Bridge'
+export { TokenBridger, EthBridger } from './lib/assetBridger'
+export { L2ToL1MessageStatus } from './lib/message/L2ToL1Message'
 export { networks } from './lib/networks'
 export { argSerializerConstructor } from './lib/byte_serialize_params'
+export { CallInput, MultiCaller } from './lib/utils/multicall'

@@ -8,13 +8,13 @@ const cleanCompileContracts = async () => {
   const peripheralsPath = getPackagePath('arb-bridge-eth')
 
   console.log('Clean building arbos')
-  const stdout1 = execSync(`cd ${arbosPath} && yarn clean:build`)
+  execSync(`cd ${arbosPath} && yarn clean:build`)
 
   console.log('Clean building ethbridge')
-  const stdout2 = execSync(`cd ${ethBridgePath} && yarn clean:build`)
+  execSync(`cd ${ethBridgePath} && yarn clean:build`)
 
   console.log('Clean building peripherals')
-  const stdout3 = execSync(`cd ${peripheralsPath} && yarn clean:build`)
+  execSync(`cd ${peripheralsPath} && yarn clean:build`)
 
   console.log('All clean and all built.')
 }

@@ -15,11 +15,11 @@ async function main() {
 
   console.log('Compiling paths.')
   console.log('building arbos')
-  const stdout1 = execSync(`cd ${arbosPath} && yarn build`)
+  execSync(`cd ${arbosPath} && yarn build`)
   console.log('building ethbridge')
-  const stdout2 = execSync(`cd ${ethBridgePath} && yarn build`)
+  execSync(`cd ${ethBridgePath} && yarn build`)
   console.log('building peripherals')
-  const stdout3 = execSync(`cd ${peripheralsPath} && yarn build`)
+  execSync(`cd ${peripheralsPath} && yarn build`)
 
   console.log('Done compiling')
 
@@ -29,12 +29,10 @@ async function main() {
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
-  const files = allFiles.filter(curr => !curr.toLowerCase().includes('test'))
-
-  const result = await runTypeChain({
+  await runTypeChain({
     cwd,
-    filesToProcess: files,
-    allFiles: files,
+    filesToProcess: allFiles,
+    allFiles: allFiles,
     outDir: './src/lib/abi/',
     target: 'ethers-v5',
   })

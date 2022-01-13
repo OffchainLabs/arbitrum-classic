@@ -21,8 +21,14 @@ import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
 import args from './getCLargs'
-import { Bridge, networks } from '../src'
-import { Network } from '../src/lib/networks'
+import { EthBridger, TokenBridger } from '../src'
+import {
+  L1Network,
+  l1Networks,
+  L2Network,
+  l2Networks,
+} from '../src/lib/utils/networks'
+import { Signer } from 'ethers'
 
 dotenv.config()
 
@@ -30,12 +36,19 @@ const pk = process.env['DEVNET_PRIVKEY'] as string
 const mnemonic = process.env['DEV_MNEMONIC'] as string
 const verbose = process.env['VERBOSE'] as string
 
-const defaultNetworkId = 4
+const defaultNetworkId = 421611
 
 export const instantiateBridge = async (
   l1pkParam?: string,
   l2PkParam?: string
-): Promise<{ bridge: Bridge; l1Network: Network; l2Network: Network }> => {
+): Promise<{
+  l1Network: L1Network
+  l2Network: L2Network
+  l1Signer: Signer
+  l2Signer: Signer
+  tokenBridger: TokenBridger
+  ethBridger: EthBridger
+}> => {
   if (!l1pkParam) {
     if (!pk && !mnemonic)
       throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
@@ -56,21 +69,29 @@ export const instantiateBridge = async (
 
     networkID = defaultNetworkId
   }
-  const network = networks[networkID]
-  if (!network) {
+  const isL1 = !!l1Networks[networkID]
+  const isL2 = !!l2Networks[networkID]
+  if (!isL1 && !isL2) {
     throw new Error(`Unrecognized network ID: ${networkID}`)
   }
+  if (!isL2) {
+    throw new Error(`Tests must specify an L2 network ID: ${networkID}`)
+  }
 
-  const l1Network = network.isArbitrum
-    ? networks[network.partnerChainID]
-    : network
-  const l2Network = networks[l1Network.partnerChainID]
+  const l2Network = l2Networks[networkID]
+  const l1Network = l1Networks[l2Network.partnerChainID]
+
+  if (!l1Network) {
+    throw new Error(
+      `Unrecognised partner chain id: ${l2Network.partnerChainID}`
+    )
+  }
 
   if (!l1Network.rpcURL) {
     throw new Error('L1 rpc url not set (see .env.sample or networks.ts)')
   }
   if (!l2Network.rpcURL) {
-    throw new Error('L2 rpc url not set (see .env.sample or networks.ts)')
+    throw new Error('L2 rpc url not set (see .env.sample or utils/networks.ts)')
   }
   const ethProvider = new JsonRpcProvider(l1Network.rpcURL)
 
@@ -100,12 +121,25 @@ export const instantiateBridge = async (
     }
   })()
 
-  const bridge = await Bridge.init(l1Signer, l2Signer)
   if (verbose) {
     console.log('')
-    console.log('**** Bridge instantiated w/ address', l1Signer.address, '****')
+    console.log(
+      '**** Bridger instantiated w/ address',
+      l1Signer.address,
+      '****'
+    )
     console.log('')
   }
 
-  return { bridge, l1Network, l2Network }
+  const tokenBridger = new TokenBridger(l2Network)
+  const ethBridger = new EthBridger(l2Network)
+
+  return {
+    l1Network,
+    l2Network,
+    l1Signer,
+    l2Signer,
+    tokenBridger,
+    ethBridger,
+  }
 }

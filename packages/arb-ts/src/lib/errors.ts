@@ -16,17 +16,22 @@
 /* eslint-env node */
 'use strict'
 
-export const NODE_INTERFACE_ADDRESS =
-  '0x00000000000000000000000000000000000000C8'
+/**
+ * Errors originating in ArbTs
+ */
+export class ArbTsError extends Error {
+  constructor(message?: string) {
+    super(message)
+  }
+}
 
-export const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
-
-export const ARB_RETRYABLE_TX_ADDRESS =
-  '0x000000000000000000000000000000000000006E'
-
-export const ARB_ADDRESS_TABLE_ADDRESS =
-  '0x0000000000000000000000000000000000000066'
-
-export const ARB_GAS_INFO = '0x000000000000000000000000000000000000006C'
-
-export const ARB_STATISTICS = '0x000000000000000000000000000000000000006F'
+/**
+ * Thrown when a signer does not have a connected provider
+ */
+export class MissingProviderArbTsError extends ArbTsError {
+  constructor(signerName: string) {
+    super(
+      `${signerName} does not have a connected provider and one is required.`
+    )
+  }
+}
