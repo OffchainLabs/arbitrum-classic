@@ -15,7 +15,7 @@
  */
 /* eslint-env node */
 'use strict'
-
+// useless comment
 export { Bridge } from './lib/bridge'
 export {
   DepositInitiated,
