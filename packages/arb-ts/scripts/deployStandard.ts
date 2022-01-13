@@ -2,7 +2,7 @@ import { instantiateBridge } from './instantiate_bridge'
 import dotenv from 'dotenv'
 import args from './getCLargs'
 import { constants, BigNumber, utils } from 'ethers'
-import { L1TokenData } from '../src'
+import { MultiCaller } from '../src'
 import axios from 'axios'
 import prompt from 'prompts'
 import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
@@ -21,13 +21,16 @@ if (!args.l1TokenAddress) {
 const { l1TokenAddress: l1TokenAddress } = args
 
 const main = async () => {
-  const { bridge } = await instantiateBridge(privKey, privKey)
-  const walletAddress = await bridge.l1Bridge.getWalletAddress()
+  const { l1Signer } = await instantiateBridge(privKey, privKey)
 
   /* Looks like an L1 token: */
-  let l1TokenData: L1TokenData | undefined
+  const multicaller = await MultiCaller.fromProvider(l1Signer.provider!)
+  let l1TokenData: { allowance: BigNumber | undefined }
   try {
-    l1TokenData = await bridge.l1Bridge.getL1TokenData(l1TokenAddress)
+    l1TokenData = await multicaller.getTokenData([l1TokenAddress], {
+      allowance: {},
+    })
+    // l1TokenData = await bridge.l1Bridge.getL1TokenData(l1TokenAddress)
   } catch (err) {
     console.warn(`${l1TokenAddress} doesn't look like an L1 ERC20 token`)
     throw err

@@ -29,12 +29,12 @@ if (!args.txid) {
 const l1Txn: string | ContractReceipt = args.txid as string
 
 ;(async () => {
-  const { bridge } = await instantiateBridge()
+  const { l1Signer, l2Signer } = await instantiateBridge()
   const l1Receipt = new L1TransactionReceipt(
-    await bridge.l1Provider.getTransactionReceipt(l1Txn)
+    await l1Signer.provider!.getTransactionReceipt(l1Txn)
   )
-  const message = await l1Receipt.getL1ToL2Message(bridge.l2Signer)
-  const res = await message.cancelSafe()
+  const message = await l1Receipt.getL1ToL2Message(l2Signer)
+  const res = await message.cancel()
   const rec = await res.wait()
   console.log('done:', rec)
   console.log(rec.status === 1 ? 'success!' : 'failed...')

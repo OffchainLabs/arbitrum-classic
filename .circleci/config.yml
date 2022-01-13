@@ -84,6 +84,7 @@ jobs:
           name: test arb-ts
           command: |
             yarn
+            yarn update:abi
             ls -al .
             ls -al ./src
             ls -al ./src/lib
