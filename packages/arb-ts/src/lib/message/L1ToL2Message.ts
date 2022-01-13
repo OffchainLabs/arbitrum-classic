@@ -115,16 +115,12 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
   ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
-    const provider = SignerProviderUtils.getProvider(l2SignerOrProvider)
-    if (!provider) throw new Error('Signer not connected to provider.')
+    const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
 
     const chainID = (await provider.getNetwork()).chainId.toString()
 
     const messageNumbers = this.getMessageNumbers()
-    if (!messageNumbers || messageNumbers.length === 0)
-      throw new Error(
-        'No l1 to l2 messages found in L1 txn ' + this.transactionHash
-      )
+    if (!messageNumbers || messageNumbers.length === 0) return []
 
     return messageNumbers.map((mn: BigNumber) => {
       const ticketCreationHash = L1ToL2Message.calculateRetryableCreationId(
@@ -357,7 +353,7 @@ type L1ToL2MessageWaitResult =
 
 export class L1ToL2MessageReader extends L1ToL2Message {
   public constructor(
-    private readonly l2Provider: Provider,
+    public readonly l2Provider: Provider,
     retryableCreationId: string,
     messageNumber: BigNumber
   ) {
@@ -523,7 +519,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
 export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public constructor(
-    private readonly l2Signer: Signer,
+    public readonly l2Signer: Signer,
     retryableCreationId: string,
     messageNumber: BigNumber
   ) {
