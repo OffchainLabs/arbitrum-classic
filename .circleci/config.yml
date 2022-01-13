@@ -84,6 +84,11 @@ jobs:
           name: test arb-ts
           command: |
             yarn
+            ls -al .
+            ls -al ./packages
+            ls -al ./packages/arb-ts
+            ls -al ./packages/arb-ts/src
+            ls -al ./packages/arb-ts/src/lib
             ls -al ./packages/arb-ts/src/lib/abi
             ls -al ./packages/arb-ts/src/lib/abi/factories
             yarn build --reporter-options output=${TEST_RESULTS}/arb-ts.xml
