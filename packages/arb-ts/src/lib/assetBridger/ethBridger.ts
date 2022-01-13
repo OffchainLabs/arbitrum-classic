@@ -30,8 +30,14 @@ import {
 import { SignerProviderUtils } from '../utils/signerOrProvider'
 import { MissingProviderArbTsError } from '../errors'
 import { AssetBridger } from './assetBridger'
-import { L1TransactionReceipt } from '../message/L1ToL2Message'
-import { L2TransactionReceipt } from '../message/L2ToL1Message'
+import {
+  L1ContractTransaction,
+  L1TransactionReceipt,
+} from '../message/L1ToL2Message'
+import {
+  L2ContractTransaction,
+  L2TransactionReceipt,
+} from '../message/L2ToL1Message'
 
 export interface EthWithdrawParams {
   /**
@@ -135,7 +141,9 @@ export class EthBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async depositEstimateGas(params: EthDepositParams) {
+  public async depositEstimateGas(
+    params: EthDepositParams
+  ): Promise<BigNumber> {
     return this.depositTxOrGas(params, true)
   }
 
@@ -144,7 +152,9 @@ export class EthBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async deposit(params: EthDepositParams) {
+  public async deposit(
+    params: EthDepositParams
+  ): Promise<L1ContractTransaction> {
     const tx = await this.depositTxOrGas(params, false)
     return L1TransactionReceipt.monkeyPatchWait(tx)
   }
@@ -180,7 +190,9 @@ export class EthBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async withdrawEstimateGas(params: EthWithdrawParams) {
+  public async withdrawEstimateGas(
+    params: EthWithdrawParams
+  ): Promise<BigNumber> {
     return await this.withdrawTxOrGas(params, true)
   }
 
@@ -189,7 +201,9 @@ export class EthBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async withdraw(params: EthWithdrawParams) {
+  public async withdraw(
+    params: EthWithdrawParams
+  ): Promise<L2ContractTransaction> {
     const tx = await this.withdrawTxOrGas(params, false)
     return L2TransactionReceipt.monkeyPatchWait(tx)
   }

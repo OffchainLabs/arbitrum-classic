@@ -15,11 +15,11 @@ async function main() {
 
   console.log('Compiling paths.')
   console.log('building arbos')
-  const stdout1 = execSync(`cd ${arbosPath} && yarn build`)
+  execSync(`cd ${arbosPath} && yarn build`)
   console.log('building ethbridge')
-  const stdout2 = execSync(`cd ${ethBridgePath} && yarn build`)
+  execSync(`cd ${ethBridgePath} && yarn build`)
   console.log('building peripherals')
-  const stdout3 = execSync(`cd ${peripheralsPath} && yarn build`)
+  execSync(`cd ${peripheralsPath} && yarn build`)
 
   console.log('Done compiling')
 
@@ -29,7 +29,7 @@ async function main() {
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
-  const result = await runTypeChain({
+  await runTypeChain({
     cwd,
     filesToProcess: allFiles,
     allFiles: allFiles,

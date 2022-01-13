@@ -20,15 +20,17 @@ import { expect } from 'chai'
 
 import { AddressZero } from '@ethersproject/constants'
 
-import { L1ERC20Gateway__factory } from '../src/lib/abi/factories/L1ERC20Gateway__factory'
-import { L2ERC20Gateway__factory } from '../src/lib/abi/factories/L2ERC20Gateway__factory'
-import { L1CustomGateway__factory } from '../src/lib/abi/factories/L1CustomGateway__factory'
-import { L2CustomGateway__factory } from '../src/lib/abi/factories/L2CustomGateway__factory'
-import { L1WethGateway__factory } from '../src/lib/abi/factories/L1WethGateway__factory'
-import { L2WethGateway__factory } from '../src/lib/abi/factories/L2WethGateway__factory'
-import { L2GatewayRouter__factory } from '../src/lib/abi/factories/L2GatewayRouter__factory'
-import { L1GatewayRouter__factory } from '../src/lib/abi/factories/L1GatewayRouter__factory'
-import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
+import {
+  AeWETH__factory,
+  L1GatewayRouter__factory,
+  L2GatewayRouter__factory,
+  L2WethGateway__factory,
+  L1WethGateway__factory,
+  L2CustomGateway__factory,
+  L1CustomGateway__factory,
+  L2ERC20Gateway__factory,
+  L1ERC20Gateway__factory,
+} from '../src/lib/abi'
 
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 import { existentTestERC20, existentTestCustomToken } from './testHelpers'
@@ -39,8 +41,7 @@ const expectIgnoreCase = (expected: string, actual: string) => {
 
 describe('sanity checks (read-only)', async () => {
   it('standard gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l1Network, l2Network } =
-      await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
     const l1Gateway = await L1ERC20Gateway__factory.connect(
       l2Network.tokenBridge.l1ERC20Gateway,
       l1Signer
@@ -72,8 +73,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('custom gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l1Network, l2Network } =
-      await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
     const l1Gateway = await L1CustomGateway__factory.connect(
       l2Network.tokenBridge.l1CustomGateway,
       l1Signer
@@ -131,8 +131,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('tokens properly set on gateway routers', async () => {
-    const { l1Signer, l2Signer, l1Network, l2Network } =
-      await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
 
     const {
       l1ERC20Gateway,
@@ -169,8 +168,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('weth gateways gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l1Network, l2Network } =
-      await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
 
     const l1Gateway = await L1WethGateway__factory.connect(
       l2Network.tokenBridge.l1WethGateway,

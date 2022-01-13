@@ -20,7 +20,7 @@ import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { BigNumber } from 'ethers'
 
 import { Whitelist__factory, Rollup__factory, Rollup } from '../abi'
-import { NodeCreatedEvent } from '../abi/Rollup'
+import { NodeConfirmedEvent, NodeCreatedEvent } from '../abi/Rollup'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ADDRESS_ALIAS_OFFSET } from '../constants'
 
@@ -73,14 +73,14 @@ export class NetworkState {
    * @param filter
    * @returns
    */
-  public getNodeCreatedEvents(
+  public async getNodeCreatedEvents(
     rollupAddress: string,
     nodeNum?: BigNumber,
     parentNodeHash?: string,
     filter?: Omit<Filter, 'address' | 'topics'>
-  ) {
+  ): Promise<NodeCreatedEvent['args'][]> {
     const eventFetcher = new EventFetcher(this.l1Provider)
-    return eventFetcher.getEvents<Rollup, NodeCreatedEvent>(
+    return await eventFetcher.getEvents<Rollup, NodeCreatedEvent>(
       rollupAddress,
       Rollup__factory,
       r => r.filters.NodeCreated(nodeNum, parentNodeHash),
@@ -100,9 +100,9 @@ export class NetworkState {
     rollupAddress: string,
     nodeNum?: BigNumber,
     filter?: Omit<Filter, 'address' | 'topics'>
-  ) {
+  ): Promise<NodeConfirmedEvent['args'][]> {
     const eventFetcher = new EventFetcher(this.l1Provider)
-    return eventFetcher.getEvents<Rollup, NodeCreatedEvent>(
+    return eventFetcher.getEvents<Rollup, NodeConfirmedEvent>(
       rollupAddress,
       Rollup__factory,
       r => r.filters.NodeConfirmed(nodeNum),
