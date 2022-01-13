@@ -52,8 +52,7 @@ import { isAddress as _isAddress } from '@ethersproject/address'
 import { concat, hexZeroPad } from '@ethersproject/bytes'
 import { BigNumber } from '@ethersproject/bignumber'
 
-import { ArbAddressTable } from './abi/ArbAddressTable'
-import { ArbAddressTable__factory } from './abi/factories/ArbAddressTable__factory'
+import { ArbAddressTable__factory, ArbAddressTable } from './abi'
 
 import { ARB_ADDRESS_TABLE_ADDRESS } from './constants'
 

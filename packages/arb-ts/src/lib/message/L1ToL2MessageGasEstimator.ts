@@ -1,6 +1,5 @@
 import { Provider } from '@ethersproject/abstract-provider'
-import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+import { NodeInterface__factory, ArbRetryableTx__factory } from '../abi'
 
 import { ARB_RETRYABLE_TX_ADDRESS, NODE_INTERFACE_ADDRESS } from '../constants'
 import { BigNumber } from '@ethersproject/bignumber'

@@ -24,15 +24,17 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { keccak256 } from '@ethersproject/keccak256'
 import { concat, zeroPad } from '@ethersproject/bytes'
 
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
+import {
+  L1ERC20Gateway__factory,
+  ArbRetryableTx__factory,
+  Inbox__factory,
+} from '../abi'
+import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../constants'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../utils/signerOrProvider'
-import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 import { ArbTsError } from '../errors'
 
 export enum L2TxnType {

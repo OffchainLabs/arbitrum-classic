@@ -16,28 +16,30 @@
 /* eslint-env node */
 'use strict'
 
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { ArbSys } from '../abi'
 import { ARB_SYS_ADDRESS, NODE_INTERFACE_ADDRESS } from '../constants'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
-import {
-  SignerProviderUtils,
-  SignerOrProvider,
-} from '../utils/signerOrProvider'
-import { wait } from '../utils/lib'
-
 import { Log } from '@ethersproject/abstract-provider'
-import { Outbox__factory } from '../abi/factories/Outbox__factory'
-import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+
+import {
+  ArbSys__factory,
+  IOutbox__factory,
+  Outbox__factory,
+  NodeInterface__factory,
+} from '../abi'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { ContractTransaction } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import { L2Network } from '../utils/networks'
 import { ArbTsError } from '../errors'
+import {
+  SignerProviderUtils,
+  SignerOrProvider,
+} from '../utils/signerOrProvider'
+import { wait } from '../utils/lib'
 
 export interface MessageBatchProofInfo {
   /**

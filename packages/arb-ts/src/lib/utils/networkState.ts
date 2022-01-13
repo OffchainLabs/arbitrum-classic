@@ -19,10 +19,9 @@
 import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { BigNumber } from 'ethers'
 
-import { Whitelist__factory } from '../abi'
+import { Whitelist__factory, Rollup__factory, Rollup } from '../abi'
+import { NodeCreatedEvent } from '../abi/Rollup'
 import { EventFetcher } from '../utils/eventFetcher'
-import { Rollup__factory } from '../abi/factories/Rollup__factory'
-import { NodeCreatedEvent, Rollup } from '../abi/Rollup'
 import { ADDRESS_ALIAS_OFFSET } from '../constants'
 
 /**
