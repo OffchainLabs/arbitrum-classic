@@ -22,8 +22,7 @@ import { TransparentUpgradeableProxy__factory } from '../src/lib/abi/factories/T
 import { instantiateBridge } from './instantiate_bridge'
 
 const main = async () => {
-  const { bridge, l2Network } = await instantiateBridge()
-  const { l2Signer } = bridge.l2Bridge
+  const { l2Signer, l2Network } = await instantiateBridge()
 
   const aeWeth = new AeWETH__factory(l2Signer)
   const res = await aeWeth.deploy()

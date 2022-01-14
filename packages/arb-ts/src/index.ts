@@ -17,7 +17,22 @@
 'use strict'
 
 export { TokenBridger, EthBridger } from './lib/assetBridger'
-export { L2ToL1MessageStatus } from './lib/message/L2ToL1Message'
+export {
+  L2ToL1MessageStatus,
+  L2ToL1Message,
+  L2ToL1MessageWriter,
+  L2TransactionReceipt,
+  L2ContractTransaction,
+  L2ToL1MessageReader,
+} from './lib/message/L2ToL1Message'
+export {
+  L1ToL2MessageStatus,
+  L1ToL2Message,
+  L1ContractTransaction,
+  L1ToL2MessageReader,
+  L1ToL2MessageWriter,
+  L1TransactionReceipt,
+} from './lib/message/L1ToL2Message'
 export { argSerializerConstructor } from './lib/byte_serialize_params'
 export { CallInput, MultiCaller } from './lib/utils/multicall'
 export {

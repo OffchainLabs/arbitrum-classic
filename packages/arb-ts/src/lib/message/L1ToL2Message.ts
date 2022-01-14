@@ -127,7 +127,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
         BigNumber.from(chainID),
         mn
       )
-      return L1ToL2Message.fromL2Ticket(
+      return L1ToL2Message.fromRetryableCreationId(
         l2SignerOrProvider,
         ticketCreationHash,
         mn
@@ -227,8 +227,8 @@ export enum L1ToL2MessageStatus {
   /**
    * The retryable ticket has been created but has not been redeemed. This could be due to the
    * auto redeem failing, or if the params (max l2 gas price) * (max l2 gas) = 0 then no auto
-   * redeem tx is ever issued. To tell the difference the l1 transaction can be checked for these
-   * parameters. An auto redeem is also never issued for ETH deposits.
+   * redeem tx is ever issued. An auto redeem is also never issued for ETH deposits.
+   * A manual redeem is now required.
    */
   NOT_YET_REDEEMED,
   /**
@@ -318,25 +318,25 @@ export class L1ToL2Message {
     return this.calculateL2DerivedHash(retryableCreationId, L2TxnType.L2_TX)
   }
 
-  public static fromL2Ticket<T extends SignerOrProvider>(
+  public static fromRetryableCreationId<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
-    l2TicketCreationHash: string,
+    retryableCreationId: string,
     messageNumber: BigNumber
   ): L1ToL2MessageReaderOrWriter<T>
-  public static fromL2Ticket<T extends SignerOrProvider>(
+  public static fromRetryableCreationId<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
-    l2TicketCreationHash: string,
+    retryableCreationId: string,
     messageNumber: BigNumber
   ): L1ToL2MessageReader | L1ToL2MessageWriter {
     return SignerProviderUtils.isSigner(l2SignerOrProvider)
       ? new L1ToL2MessageWriter(
           l2SignerOrProvider,
-          l2TicketCreationHash,
+          retryableCreationId,
           messageNumber
         )
       : new L1ToL2MessageReader(
           l2SignerOrProvider,
-          l2TicketCreationHash,
+          retryableCreationId,
           messageNumber
         )
   }

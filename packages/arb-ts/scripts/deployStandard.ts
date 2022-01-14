@@ -6,6 +6,8 @@ import { MultiCaller } from '../src'
 import axios from 'axios'
 import prompt from 'prompts'
 import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
+import { NetworkState } from '../src/lib/utils/networkState'
+import { L1ToL2MessageGasEstimator } from '../src/lib/message/L1ToL2MessageGasEstimator'
 dotenv.config()
 
 const privKey = process.env.PRIVKEY as string
@@ -21,23 +23,40 @@ if (!args.l1TokenAddress) {
 const { l1TokenAddress: l1TokenAddress } = args
 
 const main = async () => {
-  const { l1Signer } = await instantiateBridge(privKey, privKey)
+  const { l1Signer, tokenBridger, l2Signer } = await instantiateBridge(
+    privKey,
+    privKey
+  )
+  const l1Provider = l1Signer.provider!
+  const l2Provider = l2Signer.provider!
+  const gatewayAddress = await tokenBridger.getL1GatewayAddress(
+    l1TokenAddress,
+    l1Provider
+  )
+  const l1SignerAddr = await l1Signer.getAddress()
 
   /* Looks like an L1 token: */
-  const multicaller = await MultiCaller.fromProvider(l1Signer.provider!)
+  const multicaller = await MultiCaller.fromProvider(l1Provider)
   let l1TokenData: { allowance: BigNumber | undefined }
   try {
-    l1TokenData = await multicaller.getTokenData([l1TokenAddress], {
-      allowance: {},
-    })
-    // l1TokenData = await bridge.l1Bridge.getL1TokenData(l1TokenAddress)
+    l1TokenData = (
+      await multicaller.getTokenData([l1TokenAddress], {
+        allowance: {
+          owner: l1SignerAddr,
+          spender: gatewayAddress,
+        },
+      })
+    )[0]
   } catch (err) {
     console.warn(`${l1TokenAddress} doesn't look like an L1 ERC20 token`)
     throw err
   }
 
   /** Check if disabled */
-  const isDisabled = await bridge.l1Bridge.tokenIsDisabled(l1TokenAddress)
+  const isDisabled = await tokenBridger.l1TokenIsDisabled(
+    l1TokenAddress,
+    l1Provider
+  )
   if (isDisabled) {
     console.log(`Deploying ${l1TokenAddress} is currently disabled`)
     return
@@ -80,28 +99,37 @@ const main = async () => {
   }
 
   /* check that you have some eth */
-  const walletBal = await bridge.l1Provider.getBalance(walletAddress)
+  const walletBal = await l1Provider.getBalance(l1SignerAddr)
   if (walletBal.eq(constants.Zero)) {
-    throw new Error(`${walletAddress} has no Ether to pay for gas`)
+    throw new Error(`${l1SignerAddr} has no Ether to pay for gas`)
   }
 
   /* check token not yet deployed */
-  const l2TokenAddress = await bridge.l1Bridge.getERC20L2Address(l1TokenAddress)
+  const l2TokenAddress = await tokenBridger.getL2ERC20Address(
+    l1TokenAddress,
+    l1Provider
+  )
   if (l2TokenAddress === constants.AddressZero) {
     throw new Error(`${l1TokenAddress} can't be bridged`)
   }
 
-  if ((await bridge.l2Provider.getCode(l2TokenAddress)).length > 2) {
+  if ((await l2Provider.getCode(l2TokenAddress)).length > 2) {
     throw new Error(
       `${l1TokenAddress} already deployed on L2 at ${l2TokenAddress}`
     )
   }
 
   /* set allowance */
-  if (!l1TokenData.allowed) {
+  const amount = BigNumber.from(0)
+  const approveAmount = BigNumber.from(1000)
+  if (l1TokenData.allowance.lt(approveAmount)) {
     console.log('Setting allowance on gateway')
 
-    const res = await bridge.approveToken(l1TokenAddress)
+    const res = await tokenBridger.approveToken({
+      erc20L1Address: l1TokenAddress,
+      l1Signer: l1Signer,
+      amount,
+    })
     const rec = await res.wait(2)
     console.log(
       `Allowance successfully set — L1 tx hash: ${rec.transactionHash}`
@@ -112,9 +140,13 @@ const main = async () => {
     amount: BigNumber.from(0),
   }
   /* check for required gas */
-  const gasNeeded = await bridge.estimateGasDeposit(depositParams)
-  const { maxFeePerGas, gasPrice } = await bridge.l1Provider.getFeeData()
-  const price = maxFeePerGas || gasPrice
+  const gasNeeded = await tokenBridger.depositEstimateGas({
+    amount,
+    erc20L1Address: l1TokenAddress,
+    l1Signer,
+    l2Provider: l2Provider,
+  })
+  const price = await l2Provider.getGasPrice()
   if (!price) {
     console.log(
       'Warning: could not get gas price estimate; will try depositing anyway'
@@ -134,12 +166,15 @@ const main = async () => {
 
   console.log('Depositing / deploying standard token contract:')
 
-  const res = await bridge.deposit(depositParams)
+  const res = await tokenBridger.deposit({
+    amount,
+    erc20L1Address: l1TokenAddress,
+    l1Signer,
+    l2Provider,
+  })
   const rec = await res.wait(2)
   console.log(`L1 deposit txn confirmed — L1 txn hash: ${rec.transactionHash}`)
-  const message = await new L1TransactionReceipt(rec).getL1ToL2Message(
-    bridge.l2Provider
-  )
+  const message = await rec.getL1ToL2Message(l2Provider)
 
   await message.wait(undefined, 2)
   console.log(`Done; your token is deployed on L2 at ${l2TokenAddress}`)
