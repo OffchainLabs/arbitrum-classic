@@ -48,10 +48,11 @@ export interface ArbTransactionReceipt {
 export const getRawArbTransactionReceipt = async (
   l2Provider: JsonRpcProvider,
   txHash: string
-): Promise<ArbTransactionReceipt> => {
+): Promise<ArbTransactionReceipt | null> => {
   const rec = (await l2Provider.send('eth_getTransactionReceipt', [
     txHash,
   ])) as ArbTransactionReceipt
+  if (!rec) return null
   if (!rec.returnCode)
     throw new ArbTsError(
       "Tx receipt doesn't have returnCode field. prob a l1 provider"
