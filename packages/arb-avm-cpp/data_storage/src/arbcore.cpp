@@ -922,7 +922,11 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     bool initial_start,
     ValueCache& value_cache) {
     if (initial_start) {
-        std::cerr << "Seeding cache" << std::endl;
+        if (coreConfig.seed_cache_on_startup) {
+            std::cerr << "Seeding cache" << std::endl;
+        } else {
+            std::cerr << "Initial machine load" << std::endl;
+        }
     } else {
         std::cerr << "Reorg blockchain" << std::endl;
     }
@@ -970,9 +974,20 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                 nearest_machine_or_status));
 
         if (initial_start) {
-            std::cerr << "Loading L2 block saved to "
-                         "database: "
+            std::cerr << "Loading checkpoint, total gas used: "
+                      << nearest_machine->machine_state.output.arb_gas_used
+                      << ", L1 block: "
+                      << nearest_machine->machine_state.output.l1_block_number
+                      << ", L2 block: "
                       << nearest_machine->machine_state.output.l2_block_number
+                      << ", log count: "
+                      << nearest_machine->machine_state.output.log_count
+                      << ", timestamp: "
+                      << std::put_time(
+                             std::localtime(
+                                 (time_t*)&nearest_machine->machine_state.output
+                                     .last_inbox_timestamp),
+                             "%c")
                       << std::endl;
         }
 
@@ -1006,7 +1021,8 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     // and advance core_machine to same place as selected_machine_output.
     combined_machine_cache.reorg(selected_machine_output.arb_gas_used + 1);
 
-    if (initial_start) {
+    if (initial_start && (core_machine->machine_state.output.l2_block_number !=
+                          selected_machine_output.l2_block_number)) {
         std::cerr << "Seeding cache between L2 blocks: "
                   << core_machine->machine_state.output.l2_block_number << " - "
                   << selected_machine_output.l2_block_number << std::endl;
