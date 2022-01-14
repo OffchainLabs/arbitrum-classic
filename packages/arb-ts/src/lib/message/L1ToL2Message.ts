@@ -183,6 +183,16 @@ export class L1TransactionReceipt implements TransactionReceipt {
     )
   }
 
+  public async looksLikeEthDeposit(
+    l1SignerOrProvider: SignerOrProvider
+  ): Promise<boolean> {
+    const l1Provider =
+      SignerProviderUtils.getProviderOrThrow(l1SignerOrProvider)
+    const txRes = await l1Provider.getTransaction(this.transactionHash)
+    const ethDeposit_FUNCTION_SIG = '0x0f4d14e9'
+    return txRes.data.startsWith(ethDeposit_FUNCTION_SIG)
+  }
+
   /**
    * Replaces the wait function with one that returns an L1TransactionReceipt
    * @param contractTransaction
