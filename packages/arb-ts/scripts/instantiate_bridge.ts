@@ -29,6 +29,7 @@ import {
   l2Networks,
 } from '../src/lib/utils/networks'
 import { Signer } from 'ethers'
+import { AdminTokenBridger } from '../src/lib/assetBridger'
 
 dotenv.config()
 
@@ -48,6 +49,7 @@ export const instantiateBridge = async (
   l2Signer: Signer
   tokenBridger: TokenBridger
   ethBridger: EthBridger
+  adminTokenBridger: AdminTokenBridger
 }> => {
   if (!l1pkParam) {
     if (!pk && !mnemonic)
@@ -132,6 +134,7 @@ export const instantiateBridge = async (
   }
 
   const tokenBridger = new TokenBridger(l2Network)
+  const adminTokenBridger = new AdminTokenBridger(l2Network)
   const ethBridger = new EthBridger(l2Network)
 
   return {
@@ -141,5 +144,6 @@ export const instantiateBridge = async (
     l2Signer,
     tokenBridger,
     ethBridger,
+    adminTokenBridger,
   }
 }

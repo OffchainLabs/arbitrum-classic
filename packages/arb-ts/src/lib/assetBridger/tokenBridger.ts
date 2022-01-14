@@ -642,8 +642,9 @@ export class AdminTokenBridger extends TokenBridger {
   public async setGateways(
     l1Signer: Signer,
     l2Provider: Provider,
-    tokenGateways: TokenAndGateway[]
-  ): Promise<ethers.ContractTransaction> {
+    tokenGateways: TokenAndGateway[],
+    maxGas: BigNumber = BigNumber.from(0)
+  ): Promise<L1ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
@@ -663,15 +664,17 @@ export class AdminTokenBridger extends TokenBridger {
       l1Signer.provider
     )
 
-    return await l1GatewayRouter.functions.setGateways(
+    const res = await l1GatewayRouter.functions.setGateways(
       tokenGateways.map(tG => tG.tokenAddr),
       tokenGateways.map(tG => tG.gatewayAddr),
-      0,
+      maxGas,
       l2GasPrice,
       submissionPrice,
       {
         value: submissionPrice,
       }
     )
+
+    return L1TransactionReceipt.monkeyPatchWait(res)
   }
 }

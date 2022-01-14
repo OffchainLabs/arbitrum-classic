@@ -19,7 +19,10 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
-import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
+import {
+  L1ToL2MessageStatus,
+  L1TransactionReceipt,
+} from '../src/lib/message/L1ToL2Message'
 
 import { instantiateBridge } from './instantiate_bridge'
 
@@ -39,7 +42,10 @@ export const setGateWays = async (
   type: 'standard' | 'arbCustom',
   overrideGateways: string[] = []
 ): Promise<ContractReceipt> => {
-  const { bridge, l1Network } = await instantiateBridge()
+  const { adminTokenBridger, l1Signer, l2Network, l2Signer } =
+    await instantiateBridge()
+  const l1Provider = l1Signer.provider!
+  const l2Provider = l2Signer.provider!
   if (tokens.length === 0) {
     throw new Error('Include some tokens to set')
   }
@@ -53,10 +59,7 @@ export const setGateWays = async (
 
   for (const tokenAddress of tokens) {
     try {
-      const token = await ERC20__factory.connect(
-        tokenAddress,
-        bridge.l1Bridge.l1Provider
-      )
+      const token = await ERC20__factory.connect(tokenAddress, l1Provider)
       console.warn('calling name for ', tokenAddress)
 
       const symbol = await token.symbol()
@@ -86,15 +89,22 @@ export const setGateWays = async (
     if (overrideGateways.length > 0) {
       return overrideGateways
     } else if (type === 'standard') {
-      return tokens.map(() => l1Network.tokenBridge.l1ERC20Gateway)
+      return tokens.map(() => l2Network.tokenBridge.l1ERC20Gateway)
     } else if (type === 'arbCustom') {
-      return tokens.map(() => l1Network.tokenBridge.l1CustomGateway)
+      return tokens.map(() => l2Network.tokenBridge.l1CustomGateway)
     } else {
       throw new Error('Unhandled else case')
     }
   })()
 
-  const res = await bridge.setGateways(tokens, gateways)
+  const res = await adminTokenBridger.setGateways(
+    l1Signer,
+    l2Provider,
+    gateways.map((g, i) => ({
+      tokenAddr: tokens[i],
+      gatewayAddr: gateways[i],
+    }))
+  )
   console.log('Getting gateway(s)', res)
   const rec = await res.wait()
   console.log('Done', rec)
@@ -104,21 +114,21 @@ export const setGateWays = async (
   }
 
   console.log('redeeming retryable ticket:')
-  const l2Tx = await new L1TransactionReceipt(rec).getL1ToL2Message(
-    bridge.l2Signer
-  )
-  const redeemRes = await l2Tx.redeemSafe()
-  const redeemRec = await redeemRes.wait()
-  console.log('Done redeeming:', redeemRec)
-  console.log(redeemRec.status === 1 ? ' success!' : 'failed...')
-
-  return redeemRec
+  const l2Tx = await rec.getL1ToL2Message(l2Signer)
+  const messageRes = await l2Tx.wait()
+  if (messageRes.status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
+    const redeemRes = await l2Tx.redeem()
+    const redeemRec = await redeemRes.wait()
+    console.log('Done redeeming:', redeemRec)
+    console.log(redeemRec.status === 1 ? ' success!' : 'failed...')
+    return redeemRec
+  } else console.log(`Unpexpected message status: ${messageRes.status}.`)
 }
 
 export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
-  const { bridge } = await instantiateBridge()
-  const { l1Provider } = bridge.l1Bridge
-  const { l2Provider } = bridge.l2Bridge
+  const { l1Signer, l2Signer } = await instantiateBridge()
+  const l1Provider = l1Signer.provider!
+  const l2Provider = l2Signer.provider!
   const rec = await l1Provider.getTransactionReceipt(l1Hash)
   const message = await new L1TransactionReceipt(rec).getL1ToL2Message(
     l2Provider
@@ -126,13 +136,13 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
 
   if (!message) throw new Error('no seq nums')
 
-  const autoRedeemHash = message.autoRedeemHash
+  const autoRedeemHash = message.autoRedeemId
   const autoRedeemRec = await l2Provider.getTransactionReceipt(autoRedeemHash)
 
-  const redeemTxnHash = message.userTxnHash
+  const redeemTxnHash = message.l2TxHash
   const redeemTxnRec = await l2Provider.getTransactionReceipt(redeemTxnHash)
 
-  const retryableTicketHash = message.l2TicketCreationTxnHash
+  const retryableTicketHash = message.retryableCreationId
 
   const retryableTicketRec = await l2Provider.getTransactionReceipt(
     retryableTicketHash

@@ -33,12 +33,13 @@ if (!l1Txn) {
 }
 
 ;(async () => {
-  const { bridge } = await instantiateBridge()
+  const { l1Signer, l2Signer } = await instantiateBridge()
+  const l1Provider = l1Signer.provider!
   const l1Receipt = new L1TransactionReceipt(
-    await bridge.l1Provider.getTransactionReceipt(l1Txn)
+    await l1Provider.getTransactionReceipt(l1Txn)
   )
-  const l1ToL2Message = await l1Receipt.getL1ToL2Message(bridge.l2Signer)
-  const res = await l1ToL2Message.redeemSafe()
+  const l1ToL2Message = await l1Receipt.getL1ToL2Message(l2Signer)
+  const res = await l1ToL2Message.redeem()
   const rec = await res.wait()
   console.log('done:', rec)
   console.log(rec.status === 1 ? 'success!' : 'failed...')
