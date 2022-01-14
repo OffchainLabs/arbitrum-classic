@@ -433,7 +433,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const l2TxReceipt = await this.getL2TxReceipt()
     const retryableCreationReceipt = await this.getRetryableCreationReceipt()
 
-    return this.receiptsToStatus(l2TxReceipt, retryableCreationReceipt)
+    return this.receiptsToStatus(retryableCreationReceipt, l2TxReceipt)
   }
 
   /**
