@@ -18,6 +18,9 @@
 
 import dotenv from 'dotenv'
 import { BigNumber } from 'ethers'
+import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
+import { ArbTsError } from '../errors'
+
 dotenv.config()
 
 export interface L1Network extends Network {
@@ -171,7 +174,7 @@ export const l2Networks: L2Networks = {
   '42161': {
     chainID: '42161',
     name: 'Arbitrum One',
-    explorerUrl: 'https://mainnet-arb-explorer.netlify.app',
+    explorerUrl: 'https://arbiscan.io',
     partnerChainID: '1',
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
@@ -183,7 +186,7 @@ export const l2Networks: L2Networks = {
   '421611': {
     chainID: '421611',
     name: 'ArbRinkeby',
-    explorerUrl: 'https://rinkeby-explorer.arbitrum.io',
+    explorerUrl: 'https://testnet.arbiscan.io',
     partnerChainID: '4',
     isArbitrum: true,
     tokenBridge: rinkebyTokenBridge,
@@ -192,6 +195,40 @@ export const l2Networks: L2Networks = {
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
   },
+}
+
+const getNetwork = async (
+  signerOrProviderOrChainID: SignerOrProvider | string,
+  layer: 1 | 2
+) => {
+  const chainID = await (async () => {
+    if (typeof signerOrProviderOrChainID === 'string') {
+      return signerOrProviderOrChainID
+    }
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      signerOrProviderOrChainID
+    )
+
+    const { chainId } = await provider.getNetwork()
+    return chainId.toString()
+  })()
+  const networks = layer === 1 ? l1Networks : l2Networks
+  if (networks[chainID]) {
+    return networks[chainID]
+  } else {
+    throw new ArbTsError(`Unrecognized network ${chainID}`)
+  }
+}
+
+export const getL1Network = (
+  signerOrProviderOrChainID: SignerOrProvider | string
+): Promise<L1Network> => {
+  return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
+}
+export const getL2Network = (
+  signerOrProviderOrChainID: SignerOrProvider | string
+): Promise<L2Network> => {
+  return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
 }
 
 const addCustomNetwork = ({

@@ -28,6 +28,15 @@ export class SignerProviderUtils {
       : signerOrProvider
   }
 
+  public static getProviderOrThrow(
+    signerOrProvider: SignerOrProvider
+  ): Provider {
+    const maybeProvider = this.getProvider(signerOrProvider)
+    if (!maybeProvider)
+      throw new MissingProviderArbTsError('Signer has no provider')
+    return maybeProvider
+  }
+
   /**
    * Check if the signer has a connected provider and throw if not
    * @param signer
