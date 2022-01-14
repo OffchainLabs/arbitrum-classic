@@ -120,6 +120,9 @@ export class TokenBridger extends AssetBridger<
   public static MAX_APPROVAL = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
 
+  /**
+   * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
+   */
   public constructor(l2Network: L2Network) {
     super(l2Network)
   }

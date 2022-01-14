@@ -212,11 +212,12 @@ const getNetwork = async (
     const { chainId } = await provider.getNetwork()
     return chainId.toString()
   })()
+
   const networks = layer === 1 ? l1Networks : l2Networks
   if (networks[chainID]) {
     return networks[chainID]
   } else {
-    throw new ArbTsError(`Unrecognized network ${chainID}`)
+    throw new ArbTsError(`Unrecognized network ${chainID}.`)
   }
 }
 
