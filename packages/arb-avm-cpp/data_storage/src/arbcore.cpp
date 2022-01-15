@@ -973,23 +973,20 @@ rocksdb::Status ArbCore::reorgCheckpoints(
             std::move(std::get<std::unique_ptr<MachineThread>>(
                 nearest_machine_or_status));
 
-        if (initial_start) {
-            std::cerr << "Loading checkpoint, total gas used: "
-                      << nearest_machine->machine_state.output.arb_gas_used
-                      << ", L1 block: "
-                      << nearest_machine->machine_state.output.l1_block_number
-                      << ", L2 block: "
-                      << nearest_machine->machine_state.output.l2_block_number
-                      << ", log count: "
-                      << nearest_machine->machine_state.output.log_count
-                      << ", timestamp: "
-                      << std::put_time(
-                             std::localtime(
-                                 (time_t*)&nearest_machine->machine_state.output
-                                     .last_inbox_timestamp),
-                             "%c")
-                      << std::endl;
-        }
+        std::cerr << "Loading checkpoint, total gas used: "
+                  << nearest_machine->machine_state.output.arb_gas_used
+                  << ", L1 block: "
+                  << nearest_machine->machine_state.output.l1_block_number
+                  << ", L2 block: "
+                  << nearest_machine->machine_state.output.l2_block_number
+                  << ", log count: "
+                  << nearest_machine->machine_state.output.log_count
+                  << ", timestamp: "
+                  << std::put_time(
+                         std::localtime((time_t*)&nearest_machine->machine_state
+                                            .output.last_inbox_timestamp),
+                         "%c")
+                  << std::endl;
 
         checkpoint_it = nullptr;
 
@@ -1982,6 +1979,10 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
 
         if (needs_consistency_check) {
             if (start_acc && item.accumulator != *start_acc) {
+                std::cout << "Found reorg in getMessagesImpl, index: "
+                          << intx::to_string(index, 16) << ", expected: "
+                          << optionalUint256ToString(start_acc) << ", found: "
+                          << intx::to_string(item.accumulator, 16) << std::endl;
                 return {rocksdb::Status::NotFound(), {}};
             }
             needs_consistency_check = false;
@@ -2047,7 +2048,8 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
                 delayed_msg_it->Next();
             }
 
-            if (!delayed_msg_it->status().ok()) {
+            if (!delayed_msg_it->status().IsNotFound() &&
+                !delayed_msg_it->status().ok()) {
                 return {delayed_msg_it->status(), {}};
             }
             if (messages.size() < count &&
@@ -2066,10 +2068,15 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
         assert(item.last_sequence_number + 1 == index + messages.size());
     }
 
-    if (!seq_batch_it->status().ok()) {
+    if (!seq_batch_it->status().IsNotFound() && !seq_batch_it->status().ok()) {
         return {seq_batch_it->status(), {}};
     }
     if (needs_consistency_check) {
+        std::cout << "Found reorg in getMessagesImpl, index: "
+                  << intx::to_string(index, 16)
+                  << ", expected: " << optionalUint256ToString(start_acc)
+                  << ", unable to load message for consistency check"
+                  << std::endl;
         return {rocksdb::Status::NotFound(), {}};
     }
 
@@ -3659,4 +3666,12 @@ rocksdb::Status ArbCore::pruneToGasOrBefore(const uint256_t& gas,
 void ArbCore::updateCheckpointPruningGas(uint256_t gas) {
     std::lock_guard<std::mutex> lock(checkpoint_pruning_mutex);
     unsafe_checkpoint_pruning_gas_used = gas;
+}
+
+std::string optionalUint256ToString(std::optional<uint256_t>& value) {
+    if (!value.has_value()) {
+        return "empty";
+    }
+
+    return intx::to_string(*value, 16);
 }
