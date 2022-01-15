@@ -961,15 +961,8 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         ReadWriteTransaction tx(data_storage);
         auto checkpoint_it = tx.checkpointGetIterator();
 
-        auto output_check = [&](const MachineOutput& output) {
-            if (initial_start) {
-                return true;
-            } else {
-                return check_output(output);
-            }
-        };
         auto output_or_status =
-            reorgToFirstMatchingCheckpoint(output_check, tx, checkpoint_it);
+            reorgToFirstMatchingCheckpoint(check_output, tx, checkpoint_it);
         if (std::holds_alternative<rocksdb::Status>(output_or_status)) {
             return std::get<rocksdb::Status>(output_or_status);
         }
