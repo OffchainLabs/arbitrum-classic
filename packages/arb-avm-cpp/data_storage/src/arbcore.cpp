@@ -2110,7 +2110,7 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
         if (needs_consistency_check) {
             if (start_acc && item.accumulator != *start_acc) {
                 std::cout << "Found reorg in getMessagesImpl, index: "
-                          << intx::to_string(index, 16) << ", expected: "
+                          << intx::to_string(index, 10) << ", expected: "
                           << optionalUint256ToString(start_acc) << ", found: "
                           << intx::to_string(item.accumulator, 16) << std::endl;
                 return {rocksdb::Status::NotFound(), {}};
@@ -2202,7 +2202,7 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
     }
     if (needs_consistency_check) {
         std::cout << "Found reorg in getMessagesImpl, index: "
-                  << intx::to_string(index, 16)
+                  << intx::to_string(index, 10)
                   << ", expected: " << optionalUint256ToString(start_acc)
                   << ", unable to load message for consistency check"
                   << std::endl;
