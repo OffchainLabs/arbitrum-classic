@@ -973,20 +973,23 @@ rocksdb::Status ArbCore::reorgCheckpoints(
             std::move(std::get<std::unique_ptr<MachineThread>>(
                 nearest_machine_or_status));
 
-        std::cerr << "Loading checkpoint, total gas used: "
-                  << nearest_machine->machine_state.output.arb_gas_used
-                  << ", L1 block: "
-                  << nearest_machine->machine_state.output.l1_block_number
-                  << ", L2 block: "
-                  << nearest_machine->machine_state.output.l2_block_number
-                  << ", log count: "
-                  << nearest_machine->machine_state.output.log_count
-                  << ", timestamp: "
-                  << std::put_time(
-                         std::localtime((time_t*)&nearest_machine->machine_state
-                                            .output.last_inbox_timestamp),
-                         "%c")
-                  << std::endl;
+        std::cerr
+            << "Loading checkpoint, total gas used: "
+            << nearest_machine->machine_state.output.arb_gas_used
+            << ", L1 block: "
+            << nearest_machine->machine_state.output.l1_block_number
+            << ", L2 block: "
+            << nearest_machine->machine_state.output.l2_block_number
+            << ", log count: "
+            << nearest_machine->machine_state.output.log_count
+            << ", messages count: "
+            << nearest_machine->machine_state.output.fully_processed_inbox.count
+            << ", timestamp: "
+            << std::put_time(
+                   std::localtime((time_t*)&nearest_machine->machine_state
+                                      .output.last_inbox_timestamp),
+                   "%c")
+            << std::endl;
 
         checkpoint_it = nullptr;
 
@@ -1367,7 +1370,9 @@ void ArbCore::operator()() {
                             << ", L1 block: " << output.l1_block_number
                             << ", L2 block: "
                             << *last_assertion.sideload_block_number
-                            << ", log count: " << output.log_count << ", took "
+                            << ", log count: " << output.log_count
+                            << ", messages count: "
+                            << output.fully_processed_inbox.count << ", took "
                             << duration
                             << " second(s) to save, inbox timestamp: "
                             << std::put_time(
@@ -3615,7 +3620,9 @@ rocksdb::Status ArbCore::pruneCheckpoints(
                   << machine_output.arb_gas_used
                   << ", L1 block: " << machine_output.l1_block_number
                   << ", L2 block: " << machine_output.l2_block_number
-                  << ", log count: " << machine_output.log_count << ", took "
+                  << ", log count: " << machine_output.log_count
+                  << ", messages count: "
+                  << machine_output.fully_processed_inbox.count << ", took "
                   << duration << " second(s) to prune, inbox timestamp: "
                   << std::put_time(
                          std::localtime(
