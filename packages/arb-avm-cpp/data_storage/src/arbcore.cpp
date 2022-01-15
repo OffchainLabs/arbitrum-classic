@@ -1082,6 +1082,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     }
 
     // Checkpoint was saved at sideload, attempt to continue running
+    core_machine->machine_state.context.clearInboxMessages();
     core_machine->continueRunningMachine(true);
 
     return rocksdb::Status::OK();
