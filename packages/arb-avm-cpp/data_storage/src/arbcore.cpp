@@ -657,10 +657,13 @@ rocksdb::Status ArbCore::reorgToTimestampOrBefore(const uint256_t& timestamp,
                                                   bool initial_start,
                                                   ValueCache& cache) {
     if (initial_start) {
-        std::cerr << "Reloading chain starting with timestamp " << timestamp
+        std::cerr << "Reloading chain starting with timestamp "
+                  << std::put_time(std::localtime((time_t*)&timestamp), "%c")
                   << "\n";
     } else {
-        std::cerr << "Reorg'ing chain to timestamp " << timestamp << "\n";
+        std::cerr << "Reorg'ing chain to timestamp "
+                  << std::put_time(std::localtime((time_t*)&timestamp), "%c")
+                  << "\n";
     }
 
     return reorgCheckpoints(
@@ -822,6 +825,8 @@ ArbCore::reorgToFirstMatchingCheckpoint(
         return rocksdb::Status::NotFound();
     }
 
+    bool output_checkpoint = true;
+
     // Delete each checkpoint until check_output() is satisfied
     while (checkpoint_it->Valid()) {
         // Deserialize checkpoint
@@ -830,6 +835,23 @@ ArbCore::reorgToFirstMatchingCheckpoint(
             checkpoint_it->value().data() + checkpoint_it->value().size());
         auto checkpoint_variant = extractMachineStateKeys(checkpoint_vector);
         auto machine_output = getMachineOutput(checkpoint_variant);
+
+        if (output_checkpoint) {
+            std::cerr << "Initial checkpoint,  total gas used: "
+                      << machine_output.arb_gas_used
+                      << ", L1 block: " << machine_output.l1_block_number
+                      << ", L2 block: " << machine_output.l2_block_number
+                      << ", log count: " << machine_output.log_count
+                      << ", messages count: "
+                      << machine_output.fully_processed_inbox.count
+                      << ", timestamp: "
+                      << std::put_time(
+                             std::localtime(
+                                 (time_t*)&machine_output.last_inbox_timestamp),
+                             "%c")
+                      << "\n";
+            output_checkpoint = false;
+        }
 
         // Looking for first valid checkpoint
         if (check_output(machine_output)) {
@@ -958,10 +980,21 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         // behind the selected checkpoint
         MachineOutput selected_machine_output =
             std::get<MachineOutput>(output_or_status);
-        if (initial_start) {
-            std::cerr << "Last L2 block saved to database: "
-                      << selected_machine_output.l2_block_number << std::endl;
-        }
+        std::cerr << "Selected checkpoint, total gas used: "
+                  << selected_machine_output.arb_gas_used
+                  << ", L1 block: " << selected_machine_output.l1_block_number
+                  << ", L2 block: " << selected_machine_output.l2_block_number
+                  << ", log count: " << selected_machine_output.log_count
+                  << ", messages count: "
+                  << selected_machine_output.fully_processed_inbox.count
+                  << ", timestamp: "
+                  << std::put_time(
+                         std::localtime((time_t*)&selected_machine_output
+                                            .last_inbox_timestamp),
+                         "%c")
+                  << "\n";
+
+        auto reorg_machine_begin_time = std::chrono::steady_clock::now();
         auto nearest_machine_or_status = reorgToFirstMatchingMachineCheckpoint(
             selected_machine_output, check_output, tx, checkpoint_it,
             value_cache);
@@ -972,9 +1005,13 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         auto nearest_machine =
             std::move(std::get<std::unique_ptr<MachineThread>>(
                 nearest_machine_or_status));
+        auto reorg_machine_end_time = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(
+                            reorg_machine_end_time - reorg_machine_begin_time)
+                            .count();
 
         std::cerr
-            << "Loading checkpoint, total gas used: "
+            << "Loaded full machine, total gas used: "
             << nearest_machine->machine_state.output.arb_gas_used
             << ", L1 block: "
             << nearest_machine->machine_state.output.l1_block_number
@@ -989,7 +1026,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                    std::localtime((time_t*)&nearest_machine->machine_state
                                       .output.last_inbox_timestamp),
                    "%c")
-            << std::endl;
+            << ", took " << duration << " second(s) to reorg" << std::endl;
 
         checkpoint_it = nullptr;
 
@@ -1420,13 +1457,13 @@ void ArbCore::operator()() {
                             << *last_assertion.sideload_block_number
                             << ", log count: " << output.log_count
                             << ", messages count: "
-                            << output.fully_processed_inbox.count << ", took "
-                            << duration
-                            << " second(s) to save, inbox timestamp: "
+                            << output.fully_processed_inbox.count
+                            << ", inbox timestamp: "
                             << std::put_time(
                                    std::localtime(
                                        (time_t*)&output.last_inbox_timestamp),
                                    "%c")
+                            << ", took " << duration << " second(s) to save"
                             << "\n";
                         // Clear oldest cache and start populating next cache
                         cache.nextCache();
@@ -3710,12 +3747,13 @@ rocksdb::Status ArbCore::pruneCheckpoints(
                   << ", L2 block: " << machine_output.l2_block_number
                   << ", log count: " << machine_output.log_count
                   << ", messages count: "
-                  << machine_output.fully_processed_inbox.count << ", took "
-                  << duration << " second(s) to prune, inbox timestamp: "
+                  << machine_output.fully_processed_inbox.count
+                  << ", inbox timestamp: "
                   << std::put_time(
                          std::localtime(
                              (time_t*)&machine_output.last_inbox_timestamp),
                          "%c")
+                  << ", took " << duration << " second(s) to prune"
                   << "\n";
         deleted_count++;
     }
