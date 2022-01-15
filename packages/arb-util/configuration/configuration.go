@@ -504,7 +504,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Int("core.cache.basic-size", 100, "number of basic cache entries to save")
 	f.Bool("core.cache.disable", false, "disable saving to cache while in core thread")
 	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
-	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")
+	f.Bool("core.cache.seed-on-startup", false, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 
 	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
