@@ -475,4 +475,6 @@ uint64_t seconds_since_epoch();
 std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,
                                                     uint256_t log_index);
 
+std::string optionalUint256ToString(std::optional<uint256_t>& value);
+
 #endif /* arbcore_hpp */
