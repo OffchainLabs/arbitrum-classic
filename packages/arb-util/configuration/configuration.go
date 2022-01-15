@@ -524,7 +524,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Duration("core.database.save-interval", 0, "duration between saving database backups, 0 to disable")
 	f.String("core.database.save-path", "db_checkpoints", "path to save database backups in")
 
-	f.Duration("core.idle-sleep", 5*time.Millisecond, "how long core thread should sleep when idle")
+	f.Duration("core.idle-sleep", 1*time.Millisecond, "how long core thread should sleep when idle")
 
 	f.Bool("core.lazy-load-core-machine", false, "if the core machine should be loaded as it's run")
 	f.Bool("core.lazy-load-archive-queries", true, "if the archive queries should be loaded as they're run")
