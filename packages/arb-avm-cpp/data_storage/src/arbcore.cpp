@@ -2048,8 +2048,7 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
                 delayed_msg_it->Next();
             }
 
-            if (!delayed_msg_it->status().IsNotFound() &&
-                !delayed_msg_it->status().ok()) {
+            if (!delayed_msg_it->status().ok()) {
                 return {delayed_msg_it->status(), {}};
             }
             if (messages.size() < count &&
@@ -2068,7 +2067,7 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
         assert(item.last_sequence_number + 1 == index + messages.size());
     }
 
-    if (!seq_batch_it->status().IsNotFound() && !seq_batch_it->status().ok()) {
+    if (!seq_batch_it->status().ok()) {
         return {seq_batch_it->status(), {}};
     }
     if (needs_consistency_check) {
