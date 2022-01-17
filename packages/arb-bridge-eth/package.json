@@ -22,7 +22,7 @@
     "test:ci": "CI=true yarn test",
     "test:gas": "REPORT_GAS=true yarn test",
     "test:fork": "SHOULD_FORK=1 hardhat test test/*.fork.ts",
-    "test:gas:ci": "CI=true yarn test:gas && mv gasReporterOutput.json ../..",
+    "test:gas:ci": "CI=true yarn test:gas",
     "test:fork:coverage": "SHOULD_FORK=1 hardhat coverage --testfiles 'test/*.fork.ts'",
     "test:coverage": "hardhat coverage --testfiles 'test/*.spec.ts'",
     "lint:js": "eslint .",
