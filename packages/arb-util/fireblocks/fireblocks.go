@@ -23,7 +23,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/rs/zerolog"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -32,6 +31,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
@@ -358,7 +359,7 @@ func New(fireblocksConfig configuration.WalletFireblocks) (*Fireblocks, error) {
 	}, nil
 }
 
-func (fb *Fireblocks) ListPendingTransactions() (*[]TransactionDetails, error) {
+func (fb *Fireblocks) ListPendingTransactions() ([]TransactionDetails, error) {
 	statusList := []string{
 		Submitted,
 		Queued,
@@ -374,7 +375,7 @@ func (fb *Fireblocks) ListPendingTransactions() (*[]TransactionDetails, error) {
 	return fb.ListTransactions(statusList)
 }
 
-func (fb *Fireblocks) ListTransactions(statusList []string) (*[]TransactionDetails, error) {
+func (fb *Fireblocks) ListTransactions(statusList []string) ([]TransactionDetails, error) {
 	values := url.Values{}
 	values.Set("sourceType", fb.sourceType.String())
 	values.Set("sourceId", fb.sourceId)
@@ -392,7 +393,7 @@ func (fb *Fireblocks) ListTransactions(statusList []string) (*[]TransactionDetai
 		return nil, errors.Wrap(err, "list transactions")
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func (fb *Fireblocks) ListVaultAccounts() (*[]VaultAccount, error) {

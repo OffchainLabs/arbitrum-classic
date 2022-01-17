@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
@@ -166,13 +167,42 @@ func processBlockResults(block *evm.BlockInfo, avmLogs []core.ValueAndInbox) ([]
 }
 
 func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []core.ValueAndInbox) error {
-	logger.Info().Str("start", initialLogIndex.String()).Int("count", len(avmLogs)).Msg("adding logs")
+	logger.Debug().Str("start", initialLogIndex.String()).Int("count", len(avmLogs)).Msg("adding logs")
 	logIndex := initialLogIndex.Uint64()
+	var lastBlockAdded *evm.BlockInfo
 	for _, avmLog := range avmLogs {
-		if err := db.HandleLog(logIndex, avmLog); err != nil {
+		res, err := evm.NewResultFromValue(avmLog.Value)
+		if err != nil {
+			logger.Error().Err(err).Msg("Error parsing log result")
+			return nil
+		}
+
+		switch res := res.(type) {
+		case *evm.BlockInfo:
+			err = db.handleBlockReceipt(res)
+			lastBlockAdded = res
+		case *evm.MerkleRootResult:
+			err = db.as.SaveMessageBatch(res.BatchNumber, logIndex)
+		case *evm.TxResult:
+			monitor.GlobalMonitor.GotLog(res.IncomingRequest.MessageID)
+			tx, err := evm.GetTransaction(res)
+			if err != nil {
+				logger.Warn().Err(err).Msg("error pulling transaction from receipt")
+			} else {
+				db.newTxsFeed.Send(ethcore.NewTxsEvent{Txs: []*types.Transaction{tx.Tx}})
+			}
+		}
+		if err != nil {
 			return err
 		}
 		logIndex++
+	}
+	if lastBlockAdded != nil {
+		logger.Info().
+			Str("l2Block", lastBlockAdded.BlockNum.String()).
+			Str("l1Block", lastBlockAdded.L1BlockNum.String()).
+			Time("timestamp", time.Unix(lastBlockAdded.Timestamp.Int64(), 0)).
+			Msg("sync update")
 	}
 	return nil
 }
@@ -248,30 +278,6 @@ func (db *TxDB) DeleteLogs(avmLogs []core.ValueAndInbox) error {
 	return nil
 }
 
-func (db *TxDB) HandleLog(logIndex uint64, avmLog core.ValueAndInbox) error {
-	res, err := evm.NewResultFromValue(avmLog.Value)
-	if err != nil {
-		logger.Error().Err(err).Msg("Error parsing log result")
-		return nil
-	}
-
-	switch res := res.(type) {
-	case *evm.BlockInfo:
-		return db.handleBlockReceipt(res)
-	case *evm.MerkleRootResult:
-		return db.as.SaveMessageBatch(res.BatchNumber, logIndex)
-	case *evm.TxResult:
-		monitor.GlobalMonitor.GotLog(res.IncomingRequest.MessageID)
-		tx, err := evm.GetTransaction(res)
-		if err != nil {
-			logger.Warn().Err(err).Msg("error pulling transaction from receipt")
-		} else {
-			db.newTxsFeed.Send(ethcore.NewTxsEvent{Txs: []*types.Transaction{tx.Tx}})
-		}
-	}
-	return nil
-}
-
 func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	logger.Debug().
 		Uint64("number", blockInfo.BlockNum.Uint64()).
@@ -291,11 +297,6 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 			Int("real", len(txResults)).
 			Uint64("claimed", blockInfo.BlockStats.TxCount.Uint64()).
 			Msg("expected to get same number of results")
-	}
-	if blockInfo.BlockStats.AVMLogCount.Cmp(big.NewInt(0)) == 0 {
-		logger.Warn().
-			Uint64("block", blockInfo.BlockNum.Uint64()).
-			Msg("found empty block")
 	}
 
 	processedResults := evm.FilterEthTxResults(txResults)
@@ -514,7 +515,7 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 	return nil, errors.New("can't get latest block because there are no blocks")
 }
 
-func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
+func (db *TxDB) getSnapshotForInfo(ctx context.Context, info *machine.BlockInfo) (*snapshot.Snapshot, error) {
 	if db.snapshotLRUCache != nil {
 		cachedSnap, found := db.snapshotLRUCache.Get(info.Header.Number.Uint64())
 		if found {
@@ -533,7 +534,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(info.Header.Number)),
 		Timestamp: new(big.Int).SetUint64(info.Header.Time),
 	}
-	snap, err := snapshot.NewSnapshot(mach, currentTime, big.NewInt(1<<60))
+	snap, err := snapshot.NewSnapshot(ctx, mach, currentTime, big.NewInt(1<<60))
 	if err != nil {
 		return nil, err
 	}
@@ -544,20 +545,20 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	return snap, nil
 }
 
-func (db *TxDB) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
+func (db *TxDB) GetSnapshot(ctx context.Context, blockHeight uint64) (*snapshot.Snapshot, error) {
 	info, err := db.GetBlock(blockHeight)
 	if err != nil || info == nil {
 		return nil, err
 	}
-	return db.getSnapshotForInfo(info)
+	return db.getSnapshotForInfo(ctx, info)
 }
 
-func (db *TxDB) LatestSnapshot() (*snapshot.Snapshot, error) {
+func (db *TxDB) LatestSnapshot(ctx context.Context) (*snapshot.Snapshot, error) {
 	block, err := db.LatestBlock()
 	if err != nil {
 		return nil, err
 	}
-	snap, err := db.getSnapshotForInfo(block)
+	snap, err := db.getSnapshotForInfo(ctx, block)
 	if err != nil {
 		if strings.Contains(err.Error(), "block not in cache") {
 			logger.Error().Hex("block", block.Header.Number.Bytes()).Msg("latest block is not in cache")

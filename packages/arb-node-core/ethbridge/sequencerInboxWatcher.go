@@ -78,6 +78,10 @@ func (r *SequencerInboxWatcher) Address() ethcommon.Address {
 	return r.address
 }
 
+func (r *SequencerInboxWatcher) IsSequencer(opts *bind.CallOpts, address ethcommon.Address) (bool, error) {
+	return r.con.IsSequencer(opts, address)
+}
+
 func (r *SequencerInboxWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int, error) {
 	latestHeader, err := r.client.HeaderByNumber(ctx, nil)
 	if err != nil {

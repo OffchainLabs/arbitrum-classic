@@ -224,6 +224,7 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
     const withdrawTx = await l2TestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](l1Weth.address, accounts[0].address, tokenAmount, '0x')
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await l1Weth.balanceOf(accounts[0].address)
 
@@ -265,6 +266,7 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       data,
       { value: maxSubmissionCost + maxGas * gasPrice }
     )
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await l1Weth.balanceOf(accounts[0].address)
     const postAllowance = await l1Weth.allowance(

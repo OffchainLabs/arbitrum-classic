@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"context"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -25,10 +26,11 @@ import (
 )
 
 func TestInit(t *testing.T) {
+	ctx := context.Background()
 	cmach, err := cmachine.New(*arbosfile)
 	failIfError(t, err)
 	mach := arbosmachine.New(cmach)
-	assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, nil)
+	assertion, _, _, err := mach.ExecuteAssertion(ctx, 10000000000, false, nil)
 	test.FailIfError(t, err)
 	t.Log("Startup used", assertion.NumGas, "gas")
 }
