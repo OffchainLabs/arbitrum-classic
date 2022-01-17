@@ -85,6 +85,9 @@ type ArbCoreLookup interface {
 	// UpdateCheckpointPruningGas updates the gas value such that all checkpoints with less gas
 	// will be pruned
 	UpdateCheckpointPruningGas(gas *big.Int)
+
+	// SaveRocksdbCheckpoint tells rocksdb to save a copy of the current database state
+	SaveRocksdbCheckpoint()
 }
 
 type ArbCoreInbox interface {

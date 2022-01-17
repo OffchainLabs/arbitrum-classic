@@ -19,6 +19,9 @@ package monitor
 import (
 	"context"
 	"math/big"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -135,12 +138,35 @@ func (m *Monitor) StartInboxReader(
 		m.Core,
 		healthChan,
 		sequencerFeed,
-		inboxReaderConfig.Paranoid,
+		inboxReaderConfig,
 	)
 	if err != nil {
 		return nil, err
 	}
 	reader.Start(ctx, inboxReaderConfig.DelayBlocks)
 	m.Reader = reader
+	m.listenForSignal(ctx)
 	return reader, nil
+}
+
+func (m *Monitor) listenForSignal(ctx context.Context) {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGUSR1)
+	go func() {
+		defer close(signalChan)
+		for {
+			select {
+			case <-ctx.Done():
+				break
+			case sig := <-signalChan:
+				switch sig {
+				case syscall.SIGUSR1:
+					logger.Info().Msg("triggering save of rocksdb checkpoint")
+					m.Core.SaveRocksdbCheckpoint()
+				default:
+					logger.Info().Str("signal", sig.String()).Msg("caught unexpected signal")
+				}
+			}
+		}
+	}()
 }

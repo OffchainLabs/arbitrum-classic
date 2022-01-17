@@ -38,6 +38,9 @@ struct ArbCoreConfig {
     // Frequency to save checkpoint to database
     uint256_t checkpoint_gas_frequency{1'000'000};
 
+    // If last machine should be cached for each block
+    bool last_machine_cache{false};
+
     // Amount of gas between basic cache entries
     uint32_t basic_machine_cache_interval{1'000'000};
 
@@ -58,6 +61,9 @@ struct ArbCoreConfig {
 
     // Print extra debug messages to stderr
     bool debug{false};
+
+    // Print extra timing debug messages to stderr
+    bool debug_timing{false};
 
     // Number of seconds to wait between saving rocksdb checkpoint, 0 to disable
     uint64_t database_save_interval{0};

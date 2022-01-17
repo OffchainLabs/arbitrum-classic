@@ -88,6 +88,11 @@ struct AssertionContext {
         debug_prints.clear();
         first_instruction = true;
     }
+
+    void clearInboxMessages() {
+        inbox_messages.clear();
+        inbox_messages_consumed = 0;
+    }
 };
 
 struct OneStepProof {

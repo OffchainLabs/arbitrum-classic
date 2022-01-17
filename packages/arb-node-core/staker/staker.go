@@ -123,7 +123,7 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			delay := time.After(stakerDelay)
 			// Prune any stale database entries while we wait
 			err = s.pruneDatabase(ctx)
-			if err == nil {
+			if err != nil {
 				logger.Error().Err(err).Msg("error pruning database")
 			}
 			// Force a GC run to clean up any execution cursors while we wait

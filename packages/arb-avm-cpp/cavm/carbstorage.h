@@ -32,6 +32,7 @@ typedef struct {
     int32_t checkpoint_load_gas_factor;
     int32_t checkpoint_max_execution_gas;
     int32_t checkpoint_gas_frequency;
+    int32_t last_cache;
     int32_t basic_cache_interval;
     int32_t basic_cache_size;
     int32_t lru_cache_size;
@@ -39,6 +40,7 @@ typedef struct {
     int32_t idle_sleep_milliseconds;
     int32_t seed_cache_on_startup;
     int32_t debug;
+    int32_t debug_timing;
     int32_t lazy_load_core_machine;
     int32_t lazy_load_archive_queries;
     int32_t checkpoint_prune_on_startup;
