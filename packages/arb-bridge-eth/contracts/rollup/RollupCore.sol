@@ -272,6 +272,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         bytes32 afterLogAcc,
         uint256 afterLogCount
     ) internal {
+        // CHRIS: test comment
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
 
         Node storage node = getNodeStorage(nodeNum);
