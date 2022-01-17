@@ -40,6 +40,7 @@ typedef struct {
     int32_t idle_sleep_milliseconds;
     int32_t seed_cache_on_startup;
     int32_t debug;
+    int32_t debug_timing;
     int32_t lazy_load_core_machine;
     int32_t lazy_load_archive_queries;
     int32_t checkpoint_prune_on_startup;

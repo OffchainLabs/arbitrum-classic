@@ -468,11 +468,19 @@ class ArbCore {
                                              uint64_t checkpoint_max_to_prune);
     rocksdb::Status pruneToGasOrBefore(const uint256_t& gas,
                                        uint64_t checkpoint_max_to_prune);
+
+   private:
+    void printElapsed(
+        const std::chrono::time_point<std::chrono::steady_clock>& begin_time,
+        const std::chrono::time_point<std::chrono::steady_clock>& end_time,
+        const std::string& message) const;
 };
 
 uint64_t seconds_since_epoch();
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,
                                                     uint256_t log_index);
+
+std::string optionalUint256ToString(std::optional<uint256_t>& value);
 
 #endif /* arbcore_hpp */

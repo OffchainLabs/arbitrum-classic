@@ -272,7 +272,11 @@ func startup() error {
 			return errors.Wrap(err, "error running GetKeystore")
 		}
 
-		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
+		if config.Node.Sequencer.Dangerous.DisableBatchPosting {
+			logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node with disabled batch posting")
+		} else {
+			logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
+		}
 
 		if err := ethbridge.WaitForBalance(
 			ctx,
@@ -373,7 +377,7 @@ func startup() error {
 		}
 	}()
 
-	if config.Node.Forwarder.Target != "" {
+	if config.Node.Type == "forwarder" && config.Node.Forwarder.Target != "" {
 		go func() {
 			clnt, err := ethclient.DialContext(ctx, config.Node.Forwarder.Target)
 			if err != nil {

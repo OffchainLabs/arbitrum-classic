@@ -62,6 +62,9 @@ struct ArbCoreConfig {
     // Print extra debug messages to stderr
     bool debug{false};
 
+    // Print extra timing debug messages to stderr
+    bool debug_timing{false};
+
     // Number of seconds to wait between saving rocksdb checkpoint, 0 to disable
     uint64_t database_save_interval{0};
 

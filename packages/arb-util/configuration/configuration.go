@@ -77,6 +77,7 @@ type Core struct {
 	CheckpointPruneOnStartup  bool          `koanf:"checkpoint-prune-on-startup"`
 	Database                  Database      `koanf:"database"`
 	Debug                     bool          `koanf:"debug"`
+	DebugTiming               bool          `koanf:"debug-timing"`
 	IdleSleep                 time.Duration `koanf:"idle-sleep"`
 	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
 	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
@@ -503,7 +504,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Int("core.cache.basic-size", 100, "number of basic cache entries to save")
 	f.Bool("core.cache.disable", false, "disable saving to cache while in core thread")
 	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
-	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")
+	f.Bool("core.cache.seed-on-startup", false, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 
 	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
@@ -516,6 +517,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("core.checkpoint-pruning-mode", "default", "Prune old checkpoints: 'on', 'off', or 'default'")
 
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
+	f.Bool("core.debug-timing", false, "print extra debug timing messages in arbcore")
 
 	f.Bool("core.database.compact", false, "perform database compaction")
 	f.Bool("core.database.exit-after", false, "exit after loading or manipulating database")
