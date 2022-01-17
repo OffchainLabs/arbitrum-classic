@@ -1314,10 +1314,10 @@
     "@types/node" "*"
     form-data "^3.0.0"
 
-"@types/node@*":
-  version "17.0.1"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.1.tgz#88d501e84b6185f6489ecee4ba9e8fcec7f29bb2"
-  integrity sha512-NXKvBVUzIbs6ylBwmOwHFkZS2EXCcjnqr8ZCRNaXBkHAf+3mn/rPcJxwrzuc6movh8fxQAsUUfYklJ/EG+hZqQ==
+"@types/node@*", "@types/node@^17.0.9":
+  version "17.0.9"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.9.tgz#0b7f161afb5b1cc12518d29b2cdc7175d5490628"
+  integrity sha512-5dNBXu/FOER+EXnyah7rn8xlNrfMOQb/qXnw4NQgLkCygKBKhdmF/CA5oXVOKZLBEahw8s2WP9LxIcN/oDDRgQ==
 
 "@types/node@^10.0.3":
   version "10.17.60"
@@ -1333,11 +1333,6 @@
   version "13.13.52"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-13.13.52.tgz#03c13be70b9031baaed79481c0c0cfb0045e53f7"
   integrity sha512-s3nugnZumCC//n4moGGe6tkNMyYEdaDBitVjwPxXmR5lnMG5dHePinH2EdxkG3Rh1ghFHHixAG4NJhpJW1rthQ==
-
-"@types/node@^14.0.13", "@types/node@^14.14.28":
-  version "14.18.1"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.18.1.tgz#459886b51f52aa923dc06b9ea81cb8b1d733e9d3"
-  integrity sha512-fTFWOFrgAkj737w1o0HLTIgisgYHnsZfeiqhG1Ltrf/iJjudEbUwetQAsfrtVE49JGwvpEzQR+EbMkIqG4227g==
 
 "@types/node@^8.0.0":
   version "8.10.66"
@@ -1842,6 +1837,11 @@ arb-ts@^0.0.36:
     "@types/promise-poller" "^1.7.0"
     dotenv "^10.0.0"
     ethers "^5.1.0"
+
+arbos-precompiles@1.0.1, arbos-precompiles@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/arbos-precompiles/-/arbos-precompiles-1.0.1.tgz#90de6534d652d5c17b7f6a8c4f58d66bd4cc2d67"
+  integrity sha512-KHTyjtp70ApKgTsLANlM7p75l7PKfP4ptjeh9XEwQsR8ZLxjZ5gsZOXydsKoMqgUUK0HfQtTpsZyZc4B1BLARQ==
 
 archy@^1.0.0:
   version "1.0.0"
@@ -5964,7 +5964,7 @@ hardhat-gas-reporter@^1.0.4:
     eth-gas-reporter "^0.2.23"
     sha1 "^1.1.1"
 
-hardhat@^2.6.1, hardhat@^2.6.4:
+hardhat@^2.6.1:
   version "2.8.0"
   resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.8.0.tgz#4701fafe2de4fe88bed328561e554df85455385b"
   integrity sha512-A2L5F+B7HgdvfcuEWBXyokzP3biSlu4UeIvNR/lgSC0Og/2kbP9cjMMkIH42V1W8nQEZk70VuryhVKX2uHwSYw==
