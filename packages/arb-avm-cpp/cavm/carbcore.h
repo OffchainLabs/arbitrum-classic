@@ -25,6 +25,7 @@ extern "C" {
 int arbCoreStartThread(CArbCore* arbcore_ptr);
 void arbCoreAbortThread(CArbCore* arbcore_ptr);
 int arbCoreMachineIdle(CArbCore* arbcore_ptr);
+void arbCoreSaveRocksdbCheckpoint(CArbCore* arbcore_ptr);
 void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr);
 int arbCoreMessagesStatus(CArbCore* arbcore_ptr);
 char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);
@@ -112,6 +113,9 @@ CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
 CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
                                         uint64_t block_number,
                                         int allow_slow_lookup);
+
+void arbCoreUpdateCheckpointPruningGas(CArbCore* arbcore_ptr,
+                                       const void* gas_ptr);
 
 void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr);
 

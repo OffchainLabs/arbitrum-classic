@@ -402,8 +402,8 @@ rocksdb::Status deleteCode(ReadWriteTransaction& tx,
                 auto s = tx.refCountedGet(vecToSlice(key_vec), &val);
                 if (!s.ok()) {
                     std::cerr
-                        << "Couldn't load code segment metadata when deleting"
-                        << std::endl;
+                        << "Couldn't load code segment metadata when deleting: "
+                        << s.ToString() << std::endl;
                     return false;
                 }
                 auto metadata = CodeSegmentMetadata::load(val);

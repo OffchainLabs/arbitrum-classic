@@ -295,6 +295,7 @@ func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 }
 
 func TestNonAggregatorFee(t *testing.T) {
+	ctx := context.Background()
 	skipBelowVersion(t, 3)
 	backend, web3SServer, client, auth, _, _, _, _, cancel := setupFeeChain(t)
 	defer cancel()
@@ -308,7 +309,7 @@ func TestNonAggregatorFee(t *testing.T) {
 	data := simpleABI.Methods["exists"].ID
 	emptyAgg := ethcommon.Address{}
 
-	estimatedGas, err := web3SServer.EstimateGas(web3.CallTxArgs{
+	estimatedGas, err := web3SServer.EstimateGas(ctx, web3.CallTxArgs{
 		From:       &auth.From,
 		To:         &simpleAddr,
 		Data:       (*hexutil.Bytes)(&data),
@@ -369,7 +370,7 @@ func TestRetryableFee(t *testing.T) {
 	res, _, err := backend.db.GetRequest(redeemId)
 	test.FailIfError(t, err)
 
-	if new(big.Int).Mul(res.GasPrice, big.NewInt(2)).Cmp(gasPriceEstimate) != 0 {
+	if web3.ApplyGasPriceBidFactor(res.GasPrice).Cmp(gasPriceEstimate) != 0 {
 		t.Error("wrong gas price")
 	}
 

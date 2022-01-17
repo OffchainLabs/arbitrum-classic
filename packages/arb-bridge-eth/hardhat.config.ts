@@ -1,7 +1,7 @@
 import { task } from 'hardhat/config'
-import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import 'dotenv/config'
 import * as fs from 'fs'
+import 'arb-upgrades/ethBridgeTasks'
+import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
 
 import 'hardhat-deploy'
 
@@ -45,8 +45,13 @@ task('create-chain', 'Creates a rollup chain')
     console.log(
       `Creating chain for machine with hash ${machineHash} for sequencer ${taskArguments.sequencer}`
     )
-    const { deployments, ethers } = hre
+    const { ethers } = hre
     const [deployer] = await ethers.getSigners()
+    const deployments = (hre as any).deployments
+    if (!deployments || !deployments.get)
+      throw new Error(
+        'Missing hardhat deployer dependency for deployments object'
+      )
     const rollupCreatorDep = await deployments.get('RollupCreator')
     const RollupCreator = await ethers.getContractFactory('RollupCreator')
     const rollupCreator = RollupCreator.attach(
@@ -247,6 +252,7 @@ const config = {
     currency: 'USD',
     gasPrice: 20,
     enabled: process.env.REPORT_GAS ? true : false,
+    maxMethodDiff: 5,
   },
   namedAccounts: {
     deployer: {

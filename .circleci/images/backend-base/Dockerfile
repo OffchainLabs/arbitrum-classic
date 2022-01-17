@@ -17,8 +17,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     tar xf rocksdb-6.20.3.tar.gz && \
     cd rocksdb-6.20.3 && \
     PREFIX=/usr make shared_lib install-shared && \
-    curl https://dl.google.com/go/go1.15.2.linux-amd64.tar.gz --output go1.15.2.linux-amd64.tar.gz && \
-    tar -xf go1.15.2.linux-amd64.tar.gz && \
+    curl https://dl.google.com/go/go1.17.3.linux-amd64.tar.gz --output go1.17.3.linux-amd64.tar.gz && \
+    tar -xf go1.17.3.linux-amd64.tar.gz && \
     mv go /usr/local && \
     useradd -ms /bin/bash user
 USER user

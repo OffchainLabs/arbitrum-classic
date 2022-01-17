@@ -76,7 +76,11 @@ target_include_directories(avm_values PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm_values PUBLIC Threads::Threads nlohmann_json::nlohmann_json ethash::keccak intx::intx PRIVATE Boost::boost)
+if ( CMAKE_SYSTEM_NAME MATCHES "Linux" )
+    set(LIBATOMIC_LIBRARY atomic)
+endif ()
+
+target_link_libraries(avm_values PUBLIC Threads::Threads nlohmann_json::nlohmann_json ethash::keccak intx::intx PRIVATE Boost::boost ${LIBATOMIC_LIBRARY})
 
 target_code_coverage(avm_values AUTO ALL)
 

@@ -41,6 +41,8 @@ class CombinedMachineCache {
 
    private:
     std::shared_mutex mutex;
+    std::unique_ptr<Machine> last_machine;
+    std::unique_ptr<Machine> last_last_machine;
     BasicMachineCache basic;
     LRUMachineCache lru;
     TimedMachineCache timed;
@@ -55,12 +57,13 @@ class CombinedMachineCache {
           database_load_gas_cost{coreConfig.checkpoint_load_gas_cost},
           max_execution_gas{coreConfig.checkpoint_max_execution_gas} {}
 
-    void basic_add(std::unique_ptr<Machine> machine);
-    void lru_add(std::unique_ptr<Machine> machine);
-    void timed_add(std::unique_ptr<Machine> machine);
-    size_t basic_size();
-    size_t lru_size();
-    size_t timed_size();
+    void lastAdd(std::unique_ptr<Machine> machine);
+    void basicAdd(std::unique_ptr<Machine> machine);
+    void lruAdd(std::unique_ptr<Machine> machine);
+    void timedAdd(std::unique_ptr<Machine> machine);
+    size_t basicSize();
+    size_t lruSize();
+    size_t timedSize();
     CacheResultStruct atOrBeforeGas(uint256_t gas_used,
                                     std::optional<uint256_t> existing_gas_used,
                                     std::optional<uint256_t> database_gas,
@@ -71,6 +74,7 @@ class CombinedMachineCache {
    private:
     std::optional<std::reference_wrapper<const Machine>> atOrBeforeGasImpl(
         uint256_t& gas_used);
+    void checkLastMachine(uint256_t& arb_gas_used);
 };
 
 #endif  // ARB_AVM_CPP_COMBINEDMACHINECACHE_HPP

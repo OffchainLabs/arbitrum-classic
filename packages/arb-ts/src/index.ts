@@ -16,26 +16,31 @@
 /* eslint-env node */
 'use strict'
 
-export { RollupCreator__factory } from './lib/abi/factories/RollupCreator__factory'
-export { Inbox__factory } from './lib/abi/factories/Inbox__factory'
-export { L1ERC20Gateway__factory } from './lib/abi/factories/L1ERC20Gateway__factory'
-export { L2ERC20Gateway__factory } from './lib/abi/factories/L2ERC20Gateway__factory'
-export { L1GatewayRouter__factory } from './lib/abi/factories/L1GatewayRouter__factory'
-export { L2GatewayRouter__factory } from './lib/abi/factories/L2GatewayRouter__factory'
-export { ArbRetryableTx__factory } from './lib/abi/factories/ArbRetryableTx__factory'
-export { ERC20__factory } from './lib/abi/factories/ERC20__factory'
-export { ArbSys__factory } from './lib/abi/factories/ArbSys__factory'
-export { ArbAddressTable__factory } from './lib/abi/factories/ArbAddressTable__factory'
-
-export { Bridge } from './lib/bridge'
+export { TokenBridger, EthBridger } from './lib/assetBridger'
 export {
-  DepositInitiated,
-  WithdrawalInitiated,
-  L2ToL1EventResult,
-  OutgoingMessageState,
-  BridgeHelper,
-} from './lib/bridge_helpers'
-export { L1Bridge, L1TokenData } from './lib/l1Bridge'
-export { L2Bridge, L2TokenData } from './lib/l2Bridge'
-export { networks } from './lib/networks'
+  L2ToL1MessageStatus,
+  L2ToL1Message,
+  L2ToL1MessageWriter,
+  L2TransactionReceipt,
+  L2ContractTransaction,
+  L2ToL1MessageReader,
+} from './lib/message/L2ToL1Message'
+export {
+  L1ToL2MessageStatus,
+  L1ToL2Message,
+  L1ContractTransaction,
+  L1ToL2MessageReader,
+  L1ToL2MessageWriter,
+  L1TransactionReceipt,
+} from './lib/message/L1ToL2Message'
 export { argSerializerConstructor } from './lib/byte_serialize_params'
+export { CallInput, MultiCaller } from './lib/utils/multicall'
+export {
+  L1Networks,
+  L2Networks,
+  L1Network,
+  L2Network,
+  getL1Network,
+  getL2Network,
+} from './lib/utils/networks'
+export { getRawArbTransactionReceipt } from './lib/utils/lib'
