@@ -107,6 +107,7 @@ contract Rollup is Proxy, RollupCore {
         require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
     }
 
+    // CHRIS: test commnet - to be removed
     function createInitialNode(bytes32 _machineHash) private view returns (Node memory) {
         bytes32 state = RollupLib.stateHash(
             RollupLib.ExecutionState(
