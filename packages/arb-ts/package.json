@@ -34,7 +34,8 @@
     "setStandard": "ts-node scripts/setStandardGateways.ts",
     "setCustom": "ts-node scripts/setArbCustomGateways.ts",
     "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
-    "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
+    "bridgeStandardToken": "ts-node scripts/deployStandard.ts",
+    "postinstall": "yarn update:abi"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
