@@ -248,6 +248,7 @@ contract RollupCore is IRollupCore {
         IOutbox outbox,
         RollupEventBridge rollupEventBridge
     ) internal {
+        // CHRIS: test comment
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
 
         INode node = getNode(nodeNum);
