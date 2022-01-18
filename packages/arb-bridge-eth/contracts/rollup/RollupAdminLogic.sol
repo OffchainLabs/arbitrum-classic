@@ -269,9 +269,17 @@ contract RollupAdminLogic is RollupCore, IRollupAdmin {
         bytes calldata sequencerBatchProof,
         uint256 beforeProposedBlock,
         uint256 beforeInboxMaxCount,
-        uint256 prevNode
-    ) external override whenPaused {
-        require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
+        uint256 prevNodeNum,
+        NodeFixed calldata prevNode
+    )
+        external
+        override
+        // CHRIS: update callers external
+        whenPaused
+    {
+        // CHRIS: should we verify the prev node?
+
+        require(prevNodeNum == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
 
         RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
             assertionBytes32Fields,
@@ -281,14 +289,17 @@ contract RollupAdminLogic is RollupCore, IRollupAdmin {
             sequencerBridge.messageCount()
         );
 
-        createNewNode(
+        RollupCore.CreateNodeInput memory input = RollupCore.CreateNodeInput(
             assertion,
             assertionBytes32Fields,
             assertionIntFields,
             sequencerBatchProof,
-            prevNode,
-            expectedNodeHash
+            prevNodeNum,
+            expectedNodeHash,
+            prevNode
         );
+
+        createNewNode(input);
 
         emit OwnerFunctionCalled(23);
     }
@@ -300,8 +311,12 @@ contract RollupAdminLogic is RollupCore, IRollupAdmin {
         uint256[] calldata sendLengths,
         uint256 afterSendCount,
         bytes32 afterLogAcc,
-        uint256 afterLogCount
+        uint256 afterLogCount,
+        // CHRIS: update callers external
+        NodeFixed calldata nodeFixed
     ) external override whenPaused {
+        // CHRIS: should we verify here?
+
         // this skips deadline, staker and zombie validation
         confirmNode(
             nodeNum,
@@ -310,7 +325,8 @@ contract RollupAdminLogic is RollupCore, IRollupAdmin {
             sendLengths,
             afterSendCount,
             afterLogAcc,
-            afterLogCount
+            afterLogCount,
+            nodeFixed
         );
         emit OwnerFunctionCalled(24);
     }

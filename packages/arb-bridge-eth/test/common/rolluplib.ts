@@ -6,6 +6,7 @@ import { BytesLike, hexDataLength } from '@ethersproject/bytes'
 import { ContractTransaction, PayableOverrides } from '@ethersproject/contracts'
 import { Provider } from '@ethersproject/providers'
 import { RollupUserLogic, RollupAdminLogic } from '../../build/types'
+import { NodeCreatedEvent as NodeCreatedEventOrigin } from '../../build/types/RollupUserLogic'
 
 export interface ExecutionState {
   machineHash: BytesLike
@@ -28,6 +29,7 @@ export interface Node {
 
   inboxMaxCount: BigNumberish
   nodeHash: BytesLike
+  fixedData: NodeFixed
 }
 
 export function nodeHash(
@@ -59,6 +61,20 @@ export interface NodeCreatedEvent {
   afterInboxAcc: BytesLike
   assertionBytes32Fields: [AssertionBytes32Fields, AssertionBytes32Fields]
   assertionIntFields: [AssertionIntFields, AssertionIntFields]
+  stateHash: BytesLike
+  challengeHash: BytesLike
+  confirmData: BytesLike
+}
+
+export function nodeFixedHash(
+  stateHash: BytesLike,
+  challengeHash: BytesLike,
+  confirmData: BytesLike
+) {
+  return ethers.utils.solidityKeccak256(
+    ['bytes32', 'bytes32', 'bytes32'],
+    [stateHash, challengeHash, confirmData]
+  )
 }
 
 export function challengeRestHash(e: ExecutionState): BytesLike {
@@ -159,18 +175,47 @@ export function makeAssertion(
   }
 }
 
+export type NodeFixed = {
+  stateHash: BytesLike
+  challengeHash: BytesLike
+  confirmData: BytesLike
+}
+
+export async function nodeNumToNode(
+  nodeNum: BigNumber,
+  rollup: RollupUserLogic
+) {
+  const nodeCreatedFilter = rollup.filters.NodeCreated(nodeNum)
+  const logs = await rollup.provider.getLogs({
+    ...nodeCreatedFilter,
+    fromBlock: 0,
+    toBlock: 'latest',
+  })
+
+  const nodeCreatedEvents = logs.map(l => rollup.interface.parseLog(l))
+
+  if (nodeCreatedEvents.length !== 1)
+    throw new Error(
+      `Expected a single event but got ${nodeCreatedEvents.length}.`
+    )
+  console.log('fetched from logs')
+  return await nodeFromNodeCreatedLog(logs[0].blockNumber, nodeCreatedEvents[0])
+}
+
 async function nodeFromNodeCreatedLog(
   blockNumber: number,
   log: LogDescription
 ): Promise<{ node: Node; event: NodeCreatedEvent }> {
   if (log.name != 'NodeCreated') {
+    console.log(log.name)
     throw Error('wrong event type')
   }
   const parsedEv = log as any as {
     args: NodeCreatedEvent
   }
+  console.log('created num', parsedEv.args.nodeNum)
   const ev = parsedEv.args
-  const node = {
+  const node: Node = {
     proposedBlock: blockNumber,
     assertion: {
       beforeState: {
@@ -194,8 +239,14 @@ async function nodeFromNodeCreatedLog(
     },
     inboxMaxCount: ev.inboxMaxCount,
     nodeHash: ev.nodeHash,
+    fixedData: {
+      stateHash: ev.stateHash,
+      challengeHash: ev.challengeHash,
+      confirmData: ev.confirmData,
+    },
   }
   const event = parsedEv.args
+  // CHRIS: rework the typescript 'Node' class
   return { node, event }
 }
 
@@ -219,6 +270,7 @@ async function nodeFromTx(
   if (evs.length != 1) {
     throw Error('unique event not found')
   }
+  console.log('node creator', receipt.from)
   return nodeFromNodeCreatedLog(receipt.blockNumber, evs[0]!)
 }
 
@@ -243,6 +295,7 @@ export class RollupContract {
     if (!prevNode) {
       prevNode = parentNode
     }
+
     const isChild =
       challengeHash(prevNode.assertion.afterState) ==
       challengeHash(assertion.beforeState)
@@ -255,19 +308,38 @@ export class RollupContract {
         afterInboxAcc,
       ]
     )
+    const latestStakedNodeNum = await this.rollup.latestStakedNode(
+      await this.rollup.signer.getAddress()
+    )
+    console.log('\n')
+    console.log('before call')
+    console.log('latest staked node', latestStakedNodeNum)
+    const latestStakedNodeMutable = await this.rollup.getNodeMutable(
+      latestStakedNodeNum
+    )
+    console.log('hasSibling', latestStakedNodeMutable.latestChildNumber.gt(0))
+    console.log(
+      'lastHash',
+      await this.rollup.getNodeHash(latestStakedNodeMutable.latestChildNumber)
+    ) // 3
+    console.log('executionHash', assertionExecutionHash(assertion))
+
     const tx = await this.rollup.stakeOnNewNode(
-      newNodeHash,
-      [
-        executionStateBytes32Fields(assertion.beforeState),
-        executionStateBytes32Fields(assertion.afterState),
-      ],
-      [
-        executionStateIntFields(assertion.beforeState),
-        executionStateIntFields(assertion.afterState),
-      ],
-      parentNode.proposedBlock,
-      parentNode.inboxMaxCount,
-      batchProof
+      {
+        expectedNodeHash: newNodeHash,
+        assertionBytes32Fields: [
+          executionStateBytes32Fields(assertion.beforeState),
+          executionStateBytes32Fields(assertion.afterState),
+        ],
+        assertionIntFields: [
+          executionStateIntFields(assertion.beforeState),
+          executionStateIntFields(assertion.afterState),
+        ],
+        beforeProposedBlock: parentNode.proposedBlock,
+        beforeInboxMaxCount: parentNode.inboxMaxCount,
+        sequencerBatchProof: batchProof,
+      },
+      prevNode.fixedData
     )
     const { node, event } = await nodeFromTx(this.rollup.interface, tx)
     return { tx, node, event }
@@ -285,7 +357,8 @@ export class RollupContract {
     prevSendCount: BigNumberish,
     sends: BytesLike[],
     afterlogAcc: BytesLike,
-    afterLogCount: BigNumberish
+    afterLogCount: BigNumberish,
+    firstUnresolvedNodeFixed: NodeFixed
   ): Promise<ContractTransaction> {
     const messageData = ethers.utils.concat(sends)
     const messageLengths = sends.map(msg => hexDataLength(msg))
@@ -295,7 +368,8 @@ export class RollupContract {
       messageLengths,
       BigNumber.from(prevSendCount).add(sends.length),
       afterlogAcc,
-      afterLogCount
+      afterLogCount,
+      firstUnresolvedNodeFixed
     )
   }
 
@@ -312,17 +386,21 @@ export class RollupContract {
     node2: Node
   ): Promise<ContractTransaction> {
     return this.rollup.createChallenge(
-      [staker1Address, staker2Address],
-      [nodeNum1, nodeNum2],
-      [
-        assertionExecutionHash(node1.assertion),
-        assertionExecutionHash(node2.assertion),
-      ],
-      [node1.proposedBlock, node2.proposedBlock],
-      [
-        node1.assertion.afterState.inboxCount,
-        node2.assertion.afterState.inboxCount,
-      ]
+      {
+        stakers: [staker1Address, staker2Address],
+        nodeNums: [nodeNum1, nodeNum2],
+        executionHashes: [
+          assertionExecutionHash(node1.assertion),
+          assertionExecutionHash(node2.assertion),
+        ],
+        proposedTimes: [node1.proposedBlock, node2.proposedBlock],
+        maxMessageCounts: [
+          node1.assertion.afterState.inboxCount,
+          node2.assertion.afterState.inboxCount,
+        ],
+      },
+      node1.fixedData,
+      node2.fixedData
     )
   }
 
@@ -352,8 +430,8 @@ export class RollupContract {
     return this.rollup.latestConfirmed()
   }
 
-  getNodeStateHash(index: BigNumberish): Promise<string> {
-    return this.rollup.getNode(index).then(n => n.stateHash)
+  getNodeFixedHash(index: BigNumberish): Promise<string> {
+    return this.rollup.getNodeFixedHash(index)
   }
 
   latestStakedNode(staker: string): Promise<BigNumber> {
@@ -394,7 +472,8 @@ export async function forceCreateNode(
     batchProof,
     prevNode.proposedBlock,
     prevNode.inboxMaxCount,
-    prevNodeIndex
+    prevNodeIndex,
+    prevNode.fixedData
   )
   const { node, event } = await nodeFromTx(rollupAdmin.interface, tx)
   return { tx, node, event }

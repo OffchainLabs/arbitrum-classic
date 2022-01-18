@@ -41,7 +41,7 @@ import "../bridge/interfaces/IOutbox.sol";
 
 abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     using SafeMath for uint256;
-    using NodeLib for Node;
+    using NodeLib for NodeMutable;
 
     // Rollup Config
     uint256 public confirmPeriodBlocks;
@@ -84,8 +84,9 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     uint256 private _firstUnresolvedNode;
     uint256 private _latestNodeCreated;
     uint256 private _lastStakeBlock;
-    mapping(uint256 => Node) private _nodes;
+    mapping(uint256 => NodeMutable) private _nodes;
     mapping(uint256 => bytes32) private _nodeHashes;
+    mapping(uint256 => bytes32) private _nodeFixedHashes;
     mapping(uint256 => mapping(address => bool)) private _nodeStakers;
 
     address payable[] private _stakerList;
@@ -100,15 +101,15 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      * @param nodeNum Index of the node
      * @return Node struct
      */
-    function getNodeStorage(uint256 nodeNum) internal view returns (Node storage) {
+    function getNodeMutableStorage(uint256 nodeNum) internal view returns (NodeMutable storage) {
         return _nodes[nodeNum];
     }
 
     /**
      * @notice Get the Node for the given index.
      */
-    function getNode(uint256 nodeNum) public view override returns (Node memory) {
-        return getNodeStorage(nodeNum);
+    function getNodeMutable(uint256 nodeNum) public view override returns (NodeMutable memory) {
+        return getNodeMutableStorage(nodeNum);
     }
 
     /**
@@ -234,10 +235,15 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
     /**
      * @notice Initialize the core with an initial node
-     * @param initialNode Initial node to start the chain with
+     * @param initialMutableNode Mutable parts of the initial node to start the chain with
+     * @param initialFixedNode Fixed parts of the initial node to start the chain with
      */
-    function initializeCore(Node memory initialNode) internal {
-        _nodes[0] = initialNode;
+    function initializeCore(
+        NodeMutable memory initialMutableNode,
+        NodeFixed memory initialFixedNode
+    ) internal {
+        _nodes[0] = initialMutableNode;
+        _nodeFixedHashes[0] = NodeLib.nodeFixedHash(initialFixedNode);
         _firstUnresolvedNode = 1;
     }
 
@@ -246,15 +252,32 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      * @param node Node that was newly created
      * @param nodeHash The hash of said node
      */
-    function nodeCreated(Node memory node, bytes32 nodeHash) internal {
+    function nodeCreated(
+        NodeMutable memory node,
+        bytes32 nodeHash,
+        bytes32 nodeFixedHash
+    ) internal {
         _latestNodeCreated++;
         _nodes[_latestNodeCreated] = node;
         _nodeHashes[_latestNodeCreated] = nodeHash;
+        _nodeFixedHashes[_latestNodeCreated] = nodeFixedHash;
     }
 
     /// @return Node hash as of this node number
     function getNodeHash(uint256 index) public view override returns (bytes32) {
         return _nodeHashes[index];
+    }
+
+    /// @return The hash of the fixed node data
+    // CHRIS: we have override on some of these methods - so make sure we this on the base
+    function getNodeFixedHash(uint256 nodeNum) public view override returns (bytes32) {
+        return _nodeFixedHashes[nodeNum];
+    }
+
+    // CHRIS: docs on all methods created
+    function verifyNodeFixed(uint256 nodeNum, NodeFixed memory node) internal view returns (bool) {
+        // CHRIS: use the using for syntax
+        return getNodeFixedHash(nodeNum) == NodeLib.nodeFixedHash(node);
     }
 
     /// @notice Reject the next unresolved node
@@ -270,11 +293,11 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         uint256[] calldata sendLengths,
         uint256 afterSendCount,
         bytes32 afterLogAcc,
-        uint256 afterLogCount
+        uint256 afterLogCount,
+        NodeFixed memory node
     ) internal {
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
 
-        Node storage node = getNodeStorage(nodeNum);
         // Authenticate data against node's confirm data pre-image
         require(
             node.confirmData ==
@@ -427,7 +450,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     function addStaker(uint256 nodeNum, address staker) internal returns (uint256) {
         require(!_nodeStakers[nodeNum][staker], "ALREADY_STAKED");
         _nodeStakers[nodeNum][staker] = true;
-        Node storage node = getNodeStorage(nodeNum);
+        NodeMutable storage node = getNodeMutableStorage(nodeNum);
         require(node.deadlineBlock != 0, "NO_NODE");
 
         uint256 prevCount = node.stakerCount;
@@ -439,11 +462,14 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      * @notice Remove the given staker from this node
      * @param staker Address of the staker to remove
      */
-    function removeStaker(uint256 nodeNum, address staker) internal {
+    function removeStaker(
+        uint256 nodeNum,
+        address staker,
+        NodeMutable memory node
+    ) internal {
         require(_nodeStakers[nodeNum][staker], "NOT_STAKED");
         _nodeStakers[nodeNum][staker] = false;
 
-        Node storage node = getNodeStorage(nodeNum);
         node.stakerCount--;
     }
 
@@ -469,7 +495,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         uint256 newStakerCount = addStaker(nodeNum, stakerAddress);
         staker.latestStakedNode = nodeNum;
         if (newStakerCount == 1) {
-            Node storage parent = getNodeStorage(nodeNum);
+            NodeMutable storage parent = getNodeMutableStorage(nodeNum);
             parent.newChildConfirmDeadline(block.number.add(confirmPeriodBlocks));
         }
     }
@@ -517,9 +543,11 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
     function destroyNode(uint256 nodeNum) internal {
         delete _nodes[nodeNum];
         delete _nodeHashes[nodeNum];
+        delete _nodeFixedHashes[nodeNum];
     }
 
-    function nodeDeadline(uint256 gasUsed, Node memory prevNode)
+    // CHRIS: should allow storage? to avoid a copy?
+    function nodeDeadline(uint256 gasUsed, NodeMutable memory prevNode)
         internal
         view
         returns (uint256 deadlineBlock)
@@ -535,7 +563,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
         uint256 olderSibling = prevNode.latestChildNumber;
         if (olderSibling != 0) {
-            deadlineBlock = max(deadlineBlock, getNodeStorage(olderSibling).deadlineBlock);
+            deadlineBlock = max(deadlineBlock, getNodeMutableStorage(olderSibling).deadlineBlock);
         }
         return deadlineBlock;
     }
@@ -546,9 +574,9 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
     struct StakeOnNewNodeFrame {
         uint256 currentInboxSize;
-        Node node;
+        NodeMutable nodeMutable;
+        NodeFixed nodeFixed;
         bytes32 executionHash;
-        Node prevNode;
         bytes32 lastHash;
         bool hasSibling;
         uint256 deadlineBlock;
@@ -559,58 +587,81 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
     uint8 internal constant MAX_SEND_COUNT = 100;
 
-    function createNewNode(
-        RollupLib.Assertion memory assertion,
-        bytes32[3][2] calldata assertionBytes32Fields,
-        uint256[4][2] calldata assertionIntFields,
-        bytes calldata sequencerBatchProof,
-        uint256 prevNodeNum,
-        bytes32 expectedNodeHash
-    ) internal returns (bytes32 newNodeHash) {
+    struct CreateNodeInput {
+        RollupLib.Assertion assertion;
+        bytes32[3][2] assertionBytes32Fields;
+        uint256[4][2] assertionIntFields;
+        bytes sequencerBatchProof;
+        uint256 prevNodeNum;
+        bytes32 expectedNodeHash;
+        NodeFixed prevNodeFixed;
+
+        // CHRIS: some of these mem, some calldata - we should continue to reflect that
+        // RollupLib.Assertion memory assertion,
+        // bytes32[3][2] calldata assertionBytes32Fields,
+        // uint256[4][2] calldata assertionIntFields,
+        // bytes calldata sequencerBatchProof,
+        // uint256 prevNodeNum,
+        // bytes32 expectedNodeHash,
+        // NodeFixed memory prevNodeFixed
+    }
+
+    function createNewNode(CreateNodeInput memory input)
+        internal
+        returns (
+            // CHRIS: update caller internal
+            bytes32 newNodeHash
+        )
+    {
         StakeOnNewNodeFrame memory memoryFrame;
+        NodeMutable storage prevNode = getNodeMutableStorage(input.prevNodeNum);
         {
             // validate data
-            memoryFrame.gasUsed = RollupLib.assertionGasUsed(assertion);
-            memoryFrame.prevNode = getNode(prevNodeNum);
-            // TODO: don't query twice
+            memoryFrame.gasUsed = RollupLib.assertionGasUsed(input.assertion);
             memoryFrame.currentInboxSize = sequencerBridge.messageCount();
 
             // Make sure the previous state is correct against the node being built on
             require(
-                RollupLib.stateHash(assertion.beforeState) == memoryFrame.prevNode.stateHash,
+                RollupLib.stateHash(input.assertion.beforeState) == input.prevNodeFixed.stateHash,
                 "PREV_STATE_HASH"
             );
 
             // Ensure that the assertion doesn't read past the end of the current inbox
             require(
-                assertion.afterState.inboxCount <= memoryFrame.currentInboxSize,
+                input.assertion.afterState.inboxCount <= memoryFrame.currentInboxSize,
                 "INBOX_PAST_END"
             );
             // Insure inbox tip after assertion is included in a sequencer-inbox batch and return inbox acc; this gives replay protection against the state of the inbox
             (memoryFrame.sequencerBatchEnd, memoryFrame.sequencerBatchAcc) = sequencerBridge
-                .proveInboxContainsMessage(sequencerBatchProof, assertion.afterState.inboxCount);
+                .proveInboxContainsMessage(
+                    input.sequencerBatchProof,
+                    input.assertion.afterState.inboxCount
+                );
         }
 
         {
-            memoryFrame.executionHash = RollupLib.executionHash(assertion);
+            memoryFrame.executionHash = RollupLib.executionHash(input.assertion);
+            memoryFrame.deadlineBlock = nodeDeadline(memoryFrame.gasUsed, prevNode);
 
-            memoryFrame.deadlineBlock = nodeDeadline(memoryFrame.gasUsed, memoryFrame.prevNode);
-
-            memoryFrame.hasSibling = memoryFrame.prevNode.latestChildNumber > 0;
+            memoryFrame.hasSibling = prevNode.latestChildNumber > 0;
             // here we don't use ternacy operator to remain compatible with slither
             if (memoryFrame.hasSibling) {
-                memoryFrame.lastHash = getNodeHash(memoryFrame.prevNode.latestChildNumber);
+                memoryFrame.lastHash = getNodeHash(prevNode.latestChildNumber);
             } else {
-                memoryFrame.lastHash = getNodeHash(prevNodeNum);
+                memoryFrame.lastHash = getNodeHash(input.prevNodeNum);
             }
 
-            memoryFrame.node = NodeLib.initialize(
-                RollupLib.stateHash(assertion.afterState),
-                RollupLib.challengeRoot(assertion, memoryFrame.executionHash, block.number),
-                RollupLib.confirmHash(assertion),
-                prevNodeNum,
+            memoryFrame.nodeMutable = NodeLib.initMutable(
+                input.prevNodeNum,
                 memoryFrame.deadlineBlock
             );
+            memoryFrame.nodeFixed = NodeLib.initFixed(
+                RollupLib.stateHash(input.assertion.afterState),
+                RollupLib.challengeRoot(input.assertion, memoryFrame.executionHash, block.number),
+                RollupLib.confirmHash(input.assertion)
+            );
+
+            // CHRIS: make sure 'using for' is updated for node lib
         }
 
         {
@@ -618,7 +669,6 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
             // Fetch a storage reference to prevNode since we copied our other one into memory
             // and we don't have enough stack available to keep to keep the previous storage reference around
-            Node storage prevNode = getNodeStorage(prevNodeNum);
             prevNode.childCreated(nodeNum);
 
             newNodeHash = RollupLib.nodeHash(
@@ -627,12 +677,16 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
                 memoryFrame.executionHash,
                 memoryFrame.sequencerBatchAcc
             );
-            require(newNodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
+            require(newNodeHash == input.expectedNodeHash, "UNEXPECTED_NODE_HASH");
 
-            nodeCreated(memoryFrame.node, newNodeHash);
+            nodeCreated(
+                memoryFrame.nodeMutable,
+                newNodeHash,
+                NodeLib.nodeFixedHash(memoryFrame.nodeFixed)
+            );
             rollupEventBridge.nodeCreated(
                 nodeNum,
-                prevNodeNum,
+                input.prevNodeNum,
                 memoryFrame.deadlineBlock,
                 msg.sender
             );
@@ -640,14 +694,17 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
 
         emit NodeCreated(
             latestNodeCreated(),
-            getNodeHash(prevNodeNum),
+            getNodeHash(input.prevNodeNum),
             newNodeHash,
             memoryFrame.executionHash,
             memoryFrame.currentInboxSize,
             memoryFrame.sequencerBatchEnd,
             memoryFrame.sequencerBatchAcc,
-            assertionBytes32Fields,
-            assertionIntFields
+            input.assertionBytes32Fields,
+            input.assertionIntFields,
+            memoryFrame.nodeFixed.stateHash,
+            memoryFrame.nodeFixed.challengeHash,
+            memoryFrame.nodeFixed.confirmData
         );
 
         return newNodeHash;

@@ -17,8 +17,10 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "../bridge/interfaces/IOutbox.sol";
+import "./Node.sol";
 
 interface IRollupUser {
     function initialize(address _stakeToken) external;
@@ -194,7 +196,8 @@ interface IRollupAdmin {
         bytes calldata sequencerBatchProof,
         uint256 beforeProposedBlock,
         uint256 beforeInboxMaxCount,
-        uint256 prevNode
+        uint256 prevNodeNum,
+        NodeFixed calldata prevNode
     ) external;
 
     function forceConfirmNode(
@@ -204,6 +207,7 @@ interface IRollupAdmin {
         uint256[] calldata sendLengths,
         uint256 afterSendCount,
         bytes32 afterLogAcc,
-        uint256 afterLogCount
+        uint256 afterLogCount,
+        NodeFixed calldata node
     ) external;
 }

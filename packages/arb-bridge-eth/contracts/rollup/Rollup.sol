@@ -82,8 +82,10 @@ contract Rollup is Proxy, RollupCore {
 
         challengeFactory = IChallengeFactory(connectedContracts[4]);
 
-        Node memory node = createInitialNode(_machineHash);
-        initializeCore(node);
+        (NodeMutable memory nodeMutable, NodeFixed memory nodeFixed) = createInitialNode(
+            _machineHash
+        );
+        initializeCore(nodeMutable, nodeFixed);
 
         confirmPeriodBlocks = _rollupParams[0];
         extraChallengeTimeBlocks = _rollupParams[1];
@@ -107,8 +109,11 @@ contract Rollup is Proxy, RollupCore {
         require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
     }
 
-    // CHRIS: test commnet - to be removed
-    function createInitialNode(bytes32 _machineHash) private view returns (Node memory) {
+    function createInitialNode(bytes32 _machineHash)
+        private
+        view
+        returns (NodeMutable memory, NodeFixed memory)
+    {
         bytes32 state = RollupLib.stateHash(
             RollupLib.ExecutionState(
                 0, // total gas used
@@ -122,14 +127,17 @@ contract Rollup is Proxy, RollupCore {
                 1 // Initialization message already in inbox
             )
         );
-        return
-            NodeLib.initialize(
-                state,
-                0, // challenge hash (not challengeable)
-                0, // confirm data
-                0, // prev node
-                block.number // deadline block (not challengeable)
-            );
+        NodeMutable memory nodeMutable = NodeLib.initMutable(
+            0, // prev node
+            block.number // deadline block (not challengeable)
+        );
+        NodeFixed memory nodeFixed = NodeLib.initFixed(
+            state,
+            0, // challenge hash (not challengeable)
+            0 // confirm data
+        );
+
+        return (nodeMutable, nodeFixed);
     }
 
     /**

@@ -22,7 +22,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         requireUnresolvedExists();
         uint256 latestConfirmedNodeNum = latestConfirmed();
         uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
-        Node storage firstUnresolvedNode_ = getNodeStorage(firstUnresolvedNodeNum);
+        NodeMutable storage firstUnresolvedNode_ = getNodeMutableStorage(firstUnresolvedNodeNum);
 
         if (firstUnresolvedNode_.prevNum == latestConfirmedNodeNum) {
             /**If the first unresolved node is a child of the latest confirmed node, to prove it can be rejected, we show:
@@ -45,7 +45,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             // Verify the block's deadline has passed
             firstUnresolvedNode_.requirePastDeadline();
 
-            getNodeStorage(latestConfirmedNodeNum).requirePastChildConfirmDeadline();
+            getNodeMutableStorage(latestConfirmedNodeNum).requirePastChildConfirmDeadline();
 
             removeOldZombies(0);
 
@@ -77,28 +77,36 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         uint256[] calldata sendLengths,
         uint256 afterSendCount,
         bytes32 afterLogAcc,
-        uint256 afterLogCount
-    ) external onlyValidator whenNotPaused {
+        uint256 afterLogCount,
+        NodeFixed memory firstUnresolvedNodeFixed
+    )
+        external
+        // CHRIS: update callers external
+        onlyValidator
+        whenNotPaused
+    {
         requireUnresolvedExists();
 
         // There is at least one non-zombie staker
         require(stakerCount() > 0, "NO_STAKERS");
+        // CHRIS: race confition here?
         uint256 nodeNum = firstUnresolvedNode();
-        Node storage node = getNodeStorage(nodeNum);
+        require(verifyNodeFixed(nodeNum, firstUnresolvedNodeFixed), "NODE_NOT_VERIFIED");
+        NodeMutable storage nodeMutable = getNodeMutableStorage(nodeNum);
 
         // Verify the block's deadline has passed
-        node.requirePastDeadline();
+        nodeMutable.requirePastDeadline();
 
         // Check that prev is latest confirmed
-        require(node.prevNum == latestConfirmed(), "INVALID_PREV");
+        require(nodeMutable.prevNum == latestConfirmed(), "INVALID_PREV");
 
-        getNodeStorage(latestConfirmed()).requirePastChildConfirmDeadline();
+        getNodeMutableStorage(latestConfirmed()).requirePastChildConfirmDeadline();
 
         removeOldZombies(0);
 
         // All non-zombie stakers are staked on this node
         require(
-            node.stakerCount == stakerCount().add(countStakedZombies(nodeNum)),
+            nodeMutable.stakerCount == stakerCount().add(countStakedZombies(nodeNum)),
             "NOT_ALL_STAKED"
         );
 
@@ -109,7 +117,8 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             sendLengths,
             afterSendCount,
             afterLogAcc,
-            afterLogCount
+            afterLogCount,
+            firstUnresolvedNodeFixed
         );
     }
 
@@ -140,40 +149,55 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
     {
         require(isStaked(msg.sender), "NOT_STAKED");
 
+        // CHRIS: how is this even possible????
         require(getNodeHash(nodeNum) == nodeHash, "NODE_REORG");
         require(
             nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated(),
             "NODE_NUM_OUT_OF_RANGE"
         );
-        Node storage node = getNodeStorage(nodeNum);
+        NodeMutable memory node = getNodeMutableStorage(nodeNum);
         require(latestStakedNode(msg.sender) == node.prevNum, "NOT_STAKED_PREV");
         stakeOnNode(msg.sender, nodeNum);
     }
 
+    // CHRIS: better name
+    struct StakeInput {
+        bytes32 expectedNodeHash;
+        bytes32[3][2] assertionBytes32Fields;
+        uint256[4][2] assertionIntFields;
+        uint256 beforeProposedBlock;
+        uint256 beforeInboxMaxCount;
+        bytes sequencerBatchProof;
+    }
+
+    // CHRIS: add these back
+    // @param expectedNodeHash The hash of the node being created (protects against reorgs)
+    // @param assertionBytes32Fields Assertion data for creating
+    // @param assertionIntFields Assertion data for creating
+    // @param beforeProposedBlock Block number at previous assertion
+    // @param beforeInboxMaxCount Inbox count at previous assertion
+    // @param sequencerBatchProof Proof data for ensuring expected state of inbox (used in Nodehash to protect against reorgs)
+
     /**
      * @notice Create a new node and move stake onto it
-     * @param expectedNodeHash The hash of the node being created (protects against reorgs)
-     * @param assertionBytes32Fields Assertion data for creating
-     * @param assertionIntFields Assertion data for creating
-     * @param beforeProposedBlock Block number at previous assertion
-     * @param beforeInboxMaxCount Inbox count at previous assertion
-     * @param sequencerBatchProof Proof data for ensuring expected state of inbox (used in Nodehash to protect against reorgs)
      */
     function stakeOnNewNode(
-        bytes32 expectedNodeHash,
-        bytes32[3][2] calldata assertionBytes32Fields,
-        uint256[4][2] calldata assertionIntFields,
-        uint256 beforeProposedBlock,
-        uint256 beforeInboxMaxCount,
-        bytes calldata sequencerBatchProof
-    ) external onlyValidator whenNotPaused {
+        StakeInput calldata stakeInput,
+        // CHRIS: include this in the struct? and elsewhere?
+        NodeFixed calldata prevNode
+    )
+        external
+        // CHRIS: update callers external - and for struct update
+        onlyValidator
+        whenNotPaused
+    {
         require(isStaked(msg.sender), "NOT_STAKED");
 
         RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
-            assertionBytes32Fields,
-            assertionIntFields,
-            beforeProposedBlock,
-            beforeInboxMaxCount,
+            stakeInput.assertionBytes32Fields,
+            stakeInput.assertionIntFields,
+            stakeInput.beforeProposedBlock,
+            stakeInput.beforeInboxMaxCount,
             sequencerBridge.messageCount()
         );
 
@@ -204,14 +228,21 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             // Don't allow an assertion to use above a maximum amount of gas
             require(gasUsed <= timeSinceLastNode.mul(avmGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
         }
-        createNewNode(
+        uint256 prevNodeNum = latestStakedNode(msg.sender); // Ensure staker is staked on the previous node
+        // CHRIS: can we move this to the top of the method?
+        require(verifyNodeFixed(prevNodeNum, prevNode), "PREV_NODE_NOT_VERIFIED");
+
+        RollupCore.CreateNodeInput memory input = RollupCore.CreateNodeInput(
             assertion,
-            assertionBytes32Fields,
-            assertionIntFields,
-            sequencerBatchProof,
-            latestStakedNode(msg.sender), // Ensure staker is staked on the previous node
-            expectedNodeHash
+            stakeInput.assertionBytes32Fields,
+            stakeInput.assertionIntFields,
+            stakeInput.sequencerBatchProof,
+            prevNodeNum,
+            stakeInput.expectedNodeHash,
+            prevNode
         );
+
+        createNewNode(input);
 
         stakeOnNode(msg.sender, latestNodeCreated());
     }
@@ -256,84 +287,101 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         reduceStakeTo(msg.sender, target);
     }
 
+    struct ChallengeCreation {
+        address payable[2] stakers;
+        uint256[2] nodeNums;
+        bytes32[2] executionHashes;
+        uint256[2] proposedTimes;
+        uint256[2] maxMessageCounts;
+    }
+
+    // CHRIS: replace these
+    // @param stakers Stakers engaged in the challenge. The first staker should be staked on the first node
+    // @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
+    // @param executionHashes Challenge related data for the two nodes
+    // @param proposedTimes Times that the two nodes were proposed
+    // @param maxMessageCounts Total number of messages consumed by the two nodes
+
     /**
      * @notice Start a challenge between the given stakers over the node created by the first staker assuming that the two are staked on conflicting nodes. N.B.: challenge creator does not necessarily need to be one of the two asserters.
-     * @param stakers Stakers engaged in the challenge. The first staker should be staked on the first node
-     * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
-     * @param executionHashes Challenge related data for the two nodes
-     * @param proposedTimes Times that the two nodes were proposed
-     * @param maxMessageCounts Total number of messages consumed by the two nodes
      */
+    // CHRIS: update callers external - both for nodes and for new struct
     function createChallenge(
-        address payable[2] calldata stakers,
-        uint256[2] calldata nodeNums,
-        bytes32[2] calldata executionHashes,
-        uint256[2] calldata proposedTimes,
-        uint256[2] calldata maxMessageCounts
+        ChallengeCreation calldata challenge,
+        NodeFixed calldata node1Fixed,
+        NodeFixed calldata node2Fixed
     ) external onlyValidator whenNotPaused {
-        require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
-        require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
-        require(latestConfirmed() < nodeNums[0], "ALREADY_CONFIRMED");
+        require(challenge.nodeNums[0] < challenge.nodeNums[1], "WRONG_ORDER");
+        require(challenge.nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
+        require(latestConfirmed() < challenge.nodeNums[0], "ALREADY_CONFIRMED");
 
-        Node storage node1 = getNodeStorage(nodeNums[0]);
-        Node storage node2 = getNodeStorage(nodeNums[1]);
+        require(verifyNodeFixed(challenge.nodeNums[0], node1Fixed), "NODE1_NOT_VERIFIED");
+        require(verifyNodeFixed(challenge.nodeNums[1], node2Fixed), "NODE2_NOT_VERIFIED");
+        // CHRIS: only used for deadline and prevNum
+        NodeMutable storage node1Mutable = getNodeMutableStorage(challenge.nodeNums[0]);
+        NodeMutable storage node2Mutable = getNodeMutableStorage(challenge.nodeNums[1]);
 
         // ensure nodes staked on the same parent (and thus in conflict)
-        require(node1.prevNum == node2.prevNum, "DIFF_PREV");
+        require(node1Mutable.prevNum == node2Mutable.prevNum, "DIFF_PREV");
 
         // ensure both stakers aren't currently in challenge
-        requireUnchallengedStaker(stakers[0]);
-        requireUnchallengedStaker(stakers[1]);
+        requireUnchallengedStaker(challenge.stakers[0]);
+        requireUnchallengedStaker(challenge.stakers[1]);
 
-        require(nodeHasStaker(nodeNums[0], stakers[0]), "STAKER1_NOT_STAKED");
-        require(nodeHasStaker(nodeNums[1], stakers[1]), "STAKER2_NOT_STAKED");
+        require(nodeHasStaker(challenge.nodeNums[0], challenge.stakers[0]), "STAKER1_NOT_STAKED");
+        require(nodeHasStaker(challenge.nodeNums[1], challenge.stakers[1]), "STAKER2_NOT_STAKED");
 
         // Check param data against challenge hash
         require(
-            node1.challengeHash ==
+            node1Fixed.challengeHash ==
                 RollupLib.challengeRootHash(
-                    executionHashes[0],
-                    proposedTimes[0],
-                    maxMessageCounts[0]
+                    challenge.executionHashes[0],
+                    challenge.proposedTimes[0],
+                    challenge.maxMessageCounts[0]
                 ),
             "CHAL_HASH1"
         );
 
         require(
-            node2.challengeHash ==
+            node2Fixed.challengeHash ==
                 RollupLib.challengeRootHash(
-                    executionHashes[1],
-                    proposedTimes[1],
-                    maxMessageCounts[1]
+                    challenge.executionHashes[1],
+                    challenge.proposedTimes[1],
+                    challenge.maxMessageCounts[1]
                 ),
             "CHAL_HASH2"
         );
 
         // Calculate upper limit for allowed node proposal time:
-        uint256 commonEndTime = getNodeStorage(node1.prevNum).firstChildBlock.add( // Dispute start: dispute timer for a node starts when its first child is created
-            node1.deadlineBlock.sub(proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
+        uint256 commonEndTime = getNodeMutableStorage(node1Mutable.prevNum).firstChildBlock.add( // Dispute start: dispute timer for a node starts when its first child is created
+            node1Mutable.deadlineBlock.sub(challenge.proposedTimes[0]).add(extraChallengeTimeBlocks) // add dispute window to dispute start time
         );
-        if (commonEndTime < proposedTimes[1]) {
+        if (commonEndTime < challenge.proposedTimes[1]) {
             // The 2nd node was created too late; loses challenge automatically.
-            completeChallengeImpl(stakers[0], stakers[1]);
+            completeChallengeImpl(challenge.stakers[0], challenge.stakers[1]);
             return;
         }
         // Start a challenge between staker1 and staker2. Staker1 will defend the correctness of node1, and staker2 will challenge it.
         address challengeAddress = challengeFactory.createChallenge(
             address(this),
-            executionHashes[0],
-            maxMessageCounts[0],
-            stakers[0],
-            stakers[1],
-            commonEndTime.sub(proposedTimes[0]),
-            commonEndTime.sub(proposedTimes[1]),
+            challenge.executionHashes[0],
+            challenge.maxMessageCounts[0],
+            challenge.stakers[0],
+            challenge.stakers[1],
+            commonEndTime.sub(challenge.proposedTimes[0]),
+            commonEndTime.sub(challenge.proposedTimes[1]),
             sequencerBridge,
             delayedBridge
         ); // trusted external call
 
-        challengeStarted(stakers[0], stakers[1], challengeAddress);
+        challengeStarted(challenge.stakers[0], challenge.stakers[1], challengeAddress);
 
-        emit RollupChallengeStarted(challengeAddress, stakers[0], stakers[1], nodeNums[0]);
+        emit RollupChallengeStarted(
+            challengeAddress,
+            challenge.stakers[0],
+            challenge.stakers[1],
+            challenge.nodeNums[0]
+        );
     }
 
     /**
@@ -387,8 +435,8 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         uint256 nodesRemoved = 0;
         uint256 firstUnresolved = firstUnresolvedNode();
         while (latestNodeStaked >= firstUnresolved && nodesRemoved < maxNodes) {
-            Node storage node = getNodeStorage(latestNodeStaked);
-            removeStaker(latestNodeStaked, zombieStakerAddress);
+            NodeMutable storage node = getNodeMutableStorage(latestNodeStaked);
+            removeStaker(latestNodeStaked, zombieStakerAddress, node);
             latestNodeStaked = node.prevNum;
             nodesRemoved++;
         }
@@ -432,7 +480,8 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         if (_firstUnresolvedNodeNum - 1 == _latestCreatedNode) {
             return baseStake;
         }
-        uint256 firstUnresolvedDeadline = getNodeStorage(_firstUnresolvedNodeNum).deadlineBlock;
+        uint256 firstUnresolvedDeadline = getNodeMutableStorage(_firstUnresolvedNodeNum)
+            .deadlineBlock;
         if (_blockNumber < firstUnresolvedDeadline) {
             return baseStake;
         }

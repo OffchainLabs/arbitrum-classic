@@ -45,8 +45,13 @@ interface IRollupCore {
         uint256 afterInboxBatchEndCount,
         bytes32 afterInboxBatchAcc,
         bytes32[3][2] assertionBytes32Fields,
-        uint256[4][2] assertionIntFields
+        uint256[4][2] assertionIntFields,
+        bytes32 stateHash,
+        bytes32 challengeHash,
+        bytes32 confirmData
     );
+    // CHRIS: can these last three be deterministically calculated from the
+    // CHRIS: emitted assertion data?
 
     event NodeConfirmed(
         uint256 indexed nodeNum,
@@ -76,7 +81,7 @@ interface IRollupCore {
     /**
      * @notice Get the Node for the given index.
      */
-    function getNode(uint256 nodeNum) external view returns (Node memory);
+    function getNodeMutable(uint256 nodeNum) external view returns (NodeMutable memory);
 
     /**
      * @notice Check if the specified node has been staked on by the provided staker
@@ -164,4 +169,7 @@ interface IRollupCore {
 
     /// @return Node hash as of this node number
     function getNodeHash(uint256 index) external view returns (bytes32);
+
+    /// @return Get the fixed node hash for this node number
+    function getNodeFixedHash(uint256 nodeNum) external view returns (bytes32);
 }
