@@ -552,477 +552,486 @@ describe('ArbRollup', () => {
     validNode = node
   })
 
-  // let challengerNode: Node
-  // it('should let the second staker make a conflicting node', async function () {
-  //   await tryAdvanceChain(minimumAssertionPeriod)
-  //   const secondRollup = rollup.connect(accounts[1])
-  //   const latestStakedNodeNum = await secondRollup.latestStakedNode(
-  //     await accounts[1].getAddress()
-  //   )
-  //   const latestStakedNode = await nodeNumToNode(
-  //     latestStakedNodeNum,
-  //     secondRollup.rollup
-  //   )
-  //   console.log("latest staked", latestStakedNodeNum.toString())
-  //   const { node } = await makeSimpleNode(
-  //     secondRollup,
-  //     latestStakedNode.node,
-  //     latestStakedNode.node
-  //   )
-  //   challengerNode = node
-  // })
-
-  // it('should fail to confirm first staker node', async function () {
-  //   await advancePastAssertion(challengedNode.assertion)
-  //   await expect(
-  //     rollup.confirmNextNode(
-  //       zerobytes32,
-  //       0,
-  //       [],
-  //       zerobytes32,
-  //       0,
-  //       challengerNode.fixedData
-  //     )
-  //   ).to.be.revertedWith('NOT_ALL_STAKED')
-  // })
-
-  // let challenge: Challenge
-  // it('should initiate a challenge', async function () {
-  //   const tx = rollup.createChallenge(
-  //     await accounts[8].getAddress(),
-  //     3,
-  //     await accounts[1].getAddress(),
-  //     4,
-  //     challengedNode,
-  //     challengerNode
-  //   )
-  //   const receipt = await (await tx).wait()
-  //   const ev = rollup.rollup.interface.parseLog(
-  //     receipt.logs![receipt.logs!.length - 1]
-  //   )
-  //   expect(ev.name).to.equal('RollupChallengeStarted')
-  //   const parsedEv = (ev as any) as { args: { challengeContract: string } }
-  //   const Challenge = await ethers.getContractFactory('Challenge')
-  //   challenge = Challenge.attach(parsedEv.args.challengeContract)
-  // })
-
-  // it('should make a new node', async function () {
-  //   const { node } = await makeSimpleNode(rollup, validNode)
-  //   challengedNode = node
-  // })
-
-  // it('new staker should make a conflicting node', async function () {
-  //   const stake = await rollup.currentRequiredStake()
-  //   await rollup.connect(accounts[2]).newStake({ value: stake })
-
-  //   await rollup.connect(accounts[2]).stakeOnExistingNode(3, validNode.nodeHash)
-
-  //   const { node } = await makeSimpleNode(
-  //     rollup.connect(accounts[2]),
-  //     validNode,
-  //     challengedNode
-  //   )
-  //   challengerNode = node
-  // })
-
-  // it('asserter should win via timeout', async function () {
-  //   await advancePastAssertion(challengedNode.assertion)
-  //   await challenge.connect(accounts[1]).timeout()
-  // })
-
-  // it('confirm first staker node', async function () {
-  //   await rollup.confirmNextNode(
-  //     zerobytes32,
-  //     0,
-  //     [],
-  //     zerobytes32,
-  //     0,
-  //     challengerNode.fixedData
-  //   )
-  // })
-
-  // it('should reject out of order second node', async function () {
-  //   await rollup.rejectNextNode(stakeToken)
-  // })
-
-  // it('should initiate another challenge', async function () {
-  //   const tx = rollup.createChallenge(
-  //     await accounts[8].getAddress(),
-  //     5,
-  //     await accounts[2].getAddress(),
-  //     6,
-  //     challengedNode,
-  //     challengerNode
-  //   )
-  //   const receipt = await (await tx).wait()
-  //   const ev = rollup.rollup.interface.parseLog(
-  //     receipt.logs![receipt.logs!.length - 1]
-  //   )
-  //   expect(ev.name).to.equal('RollupChallengeStarted')
-  //   const parsedEv = (ev as any) as { args: { challengeContract: string } }
-  //   const Challenge = await ethers.getContractFactory('Challenge')
-  //   challenge = Challenge.attach(parsedEv.args.challengeContract)
-
-  //   await expect(
-  //     rollup.rollup.completeChallenge(
-  //       await accounts[1].getAddress(),
-  //       await accounts[3].getAddress()
-  //     )
-  //   ).to.be.revertedWith('NO_CHAL')
-
-  //   await expect(
-  //     rollup.rollup.completeChallenge(
-  //       await accounts[8].getAddress(),
-  //       await accounts[1].getAddress()
-  //     )
-  //   ).to.be.revertedWith('DIFF_IN_CHAL')
-
-  //   await expect(
-  //     rollup.rollup.completeChallenge(
-  //       await accounts[8].getAddress(),
-  //       await accounts[2].getAddress()
-  //     )
-  //   ).to.be.revertedWith('WRONG_SENDER')
-  // })
-
-  // it('challenger should reply in challenge', async function () {
-  //   const chunks = Array(401).fill(zerobytes32)
-  //   chunks[0] = challengeHash(challengedNode.assertion.beforeState)
-  //   await bisectExecution(
-  //     challenge.connect(accounts[2]),
-  //     [],
-  //     0,
-  //     challengedNode.assertion,
-  //     chunks
-  //   )
-  // })
-
-  // it('challenger should win via timeout', async function () {
-  //   await advancePastAssertion(challengedNode.assertion)
-  //   await challenge.timeout()
-  // })
-
-  // it('should reject out of order second node', async function () {
-  //   await rollup.rejectNextNode(await accounts[2].getAddress())
-  // })
-
-  // it('confirm next node', async function () {
-  //   await tryAdvanceChain(confirmationPeriodBlocks)
-  //   // CHRIS: do we have a possible race condition for confirming nodes
-  //   await rollup.confirmNextNode(
-  //     zerobytes32,
-  //     0,
-  //     [],
-  //     zerobytes32,
-  //     0,
-  //     challengerNode.fixedData
-  //   )
-  // })
-
-  // it('should add and remove stakes correctly', async function () {
-  //   /*
-  //     RollupUser functions that alter stake and their respective Core logic
-
-  //     user: newStake
-  //     core: createNewStake
-
-  //     user: addToDeposit
-  //     core: increaseStakeBy
-
-  //     user: reduceDeposit
-  //     core: reduceStakeTo
-
-  //     user: returnOldDeposit
-  //     core: withdrawStaker
-
-  //     user: withdrawStakerFunds
-  //     core: withdrawFunds
-  //   */
-
-  //   const initialStake = await rollup.rollup.amountStaked(
-  //     await accounts[2].getAddress()
-  //   )
-
-  //   await rollup.connect(accounts[2]).reduceDeposit(initialStake)
-
-  //   await expect(
-  //     rollup.connect(accounts[2]).reduceDeposit(initialStake.add(1))
-  //   ).to.be.revertedWith('TOO_LITTLE_STAKE')
-
-  //   await rollup
-  //     .connect(accounts[2])
-  //     .addToDeposit(await accounts[2].getAddress(), { value: 5 })
-
-  //   await rollup.connect(accounts[2]).reduceDeposit(5)
-
-  //   const prevBalance = await accounts[2].getBalance()
-  //   const prevWithdrawablefunds = await rollup.rollup.withdrawableFunds(
-  //     await accounts[2].getAddress()
-  //   )
-
-  //   const tx = await rollup.rollup
-  //     .connect(accounts[2])
-  //     .withdrawStakerFunds(await accounts[2].getAddress())
-  //   const receipt = await tx.wait()
-  //   const gasPaid = receipt.gasUsed.mul(receipt.effectiveGasPrice)
-
-  //   const postBalance = await accounts[2].getBalance()
-  //   const postWithdrawablefunds = await rollup.rollup.withdrawableFunds(
-  //     await accounts[2].getAddress()
-  //   )
-
-  //   expect(postWithdrawablefunds).to.equal(0)
-  //   expect(postBalance.add(gasPaid)).to.equal(
-  //     prevBalance.add(prevWithdrawablefunds)
-  //   )
-
-  //   // this gets deposit and removes staker
-  //   await rollup.rollup
-  //     .connect(accounts[2])
-  //     .returnOldDeposit(await accounts[2].getAddress())
-  //   // all stake is now removed
-  // })
-
-  // it('should pause the contracts then resume', async function () {
-  //   const prevIsPaused = await rollup.rollup.paused()
-  //   expect(prevIsPaused).to.equal(false)
-
-  //   await rollupAdmin.pause()
-
-  //   const postIsPaused = await rollup.rollup.paused()
-  //   expect(postIsPaused).to.equal(true)
-
-  //   await expect(
-  //     rollup
-  //       .connect(accounts[2])
-  //       .addToDeposit(await accounts[2].getAddress(), { value: 5 })
-  //   ).to.be.revertedWith('Pausable: paused')
-
-  //   await rollupAdmin.resume()
-  // })
-
-  // it('should allow admin to alter rollup while paused', async function () {
-  //   const prevLatestConfirmed = await rollup.rollup.latestConfirmed()
-  //   expect(prevLatestConfirmed.toNumber()).to.equal(6)
-  //   // prevNode is prevLatestConfirmed
-  //   prevNode = challengerNode
-
-  //   const stake = await rollup.currentRequiredStake()
-
-  //   await rollup.newStake({ value: stake })
-  //   const { node: node1 } = await makeSimpleNode(rollup, prevNode)
-  //   const node1Num = await rollup.rollup.latestNodeCreated()
-
-  //   await tryAdvanceChain(minimumAssertionPeriod)
-
-  //   await rollup.connect(accounts[1]).newStake({ value: stake })
-  //   const { node: node2 } = await makeSimpleNode(
-  //     rollup.connect(accounts[1]),
-  //     prevNode,
-  //     node1
-  //   )
-  //   const node2Num = await rollup.rollup.latestNodeCreated()
-
-  //   const tx = await rollup.createChallenge(
-  //     await accounts[8].getAddress(),
-  //     node1Num,
-  //     await accounts[1].getAddress(),
-  //     node2Num,
-  //     node1,
-  //     node2
-  //   )
-  //   const receipt = await tx.wait()
-  //   const ev = rollup.rollup.interface.parseLog(
-  //     receipt.logs![receipt.logs!.length - 1]
-  //   )
-  //   expect(ev.name).to.equal('RollupChallengeStarted')
-  //   const parsedEv = (ev as any) as { args: { challengeContract: string } }
-  //   const Challenge = await ethers.getContractFactory('Challenge')
-  //   challenge = Challenge.attach(parsedEv.args.challengeContract)
-
-  //   const preCode = await ethers.provider.getCode(challenge.address)
-  //   expect(preCode).to.not.equal('0x')
-
-  //   await expect(
-  //     rollupAdmin.forceResolveChallenge(
-  //       [await accounts[8].getAddress()],
-  //       [await accounts[1].getAddress()]
-  //     )
-  //   ).to.be.revertedWith('Pausable: not paused')
-
-  //   await expect(
-  //     rollup.createChallenge(
-  //       await accounts[8].getAddress(),
-  //       node1Num,
-  //       await accounts[1].getAddress(),
-  //       node2Num,
-  //       node1,
-  //       node2
-  //     )
-  //   ).to.be.revertedWith('IN_CHAL')
-
-  //   await rollupAdmin.pause()
-
-  //   await rollupAdmin.forceResolveChallenge(
-  //     [await accounts[8].getAddress()],
-  //     [await accounts[1].getAddress()]
-  //   )
-
-  //   // challenge should have been destroyed
-  //   const postCode = await ethers.provider.getCode(challenge.address)
-  //   expect(postCode).to.equal('0x')
-
-  //   const challengeA = await rollupAdmin.currentChallenge(
-  //     await accounts[8].getAddress()
-  //   )
-  //   const challengeB = await rollupAdmin.currentChallenge(
-  //     await accounts[1].getAddress()
-  //   )
-
-  //   expect(challengeA).to.equal(ZERO_ADDR)
-  //   expect(challengeB).to.equal(ZERO_ADDR)
-
-  //   await rollupAdmin.forceRefundStaker([
-  //     await accounts[8].getAddress(),
-  //     await accounts[1].getAddress(),
-  //   ])
-
-  //   const block = await ethers.provider.getBlock('latest')
-  //   const assertion = makeSimpleAssertion(
-  //     prevNode.assertion.afterState,
-  //     (block.number - prevNode.proposedBlock + 1) * avmGasSpeedLimitPerBlock
-  //   )
-
-  //   const hasSibling = true
-  //   const newNodeHash = async () =>
-  //     nodeHash(
-  //       hasSibling,
-  //       await rollup.rollup.getNodeHash(
-  //         await rollup.rollup.latestNodeCreated()
-  //       ),
-  //       assertionExecutionHash(assertion),
-  //       zerobytes32
-  //     )
-
-  //   const forceNode1Hash = await newNodeHash()
-  //   const { node: forceCreatedNode1 } = await forceCreateNode(
-  //     rollupAdmin,
-  //     forceNode1Hash,
-  //     assertion,
-  //     '0x',
-  //     prevNode,
-  //     prevLatestConfirmed
-  //   )
-  //   expect(forceCreatedNode1.assertion).to.eql(assertion)
-
-  //   const adminNodeNum = await rollup.rollup.latestNodeCreated()
-  //   const midLatestConfirmed = await rollup.rollup.latestConfirmed()
-  //   expect(midLatestConfirmed.toNumber()).to.equal(6)
-
-  //   expect(adminNodeNum.toNumber()).to.equal(node2Num.toNumber() + 1)
-  //   expect(forceCreatedNode1.proposedBlock, 'Invalid admin node number.').to.eq(
-  //     adminNodeNum.toNumber()
-  //   )
-
-  //   await forceCreateNode(
-  //     rollupAdmin,
-  //     await newNodeHash(),
-  //     assertion,
-  //     '0x',
-  //     prevNode,
-  //     prevLatestConfirmed
-  //   )
-
-  //   const postLatestCreated = await rollup.rollup.latestNodeCreated()
-
-  //   const sends: Array<BytesLike> = []
-  //   const messageData = ethers.utils.concat(sends)
-  //   const messageLengths = sends.map(msg => msg.length)
-
-  //   await rollupAdmin.forceConfirmNode(
-  //     adminNodeNum,
-  //     zerobytes32,
-  //     messageData,
-  //     messageLengths,
-  //     0,
-  //     zerobytes32,
-  //     0,
-  //     forceCreatedNode1.fixedData
-  //   )
-
-  //   const postLatestConfirmed = await rollup.rollup.latestConfirmed()
-  //   expect(postLatestCreated).to.equal(adminNodeNum.add(1))
-  //   expect(postLatestConfirmed).to.equal(adminNodeNum)
-
-  //   await rollupAdmin.resume()
-
-  //   // should create node after resuming
-
-  //   prevNode = forceCreatedNode1
-
-  //   await tryAdvanceChain(minimumAssertionPeriod)
-
-  //   await expect(
-  //     rollup
-  //       .connect(accounts[1])
-  //       .newStake({ value: await rollup.currentRequiredStake() })
-  //   ).to.be.revertedWith('STAKER_IS_ZOMBIE')
-
-  //   await expect(
-  //     makeSimpleNode(rollup.connect(accounts[1]), prevNode)
-  //   ).to.be.revertedWith('NOT_STAKED')
-
-  //   await rollup.rollup.connect(accounts[1]).removeOldZombies(0)
-
-  //   await rollup
-  //     .connect(accounts[1])
-  //     .newStake({ value: await rollup.currentRequiredStake() })
-
-  //   await makeSimpleNode(rollup.connect(accounts[1]), prevNode)
-  // })
-
-  // it('should initialize a fresh rollup', async function () {
-  //   rollup = await initNewRollup()
-  // })
-
-  // it('should place stake', async function () {
-  //   const stake = await rollup.currentRequiredStake()
-  //   await rollup.newStake({ value: stake })
-  // })
-
-  // const limitSends = makeSends(100)
-  // it('should move stake to a new node with maximum # of sends', async function () {
-  //   await tryAdvanceChain(minimumAssertionPeriod)
-  //   const { node } = await makeNode(rollup, prevNode, undefined, limitSends)
-  //   prevNode = node
-  // })
-
-  // it('should confirm node with sends and it should take under 3 million gas [ @skip-on-coverage ]', async function () {
-  //   await tryAdvanceChain(confirmationPeriodBlocks * 2)
-  //   const {
-  //     beforeState: prevExecState,
-  //     afterState: postExecState,
-  //   } = prevNode.assertion
-
-  //   const res = await rollup.confirmNextNode(
-  //     prevExecState.sendAcc,
-  //     prevExecState.sendCount,
-  //     limitSends,
-  //     postExecState.logAcc,
-  //     postExecState.logCount,
-  //     prevNode.fixedData
-  //   )
-  //   const rec = await res.wait()
-  //   console.log('Gas used in 100 send assertion:', rec.gasUsed.toString())
-
-  //   expect(rec.gasUsed.lt(BigNumber.from(3000000))).to.be.true
-  // })
-  // const aboveLimitSends = makeSends(101, 101)
-
-  // it('should revert when trying to make an assertion with too many sends', async function () {
-  //   await tryAdvanceChain(minimumAssertionPeriod)
-  //   await expect(
-  //     makeNode(rollup, prevNode, undefined, aboveLimitSends)
-  //   ).to.be.revertedWith('TOO_MANY_SENDS')
-  // })
+  let challengerNode: Node
+  it('should let the second staker make a conflicting node', async function () {
+    await tryAdvanceChain(minimumAssertionPeriod)
+    const secondRollup = rollup.connect(accounts[1])
+    const latestStakedNodeNum = await secondRollup.latestStakedNode(
+      await accounts[1].getAddress()
+    )
+    const latestStakedNode = await nodeNumToNode(
+      latestStakedNodeNum,
+      secondRollup.rollup
+    )
+    const { node } = await makeSimpleNode(
+      secondRollup,
+      latestStakedNode.node,
+      validNode
+    )
+    challengerNode = node
+  })
+
+  it('should fail to confirm first staker node', async function () {
+    await advancePastAssertion(challengedNode.assertion)
+    const firstUnresolvedNum = await rollup.rollup.firstUnresolvedNode()
+    const firstUnresolvedNode = await nodeNumToNode(
+      firstUnresolvedNum,
+      rollup.rollup
+    )
+    await expect(
+      rollup.confirmNextNode(
+        zerobytes32,
+        0,
+        [],
+        zerobytes32,
+        0,
+        firstUnresolvedNode.node.fixedData
+      )
+    ).to.be.revertedWith('NOT_ALL_STAKED')
+  })
+
+  let challenge: Challenge
+  it('should initiate a challenge', async function () {
+    const tx = rollup.createChallenge(
+      await accounts[8].getAddress(),
+      3,
+      await accounts[1].getAddress(),
+      4,
+      challengedNode,
+      challengerNode
+    )
+    const receipt = await (await tx).wait()
+    const ev = rollup.rollup.interface.parseLog(
+      receipt.logs![receipt.logs!.length - 1]
+    )
+    expect(ev.name).to.equal('RollupChallengeStarted')
+    const parsedEv = ev as any as { args: { challengeContract: string } }
+    const Challenge = await ethers.getContractFactory('Challenge')
+    challenge = Challenge.attach(parsedEv.args.challengeContract)
+  })
+
+  it('should make a new node', async function () {
+    const { node } = await makeSimpleNode(rollup, validNode)
+    challengedNode = node
+  })
+
+  it('new staker should make a conflicting node', async function () {
+    const stake = await rollup.currentRequiredStake()
+    await rollup.connect(accounts[2]).newStake({ value: stake })
+
+    await rollup.connect(accounts[2]).stakeOnExistingNode(3, validNode.nodeHash)
+
+    const { node } = await makeSimpleNode(
+      rollup.connect(accounts[2]),
+      validNode,
+      challengedNode
+    )
+    challengerNode = node
+  })
+
+  it('asserter should win via timeout', async function () {
+    await advancePastAssertion(challengedNode.assertion)
+    await challenge.connect(accounts[1]).timeout()
+  })
+
+  it('confirm first staker node', async function () {
+    const firstUnresolvedNum = await rollup.rollup.firstUnresolvedNode()
+    const firstUnresolvedNode = await nodeNumToNode(
+      firstUnresolvedNum,
+      rollup.rollup
+    )
+    await rollup.confirmNextNode(
+      zerobytes32,
+      0,
+      [],
+      zerobytes32,
+      0,
+      firstUnresolvedNode.node.fixedData
+    )
+  })
+
+  it('should reject out of order second node', async function () {
+    await rollup.rejectNextNode(stakeToken)
+  })
+
+  it('should initiate another challenge', async function () {
+    const tx = rollup.createChallenge(
+      await accounts[8].getAddress(),
+      5,
+      await accounts[2].getAddress(),
+      6,
+      challengedNode,
+      challengerNode
+    )
+    const receipt = await (await tx).wait()
+    const ev = rollup.rollup.interface.parseLog(
+      receipt.logs![receipt.logs!.length - 1]
+    )
+    expect(ev.name).to.equal('RollupChallengeStarted')
+    const parsedEv = ev as any as { args: { challengeContract: string } }
+    const Challenge = await ethers.getContractFactory('Challenge')
+    challenge = Challenge.attach(parsedEv.args.challengeContract)
+
+    await expect(
+      rollup.rollup.completeChallenge(
+        await accounts[1].getAddress(),
+        await accounts[3].getAddress()
+      )
+    ).to.be.revertedWith('NO_CHAL')
+
+    await expect(
+      rollup.rollup.completeChallenge(
+        await accounts[8].getAddress(),
+        await accounts[1].getAddress()
+      )
+    ).to.be.revertedWith('DIFF_IN_CHAL')
+
+    await expect(
+      rollup.rollup.completeChallenge(
+        await accounts[8].getAddress(),
+        await accounts[2].getAddress()
+      )
+    ).to.be.revertedWith('WRONG_SENDER')
+  })
+
+  it('challenger should reply in challenge', async function () {
+    const chunks = Array(401).fill(zerobytes32)
+    chunks[0] = challengeHash(challengedNode.assertion.beforeState)
+    await bisectExecution(
+      challenge.connect(accounts[2]),
+      [],
+      0,
+      challengedNode.assertion,
+      chunks
+    )
+  })
+
+  it('challenger should win via timeout', async function () {
+    await advancePastAssertion(challengedNode.assertion)
+    await challenge.timeout()
+  })
+
+  it('should reject out of order second node', async function () {
+    await rollup.rejectNextNode(await accounts[2].getAddress())
+  })
+
+  it('confirm next node', async function () {
+    await tryAdvanceChain(confirmationPeriodBlocks)
+    // CHRIS: do we have a possible race condition for confirming nodes
+    const firstUnresolvedNum = await rollup.rollup.firstUnresolvedNode()
+    const firstUnresolvedNode = await nodeNumToNode(
+      firstUnresolvedNum,
+      rollup.rollup
+    )
+    await rollup.confirmNextNode(
+      zerobytes32,
+      0,
+      [],
+      zerobytes32,
+      0,
+      firstUnresolvedNode.node.fixedData
+    )
+  })
+
+  it('should add and remove stakes correctly', async function () {
+    /*
+      RollupUser functions that alter stake and their respective Core logic
+
+      user: newStake
+      core: createNewStake
+
+      user: addToDeposit
+      core: increaseStakeBy
+
+      user: reduceDeposit
+      core: reduceStakeTo
+
+      user: returnOldDeposit
+      core: withdrawStaker
+
+      user: withdrawStakerFunds
+      core: withdrawFunds
+    */
+
+    const initialStake = await rollup.rollup.amountStaked(
+      await accounts[2].getAddress()
+    )
+
+    await rollup.connect(accounts[2]).reduceDeposit(initialStake)
+
+    await expect(
+      rollup.connect(accounts[2]).reduceDeposit(initialStake.add(1))
+    ).to.be.revertedWith('TOO_LITTLE_STAKE')
+
+    await rollup
+      .connect(accounts[2])
+      .addToDeposit(await accounts[2].getAddress(), { value: 5 })
+
+    await rollup.connect(accounts[2]).reduceDeposit(5)
+
+    const prevBalance = await accounts[2].getBalance()
+    const prevWithdrawablefunds = await rollup.rollup.withdrawableFunds(
+      await accounts[2].getAddress()
+    )
+
+    const tx = await rollup.rollup
+      .connect(accounts[2])
+      .withdrawStakerFunds(await accounts[2].getAddress())
+    const receipt = await tx.wait()
+    const gasPaid = receipt.gasUsed.mul(receipt.effectiveGasPrice)
+
+    const postBalance = await accounts[2].getBalance()
+    const postWithdrawablefunds = await rollup.rollup.withdrawableFunds(
+      await accounts[2].getAddress()
+    )
+
+    expect(postWithdrawablefunds).to.equal(0)
+    expect(postBalance.add(gasPaid)).to.equal(
+      prevBalance.add(prevWithdrawablefunds)
+    )
+
+    // this gets deposit and removes staker
+    await rollup.rollup
+      .connect(accounts[2])
+      .returnOldDeposit(await accounts[2].getAddress())
+    // all stake is now removed
+  })
+
+  it('should pause the contracts then resume', async function () {
+    const prevIsPaused = await rollup.rollup.paused()
+    expect(prevIsPaused).to.equal(false)
+
+    await rollupAdmin.pause()
+
+    const postIsPaused = await rollup.rollup.paused()
+    expect(postIsPaused).to.equal(true)
+
+    await expect(
+      rollup
+        .connect(accounts[2])
+        .addToDeposit(await accounts[2].getAddress(), { value: 5 })
+    ).to.be.revertedWith('Pausable: paused')
+
+    await rollupAdmin.resume()
+  })
+
+  it('should allow admin to alter rollup while paused', async function () {
+    const prevLatestConfirmed = await rollup.rollup.latestConfirmed()
+    expect(prevLatestConfirmed.toNumber()).to.equal(6)
+    // prevNode is prevLatestConfirmed
+    prevNode = challengerNode
+
+    const stake = await rollup.currentRequiredStake()
+
+    await rollup.newStake({ value: stake })
+    const { node: node1 } = await makeSimpleNode(rollup, prevNode)
+    const node1Num = await rollup.rollup.latestNodeCreated()
+
+    await tryAdvanceChain(minimumAssertionPeriod)
+
+    await rollup.connect(accounts[1]).newStake({ value: stake })
+    const { node: node2 } = await makeSimpleNode(
+      rollup.connect(accounts[1]),
+      prevNode,
+      node1
+    )
+    const node2Num = await rollup.rollup.latestNodeCreated()
+
+    const tx = await rollup.createChallenge(
+      await accounts[8].getAddress(),
+      node1Num,
+      await accounts[1].getAddress(),
+      node2Num,
+      node1,
+      node2
+    )
+    const receipt = await tx.wait()
+    const ev = rollup.rollup.interface.parseLog(
+      receipt.logs![receipt.logs!.length - 1]
+    )
+    expect(ev.name).to.equal('RollupChallengeStarted')
+    const parsedEv = ev as any as { args: { challengeContract: string } }
+    const Challenge = await ethers.getContractFactory('Challenge')
+    challenge = Challenge.attach(parsedEv.args.challengeContract)
+
+    const preCode = await ethers.provider.getCode(challenge.address)
+    expect(preCode).to.not.equal('0x')
+
+    await expect(
+      rollupAdmin.forceResolveChallenge(
+        [await accounts[8].getAddress()],
+        [await accounts[1].getAddress()]
+      )
+    ).to.be.revertedWith('Pausable: not paused')
+
+    await expect(
+      rollup.createChallenge(
+        await accounts[8].getAddress(),
+        node1Num,
+        await accounts[1].getAddress(),
+        node2Num,
+        node1,
+        node2
+      )
+    ).to.be.revertedWith('IN_CHAL')
+
+    await rollupAdmin.pause()
+
+    await rollupAdmin.forceResolveChallenge(
+      [await accounts[8].getAddress()],
+      [await accounts[1].getAddress()]
+    )
+
+    // challenge should have been destroyed
+    const postCode = await ethers.provider.getCode(challenge.address)
+    expect(postCode).to.equal('0x')
+
+    const challengeA = await rollupAdmin.currentChallenge(
+      await accounts[8].getAddress()
+    )
+    const challengeB = await rollupAdmin.currentChallenge(
+      await accounts[1].getAddress()
+    )
+
+    expect(challengeA).to.equal(ZERO_ADDR)
+    expect(challengeB).to.equal(ZERO_ADDR)
+
+    await rollupAdmin.forceRefundStaker([
+      await accounts[8].getAddress(),
+      await accounts[1].getAddress(),
+    ])
+
+    const block = await ethers.provider.getBlock('latest')
+    const assertion = makeSimpleAssertion(
+      prevNode.assertion.afterState,
+      (block.number - prevNode.proposedBlock + 1) * avmGasSpeedLimitPerBlock
+    )
+
+    const hasSibling = true
+    const newNodeHash = async () =>
+      nodeHash(
+        hasSibling,
+        await rollup.rollup.getNodeHash(
+          await rollup.rollup.latestNodeCreated()
+        ),
+        assertionExecutionHash(assertion),
+        zerobytes32
+      )
+
+    const forceNode1Hash = await newNodeHash()
+    const { node: forceCreatedNode1 } = await forceCreateNode(
+      rollupAdmin,
+      forceNode1Hash,
+      assertion,
+      '0x',
+      prevNode,
+      prevLatestConfirmed
+    )
+    expect(forceCreatedNode1.assertion).to.eql(assertion)
+
+    const adminNodeNum = await rollup.rollup.latestNodeCreated()
+    const midLatestConfirmed = await rollup.rollup.latestConfirmed()
+    expect(midLatestConfirmed.toNumber()).to.equal(6)
+
+    expect(adminNodeNum.toNumber()).to.equal(node2Num.toNumber() + 1)
+
+    await forceCreateNode(
+      rollupAdmin,
+      await newNodeHash(),
+      assertion,
+      '0x',
+      prevNode,
+      prevLatestConfirmed
+    )
+
+    const postLatestCreated = await rollup.rollup.latestNodeCreated()
+
+    const sends: Array<BytesLike> = []
+    const messageData = ethers.utils.concat(sends)
+    const messageLengths = sends.map(msg => msg.length)
+
+    await rollupAdmin.forceConfirmNode(
+      adminNodeNum,
+      zerobytes32,
+      messageData,
+      messageLengths,
+      0,
+      zerobytes32,
+      0,
+      forceCreatedNode1.fixedData
+    )
+
+    const postLatestConfirmed = await rollup.rollup.latestConfirmed()
+    expect(postLatestCreated).to.equal(adminNodeNum.add(1))
+    expect(postLatestConfirmed).to.equal(adminNodeNum)
+
+    await rollupAdmin.resume()
+
+    // should create node after resuming
+
+    prevNode = forceCreatedNode1
+
+    await tryAdvanceChain(minimumAssertionPeriod)
+
+    await expect(
+      rollup
+        .connect(accounts[1])
+        .newStake({ value: await rollup.currentRequiredStake() })
+    ).to.be.revertedWith('STAKER_IS_ZOMBIE')
+
+    await expect(
+      makeSimpleNode(rollup.connect(accounts[1]), prevNode)
+    ).to.be.revertedWith('NOT_STAKED')
+
+    await rollup.rollup.connect(accounts[1]).removeOldZombies(0)
+
+    await rollup
+      .connect(accounts[1])
+      .newStake({ value: await rollup.currentRequiredStake() })
+
+    await makeSimpleNode(rollup.connect(accounts[1]), prevNode)
+  })
+
+  it('should initialize a fresh rollup', async function () {
+    rollup = await initNewRollup()
+  })
+
+  it('should place stake', async function () {
+    const stake = await rollup.currentRequiredStake()
+    await rollup.newStake({ value: stake })
+  })
+
+  const limitSends = makeSends(100)
+  it('should move stake to a new node with maximum # of sends', async function () {
+    await tryAdvanceChain(minimumAssertionPeriod)
+    const { node } = await makeNode(rollup, prevNode, undefined, limitSends)
+    prevNode = node
+  })
+
+  it('should confirm node with sends and it should take under 3 million gas [ @skip-on-coverage ]', async function () {
+    await tryAdvanceChain(confirmationPeriodBlocks * 2)
+    const { beforeState: prevExecState, afterState: postExecState } =
+      prevNode.assertion
+
+    const res = await rollup.confirmNextNode(
+      prevExecState.sendAcc,
+      prevExecState.sendCount,
+      limitSends,
+      postExecState.logAcc,
+      postExecState.logCount,
+      prevNode.fixedData
+    )
+    const rec = await res.wait()
+    console.log('Gas used in 100 send assertion:', rec.gasUsed.toString())
+
+    expect(rec.gasUsed.lt(BigNumber.from(3000000))).to.be.true
+  })
+  const aboveLimitSends = makeSends(101, 101)
+
+  it('should revert when trying to make an assertion with too many sends', async function () {
+    await tryAdvanceChain(minimumAssertionPeriod)
+    await expect(
+      makeNode(rollup, prevNode, undefined, aboveLimitSends)
+    ).to.be.revertedWith('TOO_MANY_SENDS')
+  })
 })

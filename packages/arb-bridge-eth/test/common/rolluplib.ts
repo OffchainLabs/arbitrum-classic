@@ -198,7 +198,6 @@ export async function nodeNumToNode(
     throw new Error(
       `Expected a single event but got ${nodeCreatedEvents.length}.`
     )
-  console.log('fetched from logs')
   return await nodeFromNodeCreatedLog(logs[0].blockNumber, nodeCreatedEvents[0])
 }
 
@@ -207,13 +206,11 @@ async function nodeFromNodeCreatedLog(
   log: LogDescription
 ): Promise<{ node: Node; event: NodeCreatedEvent }> {
   if (log.name != 'NodeCreated') {
-    console.log(log.name)
     throw Error('wrong event type')
   }
   const parsedEv = log as any as {
     args: NodeCreatedEvent
   }
-  console.log('created num', parsedEv.args.nodeNum)
   const ev = parsedEv.args
   const node: Node = {
     proposedBlock: blockNumber,
@@ -270,7 +267,6 @@ async function nodeFromTx(
   if (evs.length != 1) {
     throw Error('unique event not found')
   }
-  console.log('node creator', receipt.from)
   return nodeFromNodeCreatedLog(receipt.blockNumber, evs[0]!)
 }
 
@@ -308,21 +304,6 @@ export class RollupContract {
         afterInboxAcc,
       ]
     )
-    const latestStakedNodeNum = await this.rollup.latestStakedNode(
-      await this.rollup.signer.getAddress()
-    )
-    console.log('\n')
-    console.log('before call')
-    console.log('latest staked node', latestStakedNodeNum)
-    const latestStakedNodeMutable = await this.rollup.getNodeMutable(
-      latestStakedNodeNum
-    )
-    console.log('hasSibling', latestStakedNodeMutable.latestChildNumber.gt(0))
-    console.log(
-      'lastHash',
-      await this.rollup.getNodeHash(latestStakedNodeMutable.latestChildNumber)
-    ) // 3
-    console.log('executionHash', assertionExecutionHash(assertion))
 
     const tx = await this.rollup.stakeOnNewNode(
       {
@@ -339,7 +320,7 @@ export class RollupContract {
         beforeInboxMaxCount: parentNode.inboxMaxCount,
         sequencerBatchProof: batchProof,
       },
-      prevNode.fixedData
+      parentNode.fixedData
     )
     const { node, event } = await nodeFromTx(this.rollup.interface, tx)
     return { tx, node, event }
