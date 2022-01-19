@@ -132,7 +132,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      * @return True or False for whether the staker was staked
      */
     function isStaked(address staker) public view override returns (bool) {
-        return _stakerMap[staker].latestStakedNode != 0;
+        return _stakerMap[staker].amountStaked != 0;
     }
 
     /**
