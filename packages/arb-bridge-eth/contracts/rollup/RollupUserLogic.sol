@@ -155,7 +155,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
             nodeNum >= firstUnresolvedNode() && nodeNum <= latestNodeCreated(),
             "NODE_NUM_OUT_OF_RANGE"
         );
-        NodeMutable memory node = getNodeMutableStorage(nodeNum);
+        NodeMutable storage node = getNodeMutableStorage(nodeNum);
         require(latestStakedNode(msg.sender) == node.prevNum, "NOT_STAKED_PREV");
         stakeOnNode(msg.sender, nodeNum);
     }
