@@ -183,14 +183,19 @@ export class L1TransactionReceipt implements TransactionReceipt {
     )
   }
 
+  /**
+   * Check if tx is a direct call to a depositEth function (i.e., on the Inbox contract)
+   * @returns
+   */
   public async looksLikeEthDeposit(
     l1SignerOrProvider: SignerOrProvider
   ): Promise<boolean> {
     const l1Provider =
       SignerProviderUtils.getProviderOrThrow(l1SignerOrProvider)
     const txRes = await l1Provider.getTransaction(this.transactionHash)
-    const ethDeposit_FUNCTION_SIG = '0x0f4d14e9'
-    return txRes.data.startsWith(ethDeposit_FUNCTION_SIG)
+    // Function signature for depositEth
+    const depositEth_FUNCTION_SIG = '0x0f4d14e9'
+    return txRes.data.startsWith(depositEth_FUNCTION_SIG)
   }
 
   /**
