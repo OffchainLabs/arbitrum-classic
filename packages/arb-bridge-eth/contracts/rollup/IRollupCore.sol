@@ -30,8 +30,7 @@ interface IRollupCore {
             uint256,
             uint256,
             uint256,
-            address,
-            bool
+            address
         );
 
     event RollupCreated(bytes32 machineHash);

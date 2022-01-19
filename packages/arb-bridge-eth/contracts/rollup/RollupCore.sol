@@ -77,7 +77,6 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
         uint256 amountStaked;
         // currentChallenge is 0 if staker is not in a challenge
         address currentChallenge;
-        bool isStaked;
     }
 
     uint256 private _latestConfirmed;
@@ -133,7 +132,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
      * @return True or False for whether the staker was staked
      */
     function isStaked(address staker) public view override returns (bool) {
-        return _stakerMap[staker].isStaked;
+        return _stakerMap[staker].latestStakedNode != 0;
     }
 
     /**
@@ -311,8 +310,7 @@ abstract contract RollupCore is IRollupCore, Cloneable, Pausable {
             stakerIndex,
             _latestConfirmed,
             depositAmount,
-            address(0), // new staker is not in challenge
-            true
+            address(0) // new staker is not in challenge
         );
         _lastStakeBlock = block.number;
         emit UserStakeUpdated(stakerAddress, 0, depositAmount);
