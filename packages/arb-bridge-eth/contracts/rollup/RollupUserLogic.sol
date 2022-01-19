@@ -185,12 +185,7 @@ abstract contract AbsRollupUserLogic is RollupCore, IRollupUser {
         StakeInput calldata stakeInput,
         // CHRIS: include this in the struct? and elsewhere?
         NodeFixed calldata prevNode
-    )
-        external
-        // CHRIS: update callers external - and for struct update
-        onlyValidator
-        whenNotPaused
-    {
+    ) external onlyValidator whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
         RollupLib.Assertion memory assertion = RollupLib.decodeAssertion(
