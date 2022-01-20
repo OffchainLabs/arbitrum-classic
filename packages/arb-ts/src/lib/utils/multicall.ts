@@ -200,7 +200,7 @@ export class MultiCaller {
     )
 
     return outputs.map(({ success, returnData }, index) => {
-      if (success) {
+      if (success && returnData && returnData != '0x') {
         return params[index].decoder(returnData)
       }
       return undefined
@@ -312,12 +312,11 @@ export class MultiCaller {
         balance: defaultedOptions.balanceOf
           ? (res[i++] as BigNumber)
           : undefined,
-        decimal: defaultedOptions.decimals ? (res[i++] as number) : undefined,
+        decimals: defaultedOptions.decimals ? (res[i++] as number) : undefined,
         name: defaultedOptions.name ? (res[i++] as string) : undefined,
         symbol: defaultedOptions.symbol ? (res[i++] as string) : undefined,
       })
     }
-
     return tokens
   }
 }

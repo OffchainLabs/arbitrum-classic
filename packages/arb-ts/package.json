@@ -19,7 +19,7 @@
     "postinstall": "$npm_execpath run gen:abi",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
-    "build": "./scripts/builder",
+    "build": "./scripts/builder && cp -R ./src/lib/abi/*.d.ts ./dist/lib/abi",
     "watch": "tsc --watch",
     "test": "mocha",
     "test:coverage": "nyc mocha",
