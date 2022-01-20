@@ -217,7 +217,6 @@ class ArbCore {
         std::unique_ptr<rocksdb::Iterator>& checkpoint_it);
     std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
     reorgToFirstMatchingMachineCheckpoint(
-        const MachineOutput& target_machine_output,
         const std::function<bool(const MachineOutput&)>& check_output,
         ReadWriteTransaction& tx,
         std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
