@@ -788,14 +788,17 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
     core_machine->machine_state.context.max_gas = 0;
 
     // We skip over sideloads while fast forwarding, so l2_block_number and
-    // last_sideload may not be updated properly.  Update here so comparison
-    // is correct.
+    // last_sideload may not be updated properly.  Update here for completeness
     core_machine->machine_state.output.l2_block_number =
         target_output.l2_block_number;
     core_machine->machine_state.output.last_sideload =
         target_output.last_sideload;
 
-    if (core_machine->machine_state.output != target_output) {
+    if ((core_machine->machine_state.output.fully_processed_inbox.count !=
+         target_output.fully_processed_inbox.count) ||
+        (core_machine->machine_state.output.log_acc != target_output.log_acc) ||
+        (core_machine->machine_state.output.send_acc !=
+         target_output.send_acc)) {
         // Machine in unexpected state, data corruption might have occurred
         std::cerr << "Error catching up: machine in unexpected state"
                   << "\n";
