@@ -520,6 +520,7 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     }
 
     saveCodeToCore(*core_machine, save_res.second);
+    core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
 
     std::vector<unsigned char> key;
     marshal_uint256_t(state.output.arb_gas_used, key);
@@ -1045,6 +1046,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     }
 
     core_machine = std::move(setup);
+    core_machine->machine_state.code->cleanupAfterReorg();
     auto& output = core_machine->machine_state.output;
 
     // Remove invalid cache entries after selected_machine_output
