@@ -800,8 +800,20 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         (core_machine->machine_state.output.send_acc !=
          target_output.send_acc)) {
         // Machine in unexpected state, data corruption might have occurred
-        std::cerr << "Error catching up: machine in unexpected state"
-                  << "\n";
+        std::cerr
+            << "Error catching up: machine in unexpected state"
+            << "current, expected inbox count: "
+            << core_machine->machine_state.output.fully_processed_inbox.count
+            << ", " << target_output.fully_processed_inbox.count
+            << ", current, expected log_count: "
+            << core_machine->machine_state.output.log_count << ", "
+            << target_output.log_count << ", current, expected log_acc: "
+            << core_machine->machine_state.output.log_acc << ", "
+            << target_output.log_acc << ", current, expected send_count: "
+            << core_machine->machine_state.output.send_count << ", "
+            << target_output.send_count << ", current, expected send_acc: "
+            << core_machine->machine_state.output.send_acc << ", "
+            << target_output.send_acc << "\n";
         return rocksdb::Status::Aborted();
     }
 
