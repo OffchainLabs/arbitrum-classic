@@ -37,7 +37,7 @@ void BasicMachineCache::add(std::unique_ptr<Machine> machine) {
     cache[gas_used] = std::move(machine);
 }
 
-std::optional<BasicMachineCache::map_type::iterator>
+std::optional<BasicMachineCache::map_type::const_iterator>
 BasicMachineCache::atOrBeforeGas(uint256_t gas_used) {
     auto it = cache.upper_bound(gas_used);
     if (it == cache.begin()) {
@@ -47,6 +47,20 @@ BasicMachineCache::atOrBeforeGas(uint256_t gas_used) {
     // Upper_bound returns the element after the one desired
     it--;
     return it;
+}
+
+std::optional<BasicMachineCache::map_type::const_iterator>
+BasicMachineCache::findMatching(
+    const std::function<bool(const MachineOutput&)>& check_output) {
+    for (auto rit = cache.crbegin(); rit != cache.crend(); rit++) {
+        if (check_output(rit->second->machine_state.output)) {
+            auto it = rit.base();
+            it--;
+            return it;
+        }
+    }
+
+    return std::nullopt;
 }
 
 void BasicMachineCache::reorg(uint256_t next_gas_used) {

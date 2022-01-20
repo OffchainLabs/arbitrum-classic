@@ -68,13 +68,31 @@ class CombinedMachineCache {
                                     std::optional<uint256_t> existing_gas_used,
                                     std::optional<uint256_t> database_gas,
                                     bool use_max_execution);
+    CacheResultStruct findFirstMatching(
+        const std::function<bool(const MachineOutput&)>& check_output,
+        std::optional<uint256_t> existing_gas_used,
+        std::optional<uint256_t> database_gas,
+        bool use_max_execution);
     void reorg(uint256_t next_gas_used);
     [[nodiscard]] uint256_t currentTimeExpired();
 
    private:
-    std::optional<std::reference_wrapper<const Machine>> atOrBeforeGasImpl(
+    std::optional<std::reference_wrapper<const Machine>> allCachedAtOrBeforeGas(
         uint256_t& gas_used);
+    std::optional<std::reference_wrapper<const Machine>> allCachedFindMatching(
+        const std::function<bool(const MachineOutput&)>& check_output);
     void checkLastMachine(uint256_t& arb_gas_used);
+    CacheResultStruct findBestMachine(
+        std::optional<uint256_t> current_gas_used,
+        std::optional<std::reference_wrapper<const Machine>> cache_machine,
+        std::optional<uint256_t> existing_gas_used,
+        std::optional<uint256_t> database_gas,
+        bool use_max_execution);
+    std::optional<std::reference_wrapper<const Machine>> getFirstMatch(
+        const std::function<bool(const MachineOutput&)>& check_output,
+        std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
+        std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
+        std::optional<TimedMachineCache::map_type::const_iterator>& timed_it);
 };
 
 #endif  // ARB_AVM_CPP_COMBINEDMACHINECACHE_HPP

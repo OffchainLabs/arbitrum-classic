@@ -883,7 +883,6 @@ ArbCore::reorgToFirstMatchingCheckpoint(
 // up invalid checkpoints as needed.
 std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
 ArbCore::reorgToFirstMatchingMachineCheckpoint(
-    const MachineOutput& target_machine_output,
     const std::function<bool(const MachineOutput&)>& check_output,
     ReadWriteTransaction& tx,
     std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
@@ -905,11 +904,10 @@ ArbCore::reorgToFirstMatchingMachineCheckpoint(
             continue;
         }
 
-        auto mach = combined_machine_cache.atOrBeforeGas(
-            target_machine_output.arb_gas_used, std::nullopt,
-            checkpoint.output.arb_gas_used, false);
+        auto mach = combined_machine_cache.findFirstMatching(
+            check_output, std::nullopt, checkpoint.output.arb_gas_used, false);
         if (mach.machine != nullptr) {
-            // Found machine in value_cache
+            // Found machine in cache
             return std::make_unique<MachineThread>(mach.machine->machine_state);
         }
 
@@ -989,8 +987,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
 
         auto reorg_machine_begin_time = std::chrono::steady_clock::now();
         auto nearest_machine_or_status = reorgToFirstMatchingMachineCheckpoint(
-            selected_machine_output, check_output, tx, checkpoint_it,
-            value_cache);
+            check_output, tx, checkpoint_it, value_cache);
         if (std::holds_alternative<rocksdb::Status>(
                 nearest_machine_or_status)) {
             return std::get<rocksdb::Status>(nearest_machine_or_status);
