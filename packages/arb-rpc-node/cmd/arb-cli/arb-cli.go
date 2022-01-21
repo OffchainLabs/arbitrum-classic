@@ -649,6 +649,32 @@ func setupGasParams() error {
 	return waitForTx(tx, "SetChainParameters")
 }
 
+func getBaseFee(agg ethcommon.Address) error {
+	arbAgg, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	val, err := arbAgg.GetTxBaseFee(&bind.CallOpts{}, agg)
+	if err != nil {
+		return err
+	}
+	fmt.Println("base fee is", val)
+	return nil
+}
+
+func setBaseFee(agg ethcommon.Address, val *big.Int) error {
+	arbAgg, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbAgg.SetTxBaseFee(config.auth, agg, val)
+	if err != nil {
+		return err
+	}
+	fmt.Println("base fee is", val)
+	return waitForTx(tx, "SetTxBaseFee")
+}
+
 func readL2Param(varName string) error {
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
 	if err != nil {
@@ -1398,6 +1424,22 @@ func handleCommand(fields []string) error {
 			return errors.New("expected arg to be int")
 		}
 		return writeL2Param(fields[1], val)
+	case "get-base-fee":
+		if len(fields) != 2 {
+			return errors.New("Expected [aggregator] arguments")
+		}
+		agg := ethcommon.HexToAddress(fields[1])
+		return getBaseFee(agg)
+	case "set-base-fee":
+		if len(fields) != 3 {
+			return errors.New("Expected [agg] [l1 gas fee]")
+		}
+		agg := ethcommon.HexToAddress(fields[1])
+		val, ok := new(big.Int).SetString(fields[2], 10)
+		if !ok {
+			return errors.New("expected arg to be int")
+		}
+		return setBaseFee(agg, val)
 	case "set-fee-collector":
 		if len(fields) != 3 {
 			return errors.New("Expected [sender] [feeCollector]")
