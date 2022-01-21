@@ -974,19 +974,19 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         std::cerr << "Reorg blockchain" << std::endl;
     }
 
-    if (core_machine) {
+    if (last_machine) {
         std::cerr
             << "Previous checkpoint,  total gas used: "
-            << core_machine->machine_state.output.arb_gas_used << ", L1 block: "
-            << core_machine->machine_state.output.l1_block_number
+            << last_machine->machine_state.output.arb_gas_used << ", L1 block: "
+            << last_machine->machine_state.output.l1_block_number
             << ", L2 block: "
-            << core_machine->machine_state.output.l2_block_number
-            << ", log count: " << core_machine->machine_state.output.log_count
+            << last_machine->machine_state.output.l2_block_number
+            << ", log count: " << last_machine->machine_state.output.log_count
             << ", messages count: "
-            << core_machine->machine_state.output.fully_processed_inbox.count
+            << last_machine->machine_state.output.fully_processed_inbox.count
             << ", timestamp: "
             << std::put_time(
-                   std::localtime((time_t*)&core_machine->machine_state.output
+                   std::localtime((time_t*)&last_machine->machine_state.output
                                       .last_inbox_timestamp),
                    "%c")
             << "\n";
