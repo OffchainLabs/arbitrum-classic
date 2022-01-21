@@ -729,6 +729,12 @@ rocksdb::Status ArbCore::reorgToMachineOutput(const MachineOutput& output,
 // target
 rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
                                              bool cache_sideloads) {
+    if (core_machine->machine_state.output.arb_gas_used >=
+        target_output.arb_gas_used) {
+        // Core already caught up
+        return rocksdb::Status::OK();
+    }
+
     while (core_machine->machine_state.output.arb_gas_used <
            target_output.arb_gas_used) {
         // Need to run machine until caught up with current checkpoint
@@ -801,8 +807,10 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
          target_output.send_acc)) {
         // Machine in unexpected state, data corruption might have occurred
         std::cerr
-            << "Error catching up: machine in unexpected state"
-            << "current, expected inbox count: "
+            << "Error catching up: machine in unexpected state, current, "
+               "expected gas: "
+            << core_machine->machine_state.output.arb_gas_used << ", "
+            << target_output.arb_gas_used << ", current, expected inbox count: "
             << core_machine->machine_state.output.fully_processed_inbox.count
             << ", " << target_output.fully_processed_inbox.count
             << ", current, expected log_count: "
@@ -852,7 +860,7 @@ ArbCore::reorgToFirstMatchingCheckpoint(
         auto machine_output = getMachineOutput(checkpoint_variant);
 
         if (output_checkpoint) {
-            std::cerr << "Initial checkpoint,  total gas used: "
+            std::cerr << "First checkpoint found,  total gas used: "
                       << machine_output.arb_gas_used
                       << ", L1 block: " << machine_output.l1_block_number
                       << ", L2 block: " << machine_output.l2_block_number
@@ -964,6 +972,24 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         }
     } else {
         std::cerr << "Reorg blockchain" << std::endl;
+    }
+
+    if (core_machine) {
+        std::cerr
+            << "Previous checkpoint,  total gas used: "
+            << core_machine->machine_state.output.arb_gas_used << ", L1 block: "
+            << core_machine->machine_state.output.l1_block_number
+            << ", L2 block: "
+            << core_machine->machine_state.output.l2_block_number
+            << ", log count: " << core_machine->machine_state.output.log_count
+            << ", messages count: "
+            << core_machine->machine_state.output.fully_processed_inbox.count
+            << ", timestamp: "
+            << std::put_time(
+                   std::localtime((time_t*)&core_machine->machine_state.output
+                                      .last_inbox_timestamp),
+                   "%c")
+            << "\n";
     }
 
     using checkpoint_pair =
