@@ -1,0 +1,22 @@
+{"version": 2, "static_val": {"Tuple": []}, "extensions": [], "code": [
+    {"opcode":  59, "immediate": null, "_comment": "Read an inbox message to get the machine going"},
+    {"opcode": 114, "immediate": null},
+    {"opcode":  48, "immediate": null},
+
+    {"opcode":  59, "immediate": null, "_comment": "Create a new code segment"},
+    {"opcode": 119, "immediate": null},
+    {"opcode": 120, "immediate": {"Int": "73"}},
+
+    {"opcode":  59, "immediate": null, "_comment": "Sideload, to put the machine in the cache"},
+    {"opcode": 123, "immediate": {"Int": "1"}},
+    {"opcode":  48, "immediate": null},
+
+    {"opcode":  59, "immediate": null, "_comment": "Extend the code segment"},
+    {"opcode": 120, "immediate": {"Int": "73"}},
+
+    {"opcode":  59, "immediate": null, "_comment": "Read an inbox message and sideload to force a checkpoint"},
+    {"opcode": 114, "immediate": null},
+    {"opcode":  48, "immediate": null},
+    {"opcode": 123, "immediate": {"Int": "2"}},
+    {"opcode":  48, "immediate": null}
+]}

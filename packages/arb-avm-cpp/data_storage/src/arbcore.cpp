@@ -1449,6 +1449,10 @@ void ArbCore::operator()() {
                 if (last_assertion.sideload_block_number) {
                     auto& output = core_machine->machine_state.output;
 
+                    std::cerr << "Adding machine to cache at gas "
+                              << output.arb_gas_used << " messages "
+                              << output.fully_processed_inbox.count
+                              << std::endl;
                     combined_machine_cache.timedAdd(
                         std::make_unique<Machine>(*core_machine));
 
