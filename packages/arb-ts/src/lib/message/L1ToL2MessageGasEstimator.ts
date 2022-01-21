@@ -67,7 +67,13 @@ export class L1ToL2MessageGasEstimator {
     }
   }
 
-  public async getSubmissionPrice(
+  /**
+   * Return the price, in wei, of submitting a new retryable tx with a given calldata size.
+   * @param callDataSize
+   * @param options
+   * @returns
+   */
+  public async estimateSubmissionPrice(
     callDataSize: BigNumber | number,
     options?: {
       base?: BigNumber
@@ -96,7 +102,21 @@ export class L1ToL2MessageGasEstimator {
     }
   }
 
-  public async estimateGasRetryableTicket(
+  /**
+   * Estimate the amount of L2 gas required for putting the transaction in the L2 inbox, and executing it.
+   * @param sender
+   * @param senderDeposit
+   * @param destAddr
+   * @param l2CallValue
+   * @param maxSubmissionCost
+   * @param excessFeeRefundAddress
+   * @param callValueRefundAddress
+   * @param maxGas
+   * @param gasPriceBid
+   * @param calldata
+   * @returns
+   */
+  public async estimateRetryableTicket(
     sender: string,
     senderDeposit: BigNumber,
     destAddr: string,
@@ -150,10 +170,19 @@ export class L1ToL2MessageGasEstimator {
     }
   }
 
-  public async estimateGasValuesL1ToL2Creation(
+  /**
+   * Get gas limit, gas price and submission price estimates for sending an L2 message
+   * @param sender Sender of the L1 to L2 transaction
+   * @param destAddr Destination L2 contract address
+   * @param l2CallDataHex The call data to be sent in the request
+   * @param l2CallValue The value to be sent on L2 as part of the L2 transaction
+   * @param options
+   * @returns
+   */
+  public async estimateMessage(
     sender: string,
     destAddr: string,
-    callDataHex: string,
+    l2CallDataHex: string,
     l2CallValue: BigNumber,
     options?: GasOverrides
   ): Promise<{
@@ -171,15 +200,15 @@ export class L1ToL2MessageGasEstimator {
     )
 
     const maxSubmissionPriceBid = (
-      await this.getSubmissionPrice(
-        utils.hexDataLength(callDataHex),
+      await this.estimateSubmissionPrice(
+        utils.hexDataLength(l2CallDataHex),
         options?.maxSubmissionPrice
       )
     ).submissionPrice
 
     const calculatedMaxGas = this.percentIncrease(
       defaultedOptions.maxGas.base ||
-        (await this.estimateGasRetryableTicket(
+        (await this.estimateRetryableTicket(
           sender,
           utils
             .parseEther('1')
@@ -193,7 +222,7 @@ export class L1ToL2MessageGasEstimator {
           sender,
           constants.Zero,
           maxGasPriceBid,
-          callDataHex
+          l2CallDataHex
         )),
       defaultedOptions.maxGas.percentIncrease
     )

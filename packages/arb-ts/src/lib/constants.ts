@@ -40,3 +40,9 @@ export const ADDRESS_ALIAS_OFFSET = '0x1111000000000000000000000000000000001111'
  * Address of the gateway a token will be assigned to if it is disabled
  */
 export const DISABLED_GATEWAY = '0x0000000000000000000000000000000000000001'
+
+/**
+ * If a custom token is enabled for arbitrum it will implement a function called
+ * isArbitrumEnabled which returns this value. Intger: 0xa4b1
+ */
+export const CUSTOM_TOKEN_IS_ENABLED = 42161

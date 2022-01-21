@@ -41,7 +41,7 @@ const expectIgnoreCase = (expected: string, actual: string) => {
 
 describe('sanity checks (read-only)', async () => {
   it('standard gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = instantiateBridge()
     const l1Gateway = await L1ERC20Gateway__factory.connect(
       l2Network.tokenBridge.l1ERC20Gateway,
       l1Signer
@@ -73,7 +73,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('custom gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = instantiateBridge()
     const l1Gateway = await L1CustomGateway__factory.connect(
       l2Network.tokenBridge.l1CustomGateway,
       l1Signer
@@ -100,8 +100,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('customtoken gateway properly set', async () => {
-    const { l2Network, tokenBridger, l1Signer, l2Signer } =
-      await instantiateBridge()
+    const { l2Network, tokenBridger, l1Signer, l2Signer } = instantiateBridge()
 
     const l1customGatewayAddress = await tokenBridger.getL1GatewayAddress(
       existentTestCustomToken,
@@ -131,7 +130,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('tokens properly set on gateway routers', async () => {
-    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = instantiateBridge()
 
     const {
       l1ERC20Gateway,
@@ -168,7 +167,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('weth gateways gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = instantiateBridge()
 
     const l1Gateway = await L1WethGateway__factory.connect(
       l2Network.tokenBridge.l1WethGateway,
@@ -199,7 +198,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('aeWETh public vars properly set', async () => {
-    const { l2Signer, l2Network } = await instantiateBridge()
+    const { l2Signer, l2Network } = instantiateBridge()
 
     const aeWeth = AeWETH__factory.connect(
       l2Network.tokenBridge.l2Weth,
@@ -214,7 +213,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('l1 gateway router points to right gateways', async () => {
-    const { tokenBridger, l1Signer, l2Network } = await instantiateBridge()
+    const { tokenBridger, l1Signer, l2Network } = instantiateBridge()
 
     const gateway = await tokenBridger.getL1GatewayAddress(
       l2Network.tokenBridge.l1Weth,
@@ -225,8 +224,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
-    const { l1Signer, l2Signer, l2Network, tokenBridger } =
-      await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network, tokenBridger } = instantiateBridge()
     const erc20L2AddressAsPerL1 = await tokenBridger.getL2ERC20Address(
       existentTestERC20,
       l1Signer.provider!
