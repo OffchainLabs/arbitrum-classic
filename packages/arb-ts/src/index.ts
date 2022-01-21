@@ -44,3 +44,4 @@ export {
   getL2Network,
 } from './lib/utils/networks'
 export { getRawArbTransactionReceipt } from './lib/utils/lib'
+export * as abi from './lib/abi/index'
