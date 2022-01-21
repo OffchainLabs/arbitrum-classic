@@ -103,6 +103,8 @@ func startup() error {
 	initialL1Height := fs.Uint64("l1height", 0, "initial l1 height")
 	rollupStr := fs.String("rollup", "", "address of rollup contract")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
+	tracingEnable := fs.Bool("node.rpc.tracing.enable", false, "enable tracing api")
+	tracingNamespace := fs.String("node.rpc.tracing.namespace", "arbtrace", "rpc namespace for tracing api")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -348,6 +350,9 @@ func startup() error {
 
 	rpcConfig := web3.DefaultConfig
 	rpcConfig.Mode = web3.GanacheMode
+	rpcConfig.Tracing.Enable = *tracingEnable
+	rpcConfig.Tracing.Namespace = *tracingNamespace
+
 	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, rpcConfig, mon.CoreConfig, plugins, nil)
 	if err != nil {
 		return err
