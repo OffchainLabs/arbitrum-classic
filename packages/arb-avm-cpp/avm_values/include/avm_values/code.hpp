@@ -451,11 +451,11 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
 
     std::shared_ptr<Code> parent;
 
-    // Warning: acquires the mutex.
+    // Requires the mutex is held.
     // Gives no guarantee that parent actually contains segment_id,
     // only that the parent should be asked for the segment.
     bool segmentInParent(uint64_t segment_id) const {
-        std::shared_lock<std::shared_mutex> lock(mutex);
+        assert(!mutex.try_lock() && "mutex not held in segmentInParent call");
         return segment_id < impl->first_segment ||
                (segment_id < impl->nextSegmentNum() &&
                 impl->getSegment(segment_id) == nullptr);
@@ -518,18 +518,20 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     }
 
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const override {
+        std::shared_lock<std::shared_mutex> lock(mutex);
         if (segmentInParent(segment_num)) {
+            lock.unlock();
             return parent->loadCodeSegment(segment_num);
         }
-        const std::shared_lock<std::shared_mutex> lock(mutex);
         return loadCodeSegmentImpl(segment_num);
     }
 
     CodePoint loadCodePoint(const CodePointRef& ref) const override {
+        std::shared_lock<std::shared_mutex> lock(mutex);
         if (segmentInParent(ref.segment)) {
+            lock.unlock();
             return parent->loadCodePoint(ref);
         }
-        const std::shared_lock<std::shared_mutex> lock(mutex);
         return loadCodePointImpl(ref);
     }
 
@@ -539,13 +541,14 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     }
 
     CodePointStub addOperation(const CodePointRef& ref, Operation op) override {
-        std::unique_lock<std::shared_mutex> lock(mutex, std::defer_lock);
+        const std::unique_lock<std::shared_mutex> lock(mutex);
         if (segmentInParent(ref.segment)) {
+            // We don't unlock here as we need the lock if
+            // parent->tryAddOperation fails
             auto add_var = parent->tryAddOperation(ref, std::move(op));
             if (holds_alternative<CodePointStub>(add_var)) {
                 return get<CodePointStub>(add_var);
             } else {
-                lock.lock();
                 auto& added = std::get<CodeSegmentData>(add_var);
                 auto new_segment = std::make_shared<UnsafeCodeSegment>(
                     impl->nextSegmentNum(), std::move(added));
@@ -554,25 +557,26 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
                 return stub;
             }
         }
-        lock.lock();
         return addOperationImpl(ref, std::move(op));
     }
 
     std::variant<CodePointStub, CodeSegmentData> tryAddOperation(
         const CodePointRef& ref,
         Operation op) override {
+        std::shared_lock<std::shared_mutex> lock(mutex);
         if (segmentInParent(ref.segment)) {
+            lock.unlock();
             return parent->tryAddOperation(ref, std::move(op));
         }
-        const std::unique_lock<std::shared_mutex> lock(mutex);
         return tryAddOperationImpl(ref, std::move(op));
     }
 
     bool containsSegment(uint64_t segment_id) const override {
+        std::shared_lock<std::shared_mutex> lock(mutex);
         if (segmentInParent(segment_id)) {
+            lock.unlock();
             return parent->containsSegment(segment_id);
         }
-        const std::shared_lock<std::shared_mutex> lock(mutex);
         return segment_id < impl->nextSegmentNum();
     }
 
