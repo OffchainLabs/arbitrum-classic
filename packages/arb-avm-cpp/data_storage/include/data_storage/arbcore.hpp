@@ -211,12 +211,14 @@ class ArbCore {
                                          ValueCache& value_cache);
     rocksdb::Status advanceCoreToTarget(const MachineOutput& target_output,
                                         bool cache_sideloads);
-    std::variant<MachineOutput, rocksdb::Status> reorgToFirstMatchingCheckpoint(
+    std::variant<CheckpointVariant, rocksdb::Status>
+    reorgToLastMatchingCheckpoint(
         const std::function<bool(const MachineOutput&)>& check_output,
         ReadWriteTransaction& tx,
         std::unique_ptr<rocksdb::Iterator>& checkpoint_it);
     std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
-    reorgToFirstMatchingMachineCheckpoint(
+    reorgToLastMatchingMachineCheckpoint(
+        const CheckpointVariant& last_matching_database_checkpoint,
         const std::function<bool(const MachineOutput&)>& check_output,
         ReadWriteTransaction& tx,
         std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
@@ -250,6 +252,11 @@ class ArbCore {
     rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
     void deleteCheckpoint(ReadWriteTransaction& tx,
                           const CheckpointVariant& checkpoint_variant);
+    std::unique_ptr<MachineThread> getMachineThreadFromCheckpoint(
+        const CheckpointVariant& current_database_checkpoint,
+        const std::function<bool(const MachineOutput&)>& check_output,
+        ReadWriteTransaction& tx,
+        ValueCache& value_cache);
 
    public:
     // Useful for unit tests
@@ -473,6 +480,8 @@ class ArbCore {
         const std::chrono::time_point<std::chrono::steady_clock>& begin_time,
         const std::chrono::time_point<std::chrono::steady_clock>& end_time,
         const std::string& message) const;
+    void printMachineOutputInfo(const std::string& msg,
+                                MachineOutput& machine_output) const;
 };
 
 uint64_t seconds_since_epoch();
