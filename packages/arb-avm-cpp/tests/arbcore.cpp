@@ -405,7 +405,8 @@ TEST_CASE("ArbCore duplicate code segments") {
     std::vector<InboxMessage> messages;
     messages.reserve(CHECKPOINTS);
     for (int i = 0; i < CHECKPOINTS; i++) {
-        messages.push_back(InboxMessage(0, {}, 0, 0, i, 0, {}));
+        messages.push_back(
+            InboxMessage(0, {}, 0, std::time(nullptr), i, 0, {}));
     }
     auto batch = buildBatch(messages);
     REQUIRE(batch.size() == CHECKPOINTS);
@@ -481,8 +482,7 @@ TEST_CASE("ArbCore code segment reorg") {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    arbCore->triggerSaveRocksdbCheckpoint();  // save a checkpoint at the next
-                                              // sideload
+    arbCore->triggerSaveCheckpoint();  // save a checkpoint at the next sideload
 
     // Deliver the second message
     rawSeqBatchItems[0] = serializeForCore(batch[1]);
