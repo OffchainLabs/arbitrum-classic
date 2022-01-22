@@ -499,9 +499,9 @@ rocksdb::Status ArbCore::triggerSaveCheckpoint() {
     return save_checkpoint_status;
 }
 
-// triggerSaveRocksdbCheckpoint is used to save a copy of current database
-// without having to stop program
-void ArbCore::triggerSaveRocksdbCheckpoint() {
+// triggerSaveFullRocksdbCheckpointToDisk is used to save a copy of current
+// database without having to stop program
+void ArbCore::triggerSaveFullRocksdbCheckpointToDisk() {
     trigger_save_rocksdb_checkpoint = true;
 }
 
