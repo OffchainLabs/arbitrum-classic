@@ -463,7 +463,8 @@ TEST_CASE("ArbCore code segment reorg") {
 
     std::vector<InboxMessage> messages;
     for (size_t i = 0; i < 2; i++) {
-        messages.push_back(InboxMessage(0, {}, 0, 0, i, 0, {}));
+        messages.push_back(
+            InboxMessage(0, {}, 0, std::time(nullptr), i, 0, {}));
     }
     auto batch = buildBatch(messages);
     REQUIRE(batch.size() == 2);
