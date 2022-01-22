@@ -39,6 +39,6 @@ TEST_CASE("CheckpointedMachine tests") {
 
         REQUIRE(arbcore->triggerSaveCheckpoint().ok());
         REQUIRE(!arbcore->isCheckpointsEmpty(tx));
-        REQUIRE(arbcore->maxCheckpointGas() == 0);
+        REQUIRE(arbcore->maxCheckpointGas() == 23);
     }
 }
