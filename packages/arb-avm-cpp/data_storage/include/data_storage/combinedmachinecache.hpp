@@ -77,10 +77,6 @@ class CombinedMachineCache {
     [[nodiscard]] uint256_t currentTimeExpired();
 
    private:
-    std::optional<std::reference_wrapper<const Machine>> allCachedAtOrBeforeGas(
-        uint256_t& gas_used);
-    std::optional<std::reference_wrapper<const Machine>> allCachedFindMatching(
-        const std::function<bool(const MachineOutput&)>& check_output);
     void checkLastMachine(uint256_t& arb_gas_used);
     CacheResultStruct findBestMachine(
         std::optional<uint256_t> current_gas_used,

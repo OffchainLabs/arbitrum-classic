@@ -76,29 +76,6 @@ size_t CombinedMachineCache::timedSize() {
 }
 
 std::optional<std::reference_wrapper<const Machine>>
-CombinedMachineCache::allCachedAtOrBeforeGas(uint256_t& gas_used) {
-    auto basic_it = basic.atOrBeforeGas(gas_used);
-    auto lru_it = lru.atOrBeforeGas(gas_used);
-    auto timed_it = timed.atOrBeforeGas(gas_used);
-
-    auto check_output = [&](const MachineOutput& output) {
-        return output.arb_gas_used <= gas_used;
-    };
-
-    return getFirstMatch(check_output, basic_it, lru_it, timed_it);
-}
-
-std::optional<std::reference_wrapper<const Machine>>
-CombinedMachineCache::allCachedFindMatching(
-    const std::function<bool(const MachineOutput&)>& check_output) {
-    auto basic_it = basic.findMatching(check_output);
-    auto lru_it = lru.findMatching(check_output);
-    auto timed_it = timed.findMatching(check_output);
-
-    return getFirstMatch(check_output, basic_it, lru_it, timed_it);
-}
-
-std::optional<std::reference_wrapper<const Machine>>
 CombinedMachineCache::getFirstMatch(
     const std::function<bool(const MachineOutput&)>& check_output,
     std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
@@ -159,7 +136,16 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
     std::optional<uint256_t> existing_gas_used,
     std::optional<uint256_t> database_gas,
     bool use_max_execution) {
-    auto cache_machine = allCachedAtOrBeforeGas(gas_used);
+    auto basic_it = basic.atOrBeforeGas(gas_used);
+    auto lru_it = lru.atOrBeforeGas(gas_used);
+    auto timed_it = timed.atOrBeforeGas(gas_used);
+
+    auto check_output = [&](const MachineOutput& output) {
+        return output.arb_gas_used <= gas_used;
+    };
+
+    auto cache_machine =
+        getFirstMatch(check_output, basic_it, lru_it, timed_it);
 
     return findBestMachine(gas_used, cache_machine, existing_gas_used,
                            database_gas, use_max_execution);
@@ -170,7 +156,12 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::findFirstMatching(
     std::optional<uint256_t> existing_gas_used,
     std::optional<uint256_t> database_gas,
     bool use_max_execution) {
-    auto cache_machine = allCachedFindMatching(check_output);
+    auto basic_it = basic.findMatching(check_output);
+    auto lru_it = lru.findMatching(check_output);
+    auto timed_it = timed.findMatching(check_output);
+
+    auto cache_machine =
+        getFirstMatch(check_output, basic_it, lru_it, timed_it);
 
     return findBestMachine(std::nullopt, cache_machine, existing_gas_used,
                            database_gas, use_max_execution);

@@ -55,6 +55,9 @@ BasicMachineCache::findMatching(
     for (auto rit = cache.crbegin(); rit != cache.crend(); rit++) {
         if (check_output(rit->second->machine_state.output)) {
             auto it = rit.base();
+
+            // The reverse_iterator::base() method returns the element after
+            // the current element, so need to go back one.
             it--;
             return it;
         }
