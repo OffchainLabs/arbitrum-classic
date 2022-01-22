@@ -1710,10 +1710,8 @@ void ArbCore::operator()() {
                 save_checkpoint = false;
             }
 
-            if ((core_machine->status() != MachineThread::MACHINE_SUCCESS) &&
-                (!machineIdle() || message_data_status != MESSAGES_READY)) {
-                // Machine is already running or no new messages, so sleep for a
-                // short while
+            if (machine_idle && message_data_status != MESSAGES_READY) {
+                // Machine blocked and no new messages, so sleep for a bit
                 std::this_thread::sleep_for(std::chrono::milliseconds(
                     coreConfig.idle_sleep_milliseconds));
             }
@@ -1767,7 +1765,8 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
         return false;
     }
 
-    if (!messages_result.data.empty()) {
+    if (std::holds_alternative<NotBlocked>(
+            core_machine->isBlocked(!messages_result.data.empty()))) {
         execConfig.inbox_messages = messages_result.data;
 
         auto success = core_machine->runMachine(execConfig, asynchronous);
