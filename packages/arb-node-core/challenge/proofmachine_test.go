@@ -111,9 +111,10 @@ func TestValidateProof(t *testing.T) {
 				errors := proofChecker.CheckProof(proof)
 				if len(errors) > 0 {
 					t.Logf("error checking proof for opcode 0x%x", proof.Proof[0])
-				}
-				for _, err := range proofChecker.CheckProof(proof) {
-					t.Error(err)
+
+					for _, err := range errors {
+						t.Error(err)
+					}
 				}
 			}
 		})
