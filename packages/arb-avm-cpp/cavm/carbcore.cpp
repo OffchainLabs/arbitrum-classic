@@ -53,7 +53,7 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
 
 void arbCoreSaveRocksdbCheckpoint(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    arb_core->triggerSaveRocksdbCheckpoint();
+    arb_core->triggerSaveFullRocksdbCheckpointToDisk();
 }
 
 void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr) {

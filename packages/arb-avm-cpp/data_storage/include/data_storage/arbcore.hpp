@@ -241,7 +241,7 @@ class ArbCore {
 
    public:
     // To trigger saving database copy
-    void triggerSaveRocksdbCheckpoint();
+    void triggerSaveFullRocksdbCheckpointToDisk();
 
    private:
     template <class T>
