@@ -16,6 +16,12 @@
 
 #include "helper.hpp"
 
+uint64_t getCurrentTimestamp() {
+    return std::chrono::duration_cast<std::chrono::seconds>(
+               std::chrono::system_clock::now().time_since_epoch())
+        .count();
+}
+
 Machine getComplexMachine() {
     auto core_code = std::make_shared<CoreCode>();
     auto code = std::make_shared<RunningCode>(core_code);

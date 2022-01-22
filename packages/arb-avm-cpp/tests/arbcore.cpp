@@ -406,7 +406,7 @@ TEST_CASE("ArbCore duplicate code segments") {
     messages.reserve(CHECKPOINTS);
     for (int i = 0; i < CHECKPOINTS; i++) {
         messages.push_back(
-            InboxMessage(0, {}, 0, std::time(nullptr), i, 0, {}));
+            InboxMessage(0, {}, 0, getCurrentTimestamp(), i, 0, {}));
     }
     auto batch = buildBatch(messages);
     REQUIRE(batch.size() == CHECKPOINTS);
@@ -465,7 +465,7 @@ TEST_CASE("ArbCore code segment reorg") {
     std::vector<InboxMessage> messages;
     for (size_t i = 0; i < 2; i++) {
         messages.push_back(
-            InboxMessage(0, {}, 0, std::time(nullptr), i, 0, {}));
+            InboxMessage(0, {}, 0, getCurrentTimestamp(), i, 0, {}));
     }
     auto batch = buildBatch(messages);
     REQUIRE(batch.size() == 2);

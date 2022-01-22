@@ -101,5 +101,8 @@ uint256_t TimedMachineCache::expiredTimestamp() {
 }
 
 uint256_t TimedMachineCache::currentTimeExpired() const {
-    return std::time(nullptr) - expiration_seconds;
+    return std::chrono::duration_cast<std::chrono::seconds>(
+               std::chrono::system_clock::now().time_since_epoch())
+               .count() -
+           expiration_seconds;
 }

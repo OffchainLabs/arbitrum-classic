@@ -43,7 +43,7 @@ TEST_CASE("TimedMachineCache add") {
     // Test that non-expired block is added and expires blocks that are too old
     auto valid_machine = std::make_unique<Machine>(getComplexMachine());
     valid_machine->machine_state.output.last_inbox_timestamp =
-        std::time(nullptr);
+        getCurrentTimestamp();
     valid_machine->machine_state.output.arb_gas_used = 3;
     cache.add(std::move(valid_machine));
     REQUIRE(cache.size() == 1);
@@ -81,8 +81,10 @@ TEST_CASE("TimedMachineCache get") {
     auto gas2a = machine2a->machine_state.output.arb_gas_used;
     REQUIRE(gas1a != gas2a);
 
-    machine1a->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine2a->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine1a->machine_state.output.last_inbox_timestamp =
+        getCurrentTimestamp();
+    machine2a->machine_state.output.last_inbox_timestamp =
+        getCurrentTimestamp();
     cache.add(std::move(machine1a));
     cache.add(std::move(machine2a));
     REQUIRE(cache.size() == 2);
@@ -136,10 +138,10 @@ TEST_CASE("TimedMachineCache reorg") {
     machine1->machine_state.output.arb_gas_used = 1;
     machine2->machine_state.output.arb_gas_used = 2;
     machine3->machine_state.output.arb_gas_used = 3;
-    machine0->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine1->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine2->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine3->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine0->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
+    machine1->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
+    machine2->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
+    machine3->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
     cache.add(std::move(machine0));
     cache.add(std::move(machine1));
     cache.add(std::move(machine2));
@@ -161,9 +163,9 @@ TEST_CASE("TimedMachineCache reorg") {
     machine4->machine_state.output.arb_gas_used = 40;
     machine5->machine_state.output.arb_gas_used = 42;
     machine6->machine_state.output.arb_gas_used = 43;
-    machine4->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine5->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine6->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine4->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
+    machine5->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
+    machine6->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
     cache.add(std::move(machine4));
     cache.add(std::move(machine5));
     cache.add(std::move(machine6));
@@ -183,8 +185,8 @@ TEST_CASE("TimedMachineCache reorg") {
 
     machine7->machine_state.output.arb_gas_used = 39;
     machine8->machine_state.output.arb_gas_used = 40;
-    machine7->machine_state.output.last_inbox_timestamp = std::time(nullptr);
-    machine8->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine7->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
+    machine8->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
     cache.add(std::move(machine7));
     cache.add(std::move(machine8));
     REQUIRE(cache.size() == 2);
@@ -192,7 +194,7 @@ TEST_CASE("TimedMachineCache reorg") {
     // Older blocks are fine as long as the timestamp isn't too old
     machine9->machine_state.output.arb_gas_used = 30;
     machine9->machine_state.output.last_inbox_timestamp =
-        std::time(nullptr) - 20;
+        getCurrentTimestamp() - 20;
     cache.add(std::move(machine9));
     REQUIRE(cache.size() == 3);
 }
@@ -226,11 +228,11 @@ TEST_CASE("TimedMachineCache expire") {
     machine1->machine_state.output.arb_gas_used = 1;
     machine2->machine_state.output.arb_gas_used = 2;
     machine0->machine_state.output.last_inbox_timestamp =
-        std::time(nullptr) - 1;
+        getCurrentTimestamp() - 1;
     machine1->machine_state.output.last_inbox_timestamp =
-        std::time(nullptr) - 1;
+        getCurrentTimestamp() - 1;
     machine2->machine_state.output.last_inbox_timestamp =
-        std::time(nullptr) - 1;
+        getCurrentTimestamp() - 1;
     cache.add(std::move(machine0));
     cache.add(std::move(machine1));
     cache.add(std::move(machine2));
@@ -241,7 +243,7 @@ TEST_CASE("TimedMachineCache expire") {
 
     // Add one more record
     machine3->machine_state.output.arb_gas_used = 3;
-    machine3->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine3->machine_state.output.last_inbox_timestamp = getCurrentTimestamp();
     cache.add(std::move(machine3));
     REQUIRE(cache.size() == 1);
 }
@@ -273,7 +275,7 @@ TEST_CASE("TimedMachineCache currentTimeExpired") {
 
     auto expired = cache.currentTimeExpired();
     REQUIRE(expired >=
-            std::time(nullptr) - timed_expire - expiration_fudge_factor);
+            getCurrentTimestamp() - timed_expire - expiration_fudge_factor);
     REQUIRE(expired <=
-            std::time(nullptr) - timed_expire + expiration_fudge_factor);
+            getCurrentTimestamp() - timed_expire + expiration_fudge_factor);
 }

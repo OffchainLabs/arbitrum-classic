@@ -69,7 +69,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     // Test that timed entry is added
     auto machine43 = std::make_unique<Machine>(getComplexMachine());
     machine43->machine_state.output.arb_gas_used = 43;
-    machine43->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine43->machine_state.output.last_inbox_timestamp =
+        getCurrentTimestamp();
     cache.timedAdd(std::move(machine43));
     REQUIRE(cache.timedSize() == 1);
     auto machine43a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
@@ -115,7 +116,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     cache.reorg(0);
     auto machine44 = std::make_unique<Machine>(getComplexMachine());
     machine44->machine_state.output.arb_gas_used = 44;
-    machine44->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine44->machine_state.output.last_inbox_timestamp =
+        getCurrentTimestamp();
     cache.lastAdd(std::move(machine44));
     auto machine44a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine44a.machine != nullptr);
@@ -124,7 +126,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     // Test that last last machine entry is added
     auto machine45 = std::make_unique<Machine>(getComplexMachine());
     machine45->machine_state.output.arb_gas_used = 45;
-    machine45->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine45->machine_state.output.last_inbox_timestamp =
+        getCurrentTimestamp();
     cache.lastAdd(std::move(machine45));
     auto machine45a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine45a.machine != nullptr);
@@ -136,7 +139,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     // Test that last and last last machine entry is removed appropriately
     auto machine46 = std::make_unique<Machine>(getComplexMachine());
     machine46->machine_state.output.arb_gas_used = 46;
-    machine46->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine46->machine_state.output.last_inbox_timestamp =
+        getCurrentTimestamp();
     cache.lruAdd(std::move(machine46));
     auto machine46a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine46a.machine != nullptr);
@@ -145,11 +149,13 @@ TEST_CASE("CombinedMachineCache add and get") {
     // Test that last entries are removed on reorg
     machine44 = std::make_unique<Machine>(getComplexMachine());
     machine44->machine_state.output.arb_gas_used = 44;
-    machine44->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine44->machine_state.output.last_inbox_timestamp =
+        getCurrentTimestamp();
     cache.lastAdd(std::move(machine44));
     machine45 = std::make_unique<Machine>(getComplexMachine());
     machine45->machine_state.output.arb_gas_used = 45;
-    machine45->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine45->machine_state.output.last_inbox_timestamp =
+        getCurrentTimestamp();
     cache.lastAdd(std::move(machine45));
     cache.reorg(0);
     machine46a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
@@ -180,7 +186,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     cache.lastAdd(std::move(machine41));
     machine42 = std::make_unique<Machine>(getComplexMachine());
     machine42->machine_state.output.arb_gas_used = 42;
-    machine42->machine_state.output.last_inbox_timestamp = std::time(nullptr);
+    machine42->machine_state.output.last_inbox_timestamp =
+        getCurrentTimestamp();
     cache.timedAdd(std::move(machine42));
     machine42a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine42a.machine != nullptr);
@@ -198,10 +205,10 @@ TEST_CASE("CombinedMachineCache currentTimeExpired") {
     auto expiration_fudge_factor = 10;
 
     auto expired = cache.currentTimeExpired();
-    REQUIRE(expired > std::time(nullptr) -
+    REQUIRE(expired > getCurrentTimestamp() -
                           coreConfig.timed_cache_expiration_seconds -
                           expiration_fudge_factor);
-    REQUIRE(expired < std::time(nullptr) -
+    REQUIRE(expired < getCurrentTimestamp() -
                           coreConfig.timed_cache_expiration_seconds +
                           expiration_fudge_factor);
 }

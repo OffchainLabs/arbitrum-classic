@@ -29,6 +29,8 @@ struct DBDeleter {
     ~DBDeleter() { boost::filesystem::remove_all(dbpath); }
 };
 
+uint64_t getCurrentTimestamp();
+
 Machine getComplexMachine();
 Machine getDefaultMachine();
 
