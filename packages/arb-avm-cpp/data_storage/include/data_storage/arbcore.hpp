@@ -217,7 +217,7 @@ class ArbCore {
         ReadWriteTransaction& tx,
         std::unique_ptr<rocksdb::Iterator>& checkpoint_it);
     std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
-    reorgToLastMatchingMachineCheckpoint(
+    loadLastMatchingMachine(
         const CheckpointVariant& last_matching_database_checkpoint,
         const std::function<bool(const MachineOutput&)>& check_output,
         ReadWriteTransaction& tx,

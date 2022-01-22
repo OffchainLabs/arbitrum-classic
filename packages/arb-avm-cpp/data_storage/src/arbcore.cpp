@@ -895,11 +895,11 @@ void ArbCore::printMachineOutputInfo(const std::string& msg,
               << "\n";
 }
 
-// reorgToLastMatchingMachineCheckpoint finds the first checkpoint
+// loadLastMatchingMachine finds the first checkpoint
 // that includes a machine and matches check_output, cleaning
 // up invalid checkpoints as needed.
 std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
-ArbCore::reorgToLastMatchingMachineCheckpoint(
+ArbCore::loadLastMatchingMachine(
     const CheckpointVariant& last_matching_database_checkpoint,
     const std::function<bool(const MachineOutput&)>& check_output,
     ReadWriteTransaction& tx,
@@ -910,10 +910,11 @@ ArbCore::reorgToLastMatchingMachineCheckpoint(
     if (last_machine_thread) {
         return last_machine_thread;
     }
+    // Skip last entry since it was just checked
+    checkpoint_it->Prev();
 
     while (checkpoint_it->Valid()) {
         // Load next entry from database
-        checkpoint_it->Prev();
         std::vector<unsigned char> checkpoint_vector(
             checkpoint_it->value().data(),
             checkpoint_it->value().data() + checkpoint_it->value().size());
@@ -925,6 +926,7 @@ ArbCore::reorgToLastMatchingMachineCheckpoint(
         if (current_machine_thread) {
             return current_machine_thread;
         }
+        checkpoint_it->Prev();
     }
     auto status = checkpoint_it->status();
     if (!status.ok()) {
@@ -949,7 +951,7 @@ std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
         // so delete checkpoint and keep looking
         printMachineOutputInfo(
             "Unexpected checkpoint encountered in "
-            "reorgToLastMatchingMachineCheckpoint",
+            "loadLastMatchingMachine",
             checkpoint.output);
         deleteCheckpoint(tx, current_database_checkpoint);
         assert(false);
@@ -970,7 +972,7 @@ std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
     } catch (const std::exception& e) {
         printMachineOutputInfo(
             "Exception loading machine for checkpoint in "
-            "reorgToLastMatchingMachineCheckpoint",
+            "loadLastMatchingMachine",
             checkpoint.output);
         std::cerr << "Exception message: " << e.what() << std::endl;
         assert(false);
@@ -1023,10 +1025,9 @@ rocksdb::Status ArbCore::reorgCheckpoints(
             std::get<CheckpointVariant>(output_or_status);
 
         // Get last valid checkpoint with machine from database
-        auto last_matching_machine_checkpoint =
-            reorgToLastMatchingMachineCheckpoint(
-                last_matching_database_checkpoint, check_output, tx,
-                checkpoint_it, value_cache);
+        auto last_matching_machine_checkpoint = loadLastMatchingMachine(
+            last_matching_database_checkpoint, check_output, tx, checkpoint_it,
+            value_cache);
         if (std::holds_alternative<rocksdb::Status>(
                 last_matching_machine_checkpoint)) {
             return std::get<rocksdb::Status>(last_matching_machine_checkpoint);
