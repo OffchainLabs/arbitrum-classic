@@ -1388,6 +1388,16 @@ void ArbCore::operator()() {
                 break;
             }
 
+            if (core_machine->status() != MachineThread::MACHINE_RUNNING &&
+                save_checkpoint) {
+                // Force checkpoint save for unit test purposes only when
+                // machine not running
+                ReadWriteTransaction tx(data_storage);
+                save_checkpoint_status = saveCheckpoint(tx);
+                tx.commit();
+                save_checkpoint = false;
+            }
+
             if (core_machine->status() == MachineThread::MACHINE_SUCCESS) {
                 std::chrono::time_point<std::chrono::steady_clock>
                     begin_machine_success_time;
@@ -1695,14 +1705,6 @@ void ArbCore::operator()() {
                     ReadTransaction tx(data_storage);
                     handleLogsCursorRequested(tx, i, cache);
                 }
-            }
-
-            if (save_checkpoint) {
-                // Force checkpoint save for unit test purposes
-                ReadWriteTransaction tx(data_storage);
-                save_checkpoint_status = saveCheckpoint(tx);
-                tx.commit();
-                save_checkpoint = false;
             }
 
             if (machine_idle && message_data_status != MESSAGES_READY) {
