@@ -195,7 +195,8 @@ class Code {
    public:
     virtual ~Code() = default;
 
-    [[nodiscard]] virtual SegmentsAndLock getSegmentsForCommit() const = 0;
+    // Returns mutable segments and a lock for the root CoreCode.
+    [[nodiscard]] virtual SegmentsAndLock getRootSegments() const = 0;
 
     [[nodiscard]] virtual uint64_t initialSegmentForChildCode() const = 0;
 
@@ -217,6 +218,13 @@ class Code {
     [[nodiscard]] virtual CodeSnapshot snapshot() const = 0;
 
     [[nodiscard]] virtual bool containsSegment(uint64_t segment_id) const = 0;
+
+    virtual void commitCodeToCore(
+        const std::map<uint64_t, uint64_t>& segment_counts) const = 0;
+
+    // Removes any segments colliding with the CoreCode,
+    // which should only happen after a reorg.
+    virtual void cleanupAfterReorg() = 0;
 };
 
 template <typename T>
@@ -313,6 +321,7 @@ struct CoreCodeImpl {
         return segments.at(segment_num);
     }
 
+    // Warning: increments next_segment_num, unlike RunningCode's nextSegmentNum
     uint64_t nextSegmentNum() { return next_segment_num++; }
 
     void storeSegment(std::shared_ptr<UnsafeCodeSegment> segment) {
@@ -332,7 +341,7 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
     explicit CoreCode(uint64_t next_segment_num_)
         : CodeBase<CoreCodeImpl>(next_segment_num_) {}
 
-    SegmentsAndLock getSegmentsForCommit() const override {
+    SegmentsAndLock getRootSegments() const override {
         auto lock = std::unique_lock<std::shared_mutex>(mutex);
         return SegmentsAndLock{&impl->segments, &impl->next_segment_num,
                                std::move(lock)};
@@ -409,6 +418,10 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
         const std::shared_lock<std::shared_mutex> lock(mutex);
         return {0, impl->segments.at(0)->size() - 1};
     }
+
+    void commitCodeToCore(const std::map<uint64_t, uint64_t>&) const override {}
+
+    void cleanupAfterReorg() override {}
 };
 
 struct RunningCodeImpl {
@@ -423,6 +436,7 @@ struct RunningCodeImpl {
         return segment_list.at(segment_num - first_segment);
     }
 
+    // Warning: doesn't increment, unlike CoreCode's nextSegmentNum
     [[nodiscard]] uint64_t nextSegmentNum() const {
         return first_segment + segment_list.size();
     }
@@ -437,29 +451,39 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
 
     std::shared_ptr<Code> parent;
 
+    // Requires the mutex is held.
+    // Gives no guarantee that parent actually contains segment_id,
+    // only that the parent should be asked for the segment.
+    bool segmentInParent(uint64_t segment_id) const {
+        assert(!mutex.try_lock() && "mutex not held in segmentInParent call");
+        return segment_id < impl->first_segment ||
+               (segment_id < impl->nextSegmentNum() &&
+                impl->getSegment(segment_id) == nullptr);
+    }
+
    public:
     explicit RunningCode(std::shared_ptr<Code> parent_)
         : CodeBase<RunningCodeImpl>(parent_->initialSegmentForChildCode()),
           parent(std::move(parent_)) {}
 
-    SegmentsAndLock getSegmentsForCommit() const override {
-        return parent->getSegmentsForCommit();
+    SegmentsAndLock getRootSegments() const override {
+        return parent->getRootSegments();
     }
 
-    void commitCodeToParent(
-        const std::map<uint64_t, uint64_t>& segment_counts) const {
+    void commitCodeToCore(
+        const std::map<uint64_t, uint64_t>& segment_counts) const override {
+        parent->commitCodeToCore(segment_counts);
         const std::shared_lock<std::shared_mutex> lock(mutex);
-        auto parent_segments = parent->getSegmentsForCommit();
+        auto root_segments = parent->getRootSegments();
         auto it = segment_counts.lower_bound(impl->first_segment);
-        auto end = segment_counts.end();
+        auto end = segment_counts.lower_bound(impl->nextSegmentNum());
         for (; it != end; ++it) {
-            // Skip segments not included here
-            if (it->first < impl->first_segment ||
-                it->first >= impl->first_segment + impl->segment_list.size()) {
+            auto segment = impl->getSegment(it->first);
+            if (segment == nullptr) {
                 continue;
             }
-            auto inserted = parent_segments.segments->insert(
-                std::make_pair(it->first, impl->getSegment(it->first)));
+            auto inserted = root_segments.segments->insert(
+                std::make_pair(it->first, segment));
             // Verify that the element didn't exist previously
             assert(inserted.second);
             if (!inserted.second) {
@@ -467,8 +491,8 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
                     "code segment id collision when filling in code");
             }
         }
-        if (impl->nextSegmentNum() > *parent_segments.next_segment_num) {
-            *parent_segments.next_segment_num = impl->nextSegmentNum();
+        if (impl->nextSegmentNum() > *root_segments.next_segment_num) {
+            *root_segments.next_segment_num = impl->nextSegmentNum();
         }
     }
 
@@ -483,6 +507,9 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
         auto snap = parent->snapshot();
         const std::shared_lock<std::shared_mutex> lock(mutex);
         for (const auto& segment : impl->segment_list) {
+            if (segment == nullptr) {
+                continue;
+            }
             snap.segments[segment->segmentID()] = {
                 segment, segment->size(), segment->data.cached_hashes.size()};
         }
@@ -491,18 +518,20 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     }
 
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const override {
-        if (segment_num < impl->first_segment) {
+        std::shared_lock<std::shared_mutex> lock(mutex);
+        if (segmentInParent(segment_num)) {
+            lock.unlock();
             return parent->loadCodeSegment(segment_num);
         }
-        const std::shared_lock<std::shared_mutex> lock(mutex);
         return loadCodeSegmentImpl(segment_num);
     }
 
     CodePoint loadCodePoint(const CodePointRef& ref) const override {
-        if (ref.segment < impl->first_segment) {
+        std::shared_lock<std::shared_mutex> lock(mutex);
+        if (segmentInParent(ref.segment)) {
+            lock.unlock();
             return parent->loadCodePoint(ref);
         }
-        const std::shared_lock<std::shared_mutex> lock(mutex);
         return loadCodePointImpl(ref);
     }
 
@@ -512,13 +541,14 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     }
 
     CodePointStub addOperation(const CodePointRef& ref, Operation op) override {
-        std::unique_lock<std::shared_mutex> lock(mutex, std::defer_lock);
-        if (ref.segment < impl->first_segment) {
+        const std::unique_lock<std::shared_mutex> lock(mutex);
+        if (segmentInParent(ref.segment)) {
+            // We don't unlock here as we need the lock if
+            // parent->tryAddOperation fails
             auto add_var = parent->tryAddOperation(ref, std::move(op));
             if (holds_alternative<CodePointStub>(add_var)) {
                 return get<CodePointStub>(add_var);
             } else {
-                lock.lock();
                 auto& added = std::get<CodeSegmentData>(add_var);
                 auto new_segment = std::make_shared<UnsafeCodeSegment>(
                     impl->nextSegmentNum(), std::move(added));
@@ -527,26 +557,40 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
                 return stub;
             }
         }
-        lock.lock();
         return addOperationImpl(ref, std::move(op));
     }
 
     std::variant<CodePointStub, CodeSegmentData> tryAddOperation(
         const CodePointRef& ref,
         Operation op) override {
-        if (ref.segment < impl->first_segment) {
+        std::shared_lock<std::shared_mutex> lock(mutex);
+        if (segmentInParent(ref.segment)) {
+            lock.unlock();
             return parent->tryAddOperation(ref, std::move(op));
         }
-        const std::unique_lock<std::shared_mutex> lock(mutex);
         return tryAddOperationImpl(ref, std::move(op));
     }
 
     bool containsSegment(uint64_t segment_id) const override {
-        if (segment_id < impl->first_segment) {
+        std::shared_lock<std::shared_mutex> lock(mutex);
+        if (segmentInParent(segment_id)) {
+            lock.unlock();
             return parent->containsSegment(segment_id);
         }
-        const std::shared_lock<std::shared_mutex> lock(mutex);
         return segment_id < impl->nextSegmentNum();
+    }
+
+    void cleanupAfterReorg() override {
+        parent->cleanupAfterReorg();
+        const std::shared_lock<std::shared_mutex> lock(mutex);
+        auto root_segments = parent->getRootSegments();
+        for (size_t i = 0; i < impl->segment_list.size(); i++) {
+            auto segment_id = impl->first_segment + i;
+            if (root_segments.segments->find(segment_id) !=
+                root_segments.segments->end()) {
+                impl->segment_list[i] = nullptr;
+            }
+        }
     }
 };
 

@@ -520,6 +520,7 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     }
 
     saveCodeToCore(*core_machine, save_res.second);
+    core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
 
     std::vector<unsigned char> key;
     marshal_uint256_t(state.output.arb_gas_used, key);
@@ -732,6 +733,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
     while (core_machine->machine_state.output.arb_gas_used <
            target_output.arb_gas_used) {
         // Need to run machine until caught up with current checkpoint
+        auto last_gas_used = core_machine->machine_state.output.arb_gas_used;
         MachineExecutionConfig execConfig;
         execConfig.stop_on_sideload = cache_sideloads;
         execConfig.stop_on_breakpoint = false;
@@ -741,9 +743,6 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         uint256_t target_messages = target_output.fully_processed_inbox.count;
         uint256_t have_messages =
             core_machine->machine_state.output.fully_processed_inbox.count;
-        if (target_messages <= have_messages) {
-            break;
-        }
         uint256_t num_messages = target_messages - have_messages;
         if (uint256_t(num_messages) > coreConfig.message_process_count) {
             num_messages = coreConfig.message_process_count;
@@ -782,6 +781,11 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
                 std::cerr << "Error catching up: " << core_error_string << "\n";
                 return rocksdb::Status::Aborted();
             }
+        }
+
+        if (last_gas_used == core_machine->machine_state.output.arb_gas_used) {
+            // No forward progress made
+            break;
         }
     }
 
@@ -1080,6 +1084,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     }
 
     core_machine = std::move(setup);
+    core_machine->machine_state.code->cleanupAfterReorg();
     auto& output = core_machine->machine_state.output;
 
     // Remove invalid cache entries after selected_machine_output
