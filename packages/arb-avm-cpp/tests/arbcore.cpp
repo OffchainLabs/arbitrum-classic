@@ -453,6 +453,7 @@ TEST_CASE("ArbCore code segment reorg") {
     DBDeleter deleter;
 
     ArbCoreConfig coreConfig{};
+    coreConfig.checkpoint_gas_frequency = 100;
     ArbStorage storage(dbpath, coreConfig);
     REQUIRE(storage
                 .initialize(std::string{machine_test_cases_path} +
@@ -483,8 +484,6 @@ TEST_CASE("ArbCore code segment reorg") {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    arbCore->triggerSaveCheckpoint();  // save a checkpoint at the next sideload
-
     // Deliver the second message
     rawSeqBatchItems[0] = serializeForCore(batch[1]);
     REQUIRE(arbCore->deliverMessages(1, inbox_acc, rawSeqBatchItems,
@@ -512,6 +511,7 @@ TEST_CASE("ArbCore code segment reorg") {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
+    // Redeliver the second message
     REQUIRE(arbCore->deliverMessages(1, inbox_acc, rawSeqBatchItems,
                                      std::vector<std::vector<unsigned char>>(),
                                      std::nullopt));

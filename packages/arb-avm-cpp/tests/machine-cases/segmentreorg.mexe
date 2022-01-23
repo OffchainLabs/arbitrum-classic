@@ -11,9 +11,6 @@
     {"opcode": 123, "immediate": {"Int": "1"}},
     {"opcode":  48, "immediate": null},
 
-    {"opcode":  59, "immediate": null, "_comment": "Extend the code segment"},
-    {"opcode": 120, "immediate": {"Int": "73"}},
-
     {"opcode":  59, "immediate": null, "_comment": "Read an inbox message and sideload to force a checkpoint"},
     {"opcode": 114, "immediate": null},
     {"opcode":  48, "immediate": null},
