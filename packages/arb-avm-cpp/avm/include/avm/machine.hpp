@@ -44,6 +44,7 @@ class MachineExecutionConfig {
     std::vector<MachineMessage> inbox_messages;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload;
+    bool stop_on_breakpoint;
 
     MachineExecutionConfig();
 

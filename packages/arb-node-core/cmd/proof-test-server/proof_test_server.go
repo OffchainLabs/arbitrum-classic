@@ -127,9 +127,10 @@ func main() {
 		if len(proofErrors) > 0 {
 			retByte = 1
 			fmt.Fprintln(os.Stderr, "Error verifying proof:")
-		}
-		for _, err := range proofChecker.CheckProof(proof) {
-			fmt.Fprintln(os.Stderr, err)
+
+			for _, err := range proofErrors {
+				fmt.Fprintln(os.Stderr, err)
+			}
 		}
 		_, err = resultPipe.Write([]byte{retByte})
 		handleFatalError(err)

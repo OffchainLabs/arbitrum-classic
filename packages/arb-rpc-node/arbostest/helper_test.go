@@ -316,7 +316,7 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 				Timestamp: big.NewInt(0),
 			},
 		)
-		_, _, _, err = mach.ExecuteAssertionAdvanced(ctx, 10000000000, false, []inbox.InboxMessage{msg}, nil, true)
+		_, _, _, err = mach.ExecuteAssertionAdvanced(ctx, 10000000000, false, []inbox.InboxMessage{msg}, nil, true, false)
 		test.FailIfError(t, err)
 		snap, err = snapshot.NewSnapshot(ctx, mach.Clone(), lastMessage.ChainTime, seq)
 		test.FailIfError(t, err)

@@ -882,6 +882,8 @@ TEST_CASE("OPCODE: XSET opcode is correct") {
 TEST_CASE("OPCODE: BREAKPOINT opcode is correct") {
     SECTION("break") {
         MachineState m;
+        m.context.first_instruction = false;
+        m.context.stop_on_breakpoint = true;
         auto blockReason = m.runOp(OpCode::BREAKPOINT);
         REQUIRE(m.state == Status::Extensive);
         REQUIRE(std::get_if<BreakpointBlocked>(&blockReason) != nullptr);

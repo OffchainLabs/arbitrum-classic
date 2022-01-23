@@ -36,9 +36,13 @@ TEST_CASE("CheckpointedMachine tests") {
         REQUIRE(arbcore->initialized());
         REQUIRE(arbcore->startThread());
         REQUIRE(arbcore->maxCheckpointGas() == 0);
+        while (arbcore->getLastMachineOutput().arb_gas_used == 0) {
+            // Wait for machine to do first execution
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
 
         REQUIRE(arbcore->triggerSaveCheckpoint().ok());
         REQUIRE(!arbcore->isCheckpointsEmpty(tx));
-        REQUIRE(arbcore->maxCheckpointGas() == 0);
+        REQUIRE(arbcore->maxCheckpointGas() == 23);
     }
 }
