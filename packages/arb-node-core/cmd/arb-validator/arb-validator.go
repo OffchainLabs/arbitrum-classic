@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"io/ioutil"
 	golog "log"
 	"net/http"
@@ -36,6 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
@@ -97,7 +97,7 @@ func startup() error {
 	}
 
 	if config.Metadata {
-		storage, err := cmachine.NewArbStorage(config.Persistent.DatabasePath, &config.Core)
+		storage, err := cmachine.NewArbStorage(config.GetValidatorDatabasePath(), &config.Core)
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func startup() error {
 		}
 	}
 
-	mon, err := monitor.NewMonitor(config.Persistent.DatabasePath, config.Rollup.Machine.Filename, &config.Core)
+	mon, err := monitor.NewMonitor(config.GetValidatorDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}

@@ -239,7 +239,6 @@ type NodeCache struct {
 
 type Persistent struct {
 	Chain        string `koanf:"chain"`
-	DatabasePath string `koanf:"database-path"`
 	GlobalConfig string `koanf:"global-config"`
 }
 
@@ -550,7 +549,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Uint64("l1.chain-id", 0, "if set other than 0, will be used to validate database and L1 connection")
 
 	f.String("persistent.chain", "", "path that chain specific state is located")
-	f.String("persistent.database-path", defaultDatabasePathname, "path to save database in")
 	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
@@ -680,11 +678,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	if len(out.Rollup.Machine.Filename) == 0 {
 		// Machine not provided, so use default
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
-	}
-
-	// Make database directory relative to persistent storage directory if not already absolute
-	if !filepath.IsAbs(out.Persistent.DatabasePath) {
-		out.Persistent.DatabasePath = path.Join(out.Persistent.Chain, out.Persistent.DatabasePath)
 	}
 
 	// Make rocksdb backup directory relative to persistent storage directory if not already absolute

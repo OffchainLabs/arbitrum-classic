@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	golog "log"
 	"math/big"
 	"net/http"
@@ -35,6 +34,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
@@ -111,7 +111,7 @@ func startup() error {
 	}
 
 	if config.Metadata {
-		storage, err := cmachine.NewArbStorage(config.Persistent.DatabasePath, &config.Core)
+		storage, err := cmachine.NewArbStorage(config.GetNodeDatabasePath(), &config.Core)
 		if err != nil {
 			return err
 		}
@@ -206,7 +206,7 @@ func startup() error {
 		Int64("fromBlock", config.Rollup.FromBlock).
 		Msg("Launching arbitrum node")
 
-	mon, err := monitor.NewMonitor(config.Persistent.DatabasePath, config.Rollup.Machine.Filename, &config.Core)
+	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
