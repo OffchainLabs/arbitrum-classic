@@ -202,6 +202,13 @@ void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
     config->stop_on_sideload = stop_on_sideload;
 }
 
+void machineExecutionConfigSetStopOnBreakpoint(CMachineExecutionConfig* c,
+                                               int stop_on_breakpoint) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->stop_on_breakpoint = stop_on_breakpoint;
+}
+
 RawAssertionResult executeAssertion(CMachine* m,
                                     const CMachineExecutionConfig* c) {
     assert(m);
