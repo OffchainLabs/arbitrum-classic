@@ -237,6 +237,7 @@ func (s *Snapshot) EstimateRetryableGas(ctx context.Context, msg message.Retryab
 		nil,
 		[]inbox.InboxMessage{inboxMsg2, inboxMsg1},
 		true,
+		false,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -538,7 +539,7 @@ func (s *Snapshot) GetPricesInWei(ctx context.Context) ([6]*big.Int, error) {
 }
 
 func runTxUnchecked(ctx context.Context, mach machine.Machine, msg inbox.InboxMessage, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
-	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(ctx, maxAVMGas, false, nil, []inbox.InboxMessage{msg}, true)
+	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(ctx, maxAVMGas, false, nil, []inbox.InboxMessage{msg}, true, false)
 	if err != nil {
 		return nil, nil, err
 	}

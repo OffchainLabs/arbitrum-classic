@@ -43,7 +43,7 @@ type Machine interface {
 	IsBlocked(newMessages bool) BlockReason
 
 	ExecuteAssertion(ctx context.Context, maxGas uint64, goOverGas bool, messages []inbox.InboxMessage) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
-	ExecuteAssertionAdvanced(ctx context.Context, maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, sideloads []inbox.InboxMessage, stopOnSideload bool) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
+	ExecuteAssertionAdvanced(ctx context.Context, maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, sideloads []inbox.InboxMessage, stopOnSideload bool, stopOnBreakpoint bool) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
 
 	MarshalForProof() ([]byte, []byte, error)
 

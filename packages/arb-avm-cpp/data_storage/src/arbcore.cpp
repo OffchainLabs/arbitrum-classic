@@ -735,6 +735,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         auto last_gas_used = core_machine->machine_state.output.arb_gas_used;
         MachineExecutionConfig execConfig;
         execConfig.stop_on_sideload = cache_sideloads;
+        execConfig.stop_on_breakpoint = false;
         execConfig.max_gas = target_output.arb_gas_used;
 
         // Add messages and run machine
@@ -1291,6 +1292,7 @@ void ArbCore::operator()() {
     ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
+    execConfig.stop_on_breakpoint = false;
     uint64_t next_rocksdb_save_timestamp = 0;
     std::filesystem::path save_rocksdb_path(coreConfig.database_save_path);
     auto begin_time = std::chrono::steady_clock::now();
@@ -1387,6 +1389,16 @@ void ArbCore::operator()() {
                 std::cerr << "AVM machine stopped with error: "
                           << core_error_string << "\n";
                 break;
+            }
+
+            if (core_machine->status() != MachineThread::MACHINE_RUNNING &&
+                save_checkpoint) {
+                // Force checkpoint save for unit test purposes only when
+                // machine not running
+                ReadWriteTransaction tx(data_storage);
+                save_checkpoint_status = saveCheckpoint(tx);
+                tx.commit();
+                save_checkpoint = false;
             }
 
             if (core_machine->status() == MachineThread::MACHINE_SUCCESS) {
@@ -1700,14 +1712,6 @@ void ArbCore::operator()() {
                     ReadTransaction tx(data_storage);
                     handleLogsCursorRequested(tx, i, cache);
                 }
-            }
-
-            if (save_checkpoint) {
-                // Force checkpoint save for unit test purposes
-                ReadWriteTransaction tx(data_storage);
-                save_checkpoint_status = saveCheckpoint(tx);
-                tx.commit();
-                save_checkpoint = false;
             }
 
             if (machine_idle && message_data_status != MESSAGES_READY) {
