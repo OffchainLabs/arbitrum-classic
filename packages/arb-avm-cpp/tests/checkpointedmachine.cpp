@@ -36,6 +36,9 @@ TEST_CASE("CheckpointedMachine tests") {
         REQUIRE(arbcore->initialized());
         REQUIRE(arbcore->startThread());
         REQUIRE(arbcore->maxCheckpointGas() == 0);
+        while (arbcore->getLastMachineOutput().arb_gas_used == 0) {
+            // Wait for machine to do first execution
+        }
 
         REQUIRE(arbcore->triggerSaveCheckpoint().ok());
         REQUIRE(!arbcore->isCheckpointsEmpty(tx));
