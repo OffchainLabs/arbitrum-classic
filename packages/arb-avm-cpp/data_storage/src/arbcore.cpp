@@ -734,6 +734,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         // Need to run machine until caught up with current checkpoint
         MachineExecutionConfig execConfig;
         execConfig.stop_on_sideload = cache_sideloads;
+        execConfig.stop_on_breakpoint = false;
         execConfig.max_gas = target_output.arb_gas_used;
 
         // Add messages and run machine
@@ -1288,6 +1289,7 @@ void ArbCore::operator()() {
     ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
+    execConfig.stop_on_breakpoint = false;
     uint64_t next_rocksdb_save_timestamp = 0;
     std::filesystem::path save_rocksdb_path(coreConfig.database_save_path);
     auto begin_time = std::chrono::steady_clock::now();
