@@ -1488,9 +1488,7 @@ void ArbCore::operator()() {
                                 save_checkpoint_end_time -
                                 save_checkpoint_begin_time)
                                 .count();
-                        printMachineOutputInfo(
-                            "Saved checkpoint",
-                            last_machine->machine_state.output);
+                        printMachineOutputInfo("Saved checkpoint", output);
                         std::cout << "Took " << duration << " second(s) to save"
                                   << "\n";
                         // Clear oldest cache and start populating next cache
@@ -3760,8 +3758,7 @@ rocksdb::Status ArbCore::pruneCheckpoints(
             std::chrono::duration_cast<std::chrono::seconds>(
                 prune_checkpoint_end_time - prune_checkpoint_begin_time)
                 .count();
-        printMachineOutputInfo("Pruned checkpoint",
-                               last_machine->machine_state.output);
+        printMachineOutputInfo("Pruned checkpoint", machine_output);
         std::cout << "Took " << duration << " second(s) to prune"
                   << "\n";
         deleted_count++;
