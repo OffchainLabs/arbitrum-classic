@@ -1393,16 +1393,6 @@ void ArbCore::operator()() {
                 break;
             }
 
-            if (core_machine->status() != MachineThread::MACHINE_RUNNING &&
-                save_checkpoint) {
-                // Force checkpoint save for unit test purposes only when
-                // machine not running
-                ReadWriteTransaction tx(data_storage);
-                save_checkpoint_status = saveCheckpoint(tx);
-                tx.commit();
-                save_checkpoint = false;
-            }
-
             if (core_machine->status() == MachineThread::MACHINE_SUCCESS) {
                 std::chrono::time_point<std::chrono::steady_clock>
                     begin_machine_success_time;
@@ -1463,6 +1453,7 @@ void ArbCore::operator()() {
                                  "ArbCore logs and sends save time: ");
                 }
 
+                bool checkpoint_saved = false;
                 // Cache pre-sideload machines
                 if (last_assertion.sideload_block_number) {
                     auto& output = core_machine->machine_state.output;
@@ -1470,7 +1461,7 @@ void ArbCore::operator()() {
                     combined_machine_cache.timedAdd(
                         std::make_unique<Machine>(*core_machine));
 
-                    if (trigger_save_rocksdb_checkpoint ||
+                    if (save_checkpoint || trigger_save_rocksdb_checkpoint ||
                         output.arb_gas_used >= next_checkpoint_gas) {
                         auto save_checkpoint_begin_time =
                             std::chrono::steady_clock::now();
@@ -1483,6 +1474,8 @@ void ArbCore::operator()() {
                                       << core_error_string << "\n";
                             break;
                         }
+                        // Clear oldest cache and start populating next cache
+                        cache.nextCache();
                         next_checkpoint_gas =
                             output.arb_gas_used +
                             coreConfig.checkpoint_gas_frequency;
@@ -1496,9 +1489,11 @@ void ArbCore::operator()() {
                         printMachineOutputInfo("Saved checkpoint", output);
                         std::cout << "Took " << duration << " second(s) to save"
                                   << "\n";
-                        // Clear oldest cache and start populating next cache
-                        cache.nextCache();
 
+                        if (save_checkpoint) {
+                            // Update save_checkpoint after tx committed
+                            checkpoint_saved = true;
+                        }
                         if (trigger_save_rocksdb_checkpoint) {
                             // database is ready to be copied
                             trigger_save_rocksdb_checkpoint = false;
@@ -1537,6 +1532,9 @@ void ArbCore::operator()() {
                     break;
                 }
 
+                if (checkpoint_saved) {
+                    save_checkpoint = false;
+                }
                 // Check if checkpoint of full database needs to be saved to
                 // disk
                 auto current_seconds = seconds_since_epoch();
