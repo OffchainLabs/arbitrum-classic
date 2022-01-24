@@ -34,6 +34,7 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
     : inbox_messages(std::move(config.inbox_messages)),
       sideloads(std::move(config.sideloads)),
       stop_on_sideload(config.stop_on_sideload),
+      stop_on_breakpoint(config.stop_on_breakpoint),
       max_gas(config.max_gas),
       go_over_gas(config.go_over_gas),
       inbox_messages_consumed(0) {}

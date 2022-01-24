@@ -868,8 +868,11 @@ uint64_t ec_pairing_variable_gas_cost(MachineState& m) {
 }
 
 BlockReason breakpoint(MachineState& m) {
+    if (m.context.stop_on_breakpoint && !m.context.first_instruction) {
+        return BreakpointBlocked{};
+    }
     ++m.pc;
-    return BreakpointBlocked{};
+    return NotBlocked{};
 }
 
 void log(MachineState& m) {

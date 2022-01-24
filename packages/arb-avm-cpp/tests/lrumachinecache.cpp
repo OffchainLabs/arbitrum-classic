@@ -27,6 +27,15 @@ TEST_CASE("LRUMachineCache add") {
     auto cache_size = 2;
     LRUMachineCache cache(cache_size);
 
+    // Test empty cache case
+    REQUIRE_FALSE(cache.atOrBeforeGas(50).has_value());
+
+    // Test empty findMatching
+    auto check_output = [&](const MachineOutput& output) {
+        return output.arb_gas_used <= 10;
+    };
+    REQUIRE_FALSE(cache.findMatching(check_output).has_value());
+
     // Basic add
     auto machine_zero = std::make_unique<Machine>(getComplexMachine());
     machine_zero->machine_state.output.arb_gas_used = 10;
@@ -45,6 +54,12 @@ TEST_CASE("LRUMachineCache add") {
     cache.add(std::move(machine_two));
     REQUIRE(cache.size() == 2);
     auto retrieved_machine2 = cache.atOrBeforeGas(10);
+    REQUIRE(retrieved_machine2.has_value());
+    REQUIRE(retrieved_machine2.value()
+                ->second.first->machine_state.output.arb_gas_used == 5);
+
+    // Test findMatching
+    retrieved_machine2 = cache.findMatching(check_output);
     REQUIRE(retrieved_machine2.has_value());
     REQUIRE(retrieved_machine2.value()
                 ->second.first->machine_state.output.arb_gas_used == 5);
