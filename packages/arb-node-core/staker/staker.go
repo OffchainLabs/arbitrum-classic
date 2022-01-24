@@ -291,7 +291,7 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 
 	// Don't attempt to create a new stake if we're resolving a node,
 	// as that might affect the current required stake.
-	creatingNewStake := rawInfo == nil && s.builder.TransactionCount() == 0 && effectiveStrategy >= StakeLatestStrategy
+	creatingNewStake := rawInfo == nil && s.builder.TransactionCount() == 0
 	if creatingNewStake {
 		if err := s.newStake(ctx); err != nil {
 			return nil, err
