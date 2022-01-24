@@ -19,8 +19,17 @@
 import { expect } from 'chai'
 
 import { BigNumber } from '@ethersproject/bignumber'
+import { Logger, LogLevel } from '@ethersproject/logger'
+Logger.setLogLevel(LogLevel.ERROR)
 
-import { TestERC20__factory } from '../src/lib/abi'
+import {
+  L1CustomGateway__factory,
+  L1GatewayRouter__factory,
+  L2GatewayRouter__factory,
+  TestArbCustomToken__factory,
+  TestCustomTokenL1__factory,
+  TestERC20__factory,
+} from '../src/lib/abi'
 
 import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 
@@ -35,8 +44,10 @@ import {
   skipIfMainnet,
   existentTestCustomToken,
 } from './testHelpers'
-import { TokenBridger } from '../src'
-import { Signer } from 'ethers'
+import { L1ToL2MessageStatus, TokenBridger } from '../src'
+import { Signer, constants } from 'ethers'
+import { parseEther } from 'ethers/lib/utils'
+import { SignerProviderUtils } from '../src/lib/utils/signerOrProvider'
 
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', function () {
@@ -45,13 +56,13 @@ describe('Custom ERC20', () => {
 
   it('deposits erc20 (no L2 Eth funding)', async () => {
     const { l1Signer, l2Signer, tokenBridger } =
-      await instantiateBridgeWithRandomWallet()
+      instantiateBridgeWithRandomWallet()
     await fundL1(l1Signer)
     await depositTokenTest(tokenBridger, l1Signer, l2Signer)
   })
   it.skip('deposits erc20 (with L2 Eth funding)', async () => {
     const { l1Signer, l2Signer, tokenBridger } =
-      await instantiateBridgeWithRandomWallet()
+      instantiateBridgeWithRandomWallet()
     await fundL1(l1Signer)
     await fundL2(l2Signer)
     await depositTokenTest(tokenBridger, l1Signer, l2Signer)
@@ -60,7 +71,7 @@ describe('Custom ERC20', () => {
   it('withdraws erc20', async function () {
     const tokenWithdrawAmount = BigNumber.from(1)
     const { l2Network, l2Signer, l1Signer, tokenBridger } =
-      await instantiateBridgeWithRandomWallet()
+      instantiateBridgeWithRandomWallet()
 
     await fundL2(l2Signer)
     const result = await fundL2Token(
@@ -138,6 +149,164 @@ describe('Custom ERC20', () => {
       1,
       'token filtered query failed'
     )
+  })
+
+  it.only('register custom token', async () => {
+    const { l2Network, l2Signer, l1Signer, adminTokenBridger } =
+      instantiateBridgeWithRandomWallet()
+
+    await fundL1(l1Signer, parseEther('0.01'))
+    await fundL2(l2Signer, parseEther('0.01'))
+    const l1SignerAddr = await l1Signer.getAddress()
+    const l2SignerAddr = await l2Signer.getAddress()
+    const sendAmount = 137
+    const startTokenBalance = 50000000
+    const l2Provider = SignerProviderUtils.getProviderOrThrow(l2Signer)
+
+    // create a custom token on L1 and L2
+    const l1CustomTokenFac = new TestCustomTokenL1__factory(l1Signer)
+    const l1CustomToken = await l1CustomTokenFac.deploy(
+      l2Network.tokenBridge.l1CustomGateway,
+      l2Network.tokenBridge.l1GatewayRouter
+    )
+    // mint ourselves some tokens and approve the custom gateway
+    await l1CustomToken.mint()
+    await l1CustomToken.approve(
+      l2Network.tokenBridge.l1CustomGateway,
+      sendAmount
+    )
+    const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
+    const l2CustomToken = await l2CustomTokenFac.deploy(
+      l2Network.tokenBridge.l2CustomGateway,
+      l1CustomToken.address
+    )
+
+    // check starting conditions - should initially use the default gateway
+    const l1GatewayRouter = new L1GatewayRouter__factory(l1Signer).attach(
+      l2Network.tokenBridge.l1GatewayRouter
+    )
+    const l2GatewayRouter = new L2GatewayRouter__factory(l2Signer).attach(
+      l2Network.tokenBridge.l2GatewayRouter
+    )
+    const l1CustomGateway = new L1CustomGateway__factory(l1Signer).attach(
+      l2Network.tokenBridge.l1CustomGateway
+    )
+    const l2CustomGateway = new L1CustomGateway__factory(l2Signer).attach(
+      l2Network.tokenBridge.l2CustomGateway
+    )
+    const startL1GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
+      l1CustomToken.address
+    )
+    expect(
+      startL1GatewayAddress,
+      'Start l1GatewayAddress not equal empty address'
+    ).to.eq(constants.AddressZero)
+    const startL2GatewayAddress = await l2GatewayRouter.l1TokenToGateway(
+      l2CustomToken.address
+    )
+    expect(
+      startL2GatewayAddress,
+      'Start l2GatewayAddress not equal empty address'
+    ).to.eq(constants.AddressZero)
+    const startL1Erc20Address = await l1CustomGateway.l1ToL2Token(
+      l1CustomToken.address
+    )
+    expect(
+      startL1Erc20Address,
+      'Start l1Erc20Address not equal empty address'
+    ).to.eq(constants.AddressZero)
+    const startL2Erc20Address = await l2CustomGateway.l1ToL2Token(
+      l1CustomToken.address
+    )
+    expect(
+      startL2Erc20Address,
+      'Start l2Erc20Address not equal empty address'
+    ).to.eq(constants.AddressZero)
+    const l1StartBalance = await l1CustomToken.balanceOf(l1SignerAddr)
+    expect(l1StartBalance.toNumber(), 'Wrong L1 start balance').to.eq(
+      startTokenBalance
+    )
+    const l2StartBalance = await l2CustomToken.balanceOf(l2SignerAddr)
+    expect(l2StartBalance.toNumber(), 'Wrong L2 start balance').to.eq(
+      constants.Zero.toNumber()
+    )
+
+    // send the messages
+    const regTx = await adminTokenBridger.registerCustomToken(
+      l1CustomToken.address,
+      l2CustomToken.address,
+      l1Signer,
+      l2Provider
+    )
+    const regRec = await regTx.wait()
+
+    // wait on messages
+    const l1ToL2Messages = await regRec.getL1ToL2Messages(l2Provider)
+    expect(l1ToL2Messages.length, 'Should be 2 messages.').to.eq(2)
+
+    const setTokenTx = await l1ToL2Messages[0].wait()
+    console.log('message1')
+    expect(setTokenTx.status, 'Set token not redeemed.').to.eq(
+      L1ToL2MessageStatus.REDEEMED
+    )
+    const setGateways = await l1ToL2Messages[1].wait()
+    console.log('message2')
+    expect(setGateways.status, 'Set gateways not redeemed.').to.eq(
+      L1ToL2MessageStatus.REDEEMED
+    )
+
+    // send a deposit to follow
+    const depositTx = await adminTokenBridger.deposit({
+      amount: BigNumber.from(sendAmount),
+      erc20L1Address: l1CustomToken.address,
+      l1Signer: l1Signer,
+      l2Provider: l2Provider,
+    })
+    const depositRec = await depositTx.wait()
+
+    const depositStatus = await (
+      await depositRec.getL1ToL2Message(l2Provider)
+    ).wait()
+    expect(depositStatus.status, 'Deposit is not redeemed').to.eq(
+      L1ToL2MessageStatus.REDEEMED
+    )
+
+    // check end conditions
+    const endL1GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
+      l1CustomToken.address
+    )
+    expect(
+      endL1GatewayAddress,
+      'End l1GatewayAddress not equal to l1 custom gateway'
+    ).to.eq(l2Network.tokenBridge.l1CustomGateway)
+    const endL2GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
+      l2CustomToken.address
+    )
+    expect(
+      endL2GatewayAddress,
+      'End l2GatewayAddress not equal to l1 custom gateway'
+    ).to.eq(l2Network.tokenBridge.l1CustomGateway)
+
+    const endL1Erc20Address = await l1CustomGateway.l1ToL2Token(
+      l1CustomToken.address
+    )
+    expect(
+      endL1Erc20Address,
+      'End l1Erc20Address not equal l1CustomToken address'
+    ).to.eq(l2CustomToken.address)
+    const endL2Erc20Address = await l2CustomGateway.l1ToL2Token(
+      l1CustomToken.address
+    )
+    expect(
+      endL2Erc20Address,
+      'End l2Erc20Address not equal l2CustomToken address'
+    ).to.eq(l2CustomToken.address)
+    const l1EndBalance = await l1CustomToken.balanceOf(l1SignerAddr)
+    expect(l1EndBalance.toNumber(), 'Wrong L1 end balance').to.eq(
+      startTokenBalance - sendAmount
+    )
+    const l2EndBalance = await l2CustomToken.balanceOf(l2SignerAddr)
+    expect(l2EndBalance.toNumber(), 'Wrong L2 end balance').to.eq(sendAmount)
   })
 })
 

@@ -36,6 +36,7 @@ import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
 import { Signer } from 'ethers'
 import { EthBridger, TokenBridger } from '../src'
 import { L1Network, L2Network } from '../src/lib/utils/networks'
+import { AdminTokenBridger } from '../src/lib/assetBridger'
 
 const argv = yargs(process.argv.slice(2))
   .options({
@@ -123,14 +124,15 @@ export const warn = (text: string): void => {
   console.log()
 }
 
-export const instantiateBridgeWithRandomWallet = (): Promise<{
+export const instantiateBridgeWithRandomWallet = (): {
   tokenBridger: TokenBridger
   ethBridger: EthBridger
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
-}> => {
+  adminTokenBridger: AdminTokenBridger
+} => {
   const testPk = formatBytes32String(Math.random().toString())
   prettyLog(
     `Generated wallet, pk: ${testPk} address: ${new Wallet(testPk).address} `
@@ -142,22 +144,28 @@ const _preFundedWallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
 const _preFundedL2Wallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
 console.warn('using prefunded wallet ', _preFundedWallet.address)
 
-export const fundL1 = async (l1Signer: Signer): Promise<void> => {
+export const fundL1 = async (
+  l1Signer: Signer,
+  amount?: BigNumber
+): Promise<void> => {
   const testWalletAddress = await l1Signer.getAddress()
   const preFundedWallet = _preFundedWallet.connect(l1Signer.provider!)
   const res = await preFundedWallet.sendTransaction({
     to: testWalletAddress,
-    value: preFundAmount,
+    value: amount || preFundAmount,
   })
   await res.wait()
   prettyLog('Funded L1 account')
 }
-export const fundL2 = async (l2Signer: Signer): Promise<void> => {
+export const fundL2 = async (
+  l2Signer: Signer,
+  amount?: BigNumber
+): Promise<void> => {
   const testWalletAddress = await l2Signer.getAddress()
   const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider!)
   const res = await preFundedL2Wallet.sendTransaction({
     to: testWalletAddress,
-    value: preFundAmount,
+    value: amount || preFundAmount,
   })
   await res.wait()
   prettyLog('Funded L2 account')
@@ -197,9 +205,9 @@ export const wait = (ms = 0): Promise<void> => {
 
 export const skipIfMainnet = (() => {
   let chainId = ''
-  return async (testContext: Mocha.Context) => {
+  return (testContext: Mocha.Context) => {
     if (!chainId) {
-      const { l1Network } = await instantiateBridgeWithRandomWallet()
+      const { l1Network } = instantiateBridgeWithRandomWallet()
       chainId = l1Network.chainID
     }
     if (chainId === '1') {
