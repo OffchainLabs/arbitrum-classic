@@ -105,7 +105,7 @@ class ArbCore {
     uint256_t unsafe_checkpoint_pruning_gas_used;
 
     // Core thread input
-    std::atomic<bool> save_checkpoint{false};
+    std::atomic<bool> trigger_save_checkpoint{false};
     rocksdb::Status save_checkpoint_status;
     std::atomic<bool> trigger_save_rocksdb_checkpoint;
 
