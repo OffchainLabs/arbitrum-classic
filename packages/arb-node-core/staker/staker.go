@@ -289,6 +289,20 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 		}
 	}
 
+	addr := s.wallet.Address()
+	if addr != nil {
+		withdrawable, err := s.rollup.WithdrawableFunds(ctx, common.NewAddressFromEth(*addr))
+		if err != nil {
+			return nil, err
+		}
+		if withdrawable.Sign() > 0 && s.withdrawDestination != (common.Address{}) {
+			err = s.rollup.WithdrawFunds(ctx, s.withdrawDestination)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	// Don't attempt to create a new stake if we're resolving a node,
 	// as that might affect the current required stake.
 	creatingNewStake := rawInfo == nil && s.builder.TransactionCount() == 0
@@ -314,19 +328,6 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 	if rawInfo != nil && s.builder.TransactionCount() == 0 {
 		if err := s.createConflict(ctx, rawInfo); err != nil {
 			return nil, err
-		}
-	}
-	addr := s.wallet.Address()
-	if addr != nil {
-		withdrawable, err := s.rollup.WithdrawableFunds(ctx, common.NewAddressFromEth(*addr))
-		if err != nil {
-			return nil, err
-		}
-		if withdrawable.Sign() > 0 && s.withdrawDestination != (common.Address{}) {
-			err = s.rollup.WithdrawFunds(ctx, s.withdrawDestination)
-			if err != nil {
-				return nil, err
-			}
 		}
 	}
 
