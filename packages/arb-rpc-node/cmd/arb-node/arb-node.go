@@ -34,7 +34,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
@@ -111,14 +110,7 @@ func startup() error {
 	}
 
 	if config.Core.Test.JustMetadata {
-		storage, err := cmachine.NewArbStorage(config.GetNodeDatabasePath(), &config.Core)
-		if err != nil {
-			return err
-		}
-		storage.PrintDatabaseMetadata()
-		storage.CloseArbStorage()
-
-		return nil
+		return cmdhelp.PrintDatabaseMetadata(config.GetNodeDatabasePath(), &config.Core)
 	}
 
 	badConfig := false

@@ -120,6 +120,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 }
 
 func (s *ArbStorage) PrintDatabaseMetadata() {
+	defer runtime.KeepAlive(s)
 	C.printDatabaseMetadata(s.c)
 }
 

@@ -35,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
@@ -97,14 +96,7 @@ func startup() error {
 	}
 
 	if config.Core.Test.JustMetadata {
-		storage, err := cmachine.NewArbStorage(config.GetValidatorDatabasePath(), &config.Core)
-		if err != nil {
-			return err
-		}
-		storage.PrintDatabaseMetadata()
-		storage.CloseArbStorage()
-
-		return nil
+		return cmdhelp.PrintDatabaseMetadata(config.GetValidatorDatabasePath(), &config.Core)
 	}
 
 	defer logger.Log().Msg("Cleanly shutting down validator")
