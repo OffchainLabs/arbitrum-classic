@@ -96,7 +96,7 @@ func startup() error {
 		return nil
 	}
 
-	if config.Metadata {
+	if config.Core.Test.JustMetadata {
 		storage, err := cmachine.NewArbStorage(config.GetValidatorDatabasePath(), &config.Core)
 		if err != nil {
 			return err

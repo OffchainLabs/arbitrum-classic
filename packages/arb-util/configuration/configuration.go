@@ -330,7 +330,6 @@ type Config struct {
 		URL     string `koanf:"url"`
 	} `koanf:"l1"`
 	Log           Log        `koanf:"log"`
-	Metadata      bool       `koanf:"metadata"`
 	Node          Node       `koanf:"node"`
 	Persistent    Persistent `koanf:"persistent"`
 	PProfEnable   bool       `koanf:"pprof-enable"`

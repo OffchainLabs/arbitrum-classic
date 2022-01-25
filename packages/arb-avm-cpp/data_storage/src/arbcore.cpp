@@ -48,9 +48,7 @@ namespace {
 constexpr uint256_t arbcore_schema_version = 3;
 constexpr auto pruning_mode_key = std::array<char, 1>{-59};
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
-constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
-constexpr auto send_processed_key = std::array<char, 1>{-63};
 constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-120};
 }  // namespace
@@ -175,12 +173,14 @@ void ArbCore::printDatabaseMetadata() {
     } else {
         std::cout << log_inserted_count_result.data << "\n";
     }
-    auto log_processed_count_result = logProcessedCount(tx);
-    std::cout << "log processed count:              ";
-    if (!log_processed_count_result.status.ok()) {
-        std::cout << log_processed_count_result.status.ToString() << "\n";
-    } else {
-        std::cout << log_processed_count_result.data << "\n";
+    for (size_t i = 0; i < logs_cursors.size(); i++) {
+        auto logs_cursor_count_result = logsCursorGetCurrentTotalCount(tx, i);
+        std::cout << "log cursor " << i << " count:               ";
+        if (!logs_cursor_count_result.status.ok()) {
+            std::cout << logs_cursor_count_result.status.ToString() << "\n";
+        } else {
+            std::cout << logs_cursor_count_result.data << "\n";
+        }
     }
     auto send_inserted_count_result = sendInsertedCountImpl(tx);
     std::cout << "send inserted count:              ";
@@ -188,13 +188,6 @@ void ArbCore::printDatabaseMetadata() {
         std::cout << send_inserted_count_result.status.ToString() << "\n";
     } else {
         std::cout << send_inserted_count_result.data << "\n";
-    }
-    auto send_processed_count_result = sendProcessedCount(tx);
-    std::cout << "send processed count:             ";
-    if (!send_processed_count_result.status.ok()) {
-        std::cout << send_processed_count_result.status.ToString() << "\n";
-    } else {
-        std::cout << send_processed_count_result.data << "\n";
     }
     auto message_inserted_count_result = messageEntryInsertedCountImpl(tx);
     std::cout << "message inserted count:           ";
@@ -220,6 +213,22 @@ void ArbCore::printDatabaseMetadata() {
                   << "\n";
     } else {
         std::cout << total_delayed_messages_sequenced_result.data << "\n";
+    }
+    auto pruning_mode_result = pruningMode(tx);
+    std::cout << "pruning mode:                     ";
+    if (!pruning_mode_result.status.ok()) {
+        std::cout << pruning_mode_result.status.ToString() << "\n";
+    } else {
+        std::cout << pruning_mode_result.data << "\n";
+    }
+    auto checkpoint_result = getMaxCheckpoint(tx);
+    if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
+        std::cout << std::get<rocksdb::Status>(checkpoint_result).ToString()
+                  << "\n";
+    } else {
+        printMachineOutputInfo(
+            "last checkpoint",
+            std::get<MachineStateKeys>(checkpoint_result).output);
     }
 }
 
@@ -1185,6 +1194,26 @@ uint256_t ArbCore::maxCheckpointGas() {
     } else {
         return 0;
     }
+}
+
+std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getMaxCheckpoint(
+    ReadTransaction& tx) {
+    auto it = tx.checkpointGetIterator();
+    it->SeekToLast();
+    if (it->Valid()) {
+        std::vector<unsigned char> saved_value(
+            it->value().data(), it->value().data() + it->value().size());
+        auto variantkeys = extractMachineStateKeys(saved_value);
+
+        if (std::holds_alternative<MachineStateKeys>(variantkeys)) {
+            // Found checkpoint with machine
+            return std::get<MachineStateKeys>(variantkeys);
+        }
+
+        return rocksdb::Status::NotFound("no machine checkpoint found in db");
+    }
+
+    return it->status();
 }
 
 // getCheckpointUsingGas returns the checkpoint at or before the specified gas
@@ -2849,14 +2878,6 @@ rocksdb::Status ArbCore::updateLogInsertedCount(ReadWriteTransaction& tx,
     return tx.statePut(vecToSlice(log_inserted_key), vecToSlice(value));
 }
 
-ValueResult<uint256_t> ArbCore::logProcessedCount(ReadTransaction& tx) const {
-    return tx.stateGetUint256(vecToSlice(log_processed_key));
-}
-rocksdb::Status ArbCore::updateLogProcessedCount(ReadWriteTransaction& tx,
-                                                 rocksdb::Slice value_slice) {
-    return tx.statePut(vecToSlice(log_processed_key), value_slice);
-}
-
 ValueResult<uint256_t> ArbCore::sendInsertedCount() const {
     ReadTransaction tx(data_storage);
 
@@ -2874,14 +2895,6 @@ rocksdb::Status ArbCore::updateSendInsertedCount(ReadWriteTransaction& tx,
     marshal_uint256_t(send_index, value);
 
     return tx.statePut(vecToSlice(send_inserted_key), vecToSlice(value));
-}
-
-ValueResult<uint256_t> ArbCore::sendProcessedCount(ReadTransaction& tx) const {
-    return tx.stateGetUint256(vecToSlice(send_processed_key));
-}
-rocksdb::Status ArbCore::updateSendProcessedCount(ReadWriteTransaction& tx,
-                                                  rocksdb::Slice value_slice) {
-    return tx.statePut(vecToSlice(send_processed_key), value_slice);
 }
 
 ValueResult<uint256_t> ArbCore::schemaVersion(ReadTransaction& tx) const {

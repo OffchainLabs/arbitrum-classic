@@ -384,15 +384,9 @@ class ArbCore {
     [[nodiscard]] ValueResult<uint256_t> logInsertedCountImpl(
         const ReadTransaction& tx) const;
 
-    ValueResult<uint256_t> logProcessedCount(ReadTransaction& tx) const;
-    rocksdb::Status updateLogProcessedCount(ReadWriteTransaction& tx,
-                                            rocksdb::Slice value_slice);
     [[nodiscard]] ValueResult<uint256_t> sendInsertedCountImpl(
         const ReadTransaction& tx) const;
 
-    ValueResult<uint256_t> sendProcessedCount(ReadTransaction& tx) const;
-    rocksdb::Status updateSendProcessedCount(ReadWriteTransaction& tx,
-                                             rocksdb::Slice value_slice);
     [[nodiscard]] ValueResult<uint256_t> messageEntryInsertedCountImpl(
         const ReadTransaction& tx) const;
     [[nodiscard]] ValueResult<uint256_t> delayedMessageEntryInsertedCountImpl(
@@ -478,6 +472,8 @@ class ArbCore {
         const std::string& message) const;
     void printMachineOutputInfo(const std::string& msg,
                                 MachineOutput& machine_output) const;
+    std::variant<rocksdb::Status, MachineStateKeys> getMaxCheckpoint(
+        ReadTransaction& tx);
 };
 
 uint64_t seconds_since_epoch();
