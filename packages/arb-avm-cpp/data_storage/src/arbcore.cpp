@@ -226,9 +226,14 @@ void ArbCore::printDatabaseMetadata() {
         std::cout << std::get<rocksdb::Status>(checkpoint_result).ToString()
                   << "\n";
     } else {
-        printMachineOutputInfo(
-            "last checkpoint",
-            std::get<MachineStateKeys>(checkpoint_result).output);
+        auto output =
+            getMachineOutput(std::get<CheckpointVariant>(checkpoint_result));
+        if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
+            std::cout << std::get<rocksdb::Status>(checkpoint_result).ToString()
+                      << "\n";
+        } else {
+            printMachineOutputInfo("last checkpoint", output);
+        }
     }
 }
 
@@ -1194,21 +1199,14 @@ uint256_t ArbCore::maxCheckpointGas() {
     }
 }
 
-std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getMaxCheckpoint(
+std::variant<rocksdb::Status, CheckpointVariant> ArbCore::getMaxCheckpoint(
     ReadTransaction& tx) {
     auto it = tx.checkpointGetIterator();
     it->SeekToLast();
     if (it->Valid()) {
         std::vector<unsigned char> saved_value(
             it->value().data(), it->value().data() + it->value().size());
-        auto variantkeys = extractMachineStateKeys(saved_value);
-
-        if (std::holds_alternative<MachineStateKeys>(variantkeys)) {
-            // Found checkpoint with machine
-            return std::get<MachineStateKeys>(variantkeys);
-        }
-
-        return rocksdb::Status::NotFound("no machine checkpoint found in db");
+        return extractMachineStateKeys(saved_value);
     }
 
     return it->status();

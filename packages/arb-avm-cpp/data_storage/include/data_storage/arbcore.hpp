@@ -472,7 +472,7 @@ class ArbCore {
         const std::string& message) const;
     void printMachineOutputInfo(const std::string& msg,
                                 MachineOutput& machine_output) const;
-    std::variant<rocksdb::Status, MachineStateKeys> getMaxCheckpoint(
+    std::variant<rocksdb::Status, CheckpointVariant> getMaxCheckpoint(
         ReadTransaction& tx);
 };
 
