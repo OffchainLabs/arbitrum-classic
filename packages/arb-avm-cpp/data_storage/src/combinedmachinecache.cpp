@@ -154,6 +154,22 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
                                  database_gas, use_max_execution);
 }
 
+// checkSimpleMatching just checks the last two items added to cache
+CombinedMachineCache::CacheResultStruct
+CombinedMachineCache::checkSimpleMatching(
+    const std::function<bool(const MachineOutput&)>& check_output) {
+    if (last_machine && check_output(last_machine->machine_state.output)) {
+        return {std::make_unique<Machine>(*last_machine), Success};
+    }
+
+    if (last_last_machine &&
+        check_output(last_last_machine->machine_state.output)) {
+        return {std::make_unique<Machine>(*last_machine), Success};
+    }
+
+    return {nullptr, NotFound};
+}
+
 CombinedMachineCache::CacheResultStruct CombinedMachineCache::findFirstMatching(
     const std::function<bool(const MachineOutput&)>& check_output,
     std::optional<uint256_t> existing_gas_used,

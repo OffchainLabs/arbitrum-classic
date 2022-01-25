@@ -474,6 +474,8 @@ class ArbCore {
                                 MachineOutput& machine_output) const;
     std::variant<rocksdb::Status, CheckpointVariant> getMaxCheckpoint(
         ReadTransaction& tx);
+    std::unique_ptr<MachineThread> getMachineThreadFromSimpleCheck(
+        const std::function<bool(const MachineOutput&)>& check_output);
 };
 
 uint64_t seconds_since_epoch();

@@ -54,8 +54,9 @@ func PrintDatabaseMetadata(path string, coreConfig *configuration.Core) error {
 	if err != nil {
 		return err
 	}
+	defer storage.CloseArbStorage()
+
 	storage.PrintDatabaseMetadata()
-	storage.CloseArbStorage()
 
 	return nil
 }
