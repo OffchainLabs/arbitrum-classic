@@ -485,20 +485,6 @@ template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t, ValueCache&);
 template std::unique_ptr<MachineThread> ArbCore::getMachine(uint256_t,
                                                             ValueCache&);
 
-// triggerSaveCheckpoint is meant for unit tests and should not be called from
-// multiple threads at the same time.
-rocksdb::Status ArbCore::triggerSaveCheckpoint() {
-    trigger_save_checkpoint = true;
-    std::cerr << "Triggering checkpoint save" << std::endl;
-    while (trigger_save_checkpoint) {
-        // Wait until snapshot has been saved
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    std::cerr << "Checkpoint saved" << std::endl;
-
-    return save_checkpoint_status;
-}
-
 // triggerSaveFullRocksdbCheckpointToDisk is used to save a copy of current
 // database without having to stop program
 void ArbCore::triggerSaveFullRocksdbCheckpointToDisk() {
@@ -1121,12 +1107,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     return rocksdb::Status::OK();
 }
 
-bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
-    auto it = std::unique_ptr<rocksdb::Iterator>(tx.checkpointGetIterator());
-    it->SeekToLast();
-    return !it->Valid();
-}
-
 uint256_t ArbCore::maxCheckpointGas() {
     ReadTransaction tx(data_storage);
     auto it = tx.checkpointGetIterator();
@@ -1303,7 +1283,6 @@ void ArbCore::operator()() {
     auto last_messages_ready_check_time = begin_time;
     auto last_run_machine_check_time = begin_time;
     auto last_restart_machine_check_time = begin_time;
-    trigger_save_rocksdb_checkpoint = false;
     auto perform_pruning = false;
     auto perform_save_rocksdb_checkpoint = false;
 
@@ -1453,7 +1432,6 @@ void ArbCore::operator()() {
                                  "ArbCore logs and sends save time: ");
                 }
 
-                bool checkpoint_saved = false;
                 // Cache pre-sideload machines
                 if (last_assertion.sideload_block_number) {
                     auto& output = core_machine->machine_state.output;
@@ -1461,17 +1439,13 @@ void ArbCore::operator()() {
                     combined_machine_cache.timedAdd(
                         std::make_unique<Machine>(*core_machine));
 
-                    if (trigger_save_checkpoint ||
-                        trigger_save_rocksdb_checkpoint ||
+                    if (trigger_save_rocksdb_checkpoint ||
                         output.arb_gas_used >= next_checkpoint_gas) {
                         auto save_checkpoint_begin_time =
                             std::chrono::steady_clock::now();
                         // Save checkpoint after checkpoint_gas_frequency gas
                         // used
                         status = saveCheckpoint(tx);
-                        if (trigger_save_checkpoint) {
-                            save_checkpoint_status = status;
-                        }
                         if (!status.ok()) {
                             core_error_string = status.ToString();
                             std::cerr << "ArbCore checkpoint saving failed: "
@@ -1494,10 +1468,6 @@ void ArbCore::operator()() {
                         std::cout << "Took " << duration << " second(s) to save"
                                   << "\n";
 
-                        if (trigger_save_checkpoint) {
-                            // Update trigger_save_checkpoint after tx committed
-                            checkpoint_saved = true;
-                        }
                         if (trigger_save_rocksdb_checkpoint) {
                             // database is ready to be copied
                             trigger_save_rocksdb_checkpoint = false;
@@ -1536,10 +1506,6 @@ void ArbCore::operator()() {
                     break;
                 }
 
-                if (checkpoint_saved) {
-                    // Update trigger_save_checkpoint after tx committed
-                    trigger_save_checkpoint = false;
-                }
                 // Check if checkpoint of full database needs to be saved to
                 // disk
                 auto current_seconds = seconds_since_epoch();
@@ -1728,7 +1694,6 @@ void ArbCore::operator()() {
     std::cerr << "Exiting main ArbCore thread" << std::endl;
 
     // Error occurred, make sure machine stops cleanly
-    trigger_save_checkpoint = false;
     core_machine->abortMachine();
     for (auto& logs_cursor : logs_cursors) {
         logs_cursor.error_string = "arbcore thread aborted";

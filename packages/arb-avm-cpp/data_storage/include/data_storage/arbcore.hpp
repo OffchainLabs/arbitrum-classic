@@ -105,8 +105,6 @@ class ArbCore {
     uint256_t unsafe_checkpoint_pruning_gas_used;
 
     // Core thread input
-    std::atomic<bool> trigger_save_checkpoint{false};
-    rocksdb::Status save_checkpoint_status;
     std::atomic<bool> trigger_save_rocksdb_checkpoint;
 
     // Core thread holds mutex only during reorg.
@@ -260,9 +258,6 @@ class ArbCore {
 
    public:
     // Useful for unit tests
-    // Do not call triggerSaveCheckpoint from multiple threads at the same time
-    rocksdb::Status triggerSaveCheckpoint();
-    bool isCheckpointsEmpty(ReadTransaction& tx) const;
     uint256_t maxCheckpointGas();
 
    public:
