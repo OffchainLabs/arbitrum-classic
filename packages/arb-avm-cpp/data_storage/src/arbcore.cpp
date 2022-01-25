@@ -1105,13 +1105,11 @@ rocksdb::Status ArbCore::reorgCheckpoints(
             std::move(std::get<std::unique_ptr<MachineThread>>(
                 last_matching_machine_checkpoint));
         auto reorg_machine_end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::seconds>(
-                            reorg_machine_end_time - reorg_machine_begin_time)
-                            .count();
 
         auto& last_machine_output = last_matching_machine->machine_state.output;
         printMachineOutputInfo("Loaded full machine", last_machine_output);
-        std::cerr << "Took " << duration << " second(s) to reorg" << std::endl;
+        printElapsed(reorg_machine_begin_time, reorg_machine_end_time,
+                     "Reorg took ");
 
         checkpoint_it = nullptr;
 
@@ -1811,7 +1809,7 @@ void ArbCore::printElapsed(
                                                               begin_time)
             .count();
     if (machine_output_milliseconds > 0) {
-        std::cerr << message << machine_output_milliseconds << " ms"
+        std::cerr << message << machine_output_milliseconds << "ms"
                   << std::endl;
     }
 }
@@ -3809,13 +3807,9 @@ rocksdb::Status ArbCore::pruneCheckpoints(
         auto prune_checkpoint_begin_time = std::chrono::steady_clock::now();
         deleteCheckpoint(tx, checkpoint_variant);
         auto prune_checkpoint_end_time = std::chrono::steady_clock::now();
-        auto duration =
-            std::chrono::duration_cast<std::chrono::seconds>(
-                prune_checkpoint_end_time - prune_checkpoint_begin_time)
-                .count();
         printMachineOutputInfo("Pruned checkpoint", machine_output);
-        std::cout << "Took " << duration << " second(s) to prune"
-                  << "\n";
+        printElapsed(prune_checkpoint_begin_time, prune_checkpoint_end_time,
+                     "Prune took ");
         deleted_count++;
     }
     if (!it->status().ok()) {
