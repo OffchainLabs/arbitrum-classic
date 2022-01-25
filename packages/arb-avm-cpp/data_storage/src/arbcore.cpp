@@ -953,7 +953,12 @@ std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
         check_output, std::nullopt, checkpoint.output.arb_gas_used, false);
     if (mach.machine != nullptr) {
         // Found machine in cache
-        return std::make_unique<MachineThread>(mach.machine->machine_state);
+        auto& state = mach.machine->machine_state;
+        state.code->cleanupAfterReorg();
+        auto nextSegment = std::max(state.code->initialSegmentForChildCode(),
+                                    core_code->initialSegmentForChildCode());
+        state.code = std::make_shared<RunningCode>(state.code, nextSegment);
+        return std::make_unique<MachineThread>(state);
     }
 
     try {
@@ -1070,7 +1075,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     }
 
     core_machine = std::move(setup);
-    core_machine->machine_state.code->cleanupAfterReorg();
     auto& output = core_machine->machine_state.output;
 
     // Remove invalid cache entries after selected_machine_output
