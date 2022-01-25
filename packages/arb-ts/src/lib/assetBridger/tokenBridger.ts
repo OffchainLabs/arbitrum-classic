@@ -22,7 +22,7 @@ import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { Zero, MaxUint256 } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import { BigNumber, ethers } from 'ethers'
+import { BigNumber, constants, ethers } from 'ethers'
 
 import {
   L1GatewayRouter__factory,
@@ -36,6 +36,9 @@ import {
   ERC20,
   L2GatewayToken__factory,
   L2GatewayToken,
+  ICustomToken__factory,
+  IArbToken__factory,
+  L2CustomGateway__factory,
 } from '../abi'
 import { WithdrawalInitiatedEvent } from '../abi/L2ArbitrumGateway'
 import { GatewaySetEvent } from '../abi/L1GatewayRouter'
@@ -45,7 +48,7 @@ import {
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { L2Network } from '../dataEntities/networks'
-import { MissingProviderArbTsError } from '../dataEntities/errors'
+import { ArbTsError, MissingProviderArbTsError } from '../dataEntities/errors'
 import { EventFetcher } from '../utils/eventFetcher'
 
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
@@ -433,7 +436,7 @@ export class TokenBridger extends AssetBridger<
     }
 
     // 2. get the gas estimates
-    const estimates = await gasEstimator.estimateGasValuesL1ToL2Creation(
+    const estimates = await gasEstimator.estimateMessage(
       l1GatewayAddress,
       l2Dest,
       depositCalldata,
@@ -578,6 +581,102 @@ interface TokenAndGateway {
  * Admin functionality for the token bridge
  */
 export class AdminTokenBridger extends TokenBridger {
+  private async contractExists(
+    contractAddress: string,
+    provider: Provider
+  ): Promise<boolean> {
+    const contractCode = await provider.getCode(contractAddress)
+    return !(contractCode.length > 2)
+  }
+
+  /**
+   * Register a custom token on the Arbitrum bridge
+   * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
+   * @param l1TokenAddress Address of the already deployed l1 token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/icustomtoken.
+   * @param l2TokenAddress Address of the already deployed l2 token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/iarbtoken.
+   * @param l1Signer The signer with the rights to call registerTokenOnL2 on the l1 token
+   * @param l2Provider Arbitrum rpc provider
+   * @returns
+   */
+  public async registerCustomToken(
+    l1TokenAddress: string,
+    l2TokenAddress: string,
+    l1Signer: Signer,
+    l2Provider: Provider
+  ) {
+    await this.checkL1Network(l1Signer)
+    await this.checkL2Network(l2Provider)
+
+    const l1SenderAddress = await l1Signer.getAddress()
+
+    const l1Token = ICustomToken__factory.connect(l1TokenAddress, l1Signer)
+    const l2Token = IArbToken__factory.connect(l2TokenAddress, l2Provider)
+
+    // sanity checks
+    await l1Token.deployed()
+    await l2Token.deployed()
+
+    const l1AddressFromL2 = await l2Token.l1Address()
+    if (l1AddressFromL2 !== l1TokenAddress) {
+      throw new ArbTsError(
+        `L2 token does not have l1 address set. Set address: ${l1AddressFromL2}, expected address: ${l1TokenAddress}.`
+      )
+    }
+    const gasPriceEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+
+    // internally the registerTokenOnL2 sends two l1tol2 messages
+    // the first registers the tokens and the second sets the gateways
+    // we need to estimate gas for each of these l1tol2 messages
+    // 1. registerTokenFromL1
+    const il2CustomGateway = L2CustomGateway__factory.createInterface()
+    const l2SetTokenCallData = il2CustomGateway.encodeFunctionData(
+      'registerTokenFromL1',
+      [[l1TokenAddress], [l2TokenAddress]]
+    )
+
+    const setTokenEstimates = await gasPriceEstimator.estimateMessage(
+      this.l2Network.tokenBridge.l1CustomGateway,
+      // l1SenderAddress,
+      this.l2Network.tokenBridge.l2CustomGateway,
+      l2SetTokenCallData,
+      Zero
+    )
+
+    // 2. setGateway
+    const iL2GatewayRouter = L2GatewayRouter__factory.createInterface()
+    const l2SetGatewaysCallData = iL2GatewayRouter.encodeFunctionData(
+      'setGateway',
+      [[l1TokenAddress], [this.l2Network.tokenBridge.l1CustomGateway]]
+    )
+
+    const setGatwayEstimates = await gasPriceEstimator.estimateMessage(
+      this.l2Network.tokenBridge.l1GatewayRouter,
+      this.l2Network.tokenBridge.l2GatewayRouter,
+      l2SetGatewaysCallData,
+      Zero
+    )
+
+    // now execute the registration
+    const customRegistrationTx = await l1Token.registerTokenOnL2(
+      l2TokenAddress,
+      setTokenEstimates.maxSubmissionPriceBid,
+      setGatwayEstimates.maxSubmissionPriceBid,
+      setTokenEstimates.maxGasBid,
+      setGatwayEstimates.maxGasBid,
+      setGatwayEstimates.maxGasPriceBid,
+      setTokenEstimates.totalDepositValue,
+      setGatwayEstimates.totalDepositValue,
+      l1SenderAddress,
+      {
+        value: setTokenEstimates.totalDepositValue.add(
+          setGatwayEstimates.totalDepositValue
+        ),
+      }
+    )
+
+    return L1TransactionReceipt.monkeyPatchWait(customRegistrationTx)
+  }
+
   /**
    * Get all the gateway set events on the L1 gateway router
    * @param l1Provider
@@ -660,7 +759,7 @@ export class AdminTokenBridger extends TokenBridger {
     const l2GasPrice = await l2Provider.getGasPrice()
 
     const estimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const { submissionPrice } = await estimator.getSubmissionPrice(
+    const { submissionPrice } = await estimator.estimateSubmissionPrice(
       // 20 per address, 100 as buffer/ estimate for any additional calldata
       300 + 20 * (tokenGateways.length * 2)
     )

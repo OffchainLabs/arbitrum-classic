@@ -116,7 +116,7 @@ export class EthBridger extends AssetBridger<
     const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
 
     const submissionPrice = (
-      await gasEstimator.getSubmissionPrice(
+      await gasEstimator.estimateSubmissionPrice(
         0,
         params.retryableGasOverrides?.maxSubmissionPrice
       )

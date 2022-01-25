@@ -70,7 +70,7 @@ export class L1ToL2MessageCreator {
   ): Promise<L1TransactionReceipt> {
     const sender = await this.getSender()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const gasParams = await gasEstimator.estimateGasValuesL1ToL2Creation(
+    const gasParams = await gasEstimator.estimateMessage(
       sender,
       destAddr,
       callDataHex,

@@ -41,28 +41,28 @@ export enum L1ToL2MessageStatus {
   /**
    * The retryable ticket has yet to be created
    */
-  NOT_YET_CREATED,
+  NOT_YET_CREATED = 1,
   /**
    * An attempt was made to create the retryable ticket, but it failed.
    * This could be due to not enough submission cost being paid by the L1 transaction
    */
-  CREATION_FAILED,
+  CREATION_FAILED = 2,
   /**
    * The retryable ticket has been created but has not been redeemed. This could be due to the
    * auto redeem failing, or if the params (max l2 gas price) * (max l2 gas) = 0 then no auto
    * redeem tx is ever issued. An auto redeem is also never issued for ETH deposits.
    * A manual redeem is now required.
    */
-  NOT_YET_REDEEMED,
+  NOT_YET_REDEEMED = 3,
   /**
    * The retryable ticket has been redeemed (either by auto, or manually) and the
    * l2 transaction has been executed
    */
-  REDEEMED,
+  REDEEMED = 4,
   /**
    * The message has either expired or has been canceled. It can no longer be redeemed.
    */
-  EXPIRED,
+  EXPIRED = 5,
 }
 
 /**

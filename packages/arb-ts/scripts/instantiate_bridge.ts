@@ -39,10 +39,10 @@ const verbose = process.env['VERBOSE'] as string
 
 const defaultNetworkId = 421611
 
-export const instantiateBridge = async (
+export const instantiateBridge = (
   l1pkParam?: string,
   l2PkParam?: string
-): Promise<{
+): {
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
@@ -50,7 +50,7 @@ export const instantiateBridge = async (
   tokenBridger: TokenBridger
   ethBridger: EthBridger
   adminTokenBridger: AdminTokenBridger
-}> => {
+} => {
   if (!l1pkParam) {
     if (!pk && !mnemonic)
       throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
