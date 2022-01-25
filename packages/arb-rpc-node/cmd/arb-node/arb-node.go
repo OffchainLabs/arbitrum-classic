@@ -110,7 +110,7 @@ func startup() error {
 		return nil
 	}
 
-	if config.Metadata {
+	if config.Core.Test.JustMetadata {
 		storage, err := cmachine.NewArbStorage(config.GetNodeDatabasePath(), &config.Core)
 		if err != nil {
 			return err
