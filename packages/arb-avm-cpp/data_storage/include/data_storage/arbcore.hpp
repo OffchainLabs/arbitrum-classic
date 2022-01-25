@@ -105,7 +105,7 @@ class ArbCore {
     uint256_t unsafe_checkpoint_pruning_gas_used;
 
     // Core thread input
-    std::atomic<bool> trigger_save_rocksdb_checkpoint;
+    std::atomic<bool> trigger_save_rocksdb_checkpoint{false};
 
     // Core thread holds mutex only during reorg.
     // Routines accessing database for log entries will need to acquire mutex
