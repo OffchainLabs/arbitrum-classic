@@ -73,6 +73,8 @@ class CombinedMachineCache {
         std::optional<uint256_t> existing_gas_used,
         std::optional<uint256_t> database_gas,
         bool use_max_execution);
+    CacheResultStruct checkSimpleMatching(
+        const std::function<bool(const MachineOutput&)>& check_output);
     void reorg(uint256_t next_gas_used);
     [[nodiscard]] uint256_t currentTimeExpired();
 

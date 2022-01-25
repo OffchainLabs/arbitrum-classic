@@ -974,6 +974,13 @@ ArbCore::loadLastMatchingMachine(
     ReadWriteTransaction& tx,
     std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
     ValueCache& value_cache) {
+    // First check if last saved machine matches
+    auto simple_machine_thread = getMachineThreadFromSimpleCheck(check_output);
+    if (simple_machine_thread) {
+        return simple_machine_thread;
+    }
+
+    // Check last database entry since we already extracted machine state
     auto last_machine_thread = getMachineThreadFromCheckpoint(
         last_matching_database_checkpoint, check_output, tx, value_cache);
     if (last_machine_thread) {
@@ -1002,6 +1009,17 @@ ArbCore::loadLastMatchingMachine(
         return status;
     }
     return rocksdb::Status::NotFound();
+}
+
+std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromSimpleCheck(
+    const std::function<bool(const MachineOutput&)>& check_output) {
+    auto mach = combined_machine_cache.checkSimpleMatching(check_output);
+    if (mach.machine != nullptr) {
+        // Found machine in cache
+        return std::make_unique<MachineThread>(mach.machine->machine_state);
+    }
+
+    return nullptr;
 }
 
 std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
