@@ -27,9 +27,9 @@ import {
   l1Networks,
   L2Network,
   l2Networks,
-} from '../src/lib/utils/networks'
+} from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
-import { AdminTokenBridger } from '../src/lib/assetBridger'
+import { AdminTokenBridger } from '../src/lib/assetBridger/tokenBridger'
 
 dotenv.config()
 

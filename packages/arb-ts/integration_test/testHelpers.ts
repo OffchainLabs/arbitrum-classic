@@ -32,10 +32,10 @@ import { TestERC20__factory } from '../src/lib/abi'
 import { instantiateBridge } from '../scripts/instantiate_bridge'
 
 import config from './config'
-import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
+import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
 import { Signer } from 'ethers'
 import { EthBridger, TokenBridger } from '../src'
-import { L1Network, L2Network } from '../src/lib/utils/networks'
+import { L1Network, L2Network } from '../src/lib/dataEntities/networks'
 
 const argv = yargs(process.argv.slice(2))
   .options({

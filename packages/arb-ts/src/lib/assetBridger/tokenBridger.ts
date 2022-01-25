@@ -43,9 +43,9 @@ import {
   GasOverrides,
   L1ToL2MessageGasEstimator,
 } from '../message/L1ToL2MessageGasEstimator'
-import { SignerProviderUtils } from '../utils/signerOrProvider'
-import { L2Network } from '../utils/networks'
-import { MissingProviderArbTsError } from '../errors'
+import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
+import { L2Network } from '../dataEntities/networks'
+import { MissingProviderArbTsError } from '../dataEntities/errors'
 import { EventFetcher } from '../utils/eventFetcher'
 
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
@@ -53,11 +53,11 @@ import { AssetBridger } from './assetBridger'
 import {
   L1ContractTransaction,
   L1TransactionReceipt,
-} from '../message/L1ToL2Message'
+} from '../message/L1Transaction'
 import {
   L2ContractTransaction,
   L2TransactionReceipt,
-} from '../message/L2ToL1Message'
+} from '../message/L2Transaction'
 
 export interface TokenApproveParams {
   /**
@@ -215,16 +215,15 @@ export class TokenBridger extends AssetBridger<
     await this.checkL2Network(l2Provider)
 
     const eventFetcher = new EventFetcher(l2Provider)
-    const events = await eventFetcher.getEvents<
-      L2ArbitrumGateway,
-      WithdrawalInitiatedEvent
-    >(
-      gatewayAddress,
-      L2ArbitrumGateway__factory,
-      contract =>
-        contract.filters.WithdrawalInitiated(null, fromAddress || null),
-      filter
-    )
+    const events = (
+      await eventFetcher.getEvents<L2ArbitrumGateway, WithdrawalInitiatedEvent>(
+        gatewayAddress,
+        L2ArbitrumGateway__factory,
+        contract =>
+          contract.filters.WithdrawalInitiated(null, fromAddress || null),
+        filter
+      )
+    ).map(a => a.event)
 
     return l1TokenAddress
       ? events.filter(
@@ -600,11 +599,13 @@ export class AdminTokenBridger extends TokenBridger {
       customNetworkL1GatewayRouter || this.l2Network.tokenBridge.l1GatewayRouter
 
     const eventFetcher = new EventFetcher(l1Provider)
-    return await eventFetcher.getEvents<L1GatewayRouter, GatewaySetEvent>(
-      l1GatewayRouterAddress,
-      L1GatewayRouter__factory,
-      t => t.filters.GatewaySet()
-    )
+    return (
+      await eventFetcher.getEvents<L1GatewayRouter, GatewaySetEvent>(
+        l1GatewayRouterAddress,
+        L1GatewayRouter__factory,
+        t => t.filters.GatewaySet()
+      )
+    ).map(a => a.event)
   }
 
   /**
@@ -628,11 +629,13 @@ export class AdminTokenBridger extends TokenBridger {
       customNetworkL2GatewayRouter || this.l2Network.tokenBridge.l2GatewayRouter
 
     const eventFetcher = new EventFetcher(l2Provider)
-    return await eventFetcher.getEvents<L1GatewayRouter, GatewaySetEvent>(
-      l2GatewayRouterAddress,
-      L1GatewayRouter__factory,
-      t => t.filters.GatewaySet()
-    )
+    return (
+      await eventFetcher.getEvents<L1GatewayRouter, GatewaySetEvent>(
+        l2GatewayRouterAddress,
+        L1GatewayRouter__factory,
+        t => t.filters.GatewaySet()
+      )
+    ).map(a => a.event)
   }
 
   /**

@@ -19,7 +19,7 @@
 import dotenv from 'dotenv'
 import { BigNumber } from 'ethers'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
-import { ArbTsError } from '../errors'
+import { ArbTsError } from '../dataEntities/errors'
 
 dotenv.config()
 

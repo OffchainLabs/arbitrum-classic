@@ -20,14 +20,14 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { BigNumber } from 'ethers'
 
 import { ERC20__factory, Multicall2__factory } from '../abi'
-import { ArbTsError } from '../errors'
+import { ArbTsError } from '../dataEntities/errors'
 import {
   isL1Network,
   L1Network,
   l1Networks,
   L2Network,
   l2Networks,
-} from './networks'
+} from '../dataEntities/networks'
 
 /**
  * Input to multicall aggregator

@@ -32,7 +32,7 @@ import {
   prettyLog,
   skipIfMainnet,
 } from './testHelpers'
-import { ARB_GAS_INFO } from '../src/lib/constants'
+import { ARB_GAS_INFO } from '../src/lib/dataEntities/constants'
 import {
   L2ToL1Message,
   L2ToL1MessageStatus,
