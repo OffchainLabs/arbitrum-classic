@@ -462,9 +462,12 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     }
 
    public:
-    explicit RunningCode(std::shared_ptr<Code> parent_)
-        : CodeBase<RunningCodeImpl>(parent_->initialSegmentForChildCode()),
+    explicit RunningCode(std::shared_ptr<Code> parent_, uint64_t initialSegment)
+        : CodeBase<RunningCodeImpl>(initialSegment),
           parent(std::move(parent_)) {}
+
+    explicit RunningCode(std::shared_ptr<Code> parent_)
+        : RunningCode(parent_, parent_->initialSegmentForChildCode()) {}
 
     SegmentsAndLock getRootSegments() const override {
         return parent->getRootSegments();
