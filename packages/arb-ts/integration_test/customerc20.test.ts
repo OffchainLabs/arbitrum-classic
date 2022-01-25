@@ -47,7 +47,7 @@ import {
 import { L1ToL2MessageStatus, TokenBridger } from '../src'
 import { Signer, constants } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
-import { SignerProviderUtils } from '../src/lib/utils/signerOrProvider'
+import { SignerProviderUtils } from '../src/lib/dataEntities/signerOrProvider'
 
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', function () {
