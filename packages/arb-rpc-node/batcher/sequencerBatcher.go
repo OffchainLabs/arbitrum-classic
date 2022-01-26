@@ -308,6 +308,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		var batchDataSize int
 		seenOwnTx := false
 		emptiedQueue := true
+		txHashesSet := make(map[ethcommon.Hash]struct{})
 		// This pattern is safe as we acquired a lock so we are the exclusive reader
 		for len(b.txQueue) > 0 {
 			queueItem := <-b.txQueue
@@ -325,6 +326,12 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				emptiedQueue = false
 				break
 			}
+			txHash := queueItem.tx.Hash()
+			_, txAlreadyInBatch := txHashesSet[txHash]
+			if txAlreadyInBatch {
+				queueItem.resultChan <- errors.New("already known")
+				continue
+			}
 			if queueItem.tx == startTx {
 				seenOwnTx = true
 			}
@@ -332,6 +339,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			resultChans = append(resultChans, queueItem.resultChan)
 			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(queueItem.tx))
 			batchDataSize += len(queueItem.tx.Data())
+			txHashesSet[txHash] = struct{}{}
 		}
 		if !seenOwnTx && emptiedQueue && batchDataSize+len(startTx.Data()) <= maxTxDataSize {
 			// Another thread must have encountered an internal error attempting to process startTx
