@@ -228,12 +228,7 @@ void ArbCore::printDatabaseMetadata() {
     } else {
         auto output =
             getMachineOutput(std::get<CheckpointVariant>(checkpoint_result));
-        if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
-            std::cout << std::get<rocksdb::Status>(checkpoint_result).ToString()
-                      << "\n";
-        } else {
-            printMachineOutputInfo("last checkpoint", output);
-        }
+        printMachineOutputInfo("last checkpoint", output);
     }
 }
 
@@ -738,10 +733,11 @@ rocksdb::Status ArbCore::reorgToTimestampOrBefore(const uint256_t& timestamp,
         initial_start, cache);
 }
 
-// reorgToMachineOutput resets database entries to match the state when the
-// given output was the latest machine
-rocksdb::Status ArbCore::reorgToMachineOutput(const MachineOutput& output,
-                                              ValueCache& value_cache) {
+// reorgDatabaseToMachineOutput resets database entries to match the state when
+// the given output was the latest machine
+rocksdb::Status ArbCore::reorgDatabaseToMachineOutput(
+    const MachineOutput& output,
+    ValueCache& value_cache) {
     auto log_inserted_count = logInsertedCount();
     if (!log_inserted_count.status.ok()) {
         std::cerr << "Error getting inserted count in Cursor Reorg: "
@@ -975,9 +971,10 @@ ArbCore::loadLastMatchingMachine(
     std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
     ValueCache& value_cache) {
     // First check if last saved machine matches
-    auto simple_machine_thread = getMachineThreadFromSimpleCheck(check_output);
-    if (simple_machine_thread) {
-        return simple_machine_thread;
+    auto mach = combined_machine_cache.checkSimpleMatching(check_output);
+    if (mach.machine != nullptr) {
+        // Found machine in cache
+        return std::make_unique<MachineThread>(mach.machine->machine_state);
     }
 
     // Check last database entry since we already extracted machine state
@@ -1009,17 +1006,6 @@ ArbCore::loadLastMatchingMachine(
         return status;
     }
     return rocksdb::Status::NotFound();
-}
-
-std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromSimpleCheck(
-    const std::function<bool(const MachineOutput&)>& check_output) {
-    auto mach = combined_machine_cache.checkSimpleMatching(check_output);
-    if (mach.machine != nullptr) {
-        // Found machine in cache
-        return std::make_unique<MachineThread>(mach.machine->machine_state);
-    }
-
-    return nullptr;
 }
 
 std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
@@ -1174,6 +1160,13 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     // Remove invalid cache entries after selected_machine_output
     combined_machine_cache.reorg(selected_machine_output.arb_gas_used + 1);
 
+    // Remove invalid database entries
+    auto status =
+        reorgDatabaseToMachineOutput(selected_machine_output, value_cache);
+    if (!status.ok()) {
+        return status;
+    }
+
     // Advance core_machine to same place as selected_machine_output.
     if (initial_start && (core_machine->machine_state.output.l2_block_number !=
                           selected_machine_output.l2_block_number)) {
@@ -1182,12 +1175,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                   << selected_machine_output.l2_block_number << std::endl;
     }
 
-    auto status = advanceCoreToTarget(selected_machine_output, initial_start);
-    if (!status.ok()) {
-        return status;
-    }
-
-    status = reorgToMachineOutput(output, value_cache);
+    status = advanceCoreToTarget(selected_machine_output, initial_start);
     if (!status.ok()) {
         return status;
     }

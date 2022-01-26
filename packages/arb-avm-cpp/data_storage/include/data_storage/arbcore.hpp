@@ -206,8 +206,8 @@ class ArbCore {
         bool initial_start,
         ValueCache& value_cache);
 
-    rocksdb::Status reorgToMachineOutput(const MachineOutput& output,
-                                         ValueCache& value_cache);
+    rocksdb::Status reorgDatabaseToMachineOutput(const MachineOutput& output,
+                                                 ValueCache& value_cache);
     rocksdb::Status advanceCoreToTarget(const MachineOutput& target_output,
                                         bool cache_sideloads);
     std::variant<CheckpointVariant, rocksdb::Status>
