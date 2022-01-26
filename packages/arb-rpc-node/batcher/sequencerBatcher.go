@@ -329,7 +329,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			txHash := queueItem.tx.Hash()
 			_, txAlreadyInBatch := txHashesSet[txHash]
 			if txAlreadyInBatch {
-				queueItem.resultChan <- errors.New("duplicate transaction")
+				queueItem.resultChan <- errors.New("already known")
 				continue
 			}
 			txHashesSet[txHash] = struct{}{}
