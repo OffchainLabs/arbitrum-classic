@@ -581,14 +581,6 @@ interface TokenAndGateway {
  * Admin functionality for the token bridge
  */
 export class AdminTokenBridger extends TokenBridger {
-  private async contractExists(
-    contractAddress: string,
-    provider: Provider
-  ): Promise<boolean> {
-    const contractCode = await provider.getCode(contractAddress)
-    return !(contractCode.length > 2)
-  }
-
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
