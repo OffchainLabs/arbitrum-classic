@@ -326,6 +326,9 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				emptiedQueue = false
 				break
 			}
+			if queueItem.tx == startTx {
+				seenOwnTx = true
+			}
 			txHash := queueItem.tx.Hash()
 			_, txAlreadyInBatch := txHashesSet[txHash]
 			if txAlreadyInBatch {
@@ -333,9 +336,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				continue
 			}
 			txHashesSet[txHash] = struct{}{}
-			if queueItem.tx == startTx {
-				seenOwnTx = true
-			}
 			batchTxs = append(batchTxs, queueItem.tx)
 			resultChans = append(resultChans, queueItem.resultChan)
 			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(queueItem.tx))
