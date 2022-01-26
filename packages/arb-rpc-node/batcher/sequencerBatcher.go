@@ -308,6 +308,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		var batchDataSize int
 		seenOwnTx := false
 		emptiedQueue := true
+		txHashesSet := make(map[ethcommon.Hash]struct{})
 		// This pattern is safe as we acquired a lock so we are the exclusive reader
 		for len(b.txQueue) > 0 {
 			queueItem := <-b.txQueue
@@ -325,6 +326,13 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				emptiedQueue = false
 				break
 			}
+			txHash := queueItem.tx.Hash()
+			_, txAlreadyInBatch := txHashesSet[txHash]
+			if txAlreadyInBatch {
+				queueItem.resultChan <- errors.New("duplicate transaction")
+				continue
+			}
+			txHashesSet[txHash] = struct{}{}
 			if queueItem.tx == startTx {
 				seenOwnTx = true
 			}
