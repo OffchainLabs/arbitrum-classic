@@ -935,8 +935,13 @@ ArbCore::loadLastMatchingMachine(
     ValueCache& value_cache) {
     // First check if last saved machine matches
     auto mach = combined_machine_cache.checkSimpleMatching(check_output);
-    if (mach.machine != nullptr) {
+    auto last_matching_database_output =
+        getMachineOutput(last_matching_database_checkpoint);
+    if (mach.machine != nullptr &&
+        mach.machine->machine_state.output.arb_gas_used >=
+            last_matching_database_output.arb_gas_used) {
         // Found machine in cache
+        // #### check that at or after last checkpoint saved to database
         return std::make_unique<MachineThread>(mach.machine->machine_state);
     }
 
