@@ -173,3 +173,11 @@ func (r *Rollup) RemoveOldZombies(ctx context.Context, startIndex *big.Int) erro
 	_, err := r.builderCon.RemoveOldZombies(authWithContext(ctx, r.builderAuth), startIndex)
 	return errors.WithStack(err)
 }
+
+func (r *Rollup) WithdrawFunds(ctx context.Context, destination common.Address) error {
+	_, err := r.builderCon.WithdrawStakerFunds(
+		authWithContext(ctx, r.builderAuth),
+		destination.ToEthAddress(),
+	)
+	return errors.WithStack(err)
+}
