@@ -39,6 +39,7 @@ workflows:
       - cpp-avm-asan
       - cpp-avm-tsan
       - arb-ts
+      - arb-ts-audit
       - ethbridge
       - ethbridge-coverage
       - backend:
@@ -93,6 +94,22 @@ jobs:
           working_directory: /home/user/project/packages
       - store_test_results:
           path: *test-path
+  arb-ts-audit:
+    docker:
+      - image: offchainlabs/frontend-base:0.4.0
+    steps:
+      - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
+      - restore_cache: *restore_yarn_cache
+      - run:
+          name: install and audit
+          command: |
+            yarn install --cache-folder ~/.cache/yarn
+            if [[ ! -z $CIRCLE_PULL_REQUEST ]] ; then yarn audit:ci ; fi
+          working_directory: /home/user/project
   ethbridge:
     docker:
       - image: offchainlabs/frontend-base:0.4.0
@@ -108,10 +125,9 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_yarn_cache
       - run:
-          name: install and audit
+          name: install
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            if [[ ! -z $CIRCLE_PULL_REQUEST ]] ; then yarn audit:ci ; fi
             yarn build
           working_directory: /home/user/project
       - run:
