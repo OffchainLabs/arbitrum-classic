@@ -51,6 +51,16 @@ constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
 constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-120};
+
+template <class T>
+void printResult(const char* msg, ValueResult<T> result) {
+    std::cout << msg;
+    if (!result.status.ok()) {
+        std::cout << result.status.ToString() << "\n";
+    } else {
+        std::cout << result.data << "\n";
+    }
+}
 }  // namespace
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
@@ -159,68 +169,21 @@ ValueLoader ArbCore::makeValueLoader() const {
 
 void ArbCore::printDatabaseMetadata() {
     ReadTransaction tx(data_storage);
-    auto schema_version_result = schemaVersion(tx);
-    std::cout << "schema version:                   ";
-    if (!schema_version_result.status.ok()) {
-        std::cout << schema_version_result.status.ToString() << "\n";
-    } else {
-        std::cout << schema_version_result.data << "\n";
-    }
-    auto log_inserted_count_result = logInsertedCountImpl(tx);
-    std::cout << "log inserted count:               ";
-    if (!log_inserted_count_result.status.ok()) {
-        std::cout << log_inserted_count_result.status.ToString() << "\n";
-    } else {
-        std::cout << log_inserted_count_result.data << "\n";
-    }
+    printResult("schema version:                   ", schemaVersion(tx));
+    printResult("log inserted count:               ", logInsertedCountImpl(tx));
     for (size_t i = 0; i < logs_cursors.size(); i++) {
-        auto logs_cursor_count_result = logsCursorGetCurrentTotalCount(tx, i);
         std::cout << "log cursor " << i << " count:               ";
-        if (!logs_cursor_count_result.status.ok()) {
-            std::cout << logs_cursor_count_result.status.ToString() << "\n";
-        } else {
-            std::cout << logs_cursor_count_result.data << "\n";
-        }
+        printResult("", logsCursorGetCurrentTotalCount(tx, i));
     }
-    auto send_inserted_count_result = sendInsertedCountImpl(tx);
-    std::cout << "send inserted count:              ";
-    if (!send_inserted_count_result.status.ok()) {
-        std::cout << send_inserted_count_result.status.ToString() << "\n";
-    } else {
-        std::cout << send_inserted_count_result.data << "\n";
-    }
-    auto message_inserted_count_result = messageEntryInsertedCountImpl(tx);
-    std::cout << "message inserted count:           ";
-    if (!message_inserted_count_result.status.ok()) {
-        std::cout << message_inserted_count_result.status.ToString() << "\n";
-    } else {
-        std::cout << message_inserted_count_result.data << "\n";
-    }
-    auto delayed_message_inserted_count_result =
-        delayedMessageEntryInsertedCountImpl(tx);
-    std::cout << "delayed message inserted count:   ";
-    if (!delayed_message_inserted_count_result.status.ok()) {
-        std::cout << delayed_message_inserted_count_result.status.ToString()
-                  << "\n";
-    } else {
-        std::cout << delayed_message_inserted_count_result.data << "\n";
-    }
-    auto total_delayed_messages_sequenced_result =
-        totalDelayedMessagesSequencedImpl(tx);
-    std::cout << "total delayed messages sequenced: ";
-    if (!total_delayed_messages_sequenced_result.status.ok()) {
-        std::cout << total_delayed_messages_sequenced_result.status.ToString()
-                  << "\n";
-    } else {
-        std::cout << total_delayed_messages_sequenced_result.data << "\n";
-    }
-    auto pruning_mode_result = pruningMode(tx);
-    std::cout << "pruning mode:                     ";
-    if (!pruning_mode_result.status.ok()) {
-        std::cout << pruning_mode_result.status.ToString() << "\n";
-    } else {
-        std::cout << pruning_mode_result.data << "\n";
-    }
+    printResult("send inserted count:              ",
+                sendInsertedCountImpl(tx));
+    printResult("message inserted count:           ",
+                messageEntryInsertedCountImpl(tx));
+    printResult("delayed message inserted count:   ",
+                delayedMessageEntryInsertedCountImpl(tx));
+    printResult("total delayed messages sequenced: ",
+                totalDelayedMessagesSequencedImpl(tx));
+    printResult("pruning mode:                     ", pruningMode(tx));
     auto checkpoint_result = getMaxCheckpoint(tx);
     if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
         std::cout << std::get<rocksdb::Status>(checkpoint_result).ToString()
