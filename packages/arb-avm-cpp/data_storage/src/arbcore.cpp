@@ -485,20 +485,6 @@ template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t, ValueCache&);
 template std::unique_ptr<MachineThread> ArbCore::getMachine(uint256_t,
                                                             ValueCache&);
 
-// triggerSaveCheckpoint is meant for unit tests and should not be called from
-// multiple threads at the same time.
-rocksdb::Status ArbCore::triggerSaveCheckpoint() {
-    save_checkpoint = true;
-    std::cerr << "Triggering checkpoint save" << std::endl;
-    while (save_checkpoint) {
-        // Wait until snapshot has been saved
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    std::cerr << "Checkpoint saved" << std::endl;
-
-    return save_checkpoint_status;
-}
-
 // triggerSaveFullRocksdbCheckpointToDisk is used to save a copy of current
 // database without having to stop program
 void ArbCore::triggerSaveFullRocksdbCheckpointToDisk() {
@@ -967,7 +953,12 @@ std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
         check_output, std::nullopt, checkpoint.output.arb_gas_used, false);
     if (mach.machine != nullptr) {
         // Found machine in cache
-        return std::make_unique<MachineThread>(mach.machine->machine_state);
+        auto& state = mach.machine->machine_state;
+        state.code->cleanupAfterReorg();
+        auto nextSegment = std::max(state.code->initialSegmentForChildCode(),
+                                    core_code->initialSegmentForChildCode());
+        state.code = std::make_shared<RunningCode>(state.code, nextSegment);
+        return std::make_unique<MachineThread>(state);
     }
 
     try {
@@ -1084,7 +1075,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     }
 
     core_machine = std::move(setup);
-    core_machine->machine_state.code->cleanupAfterReorg();
     auto& output = core_machine->machine_state.output;
 
     // Remove invalid cache entries after selected_machine_output
@@ -1119,12 +1109,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     core_machine->continueRunningMachine(true);
 
     return rocksdb::Status::OK();
-}
-
-bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
-    auto it = std::unique_ptr<rocksdb::Iterator>(tx.checkpointGetIterator());
-    it->SeekToLast();
-    return !it->Valid();
 }
 
 uint256_t ArbCore::maxCheckpointGas() {
@@ -1303,7 +1287,6 @@ void ArbCore::operator()() {
     auto last_messages_ready_check_time = begin_time;
     auto last_run_machine_check_time = begin_time;
     auto last_restart_machine_check_time = begin_time;
-    trigger_save_rocksdb_checkpoint = false;
     auto perform_pruning = false;
     auto perform_save_rocksdb_checkpoint = false;
 
@@ -1393,16 +1376,6 @@ void ArbCore::operator()() {
                 break;
             }
 
-            if (core_machine->status() != MachineThread::MACHINE_RUNNING &&
-                save_checkpoint) {
-                // Force checkpoint save for unit test purposes only when
-                // machine not running
-                ReadWriteTransaction tx(data_storage);
-                save_checkpoint_status = saveCheckpoint(tx);
-                tx.commit();
-                save_checkpoint = false;
-            }
-
             if (core_machine->status() == MachineThread::MACHINE_SUCCESS) {
                 std::chrono::time_point<std::chrono::steady_clock>
                     begin_machine_success_time;
@@ -1483,6 +1456,8 @@ void ArbCore::operator()() {
                                       << core_error_string << "\n";
                             break;
                         }
+                        // Clear oldest cache and start populating next cache
+                        cache.nextCache();
                         next_checkpoint_gas =
                             output.arb_gas_used +
                             coreConfig.checkpoint_gas_frequency;
@@ -1496,8 +1471,6 @@ void ArbCore::operator()() {
                         printMachineOutputInfo("Saved checkpoint", output);
                         std::cout << "Took " << duration << " second(s) to save"
                                   << "\n";
-                        // Clear oldest cache and start populating next cache
-                        cache.nextCache();
 
                         if (trigger_save_rocksdb_checkpoint) {
                             // database is ready to be copied
