@@ -53,7 +53,7 @@ constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-120};
 
 template <class T>
-void printResult(const char* msg, ValueResult<T> result) {
+void printResult(const char* msg, const ValueResult<T>& result) {
     std::cout << msg;
     if (!result.status.ok()) {
         std::cout << result.status.ToString() << "\n";
