@@ -157,7 +157,7 @@ func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 			db.PrintCoreThreadBacktrace()
 			nextLog += time.Second * 30
 		}
-		<-time.After(time.Millisecond * 50)
+		<-time.After(time.Millisecond * 1)
 	}
 	return status, nil
 }
