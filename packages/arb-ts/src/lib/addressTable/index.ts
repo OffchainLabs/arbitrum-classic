@@ -7,39 +7,45 @@ import { ARB_ADDRESS_TABLE_ADDRESS } from '../constants'
 import { BigNumber, BigNumberish } from 'ethers'
 
 export class ArbAddressTable {
-  getAddressTableContract(l2SignerOrProvider: SignerOrProvider) {
+  static getAddressTableContract(l2SignerOrProvider: SignerOrProvider) {
     return ArbAddressTable__factory.connect(
       ARB_ADDRESS_TABLE_ADDRESS,
       l2SignerOrProvider
     )
   }
 
-  async addressIsRegistered(
+  static async addressIsRegistered(
     addr: string,
     l2SignerOrProvider: SignerOrProvider
   ): Promise<boolean> {
-    const addrTable = await this.getAddressTableContract(l2SignerOrProvider)
+    const addrTable = await ArbAddressTable.getAddressTableContract(
+      l2SignerOrProvider
+    )
     return addrTable.addressExists(addr)
   }
 
-  async lookupIndexOfAddress(
+  static async lookupIndexOfAddress(
     addr: string,
     l2SignerOrProvider: SignerOrProvider
   ): Promise<BigNumber> {
-    const addrTable = await this.getAddressTableContract(l2SignerOrProvider)
+    const addrTable = await ArbAddressTable.getAddressTableContract(
+      l2SignerOrProvider
+    )
     return addrTable.lookup(addr)
   }
 
-  async lookupAddressOfIndex(
+  static async lookupAddressOfIndex(
     index: BigNumberish,
     l2SignerOrProvider: SignerOrProvider
   ): Promise<string> {
-    const addrTable = await this.getAddressTableContract(l2SignerOrProvider)
+    const addrTable = await ArbAddressTable.getAddressTableContract(
+      l2SignerOrProvider
+    )
     return addrTable.lookupIndex(index)
   }
 
-  async registerAddress(addr: string, l2Signer: Signer) {
-    const addrTable = await this.getAddressTableContract(l2Signer)
+  static async registerAddress(addr: string, l2Signer: Signer) {
+    const addrTable = await ArbAddressTable.getAddressTableContract(l2Signer)
     return addrTable.register(addr)
   }
 }
