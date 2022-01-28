@@ -46,3 +46,4 @@ export {
 export { getRawArbTransactionReceipt } from './lib/utils/lib'
 export * as abi from './lib/abi/index'
 export * as constants from './lib/constants'
+export { ArbAddressTable } from './lib/addressTable'
