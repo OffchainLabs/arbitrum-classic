@@ -89,7 +89,7 @@ function isError(error: Error): error is NodeJS.ErrnoException {
 }
 
 const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
-const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
+const DEFAULT_MAX_GAS_PRICE_PERCENT_INCREASE = BigNumber.from(50)
 const MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
 
 interface RetryableParamsOptions {
@@ -337,7 +337,11 @@ export class Bridge {
 
     // 1. Get gas price
     const gasPriceBid =
-      retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
+      retryableGasArgs.gasPriceBid ||
+      BridgeHelper.percentIncrease(
+        await this.l2Provider.getGasPrice(),
+        DEFAULT_MAX_GAS_PRICE_PERCENT_INCREASE
+      )
 
     const l1GatewayAddress = await this.l1Bridge.getGatewayAddress(
       erc20L1Address
@@ -395,26 +399,22 @@ export class Bridge {
 
     let maxGas =
       retryableGasArgs.maxGas ||
-      BridgeHelper.percentIncrease(
-        (
-          await nodeInterface.estimateRetryableTicket(
-            l1GatewayAddress,
-            parseEther('0.05').add(
-              estimateGasCallValue
-            ) /** we add a 0.05 "deposit" buffer to pay for execution in the gas estimation  */,
-            l2Dest,
-            estimateGasCallValue,
-            maxSubmissionPrice,
-            sender,
-            sender,
-            0,
-            gasPriceBid,
-            depositCalldata
-          )
-        )[0],
-        retryableGasArgs.maxGasPercentIncrease ||
-          BigNumber.from(DEFAULT_MAX_GAS_PERCENT_INCREASE)
-      )
+      (
+        await nodeInterface.estimateRetryableTicket(
+          l1GatewayAddress,
+          parseEther('0.05').add(
+            estimateGasCallValue
+          ) /** we add a 0.05 "deposit" buffer to pay for execution in the gas estimation  */,
+          l2Dest,
+          estimateGasCallValue,
+          maxSubmissionPrice,
+          sender,
+          sender,
+          0,
+          gasPriceBid,
+          depositCalldata
+        )
+      )[0]
     if (
       l1GatewayAddress === l1CustomGatewayAddress &&
       maxGas.lt(MIN_CUSTOM_DEPOSIT_MAXGAS)
