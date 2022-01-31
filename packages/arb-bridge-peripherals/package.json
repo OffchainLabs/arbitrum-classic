@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "arbos-precompiles": "^1.0.1",
-    "@openzeppelin/contracts": "3.4.2",
+    "@openzeppelin/contracts": "4.4.2",
     "@openzeppelin/contracts-upgradeable": "3.4.2",
     "arb-bridge-eth": "0.7.4",
     "hardhat": "^2.6.1"
