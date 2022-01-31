@@ -4,8 +4,8 @@
   "license": "Apache-2.0",
   "scripts": {
     "postinstall": "$npm_execpath run clean:build",
-    "clean:build": "$npm_execpath run hardhat:prod clean && $npm_execpath run hardhat:prod compile",
-    "build": "$npm_execpath run hardhat:prod compile",
+    "clean:build": "$npm_execpath run hardhat:prod clean && $npm_execpath run build",
+    "build": "if [[ $PWD == */packages/arb-bridge-peripherals ]]; then $npm_execpath run hardhat:dev compile; else $npm_execpath run hardhat:prod compile; fi",
     "test:e2e": "$npm_execpath run hardhat:dev test test/*.e2e.ts",
     "test:l1": "$npm_execpath run hardhat:dev test test/*.l1.ts",
     "test:l2": "$npm_execpath run hardhat:dev test test/*.l2.ts --network arbitrum",
