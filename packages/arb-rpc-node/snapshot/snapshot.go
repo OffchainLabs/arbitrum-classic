@@ -18,13 +18,13 @@ package snapshot
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/rs/zerolog/log"
 
 	"github.com/pkg/errors"
 
@@ -37,6 +37,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "snapshot").Logger()
 
 type Snapshot struct {
 	mach                  machine.Machine
@@ -553,10 +555,8 @@ func runTxUnchecked(ctx context.Context, mach machine.Machine, msg inbox.InboxMe
 
 	avmLogs := assertion.Logs
 	if len(avmLogs) == 0 {
-		fmt.Println("Running message didn't produce log")
-		fmt.Println("Gas used", assertion.NumGas)
-		fmt.Println("mach state after", mach)
-		return nil, debugPrints, errors.New("no logs produced by tx")
+		logger.Info().Uint64("gasused", assertion.NumGas).Msg("Running message didn't produce log")
+		return nil, debugPrints, errors.New("transaction ran out of gas")
 	}
 
 	res, err := evm.NewTxResultFromValue(avmLogs[len(avmLogs)-1])
