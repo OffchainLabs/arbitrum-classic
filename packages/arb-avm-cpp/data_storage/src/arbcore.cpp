@@ -717,8 +717,6 @@ void ArbCore::operator()() {
         last_machine->machine_state.output.fully_processed_inbox.count;
 
     if (coreConfig.save_rocksdb_interval > 0) {
-        std::cout << "#### Interval: " << coreConfig.save_rocksdb_interval
-                  << std::endl;
         next_rocksdb_save_timestamp =
             seconds_since_epoch() + coreConfig.save_rocksdb_interval;
         std::filesystem::create_directories(save_rocksdb_path);
