@@ -32,9 +32,7 @@ rocksdb::Status ReadTransaction::createRocksdbCheckpoint(
         return status;
     }
 
-    status = checkpoint->CreateCheckpoint(checkpoint_dir);
-
-    return rocksdb::Status::OK();
+    return checkpoint->CreateCheckpoint(checkpoint_dir);
 }
 
 rocksdb::Status ReadTransaction::defaultGet(const rocksdb::Slice& key,

@@ -140,6 +140,9 @@ class ArbCore {
     std::atomic<bool> save_checkpoint{false};
     rocksdb::Status save_checkpoint_status;
 
+    // Core thread input
+    std::atomic<bool> trigger_save_rocksdb_checkpoint{false};
+
     // Core thread input for cleaning up old checkpoints
     // Delete_checkpoints_before message should be set to non-zero value
     // after other parameters are set.  Main thread will set
@@ -237,6 +240,10 @@ class ArbCore {
     template <class T>
     std::unique_ptr<T> getMachine(uint256_t machineHash,
                                   ValueCache& value_cache);
+
+   public:
+    // To trigger saving database copy
+    void triggerSaveFullRocksdbCheckpointToDisk();
 
    private:
     template <class T>

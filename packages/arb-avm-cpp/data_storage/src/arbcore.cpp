@@ -301,6 +301,12 @@ rocksdb::Status ArbCore::triggerSaveCheckpoint() {
     return save_checkpoint_status;
 }
 
+// triggerSaveFullRocksdbCheckpointToDisk is used to save a copy of current
+// database without having to stop program
+void ArbCore::triggerSaveFullRocksdbCheckpointToDisk() {
+    trigger_save_rocksdb_checkpoint = true;
+}
+
 rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     auto& state = machine->machine_state;
     if (!isValid(tx, state.output.fully_processed_inbox)) {
@@ -711,6 +717,8 @@ void ArbCore::operator()() {
         last_machine->machine_state.output.fully_processed_inbox.count;
 
     if (coreConfig.save_rocksdb_interval > 0) {
+        std::cout << "#### Interval: " << coreConfig.save_rocksdb_interval
+                  << std::endl;
         next_rocksdb_save_timestamp =
             seconds_since_epoch() + coreConfig.save_rocksdb_interval;
         std::filesystem::create_directories(save_rocksdb_path);
@@ -818,8 +826,17 @@ void ArbCore::operator()() {
                     }
                 }
 
-                if (machine->machine_state.output.arb_gas_used >
-                    last_checkpoint_gas + max_checkpoint_frequency) {
+                auto current_seconds = seconds_since_epoch();
+                if (next_rocksdb_save_timestamp != 0 &&
+                    current_seconds >= next_rocksdb_save_timestamp) {
+                    trigger_save_rocksdb_checkpoint = true;
+                    next_rocksdb_save_timestamp =
+                        current_seconds + coreConfig.save_rocksdb_interval;
+                }
+
+                if (trigger_save_rocksdb_checkpoint ||
+                    machine->machine_state.output.arb_gas_used >
+                        last_checkpoint_gas + max_checkpoint_frequency) {
                     // Save checkpoint after max_checkpoint_frequency gas used
                     status = saveCheckpoint(tx);
                     if (!status.ok()) {
@@ -831,15 +848,13 @@ void ArbCore::operator()() {
                     last_checkpoint_gas =
                         machine->machine_state.output.arb_gas_used;
                     // Clear oldest cache and start populating next cache
-                    std::cout
+                    std::cerr
                         << "Last checkpoint gas used: " << last_checkpoint_gas
                         << std::endl;
                     cache.nextCache();
 
-                    // Check if database copy needs to be saved to disk
-                    auto current_seconds = seconds_since_epoch();
-                    if (next_rocksdb_save_timestamp != 0 &&
-                        current_seconds >= next_rocksdb_save_timestamp) {
+                    if (trigger_save_rocksdb_checkpoint) {
+                        trigger_save_rocksdb_checkpoint = false;
                         auto timestamp_dir = std::to_string(current_seconds);
                         auto checkpoint_dir = save_rocksdb_path / timestamp_dir;
                         status =
@@ -857,9 +872,6 @@ void ArbCore::operator()() {
                                       << save_elapsed << " seconds"
                                       << std::endl;
                         }
-
-                        next_rocksdb_save_timestamp =
-                            current_seconds + coreConfig.save_rocksdb_interval;
                     }
                 }
 
