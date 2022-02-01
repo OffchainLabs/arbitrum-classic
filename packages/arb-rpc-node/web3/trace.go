@@ -279,6 +279,7 @@ func (t *Trace) traceDestroyed(ctx context.Context, cursor core.ExecutionCursor,
 		[]inbox.InboxMessage{endOfBlock},
 		nil,
 		true,
+		false,
 	)
 	if err != nil {
 		return nil, err

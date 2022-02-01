@@ -25,6 +25,7 @@ extern "C" {
 int arbCoreStartThread(CArbCore* arbcore_ptr);
 void arbCoreAbortThread(CArbCore* arbcore_ptr);
 int arbCoreMachineIdle(CArbCore* arbcore_ptr);
+void arbCoreSaveRocksdbCheckpoint(CArbCore* arbcore_ptr);
 void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr);
 int arbCoreMessagesStatus(CArbCore* arbcore_ptr);
 char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);

@@ -45,7 +45,9 @@ class LRUMachineCache {
 
     size_t size();
     void add(std::unique_ptr<Machine> machine);
-    std::optional<map_type::iterator> atOrBeforeGas(uint256_t gas_used);
+    std::optional<map_type::const_iterator> atOrBeforeGas(uint256_t gas_used);
+    std::optional<LRUMachineCache::map_type::const_iterator> findMatching(
+        const std::function<bool(const MachineOutput&)>& check_output);
     void updateUsed(LRUMachineCache::map_type::iterator& cache_it);
     void reorg(uint256_t next_gas_used);
 

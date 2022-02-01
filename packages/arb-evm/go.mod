@@ -6,7 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.13-0.20211112145008-abc74a5ffeb7
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.8.0
 	github.com/pkg/errors v0.9.1
-	github.com/rs/zerolog v1.26.0
+	github.com/rs/zerolog v1.26.1
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util

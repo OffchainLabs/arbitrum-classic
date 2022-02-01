@@ -110,8 +110,7 @@ class ArbCore {
     uint256_t unsafe_checkpoint_pruning_gas_used;
 
     // Core thread input
-    std::atomic<bool> save_checkpoint{false};
-    rocksdb::Status save_checkpoint_status;
+    std::atomic<bool> trigger_save_rocksdb_checkpoint{false};
 
     // Core thread holds mutex only during reorg.
     // Routines accessing database for log entries will need to acquire mutex
@@ -215,13 +214,14 @@ class ArbCore {
                                          ValueCache& value_cache);
     rocksdb::Status advanceCoreToTarget(const MachineOutput& target_output,
                                         bool cache_sideloads);
-    std::variant<MachineOutput, rocksdb::Status> reorgToFirstMatchingCheckpoint(
+    std::variant<CheckpointVariant, rocksdb::Status>
+    reorgToLastMatchingCheckpoint(
         const std::function<bool(const MachineOutput&)>& check_output,
         ReadWriteTransaction& tx,
         std::unique_ptr<rocksdb::Iterator>& checkpoint_it);
     std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
-    reorgToFirstMatchingMachineCheckpoint(
-        const MachineOutput& target_machine_output,
+    loadLastMatchingMachine(
+        const CheckpointVariant& last_matching_database_checkpoint,
         const std::function<bool(const MachineOutput&)>& check_output,
         ReadWriteTransaction& tx,
         std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
@@ -242,6 +242,10 @@ class ArbCore {
     std::unique_ptr<T> getMachine(uint256_t machineHash,
                                   ValueCache& value_cache);
 
+   public:
+    // To trigger saving database copy
+    void triggerSaveFullRocksdbCheckpointToDisk();
+
    private:
     template <class T>
     std::unique_ptr<T> getMachineImpl(ReadTransaction& tx,
@@ -251,12 +255,14 @@ class ArbCore {
     rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
     void deleteCheckpoint(ReadWriteTransaction& tx,
                           const CheckpointVariant& checkpoint_variant);
+    std::unique_ptr<MachineThread> getMachineThreadFromCheckpoint(
+        const CheckpointVariant& current_database_checkpoint,
+        const std::function<bool(const MachineOutput&)>& check_output,
+        ReadWriteTransaction& tx,
+        ValueCache& value_cache);
 
    public:
     // Useful for unit tests
-    // Do not call triggerSaveCheckpoint from multiple threads at the same time
-    rocksdb::Status triggerSaveCheckpoint();
-    bool isCheckpointsEmpty(ReadTransaction& tx) const;
     uint256_t maxCheckpointGas();
 
    public:
@@ -473,11 +479,21 @@ class ArbCore {
                                              uint64_t checkpoint_max_to_prune);
     rocksdb::Status pruneToGasOrBefore(const uint256_t& gas,
                                        uint64_t checkpoint_max_to_prune);
+
+   private:
+    void printElapsed(
+        const std::chrono::time_point<std::chrono::steady_clock>& begin_time,
+        const std::chrono::time_point<std::chrono::steady_clock>& end_time,
+        const std::string& message) const;
+    void printMachineOutputInfo(const std::string& msg,
+                                MachineOutput& machine_output) const;
 };
 
 uint64_t seconds_since_epoch();
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,
                                                     uint256_t log_index);
+
+std::string optionalUint256ToString(std::optional<uint256_t>& value);
 
 #endif /* arbcore_hpp */

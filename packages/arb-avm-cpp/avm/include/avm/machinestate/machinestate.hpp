@@ -61,6 +61,7 @@ struct AssertionContext {
     std::vector<MachineEmission<Value>> debug_prints;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload{false};
+    bool stop_on_breakpoint{false};
     uint256_t max_gas;
     bool go_over_gas{false};
     bool first_instruction{true};
@@ -89,6 +90,11 @@ struct AssertionContext {
         logs.clear();
         debug_prints.clear();
         first_instruction = true;
+    }
+
+    void clearInboxMessages() {
+        inbox_messages.clear();
+        inbox_messages_consumed = 0;
     }
 };
 

@@ -43,6 +43,7 @@ CArbStorage* createArbStorage(const char* db_path,
         arb_core_config.checkpoint_max_execution_gas;
     coreConfig.checkpoint_gas_frequency =
         arb_core_config.checkpoint_gas_frequency;
+    coreConfig.last_machine_cache = arb_core_config.last_cache;
     coreConfig.basic_machine_cache_interval =
         arb_core_config.basic_cache_interval;
     coreConfig.basic_machine_cache_size = arb_core_config.basic_cache_size;
@@ -53,6 +54,7 @@ CArbStorage* createArbStorage(const char* db_path,
         arb_core_config.idle_sleep_milliseconds;
     coreConfig.seed_cache_on_startup = arb_core_config.seed_cache_on_startup;
     coreConfig.debug = arb_core_config.debug;
+    coreConfig.debug_timing = arb_core_config.debug_timing;
     coreConfig.database_save_interval = arb_core_config.database_save_interval;
     coreConfig.database_save_path = string_save_rocksdb_path;
     coreConfig.lazy_load_core_machine = arb_core_config.lazy_load_core_machine;

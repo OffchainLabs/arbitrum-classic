@@ -77,6 +77,7 @@ type Core struct {
 	CheckpointPruneOnStartup  bool          `koanf:"checkpoint-prune-on-startup"`
 	Database                  Database      `koanf:"database"`
 	Debug                     bool          `koanf:"debug"`
+	DebugTiming               bool          `koanf:"debug-timing"`
 	IdleSleep                 time.Duration `koanf:"idle-sleep"`
 	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
 	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
@@ -88,6 +89,7 @@ type CoreCache struct {
 	BasicInterval int           `koanf:"basic-interval"`
 	BasicSize     int           `koanf:"basic-size"`
 	Disable       bool          `koanf:"disable"`
+	Last          bool          `koanf:"last"`
 	LRUSize       int           `koanf:"lru-size"`
 	SeedOnStartup bool          `koanf:"seed-on-startup"`
 	TimedExpire   time.Duration `koanf:"timed-expire"`
@@ -198,6 +200,7 @@ type Sequencer struct {
 	GasRefunderAddress                string             `koanf:"gas-refunder-address"`
 	GasRefunderExtraGas               uint64             `koanf:"gas-refunder-extra-gas"`
 	Dangerous                         SequencerDangerous `koanf:"dangerous"`
+	DebugTiming                       bool               `koanf:"debug-timing"`
 }
 
 type WS struct {
@@ -213,8 +216,9 @@ type Forwarder struct {
 }
 
 type InboxReader struct {
-	DelayBlocks int64 `koanf:"delay-blocks"`
-	Paranoid    bool  `koanf:"paranoid"`
+	DelayBlocks              int64         `koanf:"delay-blocks"`
+	Paranoid                 bool          `koanf:"paranoid"`
+	SequencerSignatureExpiry time.Duration `koanf:"sequencer-signature-expiry"`
 }
 
 type Node struct {
@@ -260,6 +264,7 @@ type Validator struct {
 	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
 	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
 	DontChallenge        bool              `koanf:"dont-challenge"`
+	WithdrawDestination  string            `koanf:"withdraw-destination"`
 }
 
 type Wallet struct {
@@ -447,6 +452,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 
 	f.Int64("node.inbox-reader.delay-blocks", 4, "number of L1 blocks to wait for confirmation before updating L2 state")
 	f.Bool("node.inbox-reader.paranoid", false, "if enabled, check for reorgs before searching for messages")
+	f.Duration("node.inbox-reader.sequencer-signature-expiry", 10*time.Minute, "length of time between verifying sequencer feed signing address on-chain")
 
 	f.Duration("node.log-idle-sleep", 100*time.Millisecond, "milliseconds for log reader to sleep between reading logs")
 	f.Int("node.log-process-count", 100, "maximum number of logs to process at a time")
@@ -473,6 +479,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.dangerous.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-batch-posting", false, "disable posting batches to L1 (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-delayed-message-sequencing", false, "disable sequencing delayed messages (DANGEROUS)")
+	f.Bool("node.sequencer.debug-timing", false, "log elapsed time throughout core sequencing loop")
 
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 
@@ -494,6 +501,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
 	f.Bool("validator.dont-challenge", false, "don't challenge any other validators' assertions")
+	f.String("validator.withdraw-destination", "", "the address to withdraw funds to (defaults to the wallet address)")
 
 	return ParseNonRelay(ctx, f, "validator-wallet", 0, 0)
 }
@@ -501,11 +509,12 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string, maxExecutionGas int, checkpointPruningAge time.Duration) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
+	f.Bool("core.cache.last", false, "whether to always cache the machine from last block")
 	f.Int("core.cache.basic-interval", 100_000_000, "amount of gas to wait between saving to basic cache")
-	f.Int("core.cache.basic-size", 100, "number of recently used L2 blocks to hold in basic memory cache")
+	f.Int("core.cache.basic-size", 100, "number of basic cache entries to save")
 	f.Bool("core.cache.disable", false, "disable saving to cache while in core thread")
 	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
-	f.Bool("core.cache.seed-on-startup", true, "seed cache on startup by re-executing timed-expire worth of history")
+	f.Bool("core.cache.seed-on-startup", false, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 
 	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
@@ -518,6 +527,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("core.checkpoint-pruning-mode", "default", "Prune old checkpoints: 'on', 'off', or 'default'")
 
 	f.Bool("core.debug", false, "print extra debug messages in arbcore")
+	f.Bool("core.debug-timing", false, "print extra debug timing messages in arbcore")
 
 	f.Bool("core.database.compact", false, "perform database compaction")
 	f.Bool("core.database.exit-after", false, "exit after loading or manipulating database")
@@ -734,7 +744,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 		// Never prune checkpoints
 		if out.Core.CheckpointPruningMode != "off" {
-			logger.Warn().Msg("Disable checkpoint pruning because allow-slow-lookup enabled")
+			logger.Warn().Msg("disabling checkpoint pruning because allow-slow-lookup enabled")
 		}
 		out.Core.CheckpointPruningMode = "off"
 	}
@@ -746,6 +756,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		(out.Core.CheckpointPruningMode != "default") {
 		return nil, nil, nil, nil,
 			fmt.Errorf("value '%v' for core.checkpoint-pruning-mode is not 'on', 'off', or 'default'", out.Core.CheckpointPruningMode)
+	}
+
+	if out.Node.Type == "sequencer" && !out.Core.Cache.Last {
+		logger.Info().Msg("enabling last machine cache for sequencer")
+		out.Core.Cache.Last = true
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil

@@ -16,51 +16,86 @@
 
 #include <data_storage/combinedmachinecache.hpp>
 
-void CombinedMachineCache::basic_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::checkLastMachine(uint256_t& arb_gas_used) {
+    if (last_machine &&
+        last_machine->machine_state.output.arb_gas_used < arb_gas_used) {
+        last_machine = nullptr;
+    }
+    if (last_last_machine &&
+        last_last_machine->machine_state.output.arb_gas_used < arb_gas_used) {
+        last_last_machine = nullptr;
+    }
+}
+
+void CombinedMachineCache::lastAdd(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
+    if (last_machine) {
+        last_last_machine = std::move(last_machine);
+    }
+    last_machine = std::move(machine);
+}
+
+void CombinedMachineCache::basicAdd(std::unique_ptr<Machine> machine) {
+    std::unique_lock lock(mutex);
+
+    checkLastMachine(machine->machine_state.output.arb_gas_used);
     basic.add(std::move(machine));
 }
 
-void CombinedMachineCache::lru_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::lruAdd(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
+    checkLastMachine(machine->machine_state.output.arb_gas_used);
     lru.add(std::move(machine));
 }
 
-void CombinedMachineCache::timed_add(std::unique_ptr<Machine> machine) {
+void CombinedMachineCache::timedAdd(std::unique_ptr<Machine> machine) {
     std::unique_lock lock(mutex);
 
+    checkLastMachine(machine->machine_state.output.arb_gas_used);
     timed.add(std::move(machine));
 }
 
-size_t CombinedMachineCache::basic_size() {
+size_t CombinedMachineCache::basicSize() {
     std::shared_lock lock(mutex);
 
     return basic.size();
 }
 
-size_t CombinedMachineCache::lru_size() {
+size_t CombinedMachineCache::lruSize() {
     std::shared_lock lock(mutex);
 
     return lru.size();
 }
 
-size_t CombinedMachineCache::timed_size() {
+size_t CombinedMachineCache::timedSize() {
     std::shared_lock lock(mutex);
 
     return timed.size();
 }
 
 std::optional<std::reference_wrapper<const Machine>>
-CombinedMachineCache::atOrBeforeGasImpl(uint256_t& gas_used) {
+CombinedMachineCache::getFirstMatch(
+    const std::function<bool(const MachineOutput&)>& check_output,
+    std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
+    std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
+    std::optional<TimedMachineCache::map_type::const_iterator>& timed_it) {
     uint256_t basic_gas;
     uint256_t lru_gas;
     uint256_t timed_gas;
 
-    auto basic_it = basic.atOrBeforeGas(gas_used);
-    auto lru_it = lru.atOrBeforeGas(gas_used);
-    auto timed_it = timed.atOrBeforeGas(gas_used);
+    if (last_machine && check_output(last_machine->machine_state.output)) {
+        // Last machine will always have the greatest amount of gas used
+        return std::cref(*last_machine);
+    }
+
+    if (last_last_machine &&
+        check_output(last_last_machine->machine_state.output)) {
+        // Last last machine will always have the next greatest amount of gas
+        // used
+        return std::cref(*last_last_machine);
+    }
 
     if (basic_it.has_value()) {
         basic_gas = basic_it.value()->second->machine_state.output.arb_gas_used;
@@ -101,13 +136,49 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
     std::optional<uint256_t> existing_gas_used,
     std::optional<uint256_t> database_gas,
     bool use_max_execution) {
+    auto basic_it = basic.atOrBeforeGas(gas_used);
+    auto lru_it = lru.atOrBeforeGas(gas_used);
+    auto timed_it = timed.atOrBeforeGas(gas_used);
+
+    auto check_output = [&](const MachineOutput& output) {
+        return output.arb_gas_used <= gas_used;
+    };
+
+    auto cache_machine =
+        getFirstMatch(check_output, basic_it, lru_it, timed_it);
+
+    return findBestMachine(gas_used, cache_machine, existing_gas_used,
+                           database_gas, use_max_execution);
+}
+
+CombinedMachineCache::CacheResultStruct CombinedMachineCache::findFirstMatching(
+    const std::function<bool(const MachineOutput&)>& check_output,
+    std::optional<uint256_t> existing_gas_used,
+    std::optional<uint256_t> database_gas,
+    bool use_max_execution) {
+    auto basic_it = basic.findMatching(check_output);
+    auto lru_it = lru.findMatching(check_output);
+    auto timed_it = timed.findMatching(check_output);
+
+    auto cache_machine =
+        getFirstMatch(check_output, basic_it, lru_it, timed_it);
+
+    return findBestMachine(std::nullopt, cache_machine, existing_gas_used,
+                           database_gas, use_max_execution);
+}
+
+CombinedMachineCache::CacheResultStruct CombinedMachineCache::findBestMachine(
+    std::optional<uint256_t> current_gas_used,
+    std::optional<std::reference_wrapper<const Machine>> cache_machine,
+    std::optional<uint256_t> existing_gas_used,
+    std::optional<uint256_t> database_gas,
+    bool use_max_execution) {
     // Unique lock required to update LRU cache
     std::unique_lock lock(mutex);
 
     std::optional<uint256_t> best_non_database_gas;
     best_non_database_gas = existing_gas_used;
 
-    auto cache_machine = atOrBeforeGasImpl(gas_used);
     std::optional<uint256_t> cache_gas;
     if (cache_machine.has_value()) {
         cache_gas =
@@ -126,9 +197,11 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
            ((database_gas.value() - best_non_database_gas.value()) >
             database_load_gas_cost))));
     if (load_from_database) {
-        if (use_max_execution && (max_execution_gas != 0) &&
-            (gas_used - database_gas.value() > max_execution_gas)) {
-            // Distance from last cache entry too far to execute
+        if (current_gas_used.has_value() && use_max_execution &&
+            (max_execution_gas != 0) &&
+            (current_gas_used.value() - database_gas.value() >
+             max_execution_gas)) {
+            // Distance from last database entry too far to execute
             return {nullptr, TooMuchExecution};
         }
 
@@ -137,9 +210,11 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
     }
 
     if (existing_gas_used.has_value() && existing_gas_used > cache_gas) {
-        if (use_max_execution && (max_execution_gas != 0) &&
-            (gas_used - existing_gas_used.value() > max_execution_gas)) {
-            // Distance from last cache entry too far to execute
+        if (current_gas_used.has_value() && use_max_execution &&
+            (max_execution_gas != 0) &&
+            (current_gas_used.value() - existing_gas_used.value() >
+             max_execution_gas)) {
+            // Distance from existing entry too far to execute
             return {nullptr, TooMuchExecution};
         }
 
@@ -148,8 +223,10 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
     }
 
     if (cache_machine.has_value()) {
-        if (use_max_execution && (max_execution_gas != 0) &&
-            (gas_used - cache_gas.value() > max_execution_gas)) {
+        if (current_gas_used.has_value() && use_max_execution &&
+            (max_execution_gas != 0) &&
+            (current_gas_used.value() - cache_gas.value() >
+             max_execution_gas)) {
             // Distance from last cache entry too far to execute
             return {nullptr, TooMuchExecution};
         }
@@ -164,6 +241,14 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
 void CombinedMachineCache::reorg(uint256_t next_gas_used) {
     std::unique_lock lock(mutex);
 
+    if (last_machine &&
+        last_machine->machine_state.output.arb_gas_used >= next_gas_used) {
+        last_machine = nullptr;
+    }
+    if (last_last_machine &&
+        last_last_machine->machine_state.output.arb_gas_used >= next_gas_used) {
+        last_last_machine = nullptr;
+    }
     basic.reorg(next_gas_used);
     lru.reorg(next_gas_used);
     timed.reorg(next_gas_used);

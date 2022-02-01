@@ -42,7 +42,8 @@ MachineExecutionConfig::MachineExecutionConfig()
       go_over_gas(false),
       inbox_messages(),
       sideloads(),
-      stop_on_sideload(false) {}
+      stop_on_sideload(false),
+      stop_on_breakpoint(false) {}
 
 void MachineExecutionConfig::setInboxMessagesFromBytes(
     const std::vector<std::vector<unsigned char>>& bytes) {
