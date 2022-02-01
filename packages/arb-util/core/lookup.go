@@ -81,6 +81,9 @@ type ArbCoreLookup interface {
 	// TakeMachine takes ownership of machine such that ExecutionCursor will
 	// no longer be able to advance.
 	TakeMachine(executionCursor ExecutionCursor) (machine.Machine, error)
+
+	// SaveRocksdbCheckpoint tells rocksdb to save a copy of the current database state
+	SaveRocksdbCheckpoint()
 }
 
 type ArbCoreInbox interface {
