@@ -16,9 +16,9 @@
 
 /* eslint-env node, mocha */
 
-import { ethers } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import { BigNumber } from '@ethersproject/bignumber'
-import { TransactionReceipt } from '@ethersproject/providers'
+import { Block, TransactionReceipt } from '@ethersproject/providers'
 import { expect } from 'chai'
 import {
   Bridge,
@@ -33,18 +33,19 @@ import { Interface } from '@ethersproject/abi'
 import { BridgeInterface, MessageDeliveredEvent } from '../build/types/Bridge'
 import { Signer } from 'ethers'
 
-const mineBlocks = async (signer: Signer, count: number) => {
-  for (let index = 0; index < count; index++) {
-    await (
-      await signer.sendTransaction({
-        to: await signer.getAddress(),
-        value: 1,
-      })
-    ).wait()
+const mineBlocks = async (count: number, timeDiffPerBlock = 14) => {
+  const block = (await network.provider.send('eth_getBlockByNumber', [
+    'latest',
+    false,
+  ])) as Block
+  let timestamp = BigNumber.from(block.timestamp).toNumber()
+  for (let i = 0; i < count; i++) {
+    timestamp = timestamp + (timeDiffPerBlock || 1)
+    await network.provider.send('evm_mine', [timestamp])
   }
 }
 
-describe('SequencerInbox', async () => {
+describe.only('SequencerInbox', async () => {
   const findMatchingLogs = <TInterface extends Interface, TEvent extends Event>(
     receipt: TransactionReceipt,
     iFace: TInterface,
@@ -126,6 +127,7 @@ describe('SequencerInbox', async () => {
         messageDataHash
       )
     )[0]
+
     const prevAccumulator = messageDeliveredEvent.beforeInboxAcc
     expect(prevAccumulator, 'Incorrect prev accumulator').to.eq(
       countBefore === 0
@@ -220,14 +222,14 @@ describe('SequencerInbox', async () => {
     } catch (err) {
       if (expectedErrorMessage) {
         const error = err as Error
-        expect(error.message, 'Error message not found.').to.include(
-          expectedErrorMessage
-        )
+        expect(error.message, 'Error message not found.')
+          .to.include(expectedErrorMessage)
+          .and.to.not.include('Expected error')
       } else throw err
     }
   }
 
-  const setupSequencerInbox = async () => {
+  const setupSequencerInbox = async (maxDelayBlocks = 10, maxDelayTime = 0) => {
     const accounts = await initializeAccounts()
     const sequencer = accounts[0]
     const user = accounts[1]
@@ -252,8 +254,9 @@ describe('SequencerInbox', async () => {
       await sequencer.getAddress(),
       await dummyRollup.getAddress()
     )
-    const maxDelayBlocks = 10
-    await sequencerInbox.connect(dummyRollup).setMaxDelay(maxDelayBlocks, 0)
+    await sequencerInbox
+      .connect(dummyRollup)
+      .setMaxDelay(maxDelayBlocks, maxDelayTime)
 
     const messageTester = await (
       await ethers.getContractFactory('MessageTester')
@@ -267,21 +270,11 @@ describe('SequencerInbox', async () => {
       messageTester,
     }
   }
-  let user: Signer,
-    bridge: Bridge,
-    inbox: Inbox,
-    messageTester: MessageTester,
-    sequencerInbox: SequencerInbox
-  before(async () => {
-    const setup = await setupSequencerInbox()
-    user = setup.user
-    bridge = setup.bridge
-    inbox = setup.inbox
-    messageTester = setup.messageTester
-    sequencerInbox = setup.sequencerInbox
-  })
 
   it('can force-include', async () => {
+    const { user, inbox, bridge, messageTester, sequencerInbox } =
+      await setupSequencerInbox()
+
     const delayedTx = await sendDelayedTx(
       user,
       inbox,
@@ -296,7 +289,7 @@ describe('SequencerInbox', async () => {
     )
 
     const maxDelayBlocks = (await sequencerInbox.maxDelayBlocks()).toNumber()
-    await mineBlocks(user, maxDelayBlocks)
+    await mineBlocks(maxDelayBlocks)
 
     await forceIncludeMessages(
       sequencerInbox,
@@ -313,6 +306,8 @@ describe('SequencerInbox', async () => {
   })
 
   it('can force-include one after another', async () => {
+    const { user, inbox, bridge, messageTester, sequencerInbox } =
+      await setupSequencerInbox()
     const delayedTx = await sendDelayedTx(
       user,
       inbox,
@@ -340,7 +335,7 @@ describe('SequencerInbox', async () => {
     )
 
     const maxDelayBlocks = (await sequencerInbox.maxDelayBlocks()).toNumber()
-    await mineBlocks(user, maxDelayBlocks)
+    await mineBlocks(maxDelayBlocks)
 
     await forceIncludeMessages(
       sequencerInbox,
@@ -369,6 +364,8 @@ describe('SequencerInbox', async () => {
   })
 
   it('can force-include three at once', async () => {
+    const { user, inbox, bridge, messageTester, sequencerInbox } =
+      await setupSequencerInbox()
     await sendDelayedTx(
       user,
       inbox,
@@ -407,7 +404,7 @@ describe('SequencerInbox', async () => {
     )
 
     const maxDelayBlocks = (await sequencerInbox.maxDelayBlocks()).toNumber()
-    await mineBlocks(user, maxDelayBlocks)
+    await mineBlocks(maxDelayBlocks)
 
     await forceIncludeMessages(
       sequencerInbox,
@@ -423,7 +420,9 @@ describe('SequencerInbox', async () => {
     )
   })
 
-  it('cannot include before max delay', async () => {
+  it('cannot include before max block delay', async () => {
+    const { user, inbox, bridge, messageTester, sequencerInbox } =
+      await setupSequencerInbox(10, 100)
     const delayedTx = await sendDelayedTx(
       user,
       inbox,
@@ -438,7 +437,7 @@ describe('SequencerInbox', async () => {
     )
 
     const maxDelayBlocks = (await sequencerInbox.maxDelayBlocks()).toNumber()
-    await mineBlocks(user, maxDelayBlocks - 1)
+    await mineBlocks(maxDelayBlocks - 1, 5)
 
     await forceIncludeMessages(
       sequencerInbox,
@@ -452,6 +451,42 @@ describe('SequencerInbox', async () => {
       delayedTx.deliveredMessageEvent.messageDataHash,
       delayedTx.delayedAcc,
       'MAX_DELAY_BLOCKS'
+    )
+  })
+
+  it('cannot include before max time delay', async () => {
+    const { user, inbox, bridge, messageTester, sequencerInbox } =
+      await setupSequencerInbox(10, 100)
+    const delayedTx = await sendDelayedTx(
+      user,
+      inbox,
+      bridge,
+      messageTester,
+      1000000,
+      21000000000,
+      0,
+      await user.getAddress(),
+      BigNumber.from(10),
+      '0x1010'
+    )
+
+    const maxDelayBlocks = (await sequencerInbox.maxDelayBlocks()).toNumber()
+    // mine a lot of blocks - but use a short time per block
+    // this should mean enough blocks have passed, but not enough time
+    await mineBlocks(maxDelayBlocks + 1, 5)
+
+    await forceIncludeMessages(
+      sequencerInbox,
+      delayedTx.inboxAccountLength,
+      delayedTx.deliveredMessageEvent.kind,
+      delayedTx.l1BlockNumber,
+      delayedTx.l1BlockTimestamp,
+      delayedTx.deliveredMessageEvent.messageIndex,
+      delayedTx.l1GasPrice,
+      delayedTx.senderAddr,
+      delayedTx.deliveredMessageEvent.messageDataHash,
+      delayedTx.delayedAcc,
+      'MAX_DELAY_TIME'
     )
   })
 })
