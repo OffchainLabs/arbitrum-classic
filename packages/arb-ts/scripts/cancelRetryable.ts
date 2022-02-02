@@ -20,7 +20,7 @@ import { ContractReceipt } from '@ethersproject/contracts'
 
 import { instantiateBridge } from './instantiate_bridge'
 import args from './getCLargs'
-import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
+import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
 
 if (!args.txid) {
   throw new Error('Include txid (--txid 0xmytxid)')

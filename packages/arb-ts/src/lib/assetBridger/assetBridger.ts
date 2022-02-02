@@ -17,15 +17,15 @@
 'use strict'
 
 import { BigNumber } from 'ethers'
-import { ArbTsError } from '../errors'
-import { L1ContractTransaction } from '../message/L1ToL2Message'
-import { L2ContractTransaction } from '../message/L2ToL1Message'
+import { ArbTsError } from '../dataEntities/errors'
+import { L1ContractTransaction } from '../message/L1Transaction'
+import { L2ContractTransaction } from '../message/L2Transaction'
 
-import networks, { L1Network, L2Network } from '../utils/networks'
+import networks, { L1Network, L2Network } from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
-} from '../utils/signerOrProvider'
+} from '../dataEntities/signerOrProvider'
 
 /**
  * Base for bridging assets from l1 to l2 and back
@@ -46,8 +46,8 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * Check the signer/provider matches the l1Network, throws if not
    * @param sop
    */
-  protected checkL1Network(sop: SignerOrProvider): void {
-    SignerProviderUtils.checkNetworkMatches(
+  protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
+    await SignerProviderUtils.checkNetworkMatches(
       sop,
       parseInt(this.l1Network.chainID)
     )
@@ -57,8 +57,8 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * Check the signer/provider matches the l2Network, throws if not
    * @param sop
    */
-  protected checkL2Network(sop: SignerOrProvider): void {
-    SignerProviderUtils.checkNetworkMatches(
+  protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
+    await SignerProviderUtils.checkNetworkMatches(
       sop,
       parseInt(this.l2Network.chainID)
     )

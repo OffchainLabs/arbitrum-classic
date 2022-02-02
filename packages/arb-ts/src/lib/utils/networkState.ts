@@ -22,7 +22,7 @@ import { BigNumber } from 'ethers'
 import { Whitelist__factory, Rollup__factory, Rollup } from '../abi'
 import { NodeConfirmedEvent, NodeCreatedEvent } from '../abi/Rollup'
 import { EventFetcher } from '../utils/eventFetcher'
-import { ADDRESS_ALIAS_OFFSET } from '../constants'
+import { ADDRESS_ALIAS_OFFSET } from '../dataEntities/constants'
 
 /**
  * General information about the current network state
@@ -80,12 +80,14 @@ export class NetworkState {
     filter?: Omit<Filter, 'address' | 'topics'>
   ): Promise<NodeCreatedEvent['args'][]> {
     const eventFetcher = new EventFetcher(this.l1Provider)
-    return await eventFetcher.getEvents<Rollup, NodeCreatedEvent>(
-      rollupAddress,
-      Rollup__factory,
-      r => r.filters.NodeCreated(nodeNum, parentNodeHash),
-      filter
-    )
+    return (
+      await eventFetcher.getEvents<Rollup, NodeCreatedEvent>(
+        rollupAddress,
+        Rollup__factory,
+        r => r.filters.NodeCreated(nodeNum, parentNodeHash),
+        filter
+      )
+    ).map(a => a.event)
   }
 
   /**
@@ -96,18 +98,20 @@ export class NetworkState {
    * @param filter
    * @returns
    */
-  public getNodeConfirmedEvents(
+  public async getNodeConfirmedEvents(
     rollupAddress: string,
     nodeNum?: BigNumber,
     filter?: Omit<Filter, 'address' | 'topics'>
   ): Promise<NodeConfirmedEvent['args'][]> {
     const eventFetcher = new EventFetcher(this.l1Provider)
-    return eventFetcher.getEvents<Rollup, NodeConfirmedEvent>(
-      rollupAddress,
-      Rollup__factory,
-      r => r.filters.NodeConfirmed(nodeNum),
-      filter
-    )
+    return (
+      await eventFetcher.getEvents<Rollup, NodeConfirmedEvent>(
+        rollupAddress,
+        Rollup__factory,
+        r => r.filters.NodeConfirmed(nodeNum),
+        filter
+      )
+    ).map(a => a.event)
   }
 
   public async contractExists(contractAddress: string): Promise<boolean> {

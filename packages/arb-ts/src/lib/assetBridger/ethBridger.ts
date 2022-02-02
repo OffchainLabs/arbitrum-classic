@@ -22,22 +22,22 @@ import { PayableOverrides } from '@ethersproject/contracts'
 import { BigNumber, ethers } from 'ethers'
 
 import { Inbox__factory, ArbSys__factory } from '../abi'
-import { ARB_SYS_ADDRESS } from '../constants'
+import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import {
   L1ToL2MessageGasEstimator,
   PercentIncrease,
 } from '../message/L1ToL2MessageGasEstimator'
-import { SignerProviderUtils } from '../utils/signerOrProvider'
-import { MissingProviderArbTsError } from '../errors'
+import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
+import { MissingProviderArbTsError } from '../dataEntities/errors'
 import { AssetBridger } from './assetBridger'
 import {
   L1ContractTransaction,
   L1TransactionReceipt,
-} from '../message/L1ToL2Message'
+} from '../message/L1Transaction'
 import {
   L2ContractTransaction,
   L2TransactionReceipt,
-} from '../message/L2ToL1Message'
+} from '../message/L2Transaction'
 
 export interface EthWithdrawParams {
   /**
