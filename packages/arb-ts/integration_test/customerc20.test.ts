@@ -151,7 +151,7 @@ describe('Custom ERC20', () => {
     )
   })
 
-  it.only('register custom token', async () => {
+  it('register custom token', async () => {
     const { l2Network, l2Signer, l1Signer, adminTokenBridger } =
       instantiateBridgeWithRandomWallet()
 
@@ -245,12 +245,10 @@ describe('Custom ERC20', () => {
     expect(l1ToL2Messages.length, 'Should be 2 messages.').to.eq(2)
 
     const setTokenTx = await l1ToL2Messages[0].wait()
-    console.log('message1')
     expect(setTokenTx.status, 'Set token not redeemed.').to.eq(
       L1ToL2MessageStatus.REDEEMED
     )
     const setGateways = await l1ToL2Messages[1].wait()
-    console.log('message2')
     expect(setGateways.status, 'Set gateways not redeemed.').to.eq(
       L1ToL2MessageStatus.REDEEMED
     )

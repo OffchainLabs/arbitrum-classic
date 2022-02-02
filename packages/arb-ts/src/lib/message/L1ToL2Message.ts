@@ -239,6 +239,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
   private async receiptsToStatus(
     retryableCreationReceipt: TransactionReceipt | null | undefined,
+    autoRedeemReceipt: TransactionReceipt | null | undefined,
     l2TxReceipt: TransactionReceipt | null | undefined
   ): Promise<L1ToL2MessageStatus> {
     if (l2TxReceipt && l2TxReceipt.status === 1) {
@@ -251,9 +252,19 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     if (retryableCreationReceipt.status === 0) {
       return L1ToL2MessageStatus.CREATION_FAILED
     }
+
+    // we have a retryableCreationReceipt, in that case we should have
+    // an autoRedeemReceipt if the transaction contained data, if it didn't
+    // we would expect an autoRedeemReceipt and the presence of a retryableCreationReceipt
+    // means the tx has already been redeemed.
+    if (!autoRedeemReceipt) {
+      return L1ToL2MessageStatus.REDEEMED
+    }
+
     if (await this.isExpired()) {
       return L1ToL2MessageStatus.EXPIRED
     }
+
     // we could sanity check that autoredeem failed, but we don't need to
     // currently if the params (max l2 gas price) * (max l2 gas) = 0
     // no auto-redeem receipt gets emitted at all; if the user cars about the difference
@@ -265,8 +276,13 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   public async status(): Promise<L1ToL2MessageStatus> {
     const l2TxReceipt = await this.getL2TxReceipt()
     const retryableCreationReceipt = await this.getRetryableCreationReceipt()
+    const autoRedeemReceipt = await this.getAutoRedeemReceipt()
 
-    return this.receiptsToStatus(retryableCreationReceipt, l2TxReceipt)
+    return this.receiptsToStatus(
+      retryableCreationReceipt,
+      autoRedeemReceipt,
+      l2TxReceipt
+    )
   }
 
   /**
@@ -306,8 +322,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       ? await this.getL2TxReceipt()
       : undefined
 
+    const autoRedeemReceiot = await this.getAutoRedeemReceipt()
+
     const status = await this.receiptsToStatus(
       retryableCreationReceipt,
+      autoRedeemReceiot,
       l2TxReceipt
     )
 
