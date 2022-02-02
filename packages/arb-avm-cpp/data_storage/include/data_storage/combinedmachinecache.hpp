@@ -77,14 +77,14 @@ class CombinedMachineCache {
     [[nodiscard]] uint256_t currentTimeExpired();
 
    private:
-    void checkLastMachine(uint256_t& arb_gas_used);
-    CacheResultStruct findBestMachine(
+    void checkLastMachineNoLock(uint256_t& arb_gas_used);
+    CacheResultStruct findBestMachineNoLock(
         std::optional<uint256_t> current_gas_used,
         std::optional<std::reference_wrapper<const Machine>> cache_machine,
         std::optional<uint256_t> existing_gas_used,
         std::optional<uint256_t> database_gas,
         bool use_max_execution);
-    std::optional<std::reference_wrapper<const Machine>> getFirstMatch(
+    std::optional<std::reference_wrapper<const Machine>> getFirstMatchNoLock(
         const std::function<bool(const MachineOutput&)>& check_output,
         std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
         std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
