@@ -181,7 +181,7 @@ export class L1ToL2Message {
  * For all other statuses l2TxReceipt is not populated
  */
 type L1ToL2MessageWaitResult =
-  | { status: L1ToL2MessageStatus.REDEEMED; l2TxReceipt: TransactionReceipt }
+  | { status: L1ToL2MessageStatus.REDEEMED; l2TxReceipt?: TransactionReceipt }
   | { status: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED> }
 
 export class L1ToL2MessageReader extends L1ToL2Message {
@@ -290,7 +290,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @param timeout
    * @param confirmations
    * @returns The wait result contains a status, and optionally the l2TxReceipt.
-   * If the status is "REDEEMED" then a l2TxReceipt is also available on the result.
+   * If the status is "REDEEMED" then a l2TxReceipt will also be available on the result, unless the transaction was just an eth deposit.
    * If the status has any other value then l2TxReceipt is not populated.
    */
   public async wait(
@@ -333,7 +333,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     if (status === L1ToL2MessageStatus.REDEEMED) {
       return {
         // if the status is redeemed we know the l2TxReceipt must exist
-        l2TxReceipt: l2TxReceipt!,
+        l2TxReceipt: l2TxReceipt,
         status,
       }
     } else {
