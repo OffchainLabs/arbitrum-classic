@@ -45,7 +45,7 @@ const mineBlocks = async (count: number, timeDiffPerBlock = 14) => {
   }
 }
 
-describe.only('SequencerInbox', async () => {
+describe('SequencerInbox', async () => {
   const findMatchingLogs = <TInterface extends Interface, TEvent extends Event>(
     receipt: TransactionReceipt,
     iFace: TInterface,
@@ -182,23 +182,20 @@ describe.only('SequencerInbox', async () => {
     ).toNumber()
     const messageCountBefore = (await sequencerInbox.messageCount()).toNumber()
 
-    try {
-      const forceInclusionTx = await sequencerInbox.forceInclusion(
-        newTotalDelayedMessagesRead,
-        kind,
-        [l1blockNumber, l1Timestamp],
-        delayedInboxSeqNum,
-        l1GasPrice,
-        senderAddr,
-        messageDataHash,
-        delayedAcc
-      )
-      await forceInclusionTx.wait()
-
-      if (expectedErrorMessage) {
-        expect(true, `Expected error: ${expectedErrorMessage} to be thrown.`).to
-          .be.false
-      }
+    const forceInclusionTx = sequencerInbox.forceInclusion(
+      newTotalDelayedMessagesRead,
+      kind,
+      [l1blockNumber, l1Timestamp],
+      delayedInboxSeqNum,
+      l1GasPrice,
+      senderAddr,
+      messageDataHash,
+      delayedAcc
+    )
+    if (expectedErrorMessage) {
+      await expect(forceInclusionTx).to.be.revertedWith(expectedErrorMessage)
+    } else {
+      await (await forceInclusionTx).wait()
 
       const totalDelayedMessagsReadAfter = (
         await sequencerInbox.totalDelayedMessagesRead()
@@ -219,13 +216,6 @@ describe.only('SequencerInbox', async () => {
         messageCountAfter - messageCountBefore,
         'Message count invalid.'
       ).to.eq(newTotalDelayedMessagesRead - totalDelayedMessagesReadBefore + 1)
-    } catch (err) {
-      if (expectedErrorMessage) {
-        const error = err as Error
-        expect(error.message, 'Error message not found.')
-          .to.include(expectedErrorMessage)
-          .and.to.not.include('Expected error')
-      } else throw err
     }
   }
 
@@ -247,7 +237,7 @@ describe.only('SequencerInbox', async () => {
     await bridge.setInbox(inbox.address, true)
 
     const SequencerInbox = await ethers.getContractFactory('SequencerInbox')
-    const sequencerInbox = (await SequencerInbox.deploy()) as SequencerInbox
+    const sequencerInbox = await SequencerInbox.deploy()
     await sequencerInbox.deployed()
     await sequencerInbox.initialize(
       bridge.address,
