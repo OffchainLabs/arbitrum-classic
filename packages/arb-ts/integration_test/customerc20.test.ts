@@ -151,7 +151,7 @@ describe('Custom ERC20', () => {
     )
   })
 
-  it.only('register custom token', async () => {
+  it('register custom token', async () => {
     const { l2Network, l2Signer, l1Signer, adminTokenBridger } =
       instantiateBridgeWithRandomWallet()
 

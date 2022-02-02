@@ -19,7 +19,7 @@
 import { Provider, Filter, EventFilter } from '@ethersproject/abstract-provider'
 import { Contract, Event } from '@ethersproject/contracts'
 
-type FetchedEvent<TEvent extends Event> = {
+export type FetchedEvent<TEvent extends Event> = {
   event: TEvent['args']
   topic: string
   name: string

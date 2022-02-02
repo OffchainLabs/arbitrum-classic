@@ -64,6 +64,7 @@ export interface TokenBridge {
 }
 
 export interface EthBridge {
+  bridge: string
   inbox: string
   sequencerInbox: string
   /**
@@ -121,6 +122,7 @@ const rinkebyTokenBridge: TokenBridge = {
 }
 
 const rinkebyETHBridge: EthBridge = {
+  bridge: '0x9a28e783c47bbeb813f32b861a431d0776681e95',
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
   sequencerInbox: '0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8',
   outboxes: {
@@ -131,6 +133,7 @@ const rinkebyETHBridge: EthBridge = {
 }
 
 const mainnetETHBridge: EthBridge = {
+  bridge: '0x011b6e24ffb0b5f5fcc564cf4183c5bbbc96d515',
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
   sequencerInbox: '0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef',
   outboxes: {
