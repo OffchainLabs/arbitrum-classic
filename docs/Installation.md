@@ -99,6 +99,7 @@ git clone -b v6.20.3 https://github.com/facebook/rocksdb
 cd rocksdb
 make -j 16 shared_lib
 sudo make install-shared
+cd ..
 ```
 
 #### Fedora 35
@@ -110,6 +111,7 @@ git clone -b v6.20.3 https://github.com/facebook/rocksdb
 cd rocksdb
 DISABLE_WARNING_AS_ERROR=1 make -j 16 shared_lib
 sudo make install-shared
+cd ..
 ```
 
 #### Troubleshooting
