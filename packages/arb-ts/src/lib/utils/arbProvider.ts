@@ -47,16 +47,16 @@ class ArbFormatter extends Formatter {
       ...superFormats.transaction,
 
       l1SequenceNumber: bigNumber,
-      parentRequestId: hash,
-      indexInParent: number,
-      arbType: number,
-      arbSubType: number,
+      // parentRequestId: hash,
+      // indexInParent: number,
+      // arbType: number,
+      // arbSubType: number,
       l1BlockNumber: number,
     }
 
     const arbReceiptFormat = {
       ...superFormats.receipt,
-      returnData: data,
+      returnData: Formatter.allowNull(data),
       returnCode: returnCode,
       feeStats: feeStats,
       batchInfo: Formatter.allowNull(batchInfo, null),
