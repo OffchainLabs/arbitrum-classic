@@ -42,6 +42,7 @@ class ArbStorage {
     ArbStorage(const std::string& db_path, const ArbCoreConfig& coreConfig);
     bool closeArbStorage();
     void printDatabaseMetadata();
+    InitializeResult applyConfig();
     InitializeResult initialize(const LoadedExecutable& executable);
     InitializeResult initialize(const std::string& executable_path);
     [[nodiscard]] bool initialized() const;
@@ -58,6 +59,7 @@ class ArbStorage {
     [[nodiscard]] std::unique_ptr<ReadTransaction> makeReadTransaction();
     [[nodiscard]] std::unique_ptr<ReadWriteTransaction>
     makeReadWriteTransaction();
+    rocksdb::Status cleanupValidator();
 };
 
 #endif /* arbstorage_hpp */

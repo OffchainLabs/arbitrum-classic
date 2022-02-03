@@ -61,7 +61,7 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
+	logger = log.With().Caller().Stack().Str("component", "arb-relay").Logger()
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running relay")

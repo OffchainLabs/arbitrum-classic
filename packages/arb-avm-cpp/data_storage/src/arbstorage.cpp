@@ -35,6 +35,10 @@ void ArbStorage::printDatabaseMetadata() {
     arb_core->printDatabaseMetadata();
 }
 
+InitializeResult ArbStorage::applyConfig() {
+    return arb_core->applyConfig();
+}
+
 InitializeResult ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
     return initialize(executable);
@@ -56,6 +60,10 @@ bool ArbStorage::closeArbStorage() {
                   << std::endl;
     }
     return status.ok();
+}
+
+rocksdb::Status ArbStorage::cleanupValidator() {
+    return datastorage->cleanupValidator();
 }
 
 std::unique_ptr<AggregatorStore> ArbStorage::getAggregatorStore() const {

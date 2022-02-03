@@ -95,8 +95,13 @@ func startup() error {
 		return nil
 	}
 
-	if config.Core.Test.JustMetadata {
+	if config.Core.Database.Metadata {
 		return cmdhelp.PrintDatabaseMetadata(config.GetValidatorDatabasePath(), &config.Core)
+	}
+
+	if config.Core.Database.MakeValidator {
+		// Exit immediately after converting database
+		return cmdhelp.NodeToValidator(config)
 	}
 
 	defer logger.Log().Msg("Cleanly shutting down validator")

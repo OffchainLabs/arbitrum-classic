@@ -82,6 +82,7 @@ class DataStorage {
     rocksdb::Status closeDb();
     rocksdb::Status clearDBExceptInbox();
     [[nodiscard]] DbLockShared tryLockShared() const;
+    rocksdb::Status cleanupValidator();
     rocksdb::Status compact(bool aggressive);
 
    private:

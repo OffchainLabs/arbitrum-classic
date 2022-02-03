@@ -50,6 +50,7 @@ typedef struct {
     int32_t database_compact;
     int32_t database_save_interval;
     const char* database_save_path;
+    int32_t database_save_on_startup;
     int32_t database_exit_after;
     int32_t test_reorg_to_l1_block;
     int32_t test_reorg_to_l2_block;
@@ -58,16 +59,17 @@ typedef struct {
     int32_t test_run_until;
     int32_t test_load_count;
     int32_t test_reset_db_except_inbox;
-    int32_t test_just_metadata;
 } CArbCoreConfig;
 
 CArbStorage* createArbStorage(const char* db_path,
                               CArbCoreConfig arb_core_config);
 void printDatabaseMetadata(CArbStorage* storage_ptr);
+int applyArbStorageConfig(CArbStorage* storage_ptr);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);
 int closeArbStorage(CArbStorage* storage_ptr);
+int cleanupValidator(CArbStorage* storage_ptr);
 
 CArbCore* createArbCore(CArbStorage* storage_ptr);
 CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr);
