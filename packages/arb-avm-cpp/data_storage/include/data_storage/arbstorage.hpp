@@ -41,6 +41,7 @@ class ArbStorage {
    public:
     ArbStorage(const std::string& db_path, const ArbCoreConfig& coreConfig);
     bool closeArbStorage();
+    void printDatabaseMetadata();
     InitializeResult initialize(const LoadedExecutable& executable);
     InitializeResult initialize(const std::string& executable_path);
     [[nodiscard]] bool initialized() const;

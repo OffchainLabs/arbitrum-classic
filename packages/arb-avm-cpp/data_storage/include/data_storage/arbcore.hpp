@@ -153,6 +153,7 @@ class ArbCore {
             ArbCoreConfig coreConfig);
 
     ~ArbCore() { abortThread(); }
+    void printDatabaseMetadata();
     InitializeResult initialize(const LoadedExecutable& executable);
     [[nodiscard]] bool initialized() const;
     void operator()();
@@ -205,8 +206,8 @@ class ArbCore {
         bool initial_start,
         ValueCache& value_cache);
 
-    rocksdb::Status reorgToMachineOutput(const MachineOutput& output,
-                                         ValueCache& value_cache);
+    rocksdb::Status reorgDatabaseToMachineOutput(const MachineOutput& output,
+                                                 ValueCache& value_cache);
     rocksdb::Status advanceCoreToTarget(const MachineOutput& target_output,
                                         bool cache_sideloads);
     std::variant<CheckpointVariant, rocksdb::Status>
@@ -383,15 +384,9 @@ class ArbCore {
     [[nodiscard]] ValueResult<uint256_t> logInsertedCountImpl(
         const ReadTransaction& tx) const;
 
-    ValueResult<uint256_t> logProcessedCount(ReadTransaction& tx) const;
-    rocksdb::Status updateLogProcessedCount(ReadWriteTransaction& tx,
-                                            rocksdb::Slice value_slice);
     [[nodiscard]] ValueResult<uint256_t> sendInsertedCountImpl(
         const ReadTransaction& tx) const;
 
-    ValueResult<uint256_t> sendProcessedCount(ReadTransaction& tx) const;
-    rocksdb::Status updateSendProcessedCount(ReadWriteTransaction& tx,
-                                             rocksdb::Slice value_slice);
     [[nodiscard]] ValueResult<uint256_t> messageEntryInsertedCountImpl(
         const ReadTransaction& tx) const;
     [[nodiscard]] ValueResult<uint256_t> delayedMessageEntryInsertedCountImpl(
@@ -477,6 +472,10 @@ class ArbCore {
         const std::string& message) const;
     void printMachineOutputInfo(const std::string& msg,
                                 MachineOutput& machine_output) const;
+    std::variant<rocksdb::Status, CheckpointVariant> getMaxCheckpoint(
+        ReadTransaction& tx);
+    std::unique_ptr<MachineThread> getMachineThreadFromSimpleCheck(
+        const std::function<bool(const MachineOutput&)>& check_output);
 };
 
 uint64_t seconds_since_epoch();

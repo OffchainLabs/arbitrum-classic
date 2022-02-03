@@ -6,7 +6,7 @@ sidebar_label: Running a Node
 
 ### Required Artifacts
 
-- Latest Docker Image: offchainlabs/arb-node:v1.1.2-cffb3a0
+- Latest Docker Image: offchainlabs/arb-node:v1.2.0-9214e38
 
 ### Required parameter
 

@@ -95,6 +95,10 @@ func startup() error {
 		return nil
 	}
 
+	if config.Core.Test.JustMetadata {
+		return cmdhelp.PrintDatabaseMetadata(config.GetValidatorDatabasePath(), &config.Core)
+	}
+
 	defer logger.Log().Msg("Cleanly shutting down validator")
 
 	if config.PProfEnable {
