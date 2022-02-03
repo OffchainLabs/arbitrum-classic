@@ -42,7 +42,6 @@
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@typechain/ethers-v5": "^7.2.0",
     "@types/prompts": "^2.0.14",
     "arb-bridge-eth": "0.7.4",
