@@ -49,10 +49,9 @@ const submitL2Tx = async (
     gasLimit: BigNumber
   },
   l2Network: L2Network,
-  l1Signer?: Signer
+  l1Signer: Signer
 ): Promise<ContractTransaction> => {
   const inbox = Inbox__factory.connect(l2Network.ethBridge.inbox, l1Signer)
-  const senderAddr = await l1Signer.getAddress()
 
   return await inbox.sendUnsignedTransaction(
     tx.gasLimit,

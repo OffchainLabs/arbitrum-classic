@@ -23,7 +23,7 @@
     "watch": "tsc --watch",
     "test": "mocha",
     "test:coverage": "nyc mocha",
-    "test:fork": "SHOULD_FORK=1 hardhat test --timeout 30000000 fork_test/*.test.ts",
+    "test:fork": "SHOULD_FORK=1 hardhat test fork_test/*.test.ts",
     "test:integration": "mocha integration_test/ --timeout 30000000 --bail",
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "lint": "eslint .",

@@ -56,7 +56,7 @@ const config = {
     },
   },
   mocha: {
-    timeout: 0,
+    timeout: 30000000,
     bail: true,
   },
 }
