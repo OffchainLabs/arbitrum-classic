@@ -40,7 +40,7 @@ const mineBlocks = async (count: number, timeDiffPerBlock = 14) => {
   ])) as Block
   let timestamp = BigNumber.from(block.timestamp).toNumber()
   for (let i = 0; i < count; i++) {
-    timestamp = timestamp + (timeDiffPerBlock || 1)
+    timestamp = timestamp + (timeDiffPerBlock)
     await network.provider.send('evm_mine', [timestamp])
   }
 }
