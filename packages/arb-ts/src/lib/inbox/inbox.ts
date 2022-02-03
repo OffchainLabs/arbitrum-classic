@@ -17,21 +17,16 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
-import { Block, Provider } from '@ethersproject/abstract-provider'
+import { Block } from '@ethersproject/abstract-provider'
 import { BigNumber, ContractTransaction, Overrides } from 'ethers'
 
-import {
-  Bridge,
-  Bridge__factory,
-  Inbox__factory,
-  SequencerInbox__factory,
-} from '../abi'
+import { Bridge, Bridge__factory, SequencerInbox__factory } from '../abi'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { L2Network } from '../dataEntities/networks'
 import { ArbTsError } from '../dataEntities/errors'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
-import { MultiCaller } from '../..'
+import { MultiCaller } from '../utils/multicall'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
