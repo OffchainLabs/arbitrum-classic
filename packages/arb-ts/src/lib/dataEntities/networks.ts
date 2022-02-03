@@ -24,19 +24,19 @@ import { ArbTsError } from '../dataEntities/errors'
 dotenv.config()
 
 export interface L1Network extends Network {
-  partnerChainIDs: string[]
+  partnerChainIDs: number[]
   blockTime: number //seconds
 }
 
 export interface L2Network extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
-  partnerChainID: string
+  partnerChainID: number
   isArbitrum: true
   confirmPeriodBlocks: number
 }
 export interface Network {
-  chainID: string
+  chainID: number
   name: string
   explorerUrl: string
   rpcURL: string
@@ -144,29 +144,29 @@ const mainnetETHBridge: EthBridge = {
 }
 
 export const l1Networks: L1Networks = {
-  '1': {
-    chainID: '1',
+  1: {
+    chainID: 1,
     name: 'Mainnet',
     explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: ['42161'],
+    partnerChainIDs: [42161],
     blockTime: 15,
     rpcURL: process.env['MAINNET_RPC'] as string,
     isCustom: false,
   },
-  '1337': {
-    chainID: '1337',
+  1337: {
+    chainID: 1337,
     name: 'Hardhat_Mainnet_Fork',
     explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: ['42161'], // TODO: use sequencer fork ID
+    partnerChainIDs: [42161], // TODO: use sequencer fork ID
     blockTime: 15,
     rpcURL: process.env['HARDHAT_RPC'] || 'http://127.0.0.1:8545/',
     isCustom: false,
   },
-  '4': {
-    chainID: '4',
+  4: {
+    chainID: 4,
     name: 'Rinkeby',
     explorerUrl: 'https://rinkeby.etherscan.io',
-    partnerChainIDs: ['421611'],
+    partnerChainIDs: [421611],
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
     isCustom: false,
@@ -174,11 +174,11 @@ export const l1Networks: L1Networks = {
 }
 
 export const l2Networks: L2Networks = {
-  '42161': {
-    chainID: '42161',
+  42161: {
+    chainID: 42161,
     name: 'Arbitrum One',
     explorerUrl: 'https://arbiscan.io',
-    partnerChainID: '1',
+    partnerChainID: 1,
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
@@ -186,11 +186,11 @@ export const l2Networks: L2Networks = {
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
     isCustom: false,
   },
-  '421611': {
-    chainID: '421611',
+  421611: {
+    chainID: 421611,
     name: 'ArbRinkeby',
     explorerUrl: 'https://testnet.arbiscan.io',
-    partnerChainID: '4',
+    partnerChainID: 4,
     isArbitrum: true,
     tokenBridge: rinkebyTokenBridge,
     ethBridge: rinkebyETHBridge,
@@ -201,11 +201,11 @@ export const l2Networks: L2Networks = {
 }
 
 const getNetwork = async (
-  signerOrProviderOrChainID: SignerOrProvider | string,
+  signerOrProviderOrChainID: SignerOrProvider | number,
   layer: 1 | 2
 ) => {
   const chainID = await (async () => {
-    if (typeof signerOrProviderOrChainID === 'string') {
+    if (typeof signerOrProviderOrChainID === 'number') {
       return signerOrProviderOrChainID
     }
     const provider = SignerProviderUtils.getProviderOrThrow(
@@ -213,7 +213,7 @@ const getNetwork = async (
     )
 
     const { chainId } = await provider.getNetwork()
-    return chainId.toString()
+    return chainId
   })()
 
   const networks = layer === 1 ? l1Networks : l2Networks
@@ -225,12 +225,12 @@ const getNetwork = async (
 }
 
 export const getL1Network = (
-  signerOrProviderOrChainID: SignerOrProvider | string
+  signerOrProviderOrChainID: SignerOrProvider | number
 ): Promise<L1Network> => {
   return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
 }
 export const getL2Network = (
-  signerOrProviderOrChainID: SignerOrProvider | string
+  signerOrProviderOrChainID: SignerOrProvider | number
 ): Promise<L2Network> => {
   return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
 }

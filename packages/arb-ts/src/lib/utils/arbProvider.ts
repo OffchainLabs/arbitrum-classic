@@ -214,7 +214,7 @@ export const getRawArbTransactionReceipt = async (
     const l1Network = await getL1Network(l2Network.partnerChainID)
     SignerProviderUtils.checkNetworkMatches(
       l1ProviderForBatch,
-      parseInt(l1Network.chainID)
+      l1Network.chainID
     )
 
     const tx = await getTransaction(l2Provider, txHash)

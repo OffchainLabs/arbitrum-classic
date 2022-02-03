@@ -23,7 +23,7 @@
     "watch": "tsc --watch",
     "test": "mocha",
     "test:coverage": "nyc mocha",
-    "test:fork": "SHOULD_FORK=1 $npm_execpath run hardhat:dev test fork_test/*.test.ts",
+    "test:fork": "SHOULD_FORK=1 hardhat test --timeout 30000000 fork_test/*.test.ts",
     "test:integration": "mocha integration_test/ --timeout 30000000 --bail",
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "lint": "eslint .",
@@ -36,8 +36,7 @@
     "setStandard": "ts-node scripts/setStandardGateways.ts",
     "setCustom": "ts-node scripts/setArbCustomGateways.ts",
     "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
-    "bridgeStandardToken": "ts-node scripts/deployStandard.ts",
-    "hardhat:dev": "hardhat --config hardhat.dev-config.ts"
+    "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",

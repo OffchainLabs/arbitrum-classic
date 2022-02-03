@@ -1,8 +1,32 @@
-import baseConfig from './hardhat.base-config.json'
 import '@nomiclabs/hardhat-ethers'
 
 const config = {
-  ...baseConfig,
+  defaultNetwork: 'hardhat',
+  paths: {
+    artifacts: 'build/contracts',
+  },
+  solidity: {
+    compilers: [
+      {
+        version: '0.6.11',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 100,
+          },
+        },
+      },
+      {
+        version: '0.8.7',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 100,
+          },
+        },
+      },
+    ],
+  },
   networks: {
     hardhat: {
       chainId: 1337,

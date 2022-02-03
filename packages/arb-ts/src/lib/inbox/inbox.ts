@@ -16,9 +16,10 @@
 /* eslint-env node */
 'use strict'
 
-import { EventFetcher, L2Network } from '../..'
 import { Signer } from '@ethersproject/abstract-signer'
-import { Provider } from '@ethersproject/abstract-provider'
+import { Block, Provider } from '@ethersproject/abstract-provider'
+import { BigNumber, ContractTransaction, Overrides } from 'ethers'
+
 import {
   Bridge,
   Bridge__factory,
@@ -26,11 +27,11 @@ import {
   SequencerInbox__factory,
 } from '../abi'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { BigNumber, ContractTransaction, Overrides } from 'ethers'
-import { Block } from '@ethersproject/abstract-provider'
-import { FetchedEvent } from '../utils/eventFetcher'
+import { L2Network } from '../dataEntities/networks'
 import { ArbTsError } from '../dataEntities/errors'
+import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
+import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
+import { MultiCaller } from '../..'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -47,73 +48,6 @@ export class InboxTools {
     private readonly l2Network: L2Network
   ) {
     this.l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
-  }
-
-  /**
-   * Normally L2 transactions are submitted via the sequencer. However
-   * if the sequencer is down L2 transactions can be submitted directly
-   * to the L1Inbox via this method
-   * @param tx The L2 tx to be submitted
-   * @param l2Provider Must be provided if any of nonce, gasPriceBid or gasLimit are not supplied.
-   * @returns
-   */
-  public async submitL2Tx(
-    tx: {
-      to: string
-      value?: BigNumber
-      data?: string
-      nonce?: number
-      gasPriceBid?: BigNumber
-      gasLimit?: BigNumber
-    },
-    l2Provider?: Provider
-  ): Promise<ContractTransaction> {
-    if (
-      (tx.nonce == undefined ||
-        tx.gasPriceBid == undefined ||
-        tx.gasLimit == undefined) &&
-      l2Provider == undefined
-    ) {
-      throw new ArbTsError(
-        'L2Provider must be presnt if nonce, gasPriceBid or gasLimit are undefined.'
-      )
-    }
-    if (l2Provider) {
-      SignerProviderUtils.checkNetworkMatches(
-        l2Provider,
-        parseInt(this.l2Network.chainID)
-      )
-    }
-
-    const inbox = Inbox__factory.connect(
-      this.l2Network.ethBridge.inbox,
-      this.l1Signer
-    )
-    const senderAddr = await this.l1Signer.getAddress()
-
-    const maxGas =
-      tx.gasLimit == undefined
-        ? await l2Provider!.estimateGas({
-            ...tx,
-            from: senderAddr,
-          })
-        : tx.gasLimit
-
-    const gasPrice = tx.gasPriceBid || (await l2Provider!.getGasPrice())
-
-    const nonce =
-      tx.nonce == undefined
-        ? await l2Provider!.getTransactionCount(senderAddr)
-        : tx.nonce
-
-    return await inbox.sendUnsignedTransaction(
-      maxGas,
-      gasPrice,
-      nonce,
-      tx.to,
-      tx.value || BigNumber.from(0),
-      tx.data || '0x'
-    )
   }
 
   /**
@@ -154,11 +88,38 @@ export class InboxTools {
       this.l2Network.ethBridge.sequencerInbox,
       this.l1Provider
     )
-    const maxDelayBlocks = (await sequencerInbox.maxDelayBlocks()).toNumber()
-    const maxDelaySeconds = (await sequencerInbox.maxDelaySeconds()).toNumber()
 
-    const firstEligibleBlockNumber = currentBlock.number - maxDelayBlocks
-    const firstEligibleTimestamp = currentBlock.timestamp - maxDelaySeconds
+    const multicall = await MultiCaller.fromProvider(this.l1Provider)
+    const [maxDelayBlocks, maxDelaySeconds] = await multicall.multiCall([
+      {
+        targetAddr: sequencerInbox.address,
+        encoder: () =>
+          sequencerInbox.interface.encodeFunctionData('maxDelayBlocks'),
+        decoder: (returnData: string) =>
+          sequencerInbox.interface.decodeFunctionResult(
+            'maxDelayBlocks',
+            returnData
+          )[0] as BigNumber,
+      },
+      {
+        targetAddr: sequencerInbox.address,
+        encoder: () =>
+          sequencerInbox.interface.encodeFunctionData('maxDelaySeconds'),
+        decoder: (returnData: string) =>
+          sequencerInbox.interface.decodeFunctionResult(
+            'maxDelaySeconds',
+            returnData
+          )[0] as BigNumber,
+      },
+    ])
+
+    if (!maxDelayBlocks) throw new ArbTsError('MaxDelayBlocks not fetched')
+    if (!maxDelaySeconds) throw new ArbTsError('MaxDelaySeconds not fetched')
+
+    const firstEligibleBlockNumber =
+      currentBlock.number - maxDelayBlocks.toNumber()
+    const firstEligibleTimestamp =
+      currentBlock.timestamp - maxDelaySeconds.toNumber()
 
     const firstEligibleBlock = await this.findFirstBlockBelow(
       firstEligibleBlockNumber,

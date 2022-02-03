@@ -47,10 +47,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * @param sop
    */
   protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(
-      sop,
-      parseInt(this.l1Network.chainID)
-    )
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainID)
   }
 
   /**
@@ -58,10 +55,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * @param sop
    */
   protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(
-      sop,
-      parseInt(this.l2Network.chainID)
-    )
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainID)
   }
 
   /**

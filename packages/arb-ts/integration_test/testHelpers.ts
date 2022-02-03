@@ -205,13 +205,13 @@ export const wait = (ms = 0): Promise<void> => {
 }
 
 export const skipIfMainnet = (() => {
-  let chainId = ''
+  let chainId: number
   return (testContext: Mocha.Context) => {
     if (!chainId) {
       const { l1Network } = instantiateBridgeWithRandomWallet()
       chainId = l1Network.chainID
     }
-    if (chainId === '1') {
+    if (chainId === 1) {
       console.log("You're writing to the chain on mainnet lol stop")
       testContext.skip()
     }

@@ -20,16 +20,49 @@ import { expect } from 'chai'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
+import { Provider } from '@ethersproject/abstract-provider'
 Logger.setLogLevel(LogLevel.ERROR)
 
-import { Bridge__factory, SequencerInbox__factory } from '../src/lib/abi'
+import {
+  Bridge__factory,
+  Inbox__factory,
+  SequencerInbox__factory,
+} from '../src/lib/abi'
 
 import { InboxTools } from '../src'
 
 import { ethers, network } from 'hardhat'
 import { hexZeroPad } from '@ethersproject/bytes'
-import { l2Networks } from '../src/lib/dataEntities/networks'
+import { l2Networks, L2Network } from '../src/lib/dataEntities/networks'
 import { solidityKeccak256 } from 'ethers/lib/utils'
+import { ContractTransaction, Signer } from 'ethers'
+import { ArbTsError } from '../src/lib/dataEntities/errors'
+import { SignerProviderUtils } from '../src/lib/dataEntities/signerOrProvider'
+
+const submitL2Tx = async (
+  tx: {
+    to: string
+    value?: BigNumber
+    data?: string
+    nonce: number
+    gasPriceBid: BigNumber
+    gasLimit: BigNumber
+  },
+  l2Network: L2Network,
+  l1Signer?: Signer
+): Promise<ContractTransaction> => {
+  const inbox = Inbox__factory.connect(l2Network.ethBridge.inbox, l1Signer)
+  const senderAddr = await l1Signer.getAddress()
+
+  return await inbox.sendUnsignedTransaction(
+    tx.gasLimit,
+    tx.gasPriceBid,
+    tx.nonce,
+    tx.to,
+    tx.value || BigNumber.from(0),
+    tx.data || '0x'
+  )
+}
 
 describe('Inbox tools', () => {
   const setup = async () => {
@@ -37,7 +70,7 @@ describe('Inbox tools', () => {
     const signer = signers[0]
     const provider = signer.provider!
 
-    const arbitrumOne = l2Networks['42161']
+    const arbitrumOne = l2Networks[42161]
 
     const sequencerInbox = SequencerInbox__factory.connect(
       arbitrumOne.ethBridge.sequencerInbox,
@@ -85,13 +118,17 @@ describe('Inbox tools', () => {
 
     const inboxTools = new InboxTools(l1Signer, l2Network)
     const startInboxLength = await bridge.messageCount()
-    const l2Tx = await inboxTools.submitL2Tx({
-      to: await l1Signer.getAddress(),
-      value: BigNumber.from(0),
-      gasLimit: BigNumber.from(100000),
-      gasPriceBid: BigNumber.from(21000000000),
-      nonce: 0,
-    })
+    const l2Tx = await submitL2Tx(
+      {
+        to: await l1Signer.getAddress(),
+        value: BigNumber.from(0),
+        gasLimit: BigNumber.from(100000),
+        gasPriceBid: BigNumber.from(21000000000),
+        nonce: 0,
+      },
+      l2Network,
+      l1Signer
+    )
     await l2Tx.wait()
 
     const block = await l1Signer.provider!.getBlock('latest')
@@ -112,29 +149,37 @@ describe('Inbox tools', () => {
   it('can force include many', async () => {
     const { l1Signer, l2Network, sequencerInbox, bridge } = await setup()
 
-    const inboxTools = new InboxTools(l1Signer, l2Network)
     const startInboxLength = await bridge.messageCount()
-    const l2Tx1 = await inboxTools.submitL2Tx({
-      to: await l1Signer.getAddress(),
-      value: BigNumber.from(0),
-      gasLimit: BigNumber.from(100000),
-      gasPriceBid: BigNumber.from(21000000000),
-      nonce: 0,
-    })
+    const l2Tx1 = await submitL2Tx(
+      {
+        to: await l1Signer.getAddress(),
+        value: BigNumber.from(0),
+        gasLimit: BigNumber.from(100000),
+        gasPriceBid: BigNumber.from(21000000000),
+        nonce: 0,
+      },
+      l2Network,
+      l1Signer
+    )
     await l2Tx1.wait()
 
-    const l2Tx2 = await inboxTools.submitL2Tx({
-      to: await l1Signer.getAddress(),
-      value: BigNumber.from(10),
-      gasLimit: BigNumber.from(100000),
-      gasPriceBid: BigNumber.from(21000000000),
-      nonce: 1,
-    })
+    const l2Tx2 = await submitL2Tx(
+      {
+        to: await l1Signer.getAddress(),
+        value: BigNumber.from(10),
+        gasLimit: BigNumber.from(100000),
+        gasPriceBid: BigNumber.from(21000000000),
+        nonce: 1,
+      },
+      l2Network,
+      l1Signer
+    )
     await l2Tx2.wait()
 
     const block = await l1Signer.provider!.getBlock('latest')
     await mineBlocks(6600, block.timestamp)
 
+    const inboxTools = new InboxTools(l1Signer, l2Network)
     const forceInclusionTx = await inboxTools.forceInclude()
 
     expect(forceInclusionTx, 'Null force inclusion').to.not.be.null
@@ -150,13 +195,17 @@ describe('Inbox tools', () => {
     const { l1Signer, l2Network } = await setup()
     const inboxTools = new InboxTools(l1Signer, l2Network)
 
-    const l2Tx1 = await inboxTools.submitL2Tx({
-      to: await l1Signer.getAddress(),
-      value: BigNumber.from(5),
-      gasLimit: BigNumber.from(100000),
-      gasPriceBid: BigNumber.from(21000000000),
-      nonce: 0,
-    })
+    const l2Tx1 = await submitL2Tx(
+      {
+        to: await l1Signer.getAddress(),
+        value: BigNumber.from(5),
+        gasLimit: BigNumber.from(100000),
+        gasPriceBid: BigNumber.from(21000000000),
+        nonce: 0,
+      },
+      l2Network,
+      l1Signer
+    )
     await l2Tx1.wait()
     const txParams = {
       to: await l1Signer.getAddress(),
@@ -177,7 +226,7 @@ describe('Inbox tools', () => {
         '0x',
       ]
     )
-    const l2Tx2 = await inboxTools.submitL2Tx(txParams)
+    const l2Tx2 = await submitL2Tx(txParams, l2Network, l1Signer)
     await l2Tx2.wait()
 
     const block = await l1Signer.provider!.getBlock('latest')

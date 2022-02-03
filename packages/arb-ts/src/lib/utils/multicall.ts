@@ -109,7 +109,7 @@ type TokenInputOutput<T> = T extends TokenMultiInput
  */
 export class MultiCaller {
   constructor(
-    public readonly provider: Provider,
+    private readonly provider: Provider,
     private readonly multicallerAddress: string
   ) {}
 
@@ -120,8 +120,8 @@ export class MultiCaller {
    */
   public static async fromProvider(provider: Provider): Promise<MultiCaller> {
     const chainId = (await provider.getNetwork()).chainId
-    const l2Network = l2Networks[chainId.toString()] as L2Network | undefined
-    const l1Network = l1Networks[chainId.toString()] as L1Network | undefined
+    const l2Network = l2Networks[chainId] as L2Network | undefined
+    const l1Network = l1Networks[chainId] as L1Network | undefined
 
     const network = l2Network || l1Network
     if (!network) {
