@@ -1,6 +1,6 @@
 {
   "name": "arb-ts",
-  "version": "2.0.0-beta.9",
+  "version": "2.0.0-beta.10",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -19,7 +19,7 @@
     "postinstall": "$npm_execpath run gen:abi",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
-    "build": "./scripts/builder && cp -R ./src/lib/abi/*.d.ts ./dist/lib/abi",
+    "build": "./scripts/builder",
     "watch": "tsc --watch",
     "test": "mocha",
     "test:coverage": "nyc mocha",
@@ -42,7 +42,7 @@
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
-    "@typechain/ethers-v5": "^7.2.0",
+    "@typechain/ethers-v5": "9.0.0",
     "@types/prompts": "^2.0.14",
     "arb-bridge-eth": "0.7.4",
     "arb-bridge-peripherals": "1.0.5",
@@ -50,7 +50,7 @@
     "dotenv": "^10.0.0",
     "ethers": "^5.1.0",
     "ts-node": "^10.2.1",
-    "typechain": "^5.2.0"
+    "typechain": "7.0.0"
   },
   "resolutions": {
     "@ethersproject/bignumber": "^5.1.1"

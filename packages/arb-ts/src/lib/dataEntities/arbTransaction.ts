@@ -12,10 +12,15 @@ export interface ArbTransactionResponse extends TransactionResponse {
    * The sequenced number for this transaction
    */
   l1SequenceNumber: BigNumber
-  parentRequestId: string
-  indexInParent: number
-  arbType: number
-  arbSubType: number
+
+  // These fields are commented out for now
+  // we can add them in as we need them and are able to document
+  // them properly
+  // parentRequestId: string
+  // indexInParent: number
+  // arbType: number
+  // arbSubType: number
+
   /**
    * The l1 block number that would be used for block.number calls
    * that occur within this transaction.
@@ -147,7 +152,7 @@ export interface ArbTransactionReceipt extends TransactionReceipt {
   /**
    * Data from a smart contract return or the revert reason if an EVM revert statement was hit
    */
-  returnData: string
+  returnData?: string
   /**
    * Arbitrum status code
    */
