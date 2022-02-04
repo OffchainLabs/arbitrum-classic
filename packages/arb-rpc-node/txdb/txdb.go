@@ -98,7 +98,7 @@ func New(
 		blockInfoLRUCache: blockInfoLRUCache,
 		allowSlowLookup:   cacheConfig.AllowSlowLookup,
 	}
-	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
+	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(100), updateFrequency)
 	errChan := logReader.Start(ctx)
 	db.logReader = logReader
 	return db, errChan, nil
