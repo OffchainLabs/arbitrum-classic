@@ -27,11 +27,11 @@ import {
   SequencerInbox__factory,
 } from '../abi'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import { L2Network } from '../dataEntities/networks'
+import { l1Networks, L2Network } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
-import { BLOCK_TIME_SEC } from '../dataEntities/constants'
+import { ArbTsError } from '../dataEntities/errors'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -42,12 +42,18 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
  */
 export class InboxTools {
   private readonly l1Provider
+  private readonly l1Network
 
   constructor(
     private readonly l1Signer: Signer,
     private readonly l2Network: L2Network
   ) {
     this.l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
+    this.l1Network = l1Networks[l2Network.partnerChainID]
+    if (!this.l1Network)
+      throw new ArbTsError(
+        `L1Network not found for chain id: ${l2Network.partnerChainID}.`
+      )
   }
 
   /**
@@ -69,7 +75,7 @@ export class InboxTools {
     // we take a long average block time of 14s
     // and always move at least 10 blocks
 
-    const diffBlocks = Math.max(Math.ceil(diff / BLOCK_TIME_SEC), 10)
+    const diffBlocks = Math.max(Math.ceil(diff / this.l1Network.blockTime), 10)
 
     return await this.findFirstBlockBelow(
       blockNumber - diffBlocks,

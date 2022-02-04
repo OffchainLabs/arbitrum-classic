@@ -46,8 +46,3 @@ export const DISABLED_GATEWAY = '0x0000000000000000000000000000000000000001'
  * isArbitrumEnabled which returns this value. Intger: 0xa4b1
  */
 export const CUSTOM_TOKEN_IS_ENABLED = 42161
-
-/**
- * A slightly longer than average block time
- */
-export const BLOCK_TIME_SEC = 14

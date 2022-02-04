@@ -149,7 +149,7 @@ export const l1Networks: L1Networks = {
     name: 'Mainnet',
     explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161],
-    blockTime: 15,
+    blockTime: 14,
     rpcURL: process.env['MAINNET_RPC'] as string,
     isCustom: false,
   },
