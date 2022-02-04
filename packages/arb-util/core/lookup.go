@@ -150,7 +150,7 @@ func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 			logger.Warn().Dur("elapsed", duration).Msg("Message delivery taking too long")
 			start = time.Now()
 		}
-		<-time.After(time.Millisecond * 50)
+		<-time.After(time.Millisecond * 1)
 	}
 	return status, nil
 }
