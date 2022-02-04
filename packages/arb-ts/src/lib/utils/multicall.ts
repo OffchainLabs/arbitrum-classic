@@ -17,9 +17,9 @@
 'use strict'
 
 import { Provider } from '@ethersproject/abstract-provider'
-import { BigNumber } from 'ethers'
+import { BigNumber, Contract } from 'ethers'
 
-import { ERC20__factory, Multicall2__factory } from '../abi'
+import { ERC20__factory, Multicall2, Multicall2__factory } from '../abi'
 import { ArbTsError } from '../dataEntities/errors'
 import {
   isL1Network,
@@ -49,11 +49,17 @@ export type CallInput<T extends unknown> = {
 
 /**
  * For each item in T this DecoderReturnType<T> yields the return
- * type of the decoder property
+ * type of the decoder property.
+ * If we require success then the result cannot be undefined
  */
-type DecoderReturnType<T extends CallInput<unknown>[]> = {
+type DecoderReturnType<
+  T extends CallInput<unknown>[],
+  TRequireSuccess extends boolean
+> = {
   [P in keyof T]: T[P] extends CallInput<unknown>
-    ? ReturnType<T[P]['decoder']> | undefined
+    ? TRequireSuccess extends true
+      ? ReturnType<T[P]['decoder']>
+      : ReturnType<T[P]['decoder']> | undefined
     : never
 }
 
@@ -110,7 +116,10 @@ type TokenInputOutput<T> = T extends TokenMultiInput
 export class MultiCaller {
   constructor(
     private readonly provider: Provider,
-    private readonly multicallerAddress: string
+    /**
+     * Address of multicall contract
+     */
+    public readonly address: string
   ) {}
 
   /**
@@ -143,6 +152,38 @@ export class MultiCaller {
     }
 
     return new MultiCaller(provider, multiCallAddr)
+  }
+
+  /**
+   * Get the call input for the current block number
+   * @returns
+   */
+  public getBlockNumberInput(): CallInput<
+    Awaited<ReturnType<Multicall2['getBlockNumber']>>
+  > {
+    const iFace = Multicall2__factory.createInterface()
+    return {
+      targetAddr: this.address,
+      encoder: () => iFace.encodeFunctionData('getBlockNumber'),
+      decoder: (returnData: string) =>
+        iFace.decodeFunctionResult('getBlockNumber', returnData)[0],
+    }
+  }
+
+  /**
+   * Get the call input for the current block timestamp
+   * @returns
+   */
+  public getCurrentBlockTimestampInput(): CallInput<
+    Awaited<ReturnType<Multicall2['getCurrentBlockTimestamp']>>
+  > {
+    const iFace = Multicall2__factory.createInterface()
+    return {
+      targetAddr: this.address,
+      encoder: () => iFace.encodeFunctionData('getCurrentBlockTimestamp'),
+      decoder: (returnData: string) =>
+        iFace.decodeFunctionResult('getCurrentBlockTimestamp', returnData)[0],
+    }
   }
 
   /**
@@ -181,21 +222,22 @@ export class MultiCaller {
    * @param requireSuccess Fail the whole call if any internal call fails
    * @returns
    */
-  public async multiCall<T extends CallInput<unknown>[]>(
+  public async multiCall<
+    T extends CallInput<unknown>[],
+    TRequireSuccess extends boolean
+  >(
     params: T,
-    requireSuccess = false
-  ): Promise<DecoderReturnType<T>> {
-    const multiCall = Multicall2__factory.connect(
-      this.multicallerAddress,
-      this.provider
-    )
+    requireSuccess?: TRequireSuccess
+  ): Promise<DecoderReturnType<T, TRequireSuccess>> {
+    const defaultedRequireSuccess = requireSuccess || false
+    const multiCall = Multicall2__factory.connect(this.address, this.provider)
     const args = params.map(p => ({
       target: p.targetAddr,
       callData: p.encoder(),
     }))
 
     const outputs = await multiCall.callStatic.tryAggregate(
-      requireSuccess,
+      defaultedRequireSuccess,
       args
     )
 
@@ -204,7 +246,7 @@ export class MultiCaller {
         return params[index].decoder(returnData)
       }
       return undefined
-    }) as DecoderReturnType<T>
+    }) as DecoderReturnType<T, TRequireSuccess>
   }
 
   /**

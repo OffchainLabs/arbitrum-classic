@@ -20,13 +20,18 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { Block } from '@ethersproject/abstract-provider'
 import { BigNumber, ContractTransaction, Overrides } from 'ethers'
 
-import { Bridge, Bridge__factory, SequencerInbox__factory } from '../abi'
+import {
+  Bridge,
+  Bridge__factory,
+  SequencerInbox,
+  SequencerInbox__factory,
+} from '../abi'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { L2Network } from '../dataEntities/networks'
-import { ArbTsError } from '../dataEntities/errors'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
-import { MultiCaller } from '../utils/multicall'
+import { MultiCaller, CallInput } from '../utils/multicall'
+import { BLOCK_TIME_SEC } from '../dataEntities/constants'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -64,7 +69,7 @@ export class InboxTools {
     // we take a long average block time of 14s
     // and always move at least 10 blocks
 
-    const diffBlocks = Math.max(Math.ceil(diff / 14), 10)
+    const diffBlocks = Math.max(Math.ceil(diff / BLOCK_TIME_SEC), 10)
 
     return await this.findFirstBlockBelow(
       blockNumber - diffBlocks,
@@ -73,19 +78,23 @@ export class InboxTools {
   }
 
   /**
-   * Get a range of blocks within eligible messages emitted events
-   * @param blockNumbeRangeSize
+   * Get a range of blocks within messages eligible for force inclusion emitted events
+   * @param blockNumberRangeSize
    * @returns
    */
-  private async getEligibleBlockRange(blockNumbeRangeSize: number) {
-    const currentBlock = await this.l1Provider.getBlock('latest')
+  private async getForceIncludeableBlockRange(blockNumberRangeSize: number) {
     const sequencerInbox = SequencerInbox__factory.connect(
       this.l2Network.ethBridge.sequencerInbox,
       this.l1Provider
     )
 
     const multicall = await MultiCaller.fromProvider(this.l1Provider)
-    const [maxDelayBlocks, maxDelaySeconds] = await multicall.multiCall([
+    const multicallInput: [
+      CallInput<Awaited<ReturnType<SequencerInbox['maxDelayBlocks']>>>,
+      CallInput<Awaited<ReturnType<SequencerInbox['maxDelaySeconds']>>>,
+      ReturnType<MultiCaller['getBlockNumberInput']>,
+      ReturnType<MultiCaller['getCurrentBlockTimestampInput']>
+    ] = [
       {
         targetAddr: sequencerInbox.address,
         encoder: () =>
@@ -94,7 +103,7 @@ export class InboxTools {
           sequencerInbox.interface.decodeFunctionResult(
             'maxDelayBlocks',
             returnData
-          )[0] as BigNumber,
+          )[0],
       },
       {
         targetAddr: sequencerInbox.address,
@@ -104,17 +113,23 @@ export class InboxTools {
           sequencerInbox.interface.decodeFunctionResult(
             'maxDelaySeconds',
             returnData
-          )[0] as BigNumber,
+          )[0],
       },
-    ])
+      multicall.getBlockNumberInput(),
+      multicall.getCurrentBlockTimestampInput(),
+    ]
 
-    if (!maxDelayBlocks) throw new ArbTsError('MaxDelayBlocks not fetched')
-    if (!maxDelaySeconds) throw new ArbTsError('MaxDelaySeconds not fetched')
+    const [
+      maxDelayBlocks,
+      maxDelaySeconds,
+      currentBlockNumber,
+      currentBlockTimestamp,
+    ] = await multicall.multiCall(multicallInput, true)
 
     const firstEligibleBlockNumber =
-      currentBlock.number - maxDelayBlocks.toNumber()
+      currentBlockNumber.toNumber() - maxDelayBlocks.toNumber()
     const firstEligibleTimestamp =
-      currentBlock.timestamp - maxDelaySeconds.toNumber()
+      currentBlockTimestamp.toNumber() - maxDelaySeconds.toNumber()
 
     const firstEligibleBlock = await this.findFirstBlockBelow(
       firstEligibleBlockNumber,
@@ -123,7 +138,7 @@ export class InboxTools {
 
     return {
       endBlock: firstEligibleBlock.number,
-      startBlock: firstEligibleBlock.number - blockNumbeRangeSize,
+      startBlock: firstEligibleBlock.number - blockNumberRangeSize,
     }
   }
 
@@ -144,7 +159,9 @@ export class InboxTools {
 
     // events dont become eligible until they pass a delay
     // find a block range which will emit eligible events
-    const blockRange = await this.getEligibleBlockRange(searchRangeBlocks)
+    const blockRange = await this.getForceIncludeableBlockRange(
+      searchRangeBlocks
+    )
 
     // get all the events in this range
     const events = await eFetcher.getEvents<Bridge, MessageDeliveredEvent>(
@@ -186,7 +203,7 @@ export class InboxTools {
     messageDeliveredEvent?: T,
     overrides?: Overrides
   ): Promise<
-    // if a message delivered event was supplied then we'll definately return
+    // if a message delivered event was supplied then we'll definitely return
     // a contract transaction or throw an error. If one isnt supplied then we may
     // find no eligible events, and so return null
     T extends ForceInclusionParams
