@@ -6,7 +6,7 @@ sidebar_label: Sequencer/Censorship Resistance
 
 The sequencer is a special Arbitrum full node which is, under normal conditions, responsible for submitting users’ transactions into the L2 system. In principle, a chain’s sequencer can take different forms; as Arbitrum One currently stands, the sequencer is simply centralized; eventually, the sequencer will consist of a distributed committee of independent parties which come to consensus. However, regardless of its form, the sequencer has a fundamental limitation that doesn’t apply to any other part of the Arbitrum system: it must operate under its own security assumptions; i.e., it can’t derive security directly from layer 1. This brings up the question of how Arbitrum maintains its claim to censorship resistance when-and-if the sequencer misbehaves. 
 
-Here we will describe the mechanics of how any user can bypass the sequencer entirely to submit any Aribtrum transaction (including one that, say, initiates the withdrawal of funds) directly from layer 1, thus preserving censorship resistance even if the sequencer is being completely unresponsive or malicious.
+Here we will describe the mechanics of how any user can bypass the sequencer entirely to submit any Arbitrum transaction (including one that, say, initiates the withdrawal of funds) directly from layer 1, thus preserving censorship resistance even if the sequencer is being completely unresponsive or malicious.
 
 ## The Core Inbox
 
@@ -34,7 +34,7 @@ First, they submit their L2 message via L1 into the delayed Inbox as described a
 
 Once in the delayed Inbox, we obviously can’t rely on the sequencer to include the translation in a batch. Instead, we can use **SequencerInbox**’s **forceInclusion** method. Once a message has been in the delayed Inbox for a sufficient amount of time **forceInclusion** can be called to move it from the delayed Inbox into the core Inbox, at which point it’s finalized. Crucially, any address can call **forceInclusion**. 
 
-Currently, on Aribtrum One, this delay time between submission and force inclusion is roughly 24 hours, as specified by the **maxDelayBlocks** and **maxDelaySeconds** variables. A force inclusion from L1 would directly affect the state for any unconfirmed L2 transactions; keeping conservatively high value ensures it should only be used under extraordinary circumstances.
+Currently, on Arbitrum One, this delay time between submission and force inclusion is roughly 24 hours, as specified by the **maxDelayBlocks** and **maxDelaySeconds** variables. A force inclusion from L1 would directly affect the state for any unconfirmed L2 transactions; keeping conservatively high value ensures it should only be used under extraordinary circumstances.
 
 On top of the delay itself, the **forceInclusion** path has the downside of uncertainty around transaction ordering; i.e., while waiting for a messages max delay to pass, a malicious sequencer could, in principle, directly post messages in front of it. However, there’s ultimately nothing the sequencer can do to stop it from being included in the core Inbox, at which point its ordering is finalized.
 	
