@@ -1740,9 +1740,10 @@ void ArbCore::operator()() {
             }
 
             for (size_t i = 0; i < logs_cursors.size(); i++) {
+                ValueCache logs_cache{1, 0};
                 if (logs_cursors[i].status == DataCursor::REQUESTED) {
                     ReadTransaction tx(data_storage);
-                    handleLogsCursorRequested(tx, i, cache);
+                    handleLogsCursorRequested(tx, i, logs_cache);
                 }
             }
 
