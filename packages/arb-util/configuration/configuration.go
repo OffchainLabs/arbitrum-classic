@@ -424,7 +424,7 @@ func ParseDBTool() (*Config, error) {
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	AddPersistent(f)
-	AddCore(f, 0, 0)
+	AddCore(f, 0, time.Hour*48)
 
 	k, err := beginCommonParse(f)
 	if err != nil {
