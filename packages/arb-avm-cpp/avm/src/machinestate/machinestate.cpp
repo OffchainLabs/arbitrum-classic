@@ -99,7 +99,8 @@ MachineState::MachineState(std::shared_ptr<CoreCode> code_, Value static_val_)
     : pc(code_->initialCodePointRef()),
       code(std::move(code_)),
       static_val(std::move(static_val_)),
-      arb_gas_remaining(max_arb_gas_remaining) {}
+      arb_gas_remaining(max_arb_gas_remaining),
+      lazy_loaded(false) {}
 
 MachineState::MachineState(MachineOutput output_,
                            CodePointRef pc_,
@@ -111,7 +112,8 @@ MachineState::MachineState(MachineOutput output_,
                            Datastack auxstack_,
                            uint256_t arb_gas_remaining_,
                            Status state_,
-                           CodePointStub errpc_)
+                           CodePointStub errpc_,
+                           bool lazy_loaded_)
     : output(output_),
       pc(pc_),
       code(std::move(code_)),
@@ -122,7 +124,8 @@ MachineState::MachineState(MachineOutput output_,
       auxstack(std::move(auxstack_)),
       arb_gas_remaining(arb_gas_remaining_),
       state(state_),
-      errpc(errpc_) {}
+      errpc(errpc_),
+      lazy_loaded(lazy_loaded_) {}
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {

@@ -77,7 +77,7 @@ size_t CombinedMachineCache::timedSize() {
 
 std::optional<std::reference_wrapper<const Machine>>
 CombinedMachineCache::getFirstMatchNoLock(
-    const std::function<bool(const MachineOutput&)>& check_output,
+    const std::function<bool(const Machine&)>& check_output,
     std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
     std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
     std::optional<TimedMachineCache::map_type::const_iterator>& timed_it) {
@@ -85,13 +85,12 @@ CombinedMachineCache::getFirstMatchNoLock(
     uint256_t lru_gas;
     uint256_t timed_gas;
 
-    if (last_machine && check_output(last_machine->machine_state.output)) {
+    if (last_machine && check_output(*last_machine)) {
         // Last machine will always have the greatest amount of gas used
         return std::cref(*last_machine);
     }
 
-    if (last_last_machine &&
-        check_output(last_last_machine->machine_state.output)) {
+    if (last_last_machine && check_output(*last_last_machine)) {
         // Last last machine will always have the next greatest amount of gas
         // used
         return std::cref(*last_last_machine);
@@ -143,8 +142,8 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
     auto lru_it = lru.atOrBeforeGas(gas_used);
     auto timed_it = timed.atOrBeforeGas(gas_used);
 
-    auto check_output = [&](const MachineOutput& output) {
-        return output.arb_gas_used <= gas_used;
+    auto check_output = [&](const Machine& output) {
+        return output.machine_state.output.arb_gas_used <= gas_used;
     };
 
     auto cache_machine =
@@ -171,7 +170,7 @@ CombinedMachineCache::checkSimpleMatching(
 }
 
 CombinedMachineCache::CacheResultStruct CombinedMachineCache::findFirstMatching(
-    const std::function<bool(const MachineOutput&)>& check_output,
+    const std::function<bool(const Machine&)>& check_output,
     std::optional<uint256_t> existing_gas_used,
     std::optional<uint256_t> database_gas,
     bool use_max_execution) {

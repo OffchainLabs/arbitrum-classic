@@ -31,8 +31,8 @@ TEST_CASE("BasicMachineCache add") {
     REQUIRE_FALSE(cache.atOrBeforeGas(50).has_value());
 
     // Test empty findMatching
-    auto check_output = [&](const MachineOutput& output) {
-        return output.arb_gas_used <= 42;
+    auto check_output = [&](const Machine& output) {
+        return output.machine_state.output.arb_gas_used <= 42;
     };
     REQUIRE_FALSE(cache.findMatching(check_output).has_value());
 

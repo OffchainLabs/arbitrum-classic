@@ -55,9 +55,9 @@ LRUMachineCache::atOrBeforeGas(uint256_t gas_used) {
 
 std::optional<LRUMachineCache::map_type::const_iterator>
 LRUMachineCache::findMatching(
-    const std::function<bool(const MachineOutput&)>& check_output) {
+    const std::function<bool(const Machine&)>& check_output) {
     for (auto rit = cache.crbegin(); rit != cache.crend(); rit++) {
-        if (check_output(rit->second.first->machine_state.output)) {
+        if (check_output(*rit->second.first)) {
             auto it = rit.base();
 
             // The reverse_iterator::base() method returns the element after
