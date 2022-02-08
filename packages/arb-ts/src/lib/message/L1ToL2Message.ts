@@ -53,7 +53,7 @@ export enum L1ToL2MessageStatus {
    * redeem tx is ever issued. An auto redeem is also never issued for ETH deposits.
    * A manual redeem is now required.
    */
-  NOT_YET_REDEEMED = 3,
+  FUNDS_DEPOSITED_ON_L2 = 3,
   /**
    * The retryable ticket has been redeemed (either by auto, or manually) and the
    * l2 transaction has been executed
@@ -237,54 +237,108 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return currentTimestamp.gte(timeoutTimestamp)
   }
 
-  private async receiptsToStatus(
+  protected async receiptsToStatus(
     retryableCreationReceipt: TransactionReceipt | null | undefined,
     l2TxReceipt: TransactionReceipt | null | undefined
   ): Promise<L1ToL2MessageStatus> {
-    if (l2TxReceipt && l2TxReceipt.status === 1) {
-      return L1ToL2MessageStatus.REDEEMED
-    }
+    // happy path for non auto redeemable messages
+    // NOT_YET_CREATED -> FUNDS_DEPOSITED
+    // these will later either transition to EXPIRED after the timeout
+    // (this is what happens to eth deposits since they don't need to be
+    // redeemed) or to REDEEMED if the retryable is manually redeemed
 
+    // happy path for auto redeemable messages
+    // NOT_YET_CREATED -> FUNDS_DEPOSITED -> REDEEMED
+    // an attempt to auto redeem executable messages is made immediately
+    // after the retryable is created - which if successful will transition
+    // the status to REDEEMED. If the auto redeem fails then the ticket
+    // will transition to REDEEMED if manually redeemed, or EXPIRE
+    // after the timeout is reached and the ticket is not redeemed
+
+    // we test the retryable receipt first as if this doesnt exist there's
+    // no point looking to see if expired
     if (!retryableCreationReceipt) {
       return L1ToL2MessageStatus.NOT_YET_CREATED
     }
     if (retryableCreationReceipt.status === 0) {
       return L1ToL2MessageStatus.CREATION_FAILED
     }
+
+    // ticket created, has it been redeemed?
+    if (l2TxReceipt && l2TxReceipt.status === 1) {
+      return L1ToL2MessageStatus.REDEEMED
+    }
+
+    // not redeemed, has it now expired
     if (await this.isExpired()) {
       return L1ToL2MessageStatus.EXPIRED
     }
-    // we could sanity check that autoredeem failed, but we don't need to
-    // currently if the params (max l2 gas price) * (max l2 gas) = 0
-    // no auto-redeem receipt gets emitted at all; if the user cars about the difference
-    // between auto-redeem failed and auto-redeem never took place, they can check
-    // the receipt. But for the sake of this status method, NOT_YET_REDEEMED for both cases is okay.
-    return L1ToL2MessageStatus.NOT_YET_REDEEMED
+
+    // ticket was created but not redeemed
+    // this could be because
+    // a) the ticket is non auto redeemable (l2GasPrice == 0 || l2GasLimit == 0) -
+    //    this is usually an eth deposit. But in some rare case the
+    //    user may still want to manually redeem it
+    // b) the ticket is auto redeemable, but the auto redeem failed
+
+    // the fact that the auto redeem failed isn't usually useful to the user
+    // if they're doing an eth deposit they dont care about redemption
+    // and if they do want execution to occur they will know that they're
+    // here because the auto redeem failed. If they really want to check
+    // they can fetch the auto redeem receipt and check the status on it
+    return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
   }
 
-  public async status(): Promise<L1ToL2MessageStatus> {
-    const l2TxReceipt = await this.getL2TxReceipt()
-    const retryableCreationReceipt = await this.getRetryableCreationReceipt()
-
-    return this.receiptsToStatus(retryableCreationReceipt, l2TxReceipt)
+  protected async status(): Promise<L1ToL2MessageStatus> {
+    return this.receiptsToStatus(
+      await this.getRetryableCreationReceipt(),
+      await this.getL2TxReceipt()
+    )
   }
 
   /**
+   * Wait for the retryable ticket to be created, and if it's an eth deposit also wait for the
+   * @param isOnlyEthDeposit Is the message only an eth deposit, and nothing else.
+   *  If the message deposits eth as well as calls a contract then false should be supplied,
+   *  or if this is just a contract call false should be supplied. True should be supplied if
+   *  if this message just deposits eth - e.g. by calling depositEth on the L1 inbox.
+   * @param timeout Amount of time to wait for the retryable ticket to be created
+   * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
+   * @returns The wait result contains a complete, a status, and optionally the l2TxReceipt.
+   * If complete is true then this message is in the terminal state for it's type. For eth deposits complete is
+   * true if the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED. For all other messages complete is true
+   * only if the status is REDEEMED.
+   */
+  public async wait(
+    isOnlyEthDeposit: boolean,
+    timeout = 900000,
+    confirmations?: number
+  ): Promise<L1ToL2MessageWaitResult & { complete: boolean }> {
+    const res = await this.waitForStatus(timeout, confirmations)
+
+    return isOnlyEthDeposit
+      ? {
+          complete:
+            res.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 ||
+            res.status === L1ToL2MessageStatus.EXPIRED ||
+            res.status === L1ToL2MessageStatus.REDEEMED,
+          ...res,
+        }
+      : { complete: res.status === L1ToL2MessageStatus.REDEEMED, ...res }
+  }
+
+  /**
+   * Suggest using .wait() instead as it correctly infers completion from the status
+   * based on whether this message was only an eth deposit.
    * Wait for the retryable ticket to be created, for it to be redeemed, and for the l2Tx to be executed.
-   * @param timeout
-   * @param confirmations
+   * @param timeout Amount of time to wait for the retryable ticket to be created
+   * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
    * @returns The wait result contains a status, and optionally the l2TxReceipt.
    * If the status is "REDEEMED" then a l2TxReceipt is also available on the result.
    * If the status has any other value then l2TxReceipt is not populated.
    */
-  public async wait(
-    /**
-     * Amount of time to wait for the retryable ticket to be created
-     */
+  public async waitForStatus(
     timeout = 900000,
-    /**
-     * Amount of confirmations the retryable ticket and the auto redeem receipt should have
-     */
     confirmations?: number
   ): Promise<L1ToL2MessageWaitResult> {
     // try to wait for the retryable ticket to be created
@@ -366,7 +420,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
    */
   public async redeem(): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
+    if (status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
@@ -374,7 +428,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       return await arbRetryableTx.redeem(this.l2TxHash)
     } else {
       throw new ArbTsError(
-        `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.NOT_YET_REDEEMED}.`
+        `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
       )
     }
   }
@@ -385,7 +439,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
    */
   public async cancel(): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
+    if (status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
@@ -393,7 +447,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       return await arbRetryableTx.cancel(this.l2TxHash)
     } else {
       throw new ArbTsError(
-        `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.NOT_YET_REDEEMED}.`
+        `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
       )
     }
   }
