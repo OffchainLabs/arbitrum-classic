@@ -171,8 +171,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     // Test match
     machine42a = cache.findFirstMatching(check_machine_state, std::nullopt,
                                          std::nullopt, true);
-    REQUIRE(machine42a.machine != nullptr);
-    REQUIRE(machine42a.machine->machine_state.output.arb_gas_used == 42);
+    // LRU cache not checked in findFirstMatching
+    REQUIRE(machine42a.machine == nullptr);
 
     // Test only timed
     cache.reorg(0);
