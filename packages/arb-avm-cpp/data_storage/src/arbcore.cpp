@@ -456,7 +456,9 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                 }
 
                 std::cerr << "Error: Invalid checkpoint found at gas: "
-                          << checkpoint.output.arb_gas_used << std::endl;
+                          << checkpoint.output.arb_gas_used
+                          << ", log count: " << checkpoint.output.log_count
+                          << std::endl;
                 assert(false);
             }
 
@@ -1005,8 +1007,8 @@ void ArbCore::operator()() {
             save_checkpoint = false;
         }
 
-        if (!machineIdle() || message_data_status != MESSAGES_READY) {
-            // Machine is already running or no new messages, so sleep for a
+        if (machineIdle() && message_data_status != MESSAGES_READY) {
+            // Machine is not running and no new messages, so sleep for a
             // short while
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }

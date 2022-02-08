@@ -110,6 +110,8 @@ std::vector<ParsedTupVal> parseTuple(
                 break;
             }
             default: {
+                std::cerr << "Invalid value type: " << value_type
+                          << ", count: " << count << ", i: " << i << std::endl;
                 throw std::runtime_error(
                     "tried to parse tuple value with invalid typecode");
             }
