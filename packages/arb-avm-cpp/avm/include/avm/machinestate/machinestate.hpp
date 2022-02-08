@@ -174,8 +174,6 @@ struct MachineState {
 
     static MachineState loadFromFile(const std::string& executable_filename);
 
-    MachineState();
-
     MachineState(std::shared_ptr<CoreCode> code_, Value static_val);
 
     MachineState(MachineOutput output_,
