@@ -31,10 +31,10 @@ TEST_CASE("LRUMachineCache add") {
     REQUIRE_FALSE(cache.atOrBeforeGas(50).has_value());
 
     // Test empty findMatching
-    auto check_output = [&](const MachineOutput& output) {
-        return output.arb_gas_used <= 10;
+    auto check_machine_state = [&](const MachineState& mach) {
+        return mach.output.arb_gas_used <= 10;
     };
-    REQUIRE_FALSE(cache.findMatching(check_output).has_value());
+    REQUIRE_FALSE(cache.findMatching(check_machine_state).has_value());
 
     // Basic add
     auto machine_zero = std::make_unique<Machine>(getComplexMachine());
@@ -59,7 +59,7 @@ TEST_CASE("LRUMachineCache add") {
                 ->second.first->machine_state.output.arb_gas_used == 5);
 
     // Test findMatching
-    retrieved_machine2 = cache.findMatching(check_output);
+    retrieved_machine2 = cache.findMatching(check_machine_state);
     REQUIRE(retrieved_machine2.has_value());
     REQUIRE(retrieved_machine2.value()
                 ->second.first->machine_state.output.arb_gas_used == 5);
