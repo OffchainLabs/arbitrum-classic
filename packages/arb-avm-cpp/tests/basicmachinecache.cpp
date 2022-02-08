@@ -31,10 +31,10 @@ TEST_CASE("BasicMachineCache add") {
     REQUIRE_FALSE(cache.atOrBeforeGas(50).has_value());
 
     // Test empty findMatching
-    auto check_output = [&](const Machine& output) {
-        return output.machine_state.output.arb_gas_used <= 42;
+    auto check_machine_state = [&](const MachineState& mach) {
+        return mach.output.arb_gas_used <= 42;
     };
-    REQUIRE_FALSE(cache.findMatching(check_output).has_value());
+    REQUIRE_FALSE(cache.findMatching(check_machine_state).has_value());
 
     // Test that block is added
     auto machine42 = std::make_unique<Machine>(getComplexMachine());
@@ -82,7 +82,7 @@ TEST_CASE("BasicMachineCache add") {
     REQUIRE(machine42a.value()->first == 42);
 
     // Test findMatching
-    machine42a = cache.findMatching(check_output);
+    machine42a = cache.findMatching(check_machine_state);
     REQUIRE(machine42a.has_value());
     REQUIRE(machine42a.value()->first == 42);
 }

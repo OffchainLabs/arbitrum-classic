@@ -37,12 +37,13 @@ TEST_CASE("CombinedMachineCache add and get") {
             nullptr);
 
     // Test empty findmatching
-    auto check_output = [&](const Machine& output) {
-        return output.machine_state.output.arb_gas_used <= 50;
+    auto check_machine_state = [&](const MachineState& mach) {
+        return mach.output.arb_gas_used <= 50;
     };
-    REQUIRE(
-        cache.findFirstMatching(check_output, std::nullopt, std::nullopt, true)
-            .machine == nullptr);
+    REQUIRE(cache
+                .findFirstMatching(check_machine_state, std::nullopt,
+                                   std::nullopt, true)
+                .machine == nullptr);
 
     // Test that basic entry is added
     auto machine40 = std::make_unique<Machine>(getComplexMachine());
@@ -168,8 +169,8 @@ TEST_CASE("CombinedMachineCache add and get") {
     REQUIRE(machine42a.machine->machine_state.output.arb_gas_used == 42);
 
     // Test match
-    machine42a =
-        cache.findFirstMatching(check_output, std::nullopt, std::nullopt, true);
+    machine42a = cache.findFirstMatching(check_machine_state, std::nullopt,
+                                         std::nullopt, true);
     REQUIRE(machine42a.machine != nullptr);
     REQUIRE(machine42a.machine->machine_state.output.arb_gas_used == 42);
 
