@@ -176,7 +176,6 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::findFirstMatching(
     std::optional<uint256_t> existing_gas_used,
     std::optional<uint256_t> database_gas,
     bool use_max_execution) {
-    // Unique lock required to update LRU cache
     std::shared_lock lock(mutex);
 
     auto basic_it = basic.findMatching(check_machine_state);
