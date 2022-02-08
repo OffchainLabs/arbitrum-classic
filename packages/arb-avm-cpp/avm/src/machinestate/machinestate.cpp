@@ -95,8 +95,6 @@ void MachineState::addProcessedLog(Value log_val) {
         std::move(log_val), output.fully_processed_inbox});
 }
 
-MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
-
 MachineState::MachineState(std::shared_ptr<CoreCode> code_, Value static_val_)
     : pc(code_->initialCodePointRef()),
       code(std::move(code_)),
