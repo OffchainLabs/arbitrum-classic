@@ -88,9 +88,11 @@ class CombinedMachineCache {
         bool use_max_execution);
     std::optional<std::reference_wrapper<const Machine>> getFirstMatchNoLock(
         const std::function<bool(const MachineState&)>& check_machine_state,
-        std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
-        std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
-        std::optional<TimedMachineCache::map_type::const_iterator>& timed_it);
+        const std::optional<BasicMachineCache::map_type::const_iterator>&
+            basic_it,
+        const std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
+        const std::optional<TimedMachineCache::map_type::const_iterator>&
+            timed_it);
 };
 
 #endif  // ARB_AVM_CPP_COMBINEDMACHINECACHE_HPP
