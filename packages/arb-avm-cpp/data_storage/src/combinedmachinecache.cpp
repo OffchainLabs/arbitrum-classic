@@ -78,9 +78,10 @@ size_t CombinedMachineCache::timedSize() {
 std::optional<std::reference_wrapper<const Machine>>
 CombinedMachineCache::getFirstMatchNoLock(
     const std::function<bool(const MachineState&)>& check_machine_state,
-    std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
-    std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
-    std::optional<TimedMachineCache::map_type::const_iterator>& timed_it) {
+    const std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
+    const std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
+    const std::optional<TimedMachineCache::map_type::const_iterator>&
+        timed_it) {
     uint256_t basic_gas;
     uint256_t lru_gas;
     uint256_t timed_gas;
@@ -176,14 +177,17 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::findFirstMatching(
     std::optional<uint256_t> database_gas,
     bool use_max_execution) {
     // Unique lock required to update LRU cache
-    std::unique_lock lock(mutex);
+    std::shared_lock lock(mutex);
 
     auto basic_it = basic.findMatching(check_machine_state);
-    auto lru_it = lru.findMatching(check_machine_state);
+    // Ignore the LRU cache since
+    // A) it could contain lazy loaded machines
+    // B) This function is just used to load core thread machines where the LRU
+    // cache is unlikely to be correct C) The LRU cache requires a unique lock
     auto timed_it = timed.findMatching(check_machine_state);
 
-    auto cache_machine =
-        getFirstMatchNoLock(check_machine_state, basic_it, lru_it, timed_it);
+    auto cache_machine = getFirstMatchNoLock(check_machine_state, basic_it,
+                                             std::nullopt, timed_it);
 
     return findBestMachineNoLock(std::nullopt, cache_machine, existing_gas_used,
                                  database_gas, use_max_execution);
