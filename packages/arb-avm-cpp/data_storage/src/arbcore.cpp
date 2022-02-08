@@ -999,8 +999,16 @@ std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
         return nullptr;
     }
 
+    auto check_machine = [&](const Machine& mach) {
+        return check_output(mach.machine_state.output) &&
+               // If lazy loading is off, make sure to only get non-lazy loaded
+               // machines for the core thread
+               (!coreConfig.lazy_load_core_machine ||
+                !mach.machine_state.lazy_loaded);
+    };
+
     auto mach = combined_machine_cache.findFirstMatching(
-        check_output, std::nullopt, checkpoint.output.arb_gas_used, false);
+        check_machine, std::nullopt, checkpoint.output.arb_gas_used, false);
     if (mach.machine != nullptr) {
         // Found machine in cache
         auto& state = mach.machine->machine_state;
@@ -1289,7 +1297,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             get<Tuple>(std::get<CountedData<Value>>(auxstack_results).data)),
         state_data.arb_gas_remaining,
         state_data.state,
-        state_data.err_pc};
+        state_data.err_pc,
+        lazy_load};
 
     return std::make_unique<T>(state);
 }

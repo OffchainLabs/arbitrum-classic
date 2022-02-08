@@ -32,7 +32,9 @@
 using namespace intx;
 
 MachineState basicMachine() {
-    return {std::make_shared<CoreCode>(), Tuple{}};
+    auto code = std::make_shared<CoreCode>();
+    code->addSegment();
+    return {std::move(code), Tuple{}};
 }
 
 MachineState runUnaryOp(uint256_t arg1, OpCode op) {

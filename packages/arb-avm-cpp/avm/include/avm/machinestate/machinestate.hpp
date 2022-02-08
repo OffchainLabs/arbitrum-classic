@@ -169,6 +169,7 @@ struct MachineState {
     uint256_t arb_gas_remaining;
     Status state{Status::Extensive};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
+    bool lazy_loaded;
 
     AssertionContext context;
 
@@ -186,7 +187,8 @@ struct MachineState {
                  Datastack auxstack_,
                  uint256_t arb_gas_remaining_,
                  Status state_,
-                 CodePointStub errpc_);
+                 CodePointStub errpc_,
+                 bool lazy_loaded_);
 
     uint256_t getMachineSize() const;
     OneStepProof marshalForProof() const;

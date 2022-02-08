@@ -37,8 +37,8 @@ TEST_CASE("CombinedMachineCache add and get") {
             nullptr);
 
     // Test empty findmatching
-    auto check_output = [&](const MachineOutput& output) {
-        return output.arb_gas_used <= 50;
+    auto check_output = [&](const Machine& output) {
+        return output.machine_state.output.arb_gas_used <= 50;
     };
     REQUIRE(
         cache.findFirstMatching(check_output, std::nullopt, std::nullopt, true)
