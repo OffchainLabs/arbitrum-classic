@@ -5,9 +5,6 @@ import { constants, BigNumber, utils } from 'ethers'
 import { MultiCaller } from '../src'
 import axios from 'axios'
 import prompt from 'prompts'
-import { L1TransactionReceipt } from '../src/lib/message/L1ToL2Message'
-import { NetworkState } from '../src/lib/utils/networkState'
-import { L1ToL2MessageGasEstimator } from '../src/lib/message/L1ToL2MessageGasEstimator'
 dotenv.config()
 
 const privKey = process.env.PRIVKEY as string

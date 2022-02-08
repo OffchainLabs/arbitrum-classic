@@ -52,9 +52,9 @@ import { isAddress as _isAddress } from '@ethersproject/address'
 import { concat, hexZeroPad } from '@ethersproject/bytes'
 import { BigNumber } from '@ethersproject/bignumber'
 
-import { ArbAddressTable__factory, ArbAddressTable } from './abi'
+import { ArbAddressTable__factory, ArbAddressTable } from '../abi'
 
-import { ARB_ADDRESS_TABLE_ADDRESS } from './constants'
+import { ARB_ADDRESS_TABLE_ADDRESS } from '../dataEntities/constants'
 
 type PrimativeType = string | number | boolean | BigNumber
 type PrimativeOrPrimativeArray = PrimativeType | PrimativeType[]

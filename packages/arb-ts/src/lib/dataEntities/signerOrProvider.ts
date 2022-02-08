@@ -1,6 +1,6 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { ArbTsError, MissingProviderArbTsError } from '../errors'
+import { ArbTsError, MissingProviderArbTsError } from '../dataEntities/errors'
 
 export type SignerOrProvider = Signer | Provider
 

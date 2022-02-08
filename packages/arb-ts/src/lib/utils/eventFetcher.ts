@@ -19,6 +19,18 @@
 import { Provider, Filter, EventFilter } from '@ethersproject/abstract-provider'
 import { Contract, Event } from '@ethersproject/contracts'
 
+type FetchedEvent<TEvent extends Event> = {
+  event: TEvent['args']
+  topic: string
+  name: string
+  blockNumber: number
+  blockHash: string
+  transactionHash: string
+  address: string
+  topics: string[]
+  data: string
+}
+
 /**
  * Fetches and parses blockchain logs
  */
@@ -40,7 +52,7 @@ export class EventFetcher {
     },
     topicGenerator: (t: TContract) => EventFilter,
     filter?: Omit<Filter, 'topics' | 'address'>
-  ): Promise<TEvent['args'][]> {
+  ): Promise<FetchedEvent<TEvent>[]> {
     const contract = contractFactory.connect(addr, this.provider)
     const eventFilter = topicGenerator(contract)
     const fullFilter = {
@@ -49,8 +61,23 @@ export class EventFetcher {
       toBlock: filter?.toBlock || 'latest',
     }
     const logs = await this.provider.getLogs(fullFilter)
-    return logs.map(
-      l => contract.interface.parseLog(l).args
-    ) as TEvent['args'][]
+    return logs
+      .filter(l => l.removed === false)
+      .map(l => {
+        const pLog = contract.interface.parseLog(l)
+
+        return {
+          event: pLog.args,
+          topic: pLog.topic,
+          name: pLog.name,
+          blockNumber: l.blockNumber,
+          blockHash: l.blockHash,
+          transactionHash: l.transactionHash,
+
+          address: l.address,
+          topics: l.topics,
+          data: l.data,
+        }
+      }) as FetchedEvent<TEvent>[]
   }
 }
