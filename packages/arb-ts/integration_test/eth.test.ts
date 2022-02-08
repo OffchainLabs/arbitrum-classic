@@ -88,9 +88,7 @@ describe('Ether', async () => {
 
     const messages = await rec.getL1ToL2Messages(l2Signer.provider!)
 
-    if (messages === undefined) {
-      throw new Error('no messages')
-    }
+    expect(messages, 'No messages.').to.be.not.undefined
     expect(messages.length, 'eth deposit message not found').to.exist
     expect(messages.length, 'eth deposit message empty array').to.not.eq(0)
 

@@ -21,7 +21,7 @@ import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
 import args from './getCLargs'
-import { EthBridger, TokenBridger } from '../src'
+import { EthBridger, InboxTools, TokenBridger } from '../src'
 import {
   L1Network,
   l1Networks,
@@ -50,6 +50,7 @@ export const instantiateBridge = (
   tokenBridger: TokenBridger
   ethBridger: EthBridger
   adminTokenBridger: AdminTokenBridger
+  inboxTools: InboxTools
 } => {
   if (!l1pkParam) {
     if (!pk && !mnemonic)
@@ -136,6 +137,7 @@ export const instantiateBridge = (
   const tokenBridger = new TokenBridger(l2Network)
   const adminTokenBridger = new AdminTokenBridger(l2Network)
   const ethBridger = new EthBridger(l2Network)
+  const inboxTools = new InboxTools(l1Signer, l2Network)
 
   return {
     l1Network,
@@ -145,5 +147,6 @@ export const instantiateBridge = (
     tokenBridger,
     ethBridger,
     adminTokenBridger,
+    inboxTools,
   }
 }

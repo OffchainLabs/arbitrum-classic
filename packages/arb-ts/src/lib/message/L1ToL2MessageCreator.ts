@@ -23,7 +23,7 @@ export class L1ToL2MessageCreator {
     gasParams: L1toL2MessageGasValues,
     destAddr: string,
     callDataHex: string,
-    l2ChainID: string,
+    l2ChainID: number,
     options: CreateRetryableTicketOpptions = {
       excessFeeRefundAddress: undefined,
       callValueRefundAddress: undefined,
@@ -76,7 +76,7 @@ export class L1ToL2MessageCreator {
       callDataHex,
       l2CallValue
     )
-    const l2ChainID = (await l2Provider.getNetwork()).chainId.toString()
+    const l2ChainID = (await l2Provider.getNetwork()).chainId
     const rec = await this.createRetryableTicketFromGasParams(
       { ...gasParams, l2CallValue },
       destAddr,

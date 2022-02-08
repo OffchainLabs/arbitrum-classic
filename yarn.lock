@@ -922,6 +922,11 @@
   resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.0.3.tgz#06e20a57274f6ce3148132910e723948a711edf1"
   integrity sha512-IJ0gBotVtO7YyLZyHNgbxzskUtFok+JkRlKPo8YELqj1ms9XL6Qm3vsfsGdZr22wnJeVEF5TQPotKuwQk21Dag==
 
+"@nomiclabs/hardhat-ethers@^2.0.4":
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.0.4.tgz#288889c338acaf47cabd29020e561d0077b7efcf"
+  integrity sha512-7LMR344TkdCYkMVF9LuC9VU2NBIi84akQiwqm7OufpWaDgHbWhuanY53rk3SVAW0E4HBk5xn5wl5+bN5f+Mq5w==
+
 "@nomiclabs/hardhat-etherscan@^2.1.0":
   version "2.1.8"
   resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-etherscan/-/hardhat-etherscan-2.1.8.tgz#e206275e96962cd15e5ba9148b44388bc922d8c2"
@@ -6084,6 +6089,59 @@ hardhat@^2.6.1, hardhat@^2.6.4:
     uuid "^8.3.2"
     ws "^7.4.6"
 
+hardhat@^2.8.3:
+  version "2.8.3"
+  resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.8.3.tgz#94cccc92d18c6361d9fbbc5d77a4fabf0166a396"
+  integrity sha512-VxqiVTSayRoeLHly8zKnlvtWoG8sroTP4vl8GHuj7OjfAdrHu4Blk7NBJ5+Rl8cmMEp6CuZtDaDmcHJIRTwEPA==
+  dependencies:
+    "@ethereumjs/block" "^3.6.0"
+    "@ethereumjs/blockchain" "^5.5.0"
+    "@ethereumjs/common" "^2.6.0"
+    "@ethereumjs/tx" "^3.4.0"
+    "@ethereumjs/vm" "^5.6.0"
+    "@ethersproject/abi" "^5.1.2"
+    "@sentry/node" "^5.18.1"
+    "@solidity-parser/parser" "^0.14.0"
+    "@types/bn.js" "^5.1.0"
+    "@types/lru-cache" "^5.1.0"
+    abort-controller "^3.0.0"
+    adm-zip "^0.4.16"
+    ansi-escapes "^4.3.0"
+    chalk "^2.4.2"
+    chokidar "^3.4.0"
+    ci-info "^2.0.0"
+    debug "^4.1.1"
+    enquirer "^2.3.0"
+    env-paths "^2.2.0"
+    eth-sig-util "^2.5.2"
+    ethereum-cryptography "^0.1.2"
+    ethereumjs-abi "^0.6.8"
+    ethereumjs-util "^7.1.3"
+    find-up "^2.1.0"
+    fp-ts "1.19.3"
+    fs-extra "^7.0.1"
+    glob "^7.1.3"
+    https-proxy-agent "^5.0.0"
+    immutable "^4.0.0-rc.12"
+    io-ts "1.10.4"
+    lodash "^4.17.11"
+    merkle-patricia-tree "^4.2.2"
+    mnemonist "^0.38.0"
+    mocha "^7.2.0"
+    node-fetch "^2.6.0"
+    qs "^6.7.0"
+    raw-body "^2.4.1"
+    resolve "1.17.0"
+    semver "^6.3.0"
+    slash "^3.0.0"
+    solc "0.7.3"
+    source-map-support "^0.5.13"
+    stacktrace-parser "^0.1.10"
+    "true-case-path" "^2.2.1"
+    tsort "0.0.1"
+    uuid "^8.3.2"
+    ws "^7.4.6"
+
 has-ansi@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/has-ansi/-/has-ansi-2.0.0.tgz#34f5049ce1ecdf2b0649af3ef24e45ed35416d91"
@@ -8012,7 +8070,7 @@ mocha-junit-reporter@^2.0.0:
     strip-ansi "^6.0.1"
     xml "^1.0.0"
 
-mocha@^7.1.1, mocha@^7.1.2:
+mocha@^7.1.1, mocha@^7.1.2, mocha@^7.2.0:
   version "7.2.0"
   resolved "https://registry.yarnpkg.com/mocha/-/mocha-7.2.0.tgz#01cc227b00d875ab1eed03a75106689cfed5a604"
   integrity sha512-O9CIypScywTVpNaRrCAgoUnJgozpIofjKUYmJhiCIJMiuYnLI6otcb1/kpW9/n/tJODHGZ7i8aLQoDVsMtOKQQ==

@@ -119,7 +119,7 @@ export class L1ToL2MessageGasEstimator {
    * @param calldata
    * @returns
    */
-  public async estimateRetryableTicket(
+  public async estimateRetryableTicketMaxGas(
     sender: string,
     senderDeposit: BigNumber,
     destAddr: string,
@@ -211,7 +211,7 @@ export class L1ToL2MessageGasEstimator {
 
     const calculatedMaxGas = this.percentIncrease(
       defaultedOptions.maxGas.base ||
-        (await this.estimateRetryableTicket(
+        (await this.estimateRetryableTicketMaxGas(
           sender,
           utils
             .parseEther('1')

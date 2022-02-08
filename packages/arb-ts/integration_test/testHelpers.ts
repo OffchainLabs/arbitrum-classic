@@ -34,7 +34,7 @@ import { instantiateBridge } from '../scripts/instantiate_bridge'
 import config from './config'
 import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
 import { Signer } from 'ethers'
-import { EthBridger, TokenBridger } from '../src'
+import { EthBridger, InboxTools, TokenBridger } from '../src'
 import { L1Network, L2Network } from '../src/lib/dataEntities/networks'
 import { AdminTokenBridger } from '../src/lib/assetBridger/tokenBridger'
 
@@ -127,6 +127,7 @@ export const warn = (text: string): void => {
 export const instantiateBridgeWithRandomWallet = (): {
   tokenBridger: TokenBridger
   ethBridger: EthBridger
+  inboxTools: InboxTools
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
@@ -204,13 +205,13 @@ export const wait = (ms = 0): Promise<void> => {
 }
 
 export const skipIfMainnet = (() => {
-  let chainId = ''
+  let chainId: number
   return (testContext: Mocha.Context) => {
     if (!chainId) {
       const { l1Network } = instantiateBridgeWithRandomWallet()
       chainId = l1Network.chainID
     }
-    if (chainId === '1') {
+    if (chainId === 1) {
       console.log("You're writing to the chain on mainnet lol stop")
       testContext.skip()
     }

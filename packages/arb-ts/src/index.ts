@@ -49,6 +49,7 @@ export {
   getL2Network,
 } from './lib/dataEntities/networks'
 export { getRawArbTransactionReceipt } from './lib/utils/arbProvider'
+export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export * as abi from './lib/abi/index'
 export * as constants from './lib/dataEntities/constants'
