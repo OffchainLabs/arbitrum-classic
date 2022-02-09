@@ -96,9 +96,9 @@ describe('WETH', async () => {
     const gatewayWithdrawEvents = await tokenBridger.getL2WithdrawalEvents(
       l2Signer.provider!,
       l2Network.tokenBridge.l2WethGateway,
+      { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
       undefined,
-      walletAddress,
-      { fromBlock: withdrawRec.blockNumber }
+      walletAddress
     )
     expect(gatewayWithdrawEvents.length).to.equal(
       1,
@@ -112,9 +112,9 @@ describe('WETH', async () => {
     const tokenWithdrawEvents = await tokenBridger.getL2WithdrawalEvents(
       l2Signer.provider!,
       gatewayAddress,
+      { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
       l2Network.tokenBridge.l1Weth,
-      walletAddress,
-      { fromBlock: withdrawRec.blockNumber }
+      walletAddress
     )
     expect(tokenWithdrawEvents.length).to.equal(
       1,

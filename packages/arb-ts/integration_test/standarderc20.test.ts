@@ -122,9 +122,9 @@ describe('standard ERC20', () => {
     const gatewayWithdrawEvents = await tokenBridger.getL2WithdrawalEvents(
       l2Signer.provider!,
       l2Network.tokenBridge.l2ERC20Gateway,
+      { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
       undefined,
-      walletAddress,
-      { fromBlock: withdrawRec.blockNumber }
+      walletAddress
     )
     expect(gatewayWithdrawEvents.length).to.equal(
       1,
@@ -138,9 +138,9 @@ describe('standard ERC20', () => {
     const tokenWithdrawEvents = await tokenBridger.getL2WithdrawalEvents(
       l2Signer.provider!,
       gatewayAddress,
+      { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
       existentTestERC20,
-      walletAddress,
-      { fromBlock: withdrawRec.blockNumber }
+      walletAddress
     )
     expect(tokenWithdrawEvents.length).to.equal(
       1,

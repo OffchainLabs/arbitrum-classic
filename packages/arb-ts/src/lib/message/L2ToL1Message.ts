@@ -16,14 +16,15 @@
 /* eslint-env node */
 'use strict'
 
-import { ArbSys } from '../abi'
 import {
   ARB_SYS_ADDRESS,
   NODE_INTERFACE_ADDRESS,
 } from '../dataEntities/constants'
-import { Provider, Filter } from '@ethersproject/abstract-provider'
+import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
+import { BlockTag } from '@ethersproject/abstract-provider'
+
 import {
   ArbSys__factory,
   IOutbox__factory,
@@ -160,7 +161,7 @@ export class L2ToL1Message {
 
   public static async getL2ToL1MessageLogs(
     l2Provider: Provider,
-    filter: Omit<Filter, 'topics' | 'address'>,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag },
     batchNumber?: BigNumber,
     destination?: string,
     uniqueId?: BigNumber,
@@ -168,7 +169,7 @@ export class L2ToL1Message {
   ): Promise<L2ToL1TransactionEvent['args'][]> {
     const eventFetcher = new EventFetcher(l2Provider)
     const events = (
-      await eventFetcher.getEvents<ArbSys, L2ToL1TransactionEvent>(
+      await eventFetcher.getEvents(
         ARB_SYS_ADDRESS,
         ArbSys__factory,
         t =>
