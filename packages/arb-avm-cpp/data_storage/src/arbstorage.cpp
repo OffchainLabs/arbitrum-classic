@@ -31,6 +31,10 @@ ArbStorage::ArbStorage(const std::string& db_path,
     : datastorage(std::make_shared<DataStorage>(db_path, coreConfig)),
       arb_core(std::make_shared<ArbCore>(datastorage, coreConfig)) {}
 
+void ArbStorage::printDatabaseMetadata() {
+    arb_core->printDatabaseMetadata();
+}
+
 InitializeResult ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
     return initialize(executable);

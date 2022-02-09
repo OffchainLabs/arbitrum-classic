@@ -41,7 +41,9 @@ class TimedMachineCache {
 
     size_t size();
     void add(std::unique_ptr<Machine> machine);
-    std::optional<map_type::iterator> atOrBeforeGas(uint256_t gas_used);
+    std::optional<map_type::const_iterator> atOrBeforeGas(uint256_t gas_used);
+    std::optional<TimedMachineCache::map_type::const_iterator> findMatching(
+        const std::function<bool(const MachineState&)>& check_machine_state);
     void reorg(uint256_t next_gas_used);
     void deleteExpired();
     [[nodiscard]] uint256_t expiredTimestamp();

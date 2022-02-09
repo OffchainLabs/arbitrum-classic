@@ -36,7 +36,7 @@ void TimedMachineCache::add(std::unique_ptr<Machine> machine) {
     deleteExpired();
 }
 
-std::optional<TimedMachineCache::map_type::iterator>
+std::optional<TimedMachineCache::map_type::const_iterator>
 TimedMachineCache::atOrBeforeGas(uint256_t gas_used) {
     auto it = cache.upper_bound(gas_used);
     if (it == cache.begin()) {
@@ -47,6 +47,23 @@ TimedMachineCache::atOrBeforeGas(uint256_t gas_used) {
     it--;
 
     return it;
+}
+
+std::optional<TimedMachineCache::map_type::const_iterator>
+TimedMachineCache::findMatching(
+    const std::function<bool(const MachineState&)>& check_machine_state) {
+    for (auto rit = cache.crbegin(); rit != cache.crend(); rit++) {
+        if (check_machine_state(rit->second.machine->machine_state)) {
+            auto it = rit.base();
+
+            // The reverse_iterator::base() method returns the element after
+            // the current element, so need to go back one.
+            it--;
+            return it;
+        }
+    }
+
+    return std::nullopt;
 }
 
 void TimedMachineCache::reorg(uint256_t next_gas_used) {

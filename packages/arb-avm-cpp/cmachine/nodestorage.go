@@ -190,22 +190,3 @@ func (as *NodeStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
 	index := uint64(result.value)
 	return &index
 }
-
-func (as *NodeStore) CurrentLogCount() (*big.Int, error) {
-	defer runtime.KeepAlive(as)
-	result := C.aggregatorLogsProcessedCount(as.c)
-	if result.found == 0 {
-		return nil, errors.New("failed to get processed log count")
-	}
-	return receiveBigInt(result.value), nil
-}
-
-func (as *NodeStore) UpdateCurrentLogCount(count *big.Int) error {
-	defer runtime.KeepAlive(as)
-	countData := math.U256Bytes(count)
-	status := C.aggregatorUpdateLogsProcessedCount(as.c, unsafeDataPointer(countData))
-	if status == 0 {
-		return errors.New("failed to update processed log count")
-	}
-	return nil
-}

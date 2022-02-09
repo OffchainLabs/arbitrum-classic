@@ -38,7 +38,6 @@ add_executable(
         basicmachinecache.cpp
 		buffer.cpp
 		checkpoint.cpp
-		checkpointedmachine.cpp
 		code.cpp
         combinedmachinecache.cpp
 		datastack.cpp

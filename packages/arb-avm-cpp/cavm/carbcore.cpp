@@ -53,7 +53,7 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
 
 void arbCoreSaveRocksdbCheckpoint(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    arb_core->triggerSaveRocksdbCheckpoint();
+    arb_core->triggerSaveFullRocksdbCheckpointToDisk();
 }
 
 void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr) {
@@ -114,7 +114,7 @@ ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
                                     const void* start_index_ptr,
                                     const void* count_ptr) {
     try {
-        ValueCache cache{0, 0};
+        ValueCache cache{1, 0};
         auto logs = static_cast<ArbCore*>(arbcore_ptr)
                         ->getLogs(receiveUint256(start_index_ptr),
                                   receiveUint256(count_ptr), cache);

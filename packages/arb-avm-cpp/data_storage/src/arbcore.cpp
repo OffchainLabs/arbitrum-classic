@@ -48,11 +48,19 @@ namespace {
 constexpr uint256_t arbcore_schema_version = 3;
 constexpr auto pruning_mode_key = std::array<char, 1>{-59};
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
-constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
-constexpr auto send_processed_key = std::array<char, 1>{-63};
 constexpr auto schema_version_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-120};
+
+template <class T>
+void printResult(const char* msg, const ValueResult<T>& result) {
+    std::cout << msg;
+    if (!result.status.ok()) {
+        std::cout << result.status.ToString() << "\n";
+    } else {
+        std::cout << result.data << "\n";
+    }
+}
 }  // namespace
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
@@ -157,6 +165,34 @@ bool ArbCore::deliverMessages(
 ValueLoader ArbCore::makeValueLoader() const {
     return ValueLoader{std::make_unique<CoreValueLoader>(
         data_storage, core_code, ValueCache{1, 0})};
+}
+
+void ArbCore::printDatabaseMetadata() {
+    ReadTransaction tx(data_storage);
+    printResult("schema version:                   ", schemaVersion(tx));
+    printResult("log inserted count:               ", logInsertedCountImpl(tx));
+    for (size_t i = 0; i < logs_cursors.size(); i++) {
+        std::cout << "log cursor " << i << " count:               ";
+        printResult("", logsCursorGetCurrentTotalCount(tx, i));
+    }
+    printResult("send inserted count:              ",
+                sendInsertedCountImpl(tx));
+    printResult("message inserted count:           ",
+                messageEntryInsertedCountImpl(tx));
+    printResult("delayed message inserted count:   ",
+                delayedMessageEntryInsertedCountImpl(tx));
+    printResult("total delayed messages sequenced: ",
+                totalDelayedMessagesSequencedImpl(tx));
+    printResult("pruning mode:                     ", pruningMode(tx));
+    auto checkpoint_result = getMaxCheckpoint(tx);
+    if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
+        std::cout << std::get<rocksdb::Status>(checkpoint_result).ToString()
+                  << "\n";
+    } else {
+        auto output =
+            getMachineOutput(std::get<CheckpointVariant>(checkpoint_result));
+        printMachineOutputInfo("last checkpoint", output);
+    }
 }
 
 InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
@@ -485,23 +521,9 @@ template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t, ValueCache&);
 template std::unique_ptr<MachineThread> ArbCore::getMachine(uint256_t,
                                                             ValueCache&);
 
-// triggerSaveCheckpoint is meant for unit tests and should not be called from
-// multiple threads at the same time.
-rocksdb::Status ArbCore::triggerSaveCheckpoint() {
-    save_checkpoint = true;
-    std::cerr << "Triggering checkpoint save" << std::endl;
-    while (save_checkpoint) {
-        // Wait until snapshot has been saved
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    std::cerr << "Checkpoint saved" << std::endl;
-
-    return save_checkpoint_status;
-}
-
-// triggerSaveRocksdbCheckpoint is used to save a copy of current database
-// without having to stop program
-void ArbCore::triggerSaveRocksdbCheckpoint() {
+// triggerSaveFullRocksdbCheckpointToDisk is used to save a copy of current
+// database without having to stop program
+void ArbCore::triggerSaveFullRocksdbCheckpointToDisk() {
     trigger_save_rocksdb_checkpoint = true;
 }
 
@@ -520,6 +542,7 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     }
 
     saveCodeToCore(*core_machine, save_res.second);
+    core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
 
     std::vector<unsigned char> key;
     marshal_uint256_t(state.output.arb_gas_used, key);
@@ -673,10 +696,11 @@ rocksdb::Status ArbCore::reorgToTimestampOrBefore(const uint256_t& timestamp,
         initial_start, cache);
 }
 
-// reorgToMachineOutput resets database entries to match the state when the
-// given output was the latest machine
-rocksdb::Status ArbCore::reorgToMachineOutput(const MachineOutput& output,
-                                              ValueCache& value_cache) {
+// reorgDatabaseToMachineOutput resets database entries to match the state when
+// the given output was the latest machine
+rocksdb::Status ArbCore::reorgDatabaseToMachineOutput(
+    const MachineOutput& output,
+    ValueCache& value_cache) {
     auto log_inserted_count = logInsertedCount();
     if (!log_inserted_count.status.ok()) {
         std::cerr << "Error getting inserted count in Cursor Reorg: "
@@ -732,17 +756,16 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
     while (core_machine->machine_state.output.arb_gas_used <
            target_output.arb_gas_used) {
         // Need to run machine until caught up with current checkpoint
+        auto last_gas_used = core_machine->machine_state.output.arb_gas_used;
         MachineExecutionConfig execConfig;
         execConfig.stop_on_sideload = cache_sideloads;
+        execConfig.stop_on_breakpoint = false;
         execConfig.max_gas = target_output.arb_gas_used;
 
         // Add messages and run machine
         uint256_t target_messages = target_output.fully_processed_inbox.count;
         uint256_t have_messages =
             core_machine->machine_state.output.fully_processed_inbox.count;
-        if (target_messages <= have_messages) {
-            break;
-        }
         uint256_t num_messages = target_messages - have_messages;
         if (uint256_t(num_messages) > coreConfig.message_process_count) {
             num_messages = coreConfig.message_process_count;
@@ -782,14 +805,18 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
                 return rocksdb::Status::Aborted();
             }
         }
+
+        if (last_gas_used == core_machine->machine_state.output.arb_gas_used) {
+            // No forward progress made
+            break;
+        }
     }
 
     // Ensure future continueRunningMachine calls don't use the set gas limit.
     core_machine->machine_state.context.max_gas = 0;
 
     // We skip over sideloads while fast forwarding, so l2_block_number and
-    // last_sideload may not be updated properly.  Update here so comparison
-    // is correct.
+    // last_sideload may not be updated properly.  Update here for completeness
     core_machine->machine_state.output.l2_block_number =
         target_output.l2_block_number;
     core_machine->machine_state.output.last_sideload =
@@ -797,19 +824,33 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
 
     if (core_machine->machine_state.output != target_output) {
         // Machine in unexpected state, data corruption might have occurred
-        std::cerr << "Error catching up: machine in unexpected state"
-                  << "\n";
+        std::cerr
+            << "Error catching up: machine in unexpected state, current, "
+               "expected gas: "
+            << core_machine->machine_state.output.arb_gas_used << ", "
+            << target_output.arb_gas_used << ", current, expected inbox count: "
+            << core_machine->machine_state.output.fully_processed_inbox.count
+            << ", " << target_output.fully_processed_inbox.count
+            << ", current, expected log_count: "
+            << core_machine->machine_state.output.log_count << ", "
+            << target_output.log_count << ", current, expected log_acc: "
+            << core_machine->machine_state.output.log_acc << ", "
+            << target_output.log_acc << ", current, expected send_count: "
+            << core_machine->machine_state.output.send_count << ", "
+            << target_output.send_count << ", current, expected send_acc: "
+            << core_machine->machine_state.output.send_acc << ", "
+            << target_output.send_acc << "\n";
         return rocksdb::Status::Aborted();
     }
 
     return rocksdb::Status::OK();
 }
 
-// reorgToFirstMatchingCheckpoint resets the checkpoint
+// reorgToLastMatchingCheckpoint resets the checkpoint
 // such that machine state is at the first matching checkpoint. cleaning
 // up old references as needed.
-std::variant<MachineOutput, rocksdb::Status>
-ArbCore::reorgToFirstMatchingCheckpoint(
+std::variant<CheckpointVariant, rocksdb::Status>
+ArbCore::reorgToLastMatchingCheckpoint(
     const std::function<bool(const MachineOutput&)>& check_output,
     ReadWriteTransaction& tx,
     std::unique_ptr<rocksdb::Iterator>& checkpoint_it) {
@@ -837,19 +878,7 @@ ArbCore::reorgToFirstMatchingCheckpoint(
         auto machine_output = getMachineOutput(checkpoint_variant);
 
         if (output_checkpoint) {
-            std::cerr << "Initial checkpoint,  total gas used: "
-                      << machine_output.arb_gas_used
-                      << ", L1 block: " << machine_output.l1_block_number
-                      << ", L2 block: " << machine_output.l2_block_number
-                      << ", log count: " << machine_output.log_count
-                      << ", messages count: "
-                      << machine_output.fully_processed_inbox.count
-                      << ", timestamp: "
-                      << std::put_time(
-                             std::localtime(
-                                 (time_t*)&machine_output.last_inbox_timestamp),
-                             "%c")
-                      << "\n";
+            printMachineOutputInfo("First database checkpoint", machine_output);
             output_checkpoint = false;
         }
 
@@ -857,7 +886,9 @@ ArbCore::reorgToFirstMatchingCheckpoint(
         if (check_output(machine_output)) {
             if (isValid(tx, machine_output.fully_processed_inbox)) {
                 // Save first valid checkpoint
-                return machine_output;
+                printMachineOutputInfo("First valid database checkpoint",
+                                       machine_output);
+                return checkpoint_variant;
             } else {
                 std::cerr << "Unexpectedly invalid checkpoint inbox at "
                              "message count "
@@ -878,54 +909,64 @@ ArbCore::reorgToFirstMatchingCheckpoint(
     return rocksdb::Status::NotFound();
 }
 
-// reorgToFirstMatchingMachineCheckpoint finds the first checkpoint
-// that includes a machine and matches matching checkpoint. cleaning
+void ArbCore::printMachineOutputInfo(const std::string& msg,
+                                     MachineOutput& machine_output) const {
+    std::cerr << msg << ",  total gas used: " << machine_output.arb_gas_used
+              << ", L1 block: " << machine_output.l1_block_number
+              << ", L2 block: " << machine_output.l2_block_number
+              << ", log count: " << machine_output.log_count
+              << ", messages count: "
+              << machine_output.fully_processed_inbox.count << ", timestamp: "
+              << std::put_time(
+                     localtime((time_t*)&machine_output.last_inbox_timestamp),
+                     "%c")
+              << "\n";
+}
+
+// loadLastMatchingMachine finds the first checkpoint
+// that includes a machine and matches check_output, cleaning
 // up invalid checkpoints as needed.
 std::variant<std::unique_ptr<MachineThread>, rocksdb::Status>
-ArbCore::reorgToFirstMatchingMachineCheckpoint(
-    const MachineOutput& target_machine_output,
+ArbCore::loadLastMatchingMachine(
+    const CheckpointVariant& last_matching_database_checkpoint,
     const std::function<bool(const MachineOutput&)>& check_output,
     ReadWriteTransaction& tx,
     std::unique_ptr<rocksdb::Iterator>& checkpoint_it,
     ValueCache& value_cache) {
+    // First check if last saved machine matches
+    auto mach = combined_machine_cache.checkSimpleMatching(check_output);
+    auto last_matching_database_output =
+        getMachineOutput(last_matching_database_checkpoint);
+    if (mach.machine != nullptr &&
+        mach.machine->machine_state.output.arb_gas_used >=
+            last_matching_database_output.arb_gas_used) {
+        // Found machine in cache
+        // #### check that at or after last checkpoint saved to database
+        return std::make_unique<MachineThread>(mach.machine->machine_state);
+    }
+
+    // Check last database entry since we already extracted machine state
+    auto last_machine_thread = getMachineThreadFromCheckpoint(
+        last_matching_database_checkpoint, check_output, tx, value_cache);
+    if (last_machine_thread) {
+        return last_machine_thread;
+    }
+    // Skip last entry since it was just checked
+    checkpoint_it->Prev();
+
     while (checkpoint_it->Valid()) {
+        // Load next entry from database
         std::vector<unsigned char> checkpoint_vector(
             checkpoint_it->value().data(),
             checkpoint_it->value().data() + checkpoint_it->value().size());
-        auto checkpoint_variant = extractMachineStateKeys(checkpoint_vector);
+        auto current_database_checkpoint =
+            extractMachineStateKeys(checkpoint_vector);
 
-        if (!std::holds_alternative<MachineStateKeys>(checkpoint_variant)) {
-            checkpoint_it->Prev();
-            continue;
+        auto current_machine_thread = getMachineThreadFromCheckpoint(
+            current_database_checkpoint, check_output, tx, value_cache);
+        if (current_machine_thread) {
+            return current_machine_thread;
         }
-        auto checkpoint = std::get<MachineStateKeys>(checkpoint_variant);
-        // In initial_start mode we might skip checkpoints
-        if (!check_output(checkpoint.output)) {
-            checkpoint_it->Prev();
-            continue;
-        }
-
-        auto mach = combined_machine_cache.atOrBeforeGas(
-            target_machine_output.arb_gas_used, std::nullopt,
-            checkpoint.output.arb_gas_used, false);
-        if (mach.machine != nullptr) {
-            // Found machine in value_cache
-            return std::make_unique<MachineThread>(mach.machine->machine_state);
-        }
-
-        try {
-            // Load machine from database
-            return getMachineUsingStateKeys<MachineThread>(
-                tx, checkpoint, value_cache, coreConfig.lazy_load_core_machine);
-        } catch (const std::exception& e) {
-            std::cerr << "Error loading machine with gas: "
-                      << checkpoint.output.arb_gas_used
-                      << " from checkpoint: " << e.what() << std::endl;
-            assert(false);
-        }
-        // If we didn't break above we must have hit an invalid checkpoint so we
-        // delete it and continue to search
-        deleteCheckpoint(tx, checkpoint_variant);
         checkpoint_it->Prev();
     }
     auto status = checkpoint_it->status();
@@ -933,6 +974,66 @@ ArbCore::reorgToFirstMatchingMachineCheckpoint(
         return status;
     }
     return rocksdb::Status::NotFound();
+}
+
+std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
+    const CheckpointVariant& current_database_checkpoint,
+    const std::function<bool(const MachineOutput&)>& check_output,
+    ReadWriteTransaction& tx,
+    ValueCache& value_cache) {
+    if (!std::holds_alternative<MachineStateKeys>(
+            current_database_checkpoint)) {
+        // Just holds MachineOutput, so continue until full checkpoint found
+        return nullptr;
+    }
+    auto checkpoint = std::get<MachineStateKeys>(current_database_checkpoint);
+    if (!check_output(checkpoint.output)) {
+        // Something is wrong, checkpoint should always be valid here,
+        // so delete checkpoint and keep looking
+        printMachineOutputInfo(
+            "Unexpected checkpoint encountered in "
+            "loadLastMatchingMachine",
+            checkpoint.output);
+        deleteCheckpoint(tx, current_database_checkpoint);
+        assert(false);
+        return nullptr;
+    }
+
+    auto check_machine_state = [&](const MachineState& mach) {
+        return check_output(mach.output) &&
+               // If lazy loading is off, make sure to only get non-lazy loaded
+               // machines for the core thread
+               (!coreConfig.lazy_load_core_machine || !mach.lazy_loaded);
+    };
+
+    auto mach = combined_machine_cache.findFirstMatching(
+        check_machine_state, std::nullopt, checkpoint.output.arb_gas_used,
+        false);
+    if (mach.machine != nullptr) {
+        // Found machine in cache
+        auto& state = mach.machine->machine_state;
+        state.code->cleanupAfterReorg();
+        auto nextSegment = std::max(state.code->initialSegmentForChildCode(),
+                                    core_code->initialSegmentForChildCode());
+        state.code = std::make_shared<RunningCode>(state.code, nextSegment);
+        return std::make_unique<MachineThread>(state);
+    }
+
+    try {
+        // Load machine from database
+        return getMachineUsingStateKeys<MachineThread>(
+            tx, checkpoint, value_cache, coreConfig.lazy_load_core_machine);
+    } catch (const std::exception& e) {
+        printMachineOutputInfo(
+            "Exception loading machine for checkpoint in "
+            "loadLastMatchingMachine",
+            checkpoint.output);
+        std::cerr << "Exception message: " << e.what() << std::endl;
+        assert(false);
+    }
+
+    deleteCheckpoint(tx, current_database_checkpoint);
+    return nullptr;
 }
 
 // reorgCheckpoints resets the checkpoint and database entries
@@ -953,6 +1054,11 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         std::cerr << "Reorg blockchain" << std::endl;
     }
 
+    if (last_machine) {
+        printMachineOutputInfo("Previous checkpoint",
+                               last_machine->machine_state.output);
+    }
+
     using checkpoint_pair =
         std::pair<MachineOutput, std::unique_ptr<MachineThread>>;
 
@@ -960,66 +1066,35 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         [&]() -> std::variant<checkpoint_pair, rocksdb::Status> {
         ReadWriteTransaction tx(data_storage);
         auto checkpoint_it = tx.checkpointGetIterator();
+        auto reorg_machine_begin_time = std::chrono::steady_clock::now();
 
+        // Get last valid checkpoint from database
+        // (may or may not contain machine)
         auto output_or_status =
-            reorgToFirstMatchingCheckpoint(check_output, tx, checkpoint_it);
+            reorgToLastMatchingCheckpoint(check_output, tx, checkpoint_it);
         if (std::holds_alternative<rocksdb::Status>(output_or_status)) {
             return std::get<rocksdb::Status>(output_or_status);
         }
+        auto last_matching_database_checkpoint =
+            std::get<CheckpointVariant>(output_or_status);
 
-        // Save selected machine output, so we know how long to execute machine
-        // to match selected checkpoint.  This will be necessary if selected
-        // checkpoint does not include machine or if entry from machine cache is
-        // behind the selected checkpoint
-        MachineOutput selected_machine_output =
-            std::get<MachineOutput>(output_or_status);
-        std::cerr << "Selected checkpoint, total gas used: "
-                  << selected_machine_output.arb_gas_used
-                  << ", L1 block: " << selected_machine_output.l1_block_number
-                  << ", L2 block: " << selected_machine_output.l2_block_number
-                  << ", log count: " << selected_machine_output.log_count
-                  << ", messages count: "
-                  << selected_machine_output.fully_processed_inbox.count
-                  << ", timestamp: "
-                  << std::put_time(
-                         std::localtime((time_t*)&selected_machine_output
-                                            .last_inbox_timestamp),
-                         "%c")
-                  << "\n";
-
-        auto reorg_machine_begin_time = std::chrono::steady_clock::now();
-        auto nearest_machine_or_status = reorgToFirstMatchingMachineCheckpoint(
-            selected_machine_output, check_output, tx, checkpoint_it,
+        // Get last valid checkpoint with machine from database
+        auto last_matching_machine_checkpoint = loadLastMatchingMachine(
+            last_matching_database_checkpoint, check_output, tx, checkpoint_it,
             value_cache);
         if (std::holds_alternative<rocksdb::Status>(
-                nearest_machine_or_status)) {
-            return std::get<rocksdb::Status>(nearest_machine_or_status);
+                last_matching_machine_checkpoint)) {
+            return std::get<rocksdb::Status>(last_matching_machine_checkpoint);
         }
-        auto nearest_machine =
+        auto last_matching_machine =
             std::move(std::get<std::unique_ptr<MachineThread>>(
-                nearest_machine_or_status));
+                last_matching_machine_checkpoint));
         auto reorg_machine_end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::seconds>(
-                            reorg_machine_end_time - reorg_machine_begin_time)
-                            .count();
 
-        std::cerr
-            << "Loaded full machine, total gas used: "
-            << nearest_machine->machine_state.output.arb_gas_used
-            << ", L1 block: "
-            << nearest_machine->machine_state.output.l1_block_number
-            << ", L2 block: "
-            << nearest_machine->machine_state.output.l2_block_number
-            << ", log count: "
-            << nearest_machine->machine_state.output.log_count
-            << ", messages count: "
-            << nearest_machine->machine_state.output.fully_processed_inbox.count
-            << ", timestamp: "
-            << std::put_time(
-                   std::localtime((time_t*)&nearest_machine->machine_state
-                                      .output.last_inbox_timestamp),
-                   "%c")
-            << ", took " << duration << " second(s) to reorg" << std::endl;
+        auto& last_machine_output = last_matching_machine->machine_state.output;
+        printMachineOutputInfo("Loaded full machine", last_machine_output);
+        printElapsed(reorg_machine_begin_time, reorg_machine_end_time,
+                     "Reorg took ");
 
         checkpoint_it = nullptr;
 
@@ -1029,8 +1104,19 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                       << status.ToString() << std::endl;
             return status;
         }
-        return std::make_pair(selected_machine_output,
-                              std::move(nearest_machine));
+        MachineOutput target_machine_output;
+        auto last_database_checkpoint_output =
+            getMachineOutput(last_matching_database_checkpoint);
+        if (last_database_checkpoint_output.arb_gas_used >=
+            last_machine_output.arb_gas_used) {
+            // Advance machine to last partial database checkpoint
+            target_machine_output = last_database_checkpoint_output;
+        } else {
+            // Checkpoint newer than last database checkpoint loaded from cache
+            target_machine_output = last_machine_output;
+        }
+        return std::make_pair(getMachineOutput(target_machine_output),
+                              std::move(last_matching_machine));
     }();
 
     if (std::holds_alternative<rocksdb::Status>(found_checkpoint_or_status)) {
@@ -1048,9 +1134,16 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     auto& output = core_machine->machine_state.output;
 
     // Remove invalid cache entries after selected_machine_output
-    // and advance core_machine to same place as selected_machine_output.
     combined_machine_cache.reorg(selected_machine_output.arb_gas_used + 1);
 
+    // Remove invalid database entries
+    auto status =
+        reorgDatabaseToMachineOutput(selected_machine_output, value_cache);
+    if (!status.ok()) {
+        return status;
+    }
+
+    // Advance core_machine to same place as selected_machine_output.
     if (initial_start && (core_machine->machine_state.output.l2_block_number !=
                           selected_machine_output.l2_block_number)) {
         std::cerr << "Seeding cache between L2 blocks: "
@@ -1058,12 +1151,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
                   << selected_machine_output.l2_block_number << std::endl;
     }
 
-    auto status = advanceCoreToTarget(selected_machine_output, initial_start);
-    if (!status.ok()) {
-        return status;
-    }
-
-    status = reorgToMachineOutput(output, value_cache);
+    status = advanceCoreToTarget(selected_machine_output, initial_start);
     if (!status.ok()) {
         return status;
     }
@@ -1081,12 +1169,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     return rocksdb::Status::OK();
 }
 
-bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
-    auto it = std::unique_ptr<rocksdb::Iterator>(tx.checkpointGetIterator());
-    it->SeekToLast();
-    return !it->Valid();
-}
-
 uint256_t ArbCore::maxCheckpointGas() {
     ReadTransaction tx(data_storage);
     auto it = tx.checkpointGetIterator();
@@ -1097,6 +1179,19 @@ uint256_t ArbCore::maxCheckpointGas() {
     } else {
         return 0;
     }
+}
+
+std::variant<rocksdb::Status, CheckpointVariant> ArbCore::getMaxCheckpoint(
+    ReadTransaction& tx) {
+    auto it = tx.checkpointGetIterator();
+    it->SeekToLast();
+    if (it->Valid()) {
+        std::vector<unsigned char> saved_value(
+            it->value().data(), it->value().data() + it->value().size());
+        return extractMachineStateKeys(saved_value);
+    }
+
+    return it->status();
 }
 
 // getCheckpointUsingGas returns the checkpoint at or before the specified gas
@@ -1202,7 +1297,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             get<Tuple>(std::get<CountedData<Value>>(auxstack_results).data)),
         state_data.arb_gas_remaining,
         state_data.state,
-        state_data.err_pc};
+        state_data.err_pc,
+        lazy_load};
 
     return std::make_unique<T>(state);
 }
@@ -1254,6 +1350,7 @@ void ArbCore::operator()() {
     ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
+    execConfig.stop_on_breakpoint = false;
     uint64_t next_rocksdb_save_timestamp = 0;
     std::filesystem::path save_rocksdb_path(coreConfig.database_save_path);
     auto begin_time = std::chrono::steady_clock::now();
@@ -1262,7 +1359,6 @@ void ArbCore::operator()() {
     auto last_messages_ready_check_time = begin_time;
     auto last_run_machine_check_time = begin_time;
     auto last_restart_machine_check_time = begin_time;
-    trigger_save_rocksdb_checkpoint = false;
     auto perform_pruning = false;
     auto perform_save_rocksdb_checkpoint = false;
 
@@ -1432,6 +1528,8 @@ void ArbCore::operator()() {
                                       << core_error_string << "\n";
                             break;
                         }
+                        // Clear oldest cache and start populating next cache
+                        cache.nextCache();
                         next_checkpoint_gas =
                             output.arb_gas_used +
                             coreConfig.checkpoint_gas_frequency;
@@ -1442,24 +1540,9 @@ void ArbCore::operator()() {
                                 save_checkpoint_end_time -
                                 save_checkpoint_begin_time)
                                 .count();
-                        std::cout
-                            << "Saved checkpoint, total gas used: "
-                            << output.arb_gas_used
-                            << ", L1 block: " << output.l1_block_number
-                            << ", L2 block: "
-                            << *last_assertion.sideload_block_number
-                            << ", log count: " << output.log_count
-                            << ", messages count: "
-                            << output.fully_processed_inbox.count
-                            << ", inbox timestamp: "
-                            << std::put_time(
-                                   std::localtime(
-                                       (time_t*)&output.last_inbox_timestamp),
-                                   "%c")
-                            << ", took " << duration << " second(s) to save"
-                            << "\n";
-                        // Clear oldest cache and start populating next cache
-                        cache.nextCache();
+                        printMachineOutputInfo("Saved checkpoint", output);
+                        std::cout << "Took " << duration << " second(s) to save"
+                                  << "\n";
 
                         if (trigger_save_rocksdb_checkpoint) {
                             // database is ready to be copied
@@ -1666,24 +1749,15 @@ void ArbCore::operator()() {
             }
 
             for (size_t i = 0; i < logs_cursors.size(); i++) {
+                ValueCache logs_cache{1, 0};
                 if (logs_cursors[i].status == DataCursor::REQUESTED) {
                     ReadTransaction tx(data_storage);
-                    handleLogsCursorRequested(tx, i, cache);
+                    handleLogsCursorRequested(tx, i, logs_cache);
                 }
             }
 
-            if (save_checkpoint) {
-                // Force checkpoint save for unit test purposes
-                ReadWriteTransaction tx(data_storage);
-                save_checkpoint_status = saveCheckpoint(tx);
-                tx.commit();
-                save_checkpoint = false;
-            }
-
-            if ((core_machine->status() != MachineThread::MACHINE_SUCCESS) &&
-                (!machineIdle() || message_data_status != MESSAGES_READY)) {
-                // Machine is already running or no new messages, so sleep for a
-                // short while
+            if (machine_idle && message_data_status != MESSAGES_READY) {
+                // Machine blocked and no new messages, so sleep for a bit
                 std::this_thread::sleep_for(std::chrono::milliseconds(
                     coreConfig.idle_sleep_milliseconds));
             }
@@ -1717,7 +1791,7 @@ void ArbCore::printElapsed(
                                                               begin_time)
             .count();
     if (machine_output_milliseconds > 0) {
-        std::cerr << message << machine_output_milliseconds << " ms"
+        std::cerr << message << machine_output_milliseconds << "ms"
                   << std::endl;
     }
 }
@@ -1737,7 +1811,8 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
         return false;
     }
 
-    if (!messages_result.data.empty()) {
+    if (std::holds_alternative<NotBlocked>(
+            core_machine->isBlocked(!messages_result.data.empty()))) {
         execConfig.inbox_messages = messages_result.data;
 
         auto success = core_machine->runMachine(execConfig, asynchronous);
@@ -2783,14 +2858,6 @@ rocksdb::Status ArbCore::updateLogInsertedCount(ReadWriteTransaction& tx,
     return tx.statePut(vecToSlice(log_inserted_key), vecToSlice(value));
 }
 
-ValueResult<uint256_t> ArbCore::logProcessedCount(ReadTransaction& tx) const {
-    return tx.stateGetUint256(vecToSlice(log_processed_key));
-}
-rocksdb::Status ArbCore::updateLogProcessedCount(ReadWriteTransaction& tx,
-                                                 rocksdb::Slice value_slice) {
-    return tx.statePut(vecToSlice(log_processed_key), value_slice);
-}
-
 ValueResult<uint256_t> ArbCore::sendInsertedCount() const {
     ReadTransaction tx(data_storage);
 
@@ -2808,14 +2875,6 @@ rocksdb::Status ArbCore::updateSendInsertedCount(ReadWriteTransaction& tx,
     marshal_uint256_t(send_index, value);
 
     return tx.statePut(vecToSlice(send_inserted_key), vecToSlice(value));
-}
-
-ValueResult<uint256_t> ArbCore::sendProcessedCount(ReadTransaction& tx) const {
-    return tx.stateGetUint256(vecToSlice(send_processed_key));
-}
-rocksdb::Status ArbCore::updateSendProcessedCount(ReadWriteTransaction& tx,
-                                                  rocksdb::Slice value_slice) {
-    return tx.statePut(vecToSlice(send_processed_key), value_slice);
 }
 
 ValueResult<uint256_t> ArbCore::schemaVersion(ReadTransaction& tx) const {
@@ -3730,24 +3789,9 @@ rocksdb::Status ArbCore::pruneCheckpoints(
         auto prune_checkpoint_begin_time = std::chrono::steady_clock::now();
         deleteCheckpoint(tx, checkpoint_variant);
         auto prune_checkpoint_end_time = std::chrono::steady_clock::now();
-        auto duration =
-            std::chrono::duration_cast<std::chrono::seconds>(
-                prune_checkpoint_end_time - prune_checkpoint_begin_time)
-                .count();
-        std::cout << "Pruned checkpoint, total gas used: "
-                  << machine_output.arb_gas_used
-                  << ", L1 block: " << machine_output.l1_block_number
-                  << ", L2 block: " << machine_output.l2_block_number
-                  << ", log count: " << machine_output.log_count
-                  << ", messages count: "
-                  << machine_output.fully_processed_inbox.count
-                  << ", inbox timestamp: "
-                  << std::put_time(
-                         std::localtime(
-                             (time_t*)&machine_output.last_inbox_timestamp),
-                         "%c")
-                  << ", took " << duration << " second(s) to prune"
-                  << "\n";
+        printMachineOutputInfo("Pruned checkpoint", machine_output);
+        printElapsed(prune_checkpoint_begin_time, prune_checkpoint_end_time,
+                     "Prune took ");
         deleted_count++;
     }
     if (!it->status().ok()) {

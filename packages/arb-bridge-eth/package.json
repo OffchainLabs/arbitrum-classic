@@ -17,8 +17,8 @@
   },
   "scripts": {
     "postinstall": "$npm_execpath run clean:build",
-    "clean:build": "$npm_execpath run hardhat:prod clean && $npm_execpath run hardhat:prod compile",
-    "build": "$npm_execpath run hardhat:prod compile",
+    "clean:build": "$npm_execpath run hardhat:prod clean && $npm_execpath run build",
+    "build": "if [[ $PWD == */packages/arb-bridge-eth ]]; then $npm_execpath run hardhat:dev compile; else $npm_execpath run hardhat:prod compile; fi",
     "test": "$npm_execpath run hardhat:dev test test/*.spec.ts",
     "test:ci": "CI=true $npm_execpath run test",
     "test:gas": "REPORT_GAS=true $npm_execpath run test",
