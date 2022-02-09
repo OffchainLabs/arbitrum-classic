@@ -26,7 +26,10 @@ import {
   SequencerInbox,
   SequencerInbox__factory,
 } from '../abi'
-import { MessageDeliveredEvent } from '../abi/Bridge'
+import {
+  MessageDeliveredEvent,
+  MessageDeliveredEventFilter,
+} from '../abi/Bridge'
 import { l1Networks, L2Network } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
@@ -170,11 +173,14 @@ export class InboxTools {
     )
 
     // get all the events in this range
-    const events = await eFetcher.getEvents<Bridge, MessageDeliveredEvent>(
+    const events = await eFetcher.getEvents(
       bridge.address,
       Bridge__factory,
       b => b.filters.MessageDelivered(),
-      { fromBlock: blockRange.startBlock, toBlock: blockRange.endBlock }
+      {
+        fromBlock: blockRange.startBlock,
+        toBlock: blockRange.endBlock,
+      }
     )
 
     // no events appeared within that time period

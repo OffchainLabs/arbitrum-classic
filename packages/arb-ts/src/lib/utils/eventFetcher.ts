@@ -16,8 +16,14 @@
 /* eslint-env node */
 'use strict'
 
-import { Provider, Filter, EventFilter } from '@ethersproject/abstract-provider'
+import {
+  Provider,
+  Filter,
+  EventFilter,
+  BlockTag,
+} from '@ethersproject/abstract-provider'
 import { Contract, Event } from '@ethersproject/contracts'
+import { TypedEvent, TypedEventFilter } from '../abi/common'
 
 export type FetchedEvent<TEvent extends Event> = {
   event: TEvent['args']
@@ -30,6 +36,13 @@ export type FetchedEvent<TEvent extends Event> = {
   topics: string[]
   data: string
 }
+
+// I'm not sure why, but I wasn't able to get the getEvents function to properly
+// infer the Event return type. It would always infer it as TypedEvent<any, any>
+// instead of the strong typed event that should be available. This type correctly
+// infers the event type so we can force getEvents to return the correct type
+// using this.
+type TEventOf<T> = T extends TypedEventFilter<infer TEvent> ? TEvent : never
 
 /**
  * Fetches and parses blockchain logs
@@ -45,20 +58,23 @@ export class EventFetcher {
    * @param filter Block filter parameters
    * @returns
    */
-  public async getEvents<TContract extends Contract, TEvent extends Event>(
+  public async getEvents<
+    TContract extends Contract,
+    TEventFilter extends TypedEventFilter<TypedEvent>
+  >(
     addr: string,
     contractFactory: {
       connect(address: string, provider: Provider): TContract
     },
-    topicGenerator: (t: TContract) => EventFilter,
-    filter?: Omit<Filter, 'topics' | 'address'>
-  ): Promise<FetchedEvent<TEvent>[]> {
+    topicGenerator: (t: TContract) => TEventFilter,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag }
+  ): Promise<FetchedEvent<TEventOf<TEventFilter>>[]> {
     const contract = contractFactory.connect(addr, this.provider)
     const eventFilter = topicGenerator(contract)
     const fullFilter = {
       ...eventFilter,
-      fromBlock: filter?.fromBlock || 0,
-      toBlock: filter?.toBlock || 'latest',
+      fromBlock: filter.fromBlock,
+      toBlock: filter.toBlock,
     }
     const logs = await this.provider.getLogs(fullFilter)
     return logs
@@ -78,6 +94,6 @@ export class EventFetcher {
           topics: l.topics,
           data: l.data,
         }
-      }) as FetchedEvent<TEvent>[]
+      }) as FetchedEvent<TEventOf<TEventFilter>>[]
   }
 }

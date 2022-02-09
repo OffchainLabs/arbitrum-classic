@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { Provider, Filter } from '@ethersproject/abstract-provider'
+import { Provider, BlockTag } from '@ethersproject/abstract-provider'
 import { BigNumber } from 'ethers'
 
 import { Whitelist__factory, Rollup__factory, Rollup } from '../abi'
@@ -75,13 +75,13 @@ export class NetworkState {
    */
   public async getNodeCreatedEvents(
     rollupAddress: string,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag },
     nodeNum?: BigNumber,
-    parentNodeHash?: string,
-    filter?: Omit<Filter, 'address' | 'topics'>
+    parentNodeHash?: string
   ): Promise<NodeCreatedEvent['args'][]> {
     const eventFetcher = new EventFetcher(this.l1Provider)
     return (
-      await eventFetcher.getEvents<Rollup, NodeCreatedEvent>(
+      await eventFetcher.getEvents(
         rollupAddress,
         Rollup__factory,
         r => r.filters.NodeCreated(nodeNum, parentNodeHash),
@@ -100,12 +100,12 @@ export class NetworkState {
    */
   public async getNodeConfirmedEvents(
     rollupAddress: string,
-    nodeNum?: BigNumber,
-    filter?: Omit<Filter, 'address' | 'topics'>
+    filter: { fromBlock: BlockTag; toBlock: BlockTag },
+    nodeNum?: BigNumber
   ): Promise<NodeConfirmedEvent['args'][]> {
     const eventFetcher = new EventFetcher(this.l1Provider)
     return (
-      await eventFetcher.getEvents<Rollup, NodeConfirmedEvent>(
+      await eventFetcher.getEvents(
         rollupAddress,
         Rollup__factory,
         r => r.filters.NodeConfirmed(nodeNum),

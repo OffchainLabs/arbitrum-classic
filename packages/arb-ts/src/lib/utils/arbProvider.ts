@@ -19,6 +19,7 @@ import {
   SequencerBatchDeliveredFromOriginEvent,
 } from '../abi/ISequencerInbox'
 import { EventFetcher } from './eventFetcher'
+import { TypedEvent, TypedEventFilter } from '../abi/common'
 
 type ArbFormats = Formats & {
   feeStats: FormatFuncs
@@ -140,12 +141,7 @@ const getBatch = async (
 ): Promise<Omit<BatchInfo, 'confirmations'> | null> => {
   const batchEvents = new EventFetcher(l1Provider)
 
-  const events = await batchEvents.getEvents<
-    SequencerInbox,
-    | DelayedInboxForcedEvent
-    | SequencerBatchDeliveredEvent
-    | SequencerBatchDeliveredFromOriginEvent
-  >(
+  const events = await batchEvents.getEvents(
     l2Network.ethBridge.sequencerInbox,
     SequencerInbox__factory,
     c => {
@@ -165,7 +161,11 @@ const getBatch = async (
               ),
             ]
 
-      return { topics: [eventTopics] }
+      return { topics: [eventTopics] } as TypedEventFilter<
+        | DelayedInboxForcedEvent
+        | SequencerBatchDeliveredEvent
+        | SequencerBatchDeliveredFromOriginEvent
+      >
     },
     { fromBlock: startBlock, toBlock: endBlock }
   )
