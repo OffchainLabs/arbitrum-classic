@@ -27,13 +27,14 @@ import {
   L1ToL2MessageWriter,
 } from './L1ToL2Message'
 
-import { L1ERC20Gateway__factory, Inbox__factory } from '../abi'
+import { L1ERC20Gateway__factory, Bridge__factory } from '../abi'
 import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
+import { MessageDeliveredEvent } from '../abi/Bridge'
 
 export interface L1ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L1TransactionReceipt>
@@ -82,24 +83,15 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get the numbers of any messages created by this transaction
    * @returns
    */
-  public getMessageNumbers(): BigNumber[] {
-    const iface = Inbox__factory.createInterface()
-    const messageDelivered = iface.getEvent('InboxMessageDelivered')
-    const messageDeliveredFromOrigin = iface.getEvent(
-      'InboxMessageDeliveredFromOrigin'
+  public getMessages(): MessageDeliveredEvent['args'][] {
+    const iface = Bridge__factory.createInterface()
+    const messageDeliveredTopic = iface.getEventTopic(
+      iface.getEvent('MessageDelivered')
     )
-    const eventTopics = {
-      InboxMessageDelivered: iface.getEventTopic(messageDelivered),
-      InboxMessageDeliveredFromOrigin: iface.getEventTopic(
-        messageDeliveredFromOrigin
-      ),
-    }
-    const logs = this.logs.filter(
-      log =>
-        log.topics[0] === eventTopics.InboxMessageDelivered ||
-        log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
-    )
-    return logs.map(log => BigNumber.from(log.topics[1]))
+
+    return this.logs
+      .filter(log => log.topics[0] === messageDeliveredTopic)
+      .map(l => iface.parseLog(l).args as MessageDeliveredEvent['args'])
   }
 
   /**
@@ -116,20 +108,22 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     const chainID = (await provider.getNetwork()).chainId.toString()
 
-    const messageNumbers = this.getMessageNumbers()
-    if (!messageNumbers || messageNumbers.length === 0) return []
+    const messages = this.getMessages()
+    if (!messages || messages.length === 0) return []
 
-    return messageNumbers.map((mn: BigNumber) => {
-      const ticketCreationHash = L1ToL2Message.calculateRetryableCreationId(
-        BigNumber.from(chainID),
-        mn
-      )
-      return L1ToL2Message.fromRetryableCreationId(
-        l2SignerOrProvider,
-        ticketCreationHash,
-        mn
-      )
-    })
+    return messages
+      .map(m => m.messageIndex)
+      .map(mn => {
+        const ticketCreationHash = L1ToL2Message.calculateRetryableCreationId(
+          BigNumber.from(chainID),
+          mn
+        )
+        return L1ToL2Message.fromRetryableCreationId(
+          l2SignerOrProvider,
+          ticketCreationHash,
+          mn
+        )
+      })
   }
 
   /**
@@ -167,10 +161,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get any deposit events created by this transaction
+   * Get any token deposit events created by this transaction
    * @returns
    */
-  public getDepositEvents(): DepositInitiatedEvent['args'][] {
+  public getTokenDepositEvents(): DepositInitiatedEvent['args'][] {
     const iface = L1ERC20Gateway__factory.createInterface()
     const event = iface.getEvent('DepositInitiated')
     const eventTopic = iface.getEventTopic(event)

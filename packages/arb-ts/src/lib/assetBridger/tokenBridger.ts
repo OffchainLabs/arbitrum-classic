@@ -18,11 +18,11 @@
 
 import { defaultAbiCoder } from '@ethersproject/abi'
 import { Signer } from '@ethersproject/abstract-signer'
-import { Provider, Filter } from '@ethersproject/abstract-provider'
+import { Provider, BlockTag } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { Zero, MaxUint256 } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import { BigNumber, constants, ethers } from 'ethers'
+import { BigNumber, ethers } from 'ethers'
 
 import {
   L1GatewayRouter__factory,
@@ -30,7 +30,6 @@ import {
   L1ERC20Gateway__factory,
   L1WethGateway__factory,
   L2ArbitrumGateway__factory,
-  L2ArbitrumGateway,
   ERC20__factory,
   L1GatewayRouter,
   ERC20,
@@ -211,15 +210,15 @@ export class TokenBridger extends AssetBridger<
   public async getL2WithdrawalEvents(
     l2Provider: Provider,
     gatewayAddress: string,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag },
     l1TokenAddress?: string,
-    fromAddress?: string,
-    filter?: Omit<Filter, 'topics' | 'address'>
+    fromAddress?: string
   ): Promise<WithdrawalInitiatedEvent['args'][]> {
     await this.checkL2Network(l2Provider)
 
     const eventFetcher = new EventFetcher(l2Provider)
     const events = (
-      await eventFetcher.getEvents<L2ArbitrumGateway, WithdrawalInitiatedEvent>(
+      await eventFetcher.getEvents(
         gatewayAddress,
         L2ArbitrumGateway__factory,
         contract =>
@@ -677,6 +676,7 @@ export class AdminTokenBridger extends TokenBridger {
    */
   public async getL1GatewaySetEvents(
     l1Provider: Provider,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag },
     customNetworkL1GatewayRouter?: string
   ): Promise<GatewaySetEvent['args'][]> {
     if (this.l2Network.isCustom && !customNetworkL1GatewayRouter) {
@@ -691,10 +691,11 @@ export class AdminTokenBridger extends TokenBridger {
 
     const eventFetcher = new EventFetcher(l1Provider)
     return (
-      await eventFetcher.getEvents<L1GatewayRouter, GatewaySetEvent>(
+      await eventFetcher.getEvents(
         l1GatewayRouterAddress,
         L1GatewayRouter__factory,
-        t => t.filters.GatewaySet()
+        t => t.filters.GatewaySet(),
+        filter
       )
     ).map(a => a.event)
   }
@@ -707,6 +708,7 @@ export class AdminTokenBridger extends TokenBridger {
    */
   public async getL2GatewaySetEvents(
     l2Provider: Provider,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag },
     customNetworkL2GatewayRouter?: string
   ): Promise<GatewaySetEvent['args'][]> {
     if (this.l2Network.isCustom && !customNetworkL2GatewayRouter) {
@@ -721,10 +723,11 @@ export class AdminTokenBridger extends TokenBridger {
 
     const eventFetcher = new EventFetcher(l2Provider)
     return (
-      await eventFetcher.getEvents<L1GatewayRouter, GatewaySetEvent>(
+      await eventFetcher.getEvents(
         l2GatewayRouterAddress,
         L1GatewayRouter__factory,
-        t => t.filters.GatewaySet()
+        t => t.filters.GatewaySet(),
+        filter
       )
     ).map(a => a.event)
   }

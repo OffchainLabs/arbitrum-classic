@@ -29,7 +29,7 @@ export interface ArbTransactionResponse extends TransactionResponse {
   l1BlockNumber: number
 }
 
-export interface FeeStat {
+export interface FeeStatComponents {
   /**
    * A fixed cost of including your transaction into the Layer 1 inbox contract.
    * This is amortised by batching transactions together
@@ -56,15 +56,15 @@ export interface FeeStats {
   /**
    * The prices per unit for this tx
    */
-  prices: FeeStat
+  prices: FeeStatComponents
   /**
    * The number of units used for this tx
    */
-  unitsUsed: FeeStat
+  unitsUsed: FeeStatComponents
   /**
    * Total amounts paid: units * price
    */
-  paid: FeeStat
+  paid: FeeStatComponents
 }
 
 export interface BatchInfo {
