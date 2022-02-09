@@ -615,11 +615,21 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
 
     try {
         auto segment =
+            getCodeSegment(transaction, 26221, segment_ids, value_cache);
+        code->restoreExistingSegment(std::move(segment));
+        std::cout << "loaded good segment\n";
+    } catch (const std::exception& e) {
+        std::cerr << "Failed loading code good segment: " << e.what() << "\n";
+        throw e;
+    }
+
+    try {
+        auto segment =
             getCodeSegment(transaction, 26231, segment_ids, value_cache);
         code->restoreExistingSegment(std::move(segment));
         std::cout << "loaded weird segment\n";
     } catch (const std::exception& e) {
-        std::cerr << "Failed loading code segment: " << e.what() << "\n";
+        std::cerr << "Failed loading code weird segment: " << e.what() << "\n";
         throw e;
     }
 
