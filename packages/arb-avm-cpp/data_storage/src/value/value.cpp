@@ -15,17 +15,19 @@
  */
 
 #include <data_storage/value/value.hpp>
-#include <utility>
 
 #include "referencecount.hpp"
 
 #include <data_storage/datastorage.hpp>
+#include <data_storage/readtransaction.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/utils.hpp>
 
 #include <avm_values/tuple.hpp>
+
 #include <cstdint>
-#include <data_storage/readtransaction.hpp>
+#include <sstream>
+#include <utility>
 #include <vector>
 
 constexpr int TUP_TUPLE_LENGTH = 33;
@@ -237,8 +239,11 @@ ParsedSerializedVal parseRecord(
             return res;
         }
         default: {
-            if (value_type - TUPLE > 8) {
-                throw std::runtime_error("can't get value with invalid type");
+            if (value_type < TUPLE || value_type - TUPLE > 8) {
+                std::stringstream ss;
+                ss << "can't get value with invalid type: ";
+                ss << value_type;
+                throw std::runtime_error(ss.str());
             }
             return parseTuple(it);
         }
