@@ -60,6 +60,7 @@ struct AssertionContext {
     std::vector<MachineEmission<Value>> debug_prints;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload{false};
+    bool stop_on_breakpoint{false};
     uint256_t max_gas;
     bool go_over_gas{false};
     bool first_instruction{true};
@@ -168,12 +169,11 @@ struct MachineState {
     uint256_t arb_gas_remaining;
     Status state{Status::Extensive};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
+    bool lazy_loaded;
 
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
-
-    MachineState();
 
     MachineState(std::shared_ptr<CoreCode> code_, Value static_val);
 
@@ -187,7 +187,8 @@ struct MachineState {
                  Datastack auxstack_,
                  uint256_t arb_gas_remaining_,
                  Status state_,
-                 CodePointStub errpc_);
+                 CodePointStub errpc_,
+                 bool lazy_loaded_);
 
     uint256_t getMachineSize() const;
     OneStepProof marshalForProof() const;

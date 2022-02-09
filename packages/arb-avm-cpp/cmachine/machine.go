@@ -176,6 +176,7 @@ func (m *Machine) ExecuteAssertion(
 		messages,
 		nil,
 		false,
+		false,
 	)
 }
 
@@ -186,6 +187,7 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	messages []inbox.InboxMessage,
 	sideloads []inbox.InboxMessage,
 	stopOnSideload bool,
+	stopOnBreakpoint bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	defer runtime.KeepAlive(m)
 	conf := C.machineExecutionConfigCreate()
@@ -202,6 +204,8 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	C.machineExecutionConfigSetSideloads(conf, sideloadsData)
 
 	C.machineExecutionConfigSetStopOnSideload(conf, boolToCInt(stopOnSideload))
+
+	C.machineExecutionConfigSetStopOnBreakpoint(conf, boolToCInt(stopOnBreakpoint))
 
 	resultChan := make(chan C.RawAssertionResult, 1)
 	go func() {

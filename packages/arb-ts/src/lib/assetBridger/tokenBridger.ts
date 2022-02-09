@@ -153,7 +153,7 @@ export class TokenBridger extends AssetBridger<
   /**
    * Get the address of the l2 gateway for this token
    * @param erc20L1Address
-   * @param l1Provider
+   * @param l2Provider
    * @returns
    */
   public async getL2GatewayAddress(
@@ -292,8 +292,8 @@ export class TokenBridger extends AssetBridger<
 
   /**
    * Get the L2 token contract at the provided address
-   * @param l1Provider
-   * @param l1TokenAddr
+   * @param l2Provider
+   * @param l2TokenAddr
    * @returns
    */
   public getL2TokenContract(

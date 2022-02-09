@@ -48,8 +48,6 @@ class AggregatorStore {
         const uint256_t& block_hash) const;
 
     void reorg(uint64_t block_height);
-    [[nodiscard]] ValueResult<uint256_t> logsProcessedCount() const;
-    void updateLogsProcessedCount(const uint256_t& count);
     void saveMessageBatch(const uint256_t& batchNum, const uint64_t& logIndex);
     std::optional<uint64_t> getMessageBatch(const uint256_t& batchNum);
 };

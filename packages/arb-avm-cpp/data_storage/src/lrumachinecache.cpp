@@ -37,7 +37,7 @@ void LRUMachineCache::add(std::unique_ptr<Machine> machine) {
     cache[gas_used] = std::make_pair(std::move(machine), lru_list.begin());
 }
 
-std::optional<LRUMachineCache::map_type::iterator>
+std::optional<LRUMachineCache::map_type::const_iterator>
 LRUMachineCache::atOrBeforeGas(uint256_t gas_used) {
     // Lookup value in the cache
     auto cache_it = cache.upper_bound(gas_used);
@@ -51,6 +51,23 @@ LRUMachineCache::atOrBeforeGas(uint256_t gas_used) {
 
     // Return the value, but don't update LRU list yet
     return cache_it;
+}
+
+std::optional<LRUMachineCache::map_type::const_iterator>
+LRUMachineCache::findMatching(
+    const std::function<bool(const MachineState&)>& check_machine_state) {
+    for (auto rit = cache.crbegin(); rit != cache.crend(); rit++) {
+        if (check_machine_state(rit->second.first->machine_state)) {
+            auto it = rit.base();
+
+            // The reverse_iterator::base() method returns the element after
+            // the current element, so need to go back one.
+            it--;
+            return it;
+        }
+    }
+
+    return std::nullopt;
 }
 
 void LRUMachineCache::updateUsed(

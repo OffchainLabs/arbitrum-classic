@@ -53,6 +53,7 @@ type SequencerLockoutManager interface {
 
 type txQueueItem struct {
 	tx         *types.Transaction
+	ctx        context.Context
 	resultChan chan error
 }
 
@@ -275,7 +276,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
 
 	startResultChan := make(chan error, 1)
-	b.txQueue <- txQueueItem{tx: startTx, resultChan: startResultChan}
+	b.txQueue <- txQueueItem{tx: startTx, resultChan: startResultChan, ctx: ctx}
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 
@@ -308,9 +309,18 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		var batchDataSize int
 		seenOwnTx := false
 		emptiedQueue := true
+		txHashesSet := make(map[ethcommon.Hash]struct{})
 		// This pattern is safe as we acquired a lock so we are the exclusive reader
 		for len(b.txQueue) > 0 {
 			queueItem := <-b.txQueue
+			err = queueItem.ctx.Err()
+			if err != nil {
+				if queueItem.tx == startTx {
+					seenOwnTx = true
+				}
+				queueItem.resultChan <- err
+				continue
+			}
 			if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
 				// This batch would be too large to publish with this tx added.
 				// Put the tx back in the queue so it can be included later.
@@ -328,10 +338,17 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			if queueItem.tx == startTx {
 				seenOwnTx = true
 			}
+			txHash := queueItem.tx.Hash()
+			_, txAlreadyInBatch := txHashesSet[txHash]
+			if txAlreadyInBatch {
+				queueItem.resultChan <- errors.New("already known")
+				continue
+			}
 			batchTxs = append(batchTxs, queueItem.tx)
 			resultChans = append(resultChans, queueItem.resultChan)
 			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(queueItem.tx))
 			batchDataSize += len(queueItem.tx.Data())
+			txHashesSet[txHash] = struct{}{}
 		}
 		if !seenOwnTx && emptiedQueue && batchDataSize+len(startTx.Data()) <= maxTxDataSize {
 			// Another thread must have encountered an internal error attempting to process startTx
@@ -341,6 +358,9 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(startTx))
 			batchDataSize += len(startTx.Data())
 			seenOwnTx = true
+		}
+		if len(batchTxs) == 0 {
+			break
 		}
 		logger.Info().Int("count", len(l2BatchContents)).Msg("gather user txes")
 

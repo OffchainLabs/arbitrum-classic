@@ -104,7 +104,7 @@ func (m *Server) LatestBlockHeader() (*types.Header, error) {
 	return latest.Header, nil
 }
 
-// GetMessageResult returns the value output by the VM in response to the
+// GetRequestResult returns the value output by the VM in response to the
 // l2message with the given hash
 func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, core.InboxState, error) {
 	return m.db.GetRequest(requestId)

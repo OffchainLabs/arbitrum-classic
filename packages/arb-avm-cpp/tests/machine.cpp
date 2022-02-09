@@ -233,6 +233,7 @@ TEST_CASE("Stopping on sideload") {
     machine = orig_machine;
     execConfig.sideloads.emplace_back(InboxMessage());
     execConfig.stop_on_sideload = true;  // Shouldn't matter
+    execConfig.stop_on_breakpoint = false;
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Halted);
@@ -243,6 +244,7 @@ TEST_CASE("Stopping on sideload") {
     machine = orig_machine;
     execConfig.sideloads.clear();
     execConfig.stop_on_sideload = true;
+    execConfig.stop_on_breakpoint = false;
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Extensive);
