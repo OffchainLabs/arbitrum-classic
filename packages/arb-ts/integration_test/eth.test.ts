@@ -95,7 +95,7 @@ describe('Ether', async () => {
     const message = messages[0]
     prettyLog('l2TxHash: ' + message.retryableCreationId)
     prettyLog('waiting for l2 transaction:')
-    const waitResult = await message.wait(true, 1000 * 60 * 12)
+    const waitResult = await message.wait(true, 1, 1000 * 60 * 12)
     prettyLog('l2 transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
     expect(waitResult.status).to.eq(

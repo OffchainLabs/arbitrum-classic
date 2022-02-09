@@ -84,7 +84,7 @@ export const testRetryableTicket = async (
   )
   prettyLog('Waiting for retryable ticket')
 
-  await message.waitForStatus(1000 * 60 * 15)
+  await message.waitForStatus(1, 1000 * 60 * 15)
 
   const retryableTicketReceipt = await message.getRetryableCreationReceipt()
 

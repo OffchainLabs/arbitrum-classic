@@ -311,8 +311,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    */
   public async wait(
     isOnlyEthDeposit: boolean,
-    timeout = 900000,
-    confirmations?: number
+    confirmations?: number,
+    timeout = 900000
   ): Promise<L1ToL2MessageWaitResult & { complete: boolean }> {
     const res = await this.waitForStatus(timeout, confirmations)
 
@@ -329,7 +329,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
   /**
    * Suggest using .wait() instead as it correctly infers completion from the status
-   * based on whether this message was only an eth deposit.
+   * based on whether this message was an eth deposit.
    * Wait for the retryable ticket to be created, for it to be redeemed, and for the l2Tx to be executed.
    * @param timeout Amount of time to wait for the retryable ticket to be created
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
@@ -338,8 +338,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * If the status has any other value then l2TxReceipt is not populated.
    */
   public async waitForStatus(
-    timeout = 900000,
-    confirmations?: number
+    confirmations?: number,
+    timeout = 900000
   ): Promise<L1ToL2MessageWaitResult> {
     // try to wait for the retryable ticket to be created
     let retryableCreationReceipt: TransactionReceipt | undefined
