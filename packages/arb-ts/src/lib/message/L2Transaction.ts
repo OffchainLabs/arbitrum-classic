@@ -175,7 +175,11 @@ export class L2TransactionReceipt implements TransactionReceipt {
   ): L2ContractTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (confirmations?: number) => {
-      const result = await wait(confirmations)
+      // we ignore the confirmations for now since L2 transactions shouldn't re-org
+      // in future we should give users a more fine grained way to check the finality of
+      // an l2 transaction - check if a batch is on L1, if an assertion has been made, and if
+      // it has been confirmed.
+      const result = await wait()
       return new L2TransactionReceipt(result)
     }
     return contractTransaction as L2ContractTransaction
