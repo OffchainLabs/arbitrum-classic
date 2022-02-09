@@ -1,4 +1,3 @@
-import { ArbTsError } from '../dataEntities/errors'
 import { JsonRpcProvider, Formatter } from '@ethersproject/providers'
 import {
   ArbTransactionReceipt,

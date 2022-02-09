@@ -22,7 +22,7 @@ import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { Zero, MaxUint256 } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import { BigNumber, constants, ethers } from 'ethers'
+import { BigNumber, ethers } from 'ethers'
 
 import {
   L1GatewayRouter__factory,

@@ -27,21 +27,13 @@ import {
   L1ToL2MessageWriter,
 } from './L1ToL2Message'
 
-import {
-  L1ERC20Gateway__factory,
-  Inbox__factory,
-  Bridge__factory,
-} from '../abi'
+import { L1ERC20Gateway__factory, Bridge__factory } from '../abi'
 import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
-import {
-  InboxMessageDeliveredEvent,
-  InboxMessageDeliveredFromOriginEvent,
-} from '../abi/Inbox'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 
 export interface L1ContractTransaction extends ContractTransaction {

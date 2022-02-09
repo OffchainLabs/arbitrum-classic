@@ -17,7 +17,7 @@
 'use strict'
 
 import { Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, Contract } from 'ethers'
+import { BigNumber } from 'ethers'
 
 import { ERC20__factory, Multicall2, Multicall2__factory } from '../abi'
 import { ArbTsError } from '../dataEntities/errors'

@@ -24,8 +24,6 @@ import {
 import { Provider, Filter } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Log } from '@ethersproject/abstract-provider'
-
 import {
   ArbSys__factory,
   IOutbox__factory,
