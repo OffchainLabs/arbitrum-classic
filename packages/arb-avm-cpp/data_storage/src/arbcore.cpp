@@ -613,6 +613,16 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     ValueCache& value_cache) const {
     std::set<uint64_t> segment_ids;
 
+    try {
+        auto segment =
+            getCodeSegment(transaction, 26231, segment_ids, value_cache);
+        code->restoreExistingSegment(std::move(segment));
+        std::cout << "loaded weird segment\n";
+    } catch (const std::exception& e) {
+        std::cerr << "Failed loading code segment: " << e.what() << "\n";
+        throw e;
+    }
+
     auto static_results = ::getValueImpl(transaction, state_data.static_hash,
                                          segment_ids, value_cache);
 
