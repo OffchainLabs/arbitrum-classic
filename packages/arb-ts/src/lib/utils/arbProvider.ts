@@ -4,7 +4,7 @@ import {
   ArbTransactionReceipt,
   ArbTransactionResponse,
   BatchInfo,
-  FeeStat,
+  FeeStatComponents,
   FeeStats,
   ReturnCode,
 } from '../dataEntities/arbTransaction'
@@ -22,7 +22,7 @@ import { EventFetcher } from './eventFetcher'
 
 type ArbFormats = Formats & {
   feeStats: FormatFuncs
-  feeStat: FormatFuncs
+  feeStatComponents: FormatFuncs
   batchInfo: FormatFuncs
 }
 
@@ -39,7 +39,7 @@ class ArbFormatter extends Formatter {
     const hash = this.hash.bind(this)
     const number = this.number.bind(this)
     const feeStats = this.feeStats.bind(this)
-    const feeStat = this.feeStat.bind(this)
+    const feeStatComponents = this.feeStatComponents.bind(this)
     const batchInfo = this.batchInfo.bind(this)
     const returnCode = this.returnCode.bind(this)
 
@@ -64,12 +64,12 @@ class ArbFormatter extends Formatter {
     }
 
     const feeStatsFormat = {
-      prices: feeStat,
-      unitsUsed: feeStat,
-      paid: feeStat,
+      prices: feeStatComponents,
+      unitsUsed: feeStatComponents,
+      paid: feeStatComponents,
     }
 
-    const feeStatFormat = {
+    const feeStatComponentsFormat = {
       l1Transaction: bigNumber,
       l1Calldata: bigNumber,
       l2Storage: bigNumber,
@@ -89,7 +89,7 @@ class ArbFormatter extends Formatter {
       transaction: arbTransactionFormat,
       receipt: arbReceiptFormat,
       feeStats: feeStatsFormat,
-      feeStat: feeStatFormat,
+      feeStatComponents: feeStatComponentsFormat,
       batchInfo: batchInfoFormat,
     }
   }
@@ -103,8 +103,8 @@ class ArbFormatter extends Formatter {
     return returnNum
   }
 
-  public feeStat(feeStat: any): FeeStat {
-    return Formatter.check(this.formats.feeStat, feeStat)
+  public feeStatComponents(feeStatComponents: any): FeeStatComponents {
+    return Formatter.check(this.formats.feeStatComponents, feeStatComponents)
   }
 
   public feeStats(feeStats: any): FeeStats {
