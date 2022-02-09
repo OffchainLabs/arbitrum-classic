@@ -938,6 +938,7 @@ ArbCore::loadLastMatchingMachine(
     auto last_matching_database_output =
         getMachineOutput(last_matching_database_checkpoint);
     if (mach.machine != nullptr &&
+        check_output(mach.machine->machine_state.output) &&
         mach.machine->machine_state.output.arb_gas_used >=
             last_matching_database_output.arb_gas_used) {
         // Found machine in cache
@@ -1055,7 +1056,7 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     }
 
     if (last_machine) {
-        printMachineOutputInfo("Previous checkpoint",
+        printMachineOutputInfo("Current machine",
                                last_machine->machine_state.output);
     }
 
