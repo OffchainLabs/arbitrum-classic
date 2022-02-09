@@ -26,6 +26,7 @@
 
 #include <boost/endian/conversion.hpp>
 
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -146,7 +147,9 @@ std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
     auto results = getRefCountedData(tx, key);
 
     if (!results.status.ok()) {
-        throw std::runtime_error("failed to load segment");
+        std::stringstream ss;
+        ss << "failed to load segment: " << results.status.ToString();
+        throw std::runtime_error(ss.str());
     }
 
     auto raw_cps = extractRawCodeSegment(results.stored_value);
