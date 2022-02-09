@@ -178,8 +178,9 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 }
 
 func TestFees(t *testing.T) {
+	ctx := context.Background()
 	skipBelowVersion(t, 3)
-	backend, _, client, auth, aggAuth, feeConfig, config, feeCollector, cancel := setupFeeChain(t)
+	backend, _, client, _, aggAuth, feeConfig, config, feeCollector, cancel := setupFeeChain(t)
 	defer cancel()
 
 	agg := common.NewAddressFromEth(aggAuth.From)
@@ -233,9 +234,12 @@ func TestFees(t *testing.T) {
 		t.Log("Fee col bal", feeCollectorBal)
 	}
 
+	userOpts, userAddr := OptsAddressPair(t, nil)
+	addSomeBalance(t, ctx, userAddr, backend, client)
+
 	for i := 0; i < 5; i++ {
 		t.Log("tx", i)
-		tx, err := arbAggregator.SetFeeCollector(auth, auth.From, auth.From)
+		tx, err := arbAggregator.SetFeeCollector(userOpts, userOpts.From, userOpts.From)
 		test.FailIfError(t, err)
 		paid := checkFees(t, backend, tx)
 		totalPaid = totalPaid.Add(totalPaid, paid)
@@ -276,7 +280,7 @@ func TestFees(t *testing.T) {
 	t.Log("perL1CalldataByte", perL1CalldataByte)
 	t.Log("perStorage", perStorage)
 
-	_, tx, _, err := arbostestcontracts.DeploySimple(auth, client)
+	_, tx, _, err := arbostestcontracts.DeploySimple(userOpts, client)
 	test.FailIfError(t, err)
 
 	paid := checkFees(t, backend, tx)
