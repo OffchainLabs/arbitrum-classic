@@ -452,6 +452,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                         std::cerr << "Error loading machine from checkpoint: "
                                   << e.what() << std::endl;
                         assert(false);
+                        throw e;
                     }
                 }
 
@@ -663,9 +664,15 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
                 // If the segment is already loaded, no need to restore it
                 continue;
             }
-            auto segment =
-                getCodeSegment(transaction, *it, next_segment_ids, value_cache);
-            code->restoreExistingSegment(std::move(segment));
+            try {
+                auto segment = getCodeSegment(transaction, *it,
+                                              next_segment_ids, value_cache);
+                code->restoreExistingSegment(std::move(segment));
+            } catch (const std::exception& e) {
+                std::cerr << "Failed loading code segment: " << *it << "\n";
+                throw e;
+            }
+
             loaded_segment = true;
         }
         segment_ids = std::move(next_segment_ids);
