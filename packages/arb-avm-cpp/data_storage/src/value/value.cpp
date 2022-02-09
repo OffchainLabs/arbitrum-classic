@@ -231,7 +231,7 @@ ParsedSerializedVal parseRecord(
         case BUFFER: {
             int len = 0;
             auto res = parseBuffer<ParsedSerializedVal>(buf, len);
-            it += len;
+            it += len + 1;
             return res;
         }
         default: {
