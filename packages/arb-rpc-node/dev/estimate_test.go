@@ -34,17 +34,17 @@ func TestZeroPriceGasEstimationEmpty(t *testing.T) {
 
 func TestZeroPriceGasEstimationCall(t *testing.T) {
 	ctx := context.Background()
-	_, _, client, auth, _, _, _, _, cancel := setupFeeChain(t)
+	backend, _, client, auth, _, _, _, _, cancel := setupFeeChain(t)
 	defer cancel()
 
 	simpleAddr, _, _, err := arbostestcontracts.DeploySimple(auth, client)
 	test.FailIfError(t, err)
 
-	fundedAddr := auth.From
-	unfundedAddr := common.RandAddress().ToEthAddress()
+	fundedAddr := addSomeBalance(t, ctx, common.RandAddress(), backend, client)
+	unfundedAddr := common.RandAddress()
 
 	fundedGas, err := client.EstimateGas(ctx, ethereum.CallMsg{
-		From:  fundedAddr,
+		From:  fundedAddr.ToEthAddress(),
 		To:    &simpleAddr,
 		Value: big.NewInt(0),
 		Data:  []byte{0x26, 0x7c, 0x4a, 0xe4}, // call exists()
@@ -52,7 +52,7 @@ func TestZeroPriceGasEstimationCall(t *testing.T) {
 	test.FailIfError(t, err)
 
 	unfundedGas, err := client.EstimateGas(ctx, ethereum.CallMsg{
-		From:  unfundedAddr,
+		From:  unfundedAddr.ToEthAddress(),
 		To:    &simpleAddr,
 		Value: big.NewInt(0),
 		Data:  []byte{0x26, 0x7c, 0x4a, 0xe4}, // call exists()

@@ -266,6 +266,20 @@ func OwnerAuthPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, com
 	return auth, address
 }
 
+func OptsAddressPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, common.Address) {
+	if key == nil {
+		random, err := crypto.GenerateKey()
+		if err != nil {
+			t.Fatal(err)
+		}
+		key = random
+	}
+
+	opts := bind.NewKeyedTransactor(key)
+	address := common.NewAddressFromEth(opts.From)
+	return opts, address
+}
+
 func enableRewrites(t *testing.T, backend *Backend, srv *aggregator.Server, auth *bind.TransactOpts) {
 
 	client := web3.NewEthClient(srv, true)

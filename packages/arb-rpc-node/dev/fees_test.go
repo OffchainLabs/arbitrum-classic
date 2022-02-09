@@ -190,6 +190,9 @@ func TestFees(t *testing.T) {
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	test.FailIfError(t, err)
 
+	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
+	test.FailIfError(t, err)
+
 	totalPaid := big.NewInt(0)
 
 	checkPaid := func() {
@@ -232,7 +235,7 @@ func TestFees(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		t.Log("tx", i)
-		tx, err := arbOwner.SetChainParameter(auth, arbos.DefaultAggregatorParamId, big.NewInt(0))
+		tx, err := arbAggregator.SetFeeCollector(auth, auth.From, auth.From)
 		test.FailIfError(t, err)
 		paid := checkFees(t, backend, tx)
 		totalPaid = totalPaid.Add(totalPaid, paid)
@@ -309,15 +312,18 @@ func TestNonAggregatorFee(t *testing.T) {
 	data := simpleABI.Methods["exists"].ID
 	emptyAgg := ethcommon.Address{}
 
+	userOpts, userAddr := OptsAddressPair(t, nil)
+	addSomeBalance(t, ctx, userAddr, backend, client)
+
 	estimatedGas, err := web3SServer.EstimateGas(ctx, web3.CallTxArgs{
-		From:       &auth.From,
+		From:       &userOpts.From,
 		To:         &simpleAddr,
 		Data:       (*hexutil.Bytes)(&data),
 		Aggregator: &emptyAgg,
 	})
 	test.FailIfError(t, err)
-	auth.GasLimit = uint64(estimatedGas)
-	tx, err := simple.Exists(auth)
+	userOpts.GasLimit = uint64(estimatedGas)
+	tx, err := simple.Exists(userOpts)
 	test.FailIfError(t, err)
 	checkFees(t, backend, tx)
 }
