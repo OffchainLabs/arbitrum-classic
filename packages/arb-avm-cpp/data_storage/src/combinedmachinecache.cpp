@@ -165,7 +165,7 @@ CombinedMachineCache::checkSimpleMatching(
 
     if (last_last_machine &&
         check_output(last_last_machine->machine_state.output)) {
-        return {std::make_unique<Machine>(*last_machine), Success};
+        return {std::make_unique<Machine>(*last_last_machine), Success};
     }
 
     return {nullptr, NotFound};
