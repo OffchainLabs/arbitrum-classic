@@ -1109,6 +1109,11 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     auto output = getLastMachineOutput();
     printMachineOutputInfo("Previous checkpoint", output);
 
+    // Remove any stale machine
+    if (core_machine != nullptr) {
+        core_machine->abortMachine();
+    }
+
     using checkpoint_pair =
         std::pair<MachineOutput, std::unique_ptr<MachineThread>>;
 
@@ -1175,11 +1180,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     }
     auto [selected_machine_output, setup] =
         std::move(std::get<checkpoint_pair>(found_checkpoint_or_status));
-
-    // Remove any stale machine
-    if (core_machine != nullptr) {
-        core_machine->abortMachine();
-    }
 
     core_machine = std::move(setup);
 

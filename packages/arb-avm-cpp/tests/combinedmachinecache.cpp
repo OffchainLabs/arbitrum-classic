@@ -112,13 +112,16 @@ TEST_CASE("CombinedMachineCache add and get") {
     REQUIRE(machineDBf.machine == nullptr);
     REQUIRE(machineDBf.status == CombinedMachineCache::TooMuchExecution);
 
+    auto check_output44 = [&](const MachineOutput& output) {
+        return output.arb_gas_used <= 44;
+    };
     // Test that last machine entry is added
     cache.reorg(0);
     auto machine44 = std::make_unique<Machine>(getComplexMachine());
     machine44->machine_state.output.arb_gas_used = 44;
     machine44->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.lastAdd(std::move(machine44));
-    auto machine44a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
+    auto machine44a = cache.checkSimpleMatching(check_output44);
     REQUIRE(machine44a.machine != nullptr);
     REQUIRE(machine44a.machine->machine_state.output.arb_gas_used == 44);
 
@@ -130,7 +133,7 @@ TEST_CASE("CombinedMachineCache add and get") {
     auto machine45a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine45a.machine != nullptr);
     REQUIRE(machine45a.machine->machine_state.output.arb_gas_used == 45);
-    machine44a = cache.atOrBeforeGas(44, std::nullopt, std::nullopt, true);
+    machine44a = cache.checkSimpleMatching(check_output44);
     REQUIRE(machine44a.machine != nullptr);
     REQUIRE(machine44a.machine->machine_state.output.arb_gas_used == 44);
 
