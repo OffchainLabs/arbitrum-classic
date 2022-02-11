@@ -37,12 +37,13 @@ TEST_CASE("CombinedMachineCache add and get") {
             nullptr);
 
     // Test empty findmatching
-    auto check_output = [&](const MachineOutput& output) {
-        return output.arb_gas_used <= 50;
+    auto check_machine_state = [&](const MachineState& mach) {
+        return mach.output.arb_gas_used <= 50;
     };
-    REQUIRE(
-        cache.findFirstMatching(check_output, std::nullopt, std::nullopt, true)
-            .machine == nullptr);
+    REQUIRE(cache
+                .findFirstMatching(check_machine_state, std::nullopt,
+                                   std::nullopt, true)
+                .machine == nullptr);
 
     // Test that basic entry is added
     auto machine40 = std::make_unique<Machine>(getComplexMachine());
@@ -111,13 +112,16 @@ TEST_CASE("CombinedMachineCache add and get") {
     REQUIRE(machineDBf.machine == nullptr);
     REQUIRE(machineDBf.status == CombinedMachineCache::TooMuchExecution);
 
+    auto check_output44 = [&](const MachineOutput& output) {
+        return output.arb_gas_used <= 44;
+    };
     // Test that last machine entry is added
     cache.reorg(0);
     auto machine44 = std::make_unique<Machine>(getComplexMachine());
     machine44->machine_state.output.arb_gas_used = 44;
     machine44->machine_state.output.last_inbox_timestamp = std::time(nullptr);
     cache.lastAdd(std::move(machine44));
-    auto machine44a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
+    auto machine44a = cache.checkSimpleMatching(check_output44);
     REQUIRE(machine44a.machine != nullptr);
     REQUIRE(machine44a.machine->machine_state.output.arb_gas_used == 44);
 
@@ -129,7 +133,7 @@ TEST_CASE("CombinedMachineCache add and get") {
     auto machine45a = cache.atOrBeforeGas(50, std::nullopt, std::nullopt, true);
     REQUIRE(machine45a.machine != nullptr);
     REQUIRE(machine45a.machine->machine_state.output.arb_gas_used == 45);
-    machine44a = cache.atOrBeforeGas(44, std::nullopt, std::nullopt, true);
+    machine44a = cache.checkSimpleMatching(check_output44);
     REQUIRE(machine44a.machine != nullptr);
     REQUIRE(machine44a.machine->machine_state.output.arb_gas_used == 44);
 
@@ -168,10 +172,10 @@ TEST_CASE("CombinedMachineCache add and get") {
     REQUIRE(machine42a.machine->machine_state.output.arb_gas_used == 42);
 
     // Test match
-    machine42a =
-        cache.findFirstMatching(check_output, std::nullopt, std::nullopt, true);
-    REQUIRE(machine42a.machine != nullptr);
-    REQUIRE(machine42a.machine->machine_state.output.arb_gas_used == 42);
+    machine42a = cache.findFirstMatching(check_machine_state, std::nullopt,
+                                         std::nullopt, true);
+    // LRU cache not checked in findFirstMatching
+    REQUIRE(machine42a.machine == nullptr);
 
     // Test only timed
     cache.reorg(0);

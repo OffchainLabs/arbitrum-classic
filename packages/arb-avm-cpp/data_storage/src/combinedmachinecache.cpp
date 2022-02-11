@@ -77,21 +77,22 @@ size_t CombinedMachineCache::timedSize() {
 
 std::optional<std::reference_wrapper<const Machine>>
 CombinedMachineCache::getFirstMatchNoLock(
-    const std::function<bool(const MachineOutput&)>& check_output,
-    std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
-    std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
-    std::optional<TimedMachineCache::map_type::const_iterator>& timed_it) {
+    const std::function<bool(const MachineState&)>& check_machine_state,
+    const std::optional<BasicMachineCache::map_type::const_iterator>& basic_it,
+    const std::optional<LRUMachineCache::map_type::const_iterator>& lru_it,
+    const std::optional<TimedMachineCache::map_type::const_iterator>&
+        timed_it) {
     uint256_t basic_gas;
     uint256_t lru_gas;
     uint256_t timed_gas;
 
-    if (last_machine && check_output(last_machine->machine_state.output)) {
+    if (last_machine && check_machine_state(last_machine->machine_state)) {
         // Last machine will always have the greatest amount of gas used
         return std::cref(*last_machine);
     }
 
     if (last_last_machine &&
-        check_output(last_last_machine->machine_state.output)) {
+        check_machine_state(last_last_machine->machine_state)) {
         // Last last machine will always have the next greatest amount of gas
         // used
         return std::cref(*last_last_machine);
@@ -143,12 +144,12 @@ CombinedMachineCache::CacheResultStruct CombinedMachineCache::atOrBeforeGas(
     auto lru_it = lru.atOrBeforeGas(gas_used);
     auto timed_it = timed.atOrBeforeGas(gas_used);
 
-    auto check_output = [&](const MachineOutput& output) {
-        return output.arb_gas_used <= gas_used;
+    auto check_machine_state = [&](const MachineState& mach) {
+        return mach.output.arb_gas_used <= gas_used;
     };
 
     auto cache_machine =
-        getFirstMatchNoLock(check_output, basic_it, lru_it, timed_it);
+        getFirstMatchNoLock(check_machine_state, basic_it, lru_it, timed_it);
 
     return findBestMachineNoLock(gas_used, cache_machine, existing_gas_used,
                                  database_gas, use_max_execution);
@@ -164,26 +165,28 @@ CombinedMachineCache::checkSimpleMatching(
 
     if (last_last_machine &&
         check_output(last_last_machine->machine_state.output)) {
-        return {std::make_unique<Machine>(*last_machine), Success};
+        return {std::make_unique<Machine>(*last_last_machine), Success};
     }
 
     return {nullptr, NotFound};
 }
 
 CombinedMachineCache::CacheResultStruct CombinedMachineCache::findFirstMatching(
-    const std::function<bool(const MachineOutput&)>& check_output,
+    const std::function<bool(const MachineState&)>& check_machine_state,
     std::optional<uint256_t> existing_gas_used,
     std::optional<uint256_t> database_gas,
     bool use_max_execution) {
-    // Unique lock required to update LRU cache
-    std::unique_lock lock(mutex);
+    std::shared_lock lock(mutex);
 
-    auto basic_it = basic.findMatching(check_output);
-    auto lru_it = lru.findMatching(check_output);
-    auto timed_it = timed.findMatching(check_output);
+    auto basic_it = basic.findMatching(check_machine_state);
+    // Ignore the LRU cache since
+    // A) it could contain lazy loaded machines
+    // B) This function is just used to load core thread machines where the LRU
+    // cache is unlikely to be correct C) The LRU cache requires a unique lock
+    auto timed_it = timed.findMatching(check_machine_state);
 
-    auto cache_machine =
-        getFirstMatchNoLock(check_output, basic_it, lru_it, timed_it);
+    auto cache_machine = getFirstMatchNoLock(check_machine_state, basic_it,
+                                             std::nullopt, timed_it);
 
     return findBestMachineNoLock(std::nullopt, cache_machine, existing_gas_used,
                                  database_gas, use_max_execution);
