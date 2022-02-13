@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"sort"
 
@@ -186,10 +187,12 @@ func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, 
 			// Top level call could actually be contract creation
 			if len(resFrames) == 0 && topLevelContractCreation {
 				frameType = "create"
-				action.Init = callFrame.Call.Data
+				// Call frame has no input for contract construction
+				action.Init = txRes.IncomingRequest.Data
 				if result != nil {
 					result.Address = &topLevelContractAddress
-					result.Code = (*hexutil.Bytes)(&callFrame.Return.ReturnData)
+					// Return data contains the created contract address so we can't the created code from that
+					// We'll get it by querying the code instead
 				}
 			} else {
 				frameType = "call"
@@ -252,7 +255,7 @@ func authenticateTraceType(traceTypes []string) (bool, error) {
 	return traceDestroys, nil
 }
 
-func (t *Trace) traceDestroyed(ctx context.Context, cursor core.ExecutionCursor, frames []TraceFrame) ([]common.Address, error) {
+func (t *Trace) getSnapAfterTx(ctx context.Context, cursor core.ExecutionCursor) (*snapshot.Snapshot, error) {
 	mach, err := t.s.srv.GetLookup().TakeMachine(cursor)
 	if err != nil {
 		return nil, err
@@ -284,11 +287,24 @@ func (t *Trace) traceDestroyed(ctx context.Context, cursor core.ExecutionCursor,
 	if err != nil {
 		return nil, err
 	}
-	snap, err := snapshot.NewSnapshot(ctx, mach, snapTime, big.NewInt(math.MaxInt64))
+	return snapshot.NewSnapshot(ctx, mach, snapTime, big.NewInt(math.MaxInt64))
+}
+
+func needsTopLevelCreate(frames []TraceFrame) bool {
+	return len(frames) > 0 &&
+		frames[0].Type == "create" &&
+		frames[0].Result != nil &&
+		frames[0].Result.Address != nil
+}
+
+func fillInTopLevelCreate(ctx context.Context, frames []TraceFrame, snap *snapshot.Snapshot) {
+	createdCode, err := snap.GetCode(ctx, arbcommon.NewAddressFromEth(*frames[0].Result.Address))
+	fmt.Println("Filling in code", err)
 	if err != nil {
-		return nil, err
+		logger.Warn().Msg("failed to retrieve code for contract")
+	} else {
+		frames[0].Result.Code = (*hexutil.Bytes)(&createdCode)
 	}
-	return getDestroyedContracts(ctx, snap, frames)
 }
 
 func (t *Trace) traceTransaction(ctx context.Context, cursor core.ExecutionCursor, res *evm.TxResult, logNumber *big.Int, traceDestroyed bool) (*rawTxTrace, error) {
@@ -311,14 +327,27 @@ func (t *Trace) traceTransaction(ctx context.Context, cursor core.ExecutionCurso
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("vmTrace", vmTrace)
 	frames, err := renderTraceFrames(res, vmTrace)
 	if err != nil {
 		return nil, err
 	}
 
+	var snap *snapshot.Snapshot
+	neadsCode := needsTopLevelCreate(frames)
+	if neadsCode || traceDestroyed {
+		snap, err = t.getSnapAfterTx(ctx, cursor.Clone())
+		if err != nil {
+			return nil, err
+		}
+	}
+	if neadsCode {
+		fillInTopLevelCreate(ctx, frames, snap)
+	}
+
 	var destroyed *[]common.Address
 	if traceDestroyed {
-		destroyedTmp, err := t.traceDestroyed(ctx, cursor.Clone(), frames)
+		destroyedTmp, err := getDestroyedContracts(ctx, snap, frames)
 		if err != nil {
 			return nil, err
 		}
@@ -410,6 +439,10 @@ func (t *Trace) handleCallRequest(ctx context.Context, callArgs CallTxArgs, trac
 	if err != nil {
 		return nil, err
 	}
+	if needsTopLevelCreate(frames) {
+		fillInTopLevelCreate(ctx, frames, snap)
+	}
+
 	var destroyed *[]common.Address
 	if traceDestroys {
 		destroyedTmp, err := getDestroyedContracts(ctx, snap, frames)
