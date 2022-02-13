@@ -320,7 +320,7 @@ func startup() error {
 	fmt.Println("Available Accounts")
 	fmt.Println("==================")
 	for i, account := range accounts {
-		fmt.Printf("(%v) %v (100 ETH)\n", i, account.Address.Hex())
+		fmt.Printf("(%v) %v (%v ETH)\n", i, account.Address.Hex(), big.NewInt(*walletbalance))
 	}
 
 	fmt.Println("\nPrivate Keys")
