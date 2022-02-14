@@ -112,7 +112,7 @@ export const setGateWays = async (
 
   console.log('redeeming retryable ticket:')
   const l2Tx = await rec.getL1ToL2Message(l2Signer)
-  const messageRes = await l2Tx.wait(false)
+  const messageRes = await l2Tx.waitForContractCall()
   if (messageRes.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
     const redeemRes = await l2Tx.redeem()
     const redeemRec = await redeemRes.wait()

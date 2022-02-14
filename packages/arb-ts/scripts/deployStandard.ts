@@ -173,7 +173,7 @@ const main = async () => {
   console.log(`L1 deposit txn confirmed — L1 txn hash: ${rec.transactionHash}`)
   const message = await rec.getL1ToL2Message(l2Provider)
 
-  await message.wait(undefined, 2)
+  await message.waitForContractCall(2)
   console.log(`Done; your token is deployed on L2 at ${l2TokenAddress}`)
 }
 
