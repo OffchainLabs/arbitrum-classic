@@ -111,6 +111,10 @@ func startup() error {
 		return nil
 	}
 
+	if config.Core.Test.JustMetadata {
+		return cmdhelp.PrintDatabaseMetadata(config.GetNodeDatabasePath(), &config.Core)
+	}
+
 	badConfig := false
 	if config.BridgeUtilsAddress == "" {
 		badConfig = true

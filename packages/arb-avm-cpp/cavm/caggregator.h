@@ -74,9 +74,6 @@ Uint64Result aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
 Uint64Result aggregatorGetPossibleBlock(const CAggregatorStore* agg,
                                         const void* block_hash);
 
-Uint256Result aggregatorLogsProcessedCount(CAggregatorStore* agg);
-int aggregatorUpdateLogsProcessedCount(CAggregatorStore* agg, void* count_ptr);
-
 #ifdef __cplusplus
 }
 #endif

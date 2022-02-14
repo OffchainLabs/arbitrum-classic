@@ -555,8 +555,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 	f.Uint64("l1.chain-id", 0, "if set other than 0, will be used to validate database and L1 connection")
 
-	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 	f.String("persistent.chain", "", "path that chain specific state is located")
+	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
 	f.String("rollup.machine.filename", "", "file to load machine from")

@@ -21,6 +21,9 @@ import (
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/rs/zerolog"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 func AddLogFlags(fs *flag.FlagSet) (*string, *string) {
@@ -42,5 +45,17 @@ func ParseLogFlags(gethLogLevel, arbLogLevel *string, coreHandler gethlog.Handle
 	h := gethlog.LvlFilterHandler(gethLevel, coreHandler)
 	h = gethlog.CallerFuncHandler(h)
 	gethlog.Root().SetHandler(h)
+	return nil
+}
+
+func PrintDatabaseMetadata(path string, coreConfig *configuration.Core) error {
+	storage, err := cmachine.NewArbStorage(path, coreConfig)
+	if err != nil {
+		return err
+	}
+	defer storage.CloseArbStorage()
+
+	storage.PrintDatabaseMetadata()
+
 	return nil
 }

@@ -36,6 +36,7 @@ rocksdb::Status ReadTransaction::createRocksdbCheckpoint(
     }
 
     status = checkpoint->CreateCheckpoint(checkpoint_dir);
+    delete checkpoint;
 
     return rocksdb::Status::OK();
 }

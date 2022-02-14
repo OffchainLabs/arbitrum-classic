@@ -63,7 +63,6 @@ class Machine {
    public:
     MachineState machine_state;
 
-    Machine() = default;
     explicit Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
     explicit Machine(const Machine& machine)
