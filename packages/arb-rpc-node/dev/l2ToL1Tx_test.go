@@ -47,7 +47,7 @@ func TestL2ToL1Tx(t *testing.T) {
 	}
 
 	upgraderAuth, upgraderAccount := OwnerAuthPair(t, nil)
-	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, upgraderAccount, nil)
+	backend, db, srv, cancelDevNode := NewSimpleTestDevNode(t, config, upgraderAccount)
 	defer cancelDevNode()
 
 	client := web3.NewEthClient(srv, true)

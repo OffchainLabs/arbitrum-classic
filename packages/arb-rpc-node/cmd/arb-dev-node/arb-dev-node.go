@@ -183,6 +183,7 @@ func startup() error {
 		chainId,
 		agg,
 		*initialL1Height,
+		true,
 	)
 	if err != nil {
 		return err

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 	"testing"
 
@@ -29,12 +31,11 @@ func TestTrace(t *testing.T) {
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-	senderKey, err := crypto.GenerateKey()
-	ownerKey, err := crypto.GenerateKey()
-	test.FailIfError(t, err)
+	senderKey := test.MustGenerateKey(t)
+	ownerKey := test.MustGenerateKey(t)
 	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, common.NewAddressFromEth(owner))
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
@@ -153,4 +154,149 @@ func assertTraceEqual(t *testing.T, trace1 interface{}, trace2 interface{}) {
 	if !bytes.Equal(jsonData1, jsonData2) {
 		t.Errorf("traces not equal")
 	}
+}
+
+func TestTraceConstructor(t *testing.T) {
+	skipBelowVersion(t, 25)
+	ctx := context.Background()
+	config := protocol.ChainParams{
+		GracePeriod:               common.NewTimeBlocksInt(3),
+		ArbGasSpeedLimitPerSecond: 2000000000000,
+	}
+	senderKey := test.MustGenerateKey(t)
+	ownerKey := test.MustGenerateKey(t)
+	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)
+
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil, false)
+	defer cancelDevNode()
+
+	signer := types.NewEIP155Signer(backend.chainID)
+
+	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
+	test.FailIfError(t, err)
+
+	ethServer := web3.NewServer(srv, web3.DefaultConfig, nil)
+	tracer := web3.NewTracer(ethServer, configuration.DefaultCoreSettingsMaxExecution())
+
+	client := web3.NewEthClient(srv, true)
+
+	_, successTx, _, err := arbostestcontracts.DeploySimple(senderAuth, client)
+	test.FailIfError(t, err)
+
+	senderAuth.GasLimit = 5000
+	_, failedTx, _, err := arbostestcontracts.DeploySimple(senderAuth, client)
+	test.FailIfError(t, err)
+
+	deposit := message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1000000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: common.NewAddressFromEth(senderAuth.From),
+				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(20), nil),
+				Data:        nil,
+			},
+		}),
+	}
+	_, err = backend.AddInboxMessage(deposit, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
+	test.FailIfError(t, err)
+
+	retryableTx := message.RetryableTx{
+		Destination:       common.Address{},
+		Value:             big.NewInt(20),
+		Deposit:           big.NewInt(100),
+		MaxSubmissionCost: big.NewInt(30),
+		CreditBack:        common.RandAddress(),
+		Beneficiary:       common.RandAddress(),
+		MaxGas:            big.NewInt(100000000),
+		GasPriceBid:       big.NewInt(10),
+		Data:              successTx.Data(),
+	}
+
+	retryableRequestId, err := backend.AddInboxMessage(retryableTx, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
+	test.FailIfError(t, err)
+
+	redeemId := hashing.SoliditySHA3(hashing.Bytes32(retryableRequestId), hashing.Uint256(big.NewInt(1)))
+
+	txTrace, err := tracer.Transaction(ctx, redeemId.Bytes())
+	test.FailIfError(t, err)
+	for _, frame := range txTrace {
+		if frame.Type != "call" {
+			t.Error("unexpected frame type")
+		}
+	}
+
+	successCreateDeposit := message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1000000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: common.Address{},
+				Payment:     big.NewInt(0),
+				Data:        successTx.Data(),
+			},
+		}),
+	}
+
+	successDepositRequestId, err := backend.AddInboxMessage(successCreateDeposit, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
+	test.FailIfError(t, err)
+
+	failedCreateDeposit := message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: common.Address{},
+				Payment:     big.NewInt(0),
+				Data:        successTx.Data(),
+			},
+		}),
+	}
+
+	failedDepositRequestId, err := backend.AddInboxMessage(failedCreateDeposit, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
+	test.FailIfError(t, err)
+
+	checkCreateRequest := func(txHash []byte, data []byte, sender ethcommon.Address, nonce uint64, success bool) {
+		t.Helper()
+		txTrace, err := tracer.Transaction(ctx, txHash)
+		test.FailIfError(t, err)
+
+		if len(txTrace) == 0 {
+			t.Fatal("expected at least one frame")
+		}
+		if txTrace[0].Type != "create" {
+			t.Error("expected top level frame to be create")
+		}
+
+		deployedCode, err := client.CodeAt(ctx, crypto.CreateAddress(sender, nonce), nil)
+		test.FailIfError(t, err)
+
+		if success {
+			if txTrace[0].Result == nil || txTrace[0].Result.Code == nil || !bytes.Equal(deployedCode, *txTrace[0].Result.Code) {
+				t.Error("expected correct code in create")
+			}
+		} else {
+			if txTrace[0].Result != nil {
+				t.Error("expected no result")
+			}
+		}
+
+		if !bytes.Equal(data, txTrace[0].Action.Init) {
+			t.Log("Correct init", hexutil.Encode(data))
+			t.Log("Real init", hexutil.Encode(txTrace[0].Action.Init))
+			t.Error("expected correct init in create")
+		}
+	}
+
+	checkCreateTx := func(tx *types.Transaction, success bool) {
+		t.Helper()
+		sender, err := types.Sender(signer, tx)
+		test.FailIfError(t, err)
+		checkCreateRequest(tx.Hash().Bytes(), tx.Data(), sender, tx.Nonce(), success)
+	}
+
+	checkCreateTx(successTx, true)
+	checkCreateTx(failedTx, false)
+	checkCreateRequest(successDepositRequestId.Bytes(), successTx.Data(), senderAuth.From, failedTx.Nonce()+1, true)
+	checkCreateRequest(failedDepositRequestId.Bytes(), successTx.Data(), senderAuth.From, failedTx.Nonce()+2, false)
 }

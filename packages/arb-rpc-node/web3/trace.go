@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"sort"
 
@@ -180,24 +179,37 @@ func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, 
 			callErr = &tmp
 		}
 
-		topLevelContractAddress, topLevelContractCreation := txRes.GetContractCreation()
 		var frameType string
 		switch frame := frame.f.(type) {
 		case *evm.CallFrame:
 			// Top level call could actually be contract creation
-			if len(resFrames) == 0 && topLevelContractCreation {
+			if len(resFrames) == 0 && txRes.IsContractCreation() {
 				frameType = "create"
 				// Call frame has no input for contract construction
-				action.Init = txRes.IncomingRequest.Data
+				if txRes.IncomingRequest.Kind == message.L2Type || txRes.IncomingRequest.Kind == message.EthDepositTxType {
+					abstractMessage, err := message.L2Message{Data: txRes.IncomingRequest.Data}.AbstractMessage()
+					if err == nil {
+						if msg, ok := abstractMessage.(message.EthConvertable); ok {
+							action.Init = msg.AsEthTx().Data()
+						}
+					}
+				}
+
 				if result != nil {
-					result.Address = &topLevelContractAddress
-					// Return data contains the created contract address so we can't the created code from that
+					topLevelContractAddress, gotAddress := txRes.GetCreatedContractAddress()
+					if gotAddress {
+						result.Address = &topLevelContractAddress
+					}
+					// Return data contains the created contract address so we can't get the created code from that
 					// We'll get it by querying the code instead
 				}
 			} else {
 				frameType = "call"
 				action.Input = callFrame.Call.Data
-				toTmp := callFrame.Call.To.ToEthAddress()
+				var toTmp common.Address
+				if callFrame.Call.To != nil {
+					toTmp = callFrame.Call.To.ToEthAddress()
+				}
 				action.To = &toTmp
 				action.CallType = callFrame.Call.Type.RPCString()
 				if result != nil {
@@ -299,7 +311,6 @@ func needsTopLevelCreate(frames []TraceFrame) bool {
 
 func fillInTopLevelCreate(ctx context.Context, frames []TraceFrame, snap *snapshot.Snapshot) {
 	createdCode, err := snap.GetCode(ctx, arbcommon.NewAddressFromEth(*frames[0].Result.Address))
-	fmt.Println("Filling in code", err)
 	if err != nil {
 		logger.Warn().Msg("failed to retrieve code for contract")
 	} else {
@@ -327,7 +338,6 @@ func (t *Trace) traceTransaction(ctx context.Context, cursor core.ExecutionCurso
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("vmTrace", vmTrace)
 	frames, err := renderTraceFrames(res, vmTrace)
 	if err != nil {
 		return nil, err

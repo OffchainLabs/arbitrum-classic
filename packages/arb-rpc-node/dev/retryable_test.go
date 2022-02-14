@@ -71,7 +71,7 @@ func setupTest(t *testing.T) (
 	}
 
 	ownerAuth, ownerAccount := OwnerAuthPair(t, nil)
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, ownerAccount, nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, ownerAccount)
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)

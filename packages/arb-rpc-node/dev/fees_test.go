@@ -79,6 +79,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		config,
 		common.NewAddressFromEth(auth.From),
 		[]message.ChainConfigOption{feeConfigInit, aggInit},
+		true,
 	)
 
 	deposit := message.EthDepositTx{
