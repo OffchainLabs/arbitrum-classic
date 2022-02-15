@@ -49,7 +49,6 @@ class MachineThread : public Machine {
     Assertion last_assertion;
 
    public:
-    MachineThread() = default;
     ~MachineThread() { abortMachine(); }
     explicit MachineThread(MachineState machine_state_)
         : Machine(std::move(machine_state_)),

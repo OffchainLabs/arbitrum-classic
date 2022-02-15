@@ -999,8 +999,16 @@ std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
         return nullptr;
     }
 
+    auto check_machine_state = [&](const MachineState& mach) {
+        return check_output(mach.output) &&
+               // If lazy loading is off, make sure to only get non-lazy loaded
+               // machines for the core thread
+               (!coreConfig.lazy_load_core_machine || !mach.lazy_loaded);
+    };
+
     auto mach = combined_machine_cache.findFirstMatching(
-        check_output, std::nullopt, checkpoint.output.arb_gas_used, false);
+        check_machine_state, std::nullopt, checkpoint.output.arb_gas_used,
+        false);
     if (mach.machine != nullptr) {
         // Found machine in cache
         auto& state = mach.machine->machine_state;
@@ -1049,6 +1057,11 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     if (last_machine) {
         printMachineOutputInfo("Previous checkpoint",
                                last_machine->machine_state.output);
+    }
+
+    // Remove any stale machine
+    if (core_machine != nullptr) {
+        core_machine->abortMachine();
     }
 
     using checkpoint_pair =
@@ -1116,11 +1129,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     }
     auto [selected_machine_output, setup] =
         std::move(std::get<checkpoint_pair>(found_checkpoint_or_status));
-
-    // Remove any stale machine
-    if (core_machine != nullptr) {
-        core_machine->abortMachine();
-    }
 
     core_machine = std::move(setup);
     auto& output = core_machine->machine_state.output;
@@ -1289,7 +1297,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             get<Tuple>(std::get<CountedData<Value>>(auxstack_results).data)),
         state_data.arb_gas_remaining,
         state_data.state,
-        state_data.err_pc};
+        state_data.err_pc,
+        lazy_load};
 
     return std::make_unique<T>(state);
 }
@@ -1740,9 +1749,10 @@ void ArbCore::operator()() {
             }
 
             for (size_t i = 0; i < logs_cursors.size(); i++) {
+                ValueCache logs_cache{1, 0};
                 if (logs_cursors[i].status == DataCursor::REQUESTED) {
                     ReadTransaction tx(data_storage);
-                    handleLogsCursorRequested(tx, i, cache);
+                    handleLogsCursorRequested(tx, i, logs_cache);
                 }
             }
 

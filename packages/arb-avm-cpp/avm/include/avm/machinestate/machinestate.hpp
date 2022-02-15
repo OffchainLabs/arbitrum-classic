@@ -169,12 +169,11 @@ struct MachineState {
     uint256_t arb_gas_remaining;
     Status state{Status::Extensive};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
+    bool lazy_loaded;
 
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
-
-    MachineState();
 
     MachineState(std::shared_ptr<CoreCode> code_, Value static_val);
 
@@ -188,7 +187,8 @@ struct MachineState {
                  Datastack auxstack_,
                  uint256_t arb_gas_remaining_,
                  Status state_,
-                 CodePointStub errpc_);
+                 CodePointStub errpc_,
+                 bool lazy_loaded_);
 
     uint256_t getMachineSize() const;
     OneStepProof marshalForProof() const;
