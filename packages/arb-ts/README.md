@@ -36,7 +36,9 @@ Defaults to `rinkArby`, for custom network use `--network` flag.
 
 Bridging new a token to L2 (i.e., deploying a new token contract) through the standard gateway is done by simply depositing a token that hasn't yet been bridged. This repo includes a script to trigger this initial deposit/deployment:
 
-1. clone `arbitrum` monorepo
+1. Clone `arbitrum` monorepo
+
+1. Switch to the most recent release tag: `git checkout $(git tag | sort -V | tail -1)`
 
 1. `git submodule update --init --recursive`
 
