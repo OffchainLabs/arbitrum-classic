@@ -330,6 +330,18 @@ func TestNonAggregatorFee(t *testing.T) {
 	tx, err := simple.Exists(userOpts)
 	test.FailIfError(t, err)
 	checkFees(t, backend, tx)
+
+	estimatedGas, err = web3SServer.EstimateGas(ctx, web3.CallTxArgs{
+		From:       &userOpts.From,
+		To:         &simpleAddr,
+		Data:       (*hexutil.Bytes)(&data),
+		Aggregator: &emptyAgg,
+	})
+	test.FailIfError(t, err)
+	userOpts.GasLimit = uint64(estimatedGas)
+	tx, err = simple.Exists(userOpts)
+	test.FailIfError(t, err)
+	checkFees(t, backend, tx)
 }
 
 func TestRetryableFee(t *testing.T) {

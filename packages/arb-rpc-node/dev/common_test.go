@@ -252,20 +252,6 @@ func UpgradeTestDevNode(t *testing.T, backend *Backend, srv *aggregator.Server, 
 	t.Log("New Version:", newVersion)
 }
 
-func OwnerAuthPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, common.Address) {
-	if key == nil {
-		random, err := crypto.GenerateKey()
-		if err != nil {
-			t.Fatal(err)
-		}
-		key = random
-	}
-
-	auth := bind.NewKeyedTransactor(key)
-	address := common.NewAddressFromEth(auth.From)
-	return auth, address
-}
-
 func OptsAddressPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, common.Address) {
 	if key == nil {
 		random, err := crypto.GenerateKey()

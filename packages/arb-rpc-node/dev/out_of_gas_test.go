@@ -36,7 +36,7 @@ func TestOutOfGas(t *testing.T) {
 	senderKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 
-	upgraderAuth, upgraderAccount := OwnerAuthPair(t, nil)
+	upgraderAuth, upgraderAccount := OptsAddressPair(t, nil)
 
 	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, upgraderAccount, nil)
 	defer cancelDevNode()

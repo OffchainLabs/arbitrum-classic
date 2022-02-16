@@ -54,7 +54,7 @@ func TestEthCall(t *testing.T) {
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-	auth, owner := OwnerAuthPair(t, nil)
+	auth, owner := OptsAddressPair(t, nil)
 	senderKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	ctx := context.Background()

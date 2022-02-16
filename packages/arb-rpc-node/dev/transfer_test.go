@@ -116,7 +116,7 @@ func TestTransfer(t *testing.T) {
 	ownerKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 
-	auth, owner := OwnerAuthPair(t, ownerKey)
+	auth, owner := OptsAddressPair(t, ownerKey)
 
 	ethBackend, ethAuths := test.SimulatedBackend(t)
 

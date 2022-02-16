@@ -44,7 +44,7 @@ func TestUpgrade(t *testing.T) {
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
-	auth, owner := OwnerAuthPair(t, privkey)
+	auth, owner := OptsAddressPair(t, privkey)
 
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),

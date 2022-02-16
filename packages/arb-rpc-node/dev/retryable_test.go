@@ -82,7 +82,7 @@ func setupTest(t *testing.T) (
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	ownerAuth, ownerAccount := OwnerAuthPair(t, nil)
+	ownerAuth, ownerAccount := OptsAddressPair(t, nil)
 	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, ownerAccount, nil)
 
 	privkey, err := crypto.GenerateKey()
