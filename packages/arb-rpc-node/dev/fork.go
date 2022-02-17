@@ -23,6 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
 	"math/big"
 )
@@ -37,7 +38,6 @@ func NewForkNode(
 	nodeConfig := configuration.DefaultNodeSettings()
 	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 	coreConfig.LazyLoadCoreMachine = true
-	coreConfig.Test.ReorgTo.Message = reorgMessage
 	coreConfig.Cache.Last = true
 	coreConfig.CheckpointPruneOnStartup = false
 	coreConfig.CheckpointPruningMode = "off"
@@ -60,6 +60,11 @@ func NewForkNode(
 		mon.Close()
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
 	}
+
+	if err := core.ReorgAndWait(mon.Core, new(big.Int).SetInt64(reorgMessage)); err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "error reorging")
+	}
+
 	latestBlock, err := db.LatestBlock()
 	if err != nil {
 		return nil, nil, nil, nil, err

@@ -187,6 +187,7 @@ func startup() error {
 		agg,
 		fork.LastMessage,
 	)
+
 	cancel := func() {
 		if !canceled {
 			cancelDevNode()
@@ -206,28 +207,23 @@ func startup() error {
 		privateKeys = append(privateKeys, privKey)
 	}
 
-	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
-	if !ok {
-		return errors.New("invalid value for deposit amount")
-	}
+	depositSize := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 	for _, account := range accounts {
-		fmt.Println("deposit", depositSize, common.NewAddressFromEth(account.Address))
-		dest := message.L2RemapAccount(common.NewAddressFromEth(account.Address))
+		dest := common.NewAddressFromEth(account.Address)
+		sender := message.L2RemapAccount(dest)
 		deposit := message.RetryableTx{
 			Destination:       dest,
 			Value:             big.NewInt(0),
-			Deposit:           new(big.Int).Exp(big.NewInt(10), big.NewInt(20), nil),
-			MaxSubmissionCost: new(big.Int).Exp(big.NewInt(10), big.NewInt(17), nil),
+			Deposit:           depositSize,
+			MaxSubmissionCost: depositSize,
 			CreditBack:        dest,
 			Beneficiary:       dest,
 			MaxGas:            big.NewInt(0),
 			GasPriceBid:       big.NewInt(0),
 		}
-		if msgHash, err := backend.AddInboxMessage(deposit, dest); err != nil {
+		if _, err := backend.AddInboxMessage(deposit, sender); err != nil {
 			return err
-		} else {
-			fmt.Println("deposit", msgHash)
 		}
 	}
 
@@ -270,7 +266,7 @@ func startup() error {
 					MaxGas:      big.NewInt(1000000),
 					GasPriceBid: big.NewInt(2000000000),
 					DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-					Payment:     depositSize,
+					Payment:     big.NewInt(0),
 					Data:        arbos.AddChainOwnerData(owner),
 				},
 			}),
@@ -285,7 +281,7 @@ func startup() error {
 					MaxGas:      big.NewInt(1000000),
 					GasPriceBid: big.NewInt(2000000000),
 					DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-					Payment:     depositSize,
+					Payment:     big.NewInt(0),
 					Data:        arbos.SetChainParameterData(arbos.ChainIDId, chainId),
 				},
 			}),
