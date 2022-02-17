@@ -78,12 +78,17 @@ func NewRPCEthClient(url string) (*RPCEthClient, error) {
 func (r *RPCEthClient) reconnect() error {
 	r.Lock()
 	defer r.Unlock()
+	if r.errCount < maxErrCount {
+		// We must have already reconnected
+		return nil
+	}
 	rpccl, err := rpc.Dial(r.url)
 	if err != nil {
 		return err
 	}
 	r.eth = ethclient.NewClient(rpccl)
 	r.rpc = rpccl
+	r.errCount = 0
 	return nil
 }
 
@@ -100,7 +105,6 @@ func (r *RPCEthClient) handleCallErr(err error) error {
 		if err := r.reconnect(); err != nil {
 			return err
 		}
-		atomic.StoreUint64(&r.errCount, 0)
 	}
 	return err
 }
