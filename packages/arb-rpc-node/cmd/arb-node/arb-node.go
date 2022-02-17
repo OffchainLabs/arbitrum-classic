@@ -364,7 +364,7 @@ func startup() error {
 		web3InboxReaderRef = inboxReader
 	}
 
-	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
+	srv := aggregator.NewServer(batch, l2ChainId, db)
 	serverConfig := web3.ServerConfig{
 		Mode:          rpcMode,
 		MaxCallAVMGas: config.Node.RPC.MaxCallGas * 100, // Multiply by 100 for arb gas to avm gas conversion

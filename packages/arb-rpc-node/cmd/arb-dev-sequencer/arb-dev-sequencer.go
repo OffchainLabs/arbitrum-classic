@@ -338,7 +338,7 @@ func startup() error {
 		return err
 	}
 
-	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
+	srv := aggregator.NewServer(batch, l2ChainId, db)
 
 	// TODO: Add back in funding of fundedAccount
 	// Note: The dev sequencer isn't being used anywhere currently

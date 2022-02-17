@@ -96,10 +96,9 @@ func startup() error {
 	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
 	arbosPath := fs.String("arbos", "", "ArbOS version")
 	enableFees := fs.Bool("with-fees", false, "Run arbos with fees on")
-	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use tempory if empty")
+	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use temporay if empty")
 	aggStr := fs.String("aggregator", "", "aggregator to use as the sender from this node")
 	initialL1Height := fs.Uint64("l1height", 0, "initial l1 height")
-	rollupStr := fs.String("rollup", "", "address of rollup contract")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 	mnemonic := fs.String(
 		"mnemonic",
@@ -160,11 +159,6 @@ func startup() error {
 	}
 
 	ctx := context.Background()
-
-	rollupAddress := common.RandAddress()
-	if *rollupStr != "" {
-		rollupAddress = common.HexToAddress(*rollupStr)
-	}
 
 	var agg common.Address
 	if *aggStr != "" {
@@ -282,7 +276,7 @@ func startup() error {
 	}
 	signer := types.NewEIP155Signer(chainId)
 
-	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
+	srv := aggregator.NewServer(backend, chainId, db)
 
 	if deleteDir {
 		client := web3.NewEthClient(srv, true)

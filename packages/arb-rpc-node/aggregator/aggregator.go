@@ -44,7 +44,6 @@ import (
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
 
 type Server struct {
-	chain   common.Address
 	chainId *big.Int
 	batch   batcher.TransactionBatcher
 	db      *txdb.TxDB
@@ -54,12 +53,10 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(
 	batch batcher.TransactionBatcher,
-	rollupAddress common.Address,
 	chainId *big.Int,
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		chain:   rollupAddress,
 		chainId: chainId,
 		batch:   batch,
 		db:      db,
@@ -119,10 +116,6 @@ func (m *Server) GetL2ToL1Proof(batchNumber *big.Int, index uint64) (*evm.Merkle
 		return nil, errors.New("batch doesn't exist")
 	}
 	return batch.GenerateProof(index)
-}
-
-func (m *Server) GetChainAddress() ethcommon.Address {
-	return m.chain.ToEthAddress()
 }
 
 func (m *Server) ChainId() *big.Int {
