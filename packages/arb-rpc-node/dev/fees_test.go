@@ -313,35 +313,26 @@ func TestNonAggregatorFee(t *testing.T) {
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
-	data := simpleABI.Methods["exists"].ID
+	data := simpleABI.Methods["arrayPush"].ID
 	emptyAgg := ethcommon.Address{}
 
 	userOpts, userAddr := OptsAddressPair(t, nil)
 	addSomeBalance(t, ctx, userAddr, backend, client)
 
-	estimatedGas, err := web3SServer.EstimateGas(ctx, web3.CallTxArgs{
-		From:       &userOpts.From,
-		To:         &simpleAddr,
-		Data:       (*hexutil.Bytes)(&data),
-		Aggregator: &emptyAgg,
-	})
-	test.FailIfError(t, err)
-	userOpts.GasLimit = uint64(estimatedGas)
-	tx, err := simple.Exists(userOpts)
-	test.FailIfError(t, err)
-	checkFees(t, backend, tx)
-
-	estimatedGas, err = web3SServer.EstimateGas(ctx, web3.CallTxArgs{
-		From:       &userOpts.From,
-		To:         &simpleAddr,
-		Data:       (*hexutil.Bytes)(&data),
-		Aggregator: &emptyAgg,
-	})
-	test.FailIfError(t, err)
-	userOpts.GasLimit = uint64(estimatedGas)
-	tx, err = simple.Exists(userOpts)
-	test.FailIfError(t, err)
-	checkFees(t, backend, tx)
+	for i := 0; i < 4; i++ {
+		estimatedGas, err := web3SServer.EstimateGas(ctx, web3.CallTxArgs{
+			From:       &userOpts.From,
+			To:         &simpleAddr,
+			Data:       (*hexutil.Bytes)(&data),
+			Aggregator: &emptyAgg,
+		})
+		test.FailIfError(t, err)
+		userOpts.GasLimit = uint64(estimatedGas)
+		t.Log("estimate:", userOpts.GasLimit)
+		tx, err := simple.ArrayPush(userOpts)
+		test.FailIfError(t, err)
+		checkFees(t, backend, tx)
+	}
 }
 
 func TestRetryableFee(t *testing.T) {
