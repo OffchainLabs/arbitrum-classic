@@ -309,7 +309,7 @@ func TestNonAggregatorFee(t *testing.T) {
 
 	simpleAddr, _, simple, err := arbostestcontracts.DeploySimple(auth, client)
 	test.FailIfError(t, err)
-	backend.currentAggregator = common.Address{}
+	backend.currentAggregator = common.RandAddress()
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
