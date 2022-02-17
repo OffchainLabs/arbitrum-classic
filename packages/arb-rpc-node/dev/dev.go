@@ -54,7 +54,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.
 	nodeConfig := configuration.DefaultNodeSettings()
 	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 
-	mon, err := monitor.NewMonitor(dir, arbosPath, coreConfig)
+	mon, err := monitor.NewInitializedMonitor(dir, arbosPath, coreConfig)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}

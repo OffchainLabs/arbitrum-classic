@@ -48,31 +48,56 @@ type Monitor struct {
 	Reader  *InboxReader
 }
 
-func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
+func NewInitializedMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
+	m, err := NewMonitor(dbDir, coreConfig)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.Initialize(contractFile); err != nil {
+		return nil, err
+	}
+	if err := m.Start(); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func NewMonitor(dbDir string, coreConfig *configuration.Core) (*Monitor, error) {
 	storage, err := cmachine.NewArbStorage(dbDir, coreConfig)
 	if err != nil {
 		return nil, err
 	}
-
 	logger.Info().Str("directory", dbDir).Msg("database opened")
-
-	err = storage.Initialize(contractFile)
-	if err != nil {
-		return nil, err
-	}
-
-	logger.Info().Msg("storage initialized")
-
-	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		return nil, errors.New("error starting ArbCore thread")
-	}
-
 	return &Monitor{
 		Storage: storage,
-		Core:    arbCore,
+		Core:    storage.GetArbCore(),
 	}, nil
+}
+
+func (m *Monitor) Initialize(contractFile string) error {
+	err := m.Storage.Initialize(contractFile)
+	if err != nil {
+		return err
+	}
+	logger.Info().Msg("storage initialized")
+	return nil
+}
+
+func (m *Monitor) InitializeExisting() error {
+	err := m.Storage.InitializeExisting()
+	if err != nil {
+		return err
+	}
+	logger.Info().Msg("storage initialized")
+	return nil
+}
+
+func (m *Monitor) Start() error {
+	started := m.Core.StartThread()
+	if !started {
+		return errors.New("error starting ArbCore thread")
+	}
+	return nil
 }
 
 func (m *Monitor) Close() {

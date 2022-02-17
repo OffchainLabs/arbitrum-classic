@@ -45,6 +45,8 @@ constexpr uint64_t value_tuple_tag = value_tagged_bit | 1;
 constexpr uint64_t value_hash_pre_image_tag = value_tagged_bit | 2;
 constexpr uint64_t value_buffer_tag = value_tagged_bit | 3;
 
+class ValueLoader;
+
 union TaggedValueContents {
     uint256_t num;
     Tuple tuple;
@@ -372,7 +374,9 @@ Value deserialize_value(const char*& srccode);
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf);
 
-void marshal_value(const Value& val, std::vector<unsigned char>& buf);
+void marshal_value(const Value& val,
+                   std::vector<unsigned char>& buf,
+                   ValueLoader* value_loader);
 
 class Code;
 

@@ -195,7 +195,7 @@ void ArbCore::printDatabaseMetadata() {
     }
 }
 
-InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
+InitializeResult ArbCore::initializeExisting() {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
 
@@ -335,9 +335,15 @@ InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
     if (!status.IsNotFound()) {
         std::cerr << "Error with initial reorg: " << status.ToString()
                   << std::endl;
-        return {status, false};
     }
+    return {status, false};
+}
 
+InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
+    auto res = initializeExisting();
+    if (!res.status.IsNotFound()) {
+        return res;
+    }
     // Need to initialize database from scratch
     core_code->addSegment(executable.code);
     core_machine = std::make_unique<MachineThread>(
@@ -349,7 +355,7 @@ InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
 
     ReadWriteTransaction tx(data_storage);
 
-    status = updateSchemaVersion(tx, arbcore_schema_version);
+    auto status = updateSchemaVersion(tx, arbcore_schema_version);
     if (!status.ok()) {
         std::cerr << "failed to save schema version into db: "
                   << status.ToString() << std::endl;
