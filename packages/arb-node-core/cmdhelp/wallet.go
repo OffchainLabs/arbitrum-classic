@@ -19,6 +19,7 @@ package cmdhelp
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math"
 	"math/big"
 	"strings"
@@ -30,14 +31,13 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "cmdhelp").Logger()
+var logger = arblog.Logger.With().Str("component", "cmdhelp").Logger()
 
 func readPass() (string, error) {
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))

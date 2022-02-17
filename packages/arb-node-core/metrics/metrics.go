@@ -1,20 +1,19 @@
 package metrics
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/metrics/exp"
-	"github.com/rs/zerolog/log"
-
 	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/metrics/exp"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "metrics").Logger()
+var logger = arblog.Logger.With().Str("component", "metrics").Logger()
 
 // Config Metrics configuration struct
 type Config struct {

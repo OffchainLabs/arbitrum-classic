@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -74,7 +75,7 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
+	logger = arblog.Logger.With().Str("component", "arb-dev-sequencer").Logger()
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running node")

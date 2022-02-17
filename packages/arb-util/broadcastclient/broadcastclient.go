@@ -19,6 +19,7 @@ package broadcastclient
 import (
 	"context"
 	"encoding/json"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"net"
 	"strings"
@@ -28,8 +29,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gobwas/ws"
-	"github.com/rs/zerolog/log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/wsbroadcastserver"
@@ -51,7 +50,7 @@ type BroadcastClient struct {
 	idleTimeout                  time.Duration
 }
 
-var logger = log.With().Caller().Str("component", "broadcaster").Logger()
+var logger = arblog.Logger.With().Str("component", "broadcaster").Logger()
 
 func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int, idleTimeout time.Duration) *BroadcastClient {
 	var seqNum *big.Int

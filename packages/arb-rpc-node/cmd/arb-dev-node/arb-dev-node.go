@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -78,7 +79,7 @@ func init() {
 	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Stack().Str("component", "arb-dev-node").Logger()
+	logger = arblog.Logger.With().Str("component", "arb-dev-node").Logger()
 }
 
 func main() {
