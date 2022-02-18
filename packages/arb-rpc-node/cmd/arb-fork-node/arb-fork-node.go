@@ -87,6 +87,7 @@ func startup() error {
 		"mnemonic to generate accounts from",
 	)
 	fs.Bool("prettyprint", true, "pretty log output")
+	persistState := fs.Bool("persist-state", false, "chain id of chain")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
 	err := fs.Parse(os.Args[1:])
@@ -155,7 +156,9 @@ func startup() error {
 		chainId,
 		agg,
 		fork.LastMessage,
+		*persistState,
 	)
+
 	defer cancel()
 
 	srv := aggregator.NewServer(backend, chainId, db)

@@ -34,6 +34,7 @@ func NewForkNode(
 	chainId *big.Int,
 	agg common.Address,
 	reorgMessage int64,
+	persistState bool,
 ) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
 	nodeConfig := configuration.DefaultNodeSettings()
 	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
@@ -61,8 +62,10 @@ func NewForkNode(
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
 	}
 
-	if err := core.ReorgAndWait(mon.Core, new(big.Int).SetInt64(reorgMessage)); err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error reorging")
+	if !persistState {
+		if err := core.ReorgAndWait(mon.Core, new(big.Int).SetInt64(reorgMessage)); err != nil {
+			return nil, nil, nil, nil, errors.Wrap(err, "error reorging")
+		}
 	}
 
 	latestBlock, err := db.LatestBlock()
