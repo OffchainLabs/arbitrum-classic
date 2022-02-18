@@ -17,13 +17,13 @@
 package monitor
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/rs/zerolog/log"
 	"sync"
 	"time"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "monitor").Logger()
+var logger = arblog.Logger.With().Str("component", "monitor").Logger()
 
 var GlobalMonitor = NewMonitor()
 

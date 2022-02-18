@@ -18,6 +18,7 @@ package broadcaster
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/wsbroadcastserver"
@@ -27,10 +28,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Str("component", "broadcaster").Logger()
+var logger = arblog.Logger.With().Str("component", "broadcaster").Logger()
 
 type Broadcaster struct {
 	server           *wsbroadcastserver.WSBroadcastServer

@@ -233,12 +233,12 @@ RawAssertionResult executeAssertion(CMachine* m,
 
         std::vector<unsigned char> logData;
         for (const auto& log : assertion.logs) {
-            marshal_value(log.val, logData);
+            marshal_value(log.val, logData, nullptr);
         }
 
         std::vector<unsigned char> debugPrintData;
         for (const auto& debugPrint : assertion.debug_prints) {
-            marshal_value(debugPrint.val, debugPrintData);
+            marshal_value(debugPrint.val, debugPrintData, nullptr);
         }
 
         // TODO extend usage of uint256

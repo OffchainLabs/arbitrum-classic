@@ -20,7 +20,8 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"flag"
-	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/cmd/internal"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -29,13 +30,11 @@ import (
 	"os"
 	"os/signal"
 
-	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
-	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -78,7 +77,7 @@ func init() {
 	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Stack().Str("component", "arb-dev-node").Logger()
+	logger = arblog.Logger.With().Str("component", "arb-dev-node").Logger()
 }
 
 func main() {
@@ -96,10 +95,9 @@ func startup() error {
 	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
 	arbosPath := fs.String("arbos", "", "ArbOS version")
 	enableFees := fs.Bool("with-fees", false, "Run arbos with fees on")
-	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use tempory if empty")
+	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use temporary if empty")
 	aggStr := fs.String("aggregator", "", "aggregator to use as the sender from this node")
 	initialL1Height := fs.Uint64("l1height", 0, "initial l1 height")
-	rollupStr := fs.String("rollup", "", "address of rollup contract")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 	mnemonic := fs.String(
 		"mnemonic",
@@ -126,19 +124,9 @@ func startup() error {
 
 	chainId := new(big.Int).SetUint64(*chainId64)
 
-	wallet, err := hdwallet.NewFromMnemonic(*mnemonic)
+	wallet, accounts, err := internal.InitializeWallet(*mnemonic, *walletcount)
 	if err != nil {
 		return err
-	}
-
-	accounts := make([]accounts2.Account, 0)
-	for i := 0; i < *walletcount; i++ {
-		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
-		account, err := wallet.Derive(path, false)
-		if err != nil {
-			return err
-		}
-		accounts = append(accounts, account)
 	}
 
 	if *arbosPath == "" {
@@ -160,11 +148,6 @@ func startup() error {
 	}
 
 	ctx := context.Background()
-
-	rollupAddress := common.RandAddress()
-	if *rollupStr != "" {
-		rollupAddress = common.HexToAddress(*rollupStr)
-	}
 
 	var agg common.Address
 	if *aggStr != "" {
@@ -282,7 +265,7 @@ func startup() error {
 	}
 	signer := types.NewEIP155Signer(chainId)
 
-	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
+	srv := aggregator.NewServer(backend, chainId, db)
 
 	if deleteDir {
 		client := web3.NewEthClient(srv, true)
@@ -315,24 +298,9 @@ func startup() error {
 		}
 	}
 
-	fmt.Println("Arbitrum Dev Chain")
-	fmt.Println("")
-	fmt.Println("Available Accounts")
-	fmt.Println("==================")
-	for i, account := range accounts {
-		fmt.Printf("(%v) %v (100 ETH)\n", i, account.Address.Hex())
+	if err := internal.PrintAccountInfo(wallet, accounts); err != nil {
+		return err
 	}
-
-	fmt.Println("\nPrivate Keys")
-	fmt.Println("==================")
-	for i, account := range accounts {
-		privKey, err := wallet.PrivateKeyHex(account)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("(%v) 0x%v\n", i, privKey)
-	}
-	fmt.Println("")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

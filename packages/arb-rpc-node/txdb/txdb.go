@@ -19,13 +19,10 @@ package txdb
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"strings"
 	"time"
-
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -33,6 +30,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/trie"
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/blockcache"
@@ -45,7 +44,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
+var logger = arblog.Logger.With().Str("component", "txdb").Logger()
 
 type TxDB struct {
 	Lookup          core.ArbCoreLookup

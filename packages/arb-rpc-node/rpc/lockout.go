@@ -18,14 +18,13 @@ package rpc
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
@@ -35,7 +34,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
+var logger = arblog.Logger.With().Str("component", "rpc").Logger()
 
 type LockoutBatcher struct {
 	// Mutex protects currentBatcher and lockoutExpiresAt

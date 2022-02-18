@@ -40,6 +40,10 @@ InitializeResult ArbStorage::initialize(const std::string& executable_path) {
     return initialize(executable);
 }
 
+InitializeResult ArbStorage::initializeExisting() {
+    return arb_core->initializeExisting();
+}
+
 InitializeResult ArbStorage::initialize(const LoadedExecutable& executable) {
     return arb_core->initialize(executable);
 }

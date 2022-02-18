@@ -94,6 +94,27 @@ void printDatabaseMetadata(CArbStorage* storage_ptr) {
     storage->printDatabaseMetadata();
 }
 
+int initializeExistingArbStorage(CArbStorage* storage_ptr) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
+    try {
+        auto result = storage->initializeExisting();
+        if (result.finished) {
+            // Gracefully shutdown
+            return false;
+        }
+        if (!result.status.ok()) {
+            std::cerr << "Error initializing storage: "
+                      << result.status.ToString() << std::endl;
+            return false;
+        }
+
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Exception initializing storage:" << e.what() << std::endl;
+        return false;
+    }
+}
+
 int initializeArbStorage(CArbStorage* storage_ptr,
                          const char* executable_path) {
     auto storage = static_cast<ArbStorage*>(storage_ptr);
