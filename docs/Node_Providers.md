@@ -8,7 +8,7 @@ To interct with Arbitrum One and/or Arbirum public testnet, you can also rely on
 
 ## Alchemy
 
-Alchemy provides two networks on Arbitrum: Arbitrum One (Mainnet) and Rinkeby testnet. Depending one which network you want to interact with, you can use between the following endpoints and interact with directly in the command line or point your MetaMask RPC endpoints to them.
+Alchemy provides endpoints for both Arbitrum One (Mainnet) and Rinkeby testnet. Depending one which network you want to interact with, you can use between the following endpoints and interact with directly in the command line or point your MetaMask RPC endpoints to them.
     
     Mainnet: https://arb-mainnet.g.alchemy.com/v2/your-api-key
     Rinkeby: https://arb-rinkeby.g.alchemy.com/v2/your-api-key
