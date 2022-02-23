@@ -20,13 +20,13 @@ if (!args.l1TokenAddress) {
 const { l1TokenAddress: l1TokenAddress } = args
 
 const main = async () => {
-  const { l1Signer, tokenBridger, l2Signer } = await instantiateBridge(
+  const { l1Signer, erc20Bridger, l2Signer } = await instantiateBridge(
     privKey,
     privKey
   )
   const l1Provider = l1Signer.provider!
   const l2Provider = l2Signer.provider!
-  const gatewayAddress = await tokenBridger.getL1GatewayAddress(
+  const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
     l1TokenAddress,
     l1Provider
   )
@@ -50,7 +50,7 @@ const main = async () => {
   }
 
   /** Check if disabled */
-  const isDisabled = await tokenBridger.l1TokenIsDisabled(
+  const isDisabled = await erc20Bridger.l1TokenIsDisabled(
     l1TokenAddress,
     l1Provider
   )
@@ -102,7 +102,7 @@ const main = async () => {
   }
 
   /* check token not yet deployed */
-  const l2TokenAddress = await tokenBridger.getL2ERC20Address(
+  const l2TokenAddress = await erc20Bridger.getL2ERC20Address(
     l1TokenAddress,
     l1Provider
   )
@@ -122,7 +122,7 @@ const main = async () => {
   if (l1TokenData.allowance.lt(approveAmount)) {
     console.log('Setting allowance on gateway')
 
-    const res = await tokenBridger.approveToken({
+    const res = await erc20Bridger.approveToken({
       erc20L1Address: l1TokenAddress,
       l1Signer: l1Signer,
       amount,
@@ -137,7 +137,7 @@ const main = async () => {
     amount: BigNumber.from(0),
   }
   /* check for required gas */
-  const gasNeeded = await tokenBridger.depositEstimateGas({
+  const gasNeeded = await erc20Bridger.depositEstimateGas({
     amount,
     erc20L1Address: l1TokenAddress,
     l1Signer,
@@ -163,7 +163,7 @@ const main = async () => {
 
   console.log('Depositing / deploying standard token contract:')
 
-  const res = await tokenBridger.deposit({
+  const res = await erc20Bridger.deposit({
     amount,
     erc20L1Address: l1TokenAddress,
     l1Signer,

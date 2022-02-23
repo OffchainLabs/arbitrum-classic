@@ -100,9 +100,9 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('customtoken gateway properly set', async () => {
-    const { l2Network, tokenBridger, l1Signer, l2Signer } = instantiateBridge()
+    const { l2Network, erc20Bridger, l1Signer, l2Signer } = instantiateBridge()
 
-    const l1customGatewayAddress = await tokenBridger.getL1GatewayAddress(
+    const l1customGatewayAddress = await erc20Bridger.getL1GatewayAddress(
       existentTestCustomToken,
       l1Signer.provider!
     )
@@ -111,7 +111,7 @@ describe('sanity checks (read-only)', async () => {
       l2Network.tokenBridge.l1CustomGateway
     )
 
-    const l2Address = await tokenBridger.getL2ERC20Address(
+    const l2Address = await erc20Bridger.getL2ERC20Address(
       existentTestCustomToken,
       l1Signer.provider!
     )
@@ -213,9 +213,9 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('l1 gateway router points to right gateways', async () => {
-    const { tokenBridger, l1Signer, l2Network } = instantiateBridge()
+    const { erc20Bridger, l1Signer, l2Network } = instantiateBridge()
 
-    const gateway = await tokenBridger.getL1GatewayAddress(
+    const gateway = await erc20Bridger.getL1GatewayAddress(
       l2Network.tokenBridge.l1Weth,
       l1Signer.provider!
     )
@@ -224,8 +224,8 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
-    const { l1Signer, l2Signer, l2Network, tokenBridger } = instantiateBridge()
-    const erc20L2AddressAsPerL1 = await tokenBridger.getL2ERC20Address(
+    const { l1Signer, l2Signer, l2Network, erc20Bridger } = instantiateBridge()
+    const erc20L2AddressAsPerL1 = await erc20Bridger.getL2ERC20Address(
       existentTestERC20,
       l1Signer.provider!
     )

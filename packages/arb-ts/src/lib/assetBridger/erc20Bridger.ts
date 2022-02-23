@@ -115,7 +115,7 @@ export interface TokenWithdrawParams extends EthWithdrawParams {
 /**
  * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
  */
-export class TokenBridger extends AssetBridger<
+export class Erc20Bridger extends AssetBridger<
   TokenDepositParams,
   TokenWithdrawParams
 > {
@@ -193,7 +193,7 @@ export class TokenBridger extends AssetBridger<
     )
     return contract.functions.approve(
       gatewayAddress,
-      params.amount || TokenBridger.MAX_APPROVAL,
+      params.amount || Erc20Bridger.MAX_APPROVAL,
       params.overrides || {}
     )
   }
@@ -431,7 +431,7 @@ export class TokenBridger extends AssetBridger<
     // we also add a hardcoded minimum maxgas for custom gateway deposits
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides.maxGas) tokenGasOverrides.maxGas = {}
-      tokenGasOverrides.maxGas.min = TokenBridger.MIN_CUSTOM_DEPOSIT_MAXGAS
+      tokenGasOverrides.maxGas.min = Erc20Bridger.MIN_CUSTOM_DEPOSIT_MAXGAS
     }
 
     // 2. get the gas estimates
@@ -579,7 +579,7 @@ interface TokenAndGateway {
 /**
  * Admin functionality for the token bridge
  */
-export class AdminTokenBridger extends TokenBridger {
+export class AdminErc20Bridger extends Erc20Bridger {
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details

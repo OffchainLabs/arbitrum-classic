@@ -34,9 +34,9 @@ import { instantiateBridge } from '../scripts/instantiate_bridge'
 import config from './config'
 import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
 import { Signer } from 'ethers'
-import { EthBridger, InboxTools, TokenBridger } from '../src'
+import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import { L1Network, L2Network } from '../src/lib/dataEntities/networks'
-import { AdminTokenBridger } from '../src/lib/assetBridger/tokenBridger'
+import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 
 const argv = yargs(process.argv.slice(2))
   .options({
@@ -125,14 +125,14 @@ export const warn = (text: string): void => {
 }
 
 export const instantiateBridgeWithRandomWallet = (): {
-  tokenBridger: TokenBridger
+  erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
   inboxTools: InboxTools
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
-  adminTokenBridger: AdminTokenBridger
+  adminErc20Bridger: AdminErc20Bridger
 } => {
   const testPk = formatBytes32String(Math.random().toString())
   prettyLog(
@@ -176,13 +176,13 @@ export const tokenFundAmount = BigNumber.from(2)
 export const fundL2Token = async (
   l1Provider: Provider,
   l2Signer: Signer,
-  tokenBridger: TokenBridger,
+  erc20Bridger: Erc20Bridger,
   tokenAddress: string
 ): Promise<boolean> => {
   try {
     const testWalletAddress = await l2Signer.getAddress()
     const preFundedL2Wallet = _preFundedL2Wallet.connect(l2Signer.provider!)
-    const l2Address = await tokenBridger.getL2ERC20Address(
+    const l2Address = await erc20Bridger.getL2ERC20Address(
       tokenAddress,
       l1Provider
     )

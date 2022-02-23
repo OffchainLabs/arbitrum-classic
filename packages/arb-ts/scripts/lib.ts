@@ -39,7 +39,7 @@ export const setGateWays = async (
   type: 'standard' | 'arbCustom',
   overrideGateways: string[] = []
 ): Promise<ContractReceipt> => {
-  const { adminTokenBridger, l1Signer, l2Network, l2Signer } =
+  const { adminErc20Bridger, l1Signer, l2Network, l2Signer } =
     await instantiateBridge()
   const l1Provider = l1Signer.provider!
   const l2Provider = l2Signer.provider!
@@ -94,7 +94,7 @@ export const setGateWays = async (
     }
   })()
 
-  const res = await adminTokenBridger.setGateways(
+  const res = await adminErc20Bridger.setGateways(
     l1Signer,
     l2Provider,
     gateways.map((g, i) => ({
