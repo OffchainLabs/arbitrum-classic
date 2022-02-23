@@ -18,6 +18,7 @@ package dev
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"strconv"
 	"sync"
@@ -28,9 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -46,15 +44,16 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
+	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
+var logger = arblog.Logger.With().Str("component", "dev").Logger()
 
 func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
 	nodeConfig := configuration.DefaultNodeSettings()
 	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 
-	mon, err := monitor.NewMonitor(dir, arbosPath, coreConfig)
+	mon, err := monitor.NewInitializedMonitor(dir, arbosPath, coreConfig)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}

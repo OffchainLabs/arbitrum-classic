@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -74,7 +75,7 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
+	logger = arblog.Logger.With().Str("component", "arb-dev-sequencer").Logger()
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running node")
@@ -241,7 +242,7 @@ func startup() error {
 		}
 	}()
 
-	mon, err := monitor.NewMonitor(dbPath, arbosPath, &config.Core)
+	mon, err := monitor.NewInitializedMonitor(dbPath, arbosPath, &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
@@ -338,7 +339,7 @@ func startup() error {
 		return err
 	}
 
-	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
+	srv := aggregator.NewServer(batch, l2ChainId, db)
 
 	// TODO: Add back in funding of fundedAccount
 	// Note: The dev sequencer isn't being used anywhere currently

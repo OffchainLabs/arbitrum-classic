@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -35,15 +36,13 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/accounttype"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/operationtype"
+	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "fireblocks").Logger()
+var logger = arblog.Logger.With().Str("component", "fireblocks").Logger()
 
 // Transaction status values
 const (

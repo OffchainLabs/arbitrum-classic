@@ -18,15 +18,13 @@ package staker
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"runtime"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
@@ -35,9 +33,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
+	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
+var logger = arblog.Logger.With().Str("component", "staker").Logger()
 
 type Strategy uint8
 

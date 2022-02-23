@@ -134,7 +134,7 @@ func NewTestDevNode(
 		}
 	}()
 
-	srv := aggregator.NewServer(backend, common.Address{}, chainId, db)
+	srv := aggregator.NewServer(backend, chainId, db)
 	client := web3.NewEthClient(srv, true)
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	test.FailIfError(t, err)
