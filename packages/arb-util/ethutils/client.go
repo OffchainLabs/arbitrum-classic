@@ -78,7 +78,7 @@ func NewRPCEthClient(url string) (*RPCEthClient, error) {
 func (r *RPCEthClient) reconnect() error {
 	r.Lock()
 	defer r.Unlock()
-	if atomic.LoadUint64(&r.errCount) < maxErrCount {
+	if atomic.LoadUint64(&r.errCount) < maxErrCount && r.eth != nil {
 		// We must have already reconnected
 		return nil
 	}
