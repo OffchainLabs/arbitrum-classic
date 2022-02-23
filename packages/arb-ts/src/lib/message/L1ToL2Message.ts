@@ -297,38 +297,43 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   /**
-   * Wait for the retryable ticket to be created, and if it's an eth deposit also wait for the
-   * @param isOnlyEthDeposit Is the message only an eth deposit, and nothing else.
-   *  If the message deposits eth as well as calls a contract then false should be supplied,
-   *  or if this is just a contract call false should be supplied. True should be supplied if
-   *  if this message just deposits eth - e.g. by calling depositEth on the L1 inbox.
+   * Wait for the retryable ticket to be created for an eth deposit.
+   * If the call deposits eth but also calls a contract then `waitForContractCall`
+   * should be used instead.
    * @param timeout Amount of time to wait for the retryable ticket to be created
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
-   * @returns The wait result contains a complete, a status, and optionally the l2TxReceipt.
-   * If complete is true then this message is in the terminal state for it's type. For eth deposits complete is
-   * true if the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED. For all other messages complete is true
-   * only if the status is REDEEMED.
+   * @returns The wait result contains `complete`, a `status`, and optionally the `l2TxReceipt`.
+   * If complete is true then this message is in the terminal state.
+   * For eth deposits complete this is when the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED.
    */
-  public async wait(
-    isOnlyEthDeposit: boolean,
-    confirmations?: number,
-    timeout = 900000
-  ): Promise<L1ToL2MessageWaitResult & { complete: boolean }> {
+  public async waitForEthDeposit(confirmations?: number, timeout = 900000) {
     const res = await this.waitForStatus(timeout, confirmations)
 
-    return isOnlyEthDeposit
-      ? {
-          complete:
-            res.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 ||
-            res.status === L1ToL2MessageStatus.EXPIRED ||
-            res.status === L1ToL2MessageStatus.REDEEMED,
-          ...res,
-        }
-      : { complete: res.status === L1ToL2MessageStatus.REDEEMED, ...res }
+    return {
+      complete:
+        res.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 ||
+        res.status === L1ToL2MessageStatus.EXPIRED ||
+        res.status === L1ToL2MessageStatus.REDEEMED,
+      ...res,
+    }
   }
 
   /**
-   * Suggest using .wait() instead as it correctly infers completion from the status
+   * Wait for the retryable ticket to be created for an eth deposit, and for an auto redeem attempt to be made
+   * @param timeout Amount of time to wait for the retryable ticket to be created
+   * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
+   * @returns The wait result contains `complete`, a `status`, and optionally the `l2TxReceipt`.
+   * If complete is true then this message is in the terminal state.
+   * For contract calls this is true only if the status is REDEEMED.
+   */
+  public async waitForContractCall(confirmations?: number, timeout = 900000) {
+    const res = await this.waitForStatus(timeout, confirmations)
+
+    return { complete: res.status === L1ToL2MessageStatus.REDEEMED, ...res }
+  }
+
+  /**
+   * Suggest using waitForEthDeposit() or waitForContractCall() instead as they correctly infers completion from the status
    * based on whether this message was an eth deposit.
    * Wait for the retryable ticket to be created, for it to be redeemed, and for the l2Tx to be executed.
    * @param timeout Amount of time to wait for the retryable ticket to be created
