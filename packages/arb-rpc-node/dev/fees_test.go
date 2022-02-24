@@ -178,8 +178,9 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 }
 
 func TestFees(t *testing.T) {
+	ctx := context.Background()
 	skipBelowVersion(t, 3)
-	backend, _, client, auth, aggAuth, feeConfig, config, feeCollector, cancel := setupFeeChain(t)
+	backend, _, client, _, aggAuth, feeConfig, config, feeCollector, cancel := setupFeeChain(t)
 	defer cancel()
 
 	agg := common.NewAddressFromEth(aggAuth.From)
@@ -188,6 +189,9 @@ func TestFees(t *testing.T) {
 	test.FailIfError(t, err)
 
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
 	test.FailIfError(t, err)
 
 	totalPaid := big.NewInt(0)
@@ -230,9 +234,12 @@ func TestFees(t *testing.T) {
 		t.Log("Fee col bal", feeCollectorBal)
 	}
 
+	userOpts, userAddr := OptsAddressPair(t, nil)
+	addSomeBalance(t, ctx, userAddr, backend, client)
+
 	for i := 0; i < 5; i++ {
 		t.Log("tx", i)
-		tx, err := arbOwner.SetChainParameter(auth, arbos.DefaultAggregatorParamId, big.NewInt(0))
+		tx, err := arbAggregator.SetFeeCollector(userOpts, userOpts.From, userOpts.From)
 		test.FailIfError(t, err)
 		paid := checkFees(t, backend, tx)
 		totalPaid = totalPaid.Add(totalPaid, paid)
@@ -273,7 +280,7 @@ func TestFees(t *testing.T) {
 	t.Log("perL1CalldataByte", perL1CalldataByte)
 	t.Log("perStorage", perStorage)
 
-	_, tx, _, err := arbostestcontracts.DeploySimple(auth, client)
+	_, tx, _, err := arbostestcontracts.DeploySimple(userOpts, client)
 	test.FailIfError(t, err)
 
 	paid := checkFees(t, backend, tx)
@@ -309,15 +316,18 @@ func TestNonAggregatorFee(t *testing.T) {
 	data := simpleABI.Methods["exists"].ID
 	emptyAgg := ethcommon.Address{}
 
+	userOpts, userAddr := OptsAddressPair(t, nil)
+	addSomeBalance(t, ctx, userAddr, backend, client)
+
 	estimatedGas, err := web3SServer.EstimateGas(ctx, web3.CallTxArgs{
-		From:       &auth.From,
+		From:       &userOpts.From,
 		To:         &simpleAddr,
 		Data:       (*hexutil.Bytes)(&data),
 		Aggregator: &emptyAgg,
 	})
 	test.FailIfError(t, err)
-	auth.GasLimit = uint64(estimatedGas)
-	tx, err := simple.Exists(auth)
+	userOpts.GasLimit = uint64(estimatedGas)
+	tx, err := simple.Exists(userOpts)
 	test.FailIfError(t, err)
 	checkFees(t, backend, tx)
 }
