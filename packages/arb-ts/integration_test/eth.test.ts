@@ -86,16 +86,8 @@ describe('Ether', async () => {
       'balance failed to update after eth deposit'
     )
 
-    const messages = await rec.getL1ToL2Messages(l2Signer.provider!)
-
-    expect(messages, 'No messages.').to.be.not.undefined
-    expect(messages.length, 'eth deposit message not found').to.exist
-    expect(messages.length, 'eth deposit message empty array').to.not.eq(0)
-
-    const message = messages[0]
-    prettyLog('l2TxHash: ' + message.retryableCreationId)
-    prettyLog('waiting for l2 transaction:')
-    const waitResult = await message.waitForEthDeposit(1, 1000 * 60 * 12)
+    const waitResult = await rec.waitForL2(l2Signer.provider!)
+    prettyLog('l2TxHash: ' + waitResult.message.retryableCreationId)
     prettyLog('l2 transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
     expect(waitResult.status).to.eq(

@@ -25,6 +25,8 @@ import {
   L1ToL2MessageReaderOrWriter,
   L1ToL2MessageReader,
   L1ToL2MessageWriter,
+  L1ToL2MessageStatus,
+  L1ToL2MessageWaitResult,
 } from './L1ToL2Message'
 
 import { L1ERC20Gateway__factory, Bridge__factory } from '../abi'
@@ -36,9 +38,16 @@ import {
 import { ArbTsError } from '../dataEntities/errors'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 
-export interface L1ContractTransaction extends ContractTransaction {
-  wait(confirmations?: number): Promise<L1TransactionReceipt>
+export interface L1ContractTransaction<
+  TReceipt extends L1TransactionReceipt = L1TransactionReceipt
+> extends ContractTransaction {
+  wait(confirmations?: number): Promise<TReceipt>
 }
+// some helper interfaces to reduce the verbosity elsewhere
+export type L1EthDepositTransaction =
+  L1ContractTransaction<L1EthDepositTransactionReceipt>
+export type L1ContractCallTransaction =
+  L1ContractTransaction<L1ContractCallTransactionReceipt>
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -203,5 +212,109 @@ export class L1TransactionReceipt implements TransactionReceipt {
       return new L1TransactionReceipt(result)
     }
     return contractTransaction as L1ContractTransaction
+  }
+
+  /**
+   * Replaces the wait function with one that returns an L1EthDepositTransactionReceipt
+   * @param contractTransaction
+   * @returns
+   */
+  public static monkeyPatchEthDepositWait = (
+    contractTransaction: ContractTransaction
+  ): L1EthDepositTransaction => {
+    const wait = contractTransaction.wait
+    contractTransaction.wait = async (confirmations?: number) => {
+      const result = await wait(confirmations)
+      return new L1EthDepositTransactionReceipt(result)
+    }
+    return contractTransaction as L1EthDepositTransaction
+  }
+
+  /**
+   * Replaces the wait function with one that returns an L1ContractCallTransactionReceipt
+   * @param contractTransaction
+   * @returns
+   */
+  public static monkeyPatchContractCallWait = (
+    contractTransaction: ContractTransaction
+  ): L1ContractCallTransaction => {
+    const wait = contractTransaction.wait
+    contractTransaction.wait = async (confirmations?: number) => {
+      const result = await wait(confirmations)
+      return new L1ContractCallTransactionReceipt(result)
+    }
+    return contractTransaction as L1ContractCallTransaction
+  }
+}
+
+/**
+ * An L1TransactionReceipt with additional functionality that only exists
+ * if the transaction created a single eth deposit.
+ */
+export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
+  /**
+   * Wait for the funds to arrive on L2
+   * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
+   * @param timeout Amount of time to wait for the retryable ticket to be created
+   * @returns The wait result contains `complete`, a `status`, the L1ToL2Message and optionally the `l2TxReceipt`
+   * If `complete` is true then this message is in the terminal state.
+   * For eth deposits complete this is when the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED.
+   */
+  public async waitForL2<T extends SignerOrProvider>(
+    l2SignerOrProvider: T,
+    confirmations?: number,
+    timeout = 900000
+  ): Promise<
+    {
+      complete: boolean
+      message: L1ToL2MessageReaderOrWriter<T>
+    } & L1ToL2MessageWaitResult
+  > {
+    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
+    const res = await message.waitForStatus(confirmations, timeout)
+
+    return {
+      complete:
+        res.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 ||
+        res.status === L1ToL2MessageStatus.EXPIRED ||
+        res.status === L1ToL2MessageStatus.REDEEMED,
+      ...res,
+      message,
+    }
+  }
+}
+
+/**
+ * An L1TransactionReceipt with additional functionality that only exists
+ * if the transaction created a single call to an L2 contract - this includes
+ * token deposits.
+ */
+export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
+  /**
+   * Wait for the transaction to arrive and be executed on L2
+   * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
+   * @param timeout Amount of time to wait for the retryable ticket to be created
+   * @returns The wait result contains `complete`, a `status`, an L1ToL2Message and optionally the `l2TxReceipt`.
+   * If `complete` is true then this message is in the terminal state.
+   * For contract calls this is true only if the status is REDEEMED.
+   */
+  public async waitForL2<T extends SignerOrProvider>(
+    l2SignerOrProvider: T,
+    confirmations?: number,
+    timeout = 900000
+  ): Promise<
+    {
+      complete: boolean
+      message: L1ToL2MessageReaderOrWriter<T>
+    } & L1ToL2MessageWaitResult
+  > {
+    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
+    const res = await message.waitForStatus(confirmations, timeout)
+
+    return {
+      complete: res.status === L1ToL2MessageStatus.REDEEMED,
+      ...res,
+      message,
+    }
   }
 }
