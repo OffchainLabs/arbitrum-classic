@@ -55,4 +55,4 @@ Required CL params:
 `l1TokenAddress`:string — address of L1 token to be bridged
 
 Ex:
-`yarn bridgeStandardToken --networkID 4 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
+`yarn bridgeStandardToken --networkID 4 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15`
