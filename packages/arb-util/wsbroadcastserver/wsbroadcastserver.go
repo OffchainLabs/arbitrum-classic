@@ -18,6 +18,7 @@ package wsbroadcastserver
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"net"
 	"strings"
 	"sync"
@@ -27,10 +28,9 @@ import (
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/mailru/easygo/netpoll"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Str("component", "wsbroadcastserver").Logger()
+var logger = arblog.Logger.With().Str("component", "wsbroadcastserver").Logger()
 
 type WSBroadcastServer struct {
 	startMutex    *sync.Mutex

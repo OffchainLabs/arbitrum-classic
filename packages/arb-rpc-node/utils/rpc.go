@@ -18,17 +18,16 @@ package utils
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
+var logger = arblog.Logger.With().Str("component", "rpc").Logger()
 
 func setupPaths(r *mux.Router, path string) ([]*mux.Route, error) {
 	if len(path) == 0 {
