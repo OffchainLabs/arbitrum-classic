@@ -16,10 +16,11 @@
 /* eslint-env node */
 'use strict'
 
+import { BaseContract, ContractFunction } from '@ethersproject/contracts'
 import { Provider } from '@ethersproject/abstract-provider'
 import { BigNumber } from 'ethers'
 
-import { ERC20__factory, Multicall2, Multicall2__factory } from '../abi'
+import { ERC20, ERC20__factory, Multicall2, Multicall2__factory } from '../abi'
 import { ArbTsError } from '../dataEntities/errors'
 import {
   isL1Network,
@@ -32,36 +33,55 @@ import {
 /**
  * Input to multicall aggregator
  */
-export type CallInput<T extends unknown> = {
+export type CallInput<
+  T extends BaseContract,
+  TKey extends keyof T['callStatic'] & string
+> = {
   /**
    * Address of the target contract to be called
    */
   targetAddr: string
   /**
-   * Function to produce encoded call data
+   * Target contract object
    */
-  encoder: () => string
+  contract: T
   /**
-   * Function to decode the result of the call
+   * Name of function to be multicalled
    */
-  decoder: (returnData: string) => T
+  funcName: TKey
+  /**
+   * Arguments to call the function with
+   */
+  values?: Array<any>
 }
 
+// TODO: add in DecoderReturnType to infer when undefined
 /**
  * For each item in T this DecoderReturnType<T> yields the return
  * type of the decoder property.
  * If we require success then the result cannot be undefined
  */
-type DecoderReturnType<
-  T extends CallInput<unknown>[],
-  TRequireSuccess extends boolean
-> = {
-  [P in keyof T]: T[P] extends CallInput<unknown>
-    ? TRequireSuccess extends true
-      ? ReturnType<T[P]['decoder']>
-      : ReturnType<T[P]['decoder']> | undefined
-    : never
+// type DecoderReturnType<
+//   T extends CallInput<unknown>[],
+//   TRequireSuccess extends boolean
+// > = {
+//   [P in keyof T]: T[P] extends CallInput<unknown>
+//     ? TRequireSuccess extends true
+//       ? ReturnType<T[P]['decoder']>
+//       : ReturnType<T[P]['decoder']> | undefined
+//     : never
+// }
+
+type ContractKey<T extends Array<BaseContract>> = {
+  [P in keyof T]: T[P] extends BaseContract ? BaseContract : never
 }
+type Unarray<T> = T extends Array<infer U> ? U : T
+
+// multiCall<
+//     T extends BaseContract,
+//     TKey extends keyof T["callStatic"] & string,
+//     TRequireSuccess extends boolean
+//   >
 
 ///////////////////////////////////////
 /////// TOKEN CONDITIONAL TYPES ///////
@@ -114,13 +134,17 @@ type TokenInputOutput<T> = T extends TokenMultiInput
  * Util for executing multi calls against the MultiCallV2 contract
  */
 export class MultiCaller {
+  public readonly instance: Multicall2
+
   constructor(
     private readonly provider: Provider,
     /**
      * Address of multicall contract
      */
     public readonly address: string
-  ) {}
+  ) {
+    this.instance = Multicall2__factory.connect(this.address, this.provider)
+  }
 
   /**
    * Finds the correct multicall address for the given provider and instantiates a multicaller
@@ -158,33 +182,33 @@ export class MultiCaller {
    * Get the call input for the current block number
    * @returns
    */
-  public getBlockNumberInput(): CallInput<
-    Awaited<ReturnType<Multicall2['getBlockNumber']>>
-  > {
-    const iFace = Multicall2__factory.createInterface()
-    return {
-      targetAddr: this.address,
-      encoder: () => iFace.encodeFunctionData('getBlockNumber'),
-      decoder: (returnData: string) =>
-        iFace.decodeFunctionResult('getBlockNumber', returnData)[0],
-    }
-  }
+  // public getBlockNumberInput(): CallInput<
+  //   Awaited<ReturnType<Multicall2['getBlockNumber']>>
+  // > {
+  //   const iFace = Multicall2__factory.createInterface()
+  //   return {
+  //     targetAddr: this.address,
+  //     encoder: () => iFace.encodeFunctionData('getBlockNumber'),
+  //     decoder: (returnData: string) =>
+  //       iFace.decodeFunctionResult('getBlockNumber', returnData)[0],
+  //   }
+  // }
 
   /**
    * Get the call input for the current block timestamp
    * @returns
    */
-  public getCurrentBlockTimestampInput(): CallInput<
-    Awaited<ReturnType<Multicall2['getCurrentBlockTimestamp']>>
-  > {
-    const iFace = Multicall2__factory.createInterface()
-    return {
-      targetAddr: this.address,
-      encoder: () => iFace.encodeFunctionData('getCurrentBlockTimestamp'),
-      decoder: (returnData: string) =>
-        iFace.decodeFunctionResult('getCurrentBlockTimestamp', returnData)[0],
-    }
-  }
+  // public getCurrentBlockTimestampInput(): CallInput<
+  //   Awaited<ReturnType<Multicall2['getCurrentBlockTimestamp']>>
+  // > {
+  //   const iFace = Multicall2__factory.createInterface()
+  //   return {
+  //     targetAddr: this.address,
+  //     encoder: () => iFace.encodeFunctionData('getCurrentBlockTimestamp'),
+  //     decoder: (returnData: string) =>
+  //       iFace.decodeFunctionResult('getCurrentBlockTimestamp', returnData)[0],
+  //   }
+  // }
 
   /**
    * Executes a multicall for the given parameters
@@ -223,30 +247,34 @@ export class MultiCaller {
    * @returns
    */
   public async multiCall<
-    T extends CallInput<unknown>[],
+    TContract extends BaseContract,
+    TKey extends keyof TContract['callStatic'] & string,
     TRequireSuccess extends boolean
   >(
-    params: T,
+    params: [...Array<CallInput<TContract, TKey>>],
     requireSuccess?: TRequireSuccess
-  ): Promise<DecoderReturnType<T, TRequireSuccess>> {
+  ) {
     const defaultedRequireSuccess = requireSuccess || false
-    const multiCall = Multicall2__factory.connect(this.address, this.provider)
     const args = params.map(p => ({
       target: p.targetAddr,
-      callData: p.encoder(),
+      callData: p.contract.interface.encodeFunctionData(p.funcName, p.values),
     }))
 
-    const outputs = await multiCall.callStatic.tryAggregate(
+    const outputs = await this.instance.callStatic.tryAggregate(
       defaultedRequireSuccess,
       args
     )
 
     return outputs.map(({ success, returnData }, index) => {
       if (success && returnData && returnData != '0x') {
-        return params[index].decoder(returnData)
+        const curr = params[index]
+        return curr.contract.interface.decodeFunctionResult(
+          curr.funcName,
+          returnData
+        ) as Awaited<ReturnType<TContract['callStatic'][TKey]>>
       }
       return undefined
-    }) as DecoderReturnType<T, TRequireSuccess>
+    })
   }
 
   /**
@@ -276,68 +304,56 @@ export class MultiCaller {
   > {
     // if no options are supplied, then we just multicall for the names
     const defaultedOptions: TokenMultiInput = options || { name: true }
-    const erc20Iface = ERC20__factory.createInterface()
-
     const input = []
     for (const t of erc20Addresses) {
+      const contract = ERC20__factory.connect(t, this.provider)
+      type ERC20FuncKey = keyof typeof contract['callStatic']
+
       if (defaultedOptions.allowance) {
         input.push({
           targetAddr: t,
-          encoder: () =>
-            erc20Iface.encodeFunctionData('allowance', [
-              defaultedOptions.allowance!.owner,
-              defaultedOptions.allowance!.spender,
-            ]),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult(
-              'allowance',
-              returnData
-            )[0] as BigNumber,
+          contract: contract,
+          funcName: 'allowance' as ERC20FuncKey,
+          values: [
+            defaultedOptions.allowance!.owner,
+            defaultedOptions.allowance!.spender,
+          ],
         })
       }
 
       if (defaultedOptions.balanceOf) {
         input.push({
           targetAddr: t,
-          encoder: () =>
-            erc20Iface.encodeFunctionData('balanceOf', [
-              defaultedOptions.balanceOf!.account,
-            ]),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult(
-              'balanceOf',
-              returnData
-            )[0] as BigNumber,
+          contract: contract,
+          funcName: 'balanceOf' as ERC20FuncKey,
+          values: [defaultedOptions.balanceOf!.account],
         })
       }
 
       if (defaultedOptions.decimals) {
         input.push({
           targetAddr: t,
-          encoder: () => erc20Iface.encodeFunctionData('decimals'),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult(
-              'decimals',
-              returnData
-            )[0] as number,
+          contract: contract,
+          funcName: 'decimals' as ERC20FuncKey,
+          values: [],
         })
       }
 
       if (defaultedOptions.name) {
         input.push({
           targetAddr: t,
-          encoder: () => erc20Iface.encodeFunctionData('name'),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult('name', returnData)[0] as string,
+          contract: contract,
+          funcName: 'name' as ERC20FuncKey,
+          // values: []
         })
       }
 
       if (defaultedOptions.symbol) {
         input.push({
           targetAddr: t,
-          encoder: () => erc20Iface.encodeFunctionData('symbol'),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult('symbol', returnData)[0] as string,
+          contract: contract,
+          funcName: 'symbol' as ERC20FuncKey,
+          values: undefined,
         })
       }
     }

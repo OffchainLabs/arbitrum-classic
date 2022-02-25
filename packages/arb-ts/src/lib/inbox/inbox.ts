@@ -23,6 +23,7 @@ import { ContractTransaction, Overrides } from 'ethers'
 import {
   Bridge,
   Bridge__factory,
+  Multicall2__factory,
   SequencerInbox,
   SequencerInbox__factory,
 } from '../abi'
@@ -98,34 +99,51 @@ export class InboxTools {
     )
 
     const multicall = await MultiCaller.fromProvider(this.l1Provider)
-    const multicallInput: [
-      CallInput<Awaited<ReturnType<SequencerInbox['maxDelayBlocks']>>>,
-      CallInput<Awaited<ReturnType<SequencerInbox['maxDelaySeconds']>>>,
-      ReturnType<MultiCaller['getBlockNumberInput']>,
-      ReturnType<MultiCaller['getCurrentBlockTimestampInput']>
-    ] = [
+    // const multicallInput: [
+    //   CallInput<Awaited<ReturnType<SequencerInbox['maxDelayBlocks']>>>,
+    //   CallInput<Awaited<ReturnType<SequencerInbox['maxDelaySeconds']>>>,
+    //   ReturnType<MultiCaller['getBlockNumberInput']>,
+    //   ReturnType<MultiCaller['getCurrentBlockTimestampInput']>
+    // ] = [
+    //   {
+    //     targetAddr: sequencerInbox.address,
+    //     encoder: () =>
+    //       sequencerInbox.interface.encodeFunctionData('maxDelayBlocks'),
+    //     decoder: (returnData: string) =>
+    //       sequencerInbox.interface.decodeFunctionResult(
+    //         'maxDelayBlocks',
+    //         returnData
+    //       )[0],
+    //   },
+    //   {
+    //     targetAddr: sequencerInbox.address,
+    //     encoder: () =>
+    //       sequencerInbox.interface.encodeFunctionData('maxDelaySeconds'),
+    //     decoder: (returnData: string) =>
+    //       sequencerInbox.interface.decodeFunctionResult(
+    //         'maxDelaySeconds',
+    //         returnData
+    //       )[0],
+    //   },
+    //   multicall.getBlockNumberInput(),
+    //   multicall.getCurrentBlockTimestampInput(),
+    // ]
+    const multicallInput = [
       {
         targetAddr: sequencerInbox.address,
-        encoder: () =>
-          sequencerInbox.interface.encodeFunctionData('maxDelayBlocks'),
-        decoder: (returnData: string) =>
-          sequencerInbox.interface.decodeFunctionResult(
-            'maxDelayBlocks',
-            returnData
-          )[0],
+        contract: sequencerInbox,
+        funcName: 'maxDelayBlocks',
       },
       {
         targetAddr: sequencerInbox.address,
-        encoder: () =>
-          sequencerInbox.interface.encodeFunctionData('maxDelaySeconds'),
-        decoder: (returnData: string) =>
-          sequencerInbox.interface.decodeFunctionResult(
-            'maxDelaySeconds',
-            returnData
-          )[0],
+        contract: sequencerInbox,
+        funcName: 'maxDelaySeconds',
       },
-      multicall.getBlockNumberInput(),
-      multicall.getCurrentBlockTimestampInput(),
+      // {
+      //   targetAddr: multicall.instance.address,
+      //   contract: multicall.instance,
+      //   funcName: "currentBlockNumber"
+      // }
     ]
 
     const [
@@ -133,7 +151,27 @@ export class InboxTools {
       maxDelaySeconds,
       currentBlockNumber,
       currentBlockTimestamp,
-    ] = await multicall.multiCall(multicallInput, true)
+    ] = await multicall.multiCall(
+      [
+        {
+          targetAddr: sequencerInbox.address,
+          contract: sequencerInbox,
+          funcName: 'maxDelayBlocks',
+        },
+        {
+          targetAddr: sequencerInbox.address,
+          contract: sequencerInbox,
+          funcName: 'maxDelaySeconds',
+        },
+        {
+          contract: multicall.instance,
+          targetAddr: multicall.instance.address,
+          funcName: '',
+        },
+      ],
+      true
+    )
+    // ] = await multicall.multiCall(multicallInput, true)
 
     const firstEligibleBlockNumber =
       currentBlockNumber.toNumber() - maxDelayBlocks.toNumber()
