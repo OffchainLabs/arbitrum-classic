@@ -25,12 +25,11 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
 
-import {
-  ArbSys__factory,
-  IOutbox__factory,
-  Outbox__factory,
-  NodeInterface__factory,
-} from '../abi'
+import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
+import { Outbox__factory } from '../abi/factories/Outbox__factory'
+import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { ContractTransaction } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'

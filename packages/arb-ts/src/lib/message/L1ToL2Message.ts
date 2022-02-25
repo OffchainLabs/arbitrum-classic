@@ -24,7 +24,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { keccak256 } from '@ethersproject/keccak256'
 import { concat, zeroPad } from '@ethersproject/bytes'
 
-import { ArbRetryableTx__factory } from '../abi'
+import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
 import {
   SignerProviderUtils,
