@@ -37,6 +37,8 @@ async function main() {
     target: 'ethers-v5',
   })
 
+  execSync(`cd ${cwd} && rm -rf src/lib/abi/index.ts`)
+
   console.log('Typechain generated')
 }
 
