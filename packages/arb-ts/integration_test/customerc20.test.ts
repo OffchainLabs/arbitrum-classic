@@ -244,13 +244,11 @@ describe('Custom ERC20', () => {
     const l1ToL2Messages = await regRec.getL1ToL2Messages(l2Provider)
     expect(l1ToL2Messages.length, 'Should be 2 messages.').to.eq(2)
 
-    const setTokenTx = await l1ToL2Messages[0].waitForContractCall()
-    expect(setTokenTx.complete, 'Set token not complete.').to.eq(true)
+    const setTokenTx = await l1ToL2Messages[0].waitForStatus()
     expect(setTokenTx.status, 'Set token not redeemed.').to.eq(
       L1ToL2MessageStatus.REDEEMED
     )
-    const setGateways = await l1ToL2Messages[1].waitForContractCall()
-    expect(setGateways.complete, 'Set gateways not complete.').to.eq(true)
+    const setGateways = await l1ToL2Messages[1].waitForStatus()
     expect(setGateways.status, 'Set gateways not redeemed.').to.eq(
       L1ToL2MessageStatus.REDEEMED
     )
@@ -264,9 +262,7 @@ describe('Custom ERC20', () => {
     })
     const depositRec = await depositTx.wait()
 
-    const depositStatus = await (
-      await depositRec.getL1ToL2Message(l2Provider)
-    ).waitForContractCall()
+    const depositStatus = await depositRec.waitForL2(l2Provider)
     expect(depositStatus.complete, 'Deposit is not complete').to.eq(true)
     expect(depositStatus.status, 'Deposit is not redeemed').to.eq(
       L1ToL2MessageStatus.REDEEMED

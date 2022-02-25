@@ -31,7 +31,6 @@ import {
   L1WethGateway__factory,
   L2ArbitrumGateway__factory,
   ERC20__factory,
-  L1GatewayRouter,
   ERC20,
   L2GatewayToken__factory,
   L2GatewayToken,
@@ -53,6 +52,7 @@ import { EventFetcher } from '../utils/eventFetcher'
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
+  L1ContractCallTransaction,
   L1ContractTransaction,
   L1TransactionReceipt,
 } from '../message/L1Transaction'
@@ -514,9 +514,9 @@ export class Erc20Bridger extends AssetBridger<
    */
   public async deposit(
     params: TokenDepositParams
-  ): Promise<L1ContractTransaction> {
+  ): Promise<L1ContractCallTransaction> {
     const tx = await this.depositTxOrGas(params, false)
-    return L1TransactionReceipt.monkeyPatchWait(tx)
+    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   private async withdrawTxOrGas<T extends boolean>(
@@ -594,7 +594,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     l2TokenAddress: string,
     l1Signer: Signer,
     l2Provider: Provider
-  ) {
+  ): Promise<L1ContractTransaction> {
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
 
@@ -744,7 +744,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     l2Provider: Provider,
     tokenGateways: TokenAndGateway[],
     maxGas: BigNumber = BigNumber.from(0)
-  ): Promise<L1ContractTransaction> {
+  ): Promise<L1ContractCallTransaction> {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
@@ -775,6 +775,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       }
     )
 
-    return L1TransactionReceipt.monkeyPatchWait(res)
+    return L1TransactionReceipt.monkeyPatchContractCallWait(res)
   }
 }
