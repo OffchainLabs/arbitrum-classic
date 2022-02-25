@@ -56,6 +56,18 @@ func makeDepositMessage(dest common.Address) message.EthDepositTx {
 	}
 }
 
+func addSomeBalance(t *testing.T, ctx context.Context, address common.Address, backend *Backend, client *web3.EthClient) common.Address {
+	t.Helper()
+	deposit := makeDepositMessage(address)
+	_, err := backend.AddInboxMessage(deposit, message.L1RemapAccount(address))
+	test.FailIfError(t, err)
+	fundedAddrBalance, err := client.BalanceAt(ctx, address.ToEthAddress(), nil)
+	if err != nil || fundedAddrBalance.Uint64() == 0 {
+		t.Fatal("Address was not funded", err)
+	}
+	return address
+}
+
 func setupTest(t *testing.T) (
 	common.Address,
 	*bind.TransactOpts,
