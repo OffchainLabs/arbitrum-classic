@@ -256,6 +256,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
    * Wait for the funds to arrive on L2
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
    * @param timeout Amount of time to wait for the retryable ticket to be created
+   * Defaults to 15 minutes, as by this time all transactions are expected to be included on L2. Throws on timeout.
    * @returns The wait result contains `complete`, a `status`, the L1ToL2Message and optionally the `l2TxReceipt`
    * If `complete` is true then this message is in the terminal state.
    * For eth deposits complete this is when the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED.
@@ -294,6 +295,7 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
    * Wait for the transaction to arrive and be executed on L2
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
    * @param timeout Amount of time to wait for the retryable ticket to be created
+   * Defaults to 15 minutes, as by this time all transactions are expected to be included on L2. Throws on timeout.
    * @returns The wait result contains `complete`, a `status`, an L1ToL2Message and optionally the `l2TxReceipt`.
    * If `complete` is true then this message is in the terminal state.
    * For contract calls this is true only if the status is REDEEMED.
