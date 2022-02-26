@@ -200,9 +200,15 @@ class Code {
 
     [[nodiscard]] virtual uint64_t initialSegmentForChildCode() const = 0;
 
+    // Warning: attempting to access a segment past the last created segment
+    // from this code is undefined behavior and may result in an unexpected
+    // segment being returned.
     [[nodiscard]] virtual CodeSegmentSnapshot loadCodeSegment(
         uint64_t segment_num) const = 0;
 
+    // Warning: attempting to access a segment past the last created segment
+    // from this code is undefined behavior and may result in an unexpected
+    // segment being returned.
     [[nodiscard]] virtual CodePoint loadCodePoint(
         const CodePointRef& ref) const = 0;
 
@@ -217,6 +223,9 @@ class Code {
 
     [[nodiscard]] virtual CodeSnapshot snapshot() const = 0;
 
+    // Warning: attempting to access a segment past the last created segment
+    // from this code is undefined behavior and may result in this unexpectedly
+    // returning true.
     [[nodiscard]] virtual bool containsSegment(uint64_t segment_id) const = 0;
 
     virtual void commitCodeToCore(
@@ -457,8 +466,8 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     bool segmentInParent(uint64_t segment_id) const {
         assert(!mutex.try_lock() && "mutex not held in segmentInParent call");
         return segment_id < impl->first_segment ||
-               (segment_id < impl->nextSegmentNum() &&
-                impl->getSegment(segment_id) == nullptr);
+               segment_id >= impl->nextSegmentNum() ||
+               impl->getSegment(segment_id) == nullptr;
     }
 
    public:
