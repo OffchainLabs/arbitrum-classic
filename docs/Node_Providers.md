@@ -4,7 +4,7 @@ title: Alternatives
 sidebar_label: Node Providers
 ---
 
-To interct with Arbitrum One and/or Arbirum public testnet, you can also rely on popular node providers that offer access to the nodes of these two networks. All you need to do is to choose the provider and the required node, and the node service provider will carry out out all the settings and installation. Here, we list those node services that help you build on Arbitrum One and/or Rinkbey testnet.
+To interact with Arbitrum One and the RinkArby testnet, you can rely on the same popular node providers that you are already used to on Ethereum. There are multiple providers that may help you build on Arbitrum, here is a list of a couple of them.
 
 ## Alchemy
 
