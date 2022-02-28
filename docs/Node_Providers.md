@@ -14,7 +14,7 @@ Alchemy provides endpoints for both Arbitrum One (Mainnet) and Rinkeby testnet. 
     Rinkeby: https://arb-rinkeby.g.alchemy.com/v2/your-api-key
 
 *Not sure how to create an Alchemy API key?*
-To use Alchemy's products, you need an API key to authenticate your requests. For dteilaed steps of how to create one, see the [Alchemy's Documentation](https://docs.alchemy.com/alchemy/introduction/getting-started#1.create-an-alchemy-key).
+To use Alchemy's products, you need an API key to authenticate your requests. For detailed steps of how to create one, see the [Alchemy's Documentation](https://docs.alchemy.com/alchemy/introduction/getting-started#1.create-an-alchemy-key).
 
 
 ## Infura
