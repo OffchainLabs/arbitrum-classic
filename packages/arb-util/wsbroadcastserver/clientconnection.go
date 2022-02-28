@@ -22,7 +22,6 @@ import (
 	"math/rand"
 	"net"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -75,9 +74,7 @@ func (cc *ClientConnection) Start(parentCtx context.Context) {
 			case data := <-cc.out:
 				err := cc.writeRaw(data)
 				if err != nil {
-					if !strings.Contains(err.Error(), "use of closed network connection") {
-						logger.Error().Err(err).Str("client", cc.Name).Msg("error writing data to client")
-					}
+					logError(err, "error writing data to client")
 					cc.clientManager.Remove(cc)
 					for {
 						// Consume and ignore channel data until client properly stopped to prevent deadlock
