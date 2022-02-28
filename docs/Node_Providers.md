@@ -19,7 +19,7 @@ To use Alchemy's products, you need an API key to authenticate your requests. Fo
 
 ## Infura
 
-Infura is a node service provider that provides access to Arbitrum One (Mainnet) and Rinkeby testnet. To start interacting with either of these networks, you need to set up an Infura account and create a project. Next, you will be given a ***Project ID*** (For detailed steps, see the [Infura's Documentation](https://blog.infura.io/getting-started-with-infura-28e41844cc89/)). You can now select which endpoint you want to connect to, this could be Arbirum One, or it could be Rinkeby testnet. Depending on which one you choose, your endpoint URL will look like below. You can use these endpoint URLs to start interacting with Arbitrum.
+Infura is a node service provider that provides access to Arbitrum One (Mainnet) and RinkArby testnet. To start interacting with either of these networks, you need to set up an Infura account and create a project. Next, you will be given a ***Project ID*** (For detailed steps, see the [Infura's Documentation](https://blog.infura.io/getting-started-with-infura-28e41844cc89/)). You can now select which endpoint you want to connect to, this could be Arbitrum One, or it could be Rinkeby testnet. Depending on which one you choose, your endpoint URL will look like below. You can use these endpoint URLs to start interacting with Arbitrum.
 
     https://<network>.infura.io/v3/YOUR-PROJECT-ID
 
