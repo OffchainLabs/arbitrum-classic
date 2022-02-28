@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -199,7 +200,7 @@ func (cm *ClientManager) verifyClients() {
 	logger.Debug().Int("count", len(cm.clientPtrMap)).Msg("pinging clients")
 	for client := range cm.clientPtrMap {
 		err := client.Ping()
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 			logger.Error().Err(err).Str("name", client.Name).Msg("error pinging client")
 		}
 	}
@@ -235,7 +236,7 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 				}
 			case bm := <-cm.broadcastChan:
 				err := cm.doBroadcast(bm)
-				if err != nil {
+				if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 					logger.Error().Err(err).Msg("failed to do broadcast")
 				}
 			case <-pingInterval.C:

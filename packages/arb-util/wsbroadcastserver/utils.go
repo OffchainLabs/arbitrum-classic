@@ -24,7 +24,7 @@ func ReadData(ctx context.Context, conn net.Conn, idleTimeout time.Duration, sta
 	defer func(conn net.Conn) {
 		err := conn.SetReadDeadline(time.Time{})
 		if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-			logger.Error().Err(err).Msg("error removing read deadline")
+			logger.Warn().Err(err).Msg("error removing read deadline")
 		}
 	}(conn)
 
