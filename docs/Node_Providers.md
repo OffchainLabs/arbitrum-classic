@@ -4,7 +4,7 @@ title: Alternatives
 sidebar_label: Node Providers
 ---
 
-To interact with Arbitrum One and the RinkArby testnet, you can rely on the same popular node providers that you are already used to on Ethereum. There are multiple providers that may help you build on Arbitrum, here is a list of a couple of them.
+To interact with Arbitrum One and the RinkArby testnet, you can rely on the same popular node providers that you are already using on Ethereum. There are multiple providers that may help you build on Arbitrum, here is a list of a couple of them.
 
 ## Alchemy
 
