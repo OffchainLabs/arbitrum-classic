@@ -30,6 +30,7 @@ sidebar_label: Running a Node
   ```
   docker run --rm -it  -v /some/local/dir/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.2.0-9214e38 --l1.url https://l1-rinkeby-node:8545
   ```
+- If you are running an Ethereum node locally and attempting to point your `--l1.url` to a port on `localhost`, you may need to add the `--network="host"` flag to your `docker run` command. Note: This will make the `-p` port flags obsolete. In-depth explanation [here](https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach).
 
 ### Note on permissions
 
