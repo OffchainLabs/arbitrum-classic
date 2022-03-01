@@ -51,7 +51,7 @@ The Arbitrum block number can also be retrieved within an Arbitrum contract via 
 
 ## Example
 
-| Wall Clock time             | 12:00 am | 12:15 am | 12:30 am | 12:45 am | 1:00 am | 1:15 am |
+| Wall Clock time             | 12:00am | 12:00:15 am | 12:00:30 am | 12:00:45 am | 12:01 am | 12:01:15 am |
 |-----------------------------|----------|----------|----------|----------|---------|---------|
 | L1 `block.number`             | 1000     | 1001     | 1002     | 1003     | 1004    | 1005    |
 | L2 `block.number`             | 1000     | 1000     | 1000     | 1000     | 1004    | 1004    |
