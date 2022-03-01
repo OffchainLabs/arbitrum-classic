@@ -166,7 +166,7 @@ export class InboxTools {
 
     const eFetcher = new EventFetcher(this.l1Provider)
 
-    // events dont become eligible until they pass a delay
+    // events don't become eligible until they pass a delay
     // find a block range which will emit eligible events
     const blockRange = await this.getForceIncludeableBlockRange(
       searchRangeBlocks
