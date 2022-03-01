@@ -47,6 +47,8 @@ import {
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { L2Network } from '../dataEntities/networks'
 import { ArbTsError, MissingProviderArbTsError } from '../dataEntities/errors'
+import { DISABLED_GATEWAY } from '../dataEntities/constants'
+
 import { EventFetcher } from '../utils/eventFetcher'
 
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
@@ -370,7 +372,7 @@ export class Erc20Bridger extends AssetBridger<
 
     return (
       (await l1GatewayRouter.l1TokenToGateway(l1TokenAddress)) ===
-      '0x0000000000000000000000000000000000000001'
+      DISABLED_GATEWAY
     )
   }
 
