@@ -1155,7 +1155,6 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 
 		// Maybe sequence delayed messages
 		sequencedDelayed := false
-		var dontPublishBlockNum *big.Int
 		if shouldSequence {
 			targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
 			if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
@@ -1166,14 +1165,16 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 				}
 				b.lastSequencedDelayedAt = blockNum
 			}
-			targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
-			if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed {
-				b.inboxReader.MessageDeliveryMutex.Lock()
-				b.latestChainTime = chainTime
-				// Avoid inefficency of publishing something that just got put in this timestamp
-				dontPublishBlockNum = b.latestChainTime.BlockNum.AsInt()
-				b.inboxReader.MessageDeliveryMutex.Unlock()
-			}
+		}
+
+		var dontPublishBlockNum *big.Int
+		targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
+		if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed {
+			b.inboxReader.MessageDeliveryMutex.Lock()
+			b.latestChainTime = chainTime
+			// Avoid inefficency of publishing something that just got put in this timestamp
+			dontPublishBlockNum = b.latestChainTime.BlockNum.AsInt()
+			b.inboxReader.MessageDeliveryMutex.Unlock()
 		}
 
 		// Maybe create a batch
