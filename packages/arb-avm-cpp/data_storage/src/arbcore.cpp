@@ -3084,12 +3084,25 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                     deserializeSequencerBatchItemAccumulator(value_ptr);
 
                 if (accumulator != item.accumulator) {
-                    std::cerr << "INBOX FORCED REORG at sequence number "
-                              << item.last_sequence_number << std::endl
-                              << "Previous accumulator: " << accumulator
-                              << std::endl
+                    std::cerr << "INBOX FORCED REORG to message: "
+                              << item.last_sequence_number << "\n"
+                              << "Previous accumulator: " << accumulator << "\n"
                               << "New accumulator:      " << item.accumulator
                               << std::endl;
+                    if (last_machine) {
+                        std::cerr
+                            << "Previous message count: "
+                            << last_machine->machine_state.output
+                                   .fully_processed_inbox.count
+                            << "\n"
+                            << "Previous log count: "
+                            << last_machine->machine_state.output.log_count
+                            << "\n"
+                            << "Previous L2 block number: "
+                            << last_machine->machine_state.output
+                                   .l2_block_number
+                            << std::endl;
+                    }
                     if (item.last_sequence_number == 0) {
                         reorging_to_count = 0;
                     } else {

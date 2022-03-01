@@ -200,6 +200,8 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []core.ValueAndInbox) 
 		logger.Info().
 			Str("l2Block", lastBlockAdded.BlockNum.String()).
 			Str("l1Block", lastBlockAdded.L1BlockNum.String()).
+			Str("transactionCount", lastBlockAdded.ChainStats.TxCount.String()).
+			Str("logCount", lastBlockAdded.ChainStats.AVMLogCount.String()).
 			Time("timestamp", time.Unix(lastBlockAdded.Timestamp.Int64(), 0)).
 			Msg("sync update")
 	}
