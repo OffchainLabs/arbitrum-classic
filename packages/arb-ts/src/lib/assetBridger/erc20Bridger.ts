@@ -24,20 +24,19 @@ import { Zero, MaxUint256 } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
 import { BigNumber, ethers } from 'ethers'
 
-import {
-  L1GatewayRouter__factory,
-  L2GatewayRouter__factory,
-  L1ERC20Gateway__factory,
-  L1WethGateway__factory,
-  L2ArbitrumGateway__factory,
-  ERC20__factory,
-  ERC20,
-  L2GatewayToken__factory,
-  L2GatewayToken,
-  ICustomToken__factory,
-  IArbToken__factory,
-  L2CustomGateway__factory,
-} from '../abi'
+import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
+import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
+import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
+import { L1WethGateway__factory } from '../abi/factories/L1WethGateway__factory'
+import { L2ArbitrumGateway__factory } from '../abi/factories/L2ArbitrumGateway__factory'
+import { ERC20__factory } from '../abi/factories/ERC20__factory'
+import { ERC20 } from '../abi/ERC20'
+import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factory'
+import { L2GatewayToken } from '../abi/L2GatewayToken'
+import { ICustomToken__factory } from '../abi/factories/ICustomToken__factory'
+import { IArbToken__factory } from '../abi/factories/IArbToken__factory'
+import { L2CustomGateway__factory } from '../abi/factories/L2CustomGateway__factory'
+
 import { WithdrawalInitiatedEvent } from '../abi/L2ArbitrumGateway'
 import { GatewaySetEvent } from '../abi/L1GatewayRouter'
 import {

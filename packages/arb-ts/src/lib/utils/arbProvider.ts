@@ -11,7 +11,7 @@ import { providers, BigNumber, logger } from 'ethers'
 import { Formats, FormatFuncs } from '@ethersproject/providers/lib/formatter'
 import { getL1Network, getL2Network, L2Network } from '../..'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { SequencerInbox, SequencerInbox__factory } from '../abi'
+import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
 import {
   DelayedInboxForcedEvent,
   SequencerBatchDeliveredEvent,
