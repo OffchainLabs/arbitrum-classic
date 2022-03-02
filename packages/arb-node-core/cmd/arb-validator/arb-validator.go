@@ -152,7 +152,7 @@ func startup() error {
 	} else if strategyString == "Watchtower" {
 		strategy = staker.WatchtowerStrategy
 	} else {
-		return errors.New("unsupported strategy specified. Currently supported: MakeNodes, StakeLatest")
+		return errors.New("unsupported strategy specified. Currently supported: MakeNodes, StakeLatest, Defensive, Watchtower")
 	}
 
 	chainState := ChainState{}
