@@ -210,7 +210,7 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []core.ValueAndInbox) 
 			Time("blockTimestamp", time.Unix(lastBlockAdded.Timestamp.Int64(), 0))
 
 		if lastBlockHeader != nil {
-			log.Str("blockHash", lastBlockHeader.Hash().String())
+			log = log.Str("blockHash", lastBlockHeader.Hash().String())
 		}
 
 		log.Msg("sync update")
