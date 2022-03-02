@@ -169,6 +169,7 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []core.ValueAndInbox) 
 	logger.Debug().Str("start", initialLogIndex.String()).Int("count", len(avmLogs)).Msg("adding logs")
 	logIndex := initialLogIndex.Uint64()
 	var lastBlockAdded *evm.BlockInfo
+	var lastBlockHeader *types.Header
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog.Value)
 		if err != nil {
@@ -178,7 +179,10 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []core.ValueAndInbox) 
 
 		switch res := res.(type) {
 		case *evm.BlockInfo:
-			err = db.handleBlockReceipt(res)
+			lastBlockHeader, err = db.handleBlockReceipt(res)
+			if err != nil {
+				logger.Warn().Err(err).Msg("Error handling block receipt")
+			}
 			lastBlockAdded = res
 		case *evm.MerkleRootResult:
 			err = db.as.SaveMessageBatch(res.BatchNumber, logIndex)
@@ -196,14 +200,20 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []core.ValueAndInbox) 
 		}
 		logIndex++
 	}
+
 	if lastBlockAdded != nil {
-		logger.Info().
+		log := logger.Info().
 			Str("l2Block", lastBlockAdded.BlockNum.String()).
 			Str("l1Block", lastBlockAdded.L1BlockNum.String()).
 			Str("transactionCount", lastBlockAdded.ChainStats.TxCount.String()).
 			Str("logCount", lastBlockAdded.ChainStats.AVMLogCount.String()).
-			Time("timestamp", time.Unix(lastBlockAdded.Timestamp.Int64(), 0)).
-			Msg("sync update")
+			Time("blockTimestamp", time.Unix(lastBlockAdded.Timestamp.Int64(), 0))
+
+		if lastBlockHeader != nil {
+			log.Str("blockHash", lastBlockHeader.Hash().String())
+		}
+
+		log.Msg("sync update")
 	}
 	return nil
 }
@@ -279,7 +289,7 @@ func (db *TxDB) DeleteLogs(avmLogs []core.ValueAndInbox) error {
 	return nil
 }
 
-func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
+func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) (*types.Header, error) {
 	logger.Debug().
 		Uint64("number", blockInfo.BlockNum.Uint64()).
 		Uint64("block_txcount", blockInfo.BlockStats.TxCount.Uint64()).
@@ -289,7 +299,7 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 
 	txResults, err := db.getBlockResultsUnsafe(blockInfo)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if uint64(len(txResults)) != blockInfo.BlockStats.TxCount.Uint64() {
@@ -333,10 +343,10 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	if blockInfo.BlockNum.Cmp(big.NewInt(0)) > 0 {
 		prev, err := db.GetBlock(blockInfo.BlockNum.Uint64() - 1)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if prev == nil {
-			return errors.Errorf("trying to add block %v, but prev header was not found", blockInfo.BlockNum.Uint64())
+			return nil, errors.Errorf("trying to add block %v, but prev header was not found", blockInfo.BlockNum.Uint64())
 		}
 		prevHash = prev.Header.Hash()
 	}
@@ -366,7 +376,7 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 			// If this log was for an invalid transaction, only save the request if it hasn't been saved before
 			orig, _, err := db.GetRequest(txRes.IncomingRequest.MessageID)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if orig != nil {
 				continue
@@ -385,7 +395,7 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 		LogCount: blockInfo.BlockStats.AVMLogCount.Uint64(),
 	}
 	if err := db.as.SaveBlock(arbBlockInfo, requests); err != nil {
-		return err
+		return nil, err
 	}
 	if db.blockInfoLRUCache != nil {
 		db.blockInfoLRUCache.Add(header.Number.Uint64(), arbBlockInfo)
@@ -396,7 +406,7 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	if len(ethLogs) > 0 {
 		db.logsFeed.Send(ethLogs)
 	}
-	return nil
+	return header, nil
 }
 
 func (db *TxDB) GetMessageBatch(index *big.Int) (*evm.MerkleRootResult, error) {
