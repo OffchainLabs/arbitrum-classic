@@ -6,7 +6,7 @@ import {
   L1toL2MessageGasValues,
 } from './L1ToL2MessageGasEstimator'
 import { L1TransactionReceipt } from './L1Transaction'
-import { Inbox__factory } from '../abi'
+import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { l2Networks } from '../dataEntities/networks'
 import { ContractReceipt, PayableOverrides } from '@ethersproject/contracts'
 import { BigNumber } from 'ethers'

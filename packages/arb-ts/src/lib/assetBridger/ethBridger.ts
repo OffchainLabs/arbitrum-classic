@@ -21,7 +21,8 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { BigNumber, ethers } from 'ethers'
 
-import { Inbox__factory, ArbSys__factory } from '../abi'
+import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import {
   L1ToL2MessageGasEstimator,

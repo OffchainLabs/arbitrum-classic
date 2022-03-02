@@ -27,7 +27,8 @@ import {
   L1ToL2MessageWriter,
 } from './L1ToL2Message'
 
-import { L1ERC20Gateway__factory, Bridge__factory } from '../abi'
+import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
+import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 import {
   SignerProviderUtils,
