@@ -17,7 +17,7 @@
 'use strict'
 
 export { EthBridger } from './lib/assetBridger/ethBridger'
-export { TokenBridger } from './lib/assetBridger/tokenBridger'
+export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
 export {
   L2TransactionReceipt,
   L2ContractTransaction,

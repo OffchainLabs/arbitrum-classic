@@ -32,7 +32,7 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbTsError } from '../dataEntities/errors'
 import { AssetBridger } from './assetBridger'
 import {
-  L1ContractTransaction,
+  L1EthDepositTransaction,
   L1TransactionReceipt,
 } from '../message/L1Transaction'
 import {
@@ -155,9 +155,9 @@ export class EthBridger extends AssetBridger<
    */
   public async deposit(
     params: EthDepositParams
-  ): Promise<L1ContractTransaction> {
+  ): Promise<L1EthDepositTransaction> {
     const tx = await this.depositTxOrGas(params, false)
-    return L1TransactionReceipt.monkeyPatchWait(tx)
+    return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
   private async withdrawTxOrGas<T extends boolean>(

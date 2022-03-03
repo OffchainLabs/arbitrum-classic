@@ -1,29 +1,43 @@
-### Arb-TS
+# Arb-Ts
 
-Typescript library for doing Arbitrum stuff, particular stuff like interacting between L1 and L2. Uses [ethers](https://docs.ethers.io/v5/single-page/).
+Typescript library for client-side interactions with Arbitrum. Arb-ts provides common helper functionaliy as well access to the underlying smart contract interfaces.
 
-### Quickstart
+Below is an overview of the Arb-Ts functionlity. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for examples of how to use these classes.
 
-```ts
-const ethProvider = new providers.JsonRpcProvider(ethRPC)
-const arbProvider = new providers.JsonRpcProvider(arbRPC)
+### Bridging assets
 
-const connectedL1Wallet = new Wallet(myPrivateKey, ethProvider)
-const connectedL2Wallet = new Wallet(myPrivateKey, arbProvider)
+Arb-Ts can be used to bridge assets to/from the rollup chain.The following asset bridgers are currently available:
 
-const bridge = await Bridge.init(
-  connectedL1Wallet,
-  connectedL2Wallet
-  l1GatewayRouter,
-  l2GatewayRouter
-)
+- EthBridger
+- Erc20Bridger
 
-bridge.depositEth(parseEther('32'))
-```
+All asset bridgers have the following methods:
 
-See [integration tests](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-ts/integration_test/arb-bridge.test.ts) for sample usage.
+- **deposit** - moves assets from the L1 to the L2
+- **depositEstimateGas** - estimates the gas required to do the deposit
+- **withdraw** - moves assets from the L2 to the L1
+- **withdrawEstimateGas** - estimate the gas required to do the withdrawal
+  Which accept different parameters depending on the asset bridger type
 
-#### Run Integration tests
+### Cross chain messages
+
+When assets are moved by the L1 and L2 cross chain messages are sent. The lifecycles of these messages are encapsulated in the classes `L1ToL2Message` and `L2ToL1Message`. These objects are commonly created from the receipts of transactions that send cross chain messages. A cross chain message will eventually result in a transaction being executed on the destination chain, and these message classes provide the ability to wait for that finalizing transaction to occur.
+
+### Networks
+
+Arb-Ts comes pre-configured for the Mainnet and Rinkeby, and their Arbitrum counterparts. However the networks functionlity can be used register networks for custom Arbitrum instances. Most of the classes in Arb-Ts depend on network objects so this must be configured before using other Arb-Ts functionlity.
+
+### Inbox tools
+
+As part of normal operation the Arbitrum sequencer will messages into the rollup chain. However, if the sequencer is unavailable and not posting batches, the inbox tools can be used to force the inclusion of transactions into the rollup chain.
+
+### Utils
+
+- **EventFetcher** - A utility to provide typing for the fetching of events
+- **MultiCaller** - A utility for executing multiple calls as part of a single RPC request. This can be useful for reducing round trips.
+- **constants** - A list of useful Arbitrum related constants
+
+### Run Integration tests
 
 `yarn test:integration`
 

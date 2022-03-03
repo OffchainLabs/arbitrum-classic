@@ -39,7 +39,7 @@ export const setGateWays = async (
   type: 'standard' | 'arbCustom',
   overrideGateways: string[] = []
 ): Promise<ContractReceipt> => {
-  const { adminTokenBridger, l1Signer, l2Network, l2Signer } =
+  const { adminErc20Bridger, l1Signer, l2Network, l2Signer } =
     await instantiateBridge()
   const l1Provider = l1Signer.provider!
   const l2Provider = l2Signer.provider!
@@ -94,7 +94,7 @@ export const setGateWays = async (
     }
   })()
 
-  const res = await adminTokenBridger.setGateways(
+  const res = await adminErc20Bridger.setGateways(
     l1Signer,
     l2Provider,
     gateways.map((g, i) => ({
@@ -112,8 +112,8 @@ export const setGateWays = async (
 
   console.log('redeeming retryable ticket:')
   const l2Tx = await rec.getL1ToL2Message(l2Signer)
-  const messageRes = await l2Tx.wait()
-  if (messageRes.status === L1ToL2MessageStatus.NOT_YET_REDEEMED) {
+  const messageRes = await l2Tx.wait(false)
+  if (messageRes.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
     const redeemRes = await l2Tx.redeem()
     const redeemRec = await redeemRes.wait()
     console.log('Done redeeming:', redeemRec)

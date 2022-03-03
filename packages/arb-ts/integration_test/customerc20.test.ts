@@ -44,7 +44,7 @@ import {
   skipIfMainnet,
   existentTestCustomToken,
 } from './testHelpers'
-import { L1ToL2MessageStatus, TokenBridger } from '../src'
+import { L1ToL2MessageStatus, Erc20Bridger } from '../src'
 import { Signer, constants } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { SignerProviderUtils } from '../src/lib/dataEntities/signerOrProvider'
@@ -55,29 +55,29 @@ describe('Custom ERC20', () => {
   })
 
   it('deposits erc20 (no L2 Eth funding)', async () => {
-    const { l1Signer, l2Signer, tokenBridger } =
+    const { l1Signer, l2Signer, erc20Bridger } =
       instantiateBridgeWithRandomWallet()
     await fundL1(l1Signer)
-    await depositTokenTest(tokenBridger, l1Signer, l2Signer)
+    await depositTokenTest(erc20Bridger, l1Signer, l2Signer)
   })
   it.skip('deposits erc20 (with L2 Eth funding)', async () => {
-    const { l1Signer, l2Signer, tokenBridger } =
+    const { l1Signer, l2Signer, erc20Bridger } =
       instantiateBridgeWithRandomWallet()
     await fundL1(l1Signer)
     await fundL2(l2Signer)
-    await depositTokenTest(tokenBridger, l1Signer, l2Signer)
+    await depositTokenTest(erc20Bridger, l1Signer, l2Signer)
   })
 
   it('withdraws erc20', async function () {
     const tokenWithdrawAmount = BigNumber.from(1)
-    const { l2Network, l2Signer, l1Signer, tokenBridger } =
+    const { l2Network, l2Signer, l1Signer, erc20Bridger } =
       instantiateBridgeWithRandomWallet()
 
     await fundL2(l2Signer)
     const result = await fundL2Token(
       l1Signer.provider!,
       l2Signer,
-      tokenBridger,
+      erc20Bridger,
       existentTestCustomToken
     )
     if (!result) {
@@ -85,7 +85,7 @@ describe('Custom ERC20', () => {
       this.skip()
     }
 
-    const withdrawRes = await tokenBridger.withdraw({
+    const withdrawRes = await erc20Bridger.withdraw({
       amount: tokenWithdrawAmount,
       erc20l1Address: existentTestCustomToken,
       l2Signer: l2Signer,
@@ -106,9 +106,9 @@ describe('Custom ERC20', () => {
       `custom token withdraw status returned ${messageStatus}`
     ).to.be.true
 
-    const l2Token = tokenBridger.getL2TokenContract(
+    const l2Token = erc20Bridger.getL2TokenContract(
       l2Signer.provider!,
-      await tokenBridger.getL2ERC20Address(
+      await erc20Bridger.getL2ERC20Address(
         existentTestCustomToken,
         l1Signer.provider!
       )
@@ -122,9 +122,9 @@ describe('Custom ERC20', () => {
     ).to.be.true
     const walletAddress = await l1Signer.getAddress()
 
-    const gatewayWithdrawEvents = await tokenBridger.getL2WithdrawalEvents(
+    const gatewayWithdrawEvents = await erc20Bridger.getL2WithdrawalEvents(
       l2Signer.provider!,
-      tokenBridger.l2Network.tokenBridge.l2CustomGateway,
+      erc20Bridger.l2Network.tokenBridge.l2CustomGateway,
       { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
       undefined,
       walletAddress
@@ -134,11 +134,11 @@ describe('Custom ERC20', () => {
       'token standard gateway query failed'
     )
 
-    const gatewayAddress = await tokenBridger.getL2GatewayAddress(
+    const gatewayAddress = await erc20Bridger.getL2GatewayAddress(
       existentTestCustomToken,
       l2Signer.provider!
     )
-    const tokenWithdrawEvents = await tokenBridger.getL2WithdrawalEvents(
+    const tokenWithdrawEvents = await erc20Bridger.getL2WithdrawalEvents(
       l2Signer.provider!,
       gatewayAddress,
       { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
@@ -152,7 +152,7 @@ describe('Custom ERC20', () => {
   })
 
   it('register custom token', async () => {
-    const { l2Network, l2Signer, l1Signer, adminTokenBridger } =
+    const { l2Network, l2Signer, l1Signer, adminErc20Bridger } =
       instantiateBridgeWithRandomWallet()
 
     await fundL1(l1Signer, parseEther('0.01'))
@@ -232,7 +232,7 @@ describe('Custom ERC20', () => {
     )
 
     // send the messages
-    const regTx = await adminTokenBridger.registerCustomToken(
+    const regTx = await adminErc20Bridger.registerCustomToken(
       l1CustomToken.address,
       l2CustomToken.address,
       l1Signer,
@@ -244,19 +244,17 @@ describe('Custom ERC20', () => {
     const l1ToL2Messages = await regRec.getL1ToL2Messages(l2Provider)
     expect(l1ToL2Messages.length, 'Should be 2 messages.').to.eq(2)
 
-    const setTokenTx = await l1ToL2Messages[0].wait()
-    console.log('message1')
+    const setTokenTx = await l1ToL2Messages[0].waitForStatus()
     expect(setTokenTx.status, 'Set token not redeemed.').to.eq(
       L1ToL2MessageStatus.REDEEMED
     )
-    const setGateways = await l1ToL2Messages[1].wait()
-    console.log('message2')
+    const setGateways = await l1ToL2Messages[1].waitForStatus()
     expect(setGateways.status, 'Set gateways not redeemed.').to.eq(
       L1ToL2MessageStatus.REDEEMED
     )
 
     // send a deposit to follow
-    const depositTx = await adminTokenBridger.deposit({
+    const depositTx = await adminErc20Bridger.deposit({
       amount: BigNumber.from(sendAmount),
       erc20L1Address: l1CustomToken.address,
       l1Signer: l1Signer,
@@ -264,9 +262,8 @@ describe('Custom ERC20', () => {
     })
     const depositRec = await depositTx.wait()
 
-    const depositStatus = await (
-      await depositRec.getL1ToL2Message(l2Provider)
-    ).wait()
+    const depositStatus = await depositRec.waitForL2(l2Provider)
+    expect(depositStatus.complete, 'Deposit is not complete').to.eq(true)
     expect(depositStatus.status, 'Deposit is not redeemed').to.eq(
       L1ToL2MessageStatus.REDEEMED
     )
@@ -311,7 +308,7 @@ describe('Custom ERC20', () => {
 })
 
 const depositTokenTest = async (
-  tokenBridger: TokenBridger,
+  erc20Bridger: Erc20Bridger,
   l1Signer: Signer,
   l2Signer: Signer
 ) => {
@@ -323,17 +320,17 @@ const depositTokenTest = async (
   const mintRes = await testToken.mint()
   await mintRes.wait()
 
-  const approveRes = await tokenBridger.approveToken({
+  const approveRes = await erc20Bridger.approveToken({
     erc20L1Address: existentTestCustomToken,
     l1Signer: l1Signer,
   })
   await approveRes.wait()
 
-  const expectedL1GatewayAddress = await tokenBridger.getL1GatewayAddress(
+  const expectedL1GatewayAddress = await erc20Bridger.getL1GatewayAddress(
     testToken.address,
     l1Signer.provider!
   )
-  const l1Token = tokenBridger.getL1TokenContract(
+  const l1Token = erc20Bridger.getL1TokenContract(
     l1Signer.provider!,
     existentTestCustomToken
   )
@@ -344,14 +341,14 @@ const depositTokenTest = async (
     )
   )[0]
 
-  expect(allowance.eq(TokenBridger.MAX_APPROVAL), 'set token allowance failed')
+  expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'set token allowance failed')
     .to.be.true
 
   const initialBridgeTokenBalance = await testToken.balanceOf(
     expectedL1GatewayAddress
   )
 
-  const depositRes = await tokenBridger.deposit({
+  const depositRes = await erc20Bridger.deposit({
     erc20L1Address: existentTestCustomToken,
     amount: tokenDepositAmount,
     l1Signer: l1Signer,
@@ -372,9 +369,9 @@ const depositTokenTest = async (
   ).to.be.true
   await testRetryableTicket(l2Signer.provider!, depositRec)
 
-  const l2Token = tokenBridger.getL2TokenContract(
+  const l2Token = erc20Bridger.getL2TokenContract(
     l2Signer.provider!,
-    await tokenBridger.getL2ERC20Address(
+    await erc20Bridger.getL2ERC20Address(
       existentTestCustomToken,
       l1Signer.provider!
     )

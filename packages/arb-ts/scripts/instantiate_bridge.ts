@@ -21,7 +21,7 @@ import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
 import args from './getCLargs'
-import { EthBridger, InboxTools, TokenBridger } from '../src'
+import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
   L1Network,
   l1Networks,
@@ -29,7 +29,7 @@ import {
   l2Networks,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
-import { AdminTokenBridger } from '../src/lib/assetBridger/tokenBridger'
+import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 
 dotenv.config()
 
@@ -47,9 +47,9 @@ export const instantiateBridge = (
   l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
-  tokenBridger: TokenBridger
+  erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
-  adminTokenBridger: AdminTokenBridger
+  adminErc20Bridger: AdminErc20Bridger
   inboxTools: InboxTools
 } => {
   if (!l1pkParam) {
@@ -134,8 +134,8 @@ export const instantiateBridge = (
     console.log('')
   }
 
-  const tokenBridger = new TokenBridger(l2Network)
-  const adminTokenBridger = new AdminTokenBridger(l2Network)
+  const erc20Bridger = new Erc20Bridger(l2Network)
+  const adminErc20Bridger = new AdminErc20Bridger(l2Network)
   const ethBridger = new EthBridger(l2Network)
   const inboxTools = new InboxTools(l1Signer, l2Network)
 
@@ -144,9 +144,9 @@ export const instantiateBridge = (
     l2Network,
     l1Signer,
     l2Signer,
-    tokenBridger,
+    erc20Bridger: erc20Bridger,
     ethBridger,
-    adminTokenBridger,
+    adminErc20Bridger,
     inboxTools,
   }
 }

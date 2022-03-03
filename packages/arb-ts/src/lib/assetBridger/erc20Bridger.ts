@@ -51,6 +51,7 @@ import { EventFetcher } from '../utils/eventFetcher'
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
+  L1ContractCallTransaction,
   L1ContractTransaction,
   L1TransactionReceipt,
 } from '../message/L1Transaction'
@@ -113,7 +114,7 @@ export interface TokenWithdrawParams extends EthWithdrawParams {
 /**
  * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
  */
-export class TokenBridger extends AssetBridger<
+export class Erc20Bridger extends AssetBridger<
   TokenDepositParams,
   TokenWithdrawParams
 > {
@@ -191,7 +192,7 @@ export class TokenBridger extends AssetBridger<
     )
     return contract.functions.approve(
       gatewayAddress,
-      params.amount || TokenBridger.MAX_APPROVAL,
+      params.amount || Erc20Bridger.MAX_APPROVAL,
       params.overrides || {}
     )
   }
@@ -429,7 +430,7 @@ export class TokenBridger extends AssetBridger<
     // we also add a hardcoded minimum maxgas for custom gateway deposits
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides.maxGas) tokenGasOverrides.maxGas = {}
-      tokenGasOverrides.maxGas.min = TokenBridger.MIN_CUSTOM_DEPOSIT_MAXGAS
+      tokenGasOverrides.maxGas.min = Erc20Bridger.MIN_CUSTOM_DEPOSIT_MAXGAS
     }
 
     // 2. get the gas estimates
@@ -512,9 +513,9 @@ export class TokenBridger extends AssetBridger<
    */
   public async deposit(
     params: TokenDepositParams
-  ): Promise<L1ContractTransaction> {
+  ): Promise<L1ContractCallTransaction> {
     const tx = await this.depositTxOrGas(params, false)
-    return L1TransactionReceipt.monkeyPatchWait(tx)
+    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   private async withdrawTxOrGas<T extends boolean>(
@@ -577,7 +578,7 @@ interface TokenAndGateway {
 /**
  * Admin functionality for the token bridge
  */
-export class AdminTokenBridger extends TokenBridger {
+export class AdminErc20Bridger extends Erc20Bridger {
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
@@ -592,7 +593,7 @@ export class AdminTokenBridger extends TokenBridger {
     l2TokenAddress: string,
     l1Signer: Signer,
     l2Provider: Provider
-  ) {
+  ): Promise<L1ContractTransaction> {
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
 
@@ -742,7 +743,7 @@ export class AdminTokenBridger extends TokenBridger {
     l2Provider: Provider,
     tokenGateways: TokenAndGateway[],
     maxGas: BigNumber = BigNumber.from(0)
-  ): Promise<L1ContractTransaction> {
+  ): Promise<L1ContractCallTransaction> {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
@@ -773,6 +774,6 @@ export class AdminTokenBridger extends TokenBridger {
       }
     )
 
-    return L1TransactionReceipt.monkeyPatchWait(res)
+    return L1TransactionReceipt.monkeyPatchContractCallWait(res)
   }
 }
