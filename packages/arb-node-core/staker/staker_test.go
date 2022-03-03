@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/metrics"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -189,6 +190,13 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2Auth, err := transactauth.NewTransactAuth(ctx, client, auth2)
 	test.FailIfError(t, err)
 
+	watchKey, err := crypto.GenerateKey()
+	test.FailIfError(t, err)
+	watchAuthRaw, err := bind.NewKeyedTransactorWithChainID(watchKey, big.NewInt(1337))
+	test.FailIfError(t, err)
+	watchAuth, err := transactauth.NewTransactAuth(ctx, client, watchAuthRaw)
+	test.FailIfError(t, err)
+
 	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, rollupBlock.Int64(), valAuth, client)
 	test.FailIfError(t, err)
 
@@ -219,6 +227,8 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, client, valAuth, 0, nil)
 	test.FailIfError(t, err)
 	val2, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, client, val2Auth, 0, nil)
+	test.FailIfError(t, err)
+	watchValWallet, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, client, watchAuth, 0, nil)
 	test.FailIfError(t, err)
 
 	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth, configuration.Validator{})
@@ -280,6 +290,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	test.FailIfError(t, err)
 
 	faultyStaker.Validator.GasThreshold = big.NewInt(0)
+
+	watchtowerStaker, _, err := NewStaker(ctx, mon.Core, client, watchValWallet, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), WatchtowerStrategy, bind.CallOpts{}, watchAuth, configuration.Validator{})
+	test.FailIfError(t, err)
 
 	registry := metrics.NewRegistry()
 	const largeChannelBuffer = 200
@@ -362,6 +375,13 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 		}
 		client.Commit()
 		client.Commit()
+
+		tx, err := watchtowerStaker.Act(ctx)
+		if err != nil {
+			t.Fatal("watchtower staker errored:", err)
+		} else if tx != nil {
+			t.Fatal("watchtower staker attempting to act")
+		}
 
 		faultyStakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress2))
 		test.FailIfError(t, err)
