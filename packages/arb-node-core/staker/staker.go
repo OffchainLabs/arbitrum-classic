@@ -18,10 +18,11 @@ package staker
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"runtime"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -304,7 +305,8 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 
 	// Don't attempt to create a new stake if we're resolving a node,
 	// as that might affect the current required stake.
-	creatingNewStake := rawInfo == nil && s.builder.TransactionCount() == 0
+	wouldCreateStake := rawInfo == nil && s.builder.TransactionCount() == 0
+	creatingNewStake := wouldCreateStake && effectiveStrategy >= StakeLatestStrategy
 	if creatingNewStake {
 		if err := s.newStake(ctx); err != nil {
 			return nil, err
@@ -316,7 +318,7 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 			return nil, err
 		}
 	}
-	if rawInfo != nil || creatingNewStake {
+	if rawInfo != nil || wouldCreateStake {
 		// Advance stake up to 20 times in one transaction
 		for i := 0; info.CanProgress && i < 20; i++ {
 			if err := s.advanceStake(ctx, &info, effectiveStrategy); err != nil {
