@@ -59,8 +59,6 @@ export interface TokenBridge {
   l2ProxyAdmin: string
   l1MultiCall: string
   l2Multicall: string
-  l1DaiGateway: string
-  l2DaiGateway: string
 }
 
 export interface EthBridge {
@@ -98,8 +96,6 @@ const mainnetTokenBridge: TokenBridge = {
   l2ProxyAdmin: '0xd570aCE65C43af47101fC6250FD6fC63D1c22a86',
   l1MultiCall: '0x5ba1e12693dc8f9c48aad8770482f4739beed696',
   l2Multicall: '0x842eC2c7D803033Edf55E478F461FC547Bc54EB2',
-  l1DaiGateway: '0xD3B5b60020504bc3489D6949d545893982BA3011',
-  l2DaiGateway: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65',
 }
 
 const rinkebyTokenBridge: TokenBridge = {
@@ -117,8 +113,6 @@ const rinkebyTokenBridge: TokenBridge = {
   l2ProxyAdmin: '0x58816566EB91815Cc07f3Ad5230eE0820fe1A19a',
   l1MultiCall: '0x5ba1e12693dc8f9c48aad8770482f4739beed696',
   l2Multicall: '0x5D6e06d3E154C5DBEC91317f0d04AE03AB49A273',
-  l1DaiGateway: '0x10E6593CDda8c58a1d0f14C5164B376352a55f2F',
-  l2DaiGateway: '0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65',
 }
 
 const rinkebyETHBridge: EthBridge = {
