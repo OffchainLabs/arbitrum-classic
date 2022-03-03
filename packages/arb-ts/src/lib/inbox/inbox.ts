@@ -88,7 +88,7 @@ export class InboxTools {
    * @param blockNumberRangeSize
    * @returns
    */
-  private async getForceIncludeableBlockRange(blockNumberRangeSize: number) {
+  private async getForceIncludableBlockRange(blockNumberRangeSize: number) {
     const sequencerInbox = SequencerInbox__factory.connect(
       this.l2Network.ethBridge.sequencerInbox,
       this.l1Provider
@@ -149,7 +149,7 @@ export class InboxTools {
   }
 
   /**
-   * Look for force includeable events in the search range blocks, if no events are found the search range is
+   * Look for force includable events in the search range blocks, if no events are found the search range is
    * increased incrementally up to the max search range blocks.
    * @param bridge
    * @param searchRangeBlocks
@@ -166,12 +166,12 @@ export class InboxTools {
 
     // events dont become eligible until they pass a delay
     // find a block range which will emit eligible events
-    const maxedSearchRangeBlocks = Math.min(
+    const cappedSearchRangeBlocks = Math.min(
       searchRangeBlocks,
       maxSearchRangeBlocks
     )
-    const blockRange = await this.getForceIncludeableBlockRange(
-      maxedSearchRangeBlocks
+    const blockRange = await this.getForceIncludableBlockRange(
+      cappedSearchRangeBlocks
     )
 
     // get all the events in this range
@@ -186,7 +186,7 @@ export class InboxTools {
     )
 
     if (events.length !== 0) return events
-    else if (maxedSearchRangeBlocks === maxSearchRangeBlocks) return []
+    else if (cappedSearchRangeBlocks === maxSearchRangeBlocks) return []
     else {
       return await this.getEventsAndIncreaseRange(
         bridge,
@@ -207,7 +207,7 @@ export class InboxTools {
    * Defaults to 2.
    * @returns Null if non can be found.
    */
-  public async getForceIncludeableEvent(
+  public async getForceIncludableEvent(
     maxSearchRangeBlocks: number = 3 * 6545,
     startSearchRangeBlocks = 100,
     rangeMultipler = 2
@@ -274,7 +274,7 @@ export class InboxTools {
       this.l1Signer
     )
     const eventInfo =
-      messageDeliveredEvent || (await this.getForceIncludeableEvent())
+      messageDeliveredEvent || (await this.getForceIncludableEvent())
 
     if (!eventInfo) return null
     const block = await this.l1Provider.getBlock(eventInfo.blockHash)
