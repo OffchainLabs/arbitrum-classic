@@ -231,7 +231,7 @@ describe('Inbox tools', () => {
     const block = await l1Signer.provider!.getBlock('latest')
     await mineBlocks(6600, block.timestamp)
 
-    const event = await inboxTools.getForceIncludeableEvent()
+    const event = await inboxTools.getForceIncludableEvent()
     expect(event?.event.messageDataHash, 'Invalid message hash.').to.eq(
       messageDataHash
     )
@@ -241,7 +241,7 @@ describe('Inbox tools', () => {
     const { l1Signer, l2Network } = await setup()
     const inboxTools = new InboxTools(l1Signer, l2Network)
 
-    const event = await inboxTools.getForceIncludeableEvent()
+    const event = await inboxTools.getForceIncludableEvent()
     expect(event, 'Event not null').to.be.null
   })
 

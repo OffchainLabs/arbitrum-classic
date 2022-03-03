@@ -20,14 +20,12 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { Block } from '@ethersproject/abstract-provider'
 import { ContractTransaction, Overrides } from 'ethers'
 
+import { Bridge } from '../abi/Bridge'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { SequencerInbox } from '../abi/SequencerInbox'
 import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
 
-import {
-  MessageDeliveredEvent,
-  MessageDeliveredEventFilter,
-} from '../abi/Bridge'
+import { MessageDeliveredEvent } from '../abi/Bridge'
 import { l1Networks, L2Network } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
@@ -89,7 +87,7 @@ export class InboxTools {
    * @param blockNumberRangeSize
    * @returns
    */
-  private async getForceIncludeableBlockRange(blockNumberRangeSize: number) {
+  private async getForceIncludableBlockRange(blockNumberRangeSize: number) {
     const sequencerInbox = SequencerInbox__factory.connect(
       this.l2Network.ethBridge.sequencerInbox,
       this.l1Provider
@@ -150,24 +148,29 @@ export class InboxTools {
   }
 
   /**
-   * Find the event of the latest message that can be force include
-   * @param searchRangeBlocks Defaults to 3 * 6545 ( = ~3 days) prior to the first eligble block
-   * @returns Null if non can be found.
+   * Look for force includable events in the search range blocks, if no events are found the search range is
+   * increased incrementally up to the max search range blocks.
+   * @param bridge
+   * @param searchRangeBlocks
+   * @param maxSearchRangeBlocks
+   * @returns
    */
-  public async getForceIncludeableEvent(
-    searchRangeBlocks: number = 3 * 6545
-  ): Promise<ForceInclusionParams | null> {
-    const bridge = Bridge__factory.connect(
-      this.l2Network.ethBridge.bridge,
-      this.l1Provider
-    )
-
+  private async getEventsAndIncreaseRange(
+    bridge: Bridge,
+    searchRangeBlocks: number,
+    maxSearchRangeBlocks: number,
+    rangeMultiplier: number
+  ): Promise<FetchedEvent<MessageDeliveredEvent>[]> {
     const eFetcher = new EventFetcher(this.l1Provider)
 
     // events dont become eligible until they pass a delay
     // find a block range which will emit eligible events
-    const blockRange = await this.getForceIncludeableBlockRange(
-      searchRangeBlocks
+    const cappedSearchRangeBlocks = Math.min(
+      searchRangeBlocks,
+      maxSearchRangeBlocks
+    )
+    const blockRange = await this.getForceIncludableBlockRange(
+      cappedSearchRangeBlocks
     )
 
     // get all the events in this range
@@ -179,6 +182,47 @@ export class InboxTools {
         fromBlock: blockRange.startBlock,
         toBlock: blockRange.endBlock,
       }
+    )
+
+    if (events.length !== 0) return events
+    else if (cappedSearchRangeBlocks === maxSearchRangeBlocks) return []
+    else {
+      return await this.getEventsAndIncreaseRange(
+        bridge,
+        searchRangeBlocks * rangeMultiplier,
+        maxSearchRangeBlocks,
+        rangeMultiplier
+      )
+    }
+  }
+
+  /**
+   * Find the event of the latest message that can be force include
+   * @param maxSearchRangeBlocks The max range of blocks to search in.
+   * Defaults to 3 * 6545 ( = ~3 days) prior to the first eligble block
+   * @param startSearchRangeBlocks The start range of block to search in.
+   * Moves incrementally up to the maxSearchRangeBlocks. Defaults to 100;
+   * @param rangeMultiplier The multiplier to use when increasing the block range
+   * Defaults to 2.
+   * @returns Null if non can be found.
+   */
+  public async getForceIncludableEvent(
+    maxSearchRangeBlocks: number = 3 * 6545,
+    startSearchRangeBlocks = 100,
+    rangeMultipler = 2
+  ): Promise<ForceInclusionParams | null> {
+    const bridge = Bridge__factory.connect(
+      this.l2Network.ethBridge.bridge,
+      this.l1Provider
+    )
+
+    // events dont become eligible until they pass a delay
+    // find a block range which will emit eligible events
+    const events = await this.getEventsAndIncreaseRange(
+      bridge,
+      startSearchRangeBlocks,
+      maxSearchRangeBlocks,
+      rangeMultipler
     )
 
     // no events appeared within that time period
@@ -229,7 +273,7 @@ export class InboxTools {
       this.l1Signer
     )
     const eventInfo =
-      messageDeliveredEvent || (await this.getForceIncludeableEvent())
+      messageDeliveredEvent || (await this.getForceIncludableEvent())
 
     if (!eventInfo) return null
     const block = await this.l1Provider.getBlock(eventInfo.blockHash)
