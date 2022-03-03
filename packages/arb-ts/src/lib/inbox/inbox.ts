@@ -20,12 +20,11 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { Block } from '@ethersproject/abstract-provider'
 import { ContractTransaction, Overrides } from 'ethers'
 
-import {
-  Bridge,
-  Bridge__factory,
-  SequencerInbox,
-  SequencerInbox__factory,
-} from '../abi'
+import { Bridge } from '../abi/Bridge'
+import { Bridge__factory } from '../abi/factories/Bridge__factory'
+import { SequencerInbox } from '../abi/SequencerInbox'
+import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
+
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { l1Networks, L2Network } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'

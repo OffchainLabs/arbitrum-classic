@@ -19,7 +19,7 @@
 import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Log } from '@ethersproject/abstract-provider'
-import { ArbSys__factory } from '../abi'
+import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { ContractTransaction, providers } from 'ethers'
 import { L2Network } from '../dataEntities/networks'

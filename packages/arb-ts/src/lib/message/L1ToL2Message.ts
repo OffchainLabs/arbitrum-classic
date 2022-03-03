@@ -24,7 +24,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { keccak256 } from '@ethersproject/keccak256'
 import { concat, zeroPad } from '@ethersproject/bytes'
 
-import { ArbRetryableTx__factory } from '../abi'
+import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
 import {
   SignerProviderUtils,
@@ -301,8 +301,9 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * Note: The terminal status of a transaction that only does an eth deposit is FUNDS_DEPOSITED_ON_L2 as
    * no L2 transaction needs to be executed, however the terminal state of any other transaction is REDEEMED
    * which represents that the retryable ticket has been redeemed and the L2 tx has been executed.
-   * @param timeout Amount of time to wait for the retryable ticket to be created
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
+   * @param timeout Amount of time to wait for the retryable ticket to be created
+   * Defaults to 15 minutes, as by this time all transactions are expected to be included on L2. Throws on timeout.
    * @returns The wait result contains a status, and optionally the l2TxReceipt.
    * If the status is "REDEEMED" then a l2TxReceipt is also available on the result.
    * If the status has any other value then l2TxReceipt is not populated.
