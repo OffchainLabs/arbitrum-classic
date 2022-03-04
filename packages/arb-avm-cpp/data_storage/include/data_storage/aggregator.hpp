@@ -34,6 +34,7 @@ class AggregatorStore {
    public:
     explicit AggregatorStore(std::shared_ptr<DataStorage> data_storage_);
 
+    [[nodiscard]] uint64_t blockCount() const;
     void saveBlock(uint64_t height,
                    const uint256_t& block_hash,
                    const std::vector<uint256_t>& requests,
