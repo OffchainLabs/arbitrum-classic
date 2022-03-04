@@ -805,7 +805,7 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int, checkpointPruningAge time.Dur
 	f.Int("core.checkpoint-max-execution-gas", maxExecutionGas, "maximum amount of gas any given checkpoint is allowed to execute")
 	f.Int("core.checkpoint-max-to-prune", 2, "number of checkpoints to delete at a time, 0 for no limit")
 	f.Bool("core.checkpoint-prune-on-startup", false, "perform full database pruning on startup")
-	f.Duration("core.checkpoint-pruning-age", checkpointPruningAge, "how long to keep snapshots, 0 to disable time based pruning, always disabled if node.cache.allow-slow-lookup is set")
+	f.Duration("core.checkpoint-pruning-age", checkpointPruningAge, "how long to keep snapshots for non-validator nodes, 0 to disable time based pruning, always disabled if node.cache.allow-slow-lookup is set")
 	f.String("core.checkpoint-pruning-mode", "default", "Prune old checkpoints: 'on', 'off', or 'default'")
 
 	f.Bool("core.database.compact", false, "perform database compaction")

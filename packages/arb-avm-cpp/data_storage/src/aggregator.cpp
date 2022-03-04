@@ -100,6 +100,16 @@ void saveBlockCount(ReadWriteTransaction& tx, uint64_t max) {
         throw std::runtime_error("failed to save count");
     }
 }
+
+uint64_t blockCountImpl(const ReadTransaction& tx) {
+    std::string value;
+    auto s = tx.aggregatorGet(vecToSlice(block_key), &value);
+    if (!s.ok()) {
+        throw std::runtime_error("no block count saved");
+    }
+    auto it = value.begin();
+    return extractUint64(it);
+}
 }  // namespace
 
 std::array<char, block_key.size() + sizeof(uint64_t)> blockEntryKey(
@@ -147,11 +157,6 @@ std::optional<uint64_t> AggregatorStore::getPossibleBlock(
     const uint256_t& block_hash) const {
     ReadTransaction tx(data_storage);
     return returnIndex(tx, blockHashKey(block_hash));
-}
-
-uint64_t AggregatorStore::blockCount() const {
-    ReadTransaction tx(data_storage);
-    return blockCountImpl(tx);
 }
 
 void AggregatorStore::saveMessageBatch(const uint256_t& batchNum,
@@ -213,16 +218,6 @@ void AggregatorStore::saveBlock(uint64_t height,
     }
     saveBlockCount(tx, height + 1);
     commitTx(tx);
-}
-
-uint64_t AggregatorStore::blockCountImpl(const ReadTransaction& tx) const {
-    std::string value;
-    auto s = tx.aggregatorGet(vecToSlice(block_key), &value);
-    if (!s.ok()) {
-        throw std::runtime_error("no block count saved");
-    }
-    auto it = value.begin();
-    return extractUint64(it);
 }
 
 std::vector<char> AggregatorStore::getBlock(uint64_t height) const {

@@ -341,32 +341,29 @@ InitializeResult ArbCore::applyConfig() {
         }
     }
 
-    auto reorg_done = false;
+    auto reorg_done = true;
     rocksdb::Status status = rocksdb::Status::OK();
     if (coreConfig.test_reorg_to_l1_block != 0) {
         // Reset database for profile testing
         status =
             reorgToL1Block(coreConfig.test_reorg_to_l1_block, false, cache);
-        reorg_done = true;
     } else if (coreConfig.test_reorg_to_l2_block != 0) {
         // Reset database for profile testing
         status =
             reorgToL2Block(coreConfig.test_reorg_to_l2_block, false, cache);
-        reorg_done = true;
     } else if (coreConfig.test_reorg_to_log != 0) {
         // Reset database for profile testing
         status =
             reorgToLogCountOrBefore(coreConfig.test_reorg_to_log, false, cache);
-        reorg_done = true;
     } else if (coreConfig.test_reorg_to_message != 0) {
         // Reset database for profile testing
         status = reorgToMessageCountOrBefore(coreConfig.test_reorg_to_message,
                                              false, cache);
-        reorg_done = true;
     } else if (coreConfig.seed_cache_on_startup) {
         status = reorgToTimestampOrBefore(
             combined_machine_cache.currentTimeExpired(), true, cache);
-        reorg_done = true;
+    } else {
+        reorg_done = false;
     }
 
     if (coreConfig.database_save_on_startup) {
