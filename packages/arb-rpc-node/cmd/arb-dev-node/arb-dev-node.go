@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"flag"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/cmd/internal"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io/ioutil"
@@ -29,6 +30,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -74,8 +76,6 @@ func init() {
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
-
 	// Print line number that log was created on
 	logger = arblog.Logger.With().Str("component", "arb-dev-node").Logger()
 }
@@ -87,6 +87,9 @@ func main() {
 }
 
 func startup() error {
+	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancelFunc()
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
@@ -99,6 +102,7 @@ func startup() error {
 	aggStr := fs.String("aggregator", "", "aggregator to use as the sender from this node")
 	initialL1Height := fs.Uint64("l1height", 0, "initial l1 height")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
+	tracingNamespace := fs.String("node.rpc.tracing.namespace", "arbtrace", "rpc namespace for tracing api")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -111,7 +115,7 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))); err != nil {
 		return err
 	}
 
@@ -147,8 +151,6 @@ func startup() error {
 		deleteDir = true
 	}
 
-	ctx := context.Background()
-
 	var agg common.Address
 	if *aggStr != "" {
 		agg = common.HexToAddress(*aggStr)
@@ -158,13 +160,14 @@ func startup() error {
 		}
 		agg = common.NewAddressFromEth(accounts[1].Address)
 	}
-	backend, db, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
+	backend, db, mon, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
 		ctx,
 		*dbDir,
 		*arbosPath,
 		chainId,
 		agg,
 		*initialL1Height,
+		true,
 	)
 	if err != nil {
 		return err
@@ -222,11 +225,6 @@ func startup() error {
 			return errors.Wrap(err, "error adding init message to inbox")
 		}
 	}
-
-	errChan := make(chan error, 10)
-	go func() {
-		errChan <- <-devNodeErrChan
-	}()
 
 	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
 	if !ok {
@@ -302,33 +300,34 @@ func startup() error {
 		return err
 	}
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
+	defer func() {
 		if *saveMessages != "" {
 			data, err := backend.ExportData()
 			if err != nil {
-				errChan <- errors.Wrap(err, "error exporting data from backend")
+				log.Error().Err(err).Msg("error exporting data from backend")
 				return
 			}
 
-			if err := ioutil.WriteFile(*saveMessages, data, 777); err != nil {
-				errChan <- errors.Wrap(err, "error saving exported data")
-				return
+			if err := ioutil.WriteFile(*saveMessages, data, 0777); err != nil {
+				log.Error().Err(err).Msg("error saving exported data")
 			}
 		}
-		errChan <- nil
 	}()
 
 	plugins := make(map[string]interface{})
 	plugins["evm"] = dev.NewEVM(backend)
 
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, web3.DefaultConfig, plugins, nil)
+	rpcConfig := web3.DefaultConfig
+	rpcConfig.Mode = web3.GanacheMode
+	rpcConfig.Tracing.Enable = true
+	rpcConfig.Tracing.Namespace = *tracingNamespace
+
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, rpcConfig, mon.CoreConfig, plugins, nil)
 	if err != nil {
 		return err
 	}
 
+	errChan := make(chan error, 10)
 	go func() {
 		rpcConfig := configuration.RPC{
 			Addr: "0.0.0.0",
@@ -342,7 +341,15 @@ func startup() error {
 		}
 		errChan <- rpc.LaunchPublicServer(ctx, web3Server, rpcConfig, wsConfig)
 	}()
-
-	err = <-errChan
-	return err
+	select {
+	case err := <-errChan:
+		fmt.Println("Exit from err")
+		return err
+	case err := <-devNodeErrChan:
+		fmt.Println("Exit from dev err")
+		return err
+	case <-ctx.Done():
+		fmt.Println("Exit from done")
+		return nil
+	}
 }

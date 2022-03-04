@@ -19,6 +19,7 @@ package evm
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -49,6 +50,21 @@ func (c CallType) String() string {
 		return "DelegateCall"
 	case StaticCall:
 		return "StaticCall"
+	default:
+		return "Unknown"
+	}
+}
+
+func (c CallType) RPCString() string {
+	switch c {
+	case Call:
+		return "call"
+	case CallCode:
+		return "callCode"
+	case DelegateCall:
+		return "delegatecall"
+	case StaticCall:
+		return "staticcall"
 	default:
 		return "Unknown"
 	}
@@ -423,4 +439,115 @@ func newCreate2TraceItem(val value.Value) (*Create2Trace, error) {
 		ContractAddress: inbox.NewAddressFromInt(contractAddress),
 		PC:              pc,
 	}, nil
+}
+
+type Frame interface {
+	GetCallFrame() *CallFrame
+}
+
+type CallFrame struct {
+	Call   *CallTrace
+	Return *ReturnTrace
+	Nested []Frame
+}
+
+func (f *CallFrame) GetCallFrame() *CallFrame {
+	return f
+}
+
+type CreateFrame struct {
+	Create *CreateTrace
+	*CallFrame
+}
+
+type Create2Frame struct {
+	Create *Create2Trace
+	*CallFrame
+}
+
+type EVMTrace struct {
+	Items []TraceItem
+}
+
+func (e *EVMTrace) String() string {
+	builder := &strings.Builder{}
+	builder.WriteString("Tx trace:")
+	for _, item := range e.Items {
+		builder.WriteString("\n")
+		builder.WriteString(item.String())
+	}
+	return builder.String()
+}
+
+func (e *EVMTrace) MarshalZerologObject(event *zerolog.Event) {
+	array := zerolog.Arr()
+	for _, item := range e.Items {
+		array = array.Object(item)
+	}
+	event.Array("items", array)
+}
+
+func (e *EVMTrace) FrameTree() (Frame, error) {
+	if len(e.Items) == 0 {
+		return nil, nil
+	}
+	items := e.Items
+	var frames []Frame
+	for i := 0; i < len(items); i++ {
+		getCallAfterCreate := func() (*CallTrace, error) {
+			if i+1 >= len(items) {
+				return nil, errors.New("expected item after create")
+			}
+			i++
+			createCall, ok := items[i].(*CallTrace)
+			if !ok {
+				return nil, errors.New("expected call after create")
+			}
+			return createCall, nil
+		}
+		switch item := items[i].(type) {
+		case *CreateTrace:
+			createCall, err := getCallAfterCreate()
+			if err != nil {
+				return nil, err
+			}
+			frames = append(frames, &CreateFrame{
+				Create: item,
+				CallFrame: &CallFrame{
+					Call: createCall,
+				},
+			})
+		case *Create2Trace:
+			createCall, err := getCallAfterCreate()
+			if err != nil {
+				return nil, err
+			}
+			frames = append(frames, &Create2Frame{
+				Create: item,
+				CallFrame: &CallFrame{
+					Call: createCall,
+				},
+			})
+		case *CallTrace:
+			frames = append(frames, &CallFrame{
+				Call: item,
+			})
+		case *ReturnTrace:
+			if len(frames) == 0 {
+				return nil, errors.New("returned while not in call")
+			}
+			frames[len(frames)-1].GetCallFrame().Return = item
+			if len(frames) == 1 {
+				if i != len(items)-1 {
+					return nil, errors.New("finished")
+				}
+				return frames[0], nil
+			} else {
+				parent := frames[len(frames)-2].GetCallFrame()
+				parent.Nested = append(parent.Nested, frames[len(frames)-1])
+				frames = frames[:len(frames)-1]
+			}
+		}
+	}
+	return nil, errors.New("expected to end on return")
 }

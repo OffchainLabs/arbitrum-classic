@@ -24,11 +24,13 @@ import (
 	"math/big"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -184,7 +186,7 @@ func startup() error {
 
 	defer logger.Log().Msg("Cleanly shutting down node")
 
-	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
+	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core, gethlog.StreamHandler(os.Stderr, gethlog.JSONFormat())); err != nil {
 		return err
 	}
 
@@ -374,9 +376,10 @@ func startup() error {
 	serverConfig := web3.ServerConfig{
 		Mode:          rpcMode,
 		MaxCallAVMGas: config.Node.RPC.MaxCallGas * 100, // Multiply by 100 for arb gas to avm gas conversion
+		Tracing:       config.Node.RPC.Tracing,
 		DevopsStubs:   config.Node.RPC.EnableDevopsStubs,
 	}
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, nil, web3InboxReaderRef)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, mon.CoreConfig, nil, web3InboxReaderRef)
 	if err != nil {
 		return err
 	}

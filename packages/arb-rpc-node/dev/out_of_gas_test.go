@@ -38,7 +38,7 @@ func TestOutOfGas(t *testing.T) {
 
 	upgraderAuth, upgraderAccount := OwnerAuthPair(t, nil)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, upgraderAccount, nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, upgraderAccount)
 	defer cancelDevNode()
 
 	auth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)

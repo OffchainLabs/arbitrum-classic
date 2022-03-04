@@ -156,13 +156,19 @@ type Aggregator struct {
 	Stateful     bool   `koanf:"stateful"`
 }
 
+type Tracing struct {
+	Enable    bool   `koanf:"enable"`
+	Namespace string `koanf:"namespace"`
+}
+
 type RPC struct {
-	Addr              string `koanf:"addr"`
-	Port              string `koanf:"port"`
-	Path              string `koanf:"path"`
-	EnableL1Calls     bool   `koanf:"enable-l1-calls"`
-	MaxCallGas        uint64 `koanf:"max-call-gas"`
-	EnableDevopsStubs bool   `koanf:"enable-devops-stubs"`
+	Addr              string  `koanf:"addr"`
+	Port              string  `koanf:"port"`
+	Path              string  `koanf:"path"`
+	EnableL1Calls     bool    `koanf:"enable-l1-calls"`
+	Tracing           Tracing `koanf:"tracing"`
+	MaxCallGas        uint64  `koanf:"max-call-gas"`
+	EnableDevopsStubs bool    `koanf:"enable-devops-stubs"`
 }
 
 type S3 struct {
@@ -478,6 +484,8 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
 	f.Bool("node.rpc.enable-l1-calls", false, "If RPC calls which query the L1 node indirectly should be allowed")
+	f.Bool("node.rpc.tracing.enable", false, "enable tracing api")
+	f.String("node.rpc.tracing.namespace", "arbtrace", "rpc namespace for tracing api")
 	f.Uint64("node.rpc.max-call-gas", 5000000, "Max computational arbgas limit when processing eth_call and eth_estimateGas")
 	f.Bool("node.rpc.enable-devops-stubs", false, "Enable fake versions of eth_syncing and eth_netPeers")
 

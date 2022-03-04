@@ -35,7 +35,10 @@ func NewForkNode(
 	agg common.Address,
 	reorgMessage int64,
 	persistState bool,
-) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
+) (*Backend, *txdb.TxDB, *monitor.Monitor, func(), <-chan error, error) {
+	returnErr := func(err error, msg string) (*Backend, *txdb.TxDB, *monitor.Monitor, func(), <-chan error, error) {
+		return nil, nil, nil, nil, nil, errors.Wrap(err, msg)
+	}
 	nodeConfig := configuration.DefaultNodeSettings()
 	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 	coreConfig.LazyLoadCoreMachine = true
@@ -47,41 +50,41 @@ func NewForkNode(
 
 	mon, err := monitor.NewMonitor(dir, coreConfig)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
+		return returnErr(err, "error opening monitor")
 	}
 	if err := mon.ApplyConfig(); err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
+		return returnErr(err, "error opening monitor")
 	}
 	if err := mon.Start(); err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
+		return returnErr(err, "error opening monitor")
 	}
 
 	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), nodeConfig)
 	if err != nil {
 		mon.Close()
-		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
+		return returnErr(err, "error opening txdb")
 	}
 
 	if !persistState {
 		if err := core.ReorgAndWait(mon.Core, new(big.Int).SetInt64(reorgMessage)); err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "error reorging")
+			return returnErr(err, "error reorging")
 		}
 	}
 
 	latestBlock, err := db.LatestBlock()
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return returnErr(err, "getting block info")
 	}
 	l2Block, err := db.GetL2Block(latestBlock)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return returnErr(err, "getting l1 block")
 	}
 	initialL1Height := l2Block.L1BlockNum.Uint64() + 1
 
 	backendCore, err := NewBackendCore(ctx, mon.Core, chainId)
 	if err != nil {
 		mon.Close()
-		return nil, nil, nil, nil, err
+		return returnErr(err, "creating backend core")
 	}
 
 	cancel := func() {
@@ -90,9 +93,9 @@ func NewForkNode(
 	}
 	signer := types.NewEIP155Signer(chainId)
 	l1 := NewL1Emulator(initialL1Height)
-	backend := NewBackend(ctx, backendCore, db, l1, signer, agg, big.NewInt(100000000000))
+	backend := NewBackend(ctx, backendCore, db, l1, signer, agg, big.NewInt(100000000000), false)
 
-	return backend, db, cancel, errChan, nil
+	return backend, db, mon, cancel, errChan, nil
 }
 
 func GetMessageCount(dir string) (uint64, error) {
