@@ -95,9 +95,6 @@ struct ArbCoreConfig {
     // Delete all database entries except for inbox
     bool test_reset_db_except_inbox{false};
 
-    // Exit after printing out metadata from database
-    bool test_just_metadata{false};
-
     // Whether to lazy load the core machine
     bool lazy_load_core_machine{false};
 
@@ -109,6 +106,9 @@ struct ArbCoreConfig {
 
     // Perform database compaction
     bool database_compact{false};
+
+    // Save initial rocksdb checkpoint to disk
+    bool database_save_on_startup{false};
 
     // Exit after manipulating database
     bool database_exit_after{false};

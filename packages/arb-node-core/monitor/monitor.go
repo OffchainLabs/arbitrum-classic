@@ -84,8 +84,8 @@ func (m *Monitor) Initialize(contractFile string) error {
 	return nil
 }
 
-func (m *Monitor) InitializeExisting() error {
-	err := m.Storage.InitializeExisting()
+func (m *Monitor) ApplyConfig() error {
+	err := m.Storage.ApplyConfig()
 	if err != nil {
 		return err
 	}
