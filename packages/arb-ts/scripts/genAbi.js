@@ -22,27 +22,26 @@ async function main() {
       'No support for npm_execpath env variable in package manager'
     )
 
+  // TODO: use `HARDHAT_ARTIFACT_PATH` to write files to arb-ts instead of the packages themselves.
+  // this is currently broken since hardhat throws a weird error:
+  // `Error HH702: Invalid artifact path [...] its correct case-sensitive path is...`
   // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
-  // instead of writing in postinstall in each of those packages, we target a local folder in arb-ts' postinstall
-  const artifactsTarget = `${cwd}/contract-artifacts`
-  const envConfig = { ...process.env, ARTIFACT_PATH: artifactsTarget }
+  // instead of writing in postinstall in each of those packages, we should target a local folder in arb-ts' postinstall
 
   console.log('building arbos')
+  console.log(`${cwd}/contract-artifacts/arbos/`)
   execSync(`${npmExec} run hardhat:prod compile`, {
     cwd: arbosPath,
-    env: envConfig,
   })
 
   console.log('building ethbridge')
   execSync(`${npmExec} run hardhat:prod compile`, {
     cwd: ethBridgePath,
-    env: envConfig,
   })
 
   console.log('building peripherals')
   execSync(`${npmExec} run hardhat:prod compile`, {
     cwd: peripheralsPath,
-    env: envConfig,
   })
 
   console.log('Done compiling')
@@ -53,7 +52,6 @@ async function main() {
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
-  // TODO: remove test files
   await runTypeChain({
     cwd,
     filesToProcess: allFiles,
