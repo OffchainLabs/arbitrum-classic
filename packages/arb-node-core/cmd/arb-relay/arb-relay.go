@@ -22,9 +22,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	golog "log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -85,7 +87,7 @@ func startup() error {
 		return nil
 	}
 
-	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
+	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core, gethlog.StreamHandler(os.Stderr, gethlog.JSONFormat())); err != nil {
 		return err
 	}
 

@@ -200,7 +200,7 @@ func (cm *ClientManager) verifyClients() {
 	for client := range cm.clientPtrMap {
 		err := client.Ping()
 		if err != nil {
-			logger.Error().Err(err).Str("name", client.Name).Msg("error pinging client")
+			logError(err, "error pinging client")
 		}
 	}
 }
@@ -236,7 +236,7 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 			case bm := <-cm.broadcastChan:
 				err := cm.doBroadcast(bm)
 				if err != nil {
-					logger.Error().Err(err).Msg("failed to do broadcast")
+					logError(err, "failed to do a broadcast")
 				}
 			case <-pingInterval.C:
 				cm.verifyClients()

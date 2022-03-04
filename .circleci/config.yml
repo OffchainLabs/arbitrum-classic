@@ -20,11 +20,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v11-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
-      - go-mod-v11-{{ .Branch }}-
-      - go-mod-v11-
+      - go-mod-v13-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
+      - go-mod-v13-{{ .Branch }}-
+      - go-mod-v13-
   - &save_go_cache
-    key: go-mod-v11-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
+    key: go-mod-v13-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &test-path /tmp/test-results
@@ -276,13 +276,13 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/
+      - restore_cache: *restore_go_cache
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - restore_cache: *restore_go_cache
       - run:
           name: test arb-util
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
@@ -318,13 +318,13 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/
+      - restore_cache: *restore_go_cache
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - restore_cache: *restore_go_cache
       - run:
           name: test arb-rpc-node
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
@@ -351,13 +351,13 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/
+      - restore_cache: *restore_go_cache
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - restore_cache: *restore_go_cache
       - run:
           name: Run dev node
           command: go run arb-dev-node.go

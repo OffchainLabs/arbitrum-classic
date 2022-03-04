@@ -193,16 +193,18 @@ func openKeystore(description string, walletPath string, walletPassword *string)
 		if err != nil {
 			return nil, &accounts.Account{}, err
 		}
+
+		logger.Info().Hex("address", account.Address.Bytes()).Str("description", description).Msg("created new wallet")
 	} else {
 		account = ks.Accounts()[0]
+
+		logger.Info().Hex("address", account.Address.Bytes()).Str("description", description).Msg("used existing wallet")
 	}
 
 	err := ks.Unlock(account, password)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	logger.Info().Hex("address", account.Address.Bytes()).Str("description", description).Msg("created new wallet")
 
 	return ks, &account, nil
 }

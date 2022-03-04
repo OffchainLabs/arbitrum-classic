@@ -37,6 +37,7 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
       stop_on_breakpoint(config.stop_on_breakpoint),
       max_gas(config.max_gas),
       go_over_gas(config.go_over_gas),
+      stop_after_log_count(config.stop_after_log_count),
       inbox_messages_consumed(0) {}
 
 MachineStateKeys::MachineStateKeys(const MachineState& machine)
@@ -85,14 +86,14 @@ void MachineState::addProcessedSend(std::vector<uint8_t> data) {
     output.send_count = output.send_count + 1;
     output.send_acc = ::hash(output.send_acc, ::hash(data));
     context.sends.push_back(MachineEmission<std::vector<uint8_t>>{
-        std::move(data), output.fully_processed_inbox});
+        std::move(data), output.fully_processed_inbox, output.log_count});
 }
 
 void MachineState::addProcessedLog(Value log_val) {
     output.log_count = output.log_count + 1;
     output.log_acc = ::hash(output.log_acc, hash_value(log_val));
     context.logs.push_back(MachineEmission<Value>{
-        std::move(log_val), output.fully_processed_inbox});
+        std::move(log_val), output.fully_processed_inbox, output.log_count});
 }
 
 MachineState::MachineState(std::shared_ptr<CoreCode> code_, Value static_val_)

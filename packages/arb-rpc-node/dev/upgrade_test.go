@@ -51,7 +51,7 @@ func TestUpgrade(t *testing.T) {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, owner, nil)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, owner, nil, true)
 	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{

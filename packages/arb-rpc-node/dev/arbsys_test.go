@@ -33,7 +33,7 @@ func TestTopLevelCall(t *testing.T) {
 
 	upgraderAuth, upgraderAccount := OptsAddressPair(t, nil)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, upgraderAccount, nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, upgraderAccount)
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
