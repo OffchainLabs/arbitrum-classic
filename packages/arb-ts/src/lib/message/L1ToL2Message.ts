@@ -282,7 +282,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // b) the ticket is auto redeemable, but the auto redeem failed
 
     // the fact that the auto redeem failed isn't usually useful to the user
-    // if they're doing an eth deposit they dont care about redemption
+    // if they're doing an eth deposit they don't care about redemption
     // and if they do want execution to occur they will know that they're
     // here because the auto redeem failed. If they really want to check
     // they can fetch the auto redeem receipt and check the status on it
@@ -326,7 +326,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       } else throw err
     }
 
-    // get the l2TxReceipt, dont bother trying if we couldn't get the retryableCreationReceipt
+    // get the l2TxReceipt, don't bother trying if we couldn't get the retryableCreationReceipt
     const l2TxReceipt = retryableCreationReceipt
       ? await this.getL2TxReceipt()
       : undefined
