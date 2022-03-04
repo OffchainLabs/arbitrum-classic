@@ -7,6 +7,7 @@ FROM debian:bullseye-slim as debian-base
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y curl cmake git gcc g++ libboost-dev libboost-filesystem-dev \
     lcov make libgmp-dev libssl-dev libusb-dev sudo netcat-openbsd nodejs \
     autotools-dev dh-autoreconf pkg-config \
@@ -16,7 +17,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v6.20.3.tar.gz --output rocksdb-6.20.3.tar.gz && \
     tar xf rocksdb-6.20.3.tar.gz && \
     cd rocksdb-6.20.3 && \
-    PREFIX=/usr make shared_lib install-shared && \
+    PREFIX=/usr PORTABLE=1 make shared_lib install-shared && \
     cd - && \
     export CARGO_HOME=/usr/local/cargo && \
     curl https://sh.rustup.rs -sSf | bash -s - -y  && \
@@ -29,12 +30,13 @@ FROM debian:bullseye-slim as debian
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y curl \
     procps jq rsync \
     node-ws vim libatomic1 python3 \
     libgmp10 libssl1.1 \
     libgoogle-perftools4 \
-    libgflags2.2 libsnappy1v5 libzstd1  && \
+    libgflags2.2 libsnappy1v5 libzstd1 dnsutils && \
     rm -rf /var/lib/apt/lists/* /usr/share/doc/* && \
     useradd -ms /bin/bash user
 
