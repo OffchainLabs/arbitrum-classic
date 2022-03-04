@@ -7,6 +7,7 @@ FROM debian:bullseye-slim
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y curl cmake git gcc g++ libboost-dev libboost-filesystem-dev \
     lcov make libgmp-dev libssl-dev libusb-dev sudo netcat-openbsd nodejs \
     autotools-dev dh-autoreconf pkg-config \
@@ -16,7 +17,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v6.20.3.tar.gz --output rocksdb-6.20.3.tar.gz && \
     tar xf rocksdb-6.20.3.tar.gz && \
     cd rocksdb-6.20.3 && \
-    PREFIX=/usr make shared_lib install-shared && \
+    PREFIX=/usr PORTABLE=1 make shared_lib install-shared && \
     curl -fsSL https://deb.nodesource.com/setup_14.x | bash - && \
     curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/yarnkey.gpg >/dev/null && \
     echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | sudo tee /etc/apt/sources.list.d/yarn.list && \
