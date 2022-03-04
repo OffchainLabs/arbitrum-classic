@@ -1,5 +1,6 @@
 const { runTypeChain, glob } = require('typechain')
 const { execSync } = require('child_process')
+const { unlinkSync } = require('fs')
 
 const getPackagePath = packageName => {
   const path = require.resolve(`${packageName}/package.json`)
@@ -14,12 +15,35 @@ async function main() {
   const peripheralsPath = getPackagePath('arb-bridge-peripherals')
 
   console.log('Compiling paths.')
+
+  const npmExec = process.env['npm_execpath']
+  if (!npmExec || npmExec === '')
+    throw new Error(
+      'No support for npm_execpath env variable in package manager'
+    )
+
+  // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
+  // instead of writing in postinstall in each of those packages, we target a local folder in arb-ts' postinstall
+  const artifactsTarget = `${cwd}/contract-artifacts`
+  const envConfig = { ...process.env, ARTIFACT_PATH: artifactsTarget }
+
   console.log('building arbos')
-  execSync(`cd ${arbosPath} && yarn build`)
+  execSync(`${npmExec} run hardhat:prod compile`, {
+    cwd: arbosPath,
+    env: envConfig,
+  })
+
   console.log('building ethbridge')
-  execSync(`cd ${ethBridgePath} && yarn build`)
+  execSync(`${npmExec} run hardhat:prod compile`, {
+    cwd: ethBridgePath,
+    env: envConfig,
+  })
+
   console.log('building peripherals')
-  execSync(`cd ${peripheralsPath} && yarn build`)
+  execSync(`${npmExec} run hardhat:prod compile`, {
+    cwd: peripheralsPath,
+    env: envConfig,
+  })
 
   console.log('Done compiling')
 
@@ -29,6 +53,7 @@ async function main() {
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
+  // TODO: remove test files
   await runTypeChain({
     cwd,
     filesToProcess: allFiles,
@@ -37,7 +62,8 @@ async function main() {
     target: 'ethers-v5',
   })
 
-  execSync(`cd ${cwd} && rm -rf src/lib/abi/index.ts`)
+  // we delete the index file since it doesn't play well with tree shaking
+  unlinkSync(`${cwd}/src/lib/abi/index.ts`)
 
   console.log('Typechain generated')
 }
