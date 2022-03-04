@@ -136,6 +136,16 @@ func (s *ArbStorage) Initialize(contractPath string) error {
 	return nil
 }
 
+func (s *ArbStorage) InitializeExisting() error {
+	defer runtime.KeepAlive(s)
+	success := C.initializeExistingArbStorage(s.c)
+
+	if success == 0 {
+		return errors.Errorf("failed to initialize storage, possibly corrupt or uninitialzed database?")
+	}
+	return nil
+}
+
 func (s *ArbStorage) Initialized() bool {
 	defer runtime.KeepAlive(s)
 	return C.arbStorageInitialized(s.c) == 1

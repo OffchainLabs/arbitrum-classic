@@ -195,7 +195,7 @@ void ArbCore::printDatabaseMetadata() {
     }
 }
 
-InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
+InitializeResult ArbCore::initializeExisting() {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
 
@@ -335,9 +335,15 @@ InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
     if (!status.IsNotFound()) {
         std::cerr << "Error with initial reorg: " << status.ToString()
                   << std::endl;
-        return {status, false};
     }
+    return {status, false};
+}
 
+InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
+    auto res = initializeExisting();
+    if (!res.status.IsNotFound()) {
+        return res;
+    }
     // Need to initialize database from scratch
     core_code->addSegment(executable.code);
     core_machine = std::make_unique<MachineThread>(
@@ -349,7 +355,7 @@ InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
 
     ReadWriteTransaction tx(data_storage);
 
-    status = updateSchemaVersion(tx, arbcore_schema_version);
+    auto status = updateSchemaVersion(tx, arbcore_schema_version);
     if (!status.ok()) {
         std::cerr << "failed to save schema version into db: "
                   << status.ToString() << std::endl;
@@ -3135,12 +3141,25 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                     deserializeSequencerBatchItemAccumulator(value_ptr);
 
                 if (accumulator != item.accumulator) {
-                    std::cerr << "INBOX FORCED REORG at sequence number "
-                              << item.last_sequence_number << std::endl
-                              << "Previous accumulator: " << accumulator
-                              << std::endl
+                    std::cerr << "INBOX FORCED REORG to message: "
+                              << item.last_sequence_number << "\n"
+                              << "Previous accumulator: " << accumulator << "\n"
                               << "New accumulator:      " << item.accumulator
                               << std::endl;
+                    if (last_machine) {
+                        std::cerr
+                            << "Previous message count: "
+                            << last_machine->machine_state.output
+                                   .fully_processed_inbox.count
+                            << "\n"
+                            << "Previous log count: "
+                            << last_machine->machine_state.output.log_count
+                            << "\n"
+                            << "Previous L2 block number: "
+                            << last_machine->machine_state.output
+                                   .l2_block_number
+                            << std::endl;
+                    }
                     if (item.last_sequence_number == 0) {
                         reorging_to_count = 0;
                     } else {

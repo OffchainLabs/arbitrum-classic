@@ -62,7 +62,7 @@ func TestWhitelist(t *testing.T) {
 	test.FailIfError(t, err)
 
 	_, err = simple.Exists(senderAuth)
-	if err == nil {
+	if err == nil && arbosVersion < 54 {
 		t.Error()
 	}
 
@@ -86,7 +86,7 @@ func TestWhitelist(t *testing.T) {
 	}
 
 	_, err = simple.Exists(senderAuth)
-	if err == nil {
+	if err == nil && !(arbosVersion >= 54 || (arbosVersion == 53 && doUpgrade)) {
 		t.Error("tx should fail")
 	}
 	if arbosVersion >= 31 {

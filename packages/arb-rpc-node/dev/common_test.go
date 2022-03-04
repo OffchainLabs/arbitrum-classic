@@ -144,7 +144,7 @@ func NewTestDevNode(
 		}
 	}()
 
-	srv := aggregator.NewServer(backend, common.Address{}, chainId, db)
+	srv := aggregator.NewServer(backend, chainId, db)
 	client := web3.NewEthClient(srv, true)
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	test.FailIfError(t, err)
@@ -274,6 +274,20 @@ func OwnerAuthPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, com
 	auth := bind.NewKeyedTransactor(key)
 	address := common.NewAddressFromEth(auth.From)
 	return auth, address
+}
+
+func OptsAddressPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, common.Address) {
+	if key == nil {
+		random, err := crypto.GenerateKey()
+		if err != nil {
+			t.Fatal(err)
+		}
+		key = random
+	}
+
+	opts := bind.NewKeyedTransactor(key)
+	address := common.NewAddressFromEth(opts.From)
+	return opts, address
 }
 
 func enableRewrites(t *testing.T, backend *Backend, srv *aggregator.Server, auth *bind.TransactOpts) {

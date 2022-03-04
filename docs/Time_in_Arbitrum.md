@@ -18,7 +18,7 @@ A single Ethereum block could include within it multiple Arbitrum blocks (if, sa
 
 ## Ethereum Block Numbers Within Arbitrum
 
-On a [Sequencer](Inside_Arbitrum.md#sequencer-mode) chain, accessing block numbers within an Arbitrum smart contract (i.e., `block.number` in Solidity) will return a value _close to_ (but not necessarily exactly) the L1 block number at which the Sequencer received the transaction. On a non-sequencer chain, `block.number` will return the L1 block number at which the transaction was inserted into the L1 inbox.
+On a [Sequencer](Inside_Arbitrum.md#sequencer-mode) chain (like Arbitrum One on mainnet), accessing block numbers within an Arbitrum smart contract (i.e., `block.number` in Solidity) will return a value _close to_ (but not necessarily exactly) the L1 block number at which the Sequencer received the transaction.
 
 ```sol
 // some Arbitrum contract:
@@ -48,6 +48,19 @@ The Arbitrum block number can also be retrieved within an Arbitrum contract via 
 ```sol
  ArbSys(100).arbBlockNumber() // returns Arbitrum block number
 ```
+
+## Example
+
+| Wall Clock time             | 12:00 am | 12:00:15 am | 12:00:30 am | 12:00:45 am | 12:01 am | 12:01:15 am |
+|-----------------------------|----------|----------|----------|----------|---------|---------|
+| L1 `block.number`             | 1000     | 1001     | 1002     | 1003     | 1004    | 1005    |
+| L2 `block.number`             | 1000     | 1000     | 1000     | 1000     | 1004    | 1004    |
+| Arbitrum Block number (from RPCs) | 370000   | 370005   | 370006   | 370008   | 370012  | 370015  |
+
+_**L2 `block.number`:** updated to sync with L1 `block.number` ~ every minute; thus over time, it will, like the L1 `block.number`, average to ~15 seconds per block._
+_**Arbitrum Block number from RPCs:** note that this can be updated multipe times per L1 block (this lets the sequencer give sub-L1-block-time tx receipts.)_
+
+
 
 ## Case Study: Multicall
 

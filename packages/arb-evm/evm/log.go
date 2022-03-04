@@ -20,15 +20,15 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"strings"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "evm").Logger()
+var logger = arblog.Logger.With().Str("component", "evm").Logger()
 
 type Log struct {
 	Address common.Address

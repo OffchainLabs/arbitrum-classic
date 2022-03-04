@@ -18,10 +18,14 @@ package aggregator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -30,20 +34,14 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Caller().Str("component", "aggregator").Logger()
+var logger = arblog.Logger.With().Str("component", "aggregator").Logger()
 
 type Server struct {
-	chain   common.Address
 	chainId *big.Int
 	batch   batcher.TransactionBatcher
 	db      *txdb.TxDB
@@ -53,12 +51,10 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(
 	batch batcher.TransactionBatcher,
-	rollupAddress common.Address,
 	chainId *big.Int,
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		chain:   rollupAddress,
 		chainId: chainId,
 		batch:   batch,
 		db:      db,
@@ -118,10 +114,6 @@ func (m *Server) GetL2ToL1Proof(batchNumber *big.Int, index uint64) (*evm.Merkle
 		return nil, errors.New("batch doesn't exist")
 	}
 	return batch.GenerateProof(index)
-}
-
-func (m *Server) GetChainAddress() ethcommon.Address {
-	return m.chain.ToEthAddress()
 }
 
 func (m *Server) ChainId() *big.Int {

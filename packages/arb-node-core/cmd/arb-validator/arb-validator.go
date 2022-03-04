@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io/ioutil"
 	golog "log"
 	"net/http"
@@ -69,7 +70,7 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
+	logger = arblog.Logger.With().Str("component", "arb-validator").Logger()
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running validator")
@@ -148,8 +149,10 @@ func startup() error {
 		strategy = staker.StakeLatestStrategy
 	} else if strategyString == "Defensive" {
 		strategy = staker.DefensiveStrategy
+	} else if strategyString == "Watchtower" {
+		strategy = staker.WatchtowerStrategy
 	} else {
-		return errors.New("unsupported strategy specified. Currently supported: MakeNodes, StakeLatest")
+		return errors.New("unsupported strategy specified. Currently supported: MakeNodes, StakeLatest, Defensive, Watchtower")
 	}
 
 	chainState := ChainState{}
@@ -195,7 +198,7 @@ func startup() error {
 		}
 	}
 
-	mon, err := monitor.NewMonitor(config.GetValidatorDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
+	mon, err := monitor.NewInitializedMonitor(config.GetValidatorDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}

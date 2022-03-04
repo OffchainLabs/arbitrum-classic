@@ -18,16 +18,15 @@ package arbosmachine
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Stack().Str("component", "arbosmachine").Logger()
+var logger = arblog.Logger.With().Str("component", "arbosmachine").Logger()
 
 type Machine struct {
 	machine.Machine
