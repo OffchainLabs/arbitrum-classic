@@ -46,7 +46,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	upgraderAuth, upgraderAccount := OwnerAuthPair(t, nil)
+	upgraderAuth, upgraderAccount := OptsAddressPair(t, nil)
 	backend, db, srv, cancelDevNode := NewSimpleTestDevNode(t, config, upgraderAccount)
 	defer cancelDevNode()
 
