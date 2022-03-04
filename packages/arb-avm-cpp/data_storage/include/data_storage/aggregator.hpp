@@ -39,7 +39,6 @@ class AggregatorStore {
                    const std::vector<uint256_t>& requests,
                    const uint64_t* log_indexes,
                    const std::vector<char>& data);
-    [[nodiscard]] uint64_t blockCountImpl(const ReadTransaction& tx) const;
     [[nodiscard]] std::vector<char> getBlock(uint64_t height) const;
     [[nodiscard]] std::optional<uint64_t> getPossibleRequestInfo(
         const uint256_t& request_id) const;
