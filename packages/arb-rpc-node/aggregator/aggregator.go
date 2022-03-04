@@ -25,6 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -33,8 +34,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/pkg/errors"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -102,7 +101,7 @@ func (m *Server) LatestBlockHeader() (*types.Header, error) {
 
 // GetRequestResult returns the value output by the VM in response to the
 // l2message with the given hash
-func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, core.InboxState, error) {
+func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, core.InboxState, *big.Int, error) {
 	return m.db.GetRequest(requestId)
 }
 

@@ -95,7 +95,7 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))); err != nil {
 		return err
 	}
 
@@ -150,7 +150,7 @@ func startup() error {
 	}
 	logger.Info().Int64("message", fork.LastMessage).Msg("Forking chain")
 
-	backend, db, cancel, txDBErrChan, err := dev.NewForkNode(
+	backend, db, mon, cancel, txDBErrChan, err := dev.NewForkNode(
 		ctx,
 		*dbDir,
 		chainId,
@@ -199,7 +199,7 @@ func startup() error {
 		privateKeys = append(privateKeys, privKey)
 	}
 
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, web3.DefaultConfig, plugins, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, web3.DefaultConfig, mon.CoreConfig, plugins, nil)
 	if err != nil {
 		return err
 	}

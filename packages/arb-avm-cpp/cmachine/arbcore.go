@@ -44,6 +44,8 @@ type ArbCore struct {
 	storage *ArbStorage
 }
 
+const slowLookupErrorString = "missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )"
+
 func NewArbCore(c unsafe.Pointer, storage *ArbStorage) *ArbCore {
 	// ArbCore has same lifetime as ArbStorage, no need to have finalizer
 	// Keeping a reference to ArbStorage makes sure that ArbCore isn't
@@ -401,6 +403,51 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	return cursor.updateValues()
 }
 
+func (ac *ArbCore) AdvanceExecutionCursorWithTracing(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumberStart, logNumberEnd *big.Int) ([]core.MachineEmission, error) {
+	defer runtime.KeepAlive(ac)
+	cursor, ok := executionCursor.(*ExecutionCursor)
+	if !ok {
+		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
+	}
+	maxGasData := math.U256Bytes(maxGas)
+	logNumberStartData := math.U256Bytes(logNumberStart)
+	logNumberEndData := math.U256Bytes(logNumberEnd)
+
+	result := C.arbCoreAdvanceExecutionCursorWithTracing(
+		ac.c,
+		cursor.c,
+		unsafeDataPointer(maxGasData),
+		boolToCInt(goOverGas),
+		boolToCInt(allowSlowLookup),
+		unsafeDataPointer(logNumberStartData),
+		unsafeDataPointer(logNumberEndData),
+	)
+	if result.found == 0 {
+		return nil, errors.New("failed to advance cursor with tracing")
+	}
+	runtime.KeepAlive(cursor)
+
+	valCount := uint64(result.data.count)
+	rd := bytes.NewReader(receiveByteSlice(result.data.slice))
+	vals := make([]core.MachineEmission, 0, valCount)
+	for i := uint64(0); i < valCount; i++ {
+		var logCountData [32]byte
+		_, err := rd.Read(logCountData[:])
+		if err != nil {
+			return nil, err
+		}
+		val, err := value.UnmarshalValue(rd)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, core.MachineEmission{
+			Value:    val,
+			LogCount: new(big.Int).SetBytes(logCountData[:]),
+		})
+	}
+	return vals, cursor.updateValues()
+}
+
 func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {
 	defer runtime.KeepAlive(ac)
 	cMachine := C.arbCoreGetLastMachine(ac.c)
@@ -551,21 +598,16 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	return true, nil
 }
 
-func (ac *ArbCore) GetMachineAtBlock(blockNumber uint64, allowSlowLookup bool) (machine.Machine, error) {
+func (ac *ArbCore) GetExecutionCursorAtEndOfBlock(blockNumber uint64, allowSlowLookup bool) (core.ExecutionCursor, error) {
 	defer runtime.KeepAlive(ac)
-	CallowSlowLookup := 0
-	if allowSlowLookup {
-		CallowSlowLookup = 1
-	}
-	cMachineResult := C.arbCoreGetMachineAtBlock(ac.c, C.uint64_t(blockNumber), C.int(CallowSlowLookup))
+	cExecutionCursorResult := C.arbCoreGetExecutionCursorAtEndOfBlock(ac.c, C.uint64_t(blockNumber), boolToCInt(allowSlowLookup))
 
-	if cMachineResult.slow_error == 1 {
-		return nil, errors.Errorf("missing trie node 0000000000000000000000000000000000000000000000000000000000000000 (path )")
+	if cExecutionCursorResult.slow_error == 1 {
+		return nil, errors.Errorf(slowLookupErrorString)
 	}
 
-	if cMachineResult.machine == nil {
-		return nil, errors.Errorf("error getting machine for sideload")
+	if cExecutionCursorResult.execution_cursor == nil {
+		return nil, errors.Errorf("error creating execution cursor")
 	}
-
-	return WrapCMachine(cMachineResult.machine), nil
+	return NewExecutionCursor(cExecutionCursorResult.execution_cursor)
 }

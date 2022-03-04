@@ -59,7 +59,7 @@ func TestEthCall(t *testing.T) {
 	test.FailIfError(t, err)
 	ctx := context.Background()
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, owner, nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, owner)
 	defer cancelDevNode()
 
 	if doUpgrade {

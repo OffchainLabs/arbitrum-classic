@@ -48,6 +48,18 @@ contract Reverter {
     }
 }
 
+contract Destroyer1 {
+    constructor() public {
+        selfdestruct(msg.sender);
+    }
+}
+
+contract Destroyer2 {
+    function destroy() public {
+        selfdestruct(msg.sender);
+    }
+}
+
 contract Simple {
     uint256 x;
     uint256 public y;
@@ -94,6 +106,12 @@ contract Simple {
     function trace(uint256 arg) external payable returns (uint256) {
         ComplexConstructorCon con = new ComplexConstructorCon{ value: msg.value / 2 }("0x43254");
         try new Reverter() {} catch {}
+        new Destroyer1();
+        Destroyer2 test = new Destroyer2();
+        test.destroy();
+        (bool success, bytes memory data) = address(test).delegatecall(
+            abi.encodeWithSelector(Destroyer2.destroy.selector)
+        );
         return con.getVal();
     }
 
