@@ -42,9 +42,9 @@ class ArbStorage {
     ArbStorage(const std::string& db_path, const ArbCoreConfig& coreConfig);
     bool closeArbStorage();
     void printDatabaseMetadata();
-    InitializeResult applyConfig();
     InitializeResult initialize(const LoadedExecutable& executable);
     InitializeResult initialize(const std::string& executable_path);
+    InitializeResult applyConfig();
     [[nodiscard]] bool initialized() const;
 
     [[nodiscard]] std::unique_ptr<AggregatorStore> getAggregatorStore() const;

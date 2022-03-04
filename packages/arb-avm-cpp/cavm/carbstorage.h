@@ -64,8 +64,8 @@ typedef struct {
 CArbStorage* createArbStorage(const char* db_path,
                               CArbCoreConfig arb_core_config);
 void printDatabaseMetadata(CArbStorage* storage_ptr);
-int applyArbStorageConfig(CArbStorage* storage_ptr);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
+int applyArbStorageConfig(CArbStorage* storage_ptr);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);
 int closeArbStorage(CArbStorage* storage_ptr);

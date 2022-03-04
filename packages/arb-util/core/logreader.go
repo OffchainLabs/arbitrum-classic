@@ -2,13 +2,12 @@ package core
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "core").Logger()
+var logger = arblog.Logger.With().Str("component", "core").Logger()
 
 type LogReader struct {
 	consumer    LogConsumer

@@ -97,7 +97,7 @@ func startup() error {
 	}
 
 	// Any important errors already printed
-	_ = storage.ApplyArbStorageConfig()
+	_ = storage.ApplyConfig()
 
 	return nil
 }

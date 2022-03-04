@@ -135,7 +135,7 @@ func (s *ArbStorage) CleanupValidator() error {
 	return nil
 }
 
-func (s *ArbStorage) ApplyArbStorageConfig() error {
+func (s *ArbStorage) ApplyConfig() error {
 	defer runtime.KeepAlive(s)
 	success := C.applyArbStorageConfig(s.c)
 

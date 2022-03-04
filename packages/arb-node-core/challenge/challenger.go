@@ -2,17 +2,16 @@ package challenge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
-
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "challenge").Logger()
+var logger = arblog.Logger.With().Str("component", "challenge").Logger()
 
 type Challenger struct {
 	challenge           *ethbridge.Challenge

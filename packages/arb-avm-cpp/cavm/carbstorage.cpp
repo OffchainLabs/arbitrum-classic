@@ -104,6 +104,28 @@ int applyArbStorageConfig(CArbStorage* storage_ptr) {
             return false;
         }
         if (!result.status.ok()) {
+            std::cerr << "Error initializing storage: "
+                      << result.status.ToString() << std::endl;
+            return false;
+        }
+
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Exception initializing storage:" << e.what() << std::endl;
+        return false;
+    }
+}
+
+int initializeArbStorage(CArbStorage* storage_ptr,
+                         const char* executable_path) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
+    try {
+        auto result = storage->initialize(executable_path);
+        if (result.finished) {
+            // Gracefully shutdown
+            return false;
+        }
+        if (!result.status.ok()) {
             std::cerr << "Error applying config to storage: "
                       << result.status.ToString() << std::endl;
             return false;
@@ -131,24 +153,6 @@ int cleanupValidator(CArbStorage* storage_ptr) {
     } catch (const std::exception& e) {
         std::cerr << "Exception cleaning up validator database:" << e.what()
                   << std::endl;
-        return false;
-    }
-}
-
-int initializeArbStorage(CArbStorage* storage_ptr,
-                         const char* executable_path) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    try {
-        auto result = storage->initialize(executable_path);
-        if (!result.status.ok()) {
-            std::cerr << "Error initializing storage: "
-                      << result.status.ToString() << std::endl;
-            return false;
-        }
-
-        return true;
-    } catch (const std::exception& e) {
-        std::cerr << "Exception initializing storage:" << e.what() << std::endl;
         return false;
     }
 }

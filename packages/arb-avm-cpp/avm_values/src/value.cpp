@@ -19,6 +19,7 @@
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
+#include <avm_values/valueloader.hpp>
 
 #include <boost/endian/conversion.hpp>
 
@@ -235,6 +236,7 @@ namespace {
 struct Marshaller {
     std::vector<Value>& values;
     std::vector<unsigned char>& buf;
+    ValueLoader* value_loader;
 
     void operator()(const std::shared_ptr<HashPreImage>& val) const {
         buf.push_back(HASH_PRE_IMAGE);
@@ -267,15 +269,20 @@ struct Marshaller {
         val.marshal(buf);
     }
 
-    void operator()(const UnloadedValue&) const {
-        throw std::runtime_error("Cannot marshal unloaded value");
+    void operator()(const UnloadedValue& uv) const {
+        if (value_loader == nullptr) {
+            throw std::runtime_error("Cannot marshal unloaded value");
+        }
+        return visit(*this, value_loader->loadValue(uv.hash()));
     }
 };
 }  // namespace
 
-void marshal_value(const Value& full_val, std::vector<unsigned char>& buf) {
+void marshal_value(const Value& full_val,
+                   std::vector<unsigned char>& buf,
+                   ValueLoader* value_loader) {
     std::vector<Value> values{full_val};
-    Marshaller marshaller{values, buf};
+    Marshaller marshaller{values, buf, value_loader};
     while (!values.empty()) {
         const auto val = std::move(values.back());
         values.pop_back();

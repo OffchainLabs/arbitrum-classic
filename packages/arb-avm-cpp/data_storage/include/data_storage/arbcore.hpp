@@ -19,8 +19,8 @@
 
 #include <avm/machine.hpp>
 #include <avm/machinethread.hpp>
-#include <avm/valueloader.hpp>
 #include <avm_values/bigint.hpp>
+#include <avm_values/valueloader.hpp>
 #include <data_storage/combinedmachinecache.hpp>
 #include <data_storage/datacursor.hpp>
 #include <data_storage/datastorage.hpp>
@@ -155,8 +155,9 @@ class ArbCore {
 
     ~ArbCore() { abortThread(); }
     void printDatabaseMetadata();
-    InitializeResult applyConfig();
     InitializeResult initialize(const LoadedExecutable& executable);
+    InitializeResult applyConfig();
+
     [[nodiscard]] bool initialized() const;
     void operator()();
 
@@ -232,9 +233,9 @@ class ArbCore {
         ValueCache& value_cache,
         bool lazy_load) const;
 
+   public:
     [[nodiscard]] ValueLoader makeValueLoader() const;
 
-   public:
     // To be deprecated, use checkpoints instead
     template <class T>
     std::unique_ptr<T> getMachine(uint256_t machineHash,

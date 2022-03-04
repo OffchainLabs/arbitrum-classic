@@ -19,6 +19,7 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io"
 	"math/big"
 	"net/http"
@@ -38,7 +39,6 @@ import (
 	"github.com/knadh/koanf/providers/s3"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
@@ -46,7 +46,7 @@ import (
 
 const PASSWORD_NOT_SET = "PASSWORD_NOT_SET"
 
-var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
+var logger = arblog.Logger.With().Str("component", "configuration").Logger()
 
 type Conf struct {
 	Dump      bool   `koanf:"dump"`

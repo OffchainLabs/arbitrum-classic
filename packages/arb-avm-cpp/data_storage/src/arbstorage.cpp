@@ -35,13 +35,13 @@ void ArbStorage::printDatabaseMetadata() {
     arb_core->printDatabaseMetadata();
 }
 
-InitializeResult ArbStorage::applyConfig() {
-    return arb_core->applyConfig();
-}
-
 InitializeResult ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
     return initialize(executable);
+}
+
+InitializeResult ArbStorage::applyConfig() {
+    return arb_core->applyConfig();
 }
 
 InitializeResult ArbStorage::initialize(const LoadedExecutable& executable) {

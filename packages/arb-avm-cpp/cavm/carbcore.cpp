@@ -114,10 +114,11 @@ ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
                                     const void* start_index_ptr,
                                     const void* count_ptr) {
     try {
+        auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+        auto value_loader = arbcore->makeValueLoader();
         ValueCache cache{1, 0};
-        auto logs = static_cast<ArbCore*>(arbcore_ptr)
-                        ->getLogs(receiveUint256(start_index_ptr),
-                                  receiveUint256(count_ptr), cache);
+        auto logs = arbcore->getLogs(receiveUint256(start_index_ptr),
+                                     receiveUint256(count_ptr), cache);
         if (!logs.status.ok()) {
             return {{}, false};
         }
@@ -127,7 +128,7 @@ ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
             std::vector<unsigned char> marshalled_log;
             marshal_uint256_t(log.inbox.count, marshalled_log);
             marshal_uint256_t(log.inbox.accumulator, marshalled_log);
-            marshal_value(log.val, marshalled_log);
+            marshal_value(log.val, marshalled_log, &value_loader);
             data.push_back(move(marshalled_log));
         }
         return {returnCharVectorVector(data), true};
@@ -402,6 +403,8 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cursor_index = receiveUint256(index_ptr);
 
+    auto value_loader = arbcore->makeValueLoader();
+
     try {
         auto result =
             arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
@@ -424,7 +427,7 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
             std::vector<unsigned char> marshalled_value;
             marshal_uint256_t(log.inbox.count, marshalled_value);
             marshal_uint256_t(log.inbox.accumulator, marshalled_value);
-            marshal_value(log.val, marshalled_value);
+            marshal_value(log.val, marshalled_value, &value_loader);
             marshalled_logs.push_back(move(marshalled_value));
         }
 
@@ -434,7 +437,7 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
             std::vector<unsigned char> marshalled_value;
             marshal_uint256_t(log.inbox.count, marshalled_value);
             marshal_uint256_t(log.inbox.accumulator, marshalled_value);
-            marshal_value(log.val, marshalled_value);
+            marshal_value(log.val, marshalled_value, &value_loader);
             marshalled_deleted_logs.push_back(move(marshalled_value));
         }
 
