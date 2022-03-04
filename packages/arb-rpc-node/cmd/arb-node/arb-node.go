@@ -112,8 +112,13 @@ func startup() error {
 		return nil
 	}
 
-	if config.Core.Test.JustMetadata {
+	if config.Core.Database.Metadata {
 		return cmdhelp.PrintDatabaseMetadata(config.GetNodeDatabasePath(), &config.Core)
+	}
+
+	if config.Core.Database.MakeValidator {
+		// Exit immediately after converting database
+		return cmdhelp.NodeToValidator(config)
 	}
 
 	badConfig := false

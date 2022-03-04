@@ -52,7 +52,7 @@ func NewForkNode(
 	if err != nil {
 		return returnErr(err, "error opening monitor")
 	}
-	if err := mon.InitializeExisting(); err != nil {
+	if err := mon.ApplyConfig(); err != nil {
 		return returnErr(err, "error opening monitor")
 	}
 	if err := mon.Start(); err != nil {

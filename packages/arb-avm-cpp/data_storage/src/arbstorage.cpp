@@ -40,8 +40,8 @@ InitializeResult ArbStorage::initialize(const std::string& executable_path) {
     return initialize(executable);
 }
 
-InitializeResult ArbStorage::initializeExisting() {
-    return arb_core->initializeExisting();
+InitializeResult ArbStorage::applyConfig() {
+    return arb_core->applyConfig();
 }
 
 InitializeResult ArbStorage::initialize(const LoadedExecutable& executable) {
@@ -60,6 +60,10 @@ bool ArbStorage::closeArbStorage() {
                   << std::endl;
     }
     return status.ok();
+}
+
+rocksdb::Status ArbStorage::cleanupValidator() {
+    return datastorage->cleanupValidator();
 }
 
 std::unique_ptr<AggregatorStore> ArbStorage::getAggregatorStore() const {

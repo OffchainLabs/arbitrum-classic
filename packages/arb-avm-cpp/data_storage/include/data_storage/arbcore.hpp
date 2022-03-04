@@ -41,6 +41,7 @@
 #include <vector>
 #ifdef __linux__
 #include <pthread.h>
+#include <filesystem>
 #endif
 
 namespace rocksdb {
@@ -160,7 +161,7 @@ class ArbCore {
     ~ArbCore() { abortThread(); }
     void printDatabaseMetadata();
     InitializeResult initialize(const LoadedExecutable& executable);
-    InitializeResult initializeExisting();
+    InitializeResult applyConfig();
 
     [[nodiscard]] bool initialized() const;
     void operator()();
@@ -478,16 +479,17 @@ class ArbCore {
                                        uint64_t checkpoint_max_to_prune);
 
    private:
-    void printElapsed(
-        const std::chrono::time_point<std::chrono::steady_clock>& begin_time,
-        const std::chrono::time_point<std::chrono::steady_clock>& end_time,
-        const std::string& message) const;
-    void printMachineOutputInfo(const std::string& msg,
-                                MachineOutput& machine_output) const;
-    std::variant<rocksdb::Status, CheckpointVariant> getMaxCheckpoint(
+    void printElapsed(const std::chrono::time_point<std::chrono::steady_clock>&
+                          begin_timepoint,
+                      const std::string& message) const;
+    uint64_t countCheckpoints(ReadTransaction& tx);
+    std::variant<rocksdb::Status, CheckpointVariant> getCheckpointNumber(
+        ReadTransaction& tx,
+        uint256_t& number);
+    std::variant<rocksdb::Status, CheckpointVariant> getLastCheckpoint(
         ReadTransaction& tx);
-    std::unique_ptr<MachineThread> getMachineThreadFromSimpleCheck(
-        const std::function<bool(const MachineOutput&)>& check_output);
+    void saveRocksdbCheckpoint(const std::filesystem::path& save_rocksdb_path,
+                               ReadTransaction& tx);
 };
 
 uint64_t seconds_since_epoch();
