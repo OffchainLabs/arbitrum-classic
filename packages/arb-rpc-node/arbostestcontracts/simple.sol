@@ -63,6 +63,7 @@ contract Destroyer2 {
 contract Simple {
     uint256 x;
     uint256 public y;
+    uint256[] array;
 
     event TestEvent(uint256 value, address sender);
 
@@ -77,6 +78,12 @@ contract Simple {
 
     function exists() external payable returns (uint256) {
         x = 5;
+        emit TestEvent(msg.value, msg.sender);
+        return 10;
+    }
+
+    function arrayPush() external payable returns (uint256) {
+        array.push(x+1);
         emit TestEvent(msg.value, msg.sender);
         return 10;
     }
