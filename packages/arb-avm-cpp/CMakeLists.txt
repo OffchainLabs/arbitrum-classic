@@ -243,6 +243,7 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm" AND NOT AVM_FUZZER)
             " $<TARGET_LINKER_FILE:OpenSSL::Crypto>"
             " $<TARGET_LINKER_FILE:RocksDB::RocksDB>"
             " $<TARGET_LINKER_FILE:ethash::keccak>"
+            " $<TARGET_LINKER_FILE:Boost::filesystem>"
             " ${GPROF_LIBRARY}"
             " ${MALLOC_LIBRARY}"
             " ${GMP_LIBRARY}"

@@ -181,6 +181,9 @@ func startup() error {
 	}
 
 	ownerPrivKey, err := crypto.GenerateKey()
+	if err != nil {
+		return err
+	}
 	l1OwnerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, l1ChainId)
 	if err != nil {
 		return err

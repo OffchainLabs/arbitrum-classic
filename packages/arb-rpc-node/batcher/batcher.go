@@ -233,7 +233,6 @@ func (m *Batcher) maybeSubmitBatch(ctx context.Context, maxBatchTime time.Durati
 	if !full && !(len(txes) > 0 && !moreTxesWaiting && time.Since(lastBatch) > maxBatchTime) {
 		return false, nil
 	}
-	lastBatch = time.Now()
 	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
 	for _, tx := range txes {
 		batchTxes = append(batchTxes, message.NewCompressedECDSAFromEth(tx))
