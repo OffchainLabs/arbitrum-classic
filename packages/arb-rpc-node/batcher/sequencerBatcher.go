@@ -356,7 +356,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			batchTxs = append(batchTxs, startTx)
 			resultChans = append(resultChans, startResultChan)
 			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(startTx))
-			batchDataSize += len(startTx.Data())
 			seenOwnTx = true
 		}
 		if len(batchTxs) == 0 {
@@ -415,7 +414,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			logger.Info().Str("elapsed", time.Since(start).String()).Msg("after machine idle")
 		}
 
-		var sequencedTxs []*types.Transaction
 		var sequencedBatchItems []inbox.SequencerBatchItem
 
 		newLogCount, err := b.db.GetLogCount()
@@ -443,7 +441,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			}
 		}
 		if successCount == len(batchTxs) {
-			sequencedTxs = batchTxs
 			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
 			prevAcc = txBatchItem.Accumulator
 			sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
@@ -519,7 +516,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
 				prevAcc = txBatchItem.Accumulator
 				sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
-				sequencedTxs = append(sequencedTxs, tx)
 				postingCostEstimate := gasCostPerMessage + gasCostPerMessageByte*len(seqMsg.Data)
 				atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 				logCount = newLogCount
