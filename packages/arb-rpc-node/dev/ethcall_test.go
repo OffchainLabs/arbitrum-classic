@@ -54,12 +54,12 @@ func TestEthCall(t *testing.T) {
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-	auth, owner := OwnerAuthPair(t, nil)
+	auth, owner := OptsAddressPair(t, nil)
 	senderKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	ctx := context.Background()
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, owner, nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, owner)
 	defer cancelDevNode()
 
 	if doUpgrade {

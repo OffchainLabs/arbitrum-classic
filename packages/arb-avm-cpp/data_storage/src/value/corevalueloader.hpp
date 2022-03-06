@@ -31,7 +31,7 @@ class CoreValueLoader : public AbstractValueLoader {
 
     Value loadValue(const uint256_t& hash) override;
 
-    std::unique_ptr<AbstractValueLoader> clone() const override;
+    [[nodiscard]] std::unique_ptr<AbstractValueLoader> clone() const override;
 
    protected:
     std::shared_ptr<DataStorage> data_storage;

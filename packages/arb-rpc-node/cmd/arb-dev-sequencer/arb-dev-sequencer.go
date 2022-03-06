@@ -32,6 +32,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -126,7 +127,7 @@ func startup() error {
 		return errors.New("invalid arguments")
 	}
 
-	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))); err != nil {
 		return err
 	}
 
@@ -365,7 +366,7 @@ func startup() error {
 		return err
 	}
 
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.DefaultConfig, nil, inboxReader)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.DefaultConfig, mon.CoreConfig, nil, inboxReader)
 	if err != nil {
 		return err
 	}

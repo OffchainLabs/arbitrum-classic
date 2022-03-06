@@ -91,12 +91,21 @@ func skipBelowVersion(t *testing.T, ver int) {
 	}
 }
 
+func NewSimpleTestDevNode(
+	t *testing.T,
+	params protocol.ChainParams,
+	owner common.Address,
+) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
+	return NewTestDevNode(t, *arbosfile, params, owner, nil, true)
+}
+
 func NewTestDevNode(
 	t *testing.T,
 	arbosPath string,
 	params protocol.ChainParams,
 	owner common.Address,
 	config []message.ChainConfigOption,
+	revertFailedTxes bool,
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
 	agg := common.RandAddress()
@@ -112,13 +121,14 @@ func NewTestDevNode(
 			break
 		}
 	}
-	backend, db, cancelDevNode, txDBErrChan, err := NewDevNode(
+	backend, db, _, cancelDevNode, txDBErrChan, err := NewDevNode(
 		ctx,
 		t.TempDir(),
 		arbosPath,
 		chainId,
 		agg,
 		0,
+		revertFailedTxes,
 	)
 	test.FailIfError(t, err)
 	initMsg, err := message.NewInitMessage(params, owner, config)
@@ -250,20 +260,6 @@ func UpgradeTestDevNode(t *testing.T, backend *Backend, srv *aggregator.Server, 
 	newVersion, err := arbSys.ArbOSVersion(&bind.CallOpts{})
 	test.FailIfError(t, err)
 	t.Log("New Version:", newVersion)
-}
-
-func OwnerAuthPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, common.Address) {
-	if key == nil {
-		random, err := crypto.GenerateKey()
-		if err != nil {
-			t.Fatal(err)
-		}
-		key = random
-	}
-
-	auth := bind.NewKeyedTransactor(key)
-	address := common.NewAddressFromEth(auth.From)
-	return auth, address
 }
 
 func OptsAddressPair(t *testing.T, key *ecdsa.PrivateKey) (*bind.TransactOpts, common.Address) {

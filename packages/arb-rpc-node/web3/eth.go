@@ -35,6 +35,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
@@ -50,12 +51,6 @@ func ApplyGasPriceBidFactor(price *big.Int) *big.Int {
 
 const maxGas = 1<<31 - 1
 
-type ServerConfig struct {
-	Mode          RpcMode
-	MaxCallAVMGas uint64
-	DevopsStubs   bool
-}
-
 type Server struct {
 	srv                   *aggregator.Server
 	ganacheMode           bool
@@ -69,6 +64,11 @@ const DefaultMaxAVMGas = 500000000
 var DefaultConfig = ServerConfig{
 	Mode:          NormalMode,
 	MaxCallAVMGas: DefaultMaxAVMGas,
+	Tracing: configuration.Tracing{
+		Enable:    true,
+		Namespace: "arbtrace",
+	},
+	DevopsStubs: false,
 }
 
 func NewServer(
@@ -323,22 +323,22 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 	return s.getBlock(info, includeTxData)
 }
 
-func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, core.InboxState, error) {
+func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, core.InboxState, *big.Int, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
-	res, inbox, err := s.srv.GetRequestResult(requestId)
+	res, inbox, logNumber, err := s.srv.GetRequestResult(requestId)
 	if err != nil || res == nil {
-		return nil, nil, core.InboxState{}, err
+		return nil, nil, core.InboxState{}, nil, err
 	}
 	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
-		return nil, nil, core.InboxState{}, err
+		return nil, nil, core.InboxState{}, nil, err
 	}
-	return res, info, inbox, nil
+	return res, info, inbox, logNumber, nil
 }
 
 func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
-	res, info, _, err := s.getTransactionInfoByHash(txHash)
+	res, info, _, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -378,7 +378,7 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 }
 
 func (s *Server) GetTransactionReceipt(ctx context.Context, txHash hexutil.Bytes, opts *ArbGetTxReceiptOpts) (*GetTransactionReceiptResult, error) {
-	res, info, inboxState, err := s.getTransactionInfoByHash(txHash)
+	res, info, inboxState, _, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -689,6 +689,22 @@ func (s *Server) getSnapshot(ctx context.Context, blockNum *rpc.BlockNumber) (*s
 		return nil, errors.Errorf("unsupported block number %v", uint64(*blockNum))
 	}
 	return snap, nil
+}
+
+func (s *Server) blockInfoForNumberOrHash(blockNum rpc.BlockNumberOrHash) (*machine.BlockInfo, error) {
+	if blockNum.BlockNumber != nil {
+		height, err := s.srv.BlockNum(blockNum.BlockNumber)
+		if err != nil {
+			return nil, err
+		}
+		return s.srv.BlockInfoByNumber(height)
+	}
+	if blockNum.BlockHash == nil {
+		return nil, errors.New("must specify block number or hash")
+	}
+	var blockHash arbcommon.Hash
+	copy(blockHash[:], blockNum.BlockHash[:])
+	return s.srv.BlockInfoByHash(blockHash)
 }
 
 func (s *Server) getSnapshotForNumberOrHash(ctx context.Context, blockNum rpc.BlockNumberOrHash) (*snapshot.Snapshot, error) {

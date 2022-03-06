@@ -23,7 +23,7 @@ import (
 
 type ArbStorage interface {
 	Initialize(contractPath string) error
-	InitializeExisting() error
+	ApplyConfig() error
 	Initialized() bool
 	CloseArbStorage() bool
 

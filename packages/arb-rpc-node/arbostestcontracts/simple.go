@@ -31,7 +31,7 @@ var (
 // ComplexConstructorConMetaData contains all meta data concerning the ComplexConstructorCon contract.
 var ComplexConstructorConMetaData = &bind.MetaData{
 	ABI: "[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"getVal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
-	Bin: "0x60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea264697066735822122003301ec056e1a17896593ea680b6b2b31f0dbb0db1e5f7532488acaeafbd0bbd64736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea2646970667358221220f40fbbca7033de6fda28f07ebee6445e1c277d7f64ea67a7d28638f7b52bf18d64736f6c634300060c0033",
+	Bin: "0x60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea264697066735822122042ac706ae53382a49478381e6ca0af9a51fd8aa172345391892c66860d08f26564736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea2646970667358221220b33e1e2086250b9305022b61becbb6c9d32c6dd2b7a027229b9ceafe76974ea464736f6c634300060c0033",
 }
 
 // ComplexConstructorConABI is the input ABI used to generate the binding from.
@@ -246,7 +246,7 @@ func (_ComplexConstructorCon *ComplexConstructorConTransactorSession) Receive() 
 // ComplexConstructorCon2MetaData contains all meta data concerning the ComplexConstructorCon2 contract.
 var ComplexConstructorCon2MetaData = &bind.MetaData{
 	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"val\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"getVal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
-	Bin: "0x60806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea2646970667358221220f40fbbca7033de6fda28f07ebee6445e1c277d7f64ea67a7d28638f7b52bf18d64736f6c634300060c0033",
+	Bin: "0x60806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea2646970667358221220b33e1e2086250b9305022b61becbb6c9d32c6dd2b7a027229b9ceafe76974ea464736f6c634300060c0033",
 }
 
 // ComplexConstructorCon2ABI is the input ABI used to generate the binding from.
@@ -437,6 +437,373 @@ func (_ComplexConstructorCon2 *ComplexConstructorCon2TransactorSession) GetVal()
 	return _ComplexConstructorCon2.Contract.GetVal(&_ComplexConstructorCon2.TransactOpts)
 }
 
+// Destroyer1MetaData contains all meta data concerning the Destroyer1 contract.
+var Destroyer1MetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]",
+	Bin: "0x6080604052348015600f57600080fd5b5033fffe",
+}
+
+// Destroyer1ABI is the input ABI used to generate the binding from.
+// Deprecated: Use Destroyer1MetaData.ABI instead.
+var Destroyer1ABI = Destroyer1MetaData.ABI
+
+// Destroyer1Bin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use Destroyer1MetaData.Bin instead.
+var Destroyer1Bin = Destroyer1MetaData.Bin
+
+// DeployDestroyer1 deploys a new Ethereum contract, binding an instance of Destroyer1 to it.
+func DeployDestroyer1(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Destroyer1, error) {
+	parsed, err := Destroyer1MetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(Destroyer1Bin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Destroyer1{Destroyer1Caller: Destroyer1Caller{contract: contract}, Destroyer1Transactor: Destroyer1Transactor{contract: contract}, Destroyer1Filterer: Destroyer1Filterer{contract: contract}}, nil
+}
+
+// Destroyer1 is an auto generated Go binding around an Ethereum contract.
+type Destroyer1 struct {
+	Destroyer1Caller     // Read-only binding to the contract
+	Destroyer1Transactor // Write-only binding to the contract
+	Destroyer1Filterer   // Log filterer for contract events
+}
+
+// Destroyer1Caller is an auto generated read-only Go binding around an Ethereum contract.
+type Destroyer1Caller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// Destroyer1Transactor is an auto generated write-only Go binding around an Ethereum contract.
+type Destroyer1Transactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// Destroyer1Filterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type Destroyer1Filterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// Destroyer1Session is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type Destroyer1Session struct {
+	Contract     *Destroyer1       // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// Destroyer1CallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type Destroyer1CallerSession struct {
+	Contract *Destroyer1Caller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts     // Call options to use throughout this session
+}
+
+// Destroyer1TransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type Destroyer1TransactorSession struct {
+	Contract     *Destroyer1Transactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+}
+
+// Destroyer1Raw is an auto generated low-level Go binding around an Ethereum contract.
+type Destroyer1Raw struct {
+	Contract *Destroyer1 // Generic contract binding to access the raw methods on
+}
+
+// Destroyer1CallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type Destroyer1CallerRaw struct {
+	Contract *Destroyer1Caller // Generic read-only contract binding to access the raw methods on
+}
+
+// Destroyer1TransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type Destroyer1TransactorRaw struct {
+	Contract *Destroyer1Transactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewDestroyer1 creates a new instance of Destroyer1, bound to a specific deployed contract.
+func NewDestroyer1(address common.Address, backend bind.ContractBackend) (*Destroyer1, error) {
+	contract, err := bindDestroyer1(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Destroyer1{Destroyer1Caller: Destroyer1Caller{contract: contract}, Destroyer1Transactor: Destroyer1Transactor{contract: contract}, Destroyer1Filterer: Destroyer1Filterer{contract: contract}}, nil
+}
+
+// NewDestroyer1Caller creates a new read-only instance of Destroyer1, bound to a specific deployed contract.
+func NewDestroyer1Caller(address common.Address, caller bind.ContractCaller) (*Destroyer1Caller, error) {
+	contract, err := bindDestroyer1(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Destroyer1Caller{contract: contract}, nil
+}
+
+// NewDestroyer1Transactor creates a new write-only instance of Destroyer1, bound to a specific deployed contract.
+func NewDestroyer1Transactor(address common.Address, transactor bind.ContractTransactor) (*Destroyer1Transactor, error) {
+	contract, err := bindDestroyer1(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Destroyer1Transactor{contract: contract}, nil
+}
+
+// NewDestroyer1Filterer creates a new log filterer instance of Destroyer1, bound to a specific deployed contract.
+func NewDestroyer1Filterer(address common.Address, filterer bind.ContractFilterer) (*Destroyer1Filterer, error) {
+	contract, err := bindDestroyer1(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &Destroyer1Filterer{contract: contract}, nil
+}
+
+// bindDestroyer1 binds a generic wrapper to an already deployed contract.
+func bindDestroyer1(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(Destroyer1ABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Destroyer1 *Destroyer1Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Destroyer1.Contract.Destroyer1Caller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Destroyer1 *Destroyer1Raw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Destroyer1.Contract.Destroyer1Transactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Destroyer1 *Destroyer1Raw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Destroyer1.Contract.Destroyer1Transactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Destroyer1 *Destroyer1CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Destroyer1.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Destroyer1 *Destroyer1TransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Destroyer1.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Destroyer1 *Destroyer1TransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Destroyer1.Contract.contract.Transact(opts, method, params...)
+}
+
+// Destroyer2MetaData contains all meta data concerning the Destroyer2 contract.
+var Destroyer2MetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"destroy\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x6080604052348015600f57600080fd5b50606e80601d6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c806383197ef014602d575b600080fd5b60336035565b005b33fffea2646970667358221220f305c853ba66609f0dc0a63bc3c9d0d74e77ef622743d08485f4838d4fe3602564736f6c634300060c0033",
+}
+
+// Destroyer2ABI is the input ABI used to generate the binding from.
+// Deprecated: Use Destroyer2MetaData.ABI instead.
+var Destroyer2ABI = Destroyer2MetaData.ABI
+
+// Destroyer2Bin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use Destroyer2MetaData.Bin instead.
+var Destroyer2Bin = Destroyer2MetaData.Bin
+
+// DeployDestroyer2 deploys a new Ethereum contract, binding an instance of Destroyer2 to it.
+func DeployDestroyer2(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Destroyer2, error) {
+	parsed, err := Destroyer2MetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(Destroyer2Bin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Destroyer2{Destroyer2Caller: Destroyer2Caller{contract: contract}, Destroyer2Transactor: Destroyer2Transactor{contract: contract}, Destroyer2Filterer: Destroyer2Filterer{contract: contract}}, nil
+}
+
+// Destroyer2 is an auto generated Go binding around an Ethereum contract.
+type Destroyer2 struct {
+	Destroyer2Caller     // Read-only binding to the contract
+	Destroyer2Transactor // Write-only binding to the contract
+	Destroyer2Filterer   // Log filterer for contract events
+}
+
+// Destroyer2Caller is an auto generated read-only Go binding around an Ethereum contract.
+type Destroyer2Caller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// Destroyer2Transactor is an auto generated write-only Go binding around an Ethereum contract.
+type Destroyer2Transactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// Destroyer2Filterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type Destroyer2Filterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// Destroyer2Session is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type Destroyer2Session struct {
+	Contract     *Destroyer2       // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// Destroyer2CallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type Destroyer2CallerSession struct {
+	Contract *Destroyer2Caller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts     // Call options to use throughout this session
+}
+
+// Destroyer2TransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type Destroyer2TransactorSession struct {
+	Contract     *Destroyer2Transactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+}
+
+// Destroyer2Raw is an auto generated low-level Go binding around an Ethereum contract.
+type Destroyer2Raw struct {
+	Contract *Destroyer2 // Generic contract binding to access the raw methods on
+}
+
+// Destroyer2CallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type Destroyer2CallerRaw struct {
+	Contract *Destroyer2Caller // Generic read-only contract binding to access the raw methods on
+}
+
+// Destroyer2TransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type Destroyer2TransactorRaw struct {
+	Contract *Destroyer2Transactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewDestroyer2 creates a new instance of Destroyer2, bound to a specific deployed contract.
+func NewDestroyer2(address common.Address, backend bind.ContractBackend) (*Destroyer2, error) {
+	contract, err := bindDestroyer2(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Destroyer2{Destroyer2Caller: Destroyer2Caller{contract: contract}, Destroyer2Transactor: Destroyer2Transactor{contract: contract}, Destroyer2Filterer: Destroyer2Filterer{contract: contract}}, nil
+}
+
+// NewDestroyer2Caller creates a new read-only instance of Destroyer2, bound to a specific deployed contract.
+func NewDestroyer2Caller(address common.Address, caller bind.ContractCaller) (*Destroyer2Caller, error) {
+	contract, err := bindDestroyer2(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Destroyer2Caller{contract: contract}, nil
+}
+
+// NewDestroyer2Transactor creates a new write-only instance of Destroyer2, bound to a specific deployed contract.
+func NewDestroyer2Transactor(address common.Address, transactor bind.ContractTransactor) (*Destroyer2Transactor, error) {
+	contract, err := bindDestroyer2(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &Destroyer2Transactor{contract: contract}, nil
+}
+
+// NewDestroyer2Filterer creates a new log filterer instance of Destroyer2, bound to a specific deployed contract.
+func NewDestroyer2Filterer(address common.Address, filterer bind.ContractFilterer) (*Destroyer2Filterer, error) {
+	contract, err := bindDestroyer2(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &Destroyer2Filterer{contract: contract}, nil
+}
+
+// bindDestroyer2 binds a generic wrapper to an already deployed contract.
+func bindDestroyer2(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(Destroyer2ABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Destroyer2 *Destroyer2Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Destroyer2.Contract.Destroyer2Caller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Destroyer2 *Destroyer2Raw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Destroyer2.Contract.Destroyer2Transactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Destroyer2 *Destroyer2Raw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Destroyer2.Contract.Destroyer2Transactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Destroyer2 *Destroyer2CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Destroyer2.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Destroyer2 *Destroyer2TransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Destroyer2.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Destroyer2 *Destroyer2TransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Destroyer2.Contract.contract.Transact(opts, method, params...)
+}
+
+// Destroy is a paid mutator transaction binding the contract method 0x83197ef0.
+//
+// Solidity: function destroy() returns()
+func (_Destroyer2 *Destroyer2Transactor) Destroy(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Destroyer2.contract.Transact(opts, "destroy")
+}
+
+// Destroy is a paid mutator transaction binding the contract method 0x83197ef0.
+//
+// Solidity: function destroy() returns()
+func (_Destroyer2 *Destroyer2Session) Destroy() (*types.Transaction, error) {
+	return _Destroyer2.Contract.Destroy(&_Destroyer2.TransactOpts)
+}
+
+// Destroy is a paid mutator transaction binding the contract method 0x83197ef0.
+//
+// Solidity: function destroy() returns()
+func (_Destroyer2 *Destroyer2TransactorSession) Destroy() (*types.Transaction, error) {
+	return _Destroyer2.Contract.Destroy(&_Destroyer2.TransactOpts)
+}
+
 // ReverterMetaData contains all meta data concerning the Reverter contract.
 var ReverterMetaData = &bind.MetaData{
 	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]",
@@ -612,8 +979,8 @@ func (_Reverter *ReverterTransactorRaw) Transact(opts *bind.TransactOpts, method
 
 // SimpleMetaData contains all meta data concerning the Simple contract.
 var SimpleMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool[10]\",\"name\":\"_variable\",\"type\":\"bool[10]\"}],\"name\":\"Variable\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractSimple\",\"name\":\"con\",\"type\":\"address\"}],\"name\":\"crossCall\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"debug\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"nestedCall2\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"arg\",\"type\":\"uint256\"}],\"name\":\"trace\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"y\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
-	Bin: "0x6080604081815234600181905582523360a0527f9457b0abc6a87108b750271d78f46ad30369fbeb6a7454888743813252fca3fc91a1610930806100446000396000f3fe6080604052600436106100955760003560e01c80639b7c9da3116100595780639b7c9da31461015b578063a4ab282d14610185578063a56dfe4a14610233578063a68a4fed14610248578063ae0aba8c14610265576100d7565b80630324332e146100dc578063267c4ae4146101215780633bccbbc914610129578063588ee29b146101315780639436bc1f14610146576100d7565b366100d7576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b3480156100e857600080fd5b5061010f600480360360208110156100ff57600080fd5b50356001600160a01b031661026d565b60408051918252519081900360200190f35b61010f6102df565b6100d5610326565b34801561013d57600080fd5b506100d5610366565b34801561015257600080fd5b506100d5610364565b34801561016757600080fd5b506100d56004803603602081101561017e57600080fd5b50356103cd565b34801561019157600080fd5b506101be600480360360408110156101a857600080fd5b50803590602001356001600160a01b0316610418565b6040805160208082528351818301528351919283929083019185019080838360005b838110156101f85781810151838201526020016101e0565b50505050905090810190601f1680156102255780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561023f57600080fd5b5061010f6104dc565b61010f6004803603602081101561025e57600080fd5b50356104e2565b6100d5610364565b6000816001600160a01b031663267c4ae46040518163ffffffff1660e01b8152600401602060405180830381600087803b1580156102aa57600080fd5b505af11580156102be573d6000803e3d6000fd5b505050506040513d60208110156102d457600080fd5b505160010192915050565b600560009081556040805134815233602082015281517f9457b0abc6a87108b750271d78f46ad30369fbeb6a7454888743813252fca3fc929181900390910190a150600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b61036e6105be565b7fd09ca446fa2fa15b4f798d40263d8fb2d571205ba080eba1839db8b1efd5f676816040518082600a60200280838360005b838110156103b85781810151838201526020016103a0565b5050505090500191505060405180910390a150565b60405130908290600081818185875af1925050503d806000811461040d576040519150601f19603f3d011682016040523d82523d6000602084013e610412565b606091505b50505050565b6060306001600160a01b031663267c4ae46040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561045557600080fd5b505af1158015610469573d6000803e3d6000fd5b505050506040513d602081101561047f57600080fd5b50506040516060906001600160a01b038416908590600081818185875af1925050503d80600081146104cd576040519150601f19603f3d011682016040523d82523d6000602084013e6104d2565b606091505b5095945050505050565b60015481565b600080600234046040516104f5906105dd565b660c1e0d0ccc8d4d60ca1b8152604051908190036020019082f0905080158015610523573d6000803e3d6000fd5b509050604051610532906105ea565b604051809103906000f080156105455760015b61054e57610550565b505b806001600160a01b031663e1cb0e526040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561058b57600080fd5b505af115801561059f573d6000803e3d6000fd5b505050506040513d60208110156105b557600080fd5b50519392505050565b604051806101400160405280600a906020820280368337509192915050565b6102b1806105f783390190565b6053806108a88339019056fe60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea264697066735822122003301ec056e1a17896593ea680b6b2b31f0dbb0db1e5f7532488acaeafbd0bbd64736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea2646970667358221220f40fbbca7033de6fda28f07ebee6445e1c277d7f64ea67a7d28638f7b52bf18d64736f6c634300060c00336080604052348015600f57600080fd5b506040805162461bcd60e51b8152602060048201526012602482015271125b9d195b9d1a5bdb985b081c995d995c9d60721b604482015290519081900360640190fdfea264697066735822122042211a7a547279496112c805e1af94379b7c5528f9fe38ef5f939532901df91e64736f6c634300060c0033",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool[10]\",\"name\":\"_variable\",\"type\":\"bool[10]\"}],\"name\":\"Variable\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"arrayPush\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractSimple\",\"name\":\"con\",\"type\":\"address\"}],\"name\":\"crossCall\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"debug\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"nestedCall2\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"arg\",\"type\":\"uint256\"}],\"name\":\"trace\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"y\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
+	Bin: "0x6080604081815234600181905582523360a0527f9457b0abc6a87108b750271d78f46ad30369fbeb6a7454888743813252fca3fc91a1610bec806100446000396000f3fe6080604052600436106100a05760003560e01c80639436bc1f116100645780639436bc1f146101595780639b7c9da31461016e578063a4ab282d14610198578063a56dfe4a14610246578063a68a4fed1461025b578063ae0aba8c14610278576100e2565b80630324332e146100e7578063267c4ae41461012c5780633bccbbc91461013457806347f6ac111461013c578063588ee29b14610144576100e2565b366100e2576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b3480156100f357600080fd5b5061011a6004803603602081101561010a57600080fd5b50356001600160a01b0316610280565b60408051918252519081900360200190f35b61011a6102f2565b6100e0610339565b61011a610379565b34801561015057600080fd5b506100e06103f2565b34801561016557600080fd5b506100e0610377565b34801561017a57600080fd5b506100e06004803603602081101561019157600080fd5b5035610459565b3480156101a457600080fd5b506101d1600480360360408110156101bb57600080fd5b50803590602001356001600160a01b03166104a4565b6040805160208082528351818301528351919283929083019185019080838360005b8381101561020b5781810151838201526020016101f3565b50505050905090810190601f1680156102385780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561025257600080fd5b5061011a610568565b61011a6004803603602081101561027157600080fd5b503561056e565b6100e0610377565b6000816001600160a01b031663267c4ae46040518163ffffffff1660e01b8152600401602060405180830381600087803b1580156102bd57600080fd5b505af11580156102d1573d6000803e3d6000fd5b505050506040513d60208110156102e757600080fd5b505160010192915050565b600560009081556040805134815233602082015281517f9457b0abc6a87108b750271d78f46ad30369fbeb6a7454888743813252fca3fc929181900390910190a150600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60008054600280546001818101835591845291017f405787fa12a823e0f2b7631cc41b3ba8828b3321ca811111fa75cd3aa3bb5ace909101556040805134815233602082015281517f9457b0abc6a87108b750271d78f46ad30369fbeb6a7454888743813252fca3fc929181900390910190a150600a90565b6103fa6107c3565b7fd09ca446fa2fa15b4f798d40263d8fb2d571205ba080eba1839db8b1efd5f676816040518082600a60200280838360005b8381101561044457818101518382015260200161042c565b5050505090500191505060405180910390a150565b60405130908290600081818185875af1925050503d8060008114610499576040519150601f19603f3d011682016040523d82523d6000602084013e61049e565b606091505b50505050565b6060306001600160a01b031663267c4ae46040518163ffffffff1660e01b8152600401602060405180830381600087803b1580156104e157600080fd5b505af11580156104f5573d6000803e3d6000fd5b505050506040513d602081101561050b57600080fd5b50506040516060906001600160a01b038416908590600081818185875af1925050503d8060008114610559576040519150601f19603f3d011682016040523d82523d6000602084013e61055e565b606091505b5095945050505050565b60015481565b60008060023404604051610581906107e2565b660c1e0d0ccc8d4d60ca1b8152604051908190036020019082f09050801580156105af573d6000803e3d6000fd5b5090506040516105be906107ef565b604051809103906000f080156105d15760015b6105da576105dc565b505b6040516105e8906107fb565b604051809103906000f080158015610604573d6000803e3d6000fd5b5050600060405161061490610807565b604051809103906000f080158015610630573d6000803e3d6000fd5b509050806001600160a01b03166383197ef06040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561066e57600080fd5b505af1158015610682573d6000803e3d6000fd5b505060408051600481526024810182526020810180516001600160e01b031663083197ef60e41b1781529151815160009550606094506001600160a01b0387169382918083835b602083106106e85780518252601f1990920191602091820191016106c9565b6001836020036101000a038019825116818451168082178552505050505050905001915050600060405180830381855af49150503d8060008114610748576040519150601f19603f3d011682016040523d82523d6000602084013e61074d565b606091505b5091509150836001600160a01b031663e1cb0e526040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561078d57600080fd5b505af11580156107a1573d6000803e3d6000fd5b505050506040513d60208110156107b757600080fd5b50519695505050505050565b604051806101400160405280600a906020820280368337509192915050565b6102b18061081483390190565b605380610ac583390190565b601480610b1883390190565b608b80610b2c8339019056fe60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea264697066735822122042ac706ae53382a49478381e6ca0af9a51fd8aa172345391892c66860d08f26564736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea2646970667358221220b33e1e2086250b9305022b61becbb6c9d32c6dd2b7a027229b9ceafe76974ea464736f6c634300060c00336080604052348015600f57600080fd5b506040805162461bcd60e51b8152602060048201526012602482015271125b9d195b9d1a5bdb985b081c995d995c9d60721b604482015290519081900360640190fdfe6080604052348015600f57600080fd5b5033fffe6080604052348015600f57600080fd5b50606e80601d6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c806383197ef014602d575b600080fd5b60336035565b005b33fffea2646970667358221220f305c853ba66609f0dc0a63bc3c9d0d74e77ef622743d08485f4838d4fe3602564736f6c634300060c0033a2646970667358221220eea544f86ae77b1b7484cac637f739baf0f1743aa945a3ca49611a04d6aea33164736f6c634300060c0033",
 }
 
 // SimpleABI is the input ABI used to generate the binding from.
@@ -833,6 +1200,27 @@ func (_Simple *SimpleSession) AcceptPayment() (*types.Transaction, error) {
 // Solidity: function acceptPayment() payable returns()
 func (_Simple *SimpleTransactorSession) AcceptPayment() (*types.Transaction, error) {
 	return _Simple.Contract.AcceptPayment(&_Simple.TransactOpts)
+}
+
+// ArrayPush is a paid mutator transaction binding the contract method 0x47f6ac11.
+//
+// Solidity: function arrayPush() payable returns(uint256)
+func (_Simple *SimpleTransactor) ArrayPush(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Simple.contract.Transact(opts, "arrayPush")
+}
+
+// ArrayPush is a paid mutator transaction binding the contract method 0x47f6ac11.
+//
+// Solidity: function arrayPush() payable returns(uint256)
+func (_Simple *SimpleSession) ArrayPush() (*types.Transaction, error) {
+	return _Simple.Contract.ArrayPush(&_Simple.TransactOpts)
+}
+
+// ArrayPush is a paid mutator transaction binding the contract method 0x47f6ac11.
+//
+// Solidity: function arrayPush() payable returns(uint256)
+func (_Simple *SimpleTransactorSession) ArrayPush() (*types.Transaction, error) {
+	return _Simple.Contract.ArrayPush(&_Simple.TransactOpts)
 }
 
 // CrossCall is a paid mutator transaction binding the contract method 0x0324332e.

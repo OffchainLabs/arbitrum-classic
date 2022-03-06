@@ -27,4 +27,5 @@ ENV PATH="/home/user/go/bin:/home/user/bin:/home/user/.local/bin:/usr/local/go/b
 RUN export GOROOT=/usr/local/go && \
     mkdir bin && curl -s https://codecov.io/bash > ~/bin/codecovbash && \
     chmod +x /home/user/bin/codecovbash && \
-    go get gotest.tools/gotestsum
+    go install gotest.tools/gotestsum@v1.7.0 && \
+    go clean --modcache
