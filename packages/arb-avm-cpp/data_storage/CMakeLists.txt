@@ -92,7 +92,7 @@ target_include_directories(data_storage PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(data_storage PUBLIC avm avm_values cavm Threads::Threads OpenSSL::Crypto)
+target_link_libraries(data_storage PUBLIC avm avm_values cavm Threads::Threads OpenSSL::Crypto Boost::filesystem)
 
 target_code_coverage(data_storage AUTO ALL)
 

@@ -29,6 +29,9 @@
 #include <data_storage/value/value.hpp>
 #include <data_storage/value/valuecache.hpp>
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+
 #include <sys/stat.h>
 #include <ethash/keccak.hpp>
 #include <filesystem>
@@ -369,8 +372,9 @@ InitializeResult ArbCore::applyConfig() {
     }
 
     if (coreConfig.database_save_on_startup) {
-        std::filesystem::path save_rocksdb_path(coreConfig.database_save_path);
-        std::filesystem::create_directories(save_rocksdb_path);
+        boost::filesystem::path save_rocksdb_path(
+            coreConfig.database_save_path);
+        boost::filesystem::create_directories(save_rocksdb_path);
         ReadTransaction tx(data_storage);
         saveRocksdbCheckpoint(save_rocksdb_path, tx);
     }
@@ -1850,7 +1854,7 @@ void ArbCore::operator()() {
         thread_data.next_rocksdb_save_timepoint =
             std::chrono::steady_clock::now() +
             std::chrono::seconds(coreConfig.database_save_interval);
-        std::filesystem::create_directories(coreConfig.database_save_path);
+        boost::filesystem::create_directories(coreConfig.database_save_path);
     }
 
     try {
@@ -1878,7 +1882,7 @@ void ArbCore::operator()() {
 #endif
 }
 void ArbCore::saveRocksdbCheckpoint(
-    const std::filesystem::path& save_rocksdb_path,
+    const boost::filesystem::path& save_rocksdb_path,
     ReadTransaction& tx) {
     struct stat info;
     if ((stat(save_rocksdb_path.c_str(), &info) != 0) &&
