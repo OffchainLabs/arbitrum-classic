@@ -101,6 +101,34 @@ abstract contract GatewayRouter is TokenGateway {
             );
     }
 
+    function outboundTransferCustomRefund(
+        address _token,
+        address _to,
+        address _refundTo,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable virtual override returns (bytes memory) {
+        address gateway = getGateway(_token);
+        bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
+            msg.sender,
+            _data
+        );
+
+        emit TransferRouted(_token, msg.sender, _to, gateway);
+        return
+            ITokenGateway(gateway).outboundTransferCustomRefund{ value: msg.value }(
+                _token,
+                _to,
+                _refundTo,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                gatewayData
+            );
+    }
+
     function getOutboundCalldata(
         address _token,
         address _from,

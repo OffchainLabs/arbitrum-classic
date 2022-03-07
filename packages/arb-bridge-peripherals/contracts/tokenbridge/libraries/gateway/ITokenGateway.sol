@@ -48,6 +48,16 @@ interface ITokenGateway {
         bytes calldata _data
     ) external payable returns (bytes memory);
 
+    function outboundTransferCustomRefund(
+        address _token,
+        address _to,
+        address _refundTo,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) external payable returns (bytes memory);
+
     function finalizeInboundTransfer(
         address _token,
         address _from,

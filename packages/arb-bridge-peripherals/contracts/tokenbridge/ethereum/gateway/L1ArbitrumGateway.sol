@@ -232,6 +232,69 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         return abi.encode(seqNum);
     }
 
+    /**
+     * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
+     * @param _l1Token L1 address of ERC20
+     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param _refundTo account to be credited with the excess gas refund in the L2 (can be the user's L2 account or a contract)
+     * @param _amount Token Amount
+     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param _gasPriceBid Gas price for L2 execution
+     * @param _data encoded data from router and user
+     * @return res abi encoded inbox sequence number
+     */
+    //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+    function outboundTransferCustomRefund(
+        address _l1Token,
+        address _to,
+        address _refundTo,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable virtual override returns (bytes memory res) {
+        require(isRouter(msg.sender), "NOT_FROM_ROUTER");
+        // This function is set as public and virtual so that subclasses can override
+        // it and add custom validation for callers (ie only whitelisted users)
+        address _from;
+        uint256 seqNum;
+        bytes memory extraData;
+        {
+            uint256 _maxSubmissionCost;
+            if (super.isRouter(msg.sender)) {
+                // router encoded
+                (_from, extraData) = GatewayMessageHandler.parseFromRouterToGateway(_data);
+            } else {
+                _from = msg.sender;
+                extraData = _data;
+            }
+            // user encoded
+            (_maxSubmissionCost, extraData) = abi.decode(extraData, (uint256, bytes));
+            // the inboundEscrowAndCall functionality has been disabled, so no data is allowed
+            require(extraData.length == 0, "EXTRA_DATA_DISABLED");
+
+            require(_l1Token.isContract(), "L1_NOT_CONTRACT");
+            address l2Token = calculateL2TokenAddress(_l1Token);
+            require(l2Token != address(0), "NO_L2_TOKEN_SET");
+
+            _amount = outboundEscrowTransfer(_l1Token, _from, _amount);
+
+            // we override the res field to save on the stack
+            res = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
+
+            seqNum = createOutboundTx(
+                _refundTo,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _maxSubmissionCost,
+                res
+            );
+        }
+        emit DepositInitiated(_l1Token, _from, _to, seqNum, _amount);
+        return abi.encode(seqNum);
+    }
+
     function outboundEscrowTransfer(
         address _l1Token,
         address _from,
