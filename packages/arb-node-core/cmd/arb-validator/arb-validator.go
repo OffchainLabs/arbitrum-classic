@@ -96,8 +96,13 @@ func startup() error {
 		return nil
 	}
 
-	if config.Core.Test.JustMetadata {
+	if config.Core.Database.Metadata {
 		return cmdhelp.PrintDatabaseMetadata(config.GetValidatorDatabasePath(), &config.Core)
+	}
+
+	if config.Core.Database.MakeValidator {
+		// Exit immediately after converting database
+		return cmdhelp.NodeToValidator(config)
 	}
 
 	defer logger.Log().Msg("Cleanly shutting down validator")
@@ -149,8 +154,10 @@ func startup() error {
 		strategy = staker.StakeLatestStrategy
 	} else if strategyString == "Defensive" {
 		strategy = staker.DefensiveStrategy
+	} else if strategyString == "Watchtower" {
+		strategy = staker.WatchtowerStrategy
 	} else {
-		return errors.New("unsupported strategy specified. Currently supported: MakeNodes, StakeLatest")
+		return errors.New("unsupported strategy specified. Currently supported: MakeNodes, StakeLatest, Defensive, Watchtower")
 	}
 
 	chainState := ChainState{}

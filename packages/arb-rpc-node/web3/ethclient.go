@@ -33,6 +33,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 type EthClient struct {
@@ -49,6 +50,11 @@ func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
 	config := ServerConfig{
 		Mode:          mode,
 		MaxCallAVMGas: DefaultMaxAVMGas,
+		Tracing: configuration.Tracing{
+			Enable:    true,
+			Namespace: "arbtrace",
+		},
+		DevopsStubs: false,
 	}
 	return &EthClient{
 		srv:    NewServer(srv, config, nil),
@@ -187,7 +193,7 @@ func (c *EthClient) SubscribeFilterLogs(_ context.Context, query ethereum.Filter
 }
 
 func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*types.Receipt, error) {
-	res, block, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
+	res, block, _, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
 	if err != nil || res == nil {
 		return nil, err
 	}
@@ -195,7 +201,7 @@ func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*
 }
 
 func (c *EthClient) TransactionByHash(_ context.Context, txHash common.Hash) (*types.Transaction, bool, error) {
-	res, _, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
+	res, _, _, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
 	if err != nil || res == nil {
 		return nil, false, err
 	}

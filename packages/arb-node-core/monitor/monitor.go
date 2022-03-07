@@ -42,9 +42,10 @@ import (
 var logger = arblog.Logger.With().Str("component", "monitor").Logger()
 
 type Monitor struct {
-	Storage machine.ArbStorage
-	Core    core.ArbCore
-	Reader  *InboxReader
+	Storage    machine.ArbStorage
+	Core       core.ArbCore
+	Reader     *InboxReader
+	CoreConfig *configuration.Core
 }
 
 func NewInitializedMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
@@ -68,8 +69,9 @@ func NewMonitor(dbDir string, coreConfig *configuration.Core) (*Monitor, error) 
 	}
 	logger.Info().Str("directory", dbDir).Msg("database opened")
 	return &Monitor{
-		Storage: storage,
-		Core:    storage.GetArbCore(),
+		Storage:    storage,
+		Core:       storage.GetArbCore(),
+		CoreConfig: coreConfig,
 	}, nil
 }
 
@@ -82,8 +84,8 @@ func (m *Monitor) Initialize(contractFile string) error {
 	return nil
 }
 
-func (m *Monitor) InitializeExisting() error {
-	err := m.Storage.InitializeExisting()
+func (m *Monitor) ApplyConfig() error {
+	err := m.Storage.ApplyConfig()
 	if err != nil {
 		return err
 	}

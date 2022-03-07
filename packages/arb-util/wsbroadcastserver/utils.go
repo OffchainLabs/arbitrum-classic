@@ -10,6 +10,12 @@ import (
 	"time"
 )
 
+func logError(err error, msg string) {
+	if !strings.Contains(err.Error(), "use of closed network connection") {
+		logger.Error().Err(err).Msg(msg)
+	}
+}
+
 func ReadData(ctx context.Context, conn net.Conn, idleTimeout time.Duration, state ws.State) ([]byte, ws.OpCode, error) {
 	controlHandler := wsutil.ControlFrameHandler(conn, state)
 	reader := wsutil.Reader{
@@ -23,8 +29,8 @@ func ReadData(ctx context.Context, conn net.Conn, idleTimeout time.Duration, sta
 	// Remove timeout when leaving this function
 	defer func(conn net.Conn) {
 		err := conn.SetReadDeadline(time.Time{})
-		if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
-			logger.Error().Err(err).Msg("error removing read deadline")
+		if err != nil {
+			logError(err, "error removing read deadline")
 		}
 	}(conn)
 
