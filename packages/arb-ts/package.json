@@ -52,9 +52,6 @@
     "ts-node": "^10.2.1",
     "typechain": "7.0.0"
   },
-  "resolutions": {
-    "@ethersproject/bignumber": "^5.1.1"
-  },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@types/chai": "^4.2.11",
