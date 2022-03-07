@@ -23,11 +23,9 @@ import { Logger, LogLevel } from '@ethersproject/logger'
 import { Provider } from '@ethersproject/abstract-provider'
 Logger.setLogLevel(LogLevel.ERROR)
 
-import {
-  Bridge__factory,
-  Inbox__factory,
-  SequencerInbox__factory,
-} from '../src/lib/abi'
+import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
+import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
+import { SequencerInbox__factory } from '../src/lib/abi/factories/SequencerInbox__factory'
 
 import { InboxTools } from '../src'
 

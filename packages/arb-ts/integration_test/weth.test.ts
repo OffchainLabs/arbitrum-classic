@@ -20,7 +20,7 @@ import { expect } from 'chai'
 
 import { parseEther } from '@ethersproject/units'
 
-import { AeWETH__factory } from '../src/lib/abi'
+import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
 
 import {
   instantiateBridgeWithRandomWallet,

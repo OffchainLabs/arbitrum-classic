@@ -23,7 +23,7 @@ import { Wallet } from '@ethersproject/wallet'
 import { Zero } from '@ethersproject/constants'
 import { parseEther } from '@ethersproject/units'
 
-import { ArbGasInfo__factory } from '../src/lib/abi'
+import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
 import {
   instantiateBridgeWithRandomWallet,
   fundL1,

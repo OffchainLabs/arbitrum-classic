@@ -16,7 +16,8 @@
   },
   "homepage": "https://offchainlabs.com",
   "scripts": {
-    "postinstall": "$npm_execpath run gen:abi",
+    "postinstall": "node ./scripts/genAbi.js",
+    "gen:abi": "node ./scripts/genAbi.js",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
     "build": "./scripts/builder",
@@ -29,7 +30,6 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
-    "gen:abi": "node ./scripts/genAbi.js",
     "generate_docs": "typedoc --plugin none",
     "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
     "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
@@ -44,16 +44,13 @@
     "@ethersproject/bytes": "^5.0.8",
     "@typechain/ethers-v5": "9.0.0",
     "@types/prompts": "^2.0.14",
-    "arb-bridge-eth": "0.7.4",
-    "arb-bridge-peripherals": "1.0.5",
-    "arbos-precompiles": "1.0.1",
+    "arb-bridge-eth": "0.7.5",
+    "arb-bridge-peripherals": "1.0.6",
+    "arbos-precompiles": "1.0.2",
     "dotenv": "^10.0.0",
     "ethers": "^5.1.0",
     "ts-node": "^10.2.1",
     "typechain": "7.0.0"
-  },
-  "resolutions": {
-    "@ethersproject/bignumber": "^5.1.1"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",
@@ -67,7 +64,7 @@
     "chalk": "^4.1.0",
     "ethereum-waffle": "^3.4.0",
     "hardhat": "^2.8.3",
-    "mocha": "^9.1.1",
+    "mocha": "^9.2.1",
     "nyc": "^15.1.0",
     "prompts": "^2.4.2",
     "typedoc": "^0.21.5",

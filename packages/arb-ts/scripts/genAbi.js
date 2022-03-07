@@ -1,5 +1,6 @@
 const { runTypeChain, glob } = require('typechain')
 const { execSync } = require('child_process')
+const { unlinkSync } = require('fs')
 
 const getPackagePath = packageName => {
   const path = require.resolve(`${packageName}/package.json`)
@@ -14,12 +15,34 @@ async function main() {
   const peripheralsPath = getPackagePath('arb-bridge-peripherals')
 
   console.log('Compiling paths.')
+
+  const npmExec = process.env['npm_execpath']
+  if (!npmExec || npmExec === '')
+    throw new Error(
+      'No support for npm_execpath env variable in package manager'
+    )
+
+  // TODO: use `HARDHAT_ARTIFACT_PATH` to write files to arb-ts instead of the packages themselves.
+  // this is currently broken since hardhat throws a weird error:
+  // `Error HH702: Invalid artifact path [...] its correct case-sensitive path is...`
+  // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
+  // instead of writing in postinstall in each of those packages, we should target a local folder in arb-ts' postinstall
+
   console.log('building arbos')
-  execSync(`cd ${arbosPath} && yarn build`)
+  console.log(`${cwd}/contract-artifacts/arbos/`)
+  execSync(`${npmExec} run hardhat:prod compile`, {
+    cwd: arbosPath,
+  })
+
   console.log('building ethbridge')
-  execSync(`cd ${ethBridgePath} && yarn build`)
+  execSync(`${npmExec} run hardhat:prod compile`, {
+    cwd: ethBridgePath,
+  })
+
   console.log('building peripherals')
-  execSync(`cd ${peripheralsPath} && yarn build`)
+  execSync(`${npmExec} run hardhat:prod compile`, {
+    cwd: peripheralsPath,
+  })
 
   console.log('Done compiling')
 
@@ -37,7 +60,8 @@ async function main() {
     target: 'ethers-v5',
   })
 
-  execSync(`cd ${cwd} && rm -rf src/lib/abi/index.ts`)
+  // we delete the index file since it doesn't play well with tree shaking
+  unlinkSync(`${cwd}/src/lib/abi/index.ts`)
 
   console.log('Typechain generated')
 }

@@ -22,14 +22,12 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 
-import {
-  L1CustomGateway__factory,
-  L1GatewayRouter__factory,
-  L2GatewayRouter__factory,
-  TestArbCustomToken__factory,
-  TestCustomTokenL1__factory,
-  TestERC20__factory,
-} from '../src/lib/abi'
+import { L1CustomGateway__factory } from '../src/lib/abi/factories/L1CustomGateway__factory'
+import { L1GatewayRouter__factory } from '../src/lib/abi/factories/L1GatewayRouter__factory'
+import { L2GatewayRouter__factory } from '../src/lib/abi/factories/L2GatewayRouter__factory'
+import { TestArbCustomToken__factory } from '../src/lib/abi/factories/TestArbCustomToken__factory'
+import { TestCustomTokenL1__factory } from '../src/lib/abi/factories/TestCustomTokenL1__factory'
+import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 
 import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 
