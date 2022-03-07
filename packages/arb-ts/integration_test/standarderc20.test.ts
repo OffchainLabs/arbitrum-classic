@@ -19,6 +19,7 @@
 import { expect } from 'chai'
 
 import { BigNumber } from '@ethersproject/bignumber'
+import { Wallet } from '@ethersproject/wallet'
 
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 
@@ -43,7 +44,7 @@ describe('standard ERC20', () => {
     skipIfMainnet(this)
   })
 
-  it('deposits erc20 (no L2 Eth funding)', async () => {
+  it.skip('deposits erc20 (no L2 Eth funding)', async () => {
     const { l1Signer, erc20Bridger, l2Signer } =
       await instantiateBridgeWithRandomWallet()
     await fundL1(l1Signer)
@@ -55,6 +56,27 @@ describe('standard ERC20', () => {
     await fundL1(l1Signer)
     await fundL2(l2Signer)
     await depositTokenTest(erc20Bridger, l1Signer, l2Signer)
+  })
+  it('deposits erc20 and transfer to funding wallet', async () => {
+    const { l1Signer, erc20Bridger, l2Signer } =
+      await instantiateBridgeWithRandomWallet()
+    await fundL1(l1Signer)
+    await fundL2(l2Signer)
+    await depositTokenTest(erc20Bridger, l1Signer, l2Signer)
+    const l2Token = erc20Bridger.getL2TokenContract(
+      l2Signer.provider!,
+      await erc20Bridger.getL2ERC20Address(
+        existentTestERC20,
+        l1Signer.provider!
+      )
+    )
+    const testWalletL2Balance = (
+      await l2Token.functions.balanceOf(await l2Signer.getAddress())
+    )[0]
+    const _preFundedL2Wallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
+    await l2Token
+      .connect(l2Signer)
+      .transfer(_preFundedL2Wallet.address, testWalletL2Balance)
   })
 
   it('withdraws erc20', async function () {
@@ -87,7 +109,7 @@ describe('standard ERC20', () => {
     )
 
     const outgoingMessages = await withdrawRec.getL2ToL1Messages(
-      l2Signer.provider!,
+      l1Signer.provider!,
       l2Network
     )
     const firstMessage = outgoingMessages[0]
@@ -97,8 +119,7 @@ describe('standard ERC20', () => {
     const messageStatus = await firstMessage.status(null)
 
     expect(
-      messageStatus === L2ToL1MessageStatus.UNCONFIRMED ||
-        messageStatus === L2ToL1MessageStatus.NOT_FOUND,
+      messageStatus === L2ToL1MessageStatus.UNCONFIRMED,
       `standard token withdraw status returned ${messageStatus}`
     ).to.be.true
 

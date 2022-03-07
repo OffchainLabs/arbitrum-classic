@@ -172,7 +172,7 @@ export const fundL2 = async (
   prettyLog('Funded L2 account')
 }
 
-export const tokenFundAmount = BigNumber.from(2)
+export const tokenFundAmount = BigNumber.from(1)
 export const fundL2Token = async (
   l1Provider: Provider,
   l2Signer: Signer,

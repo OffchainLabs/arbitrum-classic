@@ -439,7 +439,7 @@ export class Erc20Bridger extends AssetBridger<
       l2Dest,
       depositCalldata,
       estimateGasCallValue,
-      retryableGasOverrides
+      tokenGasOverrides
     )
 
     return {
