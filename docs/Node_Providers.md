@@ -9,8 +9,6 @@ To interact with Arbitrum One and the RinkArby testnet, you can rely on the same
 ## Alchemy
 
 Alchemy provides endpoints for both Arbitrum One (Mainnet) and Rinkeby testnet. To use these RPC endpoints, you need an ***Alchemy API key***  to authenticate your requests. For detailed steps of how to create one, see the [Alchemy's documentation](https://docs.alchemy.com/alchemy/introduction/getting-started#1.create-an-alchemy-key). Next, depending one which network you want to interact with, you can choose between the two RPC endpoints provided by Alchemy and interact with them directly in the command line or point your MetaMask RPC endpoints to them. For more information on Arbitrum JSON-RPC API methods supported by Alchemy, check out the [official documentation](https://docs.alchemy.com/alchemy/apis/arbitrum).
-    
-
 
 ## Infura
 
