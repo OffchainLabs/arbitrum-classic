@@ -83,7 +83,7 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-  it.only('should submit the correct sender to inbox', async function () {
+  it('should submit the correct sender to inbox', async function () {
     const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
     const l1ERC20Gateway = await L1ERC20Gateway.deploy()
 
@@ -139,7 +139,7 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-  it.only('should submit the custom refund address to inbox', async function () {
+  it('should submit the custom refund address to inbox', async function () {
     const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
     const l1ERC20Gateway = await L1ERC20Gateway.deploy()
 
