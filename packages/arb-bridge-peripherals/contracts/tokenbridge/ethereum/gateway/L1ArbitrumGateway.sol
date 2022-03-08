@@ -190,46 +190,15 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory res) {
-        require(isRouter(msg.sender), "NOT_FROM_ROUTER");
-        // This function is set as public and virtual so that subclasses can override
-        // it and add custom validation for callers (ie only whitelisted users)
-        address _from;
-        uint256 seqNum;
-        bytes memory extraData;
-        {
-            uint256 _maxSubmissionCost;
-            if (super.isRouter(msg.sender)) {
-                // router encoded
-                (_from, extraData) = GatewayMessageHandler.parseFromRouterToGateway(_data);
-            } else {
-                _from = msg.sender;
-                extraData = _data;
-            }
-            // user encoded
-            (_maxSubmissionCost, extraData) = abi.decode(extraData, (uint256, bytes));
-            // the inboundEscrowAndCall functionality has been disabled, so no data is allowed
-            require(extraData.length == 0, "EXTRA_DATA_DISABLED");
-
-            require(_l1Token.isContract(), "L1_NOT_CONTRACT");
-            address l2Token = calculateL2TokenAddress(_l1Token);
-            require(l2Token != address(0), "NO_L2_TOKEN_SET");
-
-            _amount = outboundEscrowTransfer(_l1Token, _from, _amount);
-
-            // we override the res field to save on the stack
-            res = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
-
-            seqNum = createOutboundTx(
-                _from,
-                _amount,
-                _maxGas,
-                _gasPriceBid,
-                _maxSubmissionCost,
-                res
-            );
-        }
-        emit DepositInitiated(_l1Token, _from, _to, seqNum, _amount);
-        return abi.encode(seqNum);
+        return outboundTransferCustomRefund(
+            _l1Token,
+            _to,
+            _to,
+            _amount,
+            _maxGas,
+            _gasPriceBid,
+            _data
+        );
     }
 
     /**
