@@ -3,7 +3,7 @@
 ### dist-base
 ### --------------------------------------------------------------------
 
-FROM offchainlabs/backend-base:0.6.0
+FROM offchainlabs/backend-base:0.6.1
 
 USER root
 WORKDIR /
@@ -11,7 +11,9 @@ RUN export CARGO_HOME=/usr/local/cargo && \
     curl https://sh.rustup.rs -sSf | bash -s - -y  && \
     /usr/local/cargo/bin/cargo install b3sum
 
-FROM ubuntu:21.10
+USER user
+
+FROM debian:bullseye-slim
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \

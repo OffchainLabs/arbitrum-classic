@@ -3,7 +3,7 @@
 ### backend-base
 ### --------------------------------------------------------------------
 
-FROM offchainlabs/cpp-base:0.6.0
+FROM offchainlabs/cpp-base:0.6.1
 
 USER root
 WORKDIR /
