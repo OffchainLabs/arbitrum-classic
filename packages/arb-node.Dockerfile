@@ -4,7 +4,7 @@
 ### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
-FROM offchainlabs/cpp-base:0.6.0 as arb-avm-cpp
+FROM offchainlabs/cpp-base:0.6.1 as arb-avm-cpp
 
 # Copy external dependencies
 COPY --chown=user arb-avm-cpp/CMakeLists.txt /home/user/arb-avm-cpp/
@@ -36,7 +36,7 @@ RUN cd arb-avm-cpp/build && \
     cmake .. && \
     cmake --build . -j $(nproc)
 
-FROM offchainlabs/backend-base:0.6.0 as arb-node-builder
+FROM offchainlabs/backend-base:0.6.1 as arb-node-builder
 
 # Build dependencies
 COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
@@ -72,7 +72,7 @@ RUN cd arb-node-core && \
     go install -v ./cmd/arb-node && \
     go install -v ./cmd/arb-dev-node
 
-FROM offchainlabs/dist-base:0.6.0 as arb-node
+FROM offchainlabs/dist-base:0.6.1 as arb-node
 # Export binary
 
 COPY --chown=user --from=arb-node-builder /home/user/go/bin /home/user/go/bin
