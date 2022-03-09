@@ -306,6 +306,7 @@ jobs:
   backend-rpc:
     docker:
       - image: offchainlabs/backend-base:0.6.1
+      - image: openethereum/openethereum:v3.3.4
     resource_class: large
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
@@ -329,6 +330,10 @@ jobs:
           name: test arb-rpc-node
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-rpc-node
+      - run:
+          name: test arb-rpc-node/open ethereum trace
+          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node2.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES -run TestTraceOpenEthereum --tags openethereumtest ./...
+          working_directory: /home/user/project/packages/arb-rpc-node/dev
       - run:
           name: test arb-rpc-node/dev upgrade
           command: gotestsum --format short-verbose -- -upgrade -race -run TestFees TestEthCall -timeout 15m
