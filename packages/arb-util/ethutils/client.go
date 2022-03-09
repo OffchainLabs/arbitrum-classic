@@ -40,6 +40,11 @@ type ReceiptFetcher interface {
 	NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error)
 }
 
+type BasicEthClient interface {
+	bind.ContractBackend
+	ReceiptFetcher
+}
+
 type EthClient interface {
 	bind.ContractBackend
 	ReceiptFetcher
