@@ -63,7 +63,7 @@
     "@typescript-eslint/parser": "^4.29.0",
     "axios": "^0.21.3",
     "chai": "^4.2.0",
-    "chalk": "^4.1.0",
+    "chalk": "^5.0.1",
     "ethereum-waffle": "^3.4.0",
     "mocha": "^9.1.1",
     "nyc": "^15.1.0",
