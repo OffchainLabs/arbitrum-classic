@@ -44,7 +44,7 @@ type TraceAction struct {
 	CallType string          `json:"callType,omitempty"`
 	From     common.Address  `json:"from"`
 	Gas      hexutil.Uint64  `json:"gas"`
-	Input    hexutil.Bytes   `json:"input,omitempty"`
+	Input    *hexutil.Bytes  `json:"input,omitempty"`
 	Init     hexutil.Bytes   `json:"init,omitempty"`
 	To       *common.Address `json:"to,omitempty"`
 	Value    *hexutil.Big    `json:"value"`
@@ -205,7 +205,8 @@ func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, 
 				}
 			} else {
 				frameType = "call"
-				action.Input = callFrame.Call.Data
+				tmpInput := hexutil.Bytes(callFrame.Call.Data)
+				action.Input = &tmpInput
 				var toTmp common.Address
 				if callFrame.Call.To != nil {
 					toTmp = callFrame.Call.To.ToEthAddress()
