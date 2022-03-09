@@ -307,6 +307,7 @@ jobs:
     docker:
       - image: offchainlabs/backend-base:0.6.1
       - image: openethereum/openethereum:v3.3.4
+        command: --config dev-insecure --tracing=on
     resource_class: large
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
