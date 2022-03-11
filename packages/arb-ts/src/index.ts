@@ -38,6 +38,7 @@ export {
   L1ToL2MessageReader,
   L1ToL2MessageWriter,
 } from './lib/message/L1ToL2Message'
+export { L1ToL2MessageGasEstimator } from './lib/message/L1ToL2MessageGasEstimator'
 export { argSerializerConstructor } from './lib/utils/byte_serialize_params'
 export { CallInput, MultiCaller } from './lib/utils/multicall'
 export {
