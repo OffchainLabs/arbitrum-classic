@@ -73,8 +73,8 @@ abstract contract TokenGateway is ITokenGateway {
 
     function outboundTransferCustomRefund(
         address _token,
-        address _to,
         address _refundTo,
+        address _to,
         uint256 _amount,
         uint256 _maxGas,
         uint256 _gasPriceBid,

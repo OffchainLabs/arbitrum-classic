@@ -142,7 +142,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
 
-    function createOutboundTx(
+    function createOutboundTxCustomRefund(
+        address _refundTo,
         address _from,
         uint256, /* _tokenAmount */
         uint256 _maxGas,
@@ -156,9 +157,10 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         // msg.value is sent, but 0 is set to the L2 call value
         // the eth sent is used to pay for the tx's gas
         return
-            sendTxToL2(
+            sendTxToL2CustomRefund(
                 inbox,
                 counterpartGateway,
+                _refundTo,
                 _from,
                 msg.value, // we forward the L1 call value to the inbox
                 0, // l2 call value 0 by default
@@ -169,6 +171,17 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
                 }),
                 _outboundCalldata
             );
+    }
+
+    function createOutboundTx(
+        address _from,
+        uint256 _tokenAmount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        bytes memory _outboundCalldata
+    ) internal virtual returns (uint256) {
+        return createOutboundTxCustomRefund(_from, _from, _tokenAmount, _maxGas, _gasPriceBid, _maxSubmissionCost, _outboundCalldata);
     }
 
     /**
@@ -215,8 +228,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
     //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
     function outboundTransferCustomRefund(
         address _l1Token,
-        address _to,
         address _refundTo,
+        address _to,
         uint256 _amount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
@@ -251,8 +264,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
             // we override the res field to save on the stack
             res = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
 
-            seqNum = createOutboundTx(
+            seqNum = createOutboundTxCustomRefund(
                 _refundTo,
+                _from,
                 _amount,
                 _maxGas,
                 _gasPriceBid,

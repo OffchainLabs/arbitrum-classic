@@ -32,6 +32,32 @@ abstract contract L1ArbitrumMessenger {
         uint256 _gasPriceBid;
     }
 
+    function sendTxToL2CustomRefund(
+        address _inbox,
+        address _to,
+        address _refundTo,
+        address _user,
+        uint256 _l1CallValue,
+        uint256 _l2CallValue,
+        L2GasParams memory _l2GasParams,
+        bytes memory _data
+    ) internal virtual returns (uint256) {
+        // alternative function entry point when struggling with the stack size
+        return
+            sendTxToL2CustomRefund(
+                _inbox,
+                _to,
+                _refundTo,
+                _user,
+                _l1CallValue,
+                _l2CallValue,
+                _l2GasParams._maxSubmissionCost,
+                _l2GasParams._maxGas,
+                _l2GasParams._gasPriceBid,
+                _data
+            );
+    }
+
     function sendTxToL2(
         address _inbox,
         address _to,
@@ -56,9 +82,10 @@ abstract contract L1ArbitrumMessenger {
             );
     }
 
-    function sendTxToL2(
+    function sendTxToL2CustomRefund(
         address _inbox,
         address _to,
+        address _refundTo,
         address _user,
         uint256 _l1CallValue,
         uint256 _l2CallValue,
@@ -71,14 +98,28 @@ abstract contract L1ArbitrumMessenger {
             _to,
             _l2CallValue,
             _maxSubmissionCost,
-            _user,
-            _user,
+            _refundTo, // only refund excess fee to the custom address
+            _user, // user can cancel the retryable and receive call value refund
             _maxGas,
             _gasPriceBid,
             _data
         );
         emit TxToL2(_user, _to, seqNum, _data);
         return seqNum;
+    }
+
+    function sendTxToL2(
+        address _inbox,
+        address _to,
+        address _user,
+        uint256 _l1CallValue,
+        uint256 _l2CallValue,
+        uint256 _maxSubmissionCost,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes memory _data
+    ) internal virtual returns (uint256) {
+        return sendTxToL2CustomRefund(_inbox, _to, _user, _user, _l1CallValue, _l2CallValue, _maxSubmissionCost, _maxGas, _gasPriceBid,_data);
     }
 
     function getBridge(address _inbox) internal view virtual returns (IBridge) {

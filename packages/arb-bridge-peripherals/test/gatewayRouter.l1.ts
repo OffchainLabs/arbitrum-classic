@@ -19,6 +19,7 @@ import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
+import { InboxMock__factory } from '../build/types'
 
 describe('Bridge peripherals layer 1', () => {
   let accounts: SignerWithAddress[]
@@ -126,17 +127,23 @@ describe('Bridge peripherals layer 1', () => {
     )
 
     const receipt = await tx.wait()
-    // TxToL2(address,address,uint256,bytes)
+    // RefundAddresses(address,address)
     const expectedTopic =
-      '0xc1d1490cf25c3b40d600dfb27c7680340ed1ab901b7e8f3551280968a3b372b0'
+      '0x70b37e3cd4440bad0fef84e97b8196e82fe9a1ba044f099cbac6cd7f79e8702f'
     const logs = receipt.events
       .filter((curr: any) => curr.topics[0] === expectedTopic)
-      .map((curr: any) => l1ERC20Gateway.interface.parseLog(curr))
+      .map((curr: any) => inbox.interface.parseLog(curr))
     assert.equal(
-      logs[0].args._from,
+      logs[0].args.excessFeeRefundAddress,
       accounts[0].address,
-      'Invalid from address'
+      'Invalid excessFeeRefundAddress address'
     )
+    assert.equal(
+      logs[0].args.callValueRefundAddress,
+      accounts[0].address,
+      'Invalid callValueRefundAddress address'
+    )
+
   })
 
   it('should submit the custom refund address to inbox', async function () {
@@ -171,8 +178,8 @@ describe('Bridge peripherals layer 1', () => {
 
     const tx = await testBridge.outboundTransferCustomRefund(
       token.address,
-      accounts[0].address,
       accounts[1].address,
+      accounts[0].address,
       tokenAmount,
       maxGas,
       gasPrice,
@@ -183,16 +190,22 @@ describe('Bridge peripherals layer 1', () => {
     )
 
     const receipt = await tx.wait()
-    // TxToL2(address,address,uint256,bytes)
+    // RefundAddresses(address,address)
     const expectedTopic =
-      '0xc1d1490cf25c3b40d600dfb27c7680340ed1ab901b7e8f3551280968a3b372b0'
+      '0x70b37e3cd4440bad0fef84e97b8196e82fe9a1ba044f099cbac6cd7f79e8702f'
     const logs = receipt.events
       .filter((curr: any) => curr.topics[0] === expectedTopic)
-      .map((curr: any) => l1ERC20Gateway.interface.parseLog(curr))
+      .map((curr: any) => inbox.interface.parseLog(curr))
     assert.equal(
-      logs[0].args._from,
+      logs[0].args.excessFeeRefundAddress,
       accounts[1].address,
-      'Invalid from address'
+      'Invalid excessFeeRefundAddress address'
     )
+    assert.equal(
+      logs[0].args.callValueRefundAddress,
+      accounts[0].address,
+      'Invalid callValueRefundAddress address'
+    )
+    
   })
 })

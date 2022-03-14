@@ -243,8 +243,8 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
 
     function outboundTransferCustomRefund(
         address _token,
-        address _to,
         address _refundTo,
+        address _to,
         uint256 _amount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
@@ -264,7 +264,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         require(msg.value == expectedEth, "WRONG_ETH_VALUE");
 
         // will revert if msg.sender is not whitelisted
-        return super.outboundTransferCustomRefund(_token, _to, _refundTo, _amount, _maxGas, _gasPriceBid, _data);
+        return super.outboundTransferCustomRefund(_token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     modifier onlyCounterpartGateway() override {
