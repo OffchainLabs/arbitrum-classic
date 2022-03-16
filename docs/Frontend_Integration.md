@@ -49,34 +49,24 @@ var arbWeb3Provider = new Web3('http://ArbNodeUrl.com')
 
 ## Arbitrum / Ethereum Bridge
 
-Accessing bridging methods can be done via our `arb-ts` library, or by simply connecting to the relevant contracts directly.
+Accessing bridging methods can be done via our `@arbitrum/sdk` library, or by simply connecting to the relevant contracts directly.
 
-#### arb-ts
+#### @arbitrum/sdk
 
 **Installation**:
 
 ```
-yarn add arb-ts ethers
+yarn add @arbitrum/sdk
 ```
 
 **Usage (with Ethers wallets/providers)**:
 
 ```ts
-import { providers, Wallet } from 'ethers'
-import { Bridge } from 'arb-ts'
+import { getL2Network, EthBridger } from '@arbitrum/sdk'
 
-const l1Provider = new providers.JsonRpcProvider('http://EthNodeUrl.com')
-const l2Provider = new providers.JsonRpcProvider('http://ArbNodeUrl.com')
-
-const l1Signer = new Wallet('0xmyprivatekey!!', l1Provider)
-const l2Signer = new Wallet('0xmyprivatekey!!', l2Provider)
-
-const bridge = new Bridge(
-  '0xL1EthErc20BridgeAddress',
-  '0xl2ArbTokenBridgeAddress',
-  l1Signer,
-  l2Signer
+const l2Network = await getL2Network(
+  l2ChainID /** <-- chain id of target Arbitrum chain */
 )
+const ethBridger = new EthBridger(l2Network)
 ```
 
-See [library documentation here](https://arb-ts-docs.netlify.app/), or [tests](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-ts/integration_test/arb-bridge.test.ts) for sample usage.

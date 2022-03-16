@@ -75,7 +75,7 @@ Generally speaking, L1 calldata will be the primary contributor to gas cost for 
 
 One way of doing so broadly applicable to most contracts is to replace a method's parameters with a serialized byte array and have the contract deserialize the data.
 
-[arb-ts](https://arb-ts-docs.netlify.app/) offers convenience methods for this client side serialization (as well as interacting with the Address table).
+[@arbitrum/sdk](https://github.com/OffchainLabs/arbitrum-sdk/tree/master/integration_test) offers convenience methods for this client side serialization (as well as interacting with the Address table).
 
 For example usage, see our Arbiswap Demo:
 

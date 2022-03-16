@@ -136,7 +136,7 @@ In the normal, happy case, a retryable ticket is automatically redeemed and exec
 
 To redeem the retryable, any account can call `ArbRetryableTx.redeem(redemption-txn-id)`. To cancel, the beneficiary address can call `ArbRetryableTx.cancel(redemption-txn-id)`.
 
-See the [ArbRetryableTx](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) interface for other related methods, and [arb-ts](https://arb-ts-docs.netlify.app/) for convenience methods around using retryables.
+See the [ArbRetryableTx](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) interface for other related methods, and [@arbitrum/sdk](https://github.com/OffchainLabs/arbitrum-sdk) for convenience methods around using retryables.
 
 ### Demo
 
@@ -242,6 +242,6 @@ Anytime after the dispute window passes, any user can execute the L1 message by 
 
 ### Demo
 
-See [outbox-execute](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/outbox-execute) for client side interactions with the outbox using the [arb-ts](https://arb-ts-docs.netlify.app/) library.
+See [outbox-execute](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/outbox-execute) for client side interactions with the outbox using the [@arbitrum/sdk](https://github.com/OffchainLabs/arbitrum-sdk) library.
 
-See also [integration tests](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts/integration_test) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
+See also [integration tests](https://github.com/OffchainLabs/arbitrum-sdk/tree/master/integration_test) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
