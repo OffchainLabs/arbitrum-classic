@@ -19,6 +19,7 @@ package ethutils
 import (
 	"context"
 	"encoding/json"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -107,6 +108,7 @@ func (r *RPCEthClient) handleCallErr(err error) error {
 
 	// If we've had above a threshold number of errors, reinitialize the connection
 	if totalErrCount >= maxErrCount {
+		log.Warn().Err(err).Str("url", r.url).Msg("Reconnecting to client endpoint after repeated errors")
 		if err := r.reconnect(); err != nil {
 			return err
 		}
