@@ -225,12 +225,14 @@ func startup() error {
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)
 
-	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry)
-		if err != nil {
-			log.Error().Err(err).Msg("healthcheck server failed")
-		}
-	}()
+	if config.Healthcheck.Enable {
+		go func() {
+			err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry)
+			if err != nil {
+				log.Error().Err(err).Msg("healthcheck server failed")
+			}
+		}()
+	}
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	if len(config.Feed.Input.URLs) == 0 {
