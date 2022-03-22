@@ -75,6 +75,19 @@ abstract contract GatewayRouter is TokenGateway {
         revert("ONLY_OUTBOUND_ROUTER");
     }
 
+    function _getGatewayAndData(
+        address _token, 
+        address _to, 
+        bytes calldata _data
+    ) internal returns (address gateway, bytes memory gatewayData) {
+        gateway = getGateway(_token);
+        gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
+            msg.sender,
+            _data
+        );
+        emit TransferRouted(_token, msg.sender, _to, gateway);
+    }
+
     function outboundTransfer(
         address _token,
         address _to,
@@ -85,13 +98,7 @@ abstract contract GatewayRouter is TokenGateway {
     ) public payable virtual override returns (bytes memory) {
         // this function is kept instead of delegating to outboundTransferCustomRefund to allow 
         // compatibility with older gateways that did not implement outboundTransferCustomRefund
-        address gateway = getGateway(_token);
-        bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
-            msg.sender,
-            _data
-        );
-
-        emit TransferRouted(_token, msg.sender, _to, gateway);
+        (address gateway, bytes memory gatewayData) = _getGatewayAndData(_token, _to, _data);
         return
             ITokenGateway(gateway).outboundTransfer{ value: msg.value }(
                 _token,
@@ -112,13 +119,7 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory) {
-        address gateway = getGateway(_token);
-        bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
-            msg.sender,
-            _data
-        );
-
-        emit TransferRouted(_token, msg.sender, _to, gateway);
+        (address gateway, bytes memory gatewayData) = _getGatewayAndData(_token, _to, _data);
         return
             ITokenGateway(gateway).outboundTransferCustomRefund{ value: msg.value }(
                 _token,
