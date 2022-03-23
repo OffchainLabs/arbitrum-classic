@@ -218,14 +218,11 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             _setGateways(_token, _gateway, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
-    function outboundTransfer(
-        address _token,
-        address _to,
-        uint256 _amount,
+    function _outboundTransferChecks(
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable override onlyWhitelisted returns (bytes memory) {
+    ) internal{
         // when sending a L1 to L2 transaction, we expect the user to send
         // eth in flight in order to pay for L2 gas costs
         // this check prevents users from misconfiguring the msg.value
@@ -236,6 +233,17 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 expectedEth = _maxSubmissionCost + (_maxGas * _gasPriceBid);
         require(_maxSubmissionCost > 0, "NO_SUBMISSION_COST");
         require(msg.value == expectedEth, "WRONG_ETH_VALUE");
+    }
+
+    function outboundTransfer(
+        address _token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable override onlyWhitelisted returns (bytes memory) {
+        _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
         // will revert if msg.sender is not whitelisted
         return super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
@@ -252,16 +260,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
     ) public payable override onlyWhitelisted returns (bytes memory) {
         // _refundTo is subject to L2 alias rewrite
         require(_refundTo != address(0), "INVALID_REFUND_ADDR");
-        // when sending a L1 to L2 transaction, we expect the user to send
-        // eth in flight in order to pay for L2 gas costs
-        // this check prevents users from misconfiguring the msg.value
-        (uint256 _maxSubmissionCost, ) = abi.decode(_data, (uint256, bytes));
-
-        // here we don't use SafeMath since this validation is to prevent users
-        // from shooting themselves on the foot.
-        uint256 expectedEth = _maxSubmissionCost + (_maxGas * _gasPriceBid);
-        require(_maxSubmissionCost > 0, "NO_SUBMISSION_COST");
-        require(msg.value == expectedEth, "WRONG_ETH_VALUE");
+        _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
         // will revert if msg.sender is not whitelisted
         return super.outboundTransferCustomRefund(_token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
