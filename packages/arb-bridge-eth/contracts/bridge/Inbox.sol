@@ -331,6 +331,9 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         uint256 gasPriceBid,
         bytes calldata data
     ) external payable virtual override onlyWhitelisted returns (uint256) {
+        // ensure the user's deposit alone will make submission succeed
+        require(msg.value >= maxSubmissionCost + l2CallValue, "insufficient value");
+        
         // if a refund address is a contract, we apply the alias to it
         // so that it can access its funds on the L2
         // since the beneficiary and other refund addresses don't get rewritten by arb-os
