@@ -227,6 +227,8 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         // eth in flight in order to pay for L2 gas costs
         // this check prevents users from misconfiguring the msg.value
         uint256 _maxSubmissionCost;
+        // assembly code block below is the gas optimized version of
+        // _maxSubmissionCost = abi.decode(_data, (uint256, bytes));
         assembly {
             _maxSubmissionCost := mload(add(_data, 0x20))
         }
