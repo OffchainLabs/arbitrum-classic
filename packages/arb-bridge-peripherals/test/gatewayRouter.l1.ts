@@ -19,7 +19,6 @@ import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
-import { InboxMock__factory } from '../build/types'
 
 describe('Bridge peripherals layer 1', () => {
   let accounts: SignerWithAddress[]
@@ -122,7 +121,7 @@ describe('Bridge peripherals layer 1', () => {
       gasPrice,
       data,
       {
-        value: maxSubmissionCost + maxGas * gasPrice
+        value: maxSubmissionCost + maxGas * gasPrice,
       }
     )
 
@@ -143,7 +142,6 @@ describe('Bridge peripherals layer 1', () => {
       accounts[0].address,
       'Invalid callValueRefundAddress address'
     )
-
   })
 
   it('should submit the custom refund address to inbox', async function () {
@@ -185,7 +183,7 @@ describe('Bridge peripherals layer 1', () => {
       gasPrice,
       data,
       {
-        value: maxSubmissionCost + maxGas * gasPrice
+        value: maxSubmissionCost + maxGas * gasPrice,
       }
     )
 
@@ -206,6 +204,5 @@ describe('Bridge peripherals layer 1', () => {
       accounts[0].address,
       'Invalid callValueRefundAddress address'
     )
-    
   })
 })
