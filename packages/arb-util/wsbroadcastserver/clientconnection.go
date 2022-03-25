@@ -122,7 +122,7 @@ func (cc *ClientConnection) readRequest(ctx context.Context, timeout time.Durati
 
 	atomic.StoreInt64(&cc.lastHeardUnix, time.Now().Unix())
 
-	return ReadData(ctx, cc.conn, timeout, ws.StateServerSide)
+	return ReadData(ctx, cc.conn, nil, timeout, ws.StateServerSide)
 }
 
 func (cc *ClientConnection) Write(x interface{}) error {
