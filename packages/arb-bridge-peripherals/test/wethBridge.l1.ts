@@ -18,7 +18,7 @@
 import { ethers, waffle } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { Contract, ContractFactory, providers } from 'ethers'
+import { Contract, ContractFactory } from 'ethers'
 import { TestWETH9 } from '../build/types'
 
 describe('Bridge peripherals layer 1', () => {
@@ -31,8 +31,7 @@ describe('Bridge peripherals layer 1', () => {
   const maxGas = 1000000000
   const gasPrice = 0
   let l2Address: string
-  let weth: TestWETH9;
-  
+  let weth: TestWETH9
   before(async function () {
     accounts = await ethers.getSigners()
     l2Address = accounts[1].address
@@ -44,14 +43,14 @@ describe('Bridge peripherals layer 1', () => {
     inbox = await Inbox.deploy()
 
     const Weth = await ethers.getContractFactory('TestWETH9')
-    weth = await Weth.deploy('weth','weth')
+    weth = await Weth.deploy('weth', 'weth')
 
     await testBridge.initialize(
       l2Address,
       accounts[0].address,
       inbox.address,
       weth.address, // _l1Weth
-      accounts[0].address, // _l2Weth
+      accounts[0].address // _l2Weth
     )
   })
 
@@ -83,7 +82,11 @@ describe('Bridge peripherals layer 1', () => {
     const escrowedWeth = await weth.balanceOf(testBridge.address)
     assert.equal(escrowedWeth.toNumber(), 0, 'Weth should not be escrowed')
     const escrowedETH = await waffle.provider.getBalance(l2Address)
-    assert.equal(escrowedETH.sub(escrowPrevBalance).toNumber(), wethAmount, 'ETH should be escrowed')
+    assert.equal(
+      escrowedETH.sub(escrowPrevBalance).toNumber(),
+      wethAmount,
+      'ETH should be escrowed'
+    )
   })
 
   it('should escrow deposited weth as eth (new entrypoint)', async function () {
@@ -115,7 +118,11 @@ describe('Bridge peripherals layer 1', () => {
     const escrowedWeth = await weth.balanceOf(testBridge.address)
     assert.equal(escrowedWeth.toNumber(), 0, 'Weth should not be escrowed')
     const escrowedETH = await waffle.provider.getBalance(l2Address)
-    assert.equal(escrowedETH.sub(escrowPrevBalance).toNumber(), wethAmount, 'ETH should be escrowed')
+    assert.equal(
+      escrowedETH.sub(escrowPrevBalance).toNumber(),
+      wethAmount,
+      'ETH should be escrowed'
+    )
   })
 
   it('should revert post mint call correctly in outbound', async function () {
@@ -153,17 +160,6 @@ describe('Bridge peripherals layer 1', () => {
     await weth.deposit({ value: wethAmount })
     await weth.approve(testBridge.address, wethAmount)
 
-    let data = ethers.utils.defaultAbiCoder.encode(
-      ['uint256', 'bytes'],
-      [maxSubmissionCost, '0x12']
-    )
-
-    // router usually does this encoding part
-    data = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'bytes'],
-      [accounts[0].address, data]
-    )
-
     const exitNum = 0
     const withdrawData = ethers.utils.defaultAbiCoder.encode(
       ['uint256', 'bytes'],
@@ -180,6 +176,7 @@ describe('Bridge peripherals layer 1', () => {
       )
     ).to.be.revertedWith('')
   })
+
   it.skip('should withdraw weth from L2', async function () {
     // send weth to bridge
     const wethAmount = 100
@@ -242,7 +239,7 @@ describe('Bridge peripherals layer 1', () => {
       accounts[0].address,
       inbox.address,
       weth.address, // _l1Weth
-      accounts[0].address, // _l2Weth
+      accounts[0].address // _l2Weth
     )
 
     // send weth to bridge
@@ -281,8 +278,8 @@ describe('Bridge peripherals layer 1', () => {
     }
 
     const logs = events
-      .filter((curr: any) => curr.topics[0] === expectedTopic)
-      .map((curr: any) => inbox.interface.parseLog(curr))
+      .filter(curr => curr.topics[0] === expectedTopic)
+      .map(curr => inbox.interface.parseLog(curr))
 
     assert.equal(
       logs[0].args.maxSubmissionCost.toNumber(),
