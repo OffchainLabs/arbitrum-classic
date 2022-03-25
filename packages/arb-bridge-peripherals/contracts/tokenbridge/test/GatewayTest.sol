@@ -47,9 +47,10 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
         shouldUseInbox = _shouldUseInbox;
     }
 
-    function sendTxToL2(
+    function sendTxToL2CustomRefund(
         address, /* _inbox */
         address _to,
+        address, /*_refundTo */
         address, /* _user */
         uint256, /* _l1CallValue */
         uint256 _l2CallValue,
@@ -123,9 +124,10 @@ abstract contract L2ArbitrumTestMessenger is L2ArbitrumMessenger {
 }
 
 contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
-    function sendTxToL2(
+    function sendTxToL2CustomRefund(
         address _inbox,
         address _to,
+        address _refundTo,
         address _user,
         uint256 _l1CallValue,
         uint256 _l2CallValue,
@@ -135,9 +137,10 @@ contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
         bytes memory _data
     ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
         return
-            L1ArbitrumTestMessenger.sendTxToL2(
+            L1ArbitrumTestMessenger.sendTxToL2CustomRefund(
                 _inbox,
                 _to,
+                _refundTo,
                 _user,
                 _l1CallValue,
                 _l2CallValue,
@@ -203,9 +206,10 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
 }
 
 contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
-    function sendTxToL2(
+    function sendTxToL2CustomRefund(
         address _inbox,
         address _to,
+        address _refundTo,
         address _user,
         uint256 _l1CallValue,
         uint256 _l2CallValue,
@@ -215,9 +219,10 @@ contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
         bytes memory _data
     ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
         return
-            L1ArbitrumTestMessenger.sendTxToL2(
+            L1ArbitrumTestMessenger.sendTxToL2CustomRefund(
                 _inbox,
                 _to,
+                _refundTo,
                 _user,
                 _l1CallValue,
                 _l2CallValue,
@@ -261,9 +266,10 @@ contract L2CustomGatewayTester is L2ArbitrumTestMessenger, L2CustomGateway {
 }
 
 contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
-    function sendTxToL2(
+    function sendTxToL2CustomRefund(
         address _inbox,
         address _to,
+        address _refundTo,
         address _user,
         uint256 _l1CallValue,
         uint256 _l2CallValue,
@@ -273,9 +279,10 @@ contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
         bytes memory _data
     ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
         return
-            L1ArbitrumTestMessenger.sendTxToL2(
+            L1ArbitrumTestMessenger.sendTxToL2CustomRefund(
                 _inbox,
                 _to,
+                _refundTo,
                 _user,
                 _l1CallValue,
                 _l2CallValue,
@@ -323,9 +330,10 @@ contract L2WethGatewayTester is L2ArbitrumTestMessenger, L2WethGateway {
 }
 
 contract L1GatewayRouterTester is L1ArbitrumTestMessenger, L1GatewayRouter {
-    function sendTxToL2(
+    function sendTxToL2CustomRefund(
         address _inbox,
         address _to,
+        address _refundTo,
         address _user,
         uint256 _l1CallValue,
         uint256 _l2CallValue,
@@ -335,9 +343,10 @@ contract L1GatewayRouterTester is L1ArbitrumTestMessenger, L1GatewayRouter {
         bytes memory _data
     ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
         return
-            L1ArbitrumTestMessenger.sendTxToL2(
+            L1ArbitrumTestMessenger.sendTxToL2CustomRefund(
                 _inbox,
                 _to,
+                _refundTo,
                 _user,
                 _l1CallValue,
                 _l2CallValue,
