@@ -19,7 +19,6 @@ import { ethers, waffle } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
-import { TestWETH9 } from '../build/types'
 
 describe('Bridge peripherals layer 1', () => {
   let accounts: SignerWithAddress[]
@@ -31,20 +30,21 @@ describe('Bridge peripherals layer 1', () => {
   const maxGas = 1000000000
   const gasPrice = 0
   let l2Address: string
-  let weth: TestWETH9
   before(async function () {
     accounts = await ethers.getSigners()
     l2Address = accounts[1].address
 
     TestBridge = await ethers.getContractFactory('L1WethGatewayTester')
-    testBridge = await TestBridge.deploy()
 
     const Inbox = await ethers.getContractFactory('InboxMock')
     inbox = await Inbox.deploy()
+  })
 
+  it('should escrow deposited weth as eth', async function () {
     const Weth = await ethers.getContractFactory('TestWETH9')
-    weth = await Weth.deploy('weth', 'weth')
+    const weth = await Weth.deploy('weth', 'weth')
 
+    testBridge = await TestBridge.deploy()
     await testBridge.initialize(
       l2Address,
       accounts[0].address,
@@ -52,9 +52,6 @@ describe('Bridge peripherals layer 1', () => {
       weth.address, // _l1Weth
       accounts[0].address // _l2Weth
     )
-  })
-
-  it('should escrow deposited weth as eth', async function () {
     // send weth to bridge
     const wethAmount = 100
     await weth.deposit({ value: wethAmount })
@@ -90,6 +87,17 @@ describe('Bridge peripherals layer 1', () => {
   })
 
   it('should escrow deposited weth as eth (new entrypoint)', async function () {
+    const Weth = await ethers.getContractFactory('TestWETH9')
+    const weth = await Weth.deploy('weth', 'weth')
+
+    testBridge = await TestBridge.deploy()
+    await testBridge.initialize(
+      l2Address,
+      accounts[0].address,
+      inbox.address,
+      weth.address, // _l1Weth
+      accounts[0].address // _l2Weth
+    )
     // send weth to bridge
     const wethAmount = 100
     await weth.deposit({ value: wethAmount })
@@ -126,6 +134,17 @@ describe('Bridge peripherals layer 1', () => {
   })
 
   it('should revert post mint call correctly in outbound', async function () {
+    const Weth = await ethers.getContractFactory('TestWETH9')
+    const weth = await Weth.deploy('weth', 'weth')
+
+    testBridge = await TestBridge.deploy()
+    await testBridge.initialize(
+      l2Address,
+      accounts[0].address,
+      inbox.address,
+      weth.address, // _l1Weth
+      accounts[0].address // _l2Weth
+    )
     // send weth to bridge
     const wethAmount = 100
     await weth.deposit({ value: wethAmount })
@@ -155,6 +174,17 @@ describe('Bridge peripherals layer 1', () => {
   })
 
   it('should revert on inbound if there is data for post mint call', async function () {
+    const Weth = await ethers.getContractFactory('TestWETH9')
+    const weth = await Weth.deploy('weth', 'weth')
+
+    testBridge = await TestBridge.deploy()
+    await testBridge.initialize(
+      l2Address,
+      accounts[0].address,
+      inbox.address,
+      weth.address, // _l1Weth
+      accounts[0].address // _l2Weth
+    )
     // send weth to bridge
     const wethAmount = 100
     await weth.deposit({ value: wethAmount })
@@ -178,6 +208,17 @@ describe('Bridge peripherals layer 1', () => {
   })
 
   it.skip('should withdraw weth from L2', async function () {
+    const Weth = await ethers.getContractFactory('TestWETH9')
+    const weth = await Weth.deploy('weth', 'weth')
+
+    testBridge = await TestBridge.deploy()
+    await testBridge.initialize(
+      l2Address,
+      accounts[0].address,
+      inbox.address,
+      weth.address, // _l1Weth
+      accounts[0].address // _l2Weth
+    )
     // send weth to bridge
     const wethAmount = 100
     await weth.deposit({ value: wethAmount })
@@ -231,6 +272,9 @@ describe('Bridge peripherals layer 1', () => {
   })
 
   it('should submit the correct submission cost to the inbox', async function () {
+    const Weth = await ethers.getContractFactory('TestWETH9')
+    const weth = await Weth.deploy('weth', 'weth')
+
     const L1WethGateway = await ethers.getContractFactory('L1WethGateway')
     const l1WethGateway = await L1WethGateway.deploy()
 
@@ -278,8 +322,13 @@ describe('Bridge peripherals layer 1', () => {
     }
 
     const logs = events
-      .filter(curr => curr.topics[0] === expectedTopic)
-      .map(curr => inbox.interface.parseLog(curr))
+      .filter(
+        (curr: { topics: string[]; data: string }) =>
+          curr.topics[0] === expectedTopic
+      )
+      .map((curr: { topics: string[]; data: string }) =>
+        inbox.interface.parseLog(curr)
+      )
 
     assert.equal(
       logs[0].args.maxSubmissionCost.toNumber(),
