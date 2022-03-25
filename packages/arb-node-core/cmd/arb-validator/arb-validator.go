@@ -140,12 +140,14 @@ func startup() error {
 	bridgeUtilsAddr := ethcommon.HexToAddress(config.BridgeUtilsAddress)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
-	auth, _, finished, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, false)
+	auth, _, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, false)
 	if err != nil {
+		if strings.Contains(err.Error(), "only-create-key") {
+			logger.Info().Msg(err.Error())
+			fmt.Printf("\nNotice: %s\n\n", err.Error())
+			return nil
+		}
 		return errors.Wrap(err, "error loading wallet keystore")
-	}
-	if finished {
-		return nil
 	}
 	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
 

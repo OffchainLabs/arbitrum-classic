@@ -541,6 +541,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.String("rollup.address", "", "layer 2 rollup contract address")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
+	f.Bool("wallet.local.only-create-key", false, "create new wallet and exit")
 	f.String("wallet.local.pathname", defaultWalletPathname, "path to store wallet in")
 	f.String("wallet.local.password", PASSWORD_NOT_SET, "password for wallet")
 	f.String("wallet.local.private-key", "", "wallet private key string")
