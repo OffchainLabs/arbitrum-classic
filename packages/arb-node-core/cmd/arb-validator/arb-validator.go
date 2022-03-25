@@ -140,9 +140,12 @@ func startup() error {
 	bridgeUtilsAddr := ethcommon.HexToAddress(config.BridgeUtilsAddress)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
-	auth, _, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, false)
+	auth, _, finished, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, false)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
+	}
+	if finished {
+		return nil
 	}
 	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
 

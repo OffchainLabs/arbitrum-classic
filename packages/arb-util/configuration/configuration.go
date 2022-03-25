@@ -304,9 +304,10 @@ func (f *FeedSigner) Password() *string {
 }
 
 type WalletLocal struct {
-	Pathname     string `koanf:"pathname"`
-	PasswordImpl string `koanf:"password"`
-	PrivateKey   string `koanf:"private-key"`
+	OnlyCreateKey bool   `koanf:"only-create-key"`
+	Pathname      string `koanf:"pathname"`
+	PasswordImpl  string `koanf:"password"`
+	PrivateKey    string `koanf:"private-key"`
 }
 
 func (w WalletLocal) Password() *string {

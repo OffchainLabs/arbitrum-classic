@@ -59,11 +59,14 @@ func GetKeystore(
 	walletConfig *configuration.Wallet,
 	chainId *big.Int,
 	signerRequired bool,
-) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
+) (*bind.TransactOpts, func([]byte) ([]byte, error), bool, error) {
 	var signer = func(data []byte) ([]byte, error) { return nil, errors.New("undefined signer") }
 	var auth *bind.TransactOpts
 
 	if len(walletConfig.Fireblocks.SSLKey) != 0 {
+		if walletConfig.Local.OnlyCreateKey {
+			return nil, nil, false, errors.New("using fireblocks keystore, remove --wallet.local.only-create-key to run normally")
+		}
 		fromAddress := ethcommon.HexToAddress(walletConfig.Fireblocks.SourceAddress)
 		logger.Info().Hex("address", fromAddress.Bytes()).Msg("fireblocks enabled")
 		auth = &bind.TransactOpts{
@@ -79,14 +82,17 @@ func GetKeystore(
 		}
 
 		if len(walletConfig.Fireblocks.FeedSigner.PrivateKey) != 0 {
-			privateKey, err := crypto.HexToECDSA(config.Wallet.Local.PrivateKey)
+			if walletConfig.Local.OnlyCreateKey {
+				return nil, nil, false, errors.New("wallet using fireblocks for key, remove --wallet.local.only-create-key to run normally")
+			}
+			privateKey, err := crypto.HexToECDSA(walletConfig.Local.PrivateKey)
 			if err != nil {
-				return nil, nil, errors.Wrap(err, "error loading feed private key")
+				return nil, nil, false, errors.Wrap(err, "error loading feed private key")
 			}
 
 			publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
 			if !ok {
-				return nil, nil, errors.Wrap(err, "error generating public address of feed private key")
+				return nil, nil, false, errors.Wrap(err, "error generating public address of feed private key")
 			}
 			logger.
 				Info().
@@ -97,11 +103,11 @@ func GetKeystore(
 			}
 		} else if signerRequired {
 			if len(walletConfig.Fireblocks.FeedSigner.Pathname) == 0 {
-				return nil, nil, errors.New("missing feed signer private key")
+				return nil, nil, false, errors.New("missing feed signer private key")
 			}
-			ks, account, err := openKeystore("feed signer", walletConfig.Fireblocks.FeedSigner.Pathname, walletConfig.Fireblocks.FeedSigner.Password())
+			ks, account, _, err := openKeystore("feed signer", walletConfig.Fireblocks.FeedSigner.Pathname, walletConfig.Fireblocks.FeedSigner.Password())
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, false, err
 			}
 
 			logger.
@@ -112,14 +118,17 @@ func GetKeystore(
 				return ks.SignHash(*account, data)
 			}
 		}
-	} else if len(config.Wallet.Local.PrivateKey) != 0 {
-		privateKey, err := crypto.HexToECDSA(config.Wallet.Local.PrivateKey)
+	} else if len(walletConfig.Local.PrivateKey) != 0 {
+		if walletConfig.Local.OnlyCreateKey {
+			return nil, nil, false, errors.New("wallet key already exists, remove --wallet.local.only-create-key to run normally")
+		}
+		privateKey, err := crypto.HexToECDSA(walletConfig.Local.PrivateKey)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 		auth, err = bind.NewKeyedTransactorWithChainID(privateKey, chainId)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 
 		logger.
@@ -130,14 +139,28 @@ func GetKeystore(
 			return crypto.Sign(data, privateKey)
 		}
 	} else {
-		ks, account, err := openKeystore("account", walletConfig.Local.Pathname, walletConfig.Local.Password())
+		ks, account, newKeystoreCreated, err := openKeystore("account", walletConfig.Local.Pathname, walletConfig.Local.Password())
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
+		}
+
+		if newKeystoreCreated {
+			if walletConfig.Local.OnlyCreateKey {
+				logger.Info().Msg("wallet key created, backup key and remove --wallet.local.only-create-key to start normally")
+			} else {
+				logger.Info().Msg("wallet key created, backup key and run again to start normally")
+			}
+			return nil, nil, true, nil
+		}
+
+		if walletConfig.Local.OnlyCreateKey {
+			logger.Info().Msg("wallet key already created, remove --wallet.local.only-create-key to run normally")
+			return nil, nil, true, nil
 		}
 
 		auth, err = bind.NewKeyStoreTransactorWithChainID(ks, *account, chainId)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 
 		logger.
@@ -154,10 +177,10 @@ func GetKeystore(
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
 
-	return auth, signer, nil
+	return auth, signer, false, nil
 }
 
-func openKeystore(description string, walletPath string, walletPassword *string) (*keystore.KeyStore, *accounts.Account, error) {
+func openKeystore(description string, walletPath string, walletPassword *string) (*keystore.KeyStore, *accounts.Account, bool, error) {
 	ks := keystore.NewKeyStore(
 		walletPath,
 		keystore.StandardScryptN,
@@ -182,7 +205,7 @@ func openKeystore(description string, walletPath string, walletPassword *string)
 		var err error
 		password, err = readPass()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 	}
 
@@ -191,7 +214,7 @@ func openKeystore(description string, walletPath string, walletPassword *string)
 		var err error
 		account, err = ks.NewAccount(password)
 		if err != nil {
-			return nil, &accounts.Account{}, err
+			return nil, &accounts.Account{}, false, err
 		}
 
 		logger.Info().Hex("address", account.Address.Bytes()).Str("description", description).Msg("created new wallet")
@@ -203,10 +226,10 @@ func openKeystore(description string, walletPath string, walletPassword *string)
 
 	err := ks.Unlock(account, password)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, false, err
 	}
 
-	return ks, &account, nil
+	return ks, &account, creatingNew, nil
 }
 
 const WalletArgsString = "[--wallet.password=pass] [--wallet.gasprice==FloatInGwei]"

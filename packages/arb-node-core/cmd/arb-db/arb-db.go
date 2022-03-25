@@ -23,6 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/pkg/errors"
 	golog "log"
+	"os"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -53,8 +54,9 @@ func startup() error {
 	config, err := configuration.ParseDBTool()
 	if err != nil || len(config.Persistent.Chain) == 0 {
 		fmt.Printf("\n")
-		fmt.Printf("Sample usage: arb-db --persistent.chain='.arbitrum/mainnet' --core.database.metadata\n")
-		fmt.Printf("              arb-db --persistent.chain='.arbitrum/mainnet' --core.database.prune-on-startup\n")
+		fmt.Printf("Sample usage: %s --persistent.chain='.arbitrum/mainnet' --core.database.metadata\n", os.Args[0])
+		fmt.Printf("              %s --persistent.chain='.arbitrum/mainnet' --core.database.make-validator\n", os.Args[0])
+		fmt.Printf("              %s --persistent.chain='.arbitrum/mainnet' --core.database.prune-on-startup\n", os.Args[0])
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			fmt.Printf("%s\n", err.Error())
 		}
