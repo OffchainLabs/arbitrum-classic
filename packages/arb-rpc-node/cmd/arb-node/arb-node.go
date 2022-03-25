@@ -282,13 +282,14 @@ func startup() error {
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
 	} else {
 		var auth *bind.TransactOpts
-		var finished bool
-		auth, dataSigner, finished, err = cmdhelp.GetKeystore(config, walletConfig, l1ChainId, true)
+		auth, dataSigner, err = cmdhelp.GetKeystore(config, walletConfig, l1ChainId, true)
 		if err != nil {
+			if strings.Contains(err.Error(), "only-create-key") {
+				logger.Info().Msg(err.Error())
+				fmt.Printf("\nNotice: %s\n\n", err.Error())
+				return nil
+			}
 			return errors.Wrap(err, "error running GetKeystore")
-		}
-		if finished {
-			return nil
 		}
 
 		if config.Node.Sequencer.Dangerous.DisableBatchPosting {
