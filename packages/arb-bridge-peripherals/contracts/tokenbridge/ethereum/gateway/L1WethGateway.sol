@@ -45,7 +45,8 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         l2Weth = _l2Weth;
     }
 
-    function createOutboundTx(
+    function createOutboundTxCustomRefund(
+        address _refundTo,
         address _from,
         uint256 _tokenAmount,
         uint256 _maxGas,

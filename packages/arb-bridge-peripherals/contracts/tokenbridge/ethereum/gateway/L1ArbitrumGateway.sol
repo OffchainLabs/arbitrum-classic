@@ -173,6 +173,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
             );
     }
 
+    /**
+     * @notice DEPRECATED - look at createOutboundTxCustomRefund instead
+     */
     function createOutboundTx(
         address _from,
         uint256 _tokenAmount,
@@ -180,21 +183,13 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
         bytes memory _outboundCalldata
-    ) internal virtual returns (uint256) {
+    ) internal returns (uint256) {
         return createOutboundTxCustomRefund(_from, _from, _tokenAmount, _maxGas, _gasPriceBid, _maxSubmissionCost, _outboundCalldata);
     }
 
     /**
-     * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
-     * @param _l1Token L1 address of ERC20
-     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
-     * @param _amount Token Amount
-     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
-     * @param _gasPriceBid Gas price for L2 execution
-     * @param _data encoded data from router and user
-     * @return res abi encoded inbox sequence number
+     * @notice DEPRECATED - look at outboundTransferCustomRefund instead
      */
-    //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
     function outboundTransfer(
         address _l1Token,
         address _to,
@@ -202,7 +197,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override returns (bytes memory res) {
+    ) public payable override returns (bytes memory res) {
         return outboundTransferCustomRefund(
             _l1Token,
             _to,
