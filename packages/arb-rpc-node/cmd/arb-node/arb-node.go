@@ -246,6 +246,7 @@ func startup() error {
 		}
 	}
 
+	// InboxReader may fail to start if sequencer isn't up yet, so keep retrying
 	var inboxReader *monitor.InboxReader
 	for {
 		inboxReader, err = mon.StartInboxReader(
@@ -259,6 +260,10 @@ func startup() error {
 			config.Node.InboxReader,
 		)
 		if err == nil {
+			break
+		}
+		if strings.Contains(err.Error(), "arbcore thread aborted") {
+			logger.Error().Err(err).Msg("aborting inbox reader start")
 			break
 		}
 		logger.Warn().Err(err).
@@ -364,6 +369,10 @@ func startup() error {
 		}
 		if err == nil {
 			go batch.Start(ctx)
+			break
+		}
+		if strings.Contains(err.Error(), "arbcore thread aborted") {
+			logger.Error().Err(err).Msg("aborting inbox reader start")
 			break
 		}
 		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")

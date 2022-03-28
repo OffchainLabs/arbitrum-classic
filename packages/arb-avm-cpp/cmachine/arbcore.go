@@ -82,13 +82,11 @@ func (ac *ArbCore) MachineMessagesRead() *big.Int {
 
 func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	defer runtime.KeepAlive(ac)
+	if err := ac.CheckError(); err != nil {
+		return 0, err
+	}
 	statusRaw := C.arbCoreMessagesStatus(ac.c)
 	status := core.MessageStatus(int(statusRaw))
-	if status == core.MessagesError {
-		cStr := C.arbCoreMessagesClearError(ac.c)
-		defer C.free(unsafe.Pointer(cStr))
-		return core.MessagesError, errors.New(C.GoString(cStr))
-	}
 	return status, nil
 }
 
@@ -511,8 +509,7 @@ func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 
 	status := C.arbCoreLogsCursorRequest(ac.c, unsafeDataPointer(cursorIndexData), unsafeDataPointer(countData))
 	if status == 0 {
-		err := ac.LogsCursorCheckError(cursorIndex)
-		if err != nil {
+		if err := ac.CheckError(); err != nil {
 			return err
 		}
 
@@ -527,8 +524,7 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []core.Val
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
-		err := ac.LogsCursorCheckError(cursorIndex)
-		if err != nil {
+		if err := ac.CheckError(); err != nil {
 			return nil, nil, nil, err
 		}
 
@@ -564,21 +560,19 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []core.Val
 	return firstIndex, logs, deletedLogs, nil
 }
 
-func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) error {
+func (ac *ArbCore) CheckError() error {
 	defer runtime.KeepAlive(ac)
-	cursorIndexData := math.U256Bytes(cursorIndex)
-	status := C.arbCoreLogsCursorCheckError(ac.c, unsafeDataPointer(cursorIndexData))
-	if status == 0 {
-		return nil
+	if C.arbCoreCheckError(ac.c) == 1 {
+		cStr := C.arbCoreGetErrorString(ac.c)
+		if cStr == nil {
+			return errors.New("Error occurred but no error string present")
+		}
+		defer C.free(unsafe.Pointer(cStr))
+
+		return errors.New(C.GoString(cStr))
 	}
 
-	cStr := C.arbCoreLogsCursorClearError(ac.c, unsafeDataPointer(cursorIndexData))
-	if cStr == nil {
-		return errors.New("Error occurred but no error string present")
-	}
-	defer C.free(unsafe.Pointer(cStr))
-
-	return errors.New(C.GoString(cStr))
+	return nil
 }
 
 func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error) {
@@ -586,8 +580,7 @@ func (ac *ArbCore) LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	status := C.arbCoreLogsCursorConfirmReceived(ac.c, unsafeDataPointer(cursorIndexData))
 	if status == 0 {
-		err := ac.LogsCursorCheckError(cursorIndex)
-		if err != nil {
+		if err := ac.CheckError(); err != nil {
 			return false, err
 		}
 

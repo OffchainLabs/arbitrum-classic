@@ -36,7 +36,6 @@ const (
 	MessagesEmpty MessageStatus = iota
 	MessagesReady
 	MessagesSuccess
-	MessagesError
 )
 
 type MachineEmission struct {
@@ -286,9 +285,9 @@ type LogConsumer interface {
 }
 
 type LogsCursor interface {
+	CheckError() error
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []ValueAndInbox, []ValueAndInbox, error)
-	LogsCursorCheckError(cursorIndex *big.Int) error
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error)
 }

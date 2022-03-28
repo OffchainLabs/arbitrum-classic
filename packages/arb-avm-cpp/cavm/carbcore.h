@@ -28,7 +28,8 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr);
 void arbCoreSaveRocksdbCheckpoint(CArbCore* arbcore_ptr);
 void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr);
 int arbCoreMessagesStatus(CArbCore* arbcore_ptr);
-char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);
+int arbCoreCheckError(CArbCore* arbcore_ptr);
+char* arbCoreGetErrorString(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            void* previous_message_count_ptr,
@@ -93,10 +94,6 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
     const void* index_ptr);
 int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
                                      const void* cursor_index);
-int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr,
-                                const void* cursor_index);
-char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
-                                  const void* cursor_index);
 
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
                                             const void* total_gas_used_ptr,

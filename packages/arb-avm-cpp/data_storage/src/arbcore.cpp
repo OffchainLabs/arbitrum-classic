@@ -111,34 +111,22 @@ bool ArbCore::machineIdle() {
 
 ArbCore::message_status_enum ArbCore::messagesStatus() {
     auto current_status = message_data_status.load();
-    if (current_status != MESSAGES_ERROR && current_status != MESSAGES_READY) {
+    if (!core_error && current_status != MESSAGES_READY) {
         message_data_status = MESSAGES_EMPTY;
     }
     return current_status;
 }
 
-std::string ArbCore::messagesClearError() {
-    if (message_data_status != ArbCore::MESSAGES_ERROR) {
+bool ArbCore::checkError() {
+    return core_error;
+}
+
+std::string ArbCore::getErrorString() {
+    if (!core_error) {
         return "";
     }
 
-    message_data_status = MESSAGES_EMPTY;
-    auto str = core_error_string;
-    core_error_string.clear();
-
-    return str;
-}
-
-std::optional<std::string> ArbCore::machineClearError() {
-    if (!machine_error) {
-        return std::nullopt;
-    }
-
-    machine_error = false;
-    auto str = machine_error_string;
-    machine_error_string.clear();
-
-    return str;
+    return core_error_string;
 }
 
 bool ArbCore::startThread() {
@@ -366,6 +354,10 @@ InitializeResult ArbCore::applyConfig() {
         reorg_done = false;
     }
 
+    if (!status.ok()) {
+        return {status, false};
+    }
+
     if (coreConfig.database_save_on_startup) {
         std::filesystem::path save_rocksdb_path(coreConfig.database_save_path);
         std::filesystem::create_directories(save_rocksdb_path);
@@ -375,18 +367,14 @@ InitializeResult ArbCore::applyConfig() {
 
     if (coreConfig.database_exit_after) {
         // Exit program, nothing else to do.
-        if (!status.ok()) {
-            std::cerr << "Exiting early, but error occurred: "
-                      << status.ToString() << std::endl;
-        }
-
         return {rocksdb::Status::OK(), true};
     }
+
     if (!reorg_done) {
-        status = reorgToLastMessage(cache);
+        return {reorgToLastMessage(cache), false};
     }
 
-    return {status, false};
+    return {rocksdb::Status::OK(), false};
 }
 
 InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
@@ -836,7 +824,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         auto success =
             runMachineWithMessages(execConfig, size_t(num_messages), false);
         if (!success) {
-            std::cerr << "runMachineWithMessages failed" << core_error_string
+            std::cerr << "runMachineWithMessages failed: " << core_error_string
                       << "\n";
             return rocksdb::Status::Aborted();
         }
@@ -863,7 +851,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
             if (!machine_success) {
                 core_error_string =
                     "Error continuing machine thread while reorging";
-                machine_error = true;
+                core_error = true;
                 std::cerr << "Error catching up: " << core_error_string << "\n";
                 return rocksdb::Status::Aborted();
             }
@@ -1457,7 +1445,7 @@ void ArbCore::operator()() {
     uint256_t next_basic_cache_gas =
         maxCheckpointGas() + coreConfig.basic_machine_cache_interval;
     try {
-        while (!arbcore_abort) {
+        while (!arbcore_abort && !core_error) {
             bool isMachineValid;
             {
                 ReadTransaction tx(data_storage);
@@ -1473,6 +1461,9 @@ void ArbCore::operator()() {
                     std::cerr << "Error in core thread calling "
                                  "reorgCheckpoints: "
                               << status.ToString() << std::endl;
+                    core_error_string = status.ToString();
+                    core_error = true;
+                    break;
                 }
                 next_checkpoint_gas = coreConfig.checkpoint_gas_frequency;
             }
@@ -1490,9 +1481,10 @@ void ArbCore::operator()() {
                     auto add_status = addMessages(message_data, cache);
                     if (!add_status.status.ok()) {
                         core_error_string = add_status.status.ToString();
-                        message_data_status = MESSAGES_ERROR;
+                        core_error = true;
                         std::cerr << "ArbCore addMessages error: "
                                   << core_error_string << "\n";
+                        break;
                     } else {
                         machine_idle = false;
                         message_data_status = MESSAGES_SUCCESS;
@@ -1506,9 +1498,10 @@ void ArbCore::operator()() {
                     throw;
                 } catch (const std::exception& e) {
                     core_error_string = e.what();
-                    message_data_status = MESSAGES_ERROR;
+                    core_error = true;
                     std::cerr << "ArbCore addMessages exception: "
                               << core_error_string << "\n";
+                    break;
                 }
                 if (coreConfig.debug_timing) {
                     printElapsed(begin_messages_ready_timepoint,
@@ -1523,6 +1516,7 @@ void ArbCore::operator()() {
             // Check machine thread
             if (core_machine->status() == MachineThread::MACHINE_ERROR) {
                 core_error_string = core_machine->getErrorString();
+                core_error = true;
                 std::cerr << "AVM machine stopped with error: "
                           << core_error_string << "\n";
                 break;
@@ -1578,6 +1572,7 @@ void ArbCore::operator()() {
                     core_machine->machine_state.output.arb_gas_used);
                 if (!status.ok()) {
                     core_error_string = status.ToString();
+                    core_error = true;
                     std::cerr << "ArbCore assertion saving failed: "
                               << core_error_string << "\n";
                     break;
@@ -1615,6 +1610,7 @@ void ArbCore::operator()() {
                         status = saveCheckpoint(tx);
                         if (!status.ok()) {
                             core_error_string = status.ToString();
+                            core_error = true;
                             std::cerr << "ArbCore checkpoint saving failed: "
                                       << core_error_string << "\n";
                             break;
@@ -1651,7 +1647,7 @@ void ArbCore::operator()() {
                         core_machine->continueRunningMachine(true);
                     if (!machine_success) {
                         core_error_string = "Error starting machine thread";
-                        machine_error = true;
+                        core_error = true;
                         std::cerr << "ArbCore error: " << core_error_string
                                   << "\n";
                         break;
@@ -1661,7 +1657,7 @@ void ArbCore::operator()() {
                 status = tx.commit();
                 if (!status.ok()) {
                     core_error_string = status.ToString();
-                    machine_error = true;
+                    core_error = true;
                     std::cerr << "ArbCore database update failed: "
                               << core_error_string << "\n";
                     break;
@@ -1801,11 +1797,17 @@ void ArbCore::operator()() {
                 ValueCache logs_cache{1, 0};
                 if (logs_cursors[i].status == DataCursor::REQUESTED) {
                     ReadTransaction tx(data_storage);
-                    handleLogsCursorRequested(tx, i, logs_cache);
+                    auto status = handleLogsCursorRequested(tx, i, logs_cache);
+                    if (!status) {
+                        // error already logged
+                        arbcore_abort = true;
+                        break;
+                    }
                 }
             }
 
-            if (machine_idle && message_data_status != MESSAGES_READY) {
+            if (!arbcore_abort && machine_idle &&
+                message_data_status != MESSAGES_READY) {
                 // Machine blocked and no new messages, so sleep for a bit
                 std::this_thread::sleep_for(std::chrono::milliseconds(
                     coreConfig.idle_sleep_milliseconds));
@@ -1820,11 +1822,11 @@ void ArbCore::operator()() {
     std::cerr << "Exiting main ArbCore thread" << std::endl;
 
     // Error occurred, make sure machine stops cleanly
-    core_machine->abortMachine();
-    for (auto& logs_cursor : logs_cursors) {
-        logs_cursor.error_string = "arbcore thread aborted";
-        logs_cursor.status = DataCursor::ERROR;
+    if (!core_error) {
+        core_error_string = "arbcore thread aborted";
+        core_error = true;
     }
+    core_machine->abortMachine();
 
 #ifdef __linux__
     core_pthread = std::nullopt;
@@ -1878,7 +1880,7 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
         max_message_batch_size);
     if (!messages_result.status.ok()) {
         core_error_string = messages_result.status.ToString();
-        machine_error = true;
+        core_error = true;
         std::cerr << "ArbCore failed getting message entry: "
                   << core_error_string << "\n";
         return false;
@@ -1891,7 +1893,7 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
         auto success = core_machine->runMachine(execConfig, asynchronous);
         if (!success) {
             core_error_string = "Error starting machine thread";
-            machine_error = true;
+            core_error = true;
             std::cerr << "ArbCore error: " << core_error_string << "\n";
             return false;
         }
@@ -3471,7 +3473,7 @@ std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
+bool ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
                                         size_t cursor_index,
                                         ValueCache& cache) {
     if (cursor_index >= logs_cursors.size()) {
@@ -3487,27 +3489,25 @@ void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
     // Provide requested logs
     auto log_inserted_count = logInsertedCountImpl(tx);
     if (!log_inserted_count.status.ok()) {
-        logs_cursors[cursor_index].error_string =
-            log_inserted_count.status.ToString();
-        logs_cursors[cursor_index].status = DataCursor::ERROR;
+        core_error_string = log_inserted_count.status.ToString();
+        core_error = true;
 
         std::cerr << "logscursor index " << cursor_index
                   << " error getting inserted count: "
                   << log_inserted_count.status.ToString() << std::endl;
-        return;
+        return false;
     }
 
     auto current_count_result =
         logsCursorGetCurrentTotalCount(tx, cursor_index);
     if (!current_count_result.status.ok()) {
-        logs_cursors[cursor_index].error_string =
-            current_count_result.status.ToString();
-        logs_cursors[cursor_index].status = DataCursor::ERROR;
+        core_error_string = current_count_result.status.ToString();
+        core_error = true;
 
         std::cerr << "logscursor index" << cursor_index
                   << " error getting cursor current total count: "
                   << current_count_result.status.ToString() << std::endl;
-        return;
+        return false;
     }
 
     if (current_count_result.data == log_inserted_count.data) {
@@ -3518,18 +3518,18 @@ void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
             logs_cursors[cursor_index].status = DataCursor::READY;
         }
 
-        return;
+        return true;
     }
     if (current_count_result.data > log_inserted_count.data) {
-        logs_cursors[cursor_index].error_string =
+        core_error_string =
             "current_count_result greater than log_inserted_count";
-        logs_cursors[cursor_index].status = DataCursor::ERROR;
+        core_error = true;
 
         std::cerr << "handleLogsCursor current count: "
                   << current_count_result.data << " > "
                   << " log inserted count: " << log_inserted_count.data
                   << std::endl;
-        return;
+        return false;
     }
     if (current_count_result.data +
             logs_cursors[cursor_index].number_requested >
@@ -3541,23 +3541,24 @@ void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
     if (logs_cursors[cursor_index].number_requested == 0) {
         logs_cursors[cursor_index].status = DataCursor::READY;
         // No new logs to provide
-        return;
+        return true;
     }
     auto requested_logs =
         getLogs(current_count_result.data,
                 logs_cursors[cursor_index].number_requested, cache);
     if (!requested_logs.status.ok()) {
-        logs_cursors[cursor_index].error_string =
-            requested_logs.status.ToString();
-        logs_cursors[cursor_index].status = DataCursor::ERROR;
+        core_error_string = requested_logs.status.ToString();
+        core_error = true;
 
         std::cerr << "logscursor index " << cursor_index
                   << " error getting logs: " << requested_logs.status.ToString()
                   << std::endl;
-        return;
+        return false;
     }
     logs_cursors[cursor_index].data = std::move(requested_logs.data);
     logs_cursors[cursor_index].status = DataCursor::READY;
+
+    return true;
 }
 
 // handleLogsCursorReorg must be called before logs are deleted.
@@ -3714,11 +3715,9 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
         logs_cursors[cursor_index].reorg_mutex);
 
     if (logs_cursors[cursor_index].status != DataCursor::DELIVERED) {
-        logs_cursors[cursor_index].error_string =
-            "logsCursorConfirmReceived called at wrong state";
         std::cerr << "logsCursorConfirmReceived called at wrong state: "
                   << logs_cursors[cursor_index].status << "\n";
-        logs_cursors[cursor_index].status = DataCursor::ERROR;
+        abortThread();
         return false;
     }
 
@@ -3739,15 +3738,6 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
     return true;
 }
 
-bool ArbCore::logsCursorCheckError(size_t cursor_index) const {
-    if (cursor_index >= logs_cursors.size()) {
-        std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        throw std::runtime_error("Invalid logsCursor index");
-    }
-
-    return logs_cursors[cursor_index].status == DataCursor::ERROR;
-}
-
 ValueResult<uint256_t> ArbCore::logsCursorPosition(size_t cursor_index) const {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
@@ -3756,30 +3746,6 @@ ValueResult<uint256_t> ArbCore::logsCursorPosition(size_t cursor_index) const {
 
     ReadTransaction tx(data_storage);
     return logsCursorGetCurrentTotalCount(tx, cursor_index);
-}
-
-std::string ArbCore::logsCursorClearError(size_t cursor_index) {
-    if (cursor_index >= logs_cursors.size()) {
-        std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return "Invalid logsCursor index";
-    }
-
-    const std::lock_guard<std::mutex> lock(
-        logs_cursors[cursor_index].reorg_mutex);
-
-    if (logs_cursors[cursor_index].status != DataCursor::ERROR) {
-        std::cerr << "logsCursorClearError called when status not ERROR"
-                  << std::endl;
-        return "logsCursorClearError called when status not ERROR";
-    }
-
-    auto str = logs_cursors[cursor_index].error_string;
-    logs_cursors[cursor_index].error_string.clear();
-    logs_cursors[cursor_index].data.clear();
-    logs_cursors[cursor_index].deleted_data.clear();
-    logs_cursors[cursor_index].status = DataCursor::EMPTY;
-
-    return str;
 }
 
 rocksdb::Status ArbCore::logsCursorSaveCurrentTotalCount(

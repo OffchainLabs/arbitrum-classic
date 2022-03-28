@@ -21,6 +21,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -114,6 +115,10 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			if err == nil && arbTx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
 				_, err = transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.auth)
+				if strings.Contains(err.Error(), "arbcore thread aborted") {
+					logger.Error().Err(err).Msg("aborting staker background thread")
+					break
+				}
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
 					logger.Info().Str("hash", arbTx.Hash().String()).Msg("successfully executed transaction")

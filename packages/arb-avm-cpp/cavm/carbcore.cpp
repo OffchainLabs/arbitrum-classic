@@ -40,9 +40,14 @@ int arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
     return arb_core->messagesStatus();
 }
 
-char* arbCoreMessagesClearError(CArbCore* arbcore_ptr) {
+int arbCoreCheckError(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    auto str = arb_core->messagesClearError();
+    return arb_core->checkError();
+}
+
+char* arbCoreGetErrorString(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto str = arb_core->getErrorString();
     return strdup(str.c_str());
 }
 
@@ -465,42 +470,6 @@ int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
         std::cerr << "Exception while confirming receipt of logscursor "
                   << e.what() << std::endl;
         return 0;
-    }
-}
-
-int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr, const void* index_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cursor_index = receiveUint256(index_ptr);
-
-    try {
-        return arbcore->logsCursorCheckError(
-            intx::narrow_cast<size_t>(cursor_index));
-    } catch (const std::exception& e) {
-        std::cerr << "Exception while checking error for logscursor "
-                  << e.what() << std::endl;
-        return 0;
-    }
-}
-
-// Returned string must be freed
-char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
-                                  const void* index_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cursor_index = receiveUint256(index_ptr);
-
-    try {
-        auto str = arbcore->logsCursorClearError(
-            intx::narrow_cast<size_t>(cursor_index));
-
-        if (str.empty()) {
-            return nullptr;
-        }
-
-        return strdup(str.c_str());
-    } catch (const std::exception& e) {
-        std::cerr << "Exception while clearing error for logscursor "
-                  << e.what() << std::endl;
-        return strdup("exception occurred in logsCursorClearError");
     }
 }
 
