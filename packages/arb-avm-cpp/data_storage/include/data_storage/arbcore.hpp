@@ -80,7 +80,6 @@ class ArbCore {
         MESSAGES_EMPTY,    // Out: Ready to receive messages
         MESSAGES_READY,    // In:  Messages in vector
         MESSAGES_SUCCESS,  // Out:  Messages processed successfully
-        MESSAGES_ERROR     // Out: Error processing messages
     } message_status_enum;
 
     struct logscursor_logs {
@@ -136,6 +135,7 @@ class ArbCore {
     message_data_struct message_data;
 
     // Core thread inbox output
+    std::atomic<bool> core_error{false};
     std::string core_error_string;
 
     // Core thread logs output
@@ -143,8 +143,6 @@ class ArbCore {
 
     // Core thread machine state output
     std::atomic<bool> machine_idle{false};
-    std::atomic<bool> machine_error{false};
-    std::string machine_error_string;
 
     std::shared_mutex last_machine_mutex;
     std::unique_ptr<Machine> last_machine;
@@ -276,7 +274,6 @@ class ArbCore {
    public:
     // Managing machine state
     bool machineIdle();
-    std::optional<std::string> machineClearError();
     std::unique_ptr<Machine> getLastMachine();
     MachineOutput getLastMachineOutput();
     uint256_t machineMessagesRead();
@@ -290,21 +287,20 @@ class ArbCore {
         std::vector<std::vector<unsigned char>> delayed_messages,
         const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
-    std::string messagesClearError();
+    bool checkError();
+    std::string getErrorString();
 
    public:
     // Logs Cursor interaction
     bool logsCursorRequest(size_t cursor_index, uint256_t count);
     ValueResult<logscursor_logs> logsCursorGetLogs(size_t cursor_index);
-    [[nodiscard]] bool logsCursorCheckError(size_t cursor_index) const;
-    std::string logsCursorClearError(size_t cursor_index);
     bool logsCursorConfirmReceived(size_t cursor_index);
     [[nodiscard]] ValueResult<uint256_t> logsCursorPosition(
         size_t cursor_index) const;
 
    private:
     // Logs cursor internal functions
-    void handleLogsCursorRequested(ReadTransaction& tx,
+    bool handleLogsCursorRequested(ReadTransaction& tx,
                                    size_t cursor_index,
                                    ValueCache& cache);
     rocksdb::Status handleLogsCursorReorg(size_t cursor_index,

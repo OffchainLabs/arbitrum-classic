@@ -26,6 +26,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -263,6 +264,10 @@ func startup() error {
 			config.Node.InboxReader,
 		)
 		if err == nil {
+			break
+		}
+		if strings.Contains(err.Error(), "arbcore thread aborted") {
+			logger.Error().Err(err).Msg("aborting inbox reader start")
 			break
 		}
 		logger.Warn().Err(err).

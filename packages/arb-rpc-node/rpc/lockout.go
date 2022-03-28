@@ -335,11 +335,11 @@ type errorBatcher struct {
 	aggregator *common.Address
 }
 
-func (b *errorBatcher) PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error) {
+func (b *errorBatcher) PendingTransactionCount(_ context.Context, _ common.Address) (*uint64, error) {
 	return nil, b.err
 }
 
-func (b *errorBatcher) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+func (b *errorBatcher) SendTransaction(_ context.Context, _ *types.Transaction) error {
 	return b.err
 }
 
@@ -351,5 +351,5 @@ func (b *errorBatcher) Aggregator() *common.Address {
 	return b.aggregator
 }
 
-func (b *errorBatcher) Start(ctx context.Context) {
+func (b *errorBatcher) Start(_ context.Context) {
 }
