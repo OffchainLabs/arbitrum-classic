@@ -147,6 +147,7 @@ func startup() error {
 			fmt.Printf("\nNotice: %s\n\n", err.Error())
 			return nil
 		}
+
 		return errors.Wrap(err, "error loading wallet keystore")
 	}
 	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
