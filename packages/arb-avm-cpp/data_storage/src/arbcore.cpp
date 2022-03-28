@@ -381,7 +381,7 @@ InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
 
     auto config_result = applyConfig();
-    if (config_result.finished) {
+    if (config_result.finished || config_result.status.ok()) {
         return config_result;
     } else if (!config_result.status.IsNotFound()) {
         std::cerr << "Error with initial reorg: "
