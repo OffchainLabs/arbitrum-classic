@@ -158,6 +158,9 @@ func startup() error {
 		fork.LastMessage,
 		*persistState,
 	)
+	if err != nil {
+		return err
+	}
 
 	defer cancel()
 

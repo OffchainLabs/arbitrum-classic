@@ -33,7 +33,6 @@ class DataCursor {
         REQUESTED,  // In: Data requested
         READY,      // Out: Data is ready to be picked up
         DELIVERED,  // Out: Data is picked up and waiting to be confirmed
-        ERROR       // Out: Error getting data
     } status_enum;
 
    public:
@@ -45,7 +44,6 @@ class DataCursor {
     std::vector<char> current_total_key;
     std::vector<MachineEmission<Value>> data;
     std::vector<MachineEmission<Value>> deleted_data;
-    std::string error_string;
 
     // Input value
     uint256_t number_requested;
