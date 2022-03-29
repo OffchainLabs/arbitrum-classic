@@ -130,8 +130,10 @@ std::string ArbCore::getErrorString() {
 }
 
 void ArbCore::setCoreError(const std::string& message) {
-    core_error_string = message;
-    core_error = true;
+    if (!core_error) {
+        core_error_string = message;
+        core_error = true;
+    }
 }
 
 bool ArbCore::startThread() {
@@ -151,11 +153,10 @@ void ArbCore::abortThread() {
 #ifdef __linux__
         core_pthread = std::nullopt;
 #endif
-        arbcore_abort = true;
+        setCoreError("aborting thread");
         core_thread->join();
         core_thread = nullptr;
     }
-    arbcore_abort = false;
 }
 
 // deliverMessages sends messages to core thread
@@ -1643,7 +1644,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
                             << std::get<rocksdb::Status>(current_execution)
                                    .ToString()
                             << std::endl;
-                        return false;
+                        break;
                     }
                 }
 
@@ -1779,7 +1780,7 @@ void ArbCore::operator()() {
     }
 
     try {
-        while (!arbcore_abort && !core_error) {
+        while (!core_error) {
             if (!threadBody(thread_data)) {
                 break;
             }
