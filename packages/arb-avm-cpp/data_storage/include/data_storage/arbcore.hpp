@@ -142,9 +142,6 @@ class ArbCore {
     ArbCoreConfig coreConfig{};
 
     // Core thread input
-    std::atomic<bool> arbcore_abort{false};
-
-    // Core thread input
     std::mutex checkpoint_pruning_mutex;
     uint256_t unsafe_checkpoint_pruning_gas_used;
 

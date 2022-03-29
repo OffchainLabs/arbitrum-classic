@@ -59,11 +59,6 @@ func (ac *ArbCore) StartThread() bool {
 	return status == 1
 }
 
-func (ac *ArbCore) StopThread() {
-	defer runtime.KeepAlive(ac)
-	C.arbCoreAbortThread(ac.c)
-}
-
 func (ac *ArbCore) MachineIdle() bool {
 	defer runtime.KeepAlive(ac)
 	status := C.arbCoreMachineIdle(ac.c)

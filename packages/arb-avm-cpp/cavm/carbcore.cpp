@@ -30,11 +30,6 @@ int arbCoreStartThread(CArbCore* arbcore_ptr) {
     return 1;
 }
 
-void arbCoreAbortThread(CArbCore* arbcore_ptr) {
-    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    arb_core->abortThread();
-}
-
 int arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     return arb_core->messagesStatus();
