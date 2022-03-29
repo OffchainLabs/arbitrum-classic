@@ -19,6 +19,7 @@ package monitor
 import (
 	"context"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -118,6 +119,10 @@ func (ir *InboxReader) Start(parentCtx context.Context, inboxReaderDelayBlocks i
 		for {
 			err := ir.getMessages(ctx, justErrored, inboxReaderDelayBlocks)
 			if err == nil {
+				break
+			}
+			if strings.Contains(err.Error(), "arbcore thread aborted") {
+				logger.Error().Err(err).Msg("aborting inbox reader thread")
 				break
 			}
 			justErrored = true
@@ -438,7 +443,7 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 				if len(ir.BroadcastFeed) == 0 {
 					err := ir.deliverQueueItems()
 					if err != nil {
-						logger.Warn().Err(err).Msg("error delivering broadcast feed items")
+						return err
 					}
 				}
 			case <-sleepChan:
@@ -447,7 +452,7 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 		}
 		err = ir.deliverQueueItems()
 		if err != nil {
-			logger.Warn().Err(err).Msg("error delivering broadcast feed items")
+			return err
 		}
 		temporarilyParanoid = err != nil
 

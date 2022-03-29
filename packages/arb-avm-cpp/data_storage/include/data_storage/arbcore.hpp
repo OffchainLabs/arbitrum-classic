@@ -80,7 +80,6 @@ class ArbCore {
         MESSAGES_EMPTY,    // Out: Ready to receive messages
         MESSAGES_READY,    // In:  Messages in vector
         MESSAGES_SUCCESS,  // Out:  Messages processed successfully
-        MESSAGES_ERROR     // Out: Error processing messages
     } message_status_enum;
 
     struct logscursor_logs {
@@ -98,13 +97,49 @@ class ArbCore {
         std::optional<uint256_t> reorg_batch_items;
     };
 
+    struct ThreadDataStruct {
+        ValueCache cache;
+        MachineExecutionConfig execConfig;
+        std::filesystem::path save_rocksdb_path;
+        uint256_t begin_message;
+        bool perform_pruning;
+        bool perform_save_rocksdb_checkpoint;
+        uint256_t next_checkpoint_gas;
+        uint256_t next_basic_cache_gas;
+        std::chrono::time_point<std::chrono::steady_clock>
+            next_rocksdb_save_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            profiling_begin_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            last_messages_ready_check_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            last_run_machine_check_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            last_restart_machine_check_timepoint;
+
+        ThreadDataStruct(const std::string& _save_rocksdb_path,
+                         const uint256_t& _begin_message,
+                         const uint256_t& _next_checkpoint_gas,
+                         const uint256_t& _next_basic_cache_gas)
+            : cache(5, 0),
+              execConfig(),
+              save_rocksdb_path(_save_rocksdb_path),
+              begin_message(_begin_message),
+              perform_pruning(false),
+              perform_save_rocksdb_checkpoint(false),
+              next_checkpoint_gas(_next_checkpoint_gas),
+              next_basic_cache_gas(_next_basic_cache_gas),
+              next_rocksdb_save_timepoint(),
+              profiling_begin_timepoint(std::chrono::steady_clock::now()),
+              last_messages_ready_check_timepoint(profiling_begin_timepoint),
+              last_run_machine_check_timepoint(profiling_begin_timepoint),
+              last_restart_machine_check_timepoint(profiling_begin_timepoint) {}
+    };
+
    private:
     std::unique_ptr<std::thread> core_thread;
 
     ArbCoreConfig coreConfig{};
-
-    // Core thread input
-    std::atomic<bool> arbcore_abort{false};
 
     // Core thread input
     std::mutex checkpoint_pruning_mutex;
@@ -136,6 +171,7 @@ class ArbCore {
     message_data_struct message_data;
 
     // Core thread inbox output
+    std::atomic<bool> core_error{false};
     std::string core_error_string;
 
     // Core thread logs output
@@ -143,8 +179,6 @@ class ArbCore {
 
     // Core thread machine state output
     std::atomic<bool> machine_idle{false};
-    std::atomic<bool> machine_error{false};
-    std::string machine_error_string;
 
     std::shared_mutex last_machine_mutex;
     std::unique_ptr<Machine> last_machine;
@@ -276,7 +310,6 @@ class ArbCore {
    public:
     // Managing machine state
     bool machineIdle();
-    std::optional<std::string> machineClearError();
     std::unique_ptr<Machine> getLastMachine();
     MachineOutput getLastMachineOutput();
     uint256_t machineMessagesRead();
@@ -290,21 +323,20 @@ class ArbCore {
         std::vector<std::vector<unsigned char>> delayed_messages,
         const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
-    std::string messagesClearError();
+    bool checkError();
+    std::string getErrorString();
 
    public:
     // Logs Cursor interaction
     bool logsCursorRequest(size_t cursor_index, uint256_t count);
     ValueResult<logscursor_logs> logsCursorGetLogs(size_t cursor_index);
-    [[nodiscard]] bool logsCursorCheckError(size_t cursor_index) const;
-    std::string logsCursorClearError(size_t cursor_index);
     bool logsCursorConfirmReceived(size_t cursor_index);
     [[nodiscard]] ValueResult<uint256_t> logsCursorPosition(
         size_t cursor_index) const;
 
    private:
     // Logs cursor internal functions
-    void handleLogsCursorRequested(ReadTransaction& tx,
+    bool handleLogsCursorRequested(ReadTransaction& tx,
                                    size_t cursor_index,
                                    ValueCache& cache);
     rocksdb::Status handleLogsCursorReorg(size_t cursor_index,
@@ -490,6 +522,8 @@ class ArbCore {
         ReadTransaction& tx);
     void saveRocksdbCheckpoint(const std::filesystem::path& save_rocksdb_path,
                                ReadTransaction& tx);
+    void setCoreError(const std::string& message);
+    bool threadBody(ThreadDataStruct& thread_data);
 };
 
 uint64_t seconds_since_epoch();
