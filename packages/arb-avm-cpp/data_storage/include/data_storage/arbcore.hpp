@@ -486,6 +486,7 @@ class ArbCore {
         ReadTransaction& tx);
     void saveRocksdbCheckpoint(const std::filesystem::path& save_rocksdb_path,
                                ReadTransaction& tx);
+    void setCoreError(const std::string& message);
 };
 
 uint64_t seconds_since_epoch();

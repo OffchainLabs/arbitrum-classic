@@ -82,11 +82,12 @@ func (ac *ArbCore) MachineMessagesRead() *big.Int {
 
 func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	defer runtime.KeepAlive(ac)
+	statusRaw := C.arbCoreMessagesStatus(ac.c)
+	status := core.MessageStatus(int(statusRaw))
+
 	if err := ac.CheckError(); err != nil {
 		return 0, err
 	}
-	statusRaw := C.arbCoreMessagesStatus(ac.c)
-	status := core.MessageStatus(int(statusRaw))
 	return status, nil
 }
 

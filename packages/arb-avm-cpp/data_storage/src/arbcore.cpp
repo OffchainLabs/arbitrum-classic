@@ -129,6 +129,11 @@ std::string ArbCore::getErrorString() {
     return core_error_string;
 }
 
+void ArbCore::setCoreError(const std::string& message) {
+    core_error_string = message;
+    core_error = true;
+}
+
 bool ArbCore::startThread() {
     if (core_thread != nullptr) {
         return false;
@@ -830,7 +835,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         }
 
         if (core_machine->status() == MachineThread::MACHINE_ERROR) {
-            core_error_string = core_machine->getErrorString();
+            setCoreError(core_machine->getErrorString());
             std::cerr << "AVM machine stopped with error during reorg: "
                       << core_error_string << "\n";
             return rocksdb::Status::Aborted();
@@ -849,9 +854,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
             // start machine back up where it stopped
             auto machine_success = core_machine->continueRunningMachine(false);
             if (!machine_success) {
-                core_error_string =
-                    "Error continuing machine thread while reorging";
-                core_error = true;
+                setCoreError("Error continuing machine thread while reorging");
                 std::cerr << "Error catching up: " << core_error_string << "\n";
                 return rocksdb::Status::Aborted();
             }
@@ -1461,8 +1464,7 @@ void ArbCore::operator()() {
                     std::cerr << "Error in core thread calling "
                                  "reorgCheckpoints: "
                               << status.ToString() << std::endl;
-                    core_error_string = status.ToString();
-                    core_error = true;
+                    setCoreError(status.ToString());
                     break;
                 }
                 next_checkpoint_gas = coreConfig.checkpoint_gas_frequency;
@@ -1480,8 +1482,7 @@ void ArbCore::operator()() {
                 try {
                     auto add_status = addMessages(message_data, cache);
                     if (!add_status.status.ok()) {
-                        core_error_string = add_status.status.ToString();
-                        core_error = true;
+                        setCoreError(add_status.status.ToString());
                         std::cerr << "ArbCore addMessages error: "
                                   << core_error_string << "\n";
                         break;
@@ -1497,8 +1498,7 @@ void ArbCore::operator()() {
                 } catch (DataStorage::shutting_down_exception& e) {
                     throw;
                 } catch (const std::exception& e) {
-                    core_error_string = e.what();
-                    core_error = true;
+                    setCoreError(e.what());
                     std::cerr << "ArbCore addMessages exception: "
                               << core_error_string << "\n";
                     break;
@@ -1515,8 +1515,7 @@ void ArbCore::operator()() {
 
             // Check machine thread
             if (core_machine->status() == MachineThread::MACHINE_ERROR) {
-                core_error_string = core_machine->getErrorString();
-                core_error = true;
+                setCoreError(core_machine->getErrorString());
                 std::cerr << "AVM machine stopped with error: "
                           << core_error_string << "\n";
                 break;
@@ -1571,8 +1570,7 @@ void ArbCore::operator()() {
                     tx, last_assertion,
                     core_machine->machine_state.output.arb_gas_used);
                 if (!status.ok()) {
-                    core_error_string = status.ToString();
-                    core_error = true;
+                    setCoreError(status.ToString());
                     std::cerr << "ArbCore assertion saving failed: "
                               << core_error_string << "\n";
                     break;
@@ -1609,8 +1607,7 @@ void ArbCore::operator()() {
                         // used
                         status = saveCheckpoint(tx);
                         if (!status.ok()) {
-                            core_error_string = status.ToString();
-                            core_error = true;
+                            setCoreError(status.ToString());
                             std::cerr << "ArbCore checkpoint saving failed: "
                                       << core_error_string << "\n";
                             break;
@@ -1646,8 +1643,7 @@ void ArbCore::operator()() {
                     auto machine_success =
                         core_machine->continueRunningMachine(true);
                     if (!machine_success) {
-                        core_error_string = "Error starting machine thread";
-                        core_error = true;
+                        setCoreError("Error starting machine thread");
                         std::cerr << "ArbCore error: " << core_error_string
                                   << "\n";
                         break;
@@ -1656,7 +1652,7 @@ void ArbCore::operator()() {
 
                 status = tx.commit();
                 if (!status.ok()) {
-                    core_error_string = status.ToString();
+                    setCoreError(status.ToString());
                     core_error = true;
                     std::cerr << "ArbCore database update failed: "
                               << core_error_string << "\n";
@@ -1823,8 +1819,7 @@ void ArbCore::operator()() {
 
     // Error occurred, make sure machine stops cleanly
     if (!core_error) {
-        core_error_string = "arbcore thread aborted";
-        core_error = true;
+        setCoreError("arbcore thread aborted");
     }
     core_machine->abortMachine();
 
@@ -1879,8 +1874,7 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
         tx, core_machine->machine_state.output.fully_processed_inbox,
         max_message_batch_size);
     if (!messages_result.status.ok()) {
-        core_error_string = messages_result.status.ToString();
-        core_error = true;
+        setCoreError(messages_result.status.ToString());
         std::cerr << "ArbCore failed getting message entry: "
                   << core_error_string << "\n";
         return false;
@@ -1892,8 +1886,7 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
 
         auto success = core_machine->runMachine(execConfig, asynchronous);
         if (!success) {
-            core_error_string = "Error starting machine thread";
-            core_error = true;
+            setCoreError("Error starting machine thread");
             std::cerr << "ArbCore error: " << core_error_string << "\n";
             return false;
         }
@@ -3489,8 +3482,7 @@ bool ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
     // Provide requested logs
     auto log_inserted_count = logInsertedCountImpl(tx);
     if (!log_inserted_count.status.ok()) {
-        core_error_string = log_inserted_count.status.ToString();
-        core_error = true;
+        setCoreError(log_inserted_count.status.ToString());
 
         std::cerr << "logscursor index " << cursor_index
                   << " error getting inserted count: "
@@ -3501,8 +3493,7 @@ bool ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
     auto current_count_result =
         logsCursorGetCurrentTotalCount(tx, cursor_index);
     if (!current_count_result.status.ok()) {
-        core_error_string = current_count_result.status.ToString();
-        core_error = true;
+        setCoreError(current_count_result.status.ToString());
 
         std::cerr << "logscursor index" << cursor_index
                   << " error getting cursor current total count: "
@@ -3521,9 +3512,7 @@ bool ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
         return true;
     }
     if (current_count_result.data > log_inserted_count.data) {
-        core_error_string =
-            "current_count_result greater than log_inserted_count";
-        core_error = true;
+        setCoreError("current_count_result greater than log_inserted_count");
 
         std::cerr << "handleLogsCursor current count: "
                   << current_count_result.data << " > "
@@ -3547,8 +3536,7 @@ bool ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
         getLogs(current_count_result.data,
                 logs_cursors[cursor_index].number_requested, cache);
     if (!requested_logs.status.ok()) {
-        core_error_string = requested_logs.status.ToString();
-        core_error = true;
+        setCoreError(requested_logs.status.ToString());
 
         std::cerr << "logscursor index " << cursor_index
                   << " error getting logs: " << requested_logs.status.ToString()
