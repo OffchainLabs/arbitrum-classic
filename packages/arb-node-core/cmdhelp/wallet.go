@@ -82,9 +82,6 @@ func GetKeystore(
 		}
 
 		if len(walletConfig.Fireblocks.FeedSigner.PrivateKey) != 0 {
-			if walletConfig.Local.OnlyCreateKey {
-				return nil, nil, errors.New("wallet using fireblocks for key, remove --wallet.local.only-create-key to run normally")
-			}
 			privateKey, err := crypto.HexToECDSA(walletConfig.Local.PrivateKey)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "error loading feed private key")
