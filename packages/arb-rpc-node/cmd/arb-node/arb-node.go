@@ -284,6 +284,11 @@ func startup() error {
 		var auth *bind.TransactOpts
 		auth, dataSigner, err = cmdhelp.GetKeystore(config, walletConfig, l1ChainId, true)
 		if err != nil {
+			if strings.Contains(err.Error(), "only-create-key") {
+				logger.Info().Msg(err.Error())
+				fmt.Printf("\nNotice: %s\n\n", err.Error())
+				return nil
+			}
 			return errors.Wrap(err, "error running GetKeystore")
 		}
 
