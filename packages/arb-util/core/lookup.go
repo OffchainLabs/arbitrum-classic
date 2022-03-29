@@ -174,7 +174,6 @@ type ArbCore interface {
 	ArbCoreInbox
 	LogsCursor
 	StartThread() bool
-	StopThread()
 	MachineIdle() bool
 }
 
