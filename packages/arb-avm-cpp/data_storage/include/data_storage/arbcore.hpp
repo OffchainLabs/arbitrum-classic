@@ -97,6 +97,39 @@ class ArbCore {
         std::optional<uint256_t> reorg_batch_items;
     };
 
+    struct ThreadDataStruct {
+        ValueCache cache;
+        MachineExecutionConfig execConfig;
+        std::filesystem::path save_rocksdb_path;
+        uint256_t begin_message;
+        bool perform_pruning;
+        bool perform_save_rocksdb_checkpoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            next_rocksdb_save_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            profiling_begin_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            last_messages_ready_check_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            last_run_machine_check_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            last_restart_machine_check_timepoint;
+
+        ThreadDataStruct(const std::string& _save_rocksdb_path,
+                         const uint256_t& _begin_message)
+            : cache(5, 0),
+              execConfig(),
+              save_rocksdb_path(_save_rocksdb_path),
+              begin_message(_begin_message),
+              perform_pruning(false),
+              perform_save_rocksdb_checkpoint(false),
+              next_rocksdb_save_timepoint(),
+              profiling_begin_timepoint(std::chrono::steady_clock::now()),
+              last_messages_ready_check_timepoint(profiling_begin_timepoint),
+              last_run_machine_check_timepoint(profiling_begin_timepoint),
+              last_restart_machine_check_timepoint(profiling_begin_timepoint) {}
+    };
+
    private:
     std::unique_ptr<std::thread> core_thread;
 
