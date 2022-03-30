@@ -62,8 +62,6 @@ CArbStorage* createArbStorage(const char* db_path,
         arb_core_config.lazy_load_archive_queries;
     coreConfig.checkpoint_prune_on_startup =
         arb_core_config.checkpoint_prune_on_startup;
-    coreConfig.checkpoint_pruning_age_seconds =
-        arb_core_config.checkpoint_pruning_age_seconds;
     coreConfig.checkpoint_pruning_mode =
         arb_core_config.checkpoint_pruning_mode;
     coreConfig.checkpoint_max_to_prune =
