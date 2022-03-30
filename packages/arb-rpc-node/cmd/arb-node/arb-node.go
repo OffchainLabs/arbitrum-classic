@@ -165,7 +165,7 @@ func startup() error {
 	}
 
 	var rpcMode web3.RpcMode
-	if config.Node.Type == "forwarder" {
+	if strings.EqualFold(config.Node.Type, "forwarder") {
 		if config.Node.Forwarder.Target == "" {
 			badConfig = true
 			fmt.Println("Forwarder node needs --node.forwarder.target")
@@ -181,13 +181,16 @@ func startup() error {
 			badConfig = true
 			fmt.Printf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
 		}
-	} else if config.Node.Type == "aggregator" {
+	} else if strings.EqualFold(config.Node.Type, "aggregator") {
 		if config.Node.Aggregator.InboxAddress == "" {
 			badConfig = true
 			fmt.Println("Aggregator node needs --node.aggregator.inbox-address")
 		}
-	} else if config.Node.Type == "sequencer" {
+	} else if strings.EqualFold(config.Node.Type, "sequencer") {
 		// Sequencer always waits
+		config.WaitToCatchUp = true
+	} else if strings.EqualFold(config.Node.Type, "validator") {
+		// Validator always waits
 		config.WaitToCatchUp = true
 	} else {
 		badConfig = true
