@@ -64,24 +64,14 @@ func startup() error {
 		return nil
 	}
 
-	if config.Core.Database.MakeValidator {
-		// Exit immediately after converting database
-		return cmdhelp.NodeToValidator(config)
-	}
-
 	// Make sure arbcore does not continue to run
 	config.Core.Database.ExitAfter = true
 
 	var databasePath string
-	databasePath = config.GetNodeDatabasePath()
+	databasePath = config.GetDatabasePath()
 	if !configuration.DatabaseInDirectory(databasePath) {
-		databasePath = config.GetValidatorDatabasePath()
 		if !configuration.DatabaseInDirectory(databasePath) {
-			// The db directory does not exist, try just the supplied chain directory
-			databasePath = config.Persistent.Chain
-			if !configuration.DatabaseInDirectory(databasePath) {
-				return errors.New("unable to access database in " + databasePath)
-			}
+			return errors.New("unable to access database in " + databasePath)
 		}
 	}
 

@@ -7,7 +7,7 @@ sidebar_label: Setting ArbChain parameters
 When you create an ArbChain, you have to specify some parameters for the chain.
 This document describes these parameters and recommends how to set them.
 
-Note: If you run the validator (`arb-validator` or `demo:deploy`) without any options regarding parameters, you will get the recommended default parameter values.
+Note: If you run the validator (`arb-node --node.type=validator` or `demo:deploy`) without any options regarding parameters, you will get the recommended default parameter values.
 
 The parameters are:
 
