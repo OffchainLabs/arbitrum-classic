@@ -231,8 +231,32 @@ type Node struct {
 	LogIdleSleep    time.Duration `koanf:"log-idle-sleep"`
 	RPC             RPC           `koanf:"rpc"`
 	Sequencer       Sequencer     `koanf:"sequencer"`
-	Type            string        `koanf:"type"`
+	TypeImpl        string        `koanf:"type"`
 	WS              WS            `koanf:"ws"`
+}
+
+type NodeType uint8
+
+const (
+	UnknownNodeType NodeType = iota
+	ForwarderNodeType
+	AggregatorNodeType
+	SequencerNodeType
+	ValidatorNodeType
+)
+
+func (c *Node) Type() NodeType {
+	if strings.EqualFold(c.TypeImpl, "forwarder") {
+		return ForwarderNodeType
+	} else if strings.EqualFold(c.TypeImpl, "aggregator") {
+		return AggregatorNodeType
+	} else if strings.EqualFold(c.TypeImpl, "sequencer") {
+		return SequencerNodeType
+	} else if strings.EqualFold(c.TypeImpl, "validator") {
+		return ValidatorNodeType
+	} else {
+		return UnknownNodeType
+	}
 }
 
 type NodeCache struct {
@@ -258,13 +282,45 @@ type Rollup struct {
 }
 
 type Validator struct {
-	Strategy             string            `koanf:"strategy"`
+	StrategyImpl         string            `koanf:"strategy"`
 	UtilsAddress         string            `koanf:"utils-address"`
 	StakerDelay          time.Duration     `koanf:"staker-delay"`
 	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
 	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
 	DontChallenge        bool              `koanf:"dont-challenge"`
 	WithdrawDestination  string            `koanf:"withdraw-destination"`
+}
+
+type ValidatorStrategy uint8
+
+const (
+	UnknownStrategy ValidatorStrategy = iota
+	WatchtowerStrategy
+	DefensiveStrategy
+	StakeLatestStrategy
+	MakeNodesStrategy
+)
+
+func (s ValidatorStrategy) IsActive() bool {
+	if s == StakeLatestStrategy || s == MakeNodesStrategy {
+		return true
+	}
+
+	return false
+}
+
+func (c *Validator) Strategy() ValidatorStrategy {
+	if strings.EqualFold(c.StrategyImpl, "Watchtower") {
+		return WatchtowerStrategy
+	} else if strings.EqualFold(c.StrategyImpl, "Defensive") {
+		return DefensiveStrategy
+	} else if strings.EqualFold(c.StrategyImpl, "StakeLatest") {
+		return StakeLatestStrategy
+	} else if strings.EqualFold(c.StrategyImpl, "MakeNodes") {
+		return MakeNodesStrategy
+	} else {
+		return UnknownStrategy
+	}
 }
 
 type Wallet struct {
@@ -688,7 +744,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 			fmt.Errorf("value '%v' for core.checkpoint-pruning-mode is not 'on', 'off', or 'default'", out.Core.CheckpointPruningMode)
 	}
 
-	if out.Node.Type == "sequencer" && !out.Core.Cache.Last {
+	if out.Node.Type() == SequencerNodeType && !out.Core.Cache.Last {
 		logger.Info().Msg("enabling last machine cache for sequencer")
 		out.Core.Cache.Last = true
 	}
