@@ -109,7 +109,7 @@ func getKeystore(
 	l1ChainId *big.Int,
 	signerRequired bool,
 ) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
-	auth, dataSigner, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, true)
+	auth, dataSigner, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, signerRequired)
 	if err != nil {
 		if strings.Contains(err.Error(), "only-create-key") {
 			logger.Info().Msg(err.Error())
@@ -128,7 +128,7 @@ func startup() error {
 	config, walletConfig, l1Client, l1ChainId, err := configuration.ParseNode(ctx)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
-		((config.Node.Type != "sequencer") && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
+		((config.Node.Type() != configuration.SequencerNodeType) && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
 		((len(config.Node.Sequencer.Lockout.Redis) == 0) != (len(config.Node.Sequencer.Lockout.SelfRPCURL) == 0)) {
 		printSampleUsage()
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
@@ -165,7 +165,7 @@ func startup() error {
 	}
 
 	var rpcMode web3.RpcMode
-	if strings.EqualFold(config.Node.Type, "forwarder") {
+	if config.Node.Type() == configuration.ForwarderNodeType {
 		if config.Node.Forwarder.Target == "" {
 			badConfig = true
 			fmt.Println("Forwarder node needs --node.forwarder.target")
@@ -181,20 +181,22 @@ func startup() error {
 			badConfig = true
 			fmt.Printf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
 		}
-	} else if strings.EqualFold(config.Node.Type, "aggregator") {
+	} else if config.Node.Type() == configuration.AggregatorNodeType {
 		if config.Node.Aggregator.InboxAddress == "" {
 			badConfig = true
 			fmt.Println("Aggregator node needs --node.aggregator.inbox-address")
 		}
-	} else if strings.EqualFold(config.Node.Type, "sequencer") {
+	} else if config.Node.Type() == configuration.SequencerNodeType {
 		// Sequencer always waits
 		config.WaitToCatchUp = true
-	} else if strings.EqualFold(config.Node.Type, "validator") {
-		// Validator always waits
-		config.WaitToCatchUp = true
+	} else if config.Node.Type() == configuration.ValidatorNodeType {
+		if config.Validator.Strategy() == configuration.UnknownStrategy {
+			badConfig = true
+			fmt.Printf("Unrecognized validator strategy %s", config.Validator.StrategyImpl)
+		}
 	} else {
 		badConfig = true
-		fmt.Printf("Unrecognized node type %s", config.Node.Type)
+		fmt.Printf("Unrecognized node type %s", config.Node.TypeImpl)
 	}
 
 	if badConfig {
@@ -226,7 +228,7 @@ func startup() error {
 	logger.Info().
 		Hex("chainaddress", rollupAddress.Bytes()).
 		Hex("chainid", l2ChainId.Bytes()).
-		Str("type", config.Node.Type).
+		Str("type", config.Node.TypeImpl).
 		Int64("fromBlock", config.Rollup.FromBlock).
 		Msg("Launching arbitrum node")
 
@@ -235,7 +237,7 @@ func startup() error {
 		return err
 	}
 
-	if config.Node.Type == "validator" && config.Core.CheckpointMaxExecutionGas != 0 {
+	if config.Node.Type() == configuration.ValidatorNodeType && config.Core.CheckpointMaxExecutionGas != 0 {
 		log.Warn().Msg("allowing for infinite core execution because running as validator")
 		config.Core.CheckpointMaxExecutionGas = 0
 	}
@@ -265,7 +267,7 @@ func startup() error {
 		healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node}
 		healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
 
-		if config.Node.Type == "forwarder" {
+		if config.Node.Type() == configuration.ForwarderNodeType {
 			healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: config.Node.Forwarder.Target}
 		}
 		healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
@@ -326,17 +328,23 @@ func startup() error {
 	var dataSigner func([]byte) ([]byte, error)
 	var batcherMode rpc.BatcherMode
 	var stakerManager *staker.Staker
-	if config.Node.Type == "validator" {
-		auth, _, err := getKeystore(config, walletConfig, l1ChainId, false)
-		if err != nil || auth == nil {
-			return err
+	if config.Node.Type() == configuration.ValidatorNodeType {
+		var auth *bind.TransactOpts
+		if config.Validator.Strategy() != configuration.WatchtowerStrategy {
+			auth, _, err = getKeystore(config, walletConfig, l1ChainId, false)
+			if err != nil || auth == nil {
+				return err
+			}
+		} else {
+			// No wallet, so just use empty auth object
+			auth = &bind.TransactOpts{}
 		}
 		stakerManager, err = startValidator(ctx, config, walletConfig, l1Client, auth, mon)
 		if err != nil {
 			return err
 		}
 		batcherMode = rpc.ErrorBatcherMode{Error: errors.New("validator doesn't support transactions")}
-	} else if config.Node.Type == "forwarder" {
+	} else if config.Node.Type() == configuration.ForwarderNodeType {
 		logger.Info().Str("forwardTxURL", config.Node.Forwarder.Target).Msg("Arbitrum node starting in forwarder mode")
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
 	} else {
@@ -361,7 +369,7 @@ func startup() error {
 			return errors.Wrap(err, "error waiting for balance")
 		}
 
-		if config.Node.Type == "sequencer" {
+		if config.Node.Type() == configuration.SequencerNodeType {
 			batcherMode = rpc.SequencerBatcherMode{
 				Auth:        auth,
 				Core:        mon.Core,
@@ -456,7 +464,7 @@ func startup() error {
 		}
 	}()
 
-	if config.Node.Type == "forwarder" && config.Node.Forwarder.Target != "" {
+	if config.Node.Type() == configuration.ForwarderNodeType && config.Node.Forwarder.Target != "" {
 		go func() {
 			clnt, err := ethclient.DialContext(ctx, config.Node.Forwarder.Target)
 			if err != nil {
@@ -592,27 +600,13 @@ func startValidator(
 	mon *monitor.Monitor,
 ) (*staker.Staker, error) {
 	if len(config.Validator.UtilsAddress) == 0 ||
-		len(config.Validator.WalletFactoryAddress) == 0 || len(config.Validator.Strategy) == 0 {
+		len(config.Validator.WalletFactoryAddress) == 0 || config.Validator.Strategy() == configuration.UnknownStrategy {
 		return nil, errors.New("Contract addresses and strategy required for validator")
 	}
 
 	rollupAddr := ethcommon.HexToAddress(config.Rollup.Address)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
-	strategyString := config.Validator.Strategy
-
-	var strategy staker.Strategy
-	if strategyString == "MakeNodes" {
-		strategy = staker.MakeNodesStrategy
-	} else if strategyString == "StakeLatest" {
-		strategy = staker.StakeLatestStrategy
-	} else if strategyString == "Defensive" {
-		strategy = staker.DefensiveStrategy
-	} else if strategyString == "Watchtower" {
-		strategy = staker.WatchtowerStrategy
-	} else {
-		return nil, errors.New("unsupported strategy specified. Currently supported: MakeNodes, StakeLatest, Defensive, Watchtower")
-	}
 
 	chainState := ChainState{}
 	chainStatePath := path.Join(config.Persistent.Chain, "chainState.json")
@@ -637,7 +631,6 @@ func startValidator(
 		valAuth, _, err = transactauth.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, walletConfig, false)
 	} else {
 		valAuth, err = transactauth.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
-
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating connecting to chain")
@@ -662,11 +655,11 @@ func startValidator(
 		return nil, errors.Wrap(err, "error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy, bind.CallOpts{}, valAuth, config.Validator)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), config.Validator.Strategy(), bind.CallOpts{}, valAuth, config.Validator)
 	if err != nil {
 		return nil, errors.Wrap(err, "error setting up staker")
 	}
 
-	logger.Info().Int("strategy", int(strategy)).Msg("Initialized validator")
+	logger.Info().Str("strategy", config.Validator.StrategyImpl).Msg("Initialized validator")
 	return stakerManager, nil
 }
