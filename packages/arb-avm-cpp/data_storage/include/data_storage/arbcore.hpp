@@ -307,6 +307,9 @@ class ArbCore {
     // Controlling checkpoint pruning
     void updateCheckpointPruningGas(uint256_t gas);
 
+   private:
+    uint256_t getCheckpointPruningGas();
+
    public:
     // Managing machine state
     bool machineIdle();

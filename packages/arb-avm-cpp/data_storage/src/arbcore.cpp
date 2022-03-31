@@ -287,26 +287,17 @@ InitializeResult ArbCore::applyConfig() {
         // This could take a while if pruning hasn't been done before.
         std::cout << "Pruning database"
                   << "\n";
-        uint256_t last_timestamp = 0;
         {
             ReadWriteTransaction tx(data_storage);
-            auto checkpoint_result = getLastCheckpoint(tx);
-            if (std::holds_alternative<CheckpointVariant>(checkpoint_result)) {
-                auto output = getMachineOutput(
-                    std::get<CheckpointVariant>(checkpoint_result));
-                last_timestamp = output.last_inbox_timestamp;
-            }
-
             auto status = updatePruningMode(tx, "on");
             tx.commit();
         }
-        if (last_timestamp > coreConfig.checkpoint_pruning_age_seconds) {
-            auto checkpoint_pruning_age_timestamp =
-                last_timestamp - coreConfig.checkpoint_pruning_age_seconds;
+        uint256_t checkpoint_pruning_gas_used = getCheckpointPruningGas();
+        if (checkpoint_pruning_gas_used > 0) {
             // Delete in batches to prevent too much RAM from being used
             while (true) {
-                auto status = pruneToTimestampOrBefore(
-                    checkpoint_pruning_age_timestamp, 100);
+                auto status =
+                    pruneToGasOrBefore(checkpoint_pruning_gas_used, 100);
                 if (status.IsNotFound()) {
                     // Nothing left to delete
                     break;
@@ -526,12 +517,6 @@ rocksdb::Status ArbCore::initializePruningMode(
             }
         }
     }
-
-    if (coreConfig.checkpoint_pruning_mode == PRUNING_MODE_OFF) {
-        // Disable pruning
-        coreConfig.checkpoint_pruning_age_seconds = 0;
-    }
-
     return rocksdb::Status::OK();
 }
 
@@ -1668,13 +1653,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
 
     if (thread_data.perform_pruning) {
         thread_data.perform_pruning = false;
-
-        uint256_t checkpoint_pruning_gas_used = 0;
-        {
-            std::lock_guard<std::mutex> lock(checkpoint_pruning_mutex);
-            checkpoint_pruning_gas_used = unsafe_checkpoint_pruning_gas_used;
-        }
-
+        uint256_t checkpoint_pruning_gas_used = getCheckpointPruningGas();
         if (checkpoint_pruning_gas_used > 0) {
             // Prune checkpoints that have used less gas
             // than specified
@@ -1685,26 +1664,6 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
                 // Non-fatal error
                 std::cerr << "Error pruning checkpoints: "
                           << prune_status.ToString() << "\n";
-            }
-        } else {
-            auto output = getLastMachineOutput();
-            auto last_inbox_timestamp = output.last_inbox_timestamp;
-
-            if (coreConfig.checkpoint_pruning_age_seconds > 0 &&
-                last_inbox_timestamp >
-                    coreConfig.checkpoint_pruning_age_seconds) {
-                // Prune checkpoints that are too old
-                auto checkpoint_pruning_age_timestamp =
-                    last_inbox_timestamp -
-                    coreConfig.checkpoint_pruning_age_seconds;
-                auto prune_status = pruneToTimestampOrBefore(
-                    checkpoint_pruning_age_timestamp,
-                    coreConfig.checkpoint_max_to_prune);
-                if (!prune_status.ok() && !prune_status.IsNotFound()) {
-                    // Non-fatal error
-                    std::cerr << "Error pruning checkpoints: "
-                              << prune_status.ToString() << "\n";
-                }
             }
         }
     }
@@ -3907,6 +3866,11 @@ rocksdb::Status ArbCore::pruneToGasOrBefore(const uint256_t& gas,
 void ArbCore::updateCheckpointPruningGas(uint256_t gas) {
     std::lock_guard<std::mutex> lock(checkpoint_pruning_mutex);
     unsafe_checkpoint_pruning_gas_used = gas;
+}
+
+uint256_t ArbCore::getCheckpointPruningGas() {
+    std::lock_guard<std::mutex> lock(checkpoint_pruning_mutex);
+    return unsafe_checkpoint_pruning_gas_used;
 }
 
 std::string optionalUint256ToString(std::optional<uint256_t>& value) {
