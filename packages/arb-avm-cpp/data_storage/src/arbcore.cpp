@@ -110,11 +110,26 @@ bool ArbCore::machineIdle() {
 }
 
 ArbCore::message_status_enum ArbCore::messagesStatus() {
+    auto lock = std::shared_lock<std::shared_mutex>(message_data_error_mutex);
     auto current_status = message_data_status.load();
-    if (!core_error && current_status != MESSAGES_READY) {
+    if (current_status != MESSAGES_ERROR && current_status != MESSAGES_READY) {
         message_data_status = MESSAGES_EMPTY;
     }
+
     return current_status;
+}
+
+std::string ArbCore::messagesClearError() {
+    auto lock = std::shared_lock<std::shared_mutex>(message_data_error_mutex);
+    if (message_data_status != ArbCore::MESSAGES_ERROR) {
+        return "";
+    }
+
+    message_data_status = MESSAGES_EMPTY;
+    auto str = message_data_error_string;
+    message_data_error_string.clear();
+
+    return str;
 }
 
 bool ArbCore::checkError() {
@@ -1427,9 +1442,12 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         try {
             auto add_status = addMessages(message_data, thread_data.cache);
             if (!add_status.status.ok()) {
-                setCoreError(add_status.status.ToString());
+                auto lock = std::unique_lock<std::shared_mutex>(
+                    message_data_error_mutex);
+                message_data_error_string = add_status.status.ToString();
+                message_data_status = MESSAGES_ERROR;
                 std::cerr << "ArbCore addMessages non-fatal error: "
-                          << core_error_string << "\n";
+                          << message_data_error_string << "\n";
             } else {
                 machine_idle = false;
                 message_data_status = MESSAGES_SUCCESS;
@@ -1443,8 +1461,12 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             throw;
         } catch (const std::exception& e) {
             setCoreError(e.what());
-            std::cerr << "ArbCore addMessages exception: " << core_error_string
-                      << "\n";
+            auto lock =
+                std::unique_lock<std::shared_mutex>(message_data_error_mutex);
+            message_data_error_string = e.what();
+            message_data_status = MESSAGES_ERROR;
+            std::cerr << "ArbCore addMessages exception: "
+                      << message_data_error_string << "\n";
             return false;
         }
         if (coreConfig.debug_timing) {

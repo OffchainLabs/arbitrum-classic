@@ -36,6 +36,7 @@ const (
 	MessagesEmpty MessageStatus = iota
 	MessagesReady
 	MessagesSuccess
+	MessagesError
 )
 
 type MachineEmission struct {
