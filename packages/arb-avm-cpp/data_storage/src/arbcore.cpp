@@ -1408,7 +1408,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         auto status = reorgToMessageCountOrBefore(0, false, thread_data.cache);
         if (!status.ok()) {
             std::cerr << "Error in core thread calling "
-                         "reorgCheckpoints: "
+                         "reorgToMessageCountOrBefore: "
                       << status.ToString() << std::endl;
             setCoreError(status.ToString());
             return false;
@@ -1428,9 +1428,8 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             auto add_status = addMessages(message_data, thread_data.cache);
             if (!add_status.status.ok()) {
                 setCoreError(add_status.status.ToString());
-                std::cerr << "ArbCore addMessages error: " << core_error_string
-                          << "\n";
-                return false;
+                std::cerr << "ArbCore addMessages non-fatal error: "
+                          << core_error_string << "\n";
             } else {
                 machine_idle = false;
                 message_data_status = MESSAGES_SUCCESS;
@@ -3098,6 +3097,8 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
             if (checking_prev) {
                 seq_batch_it->Seek(start_slice);
                 if (!seq_batch_it->status().ok()) {
+                    std::cerr << "addMessages: previous batch item error: "
+                              << seq_batch_it->status().ToString() << std::endl;
                     return {seq_batch_it->status(), std::nullopt};
                 }
                 if (!seq_batch_it->Valid()) {
@@ -3361,6 +3362,8 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
         auto status =
             reorgToMessageCountOrBefore(*reorging_to_count, false, cache);
         if (!status.ok()) {
+            std::cerr << "reorg failed in addMessages: " << status.ToString()
+                      << std::endl;
             return {status, std::nullopt};
         }
 
