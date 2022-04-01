@@ -35,6 +35,12 @@ int arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
     return arb_core->messagesStatus();
 }
 
+char* arbCoreMessagesClearError(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto str = arb_core->messagesClearError();
+    return strdup(str.c_str());
+}
+
 int arbCoreCheckError(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     return arb_core->checkError();

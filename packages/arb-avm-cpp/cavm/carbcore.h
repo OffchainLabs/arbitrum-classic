@@ -27,6 +27,7 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr);
 void arbCoreSaveRocksdbCheckpoint(CArbCore* arbcore_ptr);
 void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr);
 int arbCoreMessagesStatus(CArbCore* arbcore_ptr);
+char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);
 int arbCoreCheckError(CArbCore* arbcore_ptr);
 char* arbCoreGetErrorString(CArbCore* arbcore_ptr);
 

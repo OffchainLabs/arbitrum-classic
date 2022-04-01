@@ -79,7 +79,8 @@ class ArbCore {
     typedef enum {
         MESSAGES_EMPTY,    // Out: Ready to receive messages
         MESSAGES_READY,    // In:  Messages in vector
-        MESSAGES_SUCCESS,  // Out:  Messages processed successfully
+        MESSAGES_SUCCESS,  // Out: Messages processed successfully
+        MESSAGES_ERROR,    // Out: Error receiving messages
     } message_status_enum;
 
     struct logscursor_logs {
@@ -166,6 +167,11 @@ class ArbCore {
     // Core thread inbox status input/output. Core thread will update if and
     // only if set to MESSAGES_READY
     std::atomic<message_status_enum> message_data_status{MESSAGES_EMPTY};
+    std::string message_data_error_string;
+    // Message_data_error_mutex non-arbcore threads should acquire read mutex
+    // when checking for MESSAGES_ERROR, arbcore thread needs to acquire write
+    // mutex only when setting MESSAGES_ERROR
+    std::shared_mutex message_data_error_mutex;
 
     // Core thread inbox input
     message_data_struct message_data;
@@ -326,6 +332,7 @@ class ArbCore {
         std::vector<std::vector<unsigned char>> delayed_messages,
         const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
+    std::string messagesClearError();
     bool checkError();
     std::string getErrorString();
 
