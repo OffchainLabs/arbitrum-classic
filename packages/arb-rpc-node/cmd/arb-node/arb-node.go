@@ -18,13 +18,21 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
+	"io/ioutil"
 	golog "log"
 	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -95,6 +103,24 @@ func printSampleUsage() {
 	fmt.Printf("          or:       sequencer: arb-node --l1.url=<L1 RPC> --node.type=sequencer [optional arguments] %s\n", cmdhelp.WalletArgsString)
 }
 
+func getKeystore(
+	config *configuration.Config,
+	walletConfig *configuration.Wallet,
+	l1ChainId *big.Int,
+	signerRequired bool,
+) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
+	auth, dataSigner, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, signerRequired)
+	if err != nil {
+		if strings.Contains(err.Error(), "only-create-key") {
+			logger.Info().Msg(err.Error())
+			fmt.Printf("\nNotice: %s\n\n", err.Error())
+			return nil, nil, nil
+		}
+		return nil, nil, errors.Wrap(err, "error running GetKeystore")
+	}
+	return auth, dataSigner, nil
+}
+
 func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
@@ -102,7 +128,7 @@ func startup() error {
 	config, walletConfig, l1Client, l1ChainId, err := configuration.ParseNode(ctx)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
-		((config.Node.Type != "sequencer") && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
+		((config.Node.Type() != configuration.SequencerNodeType) && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
 		((len(config.Node.Sequencer.Lockout.Redis) == 0) != (len(config.Node.Sequencer.Lockout.SelfRPCURL) == 0)) {
 		printSampleUsage()
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
@@ -113,12 +139,7 @@ func startup() error {
 	}
 
 	if config.Core.Database.Metadata {
-		return cmdhelp.PrintDatabaseMetadata(config.GetNodeDatabasePath(), &config.Core)
-	}
-
-	if config.Core.Database.MakeValidator {
-		// Exit immediately after converting database
-		return cmdhelp.NodeToValidator(config)
+		return cmdhelp.PrintDatabaseMetadata(config.GetDatabasePath(), &config.Core)
 	}
 
 	badConfig := false
@@ -144,7 +165,7 @@ func startup() error {
 	}
 
 	var rpcMode web3.RpcMode
-	if config.Node.Type == "forwarder" {
+	if config.Node.Type() == configuration.ForwarderNodeType {
 		if config.Node.Forwarder.Target == "" {
 			badConfig = true
 			fmt.Println("Forwarder node needs --node.forwarder.target")
@@ -160,17 +181,22 @@ func startup() error {
 			badConfig = true
 			fmt.Printf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
 		}
-	} else if config.Node.Type == "aggregator" {
+	} else if config.Node.Type() == configuration.AggregatorNodeType {
 		if config.Node.Aggregator.InboxAddress == "" {
 			badConfig = true
 			fmt.Println("Aggregator node needs --node.aggregator.inbox-address")
 		}
-	} else if config.Node.Type == "sequencer" {
+	} else if config.Node.Type() == configuration.SequencerNodeType {
 		// Sequencer always waits
 		config.WaitToCatchUp = true
+	} else if config.Node.Type() == configuration.ValidatorNodeType {
+		if config.Validator.Strategy() == configuration.UnknownStrategy {
+			badConfig = true
+			fmt.Printf("Unrecognized validator strategy %s", config.Validator.StrategyImpl)
+		}
 	} else {
 		badConfig = true
-		fmt.Printf("Unrecognized node type %s", config.Node.Type)
+		fmt.Printf("Unrecognized node type %s", config.Node.TypeImpl)
 	}
 
 	if badConfig {
@@ -202,13 +228,32 @@ func startup() error {
 	logger.Info().
 		Hex("chainaddress", rollupAddress.Bytes()).
 		Hex("chainid", l2ChainId.Bytes()).
-		Str("type", config.Node.Type).
+		Str("type", config.Node.TypeImpl).
 		Int64("fromBlock", config.Rollup.FromBlock).
 		Msg("Launching arbitrum node")
 
-	mon, err := monitor.NewInitializedMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename, &config.Core)
+	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), config.Rollup.FromBlock, l1Client, bind.CallOpts{})
 	if err != nil {
-		return errors.Wrap(err, "error opening monitor")
+		return err
+	}
+
+	if config.Node.Type() == configuration.ValidatorNodeType && config.Core.CheckpointMaxExecutionGas != 0 {
+		log.Warn().Msg("allowing for infinite core execution because running as validator")
+		config.Core.CheckpointMaxExecutionGas = 0
+	}
+
+	mon, err := monitor.NewMonitor(config.GetDatabasePath(), &config.Core)
+	if err != nil {
+		return err
+	}
+	if err := updatePrunePoint(ctx, rollup, mon.Core); err != nil {
+		logger.Error().Err(err).Msg("error pruning database")
+	}
+	if err := mon.Initialize(config.Rollup.Machine.Filename); err != nil {
+		return err
+	}
+	if err := mon.Start(); err != nil {
+		return err
 	}
 	defer mon.Close()
 
@@ -222,7 +267,7 @@ func startup() error {
 		healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node}
 		healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
 
-		if config.Node.Type == "forwarder" {
+		if config.Node.Type() == configuration.ForwarderNodeType {
 			healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: config.Node.Forwarder.Target}
 		}
 		healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
@@ -246,6 +291,7 @@ func startup() error {
 		}
 	}
 
+	// InboxReader may fail to start if sequencer isn't up yet, so keep retrying
 	var inboxReader *monitor.InboxReader
 	for {
 		inboxReader, err = mon.StartInboxReader(
@@ -259,6 +305,10 @@ func startup() error {
 			config.Node.InboxReader,
 		)
 		if err == nil {
+			break
+		}
+		if strings.Contains(err.Error(), "arbcore thread aborted") {
+			logger.Error().Err(err).Msg("aborting inbox reader start")
 			break
 		}
 		logger.Warn().Err(err).
@@ -277,14 +327,31 @@ func startup() error {
 
 	var dataSigner func([]byte) ([]byte, error)
 	var batcherMode rpc.BatcherMode
-	if config.Node.Type == "forwarder" {
+	var stakerManager *staker.Staker
+	if config.Node.Type() == configuration.ValidatorNodeType {
+		var auth *bind.TransactOpts
+		if config.Validator.Strategy() != configuration.WatchtowerStrategy {
+			auth, _, err = getKeystore(config, walletConfig, l1ChainId, false)
+			if err != nil || auth == nil {
+				return err
+			}
+		} else {
+			// No wallet, so just use empty auth object
+			auth = &bind.TransactOpts{}
+		}
+		stakerManager, err = startValidator(ctx, config, walletConfig, l1Client, auth, mon)
+		if err != nil {
+			return err
+		}
+		batcherMode = rpc.ErrorBatcherMode{Error: errors.New("validator doesn't support transactions")}
+	} else if config.Node.Type() == configuration.ForwarderNodeType {
 		logger.Info().Str("forwardTxURL", config.Node.Forwarder.Target).Msg("Arbitrum node starting in forwarder mode")
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
 	} else {
 		var auth *bind.TransactOpts
-		auth, dataSigner, err = cmdhelp.GetKeystore(config, walletConfig, l1ChainId, true)
-		if err != nil {
-			return errors.Wrap(err, "error running GetKeystore")
+		auth, dataSigner, err = getKeystore(config, walletConfig, l1ChainId, true)
+		if err != nil || auth == nil {
+			return err
 		}
 
 		if config.Node.Sequencer.Dangerous.DisableBatchPosting {
@@ -302,7 +369,7 @@ func startup() error {
 			return errors.Wrap(err, "error waiting for balance")
 		}
 
-		if config.Node.Type == "sequencer" {
+		if config.Node.Type() == configuration.SequencerNodeType {
 			batcherMode = rpc.SequencerBatcherMode{
 				Auth:        auth,
 				Core:        mon.Core,
@@ -361,6 +428,10 @@ func startup() error {
 			go batch.Start(ctx)
 			break
 		}
+		if strings.Contains(err.Error(), "arbcore thread aborted") {
+			logger.Error().Err(err).Msg("aborting inbox reader start")
+			break
+		}
 		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
 
 		select {
@@ -393,7 +464,7 @@ func startup() error {
 		}
 	}()
 
-	if config.Node.Type == "forwarder" && config.Node.Forwarder.Target != "" {
+	if config.Node.Type() == configuration.ForwarderNodeType && config.Node.Forwarder.Target != "" {
 		go func() {
 			clnt, err := ethclient.DialContext(ctx, config.Node.Forwarder.Target)
 			if err != nil {
@@ -429,7 +500,30 @@ func startup() error {
 				}
 			}
 		}()
+	}
 
+	if config.Core.CheckpointPruningMode == "on" {
+		ticker := time.NewTicker(time.Minute)
+		go func() {
+			defer ticker.Stop()
+			for {
+				if err := updatePrunePoint(ctx, rollup, mon.Core); err != nil {
+					logger.Error().Err(err).Msg("error pruning database")
+				}
+				select {
+				case <-ticker.C:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
+
+	var stakerDone chan bool
+	if stakerManager != nil {
+		stakerDone = stakerManager.RunInBackground(ctx, config.Validator.StakerDelay)
+	} else {
+		stakerDone = make(chan bool)
 	}
 
 	select {
@@ -437,6 +531,8 @@ func startup() error {
 		return err
 	case err := <-errChan:
 		return err
+	case <-stakerDone:
+		return nil
 	case <-cancelChan:
 		return nil
 	}
@@ -470,4 +566,100 @@ func checkBlockHash(ctx context.Context, clnt *ethclient.Client, db *txdb.TxDB) 
 		Str("local", block.Header.Hash().Hex()).
 		Msg("mismatched block header")
 	return false, nil
+}
+
+func updatePrunePoint(ctx context.Context, rollup *ethbridge.RollupWatcher, lookup core.ArbCoreLookup) error {
+	// Prune any stale database entries while we wait
+	latestNode, err := rollup.LatestConfirmedNode(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Prune checkpoints up to confirmed node before last confirmed node
+	previousConfirmedNode := new(big.Int).Sub(latestNode, big.NewInt(1))
+	previousNodeInfo, err := rollup.LookupNode(ctx, previousConfirmedNode)
+	if err != nil {
+		return err
+	}
+
+	confirmedGas := previousNodeInfo.AfterState().TotalGasConsumed
+	lookup.UpdateCheckpointPruningGas(confirmedGas)
+	return nil
+}
+
+type ChainState struct {
+	ValidatorWallet string `json:"validatorWallet"`
+}
+
+func startValidator(
+	ctx context.Context,
+	config *configuration.Config,
+	walletConfig *configuration.Wallet,
+	l1Client ethutils.EthClient,
+	auth *bind.TransactOpts,
+	mon *monitor.Monitor,
+) (*staker.Staker, error) {
+	if len(config.Validator.UtilsAddress) == 0 ||
+		len(config.Validator.WalletFactoryAddress) == 0 || config.Validator.Strategy() == configuration.UnknownStrategy {
+		return nil, errors.New("Contract addresses and strategy required for validator")
+	}
+
+	rollupAddr := ethcommon.HexToAddress(config.Rollup.Address)
+	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
+	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
+
+	chainState := ChainState{}
+	chainStatePath := path.Join(config.Persistent.Chain, "chainState.json")
+	chainStateFile, err := os.Open(chainStatePath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, errors.Wrap(err, "failed to open chainState.json")
+		}
+	} else {
+		chainStateData, err := ioutil.ReadAll(chainStateFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read chain state")
+		}
+		err = json.Unmarshal(chainStateData, &chainState)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal chain state")
+		}
+	}
+
+	var valAuth transactauth.TransactAuth
+	if len(walletConfig.Fireblocks.SSLKey) > 0 {
+		valAuth, _, err = transactauth.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, walletConfig, false)
+	} else {
+		valAuth, err = transactauth.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating connecting to chain")
+	}
+	var validatorAddress *ethcommon.Address
+	if chainState.ValidatorWallet != "" {
+		addr := ethcommon.HexToAddress(chainState.ValidatorWallet)
+		validatorAddress = &addr
+	}
+	onValidatorWalletCreated := func(addr ethcommon.Address) {
+		chainState.ValidatorWallet = addr.String()
+		newChainStateData, err := json.Marshal(chainState)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to marshal chain state")
+		} else if err := ioutil.WriteFile(chainStatePath, newChainStateData, 0644); err != nil {
+			log.Warn().Err(err).Msg("failed to write chain state config")
+		}
+	}
+
+	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, config.Rollup.FromBlock, onValidatorWalletCreated)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating validator wallet")
+	}
+
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), config.Validator.Strategy(), bind.CallOpts{}, valAuth, config.Validator)
+	if err != nil {
+		return nil, errors.Wrap(err, "error setting up staker")
+	}
+
+	logger.Info().Str("strategy", config.Validator.StrategyImpl).Msg("Initialized validator")
+	return stakerManager, nil
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -38,15 +39,6 @@ import (
 
 var logger = arblog.Logger.With().Str("component", "staker").Logger()
 
-type Strategy uint8
-
-const (
-	WatchtowerStrategy Strategy = iota
-	DefensiveStrategy
-	StakeLatestStrategy
-	MakeNodesStrategy
-)
-
 type nodeAndHash struct {
 	id   core.NodeID
 	hash common.Hash
@@ -55,7 +47,7 @@ type nodeAndHash struct {
 type Staker struct {
 	*Validator
 	activeChallenge         *challenge.Challenger
-	strategy                Strategy
+	strategy                configuration.ValidatorStrategy
 	fromBlock               int64
 	baseCallOpts            bind.CallOpts
 	auth                    transactauth.TransactAuth
@@ -75,7 +67,7 @@ func NewStaker(
 	wallet *ethbridge.ValidatorWallet,
 	fromBlock int64,
 	validatorUtilsAddress common.Address,
-	strategy Strategy,
+	strategy configuration.ValidatorStrategy,
 	callOpts bind.CallOpts,
 	auth transactauth.TransactAuth,
 	config configuration.Validator,
@@ -114,6 +106,10 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			if err == nil && arbTx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
 				_, err = transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.auth)
+				if strings.Contains(err.Error(), "arbcore thread aborted") {
+					logger.Error().Err(err).Msg("aborting staker background thread")
+					break
+				}
 				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
 					logger.Info().Str("hash", arbTx.Hash().String()).Msg("successfully executed transaction")
@@ -242,15 +238,15 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 	}
 	if !nodesLinear {
 		logger.Warn().Msg("fork detected")
-		if effectiveStrategy == DefensiveStrategy {
-			effectiveStrategy = StakeLatestStrategy
+		if effectiveStrategy == configuration.DefensiveStrategy {
+			effectiveStrategy = configuration.StakeLatestStrategy
 		}
 		s.inactiveLastCheckedNode = nil
 	}
 	if s.bringActiveUntilNode != nil {
 		if info.LatestStakedNode.Cmp(s.bringActiveUntilNode) < 0 {
-			if effectiveStrategy == DefensiveStrategy {
-				effectiveStrategy = StakeLatestStrategy
+			if effectiveStrategy == configuration.DefensiveStrategy {
+				effectiveStrategy = configuration.StakeLatestStrategy
 			}
 		} else {
 			logger.Info().Msg("defensive validator staked past incorrect node; waiting here")
@@ -258,7 +254,7 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 		}
 		s.inactiveLastCheckedNode = nil
 	}
-	if effectiveStrategy <= DefensiveStrategy && s.inactiveLastCheckedNode != nil {
+	if !effectiveStrategy.IsActive() && s.inactiveLastCheckedNode != nil {
 		info.LatestStakedNode = s.inactiveLastCheckedNode.id
 		info.LatestStakedNodeHash = s.inactiveLastCheckedNode.hash
 	}
@@ -266,8 +262,8 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 	// Resolve nodes if either we're on the make nodes strategy,
 	// or we're on the stake latest strategy but don't have a stake
 	// (attempt to reduce the current required stake).
-	shouldResolveNodes := effectiveStrategy >= MakeNodesStrategy
-	if !shouldResolveNodes && effectiveStrategy >= StakeLatestStrategy && rawInfo == nil {
+	shouldResolveNodes := effectiveStrategy == configuration.MakeNodesStrategy
+	if !shouldResolveNodes && effectiveStrategy.IsActive() && rawInfo == nil {
 		shouldResolveNodes, err = s.isRequiredStakeElevated(ctx)
 		if err != nil {
 			return nil, err
@@ -275,7 +271,7 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 	}
 	if shouldResolveNodes {
 		// Keep the stake of this validator placed if we plan on staking further
-		arbTx, err := s.removeOldStakers(ctx, effectiveStrategy >= StakeLatestStrategy)
+		arbTx, err := s.removeOldStakers(ctx, effectiveStrategy.IsActive())
 		if err != nil || arbTx != nil {
 			return arbTx, err
 		}
@@ -414,13 +410,12 @@ func (s *Staker) newStake(ctx context.Context) error {
 	return s.rollup.NewStake(ctx, stakeAmount)
 }
 
-func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiveStrategy Strategy) error {
-	active := effectiveStrategy >= StakeLatestStrategy
+func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiveStrategy configuration.ValidatorStrategy) error {
 	action, wrongNodesExist, err := s.generateNodeAction(ctx, info, effectiveStrategy, s.fromBlock)
 	if err != nil {
 		return err
 	}
-	if wrongNodesExist && effectiveStrategy == WatchtowerStrategy {
+	if wrongNodesExist && effectiveStrategy == configuration.WatchtowerStrategy {
 		logger.Error().Msg("found incorrect assertion in watchtower mode")
 	}
 	if action == nil {
@@ -434,8 +429,8 @@ func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiv
 			logger.Error().Msg("refusing to challenge assertion as config disables challenges")
 			return nil
 		}
-		if !active {
-			if wrongNodesExist && effectiveStrategy >= DefensiveStrategy {
+		if !effectiveStrategy.IsActive() {
+			if wrongNodesExist && effectiveStrategy == configuration.DefensiveStrategy {
 				logger.Warn().Msg("bringing defensive validator online because of incorrect assertion")
 				s.bringActiveUntilNode = new(big.Int).Add(info.LatestStakedNode, big.NewInt(1))
 			}
@@ -450,8 +445,8 @@ func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiv
 	case existingNodeAction:
 		info.LatestStakedNode = action.number
 		info.LatestStakedNodeHash = action.hash
-		if !active {
-			if wrongNodesExist && effectiveStrategy >= DefensiveStrategy {
+		if !effectiveStrategy.IsActive() {
+			if wrongNodesExist && effectiveStrategy == configuration.DefensiveStrategy {
 				logger.Warn().Msg("bringing defensive validator online because of incorrect assertion")
 				s.bringActiveUntilNode = action.number
 				info.CanProgress = false

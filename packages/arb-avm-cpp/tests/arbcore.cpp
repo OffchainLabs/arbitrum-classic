@@ -63,8 +63,8 @@ void waitForDelivery(std::shared_ptr<ArbCore>& arbCore) {
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    if (status == ArbCore::MESSAGES_ERROR) {
-        INFO(arbCore->messagesClearError());
+    if (arbCore->checkError()) {
+        INFO(arbCore->getErrorString());
     }
     REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
 }
@@ -108,8 +108,7 @@ void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
     REQUIRE(accRes.data != 0);
 
     while (!arbCore->machineIdle()) {
-        auto err_str = arbCore->machineClearError();
-        REQUIRE(!err_str.has_value());
+        REQUIRE(!arbCore->checkError());
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
@@ -195,7 +194,7 @@ TEST_CASE("ArbCore tests") {
             while (true) {
                 auto result = arbCore1->logsCursorGetLogs(0);
                 REQUIRE((result.status.ok() || result.status.IsTryAgain()));
-                REQUIRE(!arbCore1->logsCursorCheckError(0));
+                REQUIRE(!arbCore1->checkError());
                 if (result.status.ok()) {
                     REQUIRE(result.data.deleted_logs.size() <= logs_count);
                     logs_count -= result.data.deleted_logs.size();
