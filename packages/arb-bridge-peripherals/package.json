@@ -1,9 +1,9 @@
 {
   "name": "arb-bridge-peripherals",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "./scripts/build.sh",
+    "build": "./scripts/build.bash",
     "test:e2e": "hardhat test test/*.e2e.ts",
     "test:l1": "hardhat test test/*.l1.ts",
     "test:l2": "hardhat test test/*.l2.ts --network arbitrum",
@@ -20,7 +20,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "3.4.2",
     "@openzeppelin/contracts-upgradeable": "3.4.2",
-    "arb-bridge-eth": "0.7.5",
+    "arb-bridge-eth": "0.7.6",
     "arbos-precompiles": "^1.0.2",
     "hardhat": "^2.6.1"
   },

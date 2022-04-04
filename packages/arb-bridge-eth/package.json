@@ -1,6 +1,6 @@
 {
   "name": "arb-bridge-eth",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -16,7 +16,7 @@
     "test": "test"
   },
   "scripts": {
-    "build": "./scripts/build.sh",
+    "build": "./scripts/build.bash",
     "test": "yarn run hardhat test test/*.spec.ts",
     "test:ci": "CI=true $npm_execpath run test",
     "test:gas": "REPORT_GAS=true $npm_execpath run test",
