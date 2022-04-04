@@ -167,10 +167,6 @@ class ArbCore {
     // only if set to MESSAGES_READY
     std::atomic<message_status_enum> message_data_status{MESSAGES_EMPTY};
     std::string message_data_error_string;
-    // Message_data_error_mutex non-arbcore threads should acquire read mutex
-    // when checking for MESSAGES_ERROR, arbcore thread needs to acquire write
-    // mutex only when setting MESSAGES_ERROR
-    std::shared_mutex message_data_error_mutex;
 
     // Core thread inbox input
     message_data_struct message_data;

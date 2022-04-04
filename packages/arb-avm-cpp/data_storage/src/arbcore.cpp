@@ -123,9 +123,9 @@ std::string ArbCore::messagesClearError() {
         return "";
     }
 
-    message_data_status = MESSAGES_EMPTY;
     auto str = message_data_error_string;
     message_data_error_string.clear();
+    message_data_status = MESSAGES_EMPTY;
 
     return str;
 }
