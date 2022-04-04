@@ -1442,13 +1442,27 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         try {
             auto add_status = addMessages(message_data, thread_data.cache);
             if (!add_status.status.ok()) {
+                thread_data.add_messages_failure_count++;
                 auto lock = std::unique_lock<std::shared_mutex>(
                     message_data_error_mutex);
                 message_data_error_string = add_status.status.ToString();
                 message_data_status = MESSAGES_ERROR;
-                std::cerr << "ArbCore addMessages non-fatal error: "
+                if (coreConfig.add_messages_max_failure_count > 0 &&
+                    thread_data.add_messages_failure_count >=
+                        coreConfig.add_messages_max_failure_count) {
+                    std::cerr << "Exiting after arbCore addMessages failed "
+                              << thread_data.add_messages_failure_count
+                              << " times: " << message_data_error_string
+                              << "\n";
+
+                    return false;
+                }
+
+                std::cerr << "ArbCore addMessages non-fatal error "
+                          << thread_data.add_messages_failure_count << ": "
                           << message_data_error_string << "\n";
             } else {
+                thread_data.add_messages_failure_count = 0;
                 machine_idle = false;
                 message_data_status = MESSAGES_SUCCESS;
                 if (add_status.data.has_value()) {
@@ -1623,7 +1637,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         if (thread_data.perform_save_rocksdb_checkpoint) {
             thread_data.perform_save_rocksdb_checkpoint = false;
 
-            saveRocksdbCheckpoint(thread_data.save_rocksdb_path, tx);
+            saveRocksdbCheckpoint(coreConfig.database_save_path, tx);
         }
 
         auto output = getLastMachineOutput();
@@ -1745,7 +1759,6 @@ void ArbCore::operator()() {
 #endif
     auto maxGas = maxCheckpointGas();
     ThreadDataStruct thread_data(
-        coreConfig.database_save_path,
         core_machine->machine_state.output.fully_processed_inbox.count,
         maxGas + coreConfig.checkpoint_gas_frequency,
         maxGas + coreConfig.basic_machine_cache_interval);
@@ -1756,7 +1769,7 @@ void ArbCore::operator()() {
         thread_data.next_rocksdb_save_timepoint =
             std::chrono::steady_clock::now() +
             std::chrono::seconds(coreConfig.database_save_interval);
-        std::filesystem::create_directories(thread_data.save_rocksdb_path);
+        std::filesystem::create_directories(coreConfig.database_save_path);
     }
 
     try {
