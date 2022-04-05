@@ -13,7 +13,7 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
-    "audit:ci": "audit-ci -l -a 1006805 1006806 1006865",
+    "audit:ci": "audit-ci -l -a 1006805 1006806 1006865 1006896 1006899",
     "install:deps": "./scripts/install-deps",
     "install:validator": "./scripts/install-validator",
     "update:abi": "yarn go:generate && yarn workspace arb-ts update:abi",
@@ -71,6 +71,6 @@
     "lodash": "4.17.21",
     "underscore": "1.12.1",
     "node-fetch": "2.6.1",
-    "yargs-parser": "5.0.1"
+    "yargs-parser": "20.2.2"
   }
 }

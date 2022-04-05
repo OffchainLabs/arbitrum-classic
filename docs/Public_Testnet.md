@@ -16,11 +16,11 @@ If you're using Metamask, add a custom RPC network to connect to the Arbitrum te
 - RPC URL: https://rinkeby.arbitrum.io/rpc
 - ChainID: 421611
 - Symbol: ETH
-- Block Explorer URL: https://rinkeby-explorer.arbitrum.io/#/
+- Block Explorer URL: https://testnet.arbiscan.io/
 
 ## Observing transactions
 
-If you'd like to see your transactions in action, check out our [block explorer](https://rinkeby-explorer.arbitrum.io/#/)!
+If you'd like to see your transactions in action, check out our [block explorer](https://testnet.arbiscan.io/)!
 
 There you'll be able to see all the transactions being executed in Arbitrum and also see exactly how much Ethereum Gas each transaction uses.
 
@@ -68,11 +68,11 @@ All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/69
 
 #### L2:
 
-- L2 Gateway Router: [0x9413AD42910c1eA60c737dB5f58d1C504498a3cD](https://rinkeby-explorer.arbitrum.io/address/0x9413AD42910c1eA60c737dB5f58d1C504498a3cD)
-- L2 Standard ERC20 Gateway: [0x195C107F3F75c4C93Eba7d9a1312F19305d6375f](https://rinkeby-explorer.arbitrum.io/address/0x195C107F3F75c4C93Eba7d9a1312F19305d6375f)
-- L2 Custom Gateway: [0x9b014455AcC2Fe90c52803849d0002aeEC184a06](https://rinkeby-explorer.arbitrum.io/address/0x9b014455AcC2Fe90c52803849d0002aeEC184a06)
-- L2 WETH Gateway: [0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9](https://rinkeby-explorer.arbitrum.io/address/0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9)
-- L2 WETH Address: [0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681](https://rinkeby-explorer.arbitrum.io/address/0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681)
+- L2 Gateway Router: [0x9413AD42910c1eA60c737dB5f58d1C504498a3cD](https://testnet.arbiscan.io/address/0x9413AD42910c1eA60c737dB5f58d1C504498a3cD)
+- L2 Standard ERC20 Gateway: [0x195C107F3F75c4C93Eba7d9a1312F19305d6375f](https://testnet.arbiscan.io/address/0x195C107F3F75c4C93Eba7d9a1312F19305d6375f)
+- L2 Custom Gateway: [0x9b014455AcC2Fe90c52803849d0002aeEC184a06](https://testnet.arbiscan.io/address/0x9b014455AcC2Fe90c52803849d0002aeEC184a06)
+- L2 WETH Gateway: [0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9](https://testnet.arbiscan.io/address/0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9)
+- L2 WETH Address: [0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681](https://testnet.arbiscan.io/address/0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681)
 
 <!--
 ## Running your own node

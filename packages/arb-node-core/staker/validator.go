@@ -12,6 +12,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -196,7 +197,7 @@ type OurStakerInfo struct {
 	*ethbridge.StakerInfo
 }
 
-func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy Strategy, fromBlock int64) (nodeAction, bool, error) {
+func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy configuration.ValidatorStrategy, fromBlock int64) (nodeAction, bool, error) {
 	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, stakerInfo.LatestStakedNode, stakerInfo.LatestStakedNodeHash)
 	if err != nil {
 		return nil, false, err
@@ -286,7 +287,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	maximumGasTarget := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
 	maximumGasTarget = maximumGasTarget.Add(maximumGasTarget, startState.TotalGasConsumed)
 
-	if strategy > WatchtowerStrategy {
+	if strategy.IsActive() || strategy == configuration.DefensiveStrategy {
 		gasesUsed = append(gasesUsed, maximumGasTarget)
 	}
 
@@ -295,7 +296,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	var correctNode nodeAction
 	wrongNodesExist := false
 	if len(successorNodes) > 0 {
-		logger.Info().Int("count", len(successorNodes)).Msg("Examining existing potential successors")
+		logger.Info().Int("count", len(successorNodes)).Msg("examining existing potential successors")
 	}
 	for nodeI, nd := range successorNodes {
 		if correctNode != nil && wrongNodesExist {
@@ -323,7 +324,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 				return nil, false, err
 			}
 			if valid {
-				logger.Info().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found correct node")
+				logger.Info().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("found correct node")
 				correctNode = existingNodeAction{
 					number: nd.NodeNum,
 					hash:   nd.NodeHash,
@@ -338,16 +339,16 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 				}
 				continue
 			} else {
-				logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found node with incorrect assertion")
+				logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("found node with incorrect assertion")
 			}
 		} else {
-			logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found younger sibling to correct node")
+			logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("found younger sibling to correct node")
 		}
 		// If we've hit this point, the node is "wrong"
 		wrongNodesExist = true
 	}
 
-	if strategy == WatchtowerStrategy || correctNode != nil || (strategy < MakeNodesStrategy && !wrongNodesExist) {
+	if strategy == configuration.WatchtowerStrategy || correctNode != nil || (strategy != configuration.MakeNodesStrategy && !wrongNodesExist) {
 		return correctNode, wrongNodesExist, nil
 	}
 
@@ -480,7 +481,7 @@ func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, 
 		return nil, err
 	}
 	if node.NodeHash != nodeHash {
-		return nil, errors.New("Looked up starting node but found wrong hash")
+		return nil, errors.New("looked up starting node but found wrong hash")
 	}
 	return node.AfterState(), nil
 }

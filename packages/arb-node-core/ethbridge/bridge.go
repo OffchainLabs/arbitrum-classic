@@ -17,15 +17,15 @@
 package ethbridge
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "ethbridge").Logger()
+var logger = arblog.Logger.With().Str("component", "ethbridge").Logger()
 
 type Bridge struct {
 	*DelayedBridgeWatcher

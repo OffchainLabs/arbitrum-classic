@@ -36,8 +36,12 @@ const (
 	MessagesEmpty MessageStatus = iota
 	MessagesReady
 	MessagesSuccess
-	MessagesError
 )
+
+type MachineEmission struct {
+	Value    value.Value
+	LogCount *big.Int
+}
 
 type ExecutionCursor interface {
 	Clone() ExecutionCursor
@@ -77,6 +81,9 @@ type ArbCoreLookup interface {
 	// AdvanceExecutionCursor executes as much as it can without going over maxGas or
 	// optionally until it reaches or goes over maxGas
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error
+
+	// AdvanceExecutionCursorWithTracing executes machine to get tracing debugprint for given log number
+	AdvanceExecutionCursorWithTracing(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumberStart, logNumberEnd *big.Int) ([]MachineEmission, error)
 
 	// TakeMachine takes ownership of machine such that ExecutionCursor will
 	// no longer be able to advance.
@@ -157,7 +164,7 @@ func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 			db.PrintCoreThreadBacktrace()
 			nextLog += time.Second * 30
 		}
-		<-time.After(time.Millisecond * 50)
+		<-time.After(time.Millisecond * 1)
 	}
 	return status, nil
 }
@@ -167,7 +174,6 @@ type ArbCore interface {
 	ArbCoreInbox
 	LogsCursor
 	StartThread() bool
-	StopThread()
 	MachineIdle() bool
 }
 
@@ -278,9 +284,9 @@ type LogConsumer interface {
 }
 
 type LogsCursor interface {
+	CheckError() error
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []ValueAndInbox, []ValueAndInbox, error)
-	LogsCursorCheckError(cursorIndex *big.Int) error
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error)
 }

@@ -18,6 +18,7 @@ package dev
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"strconv"
 	"sync"
@@ -27,10 +28,6 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -46,29 +43,30 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
+	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
+var logger = arblog.Logger.With().Str("component", "dev").Logger()
 
-func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
+func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64, revertFailedTxes bool) (*Backend, *txdb.TxDB, *monitor.Monitor, func(), <-chan error, error) {
 	nodeConfig := configuration.DefaultNodeSettings()
 	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
 
-	mon, err := monitor.NewMonitor(dir, arbosPath, coreConfig)
+	mon, err := monitor.NewInitializedMonitor(dir, arbosPath, coreConfig)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}
 
 	backendCore, err := NewBackendCore(ctx, mon.Core, chainId)
 	if err != nil {
 		mon.Close()
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), nodeConfig)
 	if err != nil {
 		mon.Close()
-		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
+		return nil, nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
 	}
 
 	cancel := func() {
@@ -77,9 +75,9 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.
 	}
 	signer := types.NewEIP155Signer(chainId)
 	l1 := NewL1Emulator(initialL1Height)
-	backend := NewBackend(ctx, backendCore, db, l1, signer, agg, big.NewInt(100000000000))
+	backend := NewBackend(ctx, backendCore, db, l1, signer, agg, big.NewInt(100000000000), revertFailedTxes)
 
-	return backend, db, cancel, errChan, nil
+	return backend, db, mon, cancel, errChan, nil
 }
 
 type EVM struct {
@@ -232,11 +230,10 @@ type Backend struct {
 	currentAggregator common.Address
 	chainAggregator   common.Address
 	l1GasPrice        *big.Int
-
-	newTxFeed event.Feed
+	revertFailedTxes  bool
 }
 
-func NewBackend(ctx context.Context, core *BackendCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int) *Backend {
+func NewBackend(ctx context.Context, core *BackendCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int, revertFailedTxes bool) *Backend {
 	return &Backend{
 		BackendCore:       core,
 		ctx:               ctx,
@@ -246,6 +243,7 @@ func NewBackend(ctx context.Context, core *BackendCore, db *txdb.TxDB, l1 *L1Emu
 		currentAggregator: aggregator,
 		chainAggregator:   aggregator,
 		l1GasPrice:        l1GasPrice,
+		revertFailedTxes:  revertFailedTxes,
 	}
 }
 
@@ -336,7 +334,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return err
 	}
 	txHash := common.NewHashFromEth(tx.Hash())
-	res, _, err := b.db.GetRequest(txHash)
+	res, _, _, err := b.db.GetRequest(txHash)
 	if err != nil {
 		return err
 	}
@@ -344,7 +342,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return errors.New("tx res not found")
 	}
 
-	if res.ResultCode != evm.ReturnCode {
+	if b.revertFailedTxes && res.ResultCode != evm.ReturnCode {
 		logger.Warn().Int("code", int(res.ResultCode)).Msg("transaction failed")
 		// If transaction failed, rollback the block
 		if err := b.reorg(startCount.Uint64(), startHeight); err != nil {

@@ -42,7 +42,8 @@ MachineExecutionConfig::MachineExecutionConfig()
       go_over_gas(false),
       inbox_messages(),
       sideloads(),
-      stop_on_sideload(false) {}
+      stop_on_sideload(false),
+      stop_on_breakpoint(false) {}
 
 void MachineExecutionConfig::setInboxMessagesFromBytes(
     const std::vector<std::vector<unsigned char>>& bytes) {
@@ -96,6 +97,12 @@ Assertion Machine::run() {
                 // Last step reached or went over gas limit
                 break;
             }
+        }
+
+        if (machine_state.context.stop_after_log_count &&
+            machine_state.output.log_count >=
+                *machine_state.context.stop_after_log_count) {
+            break;
         }
 
         block_reason = machine_state.runOne();

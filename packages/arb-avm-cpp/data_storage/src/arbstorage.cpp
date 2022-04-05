@@ -31,9 +31,17 @@ ArbStorage::ArbStorage(const std::string& db_path,
     : datastorage(std::make_shared<DataStorage>(db_path, coreConfig)),
       arb_core(std::make_shared<ArbCore>(datastorage, coreConfig)) {}
 
+void ArbStorage::printDatabaseMetadata() {
+    arb_core->printDatabaseMetadata();
+}
+
 InitializeResult ArbStorage::initialize(const std::string& executable_path) {
     auto executable = loadExecutable(executable_path);
     return initialize(executable);
+}
+
+InitializeResult ArbStorage::applyConfig() {
+    return arb_core->applyConfig();
 }
 
 InitializeResult ArbStorage::initialize(const LoadedExecutable& executable) {
@@ -52,6 +60,10 @@ bool ArbStorage::closeArbStorage() {
                   << std::endl;
     }
     return status.ok();
+}
+
+rocksdb::Status ArbStorage::cleanupValidator() {
+    return datastorage->cleanupValidator();
 }
 
 std::unique_ptr<AggregatorStore> ArbStorage::getAggregatorStore() const {

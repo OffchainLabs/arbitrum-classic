@@ -24,8 +24,6 @@ set(LIB_HEADERS
   include/avm_values/tuple.hpp
   include/avm_values/tuplestub.hpp
   include/avm_values/unloadedvalue.hpp
-  include/avm_values/value.hpp
-  include/avm_values/valuetype.hpp
   include/avm_values/bigint.hpp
   include/avm_values/buffer.hpp
   include/avm_values/code.hpp
@@ -33,6 +31,9 @@ set(LIB_HEADERS
   include/avm_values/codepointstub.hpp
   include/avm_values/pool.hpp
   include/avm_values/opcodes.hpp
+  include/avm_values/value.hpp
+  include/avm_values/valueloader.hpp
+  include/avm_values/valuetype.hpp
   include/avm_values/vmValueParser.hpp
 )
 

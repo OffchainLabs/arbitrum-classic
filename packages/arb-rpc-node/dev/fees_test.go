@@ -79,6 +79,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		config,
 		common.NewAddressFromEth(auth.From),
 		[]message.ChainConfigOption{feeConfigInit, aggInit},
+		true,
 	)
 
 	deposit := message.EthDepositTx{
@@ -178,8 +179,9 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 }
 
 func TestFees(t *testing.T) {
+	ctx := context.Background()
 	skipBelowVersion(t, 3)
-	backend, _, client, auth, aggAuth, feeConfig, config, feeCollector, cancel := setupFeeChain(t)
+	backend, _, client, _, aggAuth, feeConfig, config, feeCollector, cancel := setupFeeChain(t)
 	defer cancel()
 
 	agg := common.NewAddressFromEth(aggAuth.From)
@@ -188,6 +190,9 @@ func TestFees(t *testing.T) {
 	test.FailIfError(t, err)
 
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
 	test.FailIfError(t, err)
 
 	totalPaid := big.NewInt(0)
@@ -230,9 +235,12 @@ func TestFees(t *testing.T) {
 		t.Log("Fee col bal", feeCollectorBal)
 	}
 
+	userOpts, userAddr := OptsAddressPair(t, nil)
+	addSomeBalance(t, ctx, userAddr, backend, client)
+
 	for i := 0; i < 5; i++ {
 		t.Log("tx", i)
-		tx, err := arbOwner.SetChainParameter(auth, arbos.DefaultAggregatorParamId, big.NewInt(0))
+		tx, err := arbAggregator.SetFeeCollector(userOpts, userOpts.From, userOpts.From)
 		test.FailIfError(t, err)
 		paid := checkFees(t, backend, tx)
 		totalPaid = totalPaid.Add(totalPaid, paid)
@@ -273,7 +281,7 @@ func TestFees(t *testing.T) {
 	t.Log("perL1CalldataByte", perL1CalldataByte)
 	t.Log("perStorage", perStorage)
 
-	_, tx, _, err := arbostestcontracts.DeploySimple(auth, client)
+	_, tx, _, err := arbostestcontracts.DeploySimple(userOpts, client)
 	test.FailIfError(t, err)
 
 	paid := checkFees(t, backend, tx)
@@ -283,7 +291,7 @@ func TestFees(t *testing.T) {
 
 func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 	t.Helper()
-	arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	arbRes, _, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 	t.Log("Gas used:", arbRes.CalcGasUsed().Uint64())
 	used := new(big.Rat).SetFrac(arbRes.CalcGasUsed(), new(big.Int).SetUint64(tx.Gas()))
@@ -302,24 +310,30 @@ func TestNonAggregatorFee(t *testing.T) {
 
 	simpleAddr, _, simple, err := arbostestcontracts.DeploySimple(auth, client)
 	test.FailIfError(t, err)
-	backend.currentAggregator = common.Address{}
+	backend.currentAggregator = common.RandAddress()
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
-	data := simpleABI.Methods["exists"].ID
+	data := simpleABI.Methods["arrayPush"].ID
 	emptyAgg := ethcommon.Address{}
 
-	estimatedGas, err := web3SServer.EstimateGas(ctx, web3.CallTxArgs{
-		From:       &auth.From,
-		To:         &simpleAddr,
-		Data:       (*hexutil.Bytes)(&data),
-		Aggregator: &emptyAgg,
-	})
-	test.FailIfError(t, err)
-	auth.GasLimit = uint64(estimatedGas)
-	tx, err := simple.Exists(auth)
-	test.FailIfError(t, err)
-	checkFees(t, backend, tx)
+	userOpts, userAddr := OptsAddressPair(t, nil)
+	addSomeBalance(t, ctx, userAddr, backend, client)
+
+	for i := 0; i < 4; i++ {
+		estimatedGas, err := web3SServer.EstimateGas(ctx, web3.CallTxArgs{
+			From:       &userOpts.From,
+			To:         &simpleAddr,
+			Data:       (*hexutil.Bytes)(&data),
+			Aggregator: &emptyAgg,
+		})
+		test.FailIfError(t, err)
+		userOpts.GasLimit = uint64(estimatedGas)
+		t.Log("estimate:", userOpts.GasLimit)
+		tx, err := simple.ArrayPush(userOpts)
+		test.FailIfError(t, err)
+		checkFees(t, backend, tx)
+	}
 }
 
 func TestRetryableFee(t *testing.T) {
@@ -367,7 +381,7 @@ func TestRetryableFee(t *testing.T) {
 	test.FailIfError(t, err)
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
-	res, _, err := backend.db.GetRequest(redeemId)
+	res, _, _, err := backend.db.GetRequest(redeemId)
 	test.FailIfError(t, err)
 
 	if web3.ApplyGasPriceBidFactor(res.GasPrice).Cmp(gasPriceEstimate) != 0 {
@@ -412,7 +426,7 @@ func TestDeposit(t *testing.T) {
 		t.Fatal("expected 1 tx in block")
 	}
 
-	arbRes, _, err := backend.db.GetRequest(txHash)
+	arbRes, _, _, err := backend.db.GetRequest(txHash)
 	test.FailIfError(t, err)
 
 	t.Log("arbRes", arbRes.IncomingRequest.Kind)
@@ -443,7 +457,7 @@ func TestDeploy(t *testing.T) {
 	tx, err = auth.Signer(auth.From, tx)
 	err = client.SendTransaction(ctx, tx)
 	test.FailIfError(t, err)
-	arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	arbRes, _, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 	t.Log(arbRes)
 }

@@ -72,7 +72,7 @@ TEST_CASE("Value marshaling") {
             auto valRaw = reinterpret_cast<const char*>(valBytes.data());
             auto val = deserialize_value(valRaw);
             std::vector<unsigned char> buf;
-            marshal_value(val, buf);
+            marshal_value(val, buf, nullptr);
             auto valptr = (const char*)&buf[0];
             auto newval = deserialize_value(valptr);
             REQUIRE(values_equal(val, newval));

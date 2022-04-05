@@ -44,14 +44,14 @@ func TestUpgrade(t *testing.T) {
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
-	auth, owner := OwnerAuthPair(t, privkey)
+	auth, owner := OptsAddressPair(t, privkey)
 
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, owner, nil)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, owner, nil, true)
 	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{

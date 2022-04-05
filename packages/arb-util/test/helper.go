@@ -65,6 +65,12 @@ func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*bind.Transac
 	return client, auths
 }
 
+func MustGenerateKey(t *testing.T) *ecdsa.PrivateKey {
+	key, err := crypto.GenerateKey()
+	FailIfError(t, err)
+	return key
+}
+
 func FailIfError(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {

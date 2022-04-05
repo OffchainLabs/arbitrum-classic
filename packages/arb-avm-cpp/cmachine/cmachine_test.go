@@ -19,6 +19,7 @@ package cmachine
 import (
 	"math/big"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
@@ -56,6 +57,7 @@ func TestMachineCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer runtime.KeepAlive(cursor)
 	mach2, err := core.TakeMachine(cursor)
 	if err != nil {
 		t.Fatal(err)

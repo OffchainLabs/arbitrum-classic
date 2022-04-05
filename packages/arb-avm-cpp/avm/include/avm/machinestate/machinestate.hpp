@@ -21,7 +21,7 @@
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/status.hpp>
-#include <avm/valueloader.hpp>
+#include <avm_values/valueloader.hpp>
 
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
@@ -50,6 +50,7 @@ template <typename T>
 struct MachineEmission {
     T val;
     InboxState inbox;
+    uint256_t log_count;
 };
 
 struct AssertionContext {
@@ -60,9 +61,11 @@ struct AssertionContext {
     std::vector<MachineEmission<Value>> debug_prints;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload{false};
+    bool stop_on_breakpoint{false};
     uint256_t max_gas;
     bool go_over_gas{false};
     bool first_instruction{true};
+    std::optional<uint256_t> stop_after_log_count;
 
    private:
     size_t inbox_messages_consumed{0};
@@ -168,12 +171,11 @@ struct MachineState {
     uint256_t arb_gas_remaining;
     Status state{Status::Extensive};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
+    bool lazy_loaded;
 
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
-
-    MachineState();
 
     MachineState(std::shared_ptr<CoreCode> code_, Value static_val);
 
@@ -187,7 +189,8 @@ struct MachineState {
                  Datastack auxstack_,
                  uint256_t arb_gas_remaining_,
                  Status state_,
-                 CodePointStub errpc_);
+                 CodePointStub errpc_,
+                 bool lazy_loaded_);
 
     uint256_t getMachineSize() const;
     OneStepProof marshalForProof() const;

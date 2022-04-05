@@ -44,6 +44,8 @@ class MachineExecutionConfig {
     std::vector<MachineMessage> inbox_messages;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload;
+    bool stop_on_breakpoint;
+    std::optional<uint256_t> stop_after_log_count;
 
     MachineExecutionConfig();
 
@@ -61,7 +63,6 @@ class Machine {
    public:
     MachineState machine_state;
 
-    Machine() = default;
     explicit Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
     explicit Machine(const Machine& machine)
