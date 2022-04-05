@@ -55,8 +55,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
 
     modifier onlyCounterpartGateway() override {
         require(
-            msg.sender == counterpartGateway ||
-                AddressAliasHelper.undoL1ToL2Alias(msg.sender) == counterpartGateway,
+            msg.sender == AddressAliasHelper.applyL1ToL2Alias(counterpartGateway),
             "ONLY_COUNTERPART_GATEWAY"
         );
         _;
