@@ -8,6 +8,8 @@ In order to make it easy for people to get started using Arbitrum Nitro, we've l
 
 For a general introduction to the Arbitrum Nitro, see our [announcement](https://medium.com/offchainlabs/arbitrum-nitro-sneak-preview-44550d9054f5).
 
+As we approach mainnet launch and incorporate feedback, we will likely reset the devnet a few times, so please plan accordingly.
+
 ## Connecting to the chain
 
 If you're using Metamask, add a custom RPC network to connect to the Arbitrum devnet:
