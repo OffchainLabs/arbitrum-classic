@@ -1,7 +1,7 @@
 ---
-id: Public_Nitro_Testnet
-title: Public Nitro Testnet Guide
-sidebar_label: Public Nitro Testnet
+id: Public_Nitro_Devnet
+title: Public Nitro Devnet Guide
+sidebar_label: Public Nitro Devnet
 ---
 
 In order to make it easy for people to get started using Arbitrum Nitro, we've launched our own hosted Arbitrum Nitro Rollup chain hosted on the Goerli testnet.
@@ -10,9 +10,9 @@ For a general introduction to the Arbitrum Nitro, see our [announcement](https:/
 
 ## Connecting to the chain
 
-If you're using Metamask, add a custom RPC network to connect to the Arbitrum testnet:
+If you're using Metamask, add a custom RPC network to connect to the Arbitrum devnet:
 
-- Network Name: Arbitrum Nitro Testnet
+- Network Name: Arbitrum Nitro Devnet
 - RPC URL: INSERT_RPC_URL
 - ChainID: 421612
 - Symbol: ETH
@@ -31,13 +31,13 @@ There you'll be able to see all the transactions being executed in Arbitrum and 
 
 In order to deposit and withdraw Eth or tokens, visit INSERT_BRIDGE_URL.
 
-You can get ETH to use in the Arbitrum Nitro testnet by visiting the [twitter faucet](INSERT_FAUCET_URL).
+You can get ETH to use in the Arbitrum Nitro Devnet by visiting the [twitter faucet](INSERT_FAUCET_URL).
 
 You may also deposit Eth from Goerli so that you can pay for fees in L2. In order to get Goerli Eth, use one of the standard faucets.
 
 ## Interacting with the chain
 
-Once you've added the Arbitrum Nitro Testnet network to Metamask, you should be able to interact with the Arbitrum chain just like you would with Ethereum.
+Once you've added the Arbitrum Nitro Devnet network to Metamask, you should be able to interact with the Arbitrum chain just like you would with Ethereum.
 
 The are a couple things to note on the Arbitrum chain.
 
@@ -46,7 +46,7 @@ The are a couple things to note on the Arbitrum chain.
 
 ## Deploying your contracts
 
-Deploying your contracts onto the Arbitrum testnet is as easy as changing your RPC endpoint to INSERT_RPC_URL
+Deploying your contracts onto the Arbitrum devnet is as easy as changing your RPC endpoint to INSERT_RPC_URL
 
 For a deeper dive into deploying with truffle see [here](Contract_Deployment.md).
 
