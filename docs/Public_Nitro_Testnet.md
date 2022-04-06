@@ -18,6 +18,9 @@ If you're using Metamask, add a custom RPC network to connect to the Arbitrum te
 - Symbol: ETH
 - Block Explorer URL: INSERT_EXPLORER_URL
 
+- Retryable Dashboard:
+- Token Bridge:
+
 ## Observing transactions
 
 If you'd like to see your transactions in action, check out our [block explorer](INSERT_EXPLORER_URL)!
