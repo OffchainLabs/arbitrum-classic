@@ -32,6 +32,7 @@ rollups
 /packages/arb-rpc-node/cmd/arb-dev-node/arbitrum*
 /packages/arb-ts/cache
 compile_commands.json
+.envrc
 
 # Logs
 logs
