@@ -15,25 +15,25 @@ As we approach mainnet launch and incorporate feedback, we will likely reset the
 If you're using Metamask, add a custom RPC network to connect to the Arbitrum devnet:
 
 - Network Name: Arbitrum Nitro Devnet
-- RPC URL: INSERT_RPC_URL
+- RPC URL: https://nitro-devnet.arbitrum.io/rpc
 - ChainID: 421612
 - Symbol: ETH
-- Block Explorer URL: INSERT_EXPLORER_URL
+- Block Explorer URL: https://nitro-devnet-explorer.arbitrum.io
 
-- Retryable Dashboard:
-- Token Bridge:
+- Retryable Dashboard: http://retryable-tx-panel-nitro.arbitrum.io/
+- Token Bridge: https://nitro-devnet-bridge.arbitrum.io/
 
 ## Observing transactions
 
-If you'd like to see your transactions in action, check out our [block explorer](INSERT_EXPLORER_URL)!
+If you'd like to see your transactions in action, check out our [block explorer](https://nitro-devnet-explorer.arbitrum.io)!
 
 There you'll be able to see all the transactions being executed in Arbitrum and also see exactly how much Ethereum Gas each transaction uses.
 
 ## Bridging Eth and ERC-20 Tokens
 
-In order to deposit and withdraw Eth or tokens, visit INSERT_BRIDGE_URL.
+In order to deposit and withdraw Eth or tokens, visit https://nitro-devnet-bridge.arbitrum.io/.
 
-You can get ETH to use in the Arbitrum Nitro Devnet by visiting the [twitter faucet](INSERT_FAUCET_URL).
+You can get ETH to use in the Arbitrum Nitro Devnet by visiting the [twitter faucet](https://twitter.com/intent/tweet?text=ok%20I%20need%20@arbitrum%20to%20give%20me%20Nitro%20devnet%20gas.%20like%20VERY%20SOON.%20I%20cant%20take%20this,%20I%E2%80%99ve%20been%20waiting%20for%20@nitro_devnet%20release.%20I%20just%20want%20to%20start%20developing.%20but%20I%20need%20the%20gas%20IN%20MY%20WALLET%20NOW.%20can%20devs%20DO%20SOMETHING??%20%20SEND%20HERE:%200x-your-eth-address-here).
 
 You may also deposit Eth from Goerli so that you can pay for fees in L2. In order to get Goerli Eth, use one of the standard faucets.
 
@@ -48,7 +48,7 @@ The are a couple things to note on the Arbitrum chain.
 
 ## Deploying your contracts
 
-Deploying your contracts onto the Arbitrum devnet is as easy as changing your RPC endpoint to INSERT_RPC_URL
+Deploying your contracts onto the Arbitrum Devnet is as easy as changing your RPC endpoint to https://nitro-devnet.arbitrum.io/rpc
 
 For a deeper dive into deploying with truffle see [here](Contract_Deployment.md).
 
