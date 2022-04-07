@@ -86,6 +86,11 @@ _Users should only interact with the token bridge via dapp interfaces like https
 | L2 Weth Gateway       | [0xf10c7CAA33A3360f60053Bc1081980f62567505F](https://nitro-devnet-explorer.arbitrum.io/address/0xf10c7CAA33A3360f60053Bc1081980f62567505F)  |
 | L1 Weth               | [0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6](https://goerli.etherscan.io/address/0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6) |
 | L2 Weth               | [0x96CfA560e7332DebA750e330fb6f59E2269f40Dd](https://nitro-devnet-explorer.arbitrum.io/address/0x96CfA560e7332DebA750e330fb6f59E2269f40Dd)  |
+| OneStepProver0      | [0x91ddccc4cccbb7609e045e10d311712789f2010f](https://goerli.etherscan.io/address/0x91ddccc4cccbb7609e045e10d311712789f2010f) |
+| OneStepProverMemory | [0x4a78961010c3a6c587077efc0cd6baa22c974e0a](https://goerli.etherscan.io/address/0x4a78961010c3a6c587077efc0cd6baa22c974e0a) |
+| OneStepProverMath   | [0x8b6dbca5a16d77333819487143ad88653e5d2574](https://goerli.etherscan.io/address/0x8b6dbca5a16d77333819487143ad88653e5d2574) |
+| OneStepProverHostIo | [0xb4dba7db08fbcf1809ec4a2139d168fa3f466868](https://goerli.etherscan.io/address/0xb4dba7db08fbcf1809ec4a2139d168fa3f466868) |
+| OneStepProofEntry   | [0x1c6ba2a2c079df3608961135e1cdd65d908ae23e](https://goerli.etherscan.io/address/0x1c6ba2a2c079df3608961135e1cdd65d908ae23e) |
 
 ### Arbitrum Precompiles (L2, same on all Arb-chains)
 
