@@ -377,6 +377,10 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 			// In other words, half the distance from cursor.TotalGasConsumed() to maximumGasTarget, rounding up.
 			newCursor := cursor.Clone()
 			v.lookup.AdvanceExecutionCursor(newCursor, advance, false, true)
+			if cursor.TotalGasConsumed().Cmp(newCursor.TotalGasConsumed()) == 0 {
+				// We've binary searched down to one instruction. This is good enough.
+				break
+			}
 			if newCursor.TotalSendCount().Cmp(maxTotalSendCount) > 0 {
 				maximumGasTarget = new(big.Int).Sub(newCursor.TotalGasConsumed(), big.NewInt(1))
 			} else {
