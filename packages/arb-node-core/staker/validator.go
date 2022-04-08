@@ -197,6 +197,8 @@ type OurStakerInfo struct {
 	*ethbridge.StakerInfo
 }
 
+var maxAssertionSendCount *big.Int = big.NewInt(100) // From MAX_SEND_COUNT in RollupCore.sol
+
 func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy configuration.ValidatorStrategy, fromBlock int64) (nodeAction, bool, error) {
 	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, stakerInfo.LatestStakedNode, stakerInfo.LatestStakedNodeHash)
 	if err != nil {
@@ -286,6 +288,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
 	maximumGasTarget := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
 	maximumGasTarget = maximumGasTarget.Add(maximumGasTarget, startState.TotalGasConsumed)
+	maxTotalSendCount := new(big.Int).Add(startState.TotalSendCount, maxAssertionSendCount)
 
 	if strategy.IsActive() || strategy == configuration.DefensiveStrategy {
 		gasesUsed = append(gasesUsed, maximumGasTarget)
@@ -352,11 +355,39 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		return correctNode, wrongNodesExist, nil
 	}
 
-	execState, _, err := execTracker.GetExecutionState(maximumGasTarget)
-	if err != nil {
-		return nil, false, err
+	for i := len(gasesUsed) - 1; i >= 0; i-- {
+		requestingGas := gasesUsed[i]
+		if requestingGas.Cmp(maximumGasTarget) > 0 {
+			continue
+		}
+		cursor, err = execTracker.GetExecutionCursor(requestingGas, true)
+		if err != nil {
+			return nil, false, err
+		}
+		if cursor.TotalSendCount().Cmp(maxTotalSendCount) > 0 {
+			maximumGasTarget = new(big.Int).Sub(cursor.TotalGasConsumed(), big.NewInt(1))
+			continue
+		}
+		// Binary search to find the maximum gas target that doesn't exceed the maxTotalSendCount
+		for cursor.TotalGasConsumed().Cmp(maximumGasTarget) < 0 {
+			advance := new(big.Int).Sub(maximumGasTarget, cursor.TotalGasConsumed())
+			advance.Add(advance, big.NewInt(1))
+			advance.Div(advance, big.NewInt(2))
+			// At this point, advance = (maximumGasTarget - cursor.TotalGasConsumed() + 1) / 2
+			// In other words, half the distance from cursor.TotalGasConsumed() to maximumGasTarget, rounding up.
+			newCursor := cursor.Clone()
+			v.lookup.AdvanceExecutionCursor(newCursor, advance, false, true)
+			if newCursor.TotalSendCount().Cmp(maxTotalSendCount) > 0 {
+				maximumGasTarget = new(big.Int).Sub(newCursor.TotalGasConsumed(), big.NewInt(1))
+			} else {
+				cursor = newCursor
+			}
+		}
+		break
 	}
-	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget, true)
+
+	stakerInfo.latestExecutionCursor = cursor
+	execState, err := core.NewExecutionState(cursor)
 	if err != nil {
 		return nil, false, err
 	}
