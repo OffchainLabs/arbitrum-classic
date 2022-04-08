@@ -67,6 +67,11 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 | Sequencer Inbox     | [0xb32f4257e05c56c53d46bbec9e85770eb52425d6](https://goerli.etherscan.io/address/0xb32f4257e05c56c53d46bbec9e85770eb52425d6) |
 | Bridge              | [0x9903a892da86c1e04522d63b08e5514a921e81df](https://goerli.etherscan.io/address/0x9903a892da86c1e04522d63b08e5514a921e81df) |
 | Outbox              | [0xFDF2B11347dA17326BAF30bbcd3F4b09c4719584](https://goerli.etherscan.io/address/0xFDF2B11347dA17326BAF30bbcd3F4b09c4719584) |
+| OneStepProver0      | [0x91ddccc4cccbb7609e045e10d311712789f2010f](https://goerli.etherscan.io/address/0x91ddccc4cccbb7609e045e10d311712789f2010f) |
+| OneStepProverMemory | [0x4a78961010c3a6c587077efc0cd6baa22c974e0a](https://goerli.etherscan.io/address/0x4a78961010c3a6c587077efc0cd6baa22c974e0a) |
+| OneStepProverMath   | [0x8b6dbca5a16d77333819487143ad88653e5d2574](https://goerli.etherscan.io/address/0x8b6dbca5a16d77333819487143ad88653e5d2574) |
+| OneStepProverHostIo | [0xb4dba7db08fbcf1809ec4a2139d168fa3f466868](https://goerli.etherscan.io/address/0xb4dba7db08fbcf1809ec4a2139d168fa3f466868) |
+| OneStepProofEntry   | [0x1c6ba2a2c079df3608961135e1cdd65d908ae23e](https://goerli.etherscan.io/address/0x1c6ba2a2c079df3608961135e1cdd65d908ae23e) |
 
 ### Token Bridge
 
@@ -86,11 +91,6 @@ _Users should only interact with the token bridge via dapp interfaces like https
 | L2 Weth Gateway       | [0xf10c7CAA33A3360f60053Bc1081980f62567505F](https://nitro-devnet-explorer.arbitrum.io/address/0xf10c7CAA33A3360f60053Bc1081980f62567505F)  |
 | L1 Weth               | [0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6](https://goerli.etherscan.io/address/0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6) |
 | L2 Weth               | [0x96CfA560e7332DebA750e330fb6f59E2269f40Dd](https://nitro-devnet-explorer.arbitrum.io/address/0x96CfA560e7332DebA750e330fb6f59E2269f40Dd)  |
-| OneStepProver0      | [0x91ddccc4cccbb7609e045e10d311712789f2010f](https://goerli.etherscan.io/address/0x91ddccc4cccbb7609e045e10d311712789f2010f) |
-| OneStepProverMemory | [0x4a78961010c3a6c587077efc0cd6baa22c974e0a](https://goerli.etherscan.io/address/0x4a78961010c3a6c587077efc0cd6baa22c974e0a) |
-| OneStepProverMath   | [0x8b6dbca5a16d77333819487143ad88653e5d2574](https://goerli.etherscan.io/address/0x8b6dbca5a16d77333819487143ad88653e5d2574) |
-| OneStepProverHostIo | [0xb4dba7db08fbcf1809ec4a2139d168fa3f466868](https://goerli.etherscan.io/address/0xb4dba7db08fbcf1809ec4a2139d168fa3f466868) |
-| OneStepProofEntry   | [0x1c6ba2a2c079df3608961135e1cdd65d908ae23e](https://goerli.etherscan.io/address/0x1c6ba2a2c079df3608961135e1cdd65d908ae23e) |
 
 ### Arbitrum Precompiles (L2, same on all Arb-chains)
 
@@ -109,6 +109,6 @@ _Users should only interact with the token bridge via dapp interfaces like https
 
 ### Misc
 
-|              | Goerli / Nitro Devnet                                                                                                | 
+|              | Nitro Devnet                                                                                                | 
 | ------------ | -------------------------------------------------------------------------------------------------------------------- | 
 | L2 Multicall | [0x1068dbfcc13f3a22fcAe684943AFA43cc66fA689](https://nitro-devnet-explorer.arbitrum.io/address/0x1068dbfcc13f3a22fcAe684943AFA43cc66fA689) | 
