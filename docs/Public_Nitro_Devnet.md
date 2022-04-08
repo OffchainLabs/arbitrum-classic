@@ -77,7 +77,7 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 
 **IMPORTANT**: _Do **not** simply transfer tokens or Ether to any of the addresses below; it will result in loss of funds._
 
-_Users should only interact with the token bridge via dapp interfaces like https://nitro-devnet-bridge.arbitrum.io.
+_Users should only interact with the token bridge via dapp interfaces like https://nitro-devnet-bridge.arbitrum.io_.
 
 |                       | Goerli / Nitro Devnet                                                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
