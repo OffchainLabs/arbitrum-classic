@@ -63,15 +63,15 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 |                     | Goerli                                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | Rollup              | [0x767CfF8D8de386d7cbe91DbD39675132ba2f5967](https://goerli.etherscan.io/address/0x767CfF8D8de386d7cbe91DbD39675132ba2f5967) |
-| Delayed Inbox       | [0x1fdbbcc914e84af593884bf8e8dd6877c29035a2](https://goerli.etherscan.io/address/0x1fdbbcc914e84af593884bf8e8dd6877c29035a2) |
-| Sequencer Inbox     | [0xb32f4257e05c56c53d46bbec9e85770eb52425d6](https://goerli.etherscan.io/address/0xb32f4257e05c56c53d46bbec9e85770eb52425d6) |
-| Bridge              | [0x9903a892da86c1e04522d63b08e5514a921e81df](https://goerli.etherscan.io/address/0x9903a892da86c1e04522d63b08e5514a921e81df) |
+| Delayed Inbox       | [0x1FdBBcC914e84aF593884bf8e8Dd6877c29035A2](https://goerli.etherscan.io/address/0x1FdBBcC914e84aF593884bf8e8Dd6877c29035A2) |
+| Sequencer Inbox     | [0xb32f4257e05C56C53D46bbEC9e85770eB52425D6](https://goerli.etherscan.io/address/0xb32f4257e05C56C53D46bbEC9e85770eB52425D6) |
+| Bridge              | [0x9903A892Da86c1e04522d63B08e5514a921E81Df](https://goerli.etherscan.io/address/0x9903A892Da86c1e04522d63B08e5514a921E81Df) |
 | Outbox              | [0xFDF2B11347dA17326BAF30bbcd3F4b09c4719584](https://goerli.etherscan.io/address/0xFDF2B11347dA17326BAF30bbcd3F4b09c4719584) |
-| OneStepProver0      | [0x91ddccc4cccbb7609e045e10d311712789f2010f](https://goerli.etherscan.io/address/0x91ddccc4cccbb7609e045e10d311712789f2010f) |
-| OneStepProverMemory | [0x4a78961010c3a6c587077efc0cd6baa22c974e0a](https://goerli.etherscan.io/address/0x4a78961010c3a6c587077efc0cd6baa22c974e0a) |
-| OneStepProverMath   | [0x8b6dbca5a16d77333819487143ad88653e5d2574](https://goerli.etherscan.io/address/0x8b6dbca5a16d77333819487143ad88653e5d2574) |
-| OneStepProverHostIo | [0xb4dba7db08fbcf1809ec4a2139d168fa3f466868](https://goerli.etherscan.io/address/0xb4dba7db08fbcf1809ec4a2139d168fa3f466868) |
-| OneStepProofEntry   | [0x1c6ba2a2c079df3608961135e1cdd65d908ae23e](https://goerli.etherscan.io/address/0x1c6ba2a2c079df3608961135e1cdd65d908ae23e) |
+| OneStepProver0      | [0x91DDCCc4CccbB7609E045E10D311712789F2010f](https://goerli.etherscan.io/address/0x91DDCCc4CccbB7609E045E10D311712789F2010f) |
+| OneStepProverMemory | [0x4A78961010c3A6c587077Efc0CD6BaA22c974E0a](https://goerli.etherscan.io/address/0x4A78961010c3A6c587077Efc0CD6BaA22c974E0a) |
+| OneStepProverMath   | [0x8b6dBCA5A16d77333819487143Ad88653E5D2574](https://goerli.etherscan.io/address/0x8b6dBCA5A16d77333819487143Ad88653E5D2574) |
+| OneStepProverHostIo | [0xB4dba7DB08fBcF1809ec4A2139d168Fa3f466868](https://goerli.etherscan.io/address/0xB4dba7DB08fBcF1809ec4A2139d168Fa3f466868) |
+| OneStepProofEntry   | [0x1c6bA2a2c079Df3608961135E1cdd65d908AE23e](https://goerli.etherscan.io/address/0x1c6bA2a2c079Df3608961135E1cdd65d908AE23e) |
 
 ### Token Bridge
 
@@ -89,7 +89,7 @@ _Users should only interact with the token bridge via dapp interfaces like https
 | L2 Arb-Custom Gateway | [0x7AC493f26EF26904E52fE46C8DaEE247b9A556B8](https://nitro-devnet-explorer.arbitrum.io/address/0x7AC493f26EF26904E52fE46C8DaEE247b9A556B8)  |
 | L1 Weth Gateway       | [0x64bfF696bE6a087A81936b9a2489624015381be4](https://goerli.etherscan.io/address/0x64bfF696bE6a087A81936b9a2489624015381be4) |
 | L2 Weth Gateway       | [0xf10c7CAA33A3360f60053Bc1081980f62567505F](https://nitro-devnet-explorer.arbitrum.io/address/0xf10c7CAA33A3360f60053Bc1081980f62567505F)  |
-| L1 Weth               | [0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6](https://goerli.etherscan.io/address/0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6) |
+| L1 Weth               | [0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6](https://goerli.etherscan.io/address/0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6) |
 | L2 Weth               | [0x96CfA560e7332DebA750e330fb6f59E2269f40Dd](https://nitro-devnet-explorer.arbitrum.io/address/0x96CfA560e7332DebA750e330fb6f59E2269f40Dd)  |
 
 ### Arbitrum Precompiles (L2, same on all Arb-chains)
