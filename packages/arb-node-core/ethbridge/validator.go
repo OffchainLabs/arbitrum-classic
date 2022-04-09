@@ -104,7 +104,7 @@ func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Tran
 	})
 }
 
-func (v *ValidatorWallet) createWalletIfNeeded(ctx context.Context) error {
+func (v *ValidatorWallet) CreateWalletIfNeeded(ctx context.Context) error {
 	if v.con != nil {
 		return nil
 	}
@@ -169,7 +169,7 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 		totalAmount = totalAmount.Add(totalAmount, tx.Value())
 	}
 
-	err := v.createWalletIfNeeded(ctx)
+	err := v.CreateWalletIfNeeded(ctx)
 	if err != nil {
 		return nil, err
 	}
