@@ -283,13 +283,15 @@ type Rollup struct {
 }
 
 type Validator struct {
-	StrategyImpl         string            `koanf:"strategy"`
-	UtilsAddress         string            `koanf:"utils-address"`
-	StakerDelay          time.Duration     `koanf:"staker-delay"`
-	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
-	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
-	DontChallenge        bool              `koanf:"dont-challenge"`
-	WithdrawDestination  string            `koanf:"withdraw-destination"`
+	StrategyImpl          string            `koanf:"strategy"`
+	UtilsAddress          string            `koanf:"utils-address"`
+	StakerDelay           time.Duration     `koanf:"staker-delay"`
+	WalletFactoryAddress  string            `koanf:"wallet-factory-address"`
+	L1PostingStrategy     L1PostingStrategy `koanf:"l1-posting-strategy"`
+	DontChallenge         bool              `koanf:"dont-challenge"`
+	WithdrawDestination   string            `koanf:"withdraw-destination"`
+	WalletAddress         string            `koanf:"wallet-address"`
+	WalletAddressFilename string            `koanf:"wallet-address-filename"`
 }
 
 type ValidatorStrategy uint8
@@ -512,6 +514,8 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	AddL1PostingStrategyOptions(f, "node.sequencer.")
 	AddL1PostingStrategyOptions(f, "validator.")
 
+	f.String("validator.wallet-address-filename", "", "json file that validator smart contract wallet address is stored in")
+	f.String("validator.wallet-address", "", "validator smart contract wallet public address")
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "validator utilities address")
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")

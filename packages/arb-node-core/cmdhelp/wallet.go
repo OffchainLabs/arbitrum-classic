@@ -82,7 +82,7 @@ func GetKeystore(
 		}
 
 		if len(walletConfig.Fireblocks.FeedSigner.PrivateKey) != 0 {
-			privateKey, err := crypto.HexToECDSA(walletConfig.Local.PrivateKey)
+			privateKey, err := crypto.HexToECDSA(walletConfig.Fireblocks.FeedSigner.PrivateKey)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "error loading feed private key")
 			}
@@ -142,11 +142,11 @@ func GetKeystore(
 		}
 
 		if newKeystoreCreated {
-			return nil, nil, errors.New("wallet key created, backup key and remove --wallet.local.only-create-key to start normally")
+			return nil, nil, errors.New("wallet key created, backup key (" + walletConfig.Local.Pathname + ") and remove --wallet.local.only-create-key to start normally")
 		}
 
 		if walletConfig.Local.OnlyCreateKey {
-			return nil, nil, errors.New("wallet key already created, remove --wallet.local.only-create-key to run normally")
+			return nil, nil, errors.New("wallet key already created, backup key (" + walletConfig.Local.Pathname + ") and remove --wallet.local.only-create-key to run normally")
 		}
 
 		auth, err = bind.NewKeyStoreTransactorWithChainID(ks, *account, chainId)
