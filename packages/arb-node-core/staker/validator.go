@@ -275,7 +275,8 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		}
 	}
 
-	gasesUsed := make([]*big.Int, 0, len(successorNodes)+1)
+	gasesUsed := make([]*big.Int, 0, len(successorNodes)+2)
+	gasesUsed = append(gasesUsed, startState.TotalGasConsumed)
 	for _, nd := range successorNodes {
 		gasesUsed = append(gasesUsed, nd.Assertion.After.TotalGasConsumed)
 	}
