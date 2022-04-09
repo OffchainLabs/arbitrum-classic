@@ -212,7 +212,7 @@ func CreateValidatorWallet(
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: big.NewInt(fromBlock),
-		ToBlock:   nil,
+		ToBlock:   big.NewInt(fromBlock + 1000),
 		Addresses: []ethcommon.Address{validatorWalletFactoryAddr},
 		Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {transactAuth.From().Hash()}},
 	}

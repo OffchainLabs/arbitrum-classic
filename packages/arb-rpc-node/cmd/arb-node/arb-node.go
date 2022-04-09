@@ -111,12 +111,8 @@ func getKeystore(
 	walletConfig *configuration.Wallet,
 	l1ChainId *big.Int,
 	signerRequired bool,
-) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
-	auth, dataSigner, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, signerRequired)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error running GetKeystore")
-	}
-	return auth, dataSigner, nil
+) (*bind.TransactOpts, func([]byte) ([]byte, error), string, error) {
+	return cmdhelp.GetKeystore(config, walletConfig, l1ChainId, signerRequired)
 }
 
 func startup() error {
@@ -143,26 +139,25 @@ func startup() error {
 	var validatorAuth *bind.TransactOpts
 	if config.Node.Type() == configuration.ValidatorNodeType && config.Validator.Strategy() != configuration.WatchtowerStrategy {
 		// Create key if needed before opening database
-		validatorAuth, _, keystoreErr := getKeystore(config, walletConfig, l1ChainId, false)
-		if keystoreErr != nil && !strings.Contains(keystoreErr.Error(), "only-create-key") {
-			// Actual error occurred
+		validatorAuth, _, message, err := getKeystore(config, walletConfig, l1ChainId, false)
+		if err != nil {
 			return err
 		}
 
-		if config.Wallet.Local.OnlyCreateKey {
+		if config.Validator.OnlyCreateWalletAddress {
 			// Just create validator smart wallet if needed then exit
 			_, err := startValidator(ctx, config, walletConfig, l1Client, validatorAuth, nil)
 			if err != nil && !strings.Contains(err.Error(), "exiting after creating key") {
 				return err
 			}
 
-			// Always exit when only-create-key set.
-			return keystoreErr
+			// Always exit when only-create-wallet-address set.
+			return errors.New(message)
 		}
 
-		if keystoreErr != nil {
-			// Return possible error with keystore creation
-			return keystoreErr
+		if walletConfig.Local.OnlyCreateKey || message != "" {
+			// Always exit when only-create-key set
+			return errors.New(message)
 		}
 	} else {
 		// No wallet, so just use empty auth object
@@ -366,9 +361,13 @@ func startup() error {
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
 	} else {
 		var auth *bind.TransactOpts
-		auth, dataSigner, err = getKeystore(config, walletConfig, l1ChainId, true)
-		if err != nil || auth == nil {
+		var message string
+		auth, dataSigner, message, err = getKeystore(config, walletConfig, l1ChainId, true)
+		if err != nil {
 			return err
+		}
+		if message != "" {
+			return errors.New(message)
 		}
 
 		if config.Node.Sequencer.Dangerous.DisableBatchPosting {
@@ -694,7 +693,7 @@ func startValidator(
 		return nil, errors.Wrap(err, "error creating validator")
 	}
 
-	if config.Wallet.Local.OnlyCreateKey {
+	if config.Validator.OnlyCreateWalletAddress {
 		// Create validator smart contract wallet if needed then exit
 		err = val.CreateWalletIfNeeded(ctx)
 		if err != nil {
