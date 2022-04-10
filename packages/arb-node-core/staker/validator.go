@@ -417,18 +417,34 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		After:  execState,
 	}
 
-	executionHash := assertion.ExecutionHash()
-	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], inboxAcc[:])
-
 	var seqBatchProof []byte
+	var batchEndAcc common.Hash
 	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
-		batch, err := v.sequencerInbox.LookupBatchContaining(ctx, v.lookup, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+		lastMessageRead := new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1))
+		batch, err := v.sequencerInbox.LookupBatchContaining(ctx, v.lookup, lastMessageRead)
 		if err != nil {
 			return nil, false, err
 		}
 		if batch == nil {
 			return nil, false, errors.New("Failed to lookup batch containing message")
 		}
+
+		batchEndAcc = batch.GetAfterAcc()
+		if execState.TotalMessagesRead.Cmp(batch.GetAfterCount()) == 0 {
+			if inboxAcc != batchEndAcc {
+				return nil, false, errors.New("Assertion inbox accumulator doesn't match on-chain accumulator (reorg?)")
+			}
+		} else {
+			lastBatchMessage := new(big.Int).Sub(batch.GetAfterCount(), big.NewInt(1))
+			haveInboxAcc, haveBatchEndAcc, err := v.lookup.GetInboxAccPair(lastMessageRead, lastBatchMessage)
+			if err != nil {
+				return nil, false, err
+			}
+			if haveInboxAcc != inboxAcc || haveBatchEndAcc != batchEndAcc {
+				return nil, false, errors.New("Reorg while producing assertion")
+			}
+		}
+
 		seqBatchProof = append(seqBatchProof, math.U256Bytes(batch.GetBatchIndex())...)
 		proofPart, err := v.generateBatchEndProof(batch.GetBeforeCount())
 		if err != nil {
@@ -441,6 +457,9 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		}
 		seqBatchProof = append(seqBatchProof, proofPart...)
 	}
+
+	executionHash := assertion.ExecutionHash()
+	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], batchEndAcc[:])
 
 	action := createNodeAction{
 		assertion:           assertion,
