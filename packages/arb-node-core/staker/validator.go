@@ -295,7 +295,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		gasesUsed = append(gasesUsed, maximumGasTarget)
 	}
 
-	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor, false)
+	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor, true)
 
 	var correctNode nodeAction
 	wrongNodesExist := false
