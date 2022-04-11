@@ -681,19 +681,38 @@ func startValidator(
 	} else {
 		log.Info().Msg("validator smart contract wallet creation delayed until needed")
 	}
-	onValidatorWalletCreated := func(addr ethcommon.Address) {
-		chainState.ValidatorWallet = addr.String()
-		newChainStateData, err := json.Marshal(chainState)
-		if err != nil {
-			log.Warn().Err(err).Msg("failed to marshal chain state")
-		} else if err := ioutil.WriteFile(config.Validator.WalletAddressFilename, newChainStateData, 0644); err != nil {
-			log.Warn().Err(err).Msg("failed to write chain state config")
+
+	onValidatorWalletCreated := func(addr ethcommon.Address) {}
+	if config.Validator.WalletAddress != "" {
+		onValidatorWalletCreated = func(addr ethcommon.Address) {
+			chainState.ValidatorWallet = addr.String()
+			newChainStateData, err := json.Marshal(chainState)
+			if err != nil {
+				log.Warn().Err(err).Msg("failed to marshal chain state")
+			} else if err := ioutil.WriteFile(config.Validator.WalletAddressFilename, newChainStateData, 0644); err != nil {
+				log.Warn().Err(err).Msg("failed to write chain state config")
+			}
+			log.
+				Info().
+				Str("address", chainState.ValidatorWallet).
+				Str("filename", config.Validator.WalletAddressFilename).
+				Msg("created validator smart contract wallet")
 		}
-		log.
-			Info().
-			Str("address", chainState.ValidatorWallet).
-			Str("filename", config.Validator.WalletAddressFilename).
-			Msg("created validator smart contract wallet")
+	} else {
+		onValidatorWalletCreated = func(addr ethcommon.Address) {
+			log.Error().Msg("created wallet when --validator.wallet-address provided")
+			chainState.ValidatorWallet = addr.String()
+			newChainStateData, err := json.Marshal(chainState)
+			if err != nil {
+			} else if err := ioutil.WriteFile(config.Validator.WalletAddressFilename, newChainStateData, 0644); err != nil {
+				log.Warn().Err(err).Msg("failed to write chain state config")
+			}
+			log.
+				Info().
+				Str("address", chainState.ValidatorWallet).
+				Str("filename", config.Validator.WalletAddressFilename).
+				Msg("created validator smart contract wallet")
+		}
 	}
 
 	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, config.Rollup.FromBlock, config.Rollup.BlockSearchSize, onValidatorWalletCreated)
