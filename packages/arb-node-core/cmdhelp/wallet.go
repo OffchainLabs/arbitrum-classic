@@ -63,10 +63,9 @@ func GetKeystore(
 	var signer = func(data []byte) ([]byte, error) { return nil, errors.New("undefined signer") }
 	var auth *bind.TransactOpts
 
-	var message string
 	if len(walletConfig.Fireblocks.SSLKey) != 0 {
 		if walletConfig.Local.OnlyCreateKey {
-			return nil, nil, "", errors.New("using fireblocks keystore, remove --wallet.local.only-create-key to run normally")
+			return nil, nil, "using fireblocks keystore, remove --wallet.local.only-create-key to run normally", nil
 		}
 		fromAddress := ethcommon.HexToAddress(walletConfig.Fireblocks.SourceAddress)
 		logger.Info().Hex("address", fromAddress.Bytes()).Msg("fireblocks enabled")
@@ -118,7 +117,7 @@ func GetKeystore(
 		}
 	} else if len(walletConfig.Local.PrivateKey) != 0 {
 		if walletConfig.Local.OnlyCreateKey {
-			message = "wallet key already exists, remove --wallet.local.only-create-key to run normally"
+			return nil, nil, "wallet key already exists, remove --wallet.local.only-create-key to run normally", nil
 		}
 		privateKey, err := crypto.HexToECDSA(walletConfig.Local.PrivateKey)
 		if err != nil {
@@ -143,11 +142,11 @@ func GetKeystore(
 		}
 
 		if newKeystoreCreated {
-			message = "wallet key created, backup key (" + walletConfig.Local.Pathname + ") and remove --wallet.local.only-create-key to start normally"
+			return nil, nil, "wallet key created, backup key (" + walletConfig.Local.Pathname + ") and remove --wallet.local.only-create-key to start normally", nil
 		}
 
 		if walletConfig.Local.OnlyCreateKey {
-			message = "wallet key already created, backup key (" + walletConfig.Local.Pathname + ") and remove --wallet.local.only-create-key to run normally"
+			return nil, nil, "wallet key already created, backup key (" + walletConfig.Local.Pathname + ") and remove --wallet.local.only-create-key to run normally", nil
 		}
 
 		auth, err = bind.NewKeyStoreTransactorWithChainID(ks, *account, chainId)
@@ -169,7 +168,7 @@ func GetKeystore(
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
 
-	return auth, signer, message, nil
+	return auth, signer, "", nil
 }
 
 func openKeystore(description string, walletPath string, walletPassword *string, createNewKey bool) (*keystore.KeyStore, *accounts.Account, bool, error) {
