@@ -150,11 +150,19 @@ func startup() error {
 				return err
 			}
 
+			if message == "" {
+				return errors.New("missing message when only-create-wallet-contract set")
+			}
+
 			// Always exit when only-create-wallet-address set.
 			return errors.New(message)
 		}
 
-		if walletConfig.Local.OnlyCreateKey || message != "" {
+		if config.Wallet.Local.OnlyCreateKey {
+			if message == "" {
+				return errors.New("missing message when only-create-key set")
+			}
+
 			// Always exit when only-create-key set
 			return errors.New(message)
 		}
@@ -365,7 +373,11 @@ func startup() error {
 		if err != nil {
 			return err
 		}
-		if message != "" {
+		if config.Wallet.Local.OnlyCreateKey {
+			if message == "" {
+				return errors.New("missing message when only-create-key set")
+			}
+
 			return errors.New(message)
 		}
 
