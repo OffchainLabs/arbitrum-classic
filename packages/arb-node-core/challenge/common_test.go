@@ -304,12 +304,12 @@ func initializeChallengeTest(
 
 	asserterAuth, err := transactauth.NewTransactAuth(ctx, client, asserter)
 	test.FailIfError(t, err)
-	asserterWallet, err := ethbridge.NewValidator(&asserterWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, asserterAuth, 0, nil)
+	asserterWallet, err := ethbridge.NewValidator(&asserterWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, asserterAuth, 0, 1000, nil)
 	test.FailIfError(t, err)
 
 	challengerAuth, err := transactauth.NewTransactAuth(ctx, client, challenger)
 	test.FailIfError(t, err)
-	challengerWallet, err := ethbridge.NewValidator(&challengerWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, challengerAuth, 0, nil)
+	challengerWallet, err := ethbridge.NewValidator(&challengerWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, challengerAuth, 0, 1000, nil)
 	test.FailIfError(t, err)
 
 	startChallenge := func(assertion *core.Assertion) {
