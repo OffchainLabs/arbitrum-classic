@@ -590,7 +590,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
 	f.Int64("rollup.from-block", 0, "layer 2 rollup contract creation block")
-	f.Int64("rollup.block-search-size", 1000, "number of blocks to search at a time when looking for validator smart contract wallet creation, 0 to search all blocks at once")
+	f.Int64("rollup.block-search-size", 0, "number of blocks to search at a time when looking for validator smart contract wallet creation, 0 to search all blocks at once")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
 	f.Bool("wallet.local.only-create-key", false, "create new wallet and exit")
