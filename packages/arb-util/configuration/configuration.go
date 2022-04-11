@@ -284,16 +284,16 @@ type Rollup struct {
 }
 
 type Validator struct {
-	StrategyImpl             string            `koanf:"strategy"`
-	UtilsAddress             string            `koanf:"utils-address"`
-	StakerDelay              time.Duration     `koanf:"staker-delay"`
-	WalletFactoryAddress     string            `koanf:"wallet-factory-address"`
-	L1PostingStrategy        L1PostingStrategy `koanf:"l1-posting-strategy"`
-	DontChallenge            bool              `koanf:"dont-challenge"`
-	WithdrawDestination      string            `koanf:"withdraw-destination"`
-	OnlyCreateWalletContract bool              `koanf:"only-create-wallet-contract"`
-	WalletAddress            string            `koanf:"wallet-address"`
-	WalletAddressFilename    string            `koanf:"wallet-address-filename"`
+	StrategyImpl                  string            `koanf:"strategy"`
+	UtilsAddress                  string            `koanf:"utils-address"`
+	StakerDelay                   time.Duration     `koanf:"staker-delay"`
+	WalletFactoryAddress          string            `koanf:"wallet-factory-address"`
+	L1PostingStrategy             L1PostingStrategy `koanf:"l1-posting-strategy"`
+	DontChallenge                 bool              `koanf:"dont-challenge"`
+	WithdrawDestination           string            `koanf:"withdraw-destination"`
+	OnlyCreateWalletContract      bool              `koanf:"only-create-wallet-contract"`
+	ContractWalletAddress         string            `koanf:"contract-wallet-address"`
+	ContractWalletAddressFilename string            `koanf:"contract-wallet-address-filename"`
 }
 
 type ValidatorStrategy uint8
@@ -517,8 +517,8 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	AddL1PostingStrategyOptions(f, "validator.")
 
 	f.Bool("validator.only-create-wallet-contract", false, "only create smart contract wallet contract, then exit")
-	f.String("validator.wallet-address-filename", "", "json file that validator smart contract wallet address is stored in")
-	f.String("validator.wallet-address", "", "validator smart contract wallet public address")
+	f.String("validator.contract-wallet-address-filename", "", "json file that validator smart contract wallet address is stored in")
+	f.String("validator.contract-wallet-address", "", "validator smart contract wallet public address")
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "validator utilities address")
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
@@ -808,11 +808,11 @@ func resolveDirectoryNames(out *Config, wallet *Wallet) error {
 	}
 
 	// Make validator smart contract wallet address relative to chain directory if not already absolute
-	if out.Validator.WalletAddressFilename == "" {
-		out.Validator.WalletAddressFilename = "chainState.json"
+	if out.Validator.ContractWalletAddressFilename == "" {
+		out.Validator.ContractWalletAddressFilename = "chainState.json"
 	}
-	if !filepath.IsAbs(out.Validator.WalletAddressFilename) {
-		out.Validator.WalletAddressFilename = path.Join(out.Persistent.Chain, out.Validator.WalletAddressFilename)
+	if !filepath.IsAbs(out.Validator.ContractWalletAddressFilename) {
+		out.Validator.ContractWalletAddressFilename = path.Join(out.Persistent.Chain, out.Validator.ContractWalletAddressFilename)
 	}
 
 	return nil
