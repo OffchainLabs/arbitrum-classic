@@ -636,18 +636,18 @@ func startValidator(
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
 
 	chainState := ChainState{}
-	if config.Validator.WalletAddress != "" {
-		if !ethcommon.IsHexAddress(config.Validator.WalletAddress) {
-			log.Error().Str("address", config.Validator.WalletAddress).Msg("invalid validator smart contract wallet")
+	if config.Validator.ContractWalletAddress != "" {
+		if !ethcommon.IsHexAddress(config.Validator.ContractWalletAddress) {
+			log.Error().Str("address", config.Validator.ContractWalletAddress).Msg("invalid validator smart contract wallet")
 			return nil, errors.New("invalid validator smart contract wallet address")
 		}
-		chainState.ValidatorWallet = config.Validator.WalletAddress
+		chainState.ValidatorWallet = config.Validator.ContractWalletAddress
 	} else {
-		chainStateFile, err := os.Open(config.Validator.WalletAddressFilename)
+		chainStateFile, err := os.Open(config.Validator.ContractWalletAddressFilename)
 		if err != nil {
 			// If file doesn't exist yet, will be created when needed
 			if !os.IsNotExist(err) {
-				return nil, errors.Wrap(err, "failed to open chainState file: "+config.Validator.WalletAddressFilename)
+				return nil, errors.Wrap(err, "failed to open chainState file: "+config.Validator.ContractWalletAddressFilename)
 			}
 		} else {
 			chainStateData, err := ioutil.ReadAll(chainStateFile)
@@ -683,19 +683,19 @@ func startValidator(
 	}
 
 	onValidatorWalletCreated := func(addr ethcommon.Address) {}
-	if config.Validator.WalletAddress != "" {
+	if config.Validator.ContractWalletAddress != "" {
 		onValidatorWalletCreated = func(addr ethcommon.Address) {
 			chainState.ValidatorWallet = addr.String()
 			newChainStateData, err := json.Marshal(chainState)
 			if err != nil {
 				log.Warn().Err(err).Msg("failed to marshal chain state")
-			} else if err := ioutil.WriteFile(config.Validator.WalletAddressFilename, newChainStateData, 0644); err != nil {
+			} else if err := ioutil.WriteFile(config.Validator.ContractWalletAddressFilename, newChainStateData, 0644); err != nil {
 				log.Warn().Err(err).Msg("failed to write chain state config")
 			}
 			log.
 				Info().
 				Str("address", chainState.ValidatorWallet).
-				Str("filename", config.Validator.WalletAddressFilename).
+				Str("filename", config.Validator.ContractWalletAddressFilename).
 				Msg("created validator smart contract wallet")
 		}
 	} else {
@@ -704,13 +704,13 @@ func startValidator(
 			chainState.ValidatorWallet = addr.String()
 			newChainStateData, err := json.Marshal(chainState)
 			if err != nil {
-			} else if err := ioutil.WriteFile(config.Validator.WalletAddressFilename, newChainStateData, 0644); err != nil {
+			} else if err := ioutil.WriteFile(config.Validator.ContractWalletAddressFilename, newChainStateData, 0644); err != nil {
 				log.Warn().Err(err).Msg("failed to write chain state config")
 			}
 			log.
 				Info().
 				Str("address", chainState.ValidatorWallet).
-				Str("filename", config.Validator.WalletAddressFilename).
+				Str("filename", config.Validator.ContractWalletAddressFilename).
 				Msg("created validator smart contract wallet")
 		}
 	}
