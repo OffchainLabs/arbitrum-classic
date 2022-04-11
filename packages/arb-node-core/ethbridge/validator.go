@@ -61,9 +61,19 @@ type ValidatorWallet struct {
 	rollupAddress     ethcommon.Address
 	walletFactoryAddr ethcommon.Address
 	rollupFromBlock   int64
+	blockSearchSize   int64
 }
 
-func NewValidator(address *ethcommon.Address, walletFactoryAddr, rollupAddress ethcommon.Address, client ethutils.EthClient, auth transactauth.TransactAuth, rollupFromBlock int64, onWalletCreated func(ethcommon.Address)) (*ValidatorWallet, error) {
+func NewValidator(
+	address *ethcommon.Address,
+	walletFactoryAddr,
+	rollupAddress ethcommon.Address,
+	client ethutils.EthClient,
+	auth transactauth.TransactAuth,
+	rollupFromBlock int64,
+	blockSearchSize int64,
+	onWalletCreated func(ethcommon.Address),
+) (*ValidatorWallet, error) {
 	var con *ethbridgecontracts.Validator
 	if address != nil {
 		var err error
@@ -81,6 +91,7 @@ func NewValidator(address *ethcommon.Address, walletFactoryAddr, rollupAddress e
 		rollupAddress:     rollupAddress,
 		walletFactoryAddr: walletFactoryAddr,
 		rollupFromBlock:   rollupFromBlock,
+		blockSearchSize:   blockSearchSize,
 	}, nil
 }
 
@@ -109,7 +120,7 @@ func (v *ValidatorWallet) CreateWalletIfNeeded(ctx context.Context) error {
 		return nil
 	}
 	if v.address == nil {
-		addr, err := CreateValidatorWallet(ctx, v.walletFactoryAddr, v.rollupFromBlock, v.auth, v.client)
+		addr, err := CreateValidatorWallet(ctx, v.walletFactoryAddr, v.rollupFromBlock, v.blockSearchSize, v.auth, v.client)
 		if err != nil {
 			return err
 		}
@@ -200,7 +211,8 @@ func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []co
 func CreateValidatorWallet(
 	ctx context.Context,
 	validatorWalletFactoryAddr ethcommon.Address,
-	fromBlock int64,
+	initialFromBlock int64,
+	blockSearchSize int64,
 	transactAuth transactauth.TransactAuth,
 	client ethutils.EthClient,
 ) (ethcommon.Address, error) {
@@ -209,16 +221,35 @@ func CreateValidatorWallet(
 		return ethcommon.Address{}, errors.WithStack(err)
 	}
 
-	query := ethereum.FilterQuery{
-		BlockHash: nil,
-		FromBlock: big.NewInt(fromBlock),
-		ToBlock:   big.NewInt(fromBlock + 1000),
-		Addresses: []ethcommon.Address{validatorWalletFactoryAddr},
-		Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {transactAuth.From().Hash()}},
-	}
-	logs, err := client.FilterLogs(ctx, query)
+	latestHeader, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return ethcommon.Address{}, errors.WithStack(err)
+	}
+	latestBlockHeight := latestHeader.Number.Int64()
+	currentFromBlock := initialFromBlock
+	var currentToBlock int64
+	if blockSearchSize > 0 {
+		currentToBlock = initialFromBlock + blockSearchSize
+	} else {
+		// Search all blocks at once, must use log caching better than go-ethereum for large block searches
+		currentToBlock = latestBlockHeight
+	}
+	var logs []types.Log
+	for len(logs) == 0 && currentFromBlock <= latestBlockHeight {
+		logger.Debug().Int64("fromBlock", currentFromBlock).Int64("toBlock", currentToBlock).Msg("searching for validator smart contract")
+		query := ethereum.FilterQuery{
+			BlockHash: nil,
+			FromBlock: big.NewInt(currentFromBlock),
+			ToBlock:   big.NewInt(currentToBlock),
+			Addresses: []ethcommon.Address{validatorWalletFactoryAddr},
+			Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {transactAuth.From().Hash()}},
+		}
+		logs, err = client.FilterLogs(ctx, query)
+		if err != nil {
+			return ethcommon.Address{}, errors.WithStack(err)
+		}
+		currentFromBlock = currentToBlock + 1
+		currentToBlock = currentFromBlock + blockSearchSize
 	}
 	if len(logs) > 1 {
 		return ethcommon.Address{}, errors.New("more than one validator wallet created for address")

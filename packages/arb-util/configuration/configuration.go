@@ -274,25 +274,26 @@ type Persistent struct {
 }
 
 type Rollup struct {
-	Address   string `koanf:"address"`
-	FromBlock int64  `koanf:"from-block"`
-	Machine   struct {
+	Address         string `koanf:"address"`
+	FromBlock       int64  `koanf:"from-block"`
+	BlockSearchSize int64  `koanf:"block-search-size"`
+	Machine         struct {
 		Filename string `koanf:"filename"`
 		URL      string `koanf:"url"`
 	} `koanf:"machine"`
 }
 
 type Validator struct {
-	StrategyImpl            string            `koanf:"strategy"`
-	UtilsAddress            string            `koanf:"utils-address"`
-	StakerDelay             time.Duration     `koanf:"staker-delay"`
-	WalletFactoryAddress    string            `koanf:"wallet-factory-address"`
-	L1PostingStrategy       L1PostingStrategy `koanf:"l1-posting-strategy"`
-	DontChallenge           bool              `koanf:"dont-challenge"`
-	WithdrawDestination     string            `koanf:"withdraw-destination"`
-	OnlyCreateWalletAddress bool              `koanf:"only-create-wallet-address"`
-	WalletAddress           string            `koanf:"wallet-address"`
-	WalletAddressFilename   string            `koanf:"wallet-address-filename"`
+	StrategyImpl             string            `koanf:"strategy"`
+	UtilsAddress             string            `koanf:"utils-address"`
+	StakerDelay              time.Duration     `koanf:"staker-delay"`
+	WalletFactoryAddress     string            `koanf:"wallet-factory-address"`
+	L1PostingStrategy        L1PostingStrategy `koanf:"l1-posting-strategy"`
+	DontChallenge            bool              `koanf:"dont-challenge"`
+	WithdrawDestination      string            `koanf:"withdraw-destination"`
+	OnlyCreateWalletContract bool              `koanf:"only-create-wallet-contract"`
+	WalletAddress            string            `koanf:"wallet-address"`
+	WalletAddressFilename    string            `koanf:"wallet-address-filename"`
 }
 
 type ValidatorStrategy uint8
@@ -515,7 +516,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	AddL1PostingStrategyOptions(f, "node.sequencer.")
 	AddL1PostingStrategyOptions(f, "validator.")
 
-	f.Bool("validator.only-create-wallet-address", false, "only create smart contract wallet, then exit")
+	f.Bool("validator.only-create-wallet-contract", false, "only create smart contract wallet contract, then exit")
 	f.String("validator.wallet-address-filename", "", "json file that validator smart contract wallet address is stored in")
 	f.String("validator.wallet-address", "", "validator smart contract wallet public address")
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
@@ -588,6 +589,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Uint64("l1.chain-id", 0, "if set other than 0, will be used to validate database and L1 connection")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
+	f.Int64("rollup.from-block", 0, "layer 2 rollup contract creation block")
+	f.Int64("rollup.block-search-size", 1000, "number of blocks to search at a time when looking for validator smart contract wallet creation, 0 to search all blocks at once")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
 	f.Bool("wallet.local.only-create-key", false, "create new wallet and exit")
@@ -696,11 +699,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		return nil, nil, nil, nil, err
 	}
 
-	if len(out.Rollup.Machine.Filename) == 0 {
-		// Machine not provided, so use default
-		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
-	}
-
 	_, err = os.Stat(out.Rollup.Machine.Filename)
 	if os.IsNotExist(err) && len(out.Rollup.Machine.URL) != 0 {
 		// Machine does not exist, so load it from provided URL
@@ -791,6 +789,11 @@ func resolveDirectoryNames(out *Config, wallet *Wallet) error {
 		out.Core.Database.SavePath = path.Join(out.Persistent.Chain, out.Core.Database.SavePath)
 	}
 
+	if len(out.Rollup.Machine.Filename) == 0 {
+		// Machine not provided, so use default chain specific machine
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
+	}
+
 	// Make machine relative to storage directory if not already absolute
 	if !filepath.IsAbs(out.Rollup.Machine.Filename) {
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
@@ -802,6 +805,14 @@ func resolveDirectoryNames(out *Config, wallet *Wallet) error {
 	}
 	if !filepath.IsAbs(wallet.Fireblocks.FeedSigner.Pathname) {
 		wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.Chain, wallet.Fireblocks.FeedSigner.Pathname)
+	}
+
+	// Make validator smart contract wallet address relative to chain directory if not already absolute
+	if out.Validator.WalletAddressFilename == "" {
+		out.Validator.WalletAddressFilename = "chainState.json"
+	}
+	if !filepath.IsAbs(out.Validator.WalletAddressFilename) {
+		out.Validator.WalletAddressFilename = path.Join(out.Persistent.Chain, out.Validator.WalletAddressFilename)
 	}
 
 	return nil

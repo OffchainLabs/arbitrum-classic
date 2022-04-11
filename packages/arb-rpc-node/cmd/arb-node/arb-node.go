@@ -32,7 +32,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -144,7 +143,7 @@ func startup() error {
 			return err
 		}
 
-		if config.Validator.OnlyCreateWalletAddress {
+		if config.Validator.OnlyCreateWalletContract {
 			// Just create validator smart wallet if needed then exit
 			_, err := startValidator(ctx, config, walletConfig, l1Client, validatorAuth, nil)
 			if err != nil && !strings.Contains(err.Error(), "exiting after creating key") {
@@ -628,15 +627,10 @@ func startValidator(
 	if config.Validator.WalletAddress != "" {
 		if !ethcommon.IsHexAddress(config.Validator.WalletAddress) {
 			log.Error().Str("address", config.Validator.WalletAddress).Msg("invalid validator smart contract wallet")
-			return nil, errors.New("invalid validator smart contract wallet")
+			return nil, errors.New("invalid validator smart contract wallet address")
 		}
 		chainState.ValidatorWallet = config.Validator.WalletAddress
 	} else {
-		if config.Validator.WalletAddressFilename == "" {
-			config.Validator.WalletAddressFilename = "chainState.json"
-		}
-
-		config.Validator.WalletAddressFilename = path.Join(config.Persistent.Chain, config.Validator.WalletAddressFilename)
 		chainStateFile, err := os.Open(config.Validator.WalletAddressFilename)
 		if err != nil {
 			// If file doesn't exist yet, will be created when needed
@@ -663,13 +657,15 @@ func startValidator(
 		valAuth, err = transactauth.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "error connecting to l1 chain")
+		return nil, errors.Wrap(err, "error creating wallet auth")
 	}
 	var validatorAddress *ethcommon.Address
 	if chainState.ValidatorWallet != "" {
 		log.Info().Str("address", chainState.ValidatorWallet).Msg("validator using smart contract wallet")
 		addr := ethcommon.HexToAddress(chainState.ValidatorWallet)
 		validatorAddress = &addr
+	} else if config.Validator.OnlyCreateWalletContract {
+		log.Info().Msg("only creating validator smart contract and exiting")
 	} else {
 		log.Info().Msg("validator smart contract wallet creation delayed until needed")
 	}
@@ -688,12 +684,12 @@ func startValidator(
 			Msg("created validator smart contract wallet")
 	}
 
-	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, config.Rollup.FromBlock, onValidatorWalletCreated)
+	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, config.Rollup.FromBlock, config.Rollup.BlockSearchSize, onValidatorWalletCreated)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating validator")
 	}
 
-	if config.Validator.OnlyCreateWalletAddress {
+	if config.Validator.OnlyCreateWalletContract {
 		// Create validator smart contract wallet if needed then exit
 		err = val.CreateWalletIfNeeded(ctx)
 		if err != nil {
