@@ -221,7 +221,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, client, val2Auth, 0, nil)
 	test.FailIfError(t, err)
 
-	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy, bind.CallOpts{}, valAuth, configuration.Validator{})
+	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), configuration.MakeNodesStrategy, bind.CallOpts{}, valAuth, configuration.Validator{})
 	test.FailIfError(t, err)
 
 	staker.Validator.GasThreshold = big.NewInt(0)
@@ -271,9 +271,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	faultsExist := faultConfig != challenge.FaultConfig{}
 	t.Log("faultsExist:", faultsExist)
-	faultyStrategy := MakeNodesStrategy
+	faultyStrategy := configuration.MakeNodesStrategy
 	if faultsExist {
-		faultyStrategy = DefensiveStrategy
+		faultyStrategy = configuration.DefensiveStrategy
 	}
 
 	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), faultyStrategy, bind.CallOpts{}, val2Auth, configuration.Validator{})
@@ -443,7 +443,7 @@ func TestChallengeToOSP(t *testing.T) {
 
 func TestChallengeToInboxOSP(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(8*400-10), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, big.NewInt(745), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {

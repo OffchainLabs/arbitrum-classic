@@ -23,12 +23,13 @@ extern "C" {
 #endif
 
 int arbCoreStartThread(CArbCore* arbcore_ptr);
-void arbCoreAbortThread(CArbCore* arbcore_ptr);
 int arbCoreMachineIdle(CArbCore* arbcore_ptr);
 void arbCoreSaveRocksdbCheckpoint(CArbCore* arbcore_ptr);
 void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr);
 int arbCoreMessagesStatus(CArbCore* arbcore_ptr);
 char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);
+int arbCoreCheckError(CArbCore* arbcore_ptr);
+char* arbCoreGetErrorString(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            void* previous_message_count_ptr,
@@ -93,10 +94,6 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
     const void* index_ptr);
 int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
                                      const void* cursor_index);
-int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr,
-                                const void* cursor_index);
-char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
-                                  const void* cursor_index);
 
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
                                             const void* total_gas_used_ptr,
@@ -106,13 +103,22 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   const void* max_gas_ptr,
                                   int go_over_gas,
                                   int allow_slow_lookup);
+ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
+    CArbCore* arbcore_ptr,
+    CExecutionCursor* execution_cursor_ptr,
+    const void* max_gas_ptr,
+    int go_over_gas,
+    int allow_slow_lookup,
+    const void* log_number_begin_ptr,
+    const void* log_number_end_ptr);
 CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr);
 Uint256Result arbCoreGetLastMachineTotalGas(CArbCore* arbcore_ptr);
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr);
-CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
-                                        uint64_t block_number,
-                                        int allow_slow_lookup);
+CExecutionCursorResult arbCoreGetExecutionCursorAtEndOfBlock(
+    CArbCore* arbcore_ptr,
+    uint64_t block_number,
+    int allow_slow_lookup);
 
 void arbCoreUpdateCheckpointPruningGas(CArbCore* arbcore_ptr,
                                        const void* gas_ptr);

@@ -17,6 +17,7 @@
 package dev
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -40,18 +41,19 @@ type upgrade struct {
 func TestUpgrade(t *testing.T) {
 	skipBelowVersion(t, 4)
 
+	ctx := context.Background()
 	arbosFile, _ := arbos.Path(true)
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
-	auth, owner := OwnerAuthPair(t, privkey)
+	auth, owner := OptsAddressPair(t, privkey)
 
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, owner, nil)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, owner, nil, true)
 	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{
@@ -65,7 +67,7 @@ func TestUpgrade(t *testing.T) {
 			},
 		}),
 	}
-	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+	if _, err := backend.AddInboxMessage(ctx, deposit, common.RandAddress()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -92,7 +94,7 @@ func TestUpgrade(t *testing.T) {
 	}
 	auth.Value = big.NewInt(0)
 
-	UpgradeTestDevNode(t, backend, srv, auth)
+	UpgradeTestDevNode(t, ctx, backend, srv, auth)
 
 	_, err = simpleCon.Exists(auth)
 	test.FailIfError(t, err)

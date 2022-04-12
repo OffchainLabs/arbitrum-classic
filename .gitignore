@@ -25,7 +25,6 @@ arbitrum_flat.sol
 vconan
 gasReporterOutput.json
 rollups
-/packages/arb-node-core/arb-validator
 /packages/arb-node-core/proof_test_server
 /packages/arb-rpc-node/arb-node
 /packages/arb-rpc-node/cmd/arb-dev-node/arb-dev-node
@@ -296,10 +295,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-packages/arb-validator/cmd/rollupServer/rollupServer
-packages/arb-validator/cmd/evilRollupServer/evilRollupServer
-packages/arb-validator/cmd/evilRollupServer/evilRollupServer
-packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 
 # geth setup
 packages/arb-bridge-eth/data/

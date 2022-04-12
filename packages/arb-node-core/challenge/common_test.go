@@ -287,7 +287,7 @@ func initializeChallengeTest(
 	_, err = sequencerBridge.AddSequencerL2BatchFromOrigin(sequencer, nil, nil, batchMetadata, endOfBlockItem.Accumulator)
 	test.FailIfError(t, err)
 
-	err = core.DeliverMessagesAndWait(arbCore, big.NewInt(0), common.Hash{}, []inbox.SequencerBatchItem{delayedItem, endOfBlockItem}, []inbox.DelayedMessage{delayed}, nil)
+	err = core.DeliverMessagesAndWait(ctx, arbCore, big.NewInt(0), common.Hash{}, []inbox.SequencerBatchItem{delayedItem, endOfBlockItem}, []inbox.DelayedMessage{delayed}, nil)
 	test.FailIfError(t, err)
 
 	asserterWalletAddress, _, validatorCon, err := ethbridgecontracts.DeployValidator(asserter, client)

@@ -23,6 +23,9 @@ struct ArbCoreConfig {
     // Maximum number of messages to process at a time
     uint32_t message_process_count{10};
 
+    // Number of consecutive addMessages failures before thread exits
+    uint32_t add_messages_max_failure_count{0};
+
     // Time it takes to run checkpoint for given gas
     // is equivalent to the time it takes to load checkpoing from database
     uint256_t checkpoint_load_gas_cost{1'000'000};
@@ -95,9 +98,6 @@ struct ArbCoreConfig {
     // Delete all database entries except for inbox
     bool test_reset_db_except_inbox{false};
 
-    // Exit after printing out metadata from database
-    bool test_just_metadata{false};
-
     // Whether to lazy load the core machine
     bool lazy_load_core_machine{false};
 
@@ -109,6 +109,9 @@ struct ArbCoreConfig {
 
     // Perform database compaction
     bool database_compact{false};
+
+    // Save initial rocksdb checkpoint to disk
+    bool database_save_on_startup{false};
 
     // Exit after manipulating database
     bool database_exit_after{false};

@@ -17,6 +17,7 @@
 package dev
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -33,6 +34,7 @@ import (
 
 func TestWhitelist(t *testing.T) {
 	skipBelowVersion(t, 25)
+	ctx := context.Background()
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
@@ -42,7 +44,7 @@ func TestWhitelist(t *testing.T) {
 	test.FailIfError(t, err)
 	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.NewAddressFromEth(owner), nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, common.NewAddressFromEth(owner))
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
@@ -62,7 +64,7 @@ func TestWhitelist(t *testing.T) {
 	test.FailIfError(t, err)
 
 	_, err = simple.Exists(senderAuth)
-	if err == nil {
+	if err == nil && arbosVersion < 55 {
 		t.Error()
 	}
 
@@ -76,7 +78,7 @@ func TestWhitelist(t *testing.T) {
 	test.FailIfError(t, err)
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		UpgradeTestDevNode(t, ctx, backend, srv, ownerAuth)
 	}
 
 	allowed, err := arbOwner.IsAllowedSender(&bind.CallOpts{}, common.RandAddress().ToEthAddress())
@@ -86,7 +88,7 @@ func TestWhitelist(t *testing.T) {
 	}
 
 	_, err = simple.Exists(senderAuth)
-	if err == nil {
+	if err == nil && !(arbosVersion >= 55 || (arbosVersion == 54 && doUpgrade)) {
 		t.Error("tx should fail")
 	}
 	if arbosVersion >= 31 {

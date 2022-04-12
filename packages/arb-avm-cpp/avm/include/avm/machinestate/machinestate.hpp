@@ -21,7 +21,7 @@
 #include <avm/machinestate/blockreason.hpp>
 #include <avm/machinestate/datastack.hpp>
 #include <avm/machinestate/status.hpp>
-#include <avm/valueloader.hpp>
+#include <avm_values/valueloader.hpp>
 
 #include <avm_values/value.hpp>
 #include <avm_values/vmValueParser.hpp>
@@ -50,6 +50,7 @@ template <typename T>
 struct MachineEmission {
     T val;
     InboxState inbox;
+    uint256_t log_count;
 };
 
 struct AssertionContext {
@@ -64,6 +65,7 @@ struct AssertionContext {
     uint256_t max_gas;
     bool go_over_gas{false};
     bool first_instruction{true};
+    std::optional<uint256_t> stop_after_log_count;
 
    private:
     size_t inbox_messages_consumed{0};

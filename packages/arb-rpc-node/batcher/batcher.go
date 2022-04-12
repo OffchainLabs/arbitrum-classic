@@ -19,6 +19,7 @@ package batcher
 import (
 	"container/list"
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"sync"
 	"time"
@@ -39,7 +40,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "batcher").Logger()
+var logger = arblog.Logger.With().Str("component", "batcher").Logger()
 
 const maxBatchSize ethcommon.StorageSize = 120000
 

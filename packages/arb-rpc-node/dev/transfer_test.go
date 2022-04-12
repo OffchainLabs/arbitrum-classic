@@ -116,22 +116,22 @@ func TestTransfer(t *testing.T) {
 	ownerKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 
-	auth, owner := OwnerAuthPair(t, ownerKey)
+	auth, owner := OptsAddressPair(t, ownerKey)
 
 	ethBackend, ethAuths := test.SimulatedBackend(t)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, owner, nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, owner)
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
 	test.FailIfError(t, err)
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, auth)
+		UpgradeTestDevNode(t, ctx, backend, srv, auth)
 	}
 
 	deposit := makeDepositMessage(common.NewAddressFromEth(senderAuth.From))
-	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
+	_, err = backend.AddInboxMessage(ctx, deposit, common.RandAddress())
 	test.FailIfError(t, err)
 
 	client := web3.NewEthClient(srv, true)

@@ -28,6 +28,7 @@ extern "C" {
 
 typedef struct {
     int32_t message_process_count;
+    int32_t add_messages_max_failure_count;
     int32_t checkpoint_load_gas_cost;
     int32_t checkpoint_load_gas_factor;
     int32_t checkpoint_max_execution_gas;
@@ -44,12 +45,12 @@ typedef struct {
     int32_t lazy_load_core_machine;
     int32_t lazy_load_archive_queries;
     int32_t checkpoint_prune_on_startup;
-    int32_t checkpoint_pruning_age_seconds;
     PruningMode checkpoint_pruning_mode;
     int32_t checkpoint_max_to_prune;
     int32_t database_compact;
     int32_t database_save_interval;
     const char* database_save_path;
+    int32_t database_save_on_startup;
     int32_t database_exit_after;
     int32_t test_reorg_to_l1_block;
     int32_t test_reorg_to_l2_block;
@@ -58,16 +59,17 @@ typedef struct {
     int32_t test_run_until;
     int32_t test_load_count;
     int32_t test_reset_db_except_inbox;
-    int32_t test_just_metadata;
 } CArbCoreConfig;
 
 CArbStorage* createArbStorage(const char* db_path,
                               CArbCoreConfig arb_core_config);
 void printDatabaseMetadata(CArbStorage* storage_ptr);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
+int applyArbStorageConfig(CArbStorage* storage_ptr);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);
 int closeArbStorage(CArbStorage* storage_ptr);
+int cleanupValidator(CArbStorage* storage_ptr);
 
 CArbCore* createArbCore(CArbStorage* storage_ptr);
 CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr);

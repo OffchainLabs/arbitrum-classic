@@ -153,15 +153,15 @@ std::optional<uint64_t> AggregatorStore::getPossibleRequestInfo(
     return returnIndex(tx, requestKey(request_id));
 }
 
+uint64_t AggregatorStore::blockCount() const {
+    ReadTransaction tx(data_storage);
+    return blockCountImpl(tx);
+}
+
 std::optional<uint64_t> AggregatorStore::getPossibleBlock(
     const uint256_t& block_hash) const {
     ReadTransaction tx(data_storage);
     return returnIndex(tx, blockHashKey(block_hash));
-}
-
-uint64_t AggregatorStore::blockCount() const {
-    ReadTransaction tx(data_storage);
-    return blockCountImpl(tx);
 }
 
 void AggregatorStore::saveMessageBatch(const uint256_t& batchNum,

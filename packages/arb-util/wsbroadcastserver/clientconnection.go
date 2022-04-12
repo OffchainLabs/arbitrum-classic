@@ -74,7 +74,7 @@ func (cc *ClientConnection) Start(parentCtx context.Context) {
 			case data := <-cc.out:
 				err := cc.writeRaw(data)
 				if err != nil {
-					logger.Error().Err(err).Str("client", cc.Name).Msg("error writing data to client")
+					logError(err, "error writing data to client")
 					cc.clientManager.Remove(cc)
 					for {
 						// Consume and ignore channel data until client properly stopped to prevent deadlock
@@ -122,7 +122,7 @@ func (cc *ClientConnection) readRequest(ctx context.Context, timeout time.Durati
 
 	atomic.StoreInt64(&cc.lastHeardUnix, time.Now().Unix())
 
-	return ReadData(ctx, cc.conn, timeout, ws.StateServerSide)
+	return ReadData(ctx, cc.conn, nil, timeout, ws.StateServerSide)
 }
 
 func (cc *ClientConnection) Write(x interface{}) error {

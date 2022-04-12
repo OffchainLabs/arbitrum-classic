@@ -34,6 +34,16 @@ typedef struct {
 } ByteSliceResult;
 
 typedef struct {
+    ByteSlice slice;
+    int count;
+} ByteSliceCount;
+
+typedef struct ByteSliceCountResultStruct {
+    ByteSliceCount data;
+    int found;
+} ByteSliceCountResult;
+
+typedef struct {
     void* data;
     int count;
 } HashList;
@@ -87,6 +97,11 @@ typedef struct {
     void* machine;
     int slow_error;
 } CMachineResult;
+
+typedef struct {
+    void* execution_cursor;
+    int slow_error;
+} CExecutionCursorResult;
 
 typedef struct {
     RawAssertion assertion;

@@ -30,11 +30,6 @@ int arbCoreStartThread(CArbCore* arbcore_ptr) {
     return 1;
 }
 
-void arbCoreAbortThread(CArbCore* arbcore_ptr) {
-    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    arb_core->abortThread();
-}
-
 int arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     return arb_core->messagesStatus();
@@ -43,6 +38,17 @@ int arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
 char* arbCoreMessagesClearError(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto str = arb_core->messagesClearError();
+    return strdup(str.c_str());
+}
+
+int arbCoreCheckError(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    return arb_core->checkError();
+}
+
+char* arbCoreGetErrorString(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto str = arb_core->getErrorString();
     return strdup(str.c_str());
 }
 
@@ -114,10 +120,11 @@ ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
                                     const void* start_index_ptr,
                                     const void* count_ptr) {
     try {
+        auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
+        auto value_loader = arbcore->makeValueLoader();
         ValueCache cache{1, 0};
-        auto logs = static_cast<ArbCore*>(arbcore_ptr)
-                        ->getLogs(receiveUint256(start_index_ptr),
-                                  receiveUint256(count_ptr), cache);
+        auto logs = arbcore->getLogs(receiveUint256(start_index_ptr),
+                                     receiveUint256(count_ptr), cache);
         if (!logs.status.ok()) {
             return {{}, false};
         }
@@ -127,7 +134,7 @@ ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
             std::vector<unsigned char> marshalled_log;
             marshal_uint256_t(log.inbox.count, marshalled_log);
             marshal_uint256_t(log.inbox.accumulator, marshalled_log);
-            marshal_value(log.val, marshalled_log);
+            marshal_value(log.val, marshalled_log, &value_loader);
             data.push_back(move(marshalled_log));
         }
         return {returnCharVectorVector(data), true};
@@ -402,6 +409,8 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cursor_index = receiveUint256(index_ptr);
 
+    auto value_loader = arbcore->makeValueLoader();
+
     try {
         auto result =
             arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
@@ -424,7 +433,7 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
             std::vector<unsigned char> marshalled_value;
             marshal_uint256_t(log.inbox.count, marshalled_value);
             marshal_uint256_t(log.inbox.accumulator, marshalled_value);
-            marshal_value(log.val, marshalled_value);
+            marshal_value(log.val, marshalled_value, &value_loader);
             marshalled_logs.push_back(move(marshalled_value));
         }
 
@@ -434,7 +443,7 @@ IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
             std::vector<unsigned char> marshalled_value;
             marshal_uint256_t(log.inbox.count, marshalled_value);
             marshal_uint256_t(log.inbox.accumulator, marshalled_value);
-            marshal_value(log.val, marshalled_value);
+            marshal_value(log.val, marshalled_value, &value_loader);
             marshalled_deleted_logs.push_back(move(marshalled_value));
         }
 
@@ -462,42 +471,6 @@ int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
         std::cerr << "Exception while confirming receipt of logscursor "
                   << e.what() << std::endl;
         return 0;
-    }
-}
-
-int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr, const void* index_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cursor_index = receiveUint256(index_ptr);
-
-    try {
-        return arbcore->logsCursorCheckError(
-            intx::narrow_cast<size_t>(cursor_index));
-    } catch (const std::exception& e) {
-        std::cerr << "Exception while checking error for logscursor "
-                  << e.what() << std::endl;
-        return 0;
-    }
-}
-
-// Returned string must be freed
-char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
-                                  const void* index_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cursor_index = receiveUint256(index_ptr);
-
-    try {
-        auto str = arbcore->logsCursorClearError(
-            intx::narrow_cast<size_t>(cursor_index));
-
-        if (str.empty()) {
-            return nullptr;
-        }
-
-        return strdup(str.c_str());
-    } catch (const std::exception& e) {
-        std::cerr << "Exception while clearing error for logscursor "
-                  << e.what() << std::endl;
-        return strdup("exception occurred in logsCursorClearError");
     }
 }
 
@@ -550,6 +523,47 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     }
 }
 
+uint256_t log_number_begin;
+uint256_t log_number_end;
+
+ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
+    CArbCore* arbcore_ptr,
+    CExecutionCursor* execution_cursor_ptr,
+    const void* max_gas_ptr,
+    int go_over_gas,
+    int allow_slow_lookup,
+    const void* log_number_begin_ptr,
+    const void* log_number_end_ptr) {
+    auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
+    auto value_loader = arbCore->makeValueLoader();
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
+    auto max_gas = receiveUint256(max_gas_ptr);
+    auto log_number_begin = receiveUint256(log_number_begin_ptr);
+    auto log_number_end = receiveUint256(log_number_end_ptr);
+    try {
+        auto result = arbCore->advanceExecutionCursorWithTracing(
+            *executionCursor, max_gas, go_over_gas, allow_slow_lookup,
+            {log_number_begin, log_number_end});
+        if (!result.status.ok()) {
+            return {{}, false};
+        }
+
+        std::vector<unsigned char> debug_print_data;
+        int debug_print_count = 0;
+        for (const auto& debug_print : result.data) {
+            marshal_uint256_t(debug_print.log_count, debug_print_data);
+            marshal_value(debug_print.val, debug_print_data, &value_loader);
+            debug_print_count++;
+        }
+
+        return {{returnCharVector(debug_print_data), debug_print_count}, 1};
+    } catch (const std::exception& e) {
+        std::cerr << "Exception while advancing execution cursor " << e.what()
+                  << std::endl;
+        return {{}, false};
+    }
+}
+
 CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
     return static_cast<void*>(arbCore->getLastMachine().release());
@@ -576,35 +590,38 @@ CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
         arbCore->takeExecutionCursorMachine(*executionCursor).release());
 }
 
-CMachineResult arbCoreGetMachineAtBlock(CArbCore* arbcore_ptr,
-                                        uint64_t block_number,
-                                        int allow_slow_lookup) {
+void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    arb_core->printCoreThreadBacktrace();
+}
+
+CExecutionCursorResult arbCoreGetExecutionCursorAtEndOfBlock(
+    CArbCore* arbcore_ptr,
+    uint64_t block_number,
+    int allow_slow_lookup) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
 
     try {
-        auto machine =
-            arbcore->getMachineAtBlock(block_number, allow_slow_lookup);
-        if (!machine.status.ok()) {
-            if (machine.status.IsNotFound() && !allow_slow_lookup) {
+        auto cursor = arbcore->getExecutionCursorAtEndOfBlock(
+            block_number, allow_slow_lookup);
+        if (std::holds_alternative<rocksdb::Status>(cursor)) {
+            auto status = std::get<rocksdb::Status>(cursor);
+            if (status.IsNotFound() && !allow_slow_lookup) {
                 // Machine not found in memory cache and database lookup
                 // disabled
                 return {nullptr, 1};
             }
 
             std::cerr << "Failed to load machine for sideload "
-                      << machine.status.ToString() << std::endl;
+                      << status.ToString() << std::endl;
             return {nullptr, 0};
         }
 
-        return {static_cast<void*>(machine.data.release()), 0};
+        auto newCursor = new ExecutionCursor(std::get<ExecutionCursor>(cursor));
+        return {static_cast<void*>(newCursor), 0};
     } catch (const std::exception& e) {
-        std::cerr << "Exception while loading machine for sideload " << e.what()
-                  << std::endl;
+        std::cerr << "Exception while loading machine at specific block: "
+                  << e.what() << std::endl;
         return {nullptr, 0};
     }
-}
-
-void arbCorePrintCoreThreadBacktrace(CArbCore* arbcore_ptr) {
-    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    arb_core->printCoreThreadBacktrace();
 }

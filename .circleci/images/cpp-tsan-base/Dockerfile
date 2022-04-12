@@ -3,29 +3,27 @@
 ### cpp-tsan-base
 ### --------------------------------------------------------------------
 
-FROM debian:bullseye-slim
+FROM offchainlabs/cpp-base:0.6.1
 
+USER root
+WORKDIR /
 RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
-    apt-get install -y curl cmake git gcc g++ libboost-dev libboost-filesystem-dev \
-    lcov make libgmp-dev libssl-dev libusb-dev sudo netcat-openbsd nodejs \
-    autotools-dev dh-autoreconf pkg-config \
-    google-perftools libgoogle-perftools-dev \
-    libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev && \
-    rm -rf /var/lib/apt/lists/* && \
+    apt-get remove -y libzstd-dev && \
+    rm /usr/lib/librocksdb.* && \
     curl -L https://github.com/facebook/zstd/archive/refs/tags/v1.5.0.tar.gz --output zstd-1.5.0.tar.gz && \
     tar xf zstd-1.5.0.tar.gz && \
     cd zstd-1.5.0 && \
     CFLAGS=-fsanitize=thread LDFLAGS=-fsanitize=thread make install && \
     cd .. && \
+    rm -rf zstd-1.5.0* && \
     curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v6.20.3.tar.gz --output rocksdb-6.20.3.tar.gz && \
     tar xf rocksdb-6.20.3.tar.gz && \
     cd rocksdb-6.20.3 && \
-    COMPILE_WITH_TSAN=1 PREFIX=/usr make shared_lib install-shared && \
-    useradd -ms /bin/bash user
+    COMPILE_WITH_TSAN=1 PREFIX=/usr PORTABLE=1 make shared_lib install-shared && \
+    strip --strip-unneeded /usr/lib/librocksdb.so.6.20.3 && \
+    cd .. && \
+    rm -rf rocksdb-6.20.3*
+
 USER user
 WORKDIR /home/user/
-ENV PATH="/home/user/go/bin:/home/user/bin:/home/user/.local/bin:/usr/local/go/bin:/home/user/.npm-global/bin:/home/user/.yarn/bin:${PATH}"
-RUN export GOROOT=/usr/local/go && \
-    mkdir bin && curl -s https://codecov.io/bash > ~/bin/codecovbash && \
-    chmod +x /home/user/bin/codecovbash
+ENV PATH="/home/user/bin:/home/user/.local/bin:${PATH}"

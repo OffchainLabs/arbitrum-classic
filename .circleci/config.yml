@@ -20,11 +20,11 @@ aliases:
 
   - &restore_go_cache
     keys:
-      - go-mod-v11-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
-      - go-mod-v11-{{ .Branch }}-
-      - go-mod-v11-
+      - go-mod-v13-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
+      - go-mod-v13-{{ .Branch }}-
+      - go-mod-v13-
   - &save_go_cache
-    key: go-mod-v11-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
+    key: go-mod-v13-{{ .Branch }}-{{ checksum "packages/arb-rpc-node/go.sum" }}
     paths:
       - ~/go/pkg/mod
   - &test-path /tmp/test-results
@@ -56,7 +56,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.4.1
+      - image: offchainlabs/backend-base:0.6.1
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -67,7 +67,7 @@ jobs:
       - save_cache: *save_go_cache
   package-audit:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
     steps:
       - checkout
       - run:
@@ -83,7 +83,7 @@ jobs:
           working_directory: /home/user/project
   ethbridge:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -118,7 +118,7 @@ jobs:
 
   ethbridge-coverage:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -153,7 +153,7 @@ jobs:
           path: *test-path
   cpp-avm-build:
     docker:
-      - image: offchainlabs/cpp-base:0.4.1
+      - image: offchainlabs/cpp-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -177,7 +177,7 @@ jobs:
             - ./project/packages/arb-avm-cpp/build/*
   cpp-avm-asan:
     docker:
-      - image: offchainlabs/cpp-asan-base:0.4.1
+      - image: offchainlabs/cpp-asan-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -207,7 +207,7 @@ jobs:
 
   cpp-avm-tsan:
     docker:
-      - image: offchainlabs/cpp-tsan-base:0.4.1
+      - image: offchainlabs/cpp-tsan-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -234,7 +234,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.4.1
+      - image: offchainlabs/backend-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -246,13 +246,13 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/
+      - restore_cache: *restore_go_cache
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - restore_cache: *restore_go_cache
       - run:
           name: test arb-util
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-util.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
@@ -275,7 +275,9 @@ jobs:
 
   backend-rpc:
     docker:
-      - image: offchainlabs/backend-base:0.4.1
+      - image: offchainlabs/backend-base:0.6.1
+      - image: openethereum/openethereum:v3.3.4
+        command: --config dev-insecure --tracing=on
     resource_class: large
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
@@ -288,17 +290,21 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/
+      - restore_cache: *restore_go_cache
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - restore_cache: *restore_go_cache
       - run:
           name: test arb-rpc-node
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-rpc-node
+      - run:
+          name: test arb-rpc-node/open ethereum trace
+          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node2.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES -run TestTraceOpenEthereum --tags openethereumtest ./...
+          working_directory: /home/user/project/packages/arb-rpc-node/dev
       - run:
           name: test arb-rpc-node/dev upgrade
           command: gotestsum --format short-verbose -- -upgrade -race -run TestFees TestEthCall -timeout 15m
@@ -309,7 +315,7 @@ jobs:
 
   arb-bridge-peripherals:
     docker:
-      - image: offchainlabs/integration-base:0.4.1
+      - image: offchainlabs/integration-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -321,13 +327,13 @@ jobs:
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/
+      - restore_cache: *restore_go_cache
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - restore_cache: *restore_go_cache
       - run:
           name: Run dev node
           command: go run arb-dev-node.go

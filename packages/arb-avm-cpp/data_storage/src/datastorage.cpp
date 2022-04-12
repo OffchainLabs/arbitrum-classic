@@ -199,6 +199,10 @@ rocksdb::Status DataStorage::closeDb() {
     return rocksdb::Status::OK();
 }
 
+rocksdb::Status DataStorage::cleanupValidator() {
+    return txn_db->DropColumnFamily(column_handles[AGGREGATOR_COLUMN]);
+}
+
 rocksdb::Status DataStorage::compact(bool aggressive) {
     auto cr_options = rocksdb::CompactRangeOptions();
     rocksdb::FlushOptions compact_flush_options;

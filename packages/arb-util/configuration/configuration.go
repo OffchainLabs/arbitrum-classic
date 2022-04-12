@@ -19,6 +19,7 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io"
 	"math/big"
 	"net/http"
@@ -38,7 +39,6 @@ import (
 	"github.com/knadh/koanf/providers/s3"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
@@ -46,7 +46,7 @@ import (
 
 const PASSWORD_NOT_SET = "PASSWORD_NOT_SET"
 
-var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
+var logger = arblog.Logger.With().Str("component", "configuration").Logger()
 
 type Conf struct {
 	Dump      bool   `koanf:"dump"`
@@ -57,32 +57,34 @@ type Conf struct {
 }
 
 type Database struct {
-	Compact      bool          `koanf:"compact"`
-	ExitAfter    bool          `koanf:"exit-after"`
-	L0Files      int           `koanf:"l0-files"`
-	SaveInterval time.Duration `koanf:"save-interval"`
-	SavePath     string        `koanf:"save-path"`
-	Threads      int           `koanf:"threads"`
+	Compact       bool          `koanf:"compact"`
+	ExitAfter     bool          `koanf:"exit-after"`
+	Metadata      bool          `koanf:"metadata"`
+	L0Files       int           `koanf:"l0-files"`
+	SaveInterval  time.Duration `koanf:"save-interval"`
+	SaveOnStartup bool          `koanf:"save-on-startup"`
+	SavePath      string        `koanf:"save-path"`
+	Threads       int           `koanf:"threads"`
 }
 
 type Core struct {
-	Cache                     CoreCache     `koanf:"cache"`
-	CheckpointGasFrequency    int           `koanf:"checkpoint-gas-frequency"`
-	CheckpointLoadGasCost     int           `koanf:"checkpoint-load-gas-cost"`
-	CheckpointLoadGasFactor   int           `koanf:"checkpoint-load-gas-factor"`
-	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution-gas"`
-	CheckpointMaxToPrune      int           `koanf:"checkpoint-max-to-prune"`
-	CheckpointPruningAge      time.Duration `koanf:"checkpoint-pruning-age"`
-	CheckpointPruningMode     string        `koanf:"checkpoint-pruning-mode"`
-	CheckpointPruneOnStartup  bool          `koanf:"checkpoint-prune-on-startup"`
-	Database                  Database      `koanf:"database"`
-	Debug                     bool          `koanf:"debug"`
-	DebugTiming               bool          `koanf:"debug-timing"`
-	IdleSleep                 time.Duration `koanf:"idle-sleep"`
-	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
-	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
-	MessageProcessCount       int           `koanf:"message-process-count"`
-	Test                      CoreTest      `koanf:"test"`
+	AddMessagesMaxFailureCount int           `koanf:"add-messages-max-failure-count"`
+	Cache                      CoreCache     `koanf:"cache"`
+	CheckpointGasFrequency     int           `koanf:"checkpoint-gas-frequency"`
+	CheckpointLoadGasCost      int           `koanf:"checkpoint-load-gas-cost"`
+	CheckpointLoadGasFactor    int           `koanf:"checkpoint-load-gas-factor"`
+	CheckpointMaxExecutionGas  int           `koanf:"checkpoint-max-execution-gas"`
+	CheckpointMaxToPrune       int           `koanf:"checkpoint-max-to-prune"`
+	CheckpointPruningMode      string        `koanf:"checkpoint-pruning-mode"`
+	CheckpointPruneOnStartup   bool          `koanf:"checkpoint-prune-on-startup"`
+	Database                   Database      `koanf:"database"`
+	Debug                      bool          `koanf:"debug"`
+	DebugTiming                bool          `koanf:"debug-timing"`
+	IdleSleep                  time.Duration `koanf:"idle-sleep"`
+	LazyLoadCoreMachine        bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries     bool          `koanf:"lazy-load-archive-queries"`
+	MessageProcessCount        int           `koanf:"message-process-count"`
+	Test                       CoreTest      `koanf:"test"`
 }
 
 type CoreCache struct {
@@ -96,7 +98,6 @@ type CoreCache struct {
 }
 
 type CoreTest struct {
-	JustMetadata        bool        `koanf:"just-metadata"`
 	LoadCount           int64       `koanf:"load-count"`
 	ReorgTo             TestReorgTo `koanf:"reorg-to"`
 	ResetAllExceptInbox bool        `koanf:"reset-all-except-inbox"`
@@ -154,13 +155,19 @@ type Aggregator struct {
 	Stateful     bool   `koanf:"stateful"`
 }
 
+type Tracing struct {
+	Enable    bool   `koanf:"enable"`
+	Namespace string `koanf:"namespace"`
+}
+
 type RPC struct {
-	Addr              string `koanf:"addr"`
-	Port              string `koanf:"port"`
-	Path              string `koanf:"path"`
-	EnableL1Calls     bool   `koanf:"enable-l1-calls"`
-	MaxCallGas        uint64 `koanf:"max-call-gas"`
-	EnableDevopsStubs bool   `koanf:"enable-devops-stubs"`
+	Addr              string  `koanf:"addr"`
+	Port              string  `koanf:"port"`
+	Path              string  `koanf:"path"`
+	EnableL1Calls     bool    `koanf:"enable-l1-calls"`
+	Tracing           Tracing `koanf:"tracing"`
+	MaxCallGas        uint64  `koanf:"max-call-gas"`
+	EnableDevopsStubs bool    `koanf:"enable-devops-stubs"`
 }
 
 type S3 struct {
@@ -225,8 +232,32 @@ type Node struct {
 	LogIdleSleep    time.Duration `koanf:"log-idle-sleep"`
 	RPC             RPC           `koanf:"rpc"`
 	Sequencer       Sequencer     `koanf:"sequencer"`
-	Type            string        `koanf:"type"`
+	TypeImpl        string        `koanf:"type"`
 	WS              WS            `koanf:"ws"`
+}
+
+type NodeType uint8
+
+const (
+	UnknownNodeType NodeType = iota
+	ForwarderNodeType
+	AggregatorNodeType
+	SequencerNodeType
+	ValidatorNodeType
+)
+
+func (c *Node) Type() NodeType {
+	if strings.EqualFold(c.TypeImpl, "forwarder") {
+		return ForwarderNodeType
+	} else if strings.EqualFold(c.TypeImpl, "aggregator") {
+		return AggregatorNodeType
+	} else if strings.EqualFold(c.TypeImpl, "sequencer") {
+		return SequencerNodeType
+	} else if strings.EqualFold(c.TypeImpl, "validator") {
+		return ValidatorNodeType
+	} else {
+		return UnknownNodeType
+	}
 }
 
 type NodeCache struct {
@@ -252,13 +283,45 @@ type Rollup struct {
 }
 
 type Validator struct {
-	Strategy             string            `koanf:"strategy"`
+	StrategyImpl         string            `koanf:"strategy"`
 	UtilsAddress         string            `koanf:"utils-address"`
 	StakerDelay          time.Duration     `koanf:"staker-delay"`
 	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
 	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
 	DontChallenge        bool              `koanf:"dont-challenge"`
 	WithdrawDestination  string            `koanf:"withdraw-destination"`
+}
+
+type ValidatorStrategy uint8
+
+const (
+	UnknownStrategy ValidatorStrategy = iota
+	WatchtowerStrategy
+	DefensiveStrategy
+	StakeLatestStrategy
+	MakeNodesStrategy
+)
+
+func (s ValidatorStrategy) IsActive() bool {
+	if s == StakeLatestStrategy || s == MakeNodesStrategy {
+		return true
+	}
+
+	return false
+}
+
+func (c *Validator) Strategy() ValidatorStrategy {
+	if strings.EqualFold(c.StrategyImpl, "Watchtower") {
+		return WatchtowerStrategy
+	} else if strings.EqualFold(c.StrategyImpl, "Defensive") {
+		return DefensiveStrategy
+	} else if strings.EqualFold(c.StrategyImpl, "StakeLatest") {
+		return StakeLatestStrategy
+	} else if strings.EqualFold(c.StrategyImpl, "MakeNodes") {
+		return MakeNodesStrategy
+	} else {
+		return UnknownStrategy
+	}
 }
 
 type Wallet struct {
@@ -296,9 +359,10 @@ func (f *FeedSigner) Password() *string {
 }
 
 type WalletLocal struct {
-	Pathname     string `koanf:"pathname"`
-	PasswordImpl string `koanf:"password"`
-	PrivateKey   string `koanf:"private-key"`
+	OnlyCreateKey bool   `koanf:"only-create-key"`
+	Pathname      string `koanf:"pathname"`
+	PasswordImpl  string `koanf:"password"`
+	PrivateKey    string `koanf:"private-key"`
 }
 
 func (w WalletLocal) Password() *string {
@@ -402,12 +466,8 @@ func DefaultNodeSettings() *Node {
 	}
 }
 
-func (c *Config) GetNodeDatabasePath() string {
+func (c *Config) GetDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "db")
-}
-
-func (c *Config) GetValidatorDatabasePath() string {
-	return path.Join(c.Persistent.Chain, "validator-db")
 }
 
 func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
@@ -415,7 +475,28 @@ func ParseCLI(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *b
 
 	AddForwarderTarget(f)
 
-	return ParseNonRelay(ctx, f, "cli-wallet", 0, 0)
+	return ParseNonRelay(ctx, f, "cli-wallet", 0)
+}
+
+func ParseDBTool() (*Config, error) {
+	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+
+	AddPersistent(f)
+	AddCore(f, 0)
+
+	k, err := beginCommonParse(f)
+	if err != nil {
+		return nil, err
+	}
+
+	out, wallet, err := endCommonParse(k)
+	if err != nil {
+		return nil, err
+	}
+
+	err = resolveDirectoryNames(out, wallet)
+
+	return out, nil
 }
 
 func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
@@ -429,6 +510,14 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	AddFeedOutputOptions(f)
 	AddForwarderTarget(f)
 	AddL1PostingStrategyOptions(f, "node.sequencer.")
+	AddL1PostingStrategyOptions(f, "validator.")
+
+	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
+	f.String("validator.utils-address", "", "validator utilities address")
+	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
+	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
+	f.Bool("validator.dont-challenge", false, "don't challenge any other validators' assertions")
+	f.String("validator.withdraw-destination", "", "the address to withdraw funds to (defaults to the wallet address)")
 
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
@@ -455,6 +544,8 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int("node.rpc.port", 8547, "RPC port")
 	f.String("node.rpc.path", "/", "RPC path")
 	f.Bool("node.rpc.enable-l1-calls", false, "If RPC calls which query the L1 node indirectly should be allowed")
+	f.Bool("node.rpc.tracing.enable", false, "enable tracing api")
+	f.String("node.rpc.tracing.namespace", "arbtrace", "rpc namespace for tracing api")
 	f.Uint64("node.rpc.max-call-gas", 5000000, "Max computational arbgas limit when processing eth_call and eth_estimateGas")
 	f.Bool("node.rpc.enable-devops-stubs", false, "Enable fake versions of eth_syncing and eth_netPeers")
 
@@ -479,80 +570,21 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Int("node.ws.port", 8548, "websocket port")
 	f.String("node.ws.path", "/", "websocket path")
 
-	return ParseNonRelay(ctx, f, "rpc-wallet", 250_000_000, time.Hour*48)
+	return ParseNonRelay(ctx, f, "rpc-wallet", 250_000_000)
 }
 
-func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
-	f := flag.NewFlagSet("", flag.ContinueOnError)
-
-	AddFeedOutputOptions(f)
-	AddL1PostingStrategyOptions(f, "validator.")
-
-	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
-	f.String("validator.utils-address", "", "validator utilities address")
-	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
-	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
-	f.Bool("validator.dont-challenge", false, "don't challenge any other validators' assertions")
-	f.String("validator.withdraw-destination", "", "the address to withdraw funds to (defaults to the wallet address)")
-
-	return ParseNonRelay(ctx, f, "validator-wallet", 0, 0)
-}
-
-func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string, maxExecutionGas int, checkpointPruningAge time.Duration) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname string, maxExecutionGas int) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
-
-	f.Bool("core.cache.last", false, "whether to always cache the machine from last block")
-	f.Int("core.cache.basic-interval", 100_000_000, "amount of gas to wait between saving to basic cache")
-	f.Int("core.cache.basic-size", 100, "number of basic cache entries to save")
-	f.Bool("core.cache.disable", false, "disable saving to cache while in core thread")
-	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
-	f.Bool("core.cache.seed-on-startup", false, "seed cache on startup by re-executing timed-expire worth of history")
-	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
-
-	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
-	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
-	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")
-	f.Int("core.checkpoint-max-execution-gas", maxExecutionGas, "maximum amount of gas any given checkpoint is allowed to execute")
-	f.Int("core.checkpoint-max-to-prune", 2, "number of checkpoints to delete at a time, 0 for no limit")
-	f.Bool("core.checkpoint-prune-on-startup", false, "perform full database pruning on startup")
-	f.Duration("core.checkpoint-pruning-age", checkpointPruningAge, "how long to keep snapshots, 0 to disable time based pruning, always disabled if node.cache.allow-slow-lookup is set")
-	f.String("core.checkpoint-pruning-mode", "default", "Prune old checkpoints: 'on', 'off', or 'default'")
-
-	f.Bool("core.debug", false, "print extra debug messages in arbcore")
-	f.Bool("core.debug-timing", false, "print extra debug timing messages in arbcore")
-
-	f.Bool("core.database.compact", false, "perform database compaction")
-	f.Bool("core.database.exit-after", false, "exit after loading or manipulating database")
-	f.Duration("core.database.save-interval", 0, "duration between saving database backups, 0 to disable")
-	f.String("core.database.save-path", "db_checkpoints", "path to save database backups in")
-
-	f.Duration("core.idle-sleep", 5*time.Millisecond, "how long core thread should sleep when idle")
-
-	f.Bool("core.lazy-load-core-machine", false, "if the core machine should be loaded as it's run")
-	f.Bool("core.lazy-load-archive-queries", true, "if the archive queries should be loaded as they're run")
-
-	f.Int("core.message-process-count", 100, "maximum number of messages to process at a time")
-
-	f.Bool("core.test.just-metadata", false, "just print database metadata and exit")
-	f.Int("core.test.load-count", 0, "number of snapshots to load from database for profile test, zero to disable")
-	f.Int("core.test.reorg-to.l1-block", 0, "reorg to snapshot with given L1 block or before, zero to disable")
-	f.Int("core.test.reorg-to.l2-block", 0, "reorg to snapshot with given L2 block or before, zero to disable")
-	f.Int("core.test.reorg-to.log", 0, "reorg to snapshot with given log or before, zero to disable")
-	f.Int("core.test.reorg-to.message", 0, "reorg to snapshot with given message or before, zero to disable")
-	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
-	f.Int("core.test.run-until", 0, "run until gas is reached for profile test, zero to disable")
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 	f.Uint64("l1.chain-id", 0, "if set other than 0, will be used to validate database and L1 connection")
 
-	f.String("persistent.chain", "", "path that chain specific state is located")
-	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
-
 	f.String("rollup.address", "", "layer 2 rollup contract address")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
+	f.Bool("wallet.local.only-create-key", false, "create new wallet and exit")
 	f.String("wallet.local.pathname", defaultWalletPathname, "path to store wallet in")
 	f.String("wallet.local.password", PASSWORD_NOT_SET, "password for wallet")
 	f.String("wallet.local.private-key", "", "wallet private key string")
@@ -563,7 +595,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
+	AddCore(f, maxExecutionGas)
 	AddHealthcheckOptions(f)
+	AddPersistent(f)
 
 	k, err := beginCommonParse(f)
 	if err != nil {
@@ -594,7 +628,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		case <-time.After(5 * time.Second):
 		}
 	}
-	logger.Info().Str("l1url", l1URL).Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
+	logger.Info().Str("l1url", l1URL).Str("l1chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
 	rollupAddress := k.String("rollup.address")
 	if len(rollupAddress) != 0 {
@@ -651,50 +685,14 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	}
 
 	// Fixup directories
-	homeDir, err := os.UserHomeDir()
+	err = resolveDirectoryNames(out, wallet)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to read users home directory")
-	}
-
-	// Make persistent storage directory relative to home directory if not already absolute
-	if !filepath.IsAbs(out.Persistent.GlobalConfig) {
-		out.Persistent.GlobalConfig = path.Join(homeDir, out.Persistent.GlobalConfig)
-	}
-	err = os.MkdirAll(out.Persistent.GlobalConfig, os.ModePerm)
-	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create global configuration directory")
-	}
-
-	// Make chain directory relative to persistent storage directory if not already absolute
-	if !filepath.IsAbs(out.Persistent.Chain) {
-		out.Persistent.Chain = path.Join(out.Persistent.GlobalConfig, out.Persistent.Chain)
-	}
-	err = os.MkdirAll(out.Persistent.Chain, os.ModePerm)
-	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create chain directory")
+		return nil, nil, nil, nil, err
 	}
 
 	if len(out.Rollup.Machine.Filename) == 0 {
 		// Machine not provided, so use default
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
-	}
-
-	// Make rocksdb backup directory relative to persistent storage directory if not already absolute
-	if !filepath.IsAbs(out.Core.Database.SavePath) {
-		out.Core.Database.SavePath = path.Join(out.Persistent.Chain, out.Core.Database.SavePath)
-	}
-
-	// Make machine relative to storage directory if not already absolute
-	if !filepath.IsAbs(out.Rollup.Machine.Filename) {
-		out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
-	}
-
-	// Make wallet directories relative to chain directory if not already absolute
-	if !filepath.IsAbs(wallet.Local.Pathname) {
-		wallet.Local.Pathname = path.Join(out.Persistent.Chain, wallet.Local.Pathname)
-	}
-	if !filepath.IsAbs(wallet.Fireblocks.FeedSigner.Pathname) {
-		wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.Chain, wallet.Fireblocks.FeedSigner.Pathname)
 	}
 
 	_, err = os.Stat(out.Rollup.Machine.Filename)
@@ -741,21 +739,66 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		out.Core.CheckpointPruningMode = "off"
 	}
 
-	if out.Core.CheckpointPruningMode == "off" {
-		// Never prune checkpoints
-		out.Core.CheckpointPruningAge = 0
-	} else if (out.Core.CheckpointPruningMode != "on") &&
+	if (out.Core.CheckpointPruningMode != "on") &&
 		(out.Core.CheckpointPruningMode != "default") {
 		return nil, nil, nil, nil,
 			fmt.Errorf("value '%v' for core.checkpoint-pruning-mode is not 'on', 'off', or 'default'", out.Core.CheckpointPruningMode)
 	}
 
-	if out.Node.Type == "sequencer" && !out.Core.Cache.Last {
+	if out.Node.Type() == SequencerNodeType && !out.Core.Cache.Last {
 		logger.Info().Msg("enabling last machine cache for sequencer")
 		out.Core.Cache.Last = true
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil
+}
+
+func resolveDirectoryNames(out *Config, wallet *Wallet) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return errors.Wrap(err, "Unable to read users home directory")
+	}
+
+	// Make persistent storage directory relative to home directory if not already absolute
+	if !filepath.IsAbs(out.Persistent.GlobalConfig) {
+		out.Persistent.GlobalConfig = path.Join(homeDir, out.Persistent.GlobalConfig)
+	}
+	err = os.MkdirAll(out.Persistent.GlobalConfig, os.ModePerm)
+	if err != nil {
+		return errors.Wrap(err, "Unable to create global configuration directory")
+	}
+
+	// Make chain directory relative to persistent storage directory if not already absolute
+	if !filepath.IsAbs(out.Persistent.Chain) {
+		out.Persistent.Chain = path.Join(out.Persistent.GlobalConfig, out.Persistent.Chain)
+	}
+	err = os.MkdirAll(out.Persistent.Chain, os.ModePerm)
+	if err != nil {
+		return errors.Wrap(err, "Unable to create chain directory")
+	}
+	if DatabaseInDirectory(out.Persistent.Chain) {
+		return errors.New("Database in --persistent.chain directory, try specifying parent directory")
+	}
+
+	// Make rocksdb backup directory relative to persistent storage directory if not already absolute
+	if !filepath.IsAbs(out.Core.Database.SavePath) {
+		out.Core.Database.SavePath = path.Join(out.Persistent.Chain, out.Core.Database.SavePath)
+	}
+
+	// Make machine relative to storage directory if not already absolute
+	if !filepath.IsAbs(out.Rollup.Machine.Filename) {
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
+	}
+
+	// Make wallet directories relative to chain directory if not already absolute
+	if !filepath.IsAbs(wallet.Local.Pathname) {
+		wallet.Local.Pathname = path.Join(out.Persistent.Chain, wallet.Local.Pathname)
+	}
+	if !filepath.IsAbs(wallet.Fireblocks.FeedSigner.Pathname) {
+		wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.Chain, wallet.Fireblocks.FeedSigner.Pathname)
+	}
+
+	return nil
 }
 
 func ParseRelay() (*Config, error) {
@@ -787,6 +830,56 @@ func AddFeedOutputOptions(f *flag.FlagSet) {
 
 func AddForwarderTarget(f *flag.FlagSet) {
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
+}
+
+func AddCore(f *flag.FlagSet, maxExecutionGas int) {
+	f.Bool("core.cache.last", false, "whether to always cache the machine from last block")
+	f.Int("core.cache.basic-interval", 100_000_000, "amount of gas to wait between saving to basic cache")
+	f.Int("core.cache.basic-size", 100, "number of basic cache entries to save")
+	f.Bool("core.cache.disable", false, "disable saving to cache while in core thread")
+	f.Int("core.cache.lru-size", 1000, "number of recently used L2 blocks to hold in lru memory cache")
+	f.Bool("core.cache.seed-on-startup", false, "seed cache on startup by re-executing timed-expire worth of history")
+	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
+
+	f.Int("core.add-messages-max-failure-count", 10, "number of add messages failures before exiting program")
+	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
+	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
+	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")
+	f.Int("core.checkpoint-max-execution-gas", maxExecutionGas, "maximum amount of gas any given checkpoint is allowed to execute")
+	f.Int("core.checkpoint-max-to-prune", 2, "number of checkpoints to delete at a time, 0 for no limit")
+	f.Bool("core.checkpoint-prune-on-startup", false, "perform full database pruning on startup")
+	f.String("core.checkpoint-pruning-mode", "default", "Prune old checkpoints: 'on', 'off', or 'default'")
+
+	f.Bool("core.database.compact", false, "perform database compaction")
+	f.Bool("core.database.exit-after", false, "exit after loading or manipulating database")
+	f.Bool("core.database.metadata", false, "just print database metadata and exit")
+	f.Duration("core.database.save-interval", 0, "duration between saving database backups, 0 to disable")
+	f.Bool("core.database.save-on-startup", false, "save database backup on start")
+	f.String("core.database.save-path", "db_checkpoints", "path to save database backups in")
+
+	f.Bool("core.debug", false, "print extra debug messages in arbcore")
+	f.Bool("core.debug-timing", false, "print extra debug timing messages in arbcore")
+
+	f.Duration("core.idle-sleep", 5*time.Millisecond, "how long core thread should sleep when idle")
+
+	f.Bool("core.lazy-load-core-machine", false, "if the core machine should be loaded as it's run")
+	f.Bool("core.lazy-load-archive-queries", true, "if the archive queries should be loaded as they're run")
+
+	f.Int("core.message-process-count", 100, "maximum number of messages to process at a time")
+
+	f.Int("core.test.load-count", 0, "number of snapshots to load from database for profile test, zero to disable")
+	f.Int("core.test.reorg-to.l1-block", 0, "reorg to snapshot with given L1 block or before, zero to disable")
+	f.Int("core.test.reorg-to.l2-block", 0, "reorg to snapshot with given L2 block or before, zero to disable")
+	f.Int("core.test.reorg-to.log", 0, "reorg to snapshot with given log or before, zero to disable")
+	f.Int("core.test.reorg-to.message", 0, "reorg to snapshot with given message or before, zero to disable")
+	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
+	f.Int("core.test.run-until", 0, "run until gas is reached for profile test, zero to disable")
+
+}
+
+func AddPersistent(f *flag.FlagSet) {
+	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
+	f.String("persistent.chain", "", "path that chain specific state is located")
 }
 
 func AddHealthcheckOptions(f *flag.FlagSet) {
@@ -1019,4 +1112,11 @@ func UnmarshalMap(marshalled string) map[string]string {
 	}
 
 	return unmarshalled
+}
+
+func DatabaseInDirectory(path string) bool {
+	// Consider database present if file `CURRENT` in directory
+	_, err := os.Stat(path + "/CURRENT")
+
+	return err == nil
 }

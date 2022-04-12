@@ -22,10 +22,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 type RpcMode int
@@ -37,7 +39,18 @@ const (
 	NonMutatingMode
 )
 
-func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, config ServerConfig, plugins map[string]interface{}, inboxReader *monitor.InboxReader) (*rpc.Server, error) {
+var (
+	logger = log.With().Caller().Str("component", "web3").Logger()
+)
+
+type ServerConfig struct {
+	Mode          RpcMode
+	MaxCallAVMGas uint64
+	Tracing       configuration.Tracing
+	DevopsStubs   bool
+}
+
+func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, config ServerConfig, coreConfig *configuration.Core, plugins map[string]interface{}, inboxReader *monitor.InboxReader) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
 	var sequencerInboxWatcher *ethbridge.SequencerInboxWatcher
@@ -69,8 +82,17 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 			return nil, err
 		}
 
-		if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys)); err != nil {
-			return nil, err
+		if config.Tracing.Enable {
+			tracer := NewTracer(ethServer, coreConfig)
+			if err := s.RegisterName(config.Tracing.Namespace, tracer); err != nil {
+				return nil, err
+			}
+		}
+
+		if len(privateKeys) > 0 {
+			if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys)); err != nil {
+				return nil, err
+			}
 		}
 	}
 

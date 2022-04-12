@@ -17,6 +17,7 @@
 package monitor
 
 import (
+	"context"
 	"math/big"
 	"testing"
 	"time"
@@ -37,7 +38,7 @@ func PrepareArbCore(t *testing.T) (*Monitor, func()) {
 
 func PrepareArbCoreWithMexe(t *testing.T, mexe string) (*Monitor, func()) {
 	coreConfig := configuration.DefaultCoreSettingsNoMaxExecution()
-	monitor, err := NewMonitor(t.TempDir(), mexe, coreConfig)
+	monitor, err := NewInitializedMonitor(t.TempDir(), mexe, coreConfig)
 	test.FailIfError(t, err)
 
 	shutdown := func() {
@@ -62,7 +63,7 @@ func PrepareArbCoreWithMexe(t *testing.T, mexe string) (*Monitor, func()) {
 	return monitor, shutdown
 }
 
-func DeliverMessagesToCore(t *testing.T, arbCore core.ArbCore, delayedCount *big.Int, prevCount *big.Int, prevAcc common.Hash, messages []inbox.InboxMessage) {
+func DeliverMessagesToCore(ctx context.Context, t *testing.T, arbCore core.ArbCore, delayedCount *big.Int, prevCount *big.Int, prevAcc common.Hash, messages []inbox.InboxMessage) {
 	startAcc := prevAcc
 	var batchItems []inbox.SequencerBatchItem
 	for _, msg := range messages {
@@ -76,7 +77,7 @@ func DeliverMessagesToCore(t *testing.T, arbCore core.ArbCore, delayedCount *big
 
 	target := new(big.Int).Add(beforeCount, big.NewInt(int64(len(messages))))
 
-	err = core.DeliverMessagesAndWait(arbCore, prevCount, startAcc, batchItems, nil, nil)
+	err = core.DeliverMessagesAndWait(ctx, arbCore, prevCount, startAcc, batchItems, nil, nil)
 	test.FailIfError(t, err)
 
 	for {

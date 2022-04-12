@@ -19,11 +19,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	golog "log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -61,7 +64,7 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
+	logger = arblog.Logger.With().Str("component", "arb-relay").Logger()
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running relay")
@@ -84,7 +87,7 @@ func startup() error {
 		return nil
 	}
 
-	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
+	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core, gethlog.StreamHandler(os.Stderr, gethlog.JSONFormat())); err != nil {
 		return err
 	}
 

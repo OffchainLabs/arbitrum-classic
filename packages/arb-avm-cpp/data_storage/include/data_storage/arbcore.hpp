@@ -19,8 +19,8 @@
 
 #include <avm/machine.hpp>
 #include <avm/machinethread.hpp>
-#include <avm/valueloader.hpp>
 #include <avm_values/bigint.hpp>
+#include <avm_values/valueloader.hpp>
 #include <data_storage/combinedmachinecache.hpp>
 #include <data_storage/datacursor.hpp>
 #include <data_storage/datastorage.hpp>
@@ -41,6 +41,7 @@
 #include <vector>
 #ifdef __linux__
 #include <pthread.h>
+#include <filesystem>
 #endif
 
 namespace rocksdb {
@@ -68,13 +69,18 @@ struct RawMessageInfo {
           accumulator(accumulator_) {}
 };
 
+struct DebugPrintCollectionOptions {
+    uint256_t log_number_begin;
+    uint256_t log_number_end;
+};
+
 class ArbCore {
    public:
     typedef enum {
         MESSAGES_EMPTY,    // Out: Ready to receive messages
         MESSAGES_READY,    // In:  Messages in vector
-        MESSAGES_SUCCESS,  // Out:  Messages processed successfully
-        MESSAGES_ERROR     // Out: Error processing messages
+        MESSAGES_SUCCESS,  // Out: Messages processed successfully
+        MESSAGES_ERROR,    // Out: Error receiving messages
     } message_status_enum;
 
     struct logscursor_logs {
@@ -92,13 +98,48 @@ class ArbCore {
         std::optional<uint256_t> reorg_batch_items;
     };
 
+    struct ThreadDataStruct {
+        ValueCache cache;
+        MachineExecutionConfig execConfig;
+        uint256_t begin_message;
+        bool perform_pruning;
+        bool perform_save_rocksdb_checkpoint;
+        uint256_t next_checkpoint_gas;
+        uint256_t next_basic_cache_gas;
+        uint32_t add_messages_failure_count;
+        std::chrono::time_point<std::chrono::steady_clock>
+            next_rocksdb_save_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            profiling_begin_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            last_messages_ready_check_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            last_run_machine_check_timepoint;
+        std::chrono::time_point<std::chrono::steady_clock>
+            last_restart_machine_check_timepoint;
+
+        ThreadDataStruct(const uint256_t& _begin_message,
+                         const uint256_t& _next_checkpoint_gas,
+                         const uint256_t& _next_basic_cache_gas)
+            : cache(5, 0),
+              execConfig(),
+              begin_message(_begin_message),
+              perform_pruning(false),
+              perform_save_rocksdb_checkpoint(false),
+              next_checkpoint_gas(_next_checkpoint_gas),
+              next_basic_cache_gas(_next_basic_cache_gas),
+              add_messages_failure_count(0),
+              next_rocksdb_save_timepoint(),
+              profiling_begin_timepoint(std::chrono::steady_clock::now()),
+              last_messages_ready_check_timepoint(profiling_begin_timepoint),
+              last_run_machine_check_timepoint(profiling_begin_timepoint),
+              last_restart_machine_check_timepoint(profiling_begin_timepoint) {}
+    };
+
    private:
     std::unique_ptr<std::thread> core_thread;
 
     ArbCoreConfig coreConfig{};
-
-    // Core thread input
-    std::atomic<bool> arbcore_abort{false};
 
     // Core thread input
     std::mutex checkpoint_pruning_mutex;
@@ -125,11 +166,13 @@ class ArbCore {
     // Core thread inbox status input/output. Core thread will update if and
     // only if set to MESSAGES_READY
     std::atomic<message_status_enum> message_data_status{MESSAGES_EMPTY};
+    std::string message_data_error_string;
 
     // Core thread inbox input
     message_data_struct message_data;
 
     // Core thread inbox output
+    std::atomic<bool> core_error{false};
     std::string core_error_string;
 
     // Core thread logs output
@@ -137,8 +180,6 @@ class ArbCore {
 
     // Core thread machine state output
     std::atomic<bool> machine_idle{false};
-    std::atomic<bool> machine_error{false};
-    std::string machine_error_string;
 
     std::shared_mutex last_machine_mutex;
     std::unique_ptr<Machine> last_machine;
@@ -155,6 +196,8 @@ class ArbCore {
     ~ArbCore() { abortThread(); }
     void printDatabaseMetadata();
     InitializeResult initialize(const LoadedExecutable& executable);
+    InitializeResult applyConfig();
+
     [[nodiscard]] bool initialized() const;
     void operator()();
 
@@ -230,9 +273,9 @@ class ArbCore {
         ValueCache& value_cache,
         bool lazy_load) const;
 
+   public:
     [[nodiscard]] ValueLoader makeValueLoader() const;
 
-   public:
     // To be deprecated, use checkpoints instead
     template <class T>
     std::unique_ptr<T> getMachine(uint256_t machineHash,
@@ -265,10 +308,12 @@ class ArbCore {
     // Controlling checkpoint pruning
     void updateCheckpointPruningGas(uint256_t gas);
 
+   private:
+    uint256_t getCheckpointPruningGas();
+
    public:
     // Managing machine state
     bool machineIdle();
-    std::optional<std::string> machineClearError();
     std::unique_ptr<Machine> getLastMachine();
     MachineOutput getLastMachineOutput();
     uint256_t machineMessagesRead();
@@ -283,20 +328,20 @@ class ArbCore {
         const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
     std::string messagesClearError();
+    bool checkError();
+    std::string getErrorString();
 
    public:
     // Logs Cursor interaction
     bool logsCursorRequest(size_t cursor_index, uint256_t count);
     ValueResult<logscursor_logs> logsCursorGetLogs(size_t cursor_index);
-    [[nodiscard]] bool logsCursorCheckError(size_t cursor_index) const;
-    std::string logsCursorClearError(size_t cursor_index);
     bool logsCursorConfirmReceived(size_t cursor_index);
     [[nodiscard]] ValueResult<uint256_t> logsCursorPosition(
         size_t cursor_index) const;
 
    private:
     // Logs cursor internal functions
-    void handleLogsCursorRequested(ReadTransaction& tx,
+    bool handleLogsCursorRequested(ReadTransaction& tx,
                                    size_t cursor_index,
                                    ValueCache& cache);
     rocksdb::Status handleLogsCursorReorg(size_t cursor_index,
@@ -312,18 +357,26 @@ class ArbCore {
                                            uint256_t max_gas,
                                            bool go_over_gas,
                                            bool allow_slow_lookup);
+    ValueResult<std::vector<MachineEmission<Value>>>
+    advanceExecutionCursorWithTracing(
+        ExecutionCursor& execution_cursor,
+        uint256_t max_gas,
+        bool go_over_gas,
+        bool allow_slow_lookup,
+        const DebugPrintCollectionOptions& collectionOptions);
 
     std::unique_ptr<Machine> takeExecutionCursorMachine(
         ExecutionCursor& execution_cursor);
 
    private:
     // Execution cursor internal functions
-    rocksdb::Status advanceExecutionCursorImpl(
+    ValueResult<std::vector<MachineEmission<Value>>> advanceExecutionCursorImpl(
         ExecutionCursor& execution_cursor,
         uint256_t total_gas_used,
         bool go_over_gas,
         size_t message_group_size,
-        bool allow_slow_lookup);
+        bool allow_slow_lookup,
+        const std::optional<DebugPrintCollectionOptions>& collectionOptions);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,
@@ -417,9 +470,6 @@ class ArbCore {
 
     [[nodiscard]] bool isValid(const ReadTransaction& tx,
                                const InboxState& fully_processed_inbox) const;
-    std::variant<rocksdb::Status, ExecutionCursor> getExecutionCursorAtBlock(
-        const uint256_t& block_number,
-        bool allow_slow_lookup);
     std::variant<rocksdb::Status, ExecutionCursor> findCloserExecutionCursor(
         ReadTransaction& tx,
         std::optional<ExecutionCursor> execution_cursor,
@@ -436,12 +486,12 @@ class ArbCore {
 
    public:
     // Public sideload interaction
-    ValueResult<std::unique_ptr<Machine>> getMachineAtBlock(
-        const uint256_t& block_number,
-        bool allow_slow_lookup);
+    std::variant<rocksdb::Status, ExecutionCursor>
+    getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
+                                   bool allow_slow_lookup);
 
-    ValueResult<uint256_t> getSideloadPosition(ReadTransaction& tx,
-                                               const uint256_t& block_number);
+    ValueResult<uint256_t> getGasAtBlock(ReadTransaction& tx,
+                                         const uint256_t& block_number);
 
    private:
     // Private sideload interaction
@@ -466,16 +516,19 @@ class ArbCore {
                                        uint64_t checkpoint_max_to_prune);
 
    private:
-    void printElapsed(
-        const std::chrono::time_point<std::chrono::steady_clock>& begin_time,
-        const std::chrono::time_point<std::chrono::steady_clock>& end_time,
-        const std::string& message) const;
-    void printMachineOutputInfo(const std::string& msg,
-                                MachineOutput& machine_output) const;
-    std::variant<rocksdb::Status, CheckpointVariant> getMaxCheckpoint(
+    void printElapsed(const std::chrono::time_point<std::chrono::steady_clock>&
+                          begin_timepoint,
+                      const std::string& message) const;
+    uint64_t countCheckpoints(ReadTransaction& tx);
+    std::variant<rocksdb::Status, CheckpointVariant> getCheckpointNumber(
+        ReadTransaction& tx,
+        uint256_t& number);
+    std::variant<rocksdb::Status, CheckpointVariant> getLastCheckpoint(
         ReadTransaction& tx);
-    std::unique_ptr<MachineThread> getMachineThreadFromSimpleCheck(
-        const std::function<bool(const MachineOutput&)>& check_output);
+    void saveRocksdbCheckpoint(const std::filesystem::path& save_rocksdb_path,
+                               ReadTransaction& tx);
+    void setCoreError(const std::string& message);
+    bool threadBody(ThreadDataStruct& thread_data);
 };
 
 uint64_t seconds_since_epoch();
