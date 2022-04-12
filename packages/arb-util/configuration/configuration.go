@@ -517,7 +517,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	AddL1PostingStrategyOptions(f, "validator.")
 
 	f.Bool("validator.only-create-wallet-contract", false, "only create smart contract wallet contract, then exit")
-	f.String("validator.contract-wallet-address-filename", "", "json file that validator smart contract wallet address is stored in")
+	f.String("validator.contract-wallet-address-filename", "chainState.json", "json file that validator smart contract wallet address is stored in")
 	f.String("validator.contract-wallet-address", "", "validator smart contract wallet public address")
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "validator utilities address")
@@ -808,9 +808,6 @@ func resolveDirectoryNames(out *Config, wallet *Wallet) error {
 	}
 
 	// Make validator smart contract wallet address relative to chain directory if not already absolute
-	if out.Validator.ContractWalletAddressFilename == "" {
-		out.Validator.ContractWalletAddressFilename = "chainState.json"
-	}
 	if !filepath.IsAbs(out.Validator.ContractWalletAddressFilename) {
 		out.Validator.ContractWalletAddressFilename = path.Join(out.Persistent.Chain, out.Validator.ContractWalletAddressFilename)
 	}
