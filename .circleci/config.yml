@@ -38,8 +38,7 @@ workflows:
       - cpp-avm-build
       - cpp-avm-asan
       - cpp-avm-tsan
-      - arb-ts
-      - arb-ts-audit
+      - package-audit
       - ethbridge
       - ethbridge-coverage
       - backend:
@@ -66,35 +65,7 @@ jobs:
             cd packages/arb-node-core
             go mod download
       - save_cache: *save_go_cache
-  arb-ts:
-    docker:
-      - image: offchainlabs/frontend-base:0.4.0
-    environment:
-      TEST_RESULTS: *test-path
-    steps:
-      - checkout
-      - run:
-          name: 'Pull Submodules'
-          command: |
-            git submodule update --init --recommend-shallow packages/arb-os
-      - run: mkdir -p $TEST_RESULTS
-      - restore_cache: *restore_yarn_cache
-      - run: yarn install --cache-folder ~/.cache/yarn
-      - save_cache: *save_yarn_cache
-      - run:
-          name: test arb-ts
-          command: |
-            yarn
-            yarn build --reporter-options output=${TEST_RESULTS}/arb-ts.xml
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-ts-lint.xml
-          working_directory: /home/user/project/packages/arb-ts
-      - run:
-          name: Upload Coverage to Codecov
-          command: codecovbash
-          working_directory: /home/user/project/packages
-      - store_test_results:
-          path: *test-path
-  arb-ts-audit:
+  package-audit:
     docker:
       - image: offchainlabs/frontend-base:0.4.0
     steps:
@@ -128,7 +99,6 @@ jobs:
           name: install
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            yarn build
           working_directory: /home/user/project
       - run:
           name: test arb-bridge-eth
@@ -368,7 +338,6 @@ jobs:
           name: install
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            yarn build
           working_directory: /home/user/project
       - run:
           name: test arb-bridge-peripherals l1
