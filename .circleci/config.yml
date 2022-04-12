@@ -99,7 +99,6 @@ jobs:
           name: install
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            yarn build
           working_directory: /home/user/project
       - run:
           name: test arb-bridge-eth
@@ -339,7 +338,6 @@ jobs:
           name: install
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            yarn build
           working_directory: /home/user/project
       - run:
           name: test arb-bridge-peripherals l1
