@@ -20,7 +20,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const RollupCreator = await ethers.getContractFactory('RollupCreator')
   const rollupCreator = RollupCreator.attach(dep.address).connect(deployer)
-  await rollupCreator.setTemplates(
+  const tx = await rollupCreator.setTemplates(
     bridgeCreator.address,
     rollup.address,
     challengeFactory.address,
@@ -28,6 +28,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     RollupAdminFacet.address,
     RollupUserFacet.address
   )
+  await tx.wait()
 }
 
 module.exports = func

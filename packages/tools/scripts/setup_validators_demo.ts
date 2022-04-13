@@ -2,6 +2,7 @@ import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 import { Inbox__factory } from 'arb-ts'
+import { RollupAdminFacet__factory } from 'arb-ts/src/lib/abi/factories/RollupAdminFacet__factory'
 import * as yargs from 'yargs'
 import * as fs from 'fs-extra'
 import { setupValidatorStates } from './setup_validators'
@@ -26,9 +27,10 @@ async function setupRollup(
   // TODO: is the L2 sequencer the 1st unlocked account in the L1 node?
   const network = 'local_development'
 
-  execSync(
+  const stdOut = execSync(
     `yarn workspace arb-bridge-eth hardhat create-chain --sequencer ${sequencerAddress} --network ${network}`
   )
+  console.log(stdOut.toString('utf-8'))
 
   const fileName = `rollup-${network}.json`
   const file = fs.readFileSync(`../arb-bridge-eth/${fileName}`).toString()
@@ -115,6 +117,21 @@ async function setupValidators(
     password: 'pass',
     blocktime: blocktime,
   }
+
+  console.log('Removing whitelist from L1 inbox.')
+  const inbox = await Inbox__factory.connect(config.inbox_address, wallet)
+  const whitelist = await inbox.whitelist()
+  const rollupAdmin = await RollupAdminFacet__factory.connect(
+    config.rollup_address,
+    wallet
+  )
+  const tx = await rollupAdmin.updateWhitelistConsumers(
+    whitelist,
+    '0x0000000000000000000000000000000000000000',
+    [inbox.address]
+  )
+  await tx.wait()
+  console.log('Whitelist removed.')
 
   await setupValidatorStates(count, 'local', config)
 
