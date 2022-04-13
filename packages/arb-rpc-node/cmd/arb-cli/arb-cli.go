@@ -379,7 +379,7 @@ func completer(t prompt.Document) []prompt.Suggest {
 }
 
 func run(ctx context.Context) error {
-	if len(os.Args) != 3 {
+	if len(os.Args) < 3 {
 		fmt.Println("Expected: arb-cli rpcurl privkey")
 	}
 	arbUrl := os.Args[1]
@@ -407,6 +407,13 @@ func run(ctx context.Context) error {
 		client: client,
 		auth:   auth,
 		fb:     nil,
+	}
+
+	if len(os.Args) >= 3 {
+		if err := handleCommand(os.Args[3:]); err != nil {
+			return fmt.Errorf("error running command: %w", err)
+		}
+		return nil
 	}
 
 	p := prompt.New(
