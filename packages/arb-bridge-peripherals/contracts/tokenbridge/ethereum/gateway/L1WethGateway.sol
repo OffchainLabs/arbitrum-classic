@@ -55,9 +55,10 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         bytes memory _outboundCalldata
     ) internal override returns (uint256) {
         return
-            sendTxToL2(
+            sendTxToL2CustomRefund(
                 inbox,
                 counterpartGateway,
+                _refundTo,
                 _from,
                 // msg.value does not include weth withdrawn from user, we need to add in that amount
                 msg.value + _tokenAmount,
