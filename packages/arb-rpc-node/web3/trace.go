@@ -44,7 +44,7 @@ type TraceAction struct {
 	CallType string          `json:"callType,omitempty"`
 	From     common.Address  `json:"from"`
 	Gas      hexutil.Uint64  `json:"gas"`
-	Input    hexutil.Bytes   `json:"input,omitempty"`
+	Input    *hexutil.Bytes  `json:"input,omitempty"`
 	Init     hexutil.Bytes   `json:"init,omitempty"`
 	To       *common.Address `json:"to,omitempty"`
 	Value    *hexutil.Big    `json:"value"`
@@ -205,7 +205,8 @@ func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, 
 				}
 			} else {
 				frameType = "call"
-				action.Input = callFrame.Call.Data
+				tmpInput := hexutil.Bytes(callFrame.Call.Data)
+				action.Input = &tmpInput
 				var toTmp common.Address
 				if callFrame.Call.To != nil {
 					toTmp = callFrame.Call.To.ToEthAddress()
@@ -249,6 +250,26 @@ func renderTraceFrames(txRes *evm.TxResult, trace *evm.EVMTrace) ([]TraceFrame, 
 			frames = append(frames, trackedFrame{f: nested, traceAddress: nestedTrace})
 		}
 	}
+	sort.SliceStable(resFrames, func(i, j int) bool {
+		addr1 := resFrames[i].TraceAddress
+		addr2 := resFrames[j].TraceAddress
+		maxLength := len(addr1)
+		if len(addr2) > maxLength {
+			maxLength = len(addr2)
+		}
+		for i := 0; i < maxLength; i++ {
+			if i >= len(addr1) {
+				return true
+			}
+			if i >= len(addr2) {
+				return false
+			}
+			if addr1[i] < addr2[i] {
+				return true
+			}
+		}
+		return false
+	})
 	return resFrames, nil
 }
 

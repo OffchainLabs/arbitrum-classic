@@ -2,13 +2,50 @@ package wsbroadcastserver
 
 import (
 	"context"
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
+	"errors"
+	"io"
 	"io/ioutil"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 )
+
+type chainedReader struct {
+	readers []io.Reader
+}
+
+func (cr *chainedReader) Read(b []byte) (n int, err error) {
+	for len(cr.readers) > 0 {
+		n, err = cr.readers[0].Read(b)
+		if errors.Is(err, io.EOF) {
+			cr.readers = cr.readers[1:]
+			if n == 0 {
+				continue // EOF and empty, skip to next
+			} else {
+				// The Read interface specifies some data can be returned along with an EOF.
+				if len(cr.readers) != 1 {
+					// If this isn't the last reader, return the data without the EOF since this
+					// may not be the end of all the readers.
+					return n, nil
+				} else {
+					return
+				}
+			}
+		}
+		break
+	}
+	return
+}
+
+func (cr *chainedReader) add(r io.Reader) *chainedReader {
+	if r != nil {
+		cr.readers = append(cr.readers, r)
+	}
+	return cr
+}
 
 func logError(err error, msg string) {
 	if !strings.Contains(err.Error(), "use of closed network connection") {
@@ -16,10 +53,10 @@ func logError(err error, msg string) {
 	}
 }
 
-func ReadData(ctx context.Context, conn net.Conn, idleTimeout time.Duration, state ws.State) ([]byte, ws.OpCode, error) {
+func ReadData(ctx context.Context, conn net.Conn, earlyFrameData io.Reader, idleTimeout time.Duration, state ws.State) ([]byte, ws.OpCode, error) {
 	controlHandler := wsutil.ControlFrameHandler(conn, state)
 	reader := wsutil.Reader{
-		Source:          conn,
+		Source:          (&chainedReader{}).add(earlyFrameData).add(conn),
 		State:           state,
 		CheckUTF8:       true,
 		SkipHeaderCheck: false,

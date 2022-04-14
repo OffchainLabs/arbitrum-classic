@@ -1,7 +1,8 @@
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
-import { Inbox__factory } from 'arb-ts'
+import { Contract } from 'ethers'
+import InboxAbi from './Inbox.json'
 import * as yargs from 'yargs'
 import * as fs from 'fs-extra'
 import { setupValidatorStates } from './setup_validators'
@@ -66,7 +67,7 @@ async function initializeClientWallets(inboxAddress: string): Promise<void> {
     '0x755449b9901f91deC52DB39AF8c655206C63eD8e',
   ]
 
-  const inbox = Inbox__factory.connect(inboxAddress, wallet)
+  const inbox = new Contract(inboxAddress, InboxAbi).connect(wallet)
   const amount = parseEther('100')
 
   for (const address of addresses) {

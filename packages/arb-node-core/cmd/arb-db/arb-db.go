@@ -23,6 +23,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/pkg/errors"
 	golog "log"
+	"os"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -53,8 +54,9 @@ func startup() error {
 	config, err := configuration.ParseDBTool()
 	if err != nil || len(config.Persistent.Chain) == 0 {
 		fmt.Printf("\n")
-		fmt.Printf("Sample usage: arb-db --persistent.chain='.arbitrum/mainnet' --core.database.metadata\n")
-		fmt.Printf("              arb-db --persistent.chain='.arbitrum/mainnet' --core.database.prune-on-startup\n")
+		fmt.Printf("Sample usage: %s --persistent.chain='.arbitrum/mainnet' --core.database.metadata\n", os.Args[0])
+		fmt.Printf("              %s --persistent.chain='.arbitrum/mainnet' --core.database.make-validator\n", os.Args[0])
+		fmt.Printf("              %s --persistent.chain='.arbitrum/mainnet' --core.database.prune-on-startup\n", os.Args[0])
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			fmt.Printf("%s\n", err.Error())
 		}
@@ -62,24 +64,14 @@ func startup() error {
 		return nil
 	}
 
-	if config.Core.Database.MakeValidator {
-		// Exit immediately after converting database
-		return cmdhelp.NodeToValidator(config)
-	}
-
 	// Make sure arbcore does not continue to run
 	config.Core.Database.ExitAfter = true
 
 	var databasePath string
-	databasePath = config.GetNodeDatabasePath()
+	databasePath = config.GetDatabasePath()
 	if !configuration.DatabaseInDirectory(databasePath) {
-		databasePath = config.GetValidatorDatabasePath()
 		if !configuration.DatabaseInDirectory(databasePath) {
-			// The db directory does not exist, try just the supplied chain directory
-			databasePath = config.Persistent.Chain
-			if !configuration.DatabaseInDirectory(databasePath) {
-				return errors.New("unable to access database in " + databasePath)
-			}
+			return errors.New("unable to access database in " + databasePath)
 		}
 	}
 

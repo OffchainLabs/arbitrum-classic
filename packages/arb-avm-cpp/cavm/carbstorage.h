@@ -28,6 +28,7 @@ extern "C" {
 
 typedef struct {
     int32_t message_process_count;
+    int32_t add_messages_max_failure_count;
     int32_t checkpoint_load_gas_cost;
     int32_t checkpoint_load_gas_factor;
     int32_t checkpoint_max_execution_gas;
@@ -44,7 +45,6 @@ typedef struct {
     int32_t lazy_load_core_machine;
     int32_t lazy_load_archive_queries;
     int32_t checkpoint_prune_on_startup;
-    int32_t checkpoint_pruning_age_seconds;
     PruningMode checkpoint_pruning_mode;
     int32_t checkpoint_max_to_prune;
     int32_t database_compact;

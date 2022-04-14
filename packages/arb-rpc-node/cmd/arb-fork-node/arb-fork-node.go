@@ -158,6 +158,9 @@ func startup() error {
 		fork.LastMessage,
 		*persistState,
 	)
+	if err != nil {
+		return err
+	}
 
 	defer cancel()
 
@@ -178,7 +181,7 @@ func startup() error {
 			MaxGas:            big.NewInt(0),
 			GasPriceBid:       big.NewInt(0),
 		}
-		if _, err := backend.AddInboxMessage(deposit, sender); err != nil {
+		if _, err := backend.AddInboxMessage(ctx, deposit, sender); err != nil {
 			return err
 		}
 	}
@@ -217,7 +220,7 @@ func startup() error {
 				},
 			}),
 		}
-		if _, err := backend.AddInboxMessage(ownerAdd, common.Address{}); err != nil {
+		if _, err := backend.AddInboxMessage(ctx, ownerAdd, common.Address{}); err != nil {
 			return err
 		}
 
@@ -232,7 +235,7 @@ func startup() error {
 				},
 			}),
 		}
-		if _, err := backend.AddInboxMessage(setChainId, common.Address{}); err != nil {
+		if _, err := backend.AddInboxMessage(ctx, setChainId, common.Address{}); err != nil {
 			return err
 		}
 	}

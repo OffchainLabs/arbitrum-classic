@@ -38,8 +38,7 @@ workflows:
       - cpp-avm-build
       - cpp-avm-asan
       - cpp-avm-tsan
-      - arb-ts
-      - arb-ts-audit
+      - package-audit
       - ethbridge
       - ethbridge-coverage
       - backend:
@@ -57,7 +56,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.4.3
+      - image: offchainlabs/backend-base:0.6.1
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -66,37 +65,9 @@ jobs:
             cd packages/arb-node-core
             go mod download
       - save_cache: *save_go_cache
-  arb-ts:
+  package-audit:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
-    environment:
-      TEST_RESULTS: *test-path
-    steps:
-      - checkout
-      - run:
-          name: 'Pull Submodules'
-          command: |
-            git submodule update --init --recommend-shallow packages/arb-os
-      - run: mkdir -p $TEST_RESULTS
-      - restore_cache: *restore_yarn_cache
-      - run: yarn install --cache-folder ~/.cache/yarn
-      - save_cache: *save_yarn_cache
-      - run:
-          name: test arb-ts
-          command: |
-            yarn
-            yarn build --reporter-options output=${TEST_RESULTS}/arb-ts.xml
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-ts-lint.xml
-          working_directory: /home/user/project/packages/arb-ts
-      - run:
-          name: Upload Coverage to Codecov
-          command: codecovbash
-          working_directory: /home/user/project/packages
-      - store_test_results:
-          path: *test-path
-  arb-ts-audit:
-    docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
     steps:
       - checkout
       - run:
@@ -112,7 +83,7 @@ jobs:
           working_directory: /home/user/project
   ethbridge:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -128,7 +99,6 @@ jobs:
           name: install
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            yarn build
           working_directory: /home/user/project
       - run:
           name: test arb-bridge-eth
@@ -148,7 +118,7 @@ jobs:
 
   ethbridge-coverage:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -183,7 +153,7 @@ jobs:
           path: *test-path
   cpp-avm-build:
     docker:
-      - image: offchainlabs/cpp-base:0.4.1
+      - image: offchainlabs/cpp-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -207,7 +177,7 @@ jobs:
             - ./project/packages/arb-avm-cpp/build/*
   cpp-avm-asan:
     docker:
-      - image: offchainlabs/cpp-asan-base:0.4.1
+      - image: offchainlabs/cpp-asan-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -237,7 +207,7 @@ jobs:
 
   cpp-avm-tsan:
     docker:
-      - image: offchainlabs/cpp-tsan-base:0.4.1
+      - image: offchainlabs/cpp-tsan-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -264,7 +234,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.4.3
+      - image: offchainlabs/backend-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -305,7 +275,9 @@ jobs:
 
   backend-rpc:
     docker:
-      - image: offchainlabs/backend-base:0.4.3
+      - image: offchainlabs/backend-base:0.6.1
+      - image: openethereum/openethereum:v3.3.4
+        command: --config dev-insecure --tracing=on
     resource_class: large
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
@@ -330,6 +302,10 @@ jobs:
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-rpc-node
       - run:
+          name: test arb-rpc-node/open ethereum trace
+          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node2.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES -run TestTraceOpenEthereum --tags openethereumtest ./...
+          working_directory: /home/user/project/packages/arb-rpc-node/dev
+      - run:
           name: test arb-rpc-node/dev upgrade
           command: gotestsum --format short-verbose -- -upgrade -race -run TestFees TestEthCall -timeout 15m
           working_directory: /home/user/project/packages/arb-rpc-node/dev/
@@ -339,7 +315,7 @@ jobs:
 
   arb-bridge-peripherals:
     docker:
-      - image: offchainlabs/integration-base:0.4.3
+      - image: offchainlabs/integration-base:0.6.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -368,7 +344,6 @@ jobs:
           name: install
           command: |
             yarn install --cache-folder ~/.cache/yarn
-            yarn build
           working_directory: /home/user/project
       - run:
           name: test arb-bridge-peripherals l1
