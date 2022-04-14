@@ -103,6 +103,18 @@ abstract contract GatewayRouter is TokenGateway {
             );
     }
 
+    /**
+     * @notice Bridge ERC20 token using the registered or otherwise default gateway
+     * @dev Some legacy gateway might not have the outboundTransferCustomRefund method and will revert, in such case use outboundTransfer instead
+     * @param _token L1 address of ERC20
+     * @param _refundTo account to be credited with the excess gas refund in the L2, subject to L2 alias rewrite if its a L1 contract
+     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param _amount Token Amount
+     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param _gasPriceBid Gas price for L2 execution
+     * @param _data encoded data from router and user
+     * @return res abi encoded inbox sequence number
+     */
     function outboundTransferCustomRefund(
         address _token,
         address _refundTo,
