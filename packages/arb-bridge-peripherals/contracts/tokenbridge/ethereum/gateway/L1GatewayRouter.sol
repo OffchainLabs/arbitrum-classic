@@ -222,7 +222,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal {
+    ) internal view {
         // when sending a L1 to L2 transaction, we expect the user to send
         // eth in flight in order to pay for L2 gas costs
         // this check prevents users from misconfiguring the msg.value
@@ -246,7 +246,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable override onlyWhitelisted returns (bytes memory) {
+    ) public payable override returns (bytes memory) {
         _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
         // will revert if msg.sender is not whitelisted
@@ -261,7 +261,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable override onlyWhitelisted returns (bytes memory) {
+    ) public payable override returns (bytes memory) {
         // _refundTo is subject to L2 alias rewrite
         require(_refundTo != address(0), "INVALID_REFUND_ADDR");
         _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
