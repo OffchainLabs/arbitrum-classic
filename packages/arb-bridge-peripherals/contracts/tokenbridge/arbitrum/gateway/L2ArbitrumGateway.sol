@@ -123,6 +123,18 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
+    function outboundTransferCustomRefund(
+        address _l1Token,
+        address _to,
+        address, /* _refundTo */
+        uint256 _amount,
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
+        bytes calldata _data
+    ) public payable virtual override returns (bytes memory res) {
+        return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
+    }
+
     /**
      * @notice Initiates a token withdrawal from Arbitrum to Ethereum
      * @param _l1Token l1 address of token

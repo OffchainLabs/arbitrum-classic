@@ -57,15 +57,16 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
 
     // end of inline reentrancy guard
 
-    function outboundTransfer(
+    function outboundTransferCustomRefund(
         address _l1Token,
+        address _refundTo,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override nonReentrant returns (bytes memory res) {
-        return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
+        return super.outboundTransferCustomRefund(_l1Token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     function finalizeInboundTransfer(
