@@ -548,7 +548,7 @@ contract RollupCore is IRollupCore {
                 assertion.afterState.inboxCount <= memoryFrame.currentInboxSize,
                 "INBOX_PAST_END"
             );
-            // Insure inbox tip after assertion is included in a sequencer-inbox batch and return inbox acc; this gives replay protection against the state of the inbox
+            // Ensure inbox tip after assertion is included in a sequencer-inbox batch and return inbox acc; this gives replay protection against the state of the inbox
             (memoryFrame.sequencerBatchEnd, memoryFrame.sequencerBatchAcc) = inputDataFrame
                 .sequencerInbox
                 .proveInboxContainsMessage(sequencerBatchProof, assertion.afterState.inboxCount);
