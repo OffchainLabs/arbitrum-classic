@@ -63,7 +63,7 @@ void waitForDelivery(std::shared_ptr<ArbCore>& arbCore) {
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    if (arbCore->checkError()) {
+    if (status == ArbCore::MESSAGES_ERROR) {
         INFO(arbCore->getErrorString());
     }
     REQUIRE(status == ArbCore::MESSAGES_SUCCESS);

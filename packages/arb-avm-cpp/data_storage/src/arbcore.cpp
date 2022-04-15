@@ -111,10 +111,23 @@ bool ArbCore::machineIdle() {
 
 ArbCore::message_status_enum ArbCore::messagesStatus() {
     auto current_status = message_data_status.load();
-    if (!core_error && current_status != MESSAGES_READY) {
+    if (current_status == MESSAGES_SUCCESS) {
         message_data_status = MESSAGES_EMPTY;
     }
+
     return current_status;
+}
+
+std::string ArbCore::messagesClearError() {
+    if (message_data_status != ArbCore::MESSAGES_ERROR) {
+        return "";
+    }
+
+    auto str = message_data_error_string;
+    message_data_error_string.clear();
+    message_data_status = MESSAGES_EMPTY;
+
+    return str;
 }
 
 bool ArbCore::checkError() {
@@ -1408,7 +1421,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         auto status = reorgToMessageCountOrBefore(0, false, thread_data.cache);
         if (!status.ok()) {
             std::cerr << "Error in core thread calling "
-                         "reorgCheckpoints: "
+                         "reorgToMessageCountOrBefore: "
                       << status.ToString() << std::endl;
             setCoreError(status.ToString());
             return false;
@@ -1427,11 +1440,25 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         try {
             auto add_status = addMessages(message_data, thread_data.cache);
             if (!add_status.status.ok()) {
-                setCoreError(add_status.status.ToString());
-                std::cerr << "ArbCore addMessages error: " << core_error_string
-                          << "\n";
-                return false;
+                thread_data.add_messages_failure_count++;
+                message_data_error_string = add_status.status.ToString();
+                message_data_status = MESSAGES_ERROR;
+                if (coreConfig.add_messages_max_failure_count > 0 &&
+                    thread_data.add_messages_failure_count >=
+                        coreConfig.add_messages_max_failure_count) {
+                    std::cerr << "Exiting after arbCore addMessages failed "
+                              << thread_data.add_messages_failure_count
+                              << " times: " << message_data_error_string
+                              << "\n";
+
+                    return false;
+                }
+
+                std::cerr << "ArbCore addMessages non-fatal error "
+                          << thread_data.add_messages_failure_count << ": "
+                          << message_data_error_string << "\n";
             } else {
+                thread_data.add_messages_failure_count = 0;
                 machine_idle = false;
                 message_data_status = MESSAGES_SUCCESS;
                 if (add_status.data.has_value()) {
@@ -1444,8 +1471,10 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             throw;
         } catch (const std::exception& e) {
             setCoreError(e.what());
-            std::cerr << "ArbCore addMessages exception: " << core_error_string
-                      << "\n";
+            message_data_error_string = e.what();
+            message_data_status = MESSAGES_ERROR;
+            std::cerr << "ArbCore addMessages exception: "
+                      << message_data_error_string << "\n";
             return false;
         }
         if (coreConfig.debug_timing) {
@@ -1602,7 +1631,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         if (thread_data.perform_save_rocksdb_checkpoint) {
             thread_data.perform_save_rocksdb_checkpoint = false;
 
-            saveRocksdbCheckpoint(thread_data.save_rocksdb_path, tx);
+            saveRocksdbCheckpoint(coreConfig.database_save_path, tx);
         }
 
         auto output = getLastMachineOutput();
@@ -1724,7 +1753,6 @@ void ArbCore::operator()() {
 #endif
     auto maxGas = maxCheckpointGas();
     ThreadDataStruct thread_data(
-        coreConfig.database_save_path,
         core_machine->machine_state.output.fully_processed_inbox.count,
         maxGas + coreConfig.checkpoint_gas_frequency,
         maxGas + coreConfig.basic_machine_cache_interval);
@@ -1735,7 +1763,7 @@ void ArbCore::operator()() {
         thread_data.next_rocksdb_save_timepoint =
             std::chrono::steady_clock::now() +
             std::chrono::seconds(coreConfig.database_save_interval);
-        std::filesystem::create_directories(thread_data.save_rocksdb_path);
+        std::filesystem::create_directories(coreConfig.database_save_path);
     }
 
     try {
@@ -3098,6 +3126,8 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
             if (checking_prev) {
                 seq_batch_it->Seek(start_slice);
                 if (!seq_batch_it->status().ok()) {
+                    std::cerr << "addMessages: previous batch item error: "
+                              << seq_batch_it->status().ToString() << std::endl;
                     return {seq_batch_it->status(), std::nullopt};
                 }
                 if (!seq_batch_it->Valid()) {
@@ -3361,6 +3391,8 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
         auto status =
             reorgToMessageCountOrBefore(*reorging_to_count, false, cache);
         if (!status.ok()) {
+            std::cerr << "reorg failed in addMessages: " << status.ToString()
+                      << std::endl;
             return {status, std::nullopt};
         }
 

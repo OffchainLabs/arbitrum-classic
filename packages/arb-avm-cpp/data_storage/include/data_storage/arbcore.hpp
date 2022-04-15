@@ -79,7 +79,8 @@ class ArbCore {
     typedef enum {
         MESSAGES_EMPTY,    // Out: Ready to receive messages
         MESSAGES_READY,    // In:  Messages in vector
-        MESSAGES_SUCCESS,  // Out:  Messages processed successfully
+        MESSAGES_SUCCESS,  // Out: Messages processed successfully
+        MESSAGES_ERROR,    // Out: Error receiving messages
     } message_status_enum;
 
     struct logscursor_logs {
@@ -100,12 +101,12 @@ class ArbCore {
     struct ThreadDataStruct {
         ValueCache cache;
         MachineExecutionConfig execConfig;
-        std::filesystem::path save_rocksdb_path;
         uint256_t begin_message;
         bool perform_pruning;
         bool perform_save_rocksdb_checkpoint;
         uint256_t next_checkpoint_gas;
         uint256_t next_basic_cache_gas;
+        uint32_t add_messages_failure_count;
         std::chrono::time_point<std::chrono::steady_clock>
             next_rocksdb_save_timepoint;
         std::chrono::time_point<std::chrono::steady_clock>
@@ -117,18 +118,17 @@ class ArbCore {
         std::chrono::time_point<std::chrono::steady_clock>
             last_restart_machine_check_timepoint;
 
-        ThreadDataStruct(const std::string& _save_rocksdb_path,
-                         const uint256_t& _begin_message,
+        ThreadDataStruct(const uint256_t& _begin_message,
                          const uint256_t& _next_checkpoint_gas,
                          const uint256_t& _next_basic_cache_gas)
             : cache(5, 0),
               execConfig(),
-              save_rocksdb_path(_save_rocksdb_path),
               begin_message(_begin_message),
               perform_pruning(false),
               perform_save_rocksdb_checkpoint(false),
               next_checkpoint_gas(_next_checkpoint_gas),
               next_basic_cache_gas(_next_basic_cache_gas),
+              add_messages_failure_count(0),
               next_rocksdb_save_timepoint(),
               profiling_begin_timepoint(std::chrono::steady_clock::now()),
               last_messages_ready_check_timepoint(profiling_begin_timepoint),
@@ -166,6 +166,7 @@ class ArbCore {
     // Core thread inbox status input/output. Core thread will update if and
     // only if set to MESSAGES_READY
     std::atomic<message_status_enum> message_data_status{MESSAGES_EMPTY};
+    std::string message_data_error_string;
 
     // Core thread inbox input
     message_data_struct message_data;
@@ -326,6 +327,7 @@ class ArbCore {
         std::vector<std::vector<unsigned char>> delayed_messages,
         const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
+    std::string messagesClearError();
     bool checkError();
     std::string getErrorString();
 

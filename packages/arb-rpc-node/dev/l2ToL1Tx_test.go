@@ -41,6 +41,7 @@ import (
 )
 
 func TestL2ToL1Tx(t *testing.T) {
+	ctx := context.Background()
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
@@ -74,12 +75,12 @@ func TestL2ToL1Tx(t *testing.T) {
 			},
 		}),
 	}
-	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+	if _, err := backend.AddInboxMessage(ctx, deposit, common.RandAddress()); err != nil {
 		t.Fatal(err)
 	}
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, upgraderAuth)
+		UpgradeTestDevNode(t, ctx, backend, srv, upgraderAuth)
 	}
 
 	latest, err := backend.db.LatestBlock()

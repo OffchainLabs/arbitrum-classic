@@ -32,7 +32,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -92,6 +91,9 @@ func main() {
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running node")
+		if strings.Contains(err.Error(), "only-create-key") {
+			fmt.Printf("\nNotice: %s\n\n", err.Error())
+		}
 	}
 }
 
@@ -108,17 +110,8 @@ func getKeystore(
 	walletConfig *configuration.Wallet,
 	l1ChainId *big.Int,
 	signerRequired bool,
-) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
-	auth, dataSigner, err := cmdhelp.GetKeystore(config, walletConfig, l1ChainId, signerRequired)
-	if err != nil {
-		if strings.Contains(err.Error(), "only-create-key") {
-			logger.Info().Msg(err.Error())
-			fmt.Printf("\nNotice: %s\n\n", err.Error())
-			return nil, nil, nil
-		}
-		return nil, nil, errors.Wrap(err, "error running GetKeystore")
-	}
-	return auth, dataSigner, nil
+) (*bind.TransactOpts, func([]byte) ([]byte, error), string, error) {
+	return cmdhelp.GetKeystore(config, walletConfig, l1ChainId, signerRequired)
 }
 
 func startup() error {
@@ -140,6 +133,42 @@ func startup() error {
 
 	if config.Core.Database.Metadata {
 		return cmdhelp.PrintDatabaseMetadata(config.GetDatabasePath(), &config.Core)
+	}
+
+	var validatorAuth *bind.TransactOpts
+	if config.Node.Type() == configuration.ValidatorNodeType && config.Validator.Strategy() != configuration.WatchtowerStrategy {
+		// Create key if needed before opening database
+		validatorAuth, _, message, err := getKeystore(config, walletConfig, l1ChainId, false)
+		if err != nil {
+			return err
+		}
+
+		if config.Validator.OnlyCreateWalletContract {
+			// Just create validator smart wallet if needed then exit
+			_, err := startValidator(ctx, config, walletConfig, l1Client, validatorAuth, nil)
+			if err != nil && !strings.Contains(err.Error(), "exiting after creating key") {
+				return err
+			}
+
+			if message == "" {
+				return errors.New("missing message when only-create-wallet-contract set")
+			}
+
+			// Always exit when only-create-wallet-address set.
+			return errors.New(message)
+		}
+
+		if config.Wallet.Local.OnlyCreateKey {
+			if message == "" {
+				return errors.New("missing message when only-create-key set")
+			}
+
+			// Always exit when only-create-key set
+			return errors.New(message)
+		}
+	} else {
+		// No wallet, so just use empty auth object
+		validatorAuth = &bind.TransactOpts{}
 	}
 
 	badConfig := false
@@ -329,17 +358,7 @@ func startup() error {
 	var batcherMode rpc.BatcherMode
 	var stakerManager *staker.Staker
 	if config.Node.Type() == configuration.ValidatorNodeType {
-		var auth *bind.TransactOpts
-		if config.Validator.Strategy() != configuration.WatchtowerStrategy {
-			auth, _, err = getKeystore(config, walletConfig, l1ChainId, false)
-			if err != nil || auth == nil {
-				return err
-			}
-		} else {
-			// No wallet, so just use empty auth object
-			auth = &bind.TransactOpts{}
-		}
-		stakerManager, err = startValidator(ctx, config, walletConfig, l1Client, auth, mon)
+		stakerManager, err = startValidator(ctx, config, walletConfig, l1Client, validatorAuth, mon)
 		if err != nil {
 			return err
 		}
@@ -349,9 +368,17 @@ func startup() error {
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
 	} else {
 		var auth *bind.TransactOpts
-		auth, dataSigner, err = getKeystore(config, walletConfig, l1ChainId, true)
-		if err != nil || auth == nil {
+		var message string
+		auth, dataSigner, message, err = getKeystore(config, walletConfig, l1ChainId, true)
+		if err != nil {
 			return err
+		}
+		if config.Wallet.Local.OnlyCreateKey {
+			if message == "" {
+				return errors.New("missing message when only-create-key set")
+			}
+
+			return errors.New(message)
 		}
 
 		if config.Node.Sequencer.Dangerous.DisableBatchPosting {
@@ -609,50 +636,86 @@ func startValidator(
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
 
 	chainState := ChainState{}
-	chainStatePath := path.Join(config.Persistent.Chain, "chainState.json")
-	chainStateFile, err := os.Open(chainStatePath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, errors.Wrap(err, "failed to open chainState.json")
+	if config.Validator.ContractWalletAddress != "" {
+		if !ethcommon.IsHexAddress(config.Validator.ContractWalletAddress) {
+			log.Error().Str("address", config.Validator.ContractWalletAddress).Msg("invalid validator smart contract wallet")
+			return nil, errors.New("invalid validator smart contract wallet address")
 		}
+		chainState.ValidatorWallet = config.Validator.ContractWalletAddress
 	} else {
-		chainStateData, err := ioutil.ReadAll(chainStateFile)
+		chainStateFile, err := os.Open(config.Validator.ContractWalletAddressFilename)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read chain state")
-		}
-		err = json.Unmarshal(chainStateData, &chainState)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal chain state")
+			// If file doesn't exist yet, will be created when needed
+			if !os.IsNotExist(err) {
+				return nil, errors.Wrap(err, "failed to open chainState file: "+config.Validator.ContractWalletAddressFilename)
+			}
+		} else {
+			chainStateData, err := ioutil.ReadAll(chainStateFile)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to read chain state")
+			}
+			err = json.Unmarshal(chainStateData, &chainState)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal chain state")
+			}
 		}
 	}
 
 	var valAuth transactauth.TransactAuth
+	var err error
 	if len(walletConfig.Fireblocks.SSLKey) > 0 {
 		valAuth, _, err = transactauth.NewFireblocksTransactAuthAdvanced(ctx, l1Client, auth, walletConfig, false)
 	} else {
 		valAuth, err = transactauth.NewTransactAuthAdvanced(ctx, l1Client, auth, false)
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating connecting to chain")
+		return nil, errors.Wrap(err, "error creating wallet auth")
 	}
 	var validatorAddress *ethcommon.Address
 	if chainState.ValidatorWallet != "" {
+		log.Info().Str("address", chainState.ValidatorWallet).Msg("validator using smart contract wallet")
 		addr := ethcommon.HexToAddress(chainState.ValidatorWallet)
 		validatorAddress = &addr
+	} else if config.Validator.OnlyCreateWalletContract {
+		log.Info().Msg("only creating validator smart contract and exiting")
+	} else {
+		log.Info().Msg("validator smart contract wallet creation delayed until needed")
 	}
-	onValidatorWalletCreated := func(addr ethcommon.Address) {
-		chainState.ValidatorWallet = addr.String()
-		newChainStateData, err := json.Marshal(chainState)
-		if err != nil {
-			log.Warn().Err(err).Msg("failed to marshal chain state")
-		} else if err := ioutil.WriteFile(chainStatePath, newChainStateData, 0644); err != nil {
-			log.Warn().Err(err).Msg("failed to write chain state config")
+
+	onValidatorWalletCreated := func(addr ethcommon.Address) {}
+	if config.Validator.ContractWalletAddress == "" {
+		onValidatorWalletCreated = func(addr ethcommon.Address) {
+			chainState.ValidatorWallet = addr.String()
+			newChainStateData, err := json.Marshal(chainState)
+			if err != nil {
+				log.Warn().Err(err).Msg("failed to marshal chain state")
+			} else if err := ioutil.WriteFile(config.Validator.ContractWalletAddressFilename, newChainStateData, 0644); err != nil {
+				log.Warn().Err(err).Msg("failed to write chain state config")
+			}
+			log.
+				Info().
+				Str("address", chainState.ValidatorWallet).
+				Str("filename", config.Validator.ContractWalletAddressFilename).
+				Msg("created validator smart contract wallet")
+		}
+	} else {
+		onValidatorWalletCreated = func(addr ethcommon.Address) {
+			log.Error().Str("address", addr.String()).Msg("created wallet when --validator.wallet-address provided")
 		}
 	}
 
-	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, config.Rollup.FromBlock, onValidatorWalletCreated)
+	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, config.Rollup.FromBlock, config.Rollup.BlockSearchSize, onValidatorWalletCreated)
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating validator wallet")
+		return nil, errors.Wrap(err, "error creating validator")
+	}
+
+	if config.Validator.OnlyCreateWalletContract {
+		// Create validator smart contract wallet if needed then exit
+		err = val.CreateWalletIfNeeded(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New("exiting after creating key and/or wallet")
 	}
 
 	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), config.Validator.Strategy(), bind.CallOpts{}, valAuth, config.Validator)

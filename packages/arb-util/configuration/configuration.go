@@ -68,22 +68,23 @@ type Database struct {
 }
 
 type Core struct {
-	Cache                     CoreCache     `koanf:"cache"`
-	CheckpointGasFrequency    int           `koanf:"checkpoint-gas-frequency"`
-	CheckpointLoadGasCost     int           `koanf:"checkpoint-load-gas-cost"`
-	CheckpointLoadGasFactor   int           `koanf:"checkpoint-load-gas-factor"`
-	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution-gas"`
-	CheckpointMaxToPrune      int           `koanf:"checkpoint-max-to-prune"`
-	CheckpointPruningMode     string        `koanf:"checkpoint-pruning-mode"`
-	CheckpointPruneOnStartup  bool          `koanf:"checkpoint-prune-on-startup"`
-	Database                  Database      `koanf:"database"`
-	Debug                     bool          `koanf:"debug"`
-	DebugTiming               bool          `koanf:"debug-timing"`
-	IdleSleep                 time.Duration `koanf:"idle-sleep"`
-	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
-	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
-	MessageProcessCount       int           `koanf:"message-process-count"`
-	Test                      CoreTest      `koanf:"test"`
+	AddMessagesMaxFailureCount int           `koanf:"add-messages-max-failure-count"`
+	Cache                      CoreCache     `koanf:"cache"`
+	CheckpointGasFrequency     int           `koanf:"checkpoint-gas-frequency"`
+	CheckpointLoadGasCost      int           `koanf:"checkpoint-load-gas-cost"`
+	CheckpointLoadGasFactor    int           `koanf:"checkpoint-load-gas-factor"`
+	CheckpointMaxExecutionGas  int           `koanf:"checkpoint-max-execution-gas"`
+	CheckpointMaxToPrune       int           `koanf:"checkpoint-max-to-prune"`
+	CheckpointPruningMode      string        `koanf:"checkpoint-pruning-mode"`
+	CheckpointPruneOnStartup   bool          `koanf:"checkpoint-prune-on-startup"`
+	Database                   Database      `koanf:"database"`
+	Debug                      bool          `koanf:"debug"`
+	DebugTiming                bool          `koanf:"debug-timing"`
+	IdleSleep                  time.Duration `koanf:"idle-sleep"`
+	LazyLoadCoreMachine        bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries     bool          `koanf:"lazy-load-archive-queries"`
+	MessageProcessCount        int           `koanf:"message-process-count"`
+	Test                       CoreTest      `koanf:"test"`
 }
 
 type CoreCache struct {
@@ -273,22 +274,26 @@ type Persistent struct {
 }
 
 type Rollup struct {
-	Address   string `koanf:"address"`
-	FromBlock int64  `koanf:"from-block"`
-	Machine   struct {
+	Address         string `koanf:"address"`
+	FromBlock       int64  `koanf:"from-block"`
+	BlockSearchSize int64  `koanf:"block-search-size"`
+	Machine         struct {
 		Filename string `koanf:"filename"`
 		URL      string `koanf:"url"`
 	} `koanf:"machine"`
 }
 
 type Validator struct {
-	StrategyImpl         string            `koanf:"strategy"`
-	UtilsAddress         string            `koanf:"utils-address"`
-	StakerDelay          time.Duration     `koanf:"staker-delay"`
-	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
-	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
-	DontChallenge        bool              `koanf:"dont-challenge"`
-	WithdrawDestination  string            `koanf:"withdraw-destination"`
+	StrategyImpl                  string            `koanf:"strategy"`
+	UtilsAddress                  string            `koanf:"utils-address"`
+	StakerDelay                   time.Duration     `koanf:"staker-delay"`
+	WalletFactoryAddress          string            `koanf:"wallet-factory-address"`
+	L1PostingStrategy             L1PostingStrategy `koanf:"l1-posting-strategy"`
+	DontChallenge                 bool              `koanf:"dont-challenge"`
+	WithdrawDestination           string            `koanf:"withdraw-destination"`
+	OnlyCreateWalletContract      bool              `koanf:"only-create-wallet-contract"`
+	ContractWalletAddress         string            `koanf:"contract-wallet-address"`
+	ContractWalletAddressFilename string            `koanf:"contract-wallet-address-filename"`
 }
 
 type ValidatorStrategy uint8
@@ -511,6 +516,9 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	AddL1PostingStrategyOptions(f, "node.sequencer.")
 	AddL1PostingStrategyOptions(f, "validator.")
 
+	f.Bool("validator.only-create-wallet-contract", false, "only create smart contract wallet contract, then exit")
+	f.String("validator.contract-wallet-address-filename", "chainState.json", "json file that validator smart contract wallet address is stored in")
+	f.String("validator.contract-wallet-address", "", "validator smart contract wallet public address")
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "validator utilities address")
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
@@ -581,6 +589,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Uint64("l1.chain-id", 0, "if set other than 0, will be used to validate database and L1 connection")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
+	f.Int64("rollup.from-block", 0, "layer 2 rollup contract creation block")
+	f.Int64("rollup.block-search-size", 0, "number of blocks to search at a time when looking for validator smart contract wallet creation, 0 to search all blocks at once")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
 	f.Bool("wallet.local.only-create-key", false, "create new wallet and exit")
@@ -689,11 +699,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		return nil, nil, nil, nil, err
 	}
 
-	if len(out.Rollup.Machine.Filename) == 0 {
-		// Machine not provided, so use default
-		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
-	}
-
 	_, err = os.Stat(out.Rollup.Machine.Filename)
 	if os.IsNotExist(err) && len(out.Rollup.Machine.URL) != 0 {
 		// Machine does not exist, so load it from provided URL
@@ -784,6 +789,11 @@ func resolveDirectoryNames(out *Config, wallet *Wallet) error {
 		out.Core.Database.SavePath = path.Join(out.Persistent.Chain, out.Core.Database.SavePath)
 	}
 
+	if len(out.Rollup.Machine.Filename) == 0 {
+		// Machine not provided, so use default chain specific machine
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
+	}
+
 	// Make machine relative to storage directory if not already absolute
 	if !filepath.IsAbs(out.Rollup.Machine.Filename) {
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
@@ -795,6 +805,11 @@ func resolveDirectoryNames(out *Config, wallet *Wallet) error {
 	}
 	if !filepath.IsAbs(wallet.Fireblocks.FeedSigner.Pathname) {
 		wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.Chain, wallet.Fireblocks.FeedSigner.Pathname)
+	}
+
+	// Make validator smart contract wallet address relative to chain directory if not already absolute
+	if !filepath.IsAbs(out.Validator.ContractWalletAddressFilename) {
+		out.Validator.ContractWalletAddressFilename = path.Join(out.Persistent.Chain, out.Validator.ContractWalletAddressFilename)
 	}
 
 	return nil
@@ -840,6 +855,7 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Bool("core.cache.seed-on-startup", false, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 
+	f.Int("core.add-messages-max-failure-count", 10, "number of add messages failures before exiting program")
 	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
 	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
 	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")
