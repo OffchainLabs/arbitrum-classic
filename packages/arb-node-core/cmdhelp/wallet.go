@@ -117,7 +117,7 @@ func GetKeystore(
 		}
 	} else if len(walletConfig.Local.PrivateKey) != 0 {
 		if walletConfig.Local.OnlyCreateKey {
-			return nil, nil, errors.New("wallet key already exists, remove --wallet.local.only-create-key to run normally")
+			return nil, nil, errors.New("wallet key provided on command line, remove --wallet.local.only-create-key to run normally")
 		}
 		privateKey, err := crypto.HexToECDSA(walletConfig.Local.PrivateKey)
 		if err != nil {
