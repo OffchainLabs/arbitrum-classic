@@ -571,7 +571,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.dangerous.disable-delayed-message-sequencing", false, "disable sequencing delayed messages (DANGEROUS)")
 	f.Bool("node.sequencer.debug-timing", false, "log elapsed time throughout core sequencing loop")
 
-	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
+	f.String("node.type", "forwarder", "forwarder, aggregator, sequencer or validator")
 
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
