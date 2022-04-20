@@ -89,7 +89,7 @@ func GetKeystore(
 
 			publicKeyECDSA, ok := privateKey.Public().(*ecdsa.PublicKey)
 			if !ok {
-				return nil, nil, errors.Wrap(err, "error generating public address of feed private key")
+				return nil, nil, errors.New("error generating public address of feed private key")
 			}
 			logger.
 				Info().
