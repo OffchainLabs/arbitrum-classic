@@ -743,12 +743,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		out.Core.CheckpointPruningMode = "off"
 	}
 
-	if (out.Core.CheckpointPruningMode != "on") &&
-		(out.Core.CheckpointPruningMode != "default") {
-		return nil, nil, nil, nil,
-			fmt.Errorf("value '%v' for core.checkpoint-pruning-mode is not 'on', 'off', or 'default'", out.Core.CheckpointPruningMode)
-	}
-
 	if out.Node.Type() == SequencerNodeType && !out.Core.Cache.Last {
 		logger.Info().Msg("enabling last machine cache for sequencer")
 		out.Core.Cache.Last = true

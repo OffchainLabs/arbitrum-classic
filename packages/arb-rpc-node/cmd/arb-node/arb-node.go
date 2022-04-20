@@ -110,7 +110,7 @@ func getKeystore(
 	walletConfig *configuration.Wallet,
 	l1ChainId *big.Int,
 	signerRequired bool,
-) (*bind.TransactOpts, func([]byte) ([]byte, error), string, error) {
+) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
 	return cmdhelp.GetKeystore(config, walletConfig, l1ChainId, signerRequired)
 }
 
@@ -138,7 +138,7 @@ func startup() error {
 	var validatorAuth *bind.TransactOpts
 	if config.Node.Type() == configuration.ValidatorNodeType && config.Validator.Strategy() != configuration.WatchtowerStrategy {
 		// Create key if needed before opening database
-		validatorAuth, _, message, err := getKeystore(config, walletConfig, l1ChainId, false)
+		validatorAuth, _, err := getKeystore(config, walletConfig, l1ChainId, false)
 		if err != nil {
 			return err
 		}
@@ -146,25 +146,11 @@ func startup() error {
 		if config.Validator.OnlyCreateWalletContract {
 			// Just create validator smart wallet if needed then exit
 			_, err := startValidator(ctx, config, walletConfig, l1Client, validatorAuth, nil)
-			if err != nil && !strings.Contains(err.Error(), "exiting after creating key") {
+			if err != nil {
 				return err
 			}
 
-			if message == "" {
-				return errors.New("missing message when only-create-wallet-contract set")
-			}
-
-			// Always exit when only-create-wallet-address set.
-			return errors.New(message)
-		}
-
-		if config.Wallet.Local.OnlyCreateKey {
-			if message == "" {
-				return errors.New("missing message when only-create-key set")
-			}
-
-			// Always exit when only-create-key set
-			return errors.New(message)
+			return errors.New("missing message when only-create-wallet-contract set")
 		}
 	} else {
 		// No wallet, so just use empty auth object
@@ -368,17 +354,9 @@ func startup() error {
 		batcherMode = rpc.ForwarderBatcherMode{Config: config.Node.Forwarder}
 	} else {
 		var auth *bind.TransactOpts
-		var message string
-		auth, dataSigner, message, err = getKeystore(config, walletConfig, l1ChainId, true)
+		auth, dataSigner, err = getKeystore(config, walletConfig, l1ChainId, true)
 		if err != nil {
 			return err
-		}
-		if config.Wallet.Local.OnlyCreateKey {
-			if message == "" {
-				return errors.New("missing message when only-create-key set")
-			}
-
-			return errors.New(message)
 		}
 
 		if config.Node.Sequencer.Dangerous.DisableBatchPosting {
