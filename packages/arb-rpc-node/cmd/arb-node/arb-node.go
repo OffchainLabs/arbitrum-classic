@@ -138,7 +138,7 @@ func startup() error {
 	var validatorAuth *bind.TransactOpts
 	if config.Node.Type() == configuration.ValidatorNodeType && config.Validator.Strategy() != configuration.WatchtowerStrategy {
 		// Create key if needed before opening database
-		validatorAuth, _, err := getKeystore(config, walletConfig, l1ChainId, false)
+		validatorAuth, _, err = getKeystore(config, walletConfig, l1ChainId, false)
 		if err != nil {
 			return err
 		}
