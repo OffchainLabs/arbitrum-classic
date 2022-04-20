@@ -91,7 +91,7 @@ func main() {
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running node")
-		if strings.Contains(err.Error(), "only-create-key") {
+		if strings.Contains(err.Error(), "only-create-") {
 			fmt.Printf("\nNotice: %s\n\n", err.Error())
 		}
 	}
@@ -689,11 +689,16 @@ func startValidator(
 
 	if config.Validator.OnlyCreateWalletContract {
 		// Create validator smart contract wallet if needed then exit
+		oldValidatorWallet := chainState.ValidatorWallet
 		err = val.CreateWalletIfNeeded(ctx)
 		if err != nil {
 			return nil, err
 		}
-		return nil, errors.New("exiting after creating key and/or wallet")
+
+		if oldValidatorWallet == chainState.ValidatorWallet {
+			return nil, errors.Errorf("validator smart contract wallet (%v) already exists, remove --validator.only-create-wallet-contract to run normally", chainState.ValidatorWallet)
+		}
+		return nil, errors.Errorf("validator smart contract wallet (%v) created, remove --validator.only-create-wallet-contract to run normally", chainState.ValidatorWallet)
 	}
 
 	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), config.Validator.Strategy(), bind.CallOpts{}, valAuth, config.Validator)
