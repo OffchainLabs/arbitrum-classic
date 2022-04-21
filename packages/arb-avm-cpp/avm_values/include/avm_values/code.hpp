@@ -575,7 +575,7 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     std::variant<CodePointStub, CodeSegmentData> tryAddOperation(
         const CodePointRef& ref,
         Operation op) override {
-        std::shared_lock<std::shared_mutex> lock(mutex);
+        std::unique_lock<std::shared_mutex> lock(mutex);
         if (segmentInParent(ref.segment)) {
             lock.unlock();
             return parent->tryAddOperation(ref, std::move(op));
