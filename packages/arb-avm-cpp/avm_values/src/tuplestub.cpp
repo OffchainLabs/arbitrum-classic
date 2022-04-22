@@ -36,6 +36,9 @@ uint256_t HashPreImage::hash() const {
     return intx::be::load<uint256_t>(hash_val.bytes);
 }
 
+// Note: not atomic in reads from source, and writes to dest are not
+// all-or-nothing. If `memcpyAtomic` is invoked concurrently with the same
+// destination, it's assumed they're writing the same source value.
 void memcpyAtomic(uint8_t* dest, const uint8_t* source, size_t length) {
     for (size_t i = 0; i < length; i++) {
         auto b = reinterpret_cast<std::atomic<uint8_t>*>(&dest[i]);

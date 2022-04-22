@@ -229,6 +229,9 @@ void Tuple::calculateHashPreImage() const {
                 }
             }
             if (!found_complex) {
+                // It's fine if multiple threads write the cached preimage
+                // simultaneously, as they must be writing the same hash, and
+                // this uses atomic writes.
                 tup.tpl->cachedPreImage.writeAtomic(calcHashPreImage(tup));
                 // The "release" ordering here ensures any other thread
                 // with the default seqcst "acquire" ordering will see
