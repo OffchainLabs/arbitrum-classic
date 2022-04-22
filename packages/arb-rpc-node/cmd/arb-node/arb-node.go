@@ -91,9 +91,7 @@ func main() {
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running node")
-		if strings.Contains(err.Error(), "only-create-") {
-			fmt.Printf("\nNotice: %s\n\n", err.Error())
-		}
+		fmt.Printf("\nNotice: %s\n\n", err.Error())
 	}
 }
 
@@ -179,11 +177,12 @@ func startup() error {
 		fmt.Println("Missing --rollup.machine.filename")
 	}
 
+	var message string
 	var rpcMode web3.RpcMode
 	if config.Node.Type() == configuration.ForwarderNodeType {
 		if config.Node.Forwarder.Target == "" {
 			badConfig = true
-			fmt.Println("Forwarder node needs --node.forwarder.target")
+			message = "Forwarder node needs --node.forwarder.target"
 		}
 
 		if config.Node.Forwarder.RpcMode == "full" {
@@ -194,28 +193,31 @@ func startup() error {
 			rpcMode = web3.ForwardingOnlyMode
 		} else {
 			badConfig = true
-			fmt.Printf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
+			message = fmt.Sprintf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
 		}
 	} else if config.Node.Type() == configuration.AggregatorNodeType {
 		if config.Node.Aggregator.InboxAddress == "" {
 			badConfig = true
-			fmt.Println("Aggregator node needs --node.aggregator.inbox-address")
+			message = "Aggregator node needs --node.aggregator.inbox-address"
 		}
 	} else if config.Node.Type() == configuration.SequencerNodeType {
 		// Sequencer always waits
 		config.WaitToCatchUp = true
 	} else if config.Node.Type() == configuration.ValidatorNodeType {
-		if config.Validator.Strategy() == configuration.UnknownStrategy {
+		if config.Validator.StrategyImpl == "" {
 			badConfig = true
-			fmt.Printf("Unrecognized validator strategy %s", config.Validator.StrategyImpl)
+			message = "Missing --validator.strategy, should be Watchtower, Defensive, StakeLatest, or MakeNodes"
+		} else if config.Validator.Strategy() == configuration.UnknownStrategy {
+			badConfig = true
+			message = fmt.Sprintf("Unrecognized --validator.strategy %s, should be Watchtower, Defensive, StakeLatest, or MakeNodes", config.Validator.StrategyImpl)
 		}
 	} else {
 		badConfig = true
-		fmt.Printf("Unrecognized node type %s", config.Node.TypeImpl)
+		message = fmt.Sprintf("Unrecognized node type %s", config.Node.TypeImpl)
 	}
 
 	if badConfig {
-		return nil
+		return errors.New(message)
 	}
 
 	if config.Node.Sequencer.Dangerous != (configuration.SequencerDangerous{}) {
