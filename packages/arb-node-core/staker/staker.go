@@ -106,7 +106,7 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			if err == nil && arbTx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
 				_, err = transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.auth)
-				if strings.Contains(err.Error(), "arbcore thread aborted") {
+				if err != nil && strings.Contains(err.Error(), "arbcore thread aborted") {
 					logger.Error().Err(err).Msg("aborting staker background thread")
 					break
 				}

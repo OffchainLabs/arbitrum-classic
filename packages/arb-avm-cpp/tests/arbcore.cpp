@@ -532,3 +532,67 @@ TEST_CASE("ArbCore code segment reorg") {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
+
+TEST_CASE("ArbCore wild code segments") {
+    DBDeleter deleter;
+
+    ArbCoreConfig coreConfig{};
+    coreConfig.checkpoint_gas_frequency = 1000000;
+    ArbStorage storage(dbpath, coreConfig);
+    REQUIRE(storage
+                .initialize(std::string{machine_test_cases_path} +
+                            "/../wild-segments/main.mexe")
+                .status.ok());
+    auto arbCore = storage.getArbCore();
+    REQUIRE(arbCore->startThread());
+
+    std::shared_ptr<std::atomic<bool>> shutdown =
+        std::make_shared<std::atomic<bool>>(false);
+    for (size_t thread = 0; thread < 32; thread++) {
+        std::thread([arbCore, shutdown]() {
+            while (!shutdown->load()) {
+                auto block_count =
+                    arbCore->getLastMachineOutput().l2_block_number;
+                if (block_count == 0) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    continue;
+                }
+                auto block_num = rand() % block_count;
+                auto res =
+                    arbCore->getExecutionCursorAtEndOfBlock(block_num, false);
+                if (auto status = std::get_if<rocksdb::Status>(&res)) {
+                    throw new std::runtime_error(
+                        std::string("Failed to get cursor: ") +
+                        status->ToString());
+                }
+                auto cursor = std::get<ExecutionCursor>(res);
+                auto machine = arbCore->takeExecutionCursorMachine(cursor);
+                InboxMessage msg;
+                msg.timestamp = rand();
+                MachineExecutionConfig config;
+                config.sideloads.push_back(msg);
+                machine->machine_state.context = AssertionContext(config);
+                machine->run();
+            }
+        }).detach();
+    }
+
+    uint256_t inbox_acc;
+    std::vector<InboxMessage> messages;
+    for (size_t i = 0; i < 100; i++) {
+        messages.push_back(
+            InboxMessage(0, {}, 0, std::time(nullptr), i, 0, {}));
+    }
+    auto batch = buildBatch(messages);
+    for (int i = 0; i < 100; i++) {
+        std::vector<std::vector<unsigned char>> rawSeqBatchItems(
+            1, serializeForCore(batch[i]));
+        REQUIRE(arbCore->deliverMessages(
+            i, inbox_acc, rawSeqBatchItems,
+            std::vector<std::vector<unsigned char>>(), std::nullopt));
+        waitForDelivery(arbCore);
+        inbox_acc = batch[i].accumulator;
+    }
+
+    *shutdown = true;
+}
