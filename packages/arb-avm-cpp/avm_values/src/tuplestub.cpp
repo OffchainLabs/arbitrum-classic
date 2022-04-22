@@ -20,6 +20,7 @@
 
 #include <ethash/keccak.hpp>
 
+#include <atomic>
 #include <iostream>
 
 uint256_t HashPreImage::hash() const {
@@ -33,6 +34,19 @@ uint256_t HashPreImage::hash() const {
 
     auto hash_val = ethash::keccak256(tupData2.data(), tupData2.size());
     return intx::be::load<uint256_t>(hash_val.bytes);
+}
+
+void memcpyAtomic(uint8_t* dest, const uint8_t* source, size_t length) {
+    for (size_t i = 0; i < length; i++) {
+        reinterpret_cast<std::atomic<uint8_t>*>(&dest[i])->store(
+            source[i], std::memory_order_relaxed);
+    }
+}
+
+void HashPreImage::writeAtomic(const HashPreImage& other) {
+    memcpyAtomic(firstHash.begin(), other.firstHash.begin(), 32);
+    memcpyAtomic(reinterpret_cast<uint8_t*>(&valueSize),
+                 reinterpret_cast<const uint8_t*>(&other.valueSize), 32);
 }
 
 uint256_t HashPreImage::secretHash(
