@@ -6,7 +6,7 @@ sidebar_label: Running a Nitro Node
 
 ### Required Artifacts
 
-- Latest Docker Image: offchainlabs/nitro_node:v2.0.0-alpha.2
+- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-alpha.2`
 
 ### Required parameter
 
