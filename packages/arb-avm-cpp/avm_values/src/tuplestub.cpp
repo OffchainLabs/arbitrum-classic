@@ -38,8 +38,13 @@ uint256_t HashPreImage::hash() const {
 
 void memcpyAtomic(uint8_t* dest, const uint8_t* source, size_t length) {
     for (size_t i = 0; i < length; i++) {
-        reinterpret_cast<std::atomic<uint8_t>*>(&dest[i])->store(
-            source[i], std::memory_order_relaxed);
+        auto b = reinterpret_cast<std::atomic<uint8_t>*>(&dest[i]);
+        uint8_t oldValue = b->load(std::memory_order_relaxed);
+        uint8_t newValue = source[i];
+        if (oldValue != newValue) {
+            b->compare_exchange_strong(oldValue, newValue,
+                                       std::memory_order_relaxed);
+        }
     }
 }
 
