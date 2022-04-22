@@ -155,34 +155,26 @@ func startup() error {
 		validatorAuth = &bind.TransactOpts{}
 	}
 
-	badConfig := false
 	if config.BridgeUtilsAddress == "" {
-		badConfig = true
-		fmt.Println("Missing --bridge-utils-address")
+		return errors.Errorf("Missing --bridge-utils-address")
 	}
 	if config.Persistent.Chain == "" {
-		badConfig = true
-		fmt.Println("Missing --persistent.chain")
+		return errors.Errorf("Missing --persistent.chain")
 	}
 	if config.Rollup.Address == "" {
-		badConfig = true
-		fmt.Println("Missing --rollup.address")
+		return errors.Errorf("Missing --rollup.address")
 	}
 	if config.Node.ChainID == 0 {
-		badConfig = true
-		fmt.Println("Missing --node.chain-id")
+		return errors.Errorf("Missing --node.chain-id")
 	}
 	if config.Rollup.Machine.Filename == "" {
-		badConfig = true
-		fmt.Println("Missing --rollup.machine.filename")
+		return errors.Errorf("Missing --rollup.machine.filename")
 	}
 
-	var message string
 	var rpcMode web3.RpcMode
 	if config.Node.Type() == configuration.ForwarderNodeType {
 		if config.Node.Forwarder.Target == "" {
-			badConfig = true
-			message = "Forwarder node needs --node.forwarder.target"
+			return errors.New("Forwarder node needs --node.forwarder.target")
 		}
 
 		if config.Node.Forwarder.RpcMode == "full" {
@@ -192,32 +184,23 @@ func startup() error {
 		} else if config.Node.Forwarder.RpcMode == "forwarding-only" {
 			rpcMode = web3.ForwardingOnlyMode
 		} else {
-			badConfig = true
-			message = fmt.Sprintf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
+			return errors.Errorf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
 		}
 	} else if config.Node.Type() == configuration.AggregatorNodeType {
 		if config.Node.Aggregator.InboxAddress == "" {
-			badConfig = true
-			message = "Aggregator node needs --node.aggregator.inbox-address"
+			return errors.New("Aggregator node needs --node.aggregator.inbox-address")
 		}
 	} else if config.Node.Type() == configuration.SequencerNodeType {
 		// Sequencer always waits
 		config.WaitToCatchUp = true
 	} else if config.Node.Type() == configuration.ValidatorNodeType {
 		if config.Validator.StrategyImpl == "" {
-			badConfig = true
-			message = "Missing --validator.strategy, should be Watchtower, Defensive, StakeLatest, or MakeNodes"
+			return errors.New("Missing --validator.strategy, should be Watchtower, Defensive, StakeLatest, or MakeNodes")
 		} else if config.Validator.Strategy() == configuration.UnknownStrategy {
-			badConfig = true
-			message = fmt.Sprintf("Unrecognized --validator.strategy %s, should be Watchtower, Defensive, StakeLatest, or MakeNodes", config.Validator.StrategyImpl)
+			return errors.Errorf("Unrecognized --validator.strategy %s, should be Watchtower, Defensive, StakeLatest, or MakeNodes", config.Validator.StrategyImpl)
 		}
 	} else {
-		badConfig = true
-		message = fmt.Sprintf("Unrecognized node type %s", config.Node.TypeImpl)
-	}
-
-	if badConfig {
-		return errors.New(message)
+		return errors.Errorf("Unrecognized node type %s", config.Node.TypeImpl)
 	}
 
 	if config.Node.Sequencer.Dangerous != (configuration.SequencerDangerous{}) {
