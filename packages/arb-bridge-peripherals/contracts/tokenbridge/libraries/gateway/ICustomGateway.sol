@@ -23,13 +23,5 @@ pragma solidity ^0.6.11;
 interface ICustomGateway {
     function l1ToL2Token(address _l1Token) external view returns (address _l2Token);
 
-    function registerTokenToL2(
-        address _l2Address,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        uint256 _maxSubmissionCost,
-        address _creditBackAddress
-    ) external payable returns (uint256);
-
     event TokenSet(address indexed l1Address, address indexed l2Address);
 }
