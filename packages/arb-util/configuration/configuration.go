@@ -519,7 +519,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("validator.only-create-wallet-contract", false, "only create smart contract wallet contract, then exit")
 	f.String("validator.contract-wallet-address-filename", "chainState.json", "json file that validator smart contract wallet address is stored in")
 	f.String("validator.contract-wallet-address", "", "validator smart contract wallet public address")
-	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
+	f.String("validator.strategy", "", "strategy for validator to use")
 	f.String("validator.utils-address", "", "validator utilities address")
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
