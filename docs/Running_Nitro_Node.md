@@ -59,9 +59,6 @@ sidebar_label: Running a Nitro Node
   - Defaults to `50000000`, cap on computation gas that can be used in `eth_call`/`estimateGas` (0 = no cap)
 - `--node.rpc.tx-fee-cap`
   - Defaults to `1`, cap on transaction fee (in ether) that can be sent via the RPC APIs (0 = no cap)
-- `--node.type`
-  - Defaults to `forwarder`
-  - More information on running validator is provided below
 
 ### Arb-Relay
 
