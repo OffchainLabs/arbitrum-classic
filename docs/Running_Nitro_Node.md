@@ -51,7 +51,7 @@ sidebar_label: Running a Nitro Node
   - Retain past block state
 - `--node.feed.input.url=<feed address>`
   - Defaults to `wss://nitro-devnet.arbitrum.io/feed`. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
-- `--node.forwarder.target=<sequencer RPC>`
+- `--node.forwarding-target=<sequencer RPC>`
   - Defaults to `https://nitro-devnet.arbitrum.io/rpc`
 - `--node.rpc.evm-timeout`
   - Defaults to `5s`, timeout used for `eth_call` (0 == no timeout)
