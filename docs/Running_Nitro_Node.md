@@ -6,7 +6,7 @@ sidebar_label: Running a Nitro Node
 
 ### Required Artifacts
 
-- Latest Docker Image: offchainlabs/nitro_node:v2.0.0-alpha.2
+- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-alpha.2`
 
 ### Required parameter
 
@@ -51,7 +51,7 @@ sidebar_label: Running a Nitro Node
   - Retain past block state
 - `--node.feed.input.url=<feed address>`
   - Defaults to `wss://nitro-devnet.arbitrum.io/feed`. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
-- `--node.forwarder.target=<sequencer RPC>`
+- `--node.forwarding-target=<sequencer RPC>`
   - Defaults to `https://nitro-devnet.arbitrum.io/rpc`
 - `--node.rpc.evm-timeout`
   - Defaults to `5s`, timeout used for `eth_call` (0 == no timeout)
@@ -59,9 +59,6 @@ sidebar_label: Running a Nitro Node
   - Defaults to `50000000`, cap on computation gas that can be used in `eth_call`/`estimateGas` (0 = no cap)
 - `--node.rpc.tx-fee-cap`
   - Defaults to `1`, cap on transaction fee (in ether) that can be sent via the RPC APIs (0 = no cap)
-- `--node.type`
-  - Defaults to `forwarder`
-  - More information on running validator is provided below
 
 ### Arb-Relay
 
