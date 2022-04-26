@@ -789,7 +789,7 @@
     "@types/sinon-chai" "^3.2.3"
     "@types/web3" "1.0.19"
 
-"@openzeppelin/contracts-0.8@npm:@openzeppelin/contracts@^4.3.2":
+"@openzeppelin/contracts-0.8@npm:@openzeppelin/contracts@^4.3.2", "@openzeppelin/contracts@4.5.0":
   version "4.5.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.5.0.tgz#3fd75d57de172b3743cdfc1206883f56430409cc"
   integrity sha512-fdkzKPYMjrRiPK6K4y64e6GzULR7R7RwxSigHS8DDp7aWDeoReqsQI+cxHV1UuhAqX69L1lAaWDxenfP+xiqzA==
@@ -798,11 +798,6 @@
   version "3.4.2"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-3.4.2.tgz#2c2a1b0fa748235a1f495b6489349776365c51b3"
   integrity sha512-mDlBS17ymb2wpaLcrqRYdnBAmP1EwqhOXMvqWk2c5Q1N1pm5TkiCtXM9Xzznh4bYsQBq0aIWEkFFE2+iLSN1Tw==
-
-"@openzeppelin/contracts@3.4.2":
-  version "3.4.2"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-3.4.2.tgz#d81f786fda2871d1eb8a8c5a73e455753ba53527"
-  integrity sha512-z0zMCjyhhp4y7XKAcDAi3Vgms4T2PstwBdahiO0+9NaGICQKjynK3wduSRplTgk4LXmoO1yfDGO5RbjKYxtuxA==
 
 "@openzeppelin/upgrades-core@^1.7.6":
   version "1.14.1"
@@ -1582,6 +1577,13 @@ aproba@^1.0.3:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/aproba/-/aproba-1.2.0.tgz#6802e6264efd18c790a1b0d517f0f2627bf2c94a"
   integrity sha512-Y9J6ZjXtoYh8RnXVCMOU/ttDmk1aBjunq9vO0ta5x85WDQiQfUF9sIPBITdbiiIVcBo03Hi3jMxigBtsddlXRw==
+
+arbos-precompiles@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/arbos-precompiles/-/arbos-precompiles-1.0.2.tgz#7bebd5963aef972cd259eb41f3116ea065013ea6"
+  integrity sha512-1dOFYFJUN0kKoofh6buZJ8qCqTs+oLGSsGzHI0trA/Pka/TCERflCRsNVxez2lihOvK7MT/a2RA8AepKtBXdPQ==
+  dependencies:
+    hardhat "^2.6.4"
 
 are-we-there-yet@~1.1.2:
   version "1.1.7"

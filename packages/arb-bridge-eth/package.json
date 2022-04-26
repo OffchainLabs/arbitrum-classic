@@ -41,7 +41,7 @@
     "hardhat": "hardhat --config hardhat.config.ts"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "3.4.2",
+    "@openzeppelin/contracts": "4.5.0",
     "@openzeppelin/contracts-0.8": "npm:@openzeppelin/contracts@^4.3.2",
     "@openzeppelin/contracts-upgradeable": "3.4.2",
     "hardhat": "^2.6.1"

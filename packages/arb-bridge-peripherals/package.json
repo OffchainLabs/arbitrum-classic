@@ -18,7 +18,7 @@
     "hardhat:prod": "hardhat --config hardhat.prod-config.js"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "3.4.2",
+    "@openzeppelin/contracts": "4.5.0",
     "@openzeppelin/contracts-upgradeable": "3.4.2",
     "arb-bridge-eth": "0.7.6",
     "arbos-precompiles": "^1.0.2",
