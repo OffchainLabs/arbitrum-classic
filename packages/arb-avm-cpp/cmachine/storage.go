@@ -75,6 +75,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	cConfig := C.CArbCoreConfig{
 		message_process_count:          C.int(coreConfig.MessageProcessCount),
 		add_messages_max_failure_count: C.int(coreConfig.AddMessagesMaxFailureCount),
+		thread_max_failure_count:       C.int(coreConfig.ThreadMaxFailureCount),
 		checkpoint_load_gas_cost:       C.int(coreConfig.CheckpointLoadGasCost),
 		checkpoint_load_gas_factor:     C.int(coreConfig.CheckpointLoadGasFactor),
 		checkpoint_max_execution_gas:   C.int(coreConfig.CheckpointMaxExecutionGas),

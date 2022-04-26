@@ -26,6 +26,9 @@ struct ArbCoreConfig {
     // Number of consecutive addMessages failures before thread exits
     uint32_t add_messages_max_failure_count{0};
 
+    // Number of consecutive core thread failures before thread exits
+    uint32_t thread_max_failure_count{0};
+
     // Time it takes to run checkpoint for given gas
     // is equivalent to the time it takes to load checkpoing from database
     uint256_t checkpoint_load_gas_cost{1'000'000};

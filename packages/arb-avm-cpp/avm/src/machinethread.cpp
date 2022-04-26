@@ -99,7 +99,14 @@ void MachineThread::clearError() {
 }
 
 void MachineThread::operator()() {
-    last_assertion = run();
+    try {
+        last_assertion = run();
+    } catch (const std::exception& e) {
+        machine_error_string = e.what();
+        machine_status = MACHINE_ERROR;
+        return;
+    }
+
     if (machine_status == MACHINE_RUNNING) {
         machine_status = MACHINE_SUCCESS;
     }

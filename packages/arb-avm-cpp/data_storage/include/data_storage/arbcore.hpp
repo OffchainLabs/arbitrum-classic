@@ -107,6 +107,7 @@ class ArbCore {
         uint256_t next_checkpoint_gas;
         uint256_t next_basic_cache_gas;
         uint32_t add_messages_failure_count;
+        uint32_t thread_failure_count;
         std::chrono::time_point<std::chrono::steady_clock>
             next_rocksdb_save_timepoint;
         std::chrono::time_point<std::chrono::steady_clock>
@@ -129,6 +130,7 @@ class ArbCore {
               next_checkpoint_gas(_next_checkpoint_gas),
               next_basic_cache_gas(_next_basic_cache_gas),
               add_messages_failure_count(0),
+              thread_failure_count(0),
               next_rocksdb_save_timepoint(),
               profiling_begin_timepoint(std::chrono::steady_clock::now()),
               last_messages_ready_check_timepoint(profiling_begin_timepoint),
@@ -228,7 +230,8 @@ class ArbCore {
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
         ReadTransaction& tx,
         const uint256_t& total_gas);
-    rocksdb::Status reorgToLastMessage(ValueCache& cache);
+    rocksdb::Status reorgToLastCheckpoint(ValueCache& cache);
+    rocksdb::Status reorgToPenultimateCheckpoint(ValueCache& cache);
     rocksdb::Status reorgToL1Block(const uint256_t& l1_block_number,
                                    bool initial_start,
                                    ValueCache& cache);
