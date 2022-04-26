@@ -381,7 +381,7 @@ InitializeResult ArbCore::applyConfig() {
     }
 
     if (!reorg_done) {
-        return {reorgToLastMessage(cache), false};
+        return {reorgToLastCheckpoint(cache), false};
     }
 
     return {rocksdb::Status::OK(), false};
@@ -655,12 +655,28 @@ rocksdb::Status ArbCore::saveAssertion(ReadWriteTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-rocksdb::Status ArbCore::reorgToLastMessage(ValueCache& cache) {
-    std::cerr << "Reloading chain to the last message saved"
+rocksdb::Status ArbCore::reorgToLastCheckpoint(ValueCache& cache) {
+    std::cerr << "Reloading chain to the last checkpoint saved"
               << "\n";
 
     return reorgCheckpoints([&](const MachineOutput&) { return true; }, true,
                             cache);
+}
+
+rocksdb::Status ArbCore::reorgToPenultimateCheckpoint(ValueCache& cache) {
+    std::cerr << "Reloading chain to the penultimate checkpoint saved"
+              << "\n";
+
+    return reorgCheckpoints([&](const MachineOutput&) { return true; }, true,
+                            cache);
+    return reorgCheckpoints(
+        [&](const MachineOutput& output) {
+            static int count = 0;
+            count++;
+            // Skip first entry
+            return count > 1;
+        },
+        false, cache);
 }
 
 rocksdb::Status ArbCore::reorgToL1Block(const uint256_t& l1_block_number,
@@ -1410,15 +1426,34 @@ void ArbCore::printCoreThreadBacktrace() {
 
 bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
     bool isMachineValid;
-    {
+    if (core_machine->status() == MachineThread::MACHINE_ERROR) {
+        isMachineValid = false;
+        core_machine->clearError();
+    } else {
         ReadTransaction tx(data_storage);
         isMachineValid = isValid(tx, core_machine->getReorgData());
     }
     if (!isMachineValid) {
-        std::cerr << "Core thread operating on invalid machine. Rolling back."
-                  << std::endl;
-        assert(false);
-        auto status = reorgToMessageCountOrBefore(0, false, thread_data.cache);
+        if (coreConfig.thread_max_failure_count != 0 &&
+            thread_data.thread_failure_count >
+                coreConfig.thread_max_failure_count) {
+            std::cerr << "Core thread had too many errors, aborting"
+                      << std::endl;
+            return false;
+        }
+        rocksdb::Status status;
+        if (thread_data.thread_failure_count == 0) {
+            std::cerr << "Core thread operating on invalid machine, "
+                         "loading last saved checkpoint"
+                      << std::endl;
+            status = reorgToLastCheckpoint(thread_data.cache);
+        } else {
+            std::cerr << "Core thread operating on invalid machine, "
+                         "loading penultimate saved checkpoint, failure_count: "
+                      << thread_data.thread_failure_count << std::endl;
+            status = reorgToPenultimateCheckpoint(thread_data.cache);
+        }
+        thread_data.thread_failure_count++;
         if (!status.ok()) {
             std::cerr << "Error in core thread calling "
                          "reorgToMessageCountOrBefore: "
@@ -1489,13 +1524,15 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
 
     // Check machine thread
     if (core_machine->status() == MachineThread::MACHINE_ERROR) {
-        setCoreError(core_machine->getErrorString());
         std::cerr << "AVM machine stopped with error: " << core_error_string
                   << "\n";
-        return false;
+
+        // Retry with fresh machine from database
+        return true;
     }
 
     if (core_machine->status() == MachineThread::MACHINE_SUCCESS) {
+        thread_data.thread_failure_count = 0;
         std::chrono::time_point<std::chrono::steady_clock>
             begin_machine_success_timepoint;
         std::chrono::time_point<std::chrono::steady_clock> output_timepoint;
@@ -1551,11 +1588,12 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         // Cache pre-sideload machines
         auto save_checkpoint_begin_timepoint = std::chrono::steady_clock::now();
         auto checkpoint_was_saved = false;
+        std::unique_ptr<Machine> machine_to_cache;
         if (last_assertion.sideload_block_number) {
             auto& output = core_machine->machine_state.output;
 
-            combined_machine_cache.timedAdd(
-                std::make_unique<Machine>(*core_machine));
+            // Add to cache after database changes are committed
+            machine_to_cache = std::make_unique<Machine>(*core_machine);
 
             auto current_timepoint = std::chrono::steady_clock::now();
             if (coreConfig.database_save_interval != 0 &&
@@ -1569,8 +1607,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
 
             if (trigger_save_rocksdb_checkpoint ||
                 output.arb_gas_used >= thread_data.next_checkpoint_gas) {
-                // Save checkpoint after checkpoint_gas_frequency gas
-                // used
+                // Save checkpoint after checkpoint_gas_frequency gas used
                 status = saveCheckpoint(tx);
                 if (!status.ok()) {
                     setCoreError(status.ToString());
@@ -1620,6 +1657,12 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
                       << "\n";
             return false;
         }
+
+        if (machine_to_cache) {
+            // Add to cache now that database changes are committed
+            combined_machine_cache.timedAdd(std::move(machine_to_cache));
+        }
+
         // Calculate time including database commit
         if (checkpoint_was_saved) {
             printElapsed(save_checkpoint_begin_timepoint,
