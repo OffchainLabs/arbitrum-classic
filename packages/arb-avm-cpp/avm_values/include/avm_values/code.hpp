@@ -591,7 +591,7 @@ class EphemeralBarrier : public Code {
    public:
     std::shared_ptr<Code> parent;
 
-    EphemeralBarrier(std::shared_ptr<Code> parent_)
+    explicit EphemeralBarrier(std::shared_ptr<Code> parent_)
         : parent(std::move(parent_)) {}
 
     CodePointStub addOperation(const CodePointRef&, Operation) override {
