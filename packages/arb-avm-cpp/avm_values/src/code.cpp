@@ -17,25 +17,16 @@
 #include <avm_values/code.hpp>
 
 void RunningCode::commitCodeToCore(
-    const std::map<uint64_t, uint64_t>& segment_counts) const {
+    const std::map<uint64_t, uint64_t>& segment_counts,
+    const std::shared_ptr<CoreCode>& core_code) const {
     const std::unique_lock<std::shared_mutex> lock(mutex);
-    {
-        // If our parent is an EphemeralBarrier, prune all the way down to the
-        // CoreCode
-        auto ephemeral = dynamic_cast<EphemeralBarrier*>(parent.get());
-        if (ephemeral != nullptr) {
-            parent = ephemeral->parent;
-            while (true) {
-                auto running_parent = dynamic_cast<RunningCode*>(parent.get());
-                if (running_parent == nullptr) {
-                    break;
-                }
-                parent = running_parent->getParent();
-            }
-        }
+    // If our parent is an EphemeralBarrier, prune all the way down to the
+    // CoreCode
+    if (dynamic_cast<EphemeralBarrier*>(parent.get())) {
+        parent = core_code;
     }
-    parent->commitCodeToCore(segment_counts);
-    auto root_segments = parent->getRootSegments();
+    parent->commitCodeToCore(segment_counts, core_code);
+    auto root_segments = core_code->getRootSegments();
     auto it = segment_counts.lower_bound(impl->first_segment);
     auto end = segment_counts.lower_bound(impl->nextSegmentNum());
     for (; it != end; ++it) {
