@@ -283,8 +283,9 @@ std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
 }
 
 void saveCodeToCore(Machine& machine,
-                    const std::map<uint64_t, uint64_t>& segment_counts) {
-    machine.machine_state.code->commitCodeToCore(segment_counts);
+                    const std::map<uint64_t, uint64_t>& segment_counts,
+                    const std::shared_ptr<CoreCode>& core_code) {
+    machine.machine_state.code->commitCodeToCore(segment_counts, core_code);
 }
 
 SaveResults saveTestMachine(ReadWriteTransaction& transaction,
@@ -307,7 +308,26 @@ SaveResults saveTestMachine(ReadWriteTransaction& transaction,
         return {0, machine_save_res.first};
     }
 
-    saveCodeToCore(machine, machine_save_res.second);
+    auto root_code = machine.machine_state.code;
+    while (true) {
+        auto running = dynamic_cast<RunningCode*>(root_code.get());
+        if (running != nullptr) {
+            root_code = running->getParent();
+            continue;
+        }
+        auto ephemeral = dynamic_cast<EphemeralBarrier*>(root_code.get());
+        if (ephemeral != nullptr) {
+            root_code = ephemeral->parent;
+            continue;
+        }
+        break;
+    }
+    auto core_code = std::dynamic_pointer_cast<CoreCode>(root_code);
+    if (!core_code) {
+        throw std::runtime_error("Could not trace code down to CoreCode");
+    }
+
+    saveCodeToCore(machine, machine_save_res.second, core_code);
     machine.machine_state.code = std::make_shared<RunningCode>(
         std::make_shared<EphemeralBarrier>(machine.machine_state.code));
 

@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <vector>
 
+class CoreCode;
 class RunningCode;
 
 struct CodeSegmentData {
@@ -233,7 +234,8 @@ class Code {
     [[nodiscard]] virtual bool containsSegment(uint64_t segment_id) const = 0;
 
     virtual void commitCodeToCore(
-        const std::map<uint64_t, uint64_t>& segment_counts) const = 0;
+        const std::map<uint64_t, uint64_t>& segment_counts,
+        const std::shared_ptr<CoreCode>& core_code) const = 0;
 
     // Removes any segments colliding with the CoreCode,
     // which should only happen after a reorg.
@@ -432,7 +434,14 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
         return {0, impl->segments.at(0)->size() - 1};
     }
 
-    void commitCodeToCore(const std::map<uint64_t, uint64_t>&) const override {}
+    void commitCodeToCore(
+        const std::map<uint64_t, uint64_t>&,
+        const std::shared_ptr<CoreCode>& core_code) const override {
+        if (this != core_code.get()) {
+            throw std::runtime_error(
+                "commitCodeToCore called with wrong core code");
+        }
+    }
 
     void cleanupAfterReorg() override {}
 };
@@ -487,7 +496,8 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     }
 
     void commitCodeToCore(
-        const std::map<uint64_t, uint64_t>& segment_counts) const override;
+        const std::map<uint64_t, uint64_t>& segment_counts,
+        const std::shared_ptr<CoreCode>& core_code) const override;
 
     const std::shared_ptr<Code>& getParent() const { return parent; }
 
@@ -606,7 +616,8 @@ class EphemeralBarrier : public Code {
         return new_segment;
     }
 
-    void commitCodeToCore(const std::map<uint64_t, uint64_t>&) const override {
+    void commitCodeToCore(const std::map<uint64_t, uint64_t>&,
+                          const std::shared_ptr<CoreCode>&) const override {
         throw std::runtime_error(
             "Cannot call commitCodeToCore on EphemeralBarrier");
     }

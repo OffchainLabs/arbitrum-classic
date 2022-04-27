@@ -596,7 +596,7 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
         return save_res.first;
     }
 
-    saveCodeToCore(*core_machine, save_res.second);
+    saveCodeToCore(*core_machine, save_res.second, core_code);
     core_machine->machine_state.code = std::make_shared<RunningCode>(
         std::make_shared<EphemeralBarrier>(core_machine->machine_state.code));
 
