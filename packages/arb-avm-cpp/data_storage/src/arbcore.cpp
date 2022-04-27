@@ -663,22 +663,6 @@ rocksdb::Status ArbCore::reorgToLastCheckpoint(ValueCache& cache) {
                             cache);
 }
 
-rocksdb::Status ArbCore::reorgToPenultimateCheckpoint(ValueCache& cache) {
-    std::cerr << "Reloading chain to the penultimate checkpoint saved"
-              << "\n";
-
-    return reorgCheckpoints([&](const MachineOutput&) { return true; }, true,
-                            cache);
-    return reorgCheckpoints(
-        [&](const MachineOutput& output) {
-            static int count = 0;
-            count++;
-            // Skip first entry
-            return count > 1;
-        },
-        false, cache);
-}
-
 rocksdb::Status ArbCore::reorgToL1Block(const uint256_t& l1_block_number,
                                         bool initial_start,
                                         ValueCache& cache) {
