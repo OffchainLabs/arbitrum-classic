@@ -306,14 +306,10 @@ SaveResults saveTestMachine(ReadWriteTransaction& transaction,
     if (!machine_save_res.first.ok()) {
         return {0, machine_save_res.first};
     }
-    saveCodeToCore(machine, machine_save_res.second);
 
-    auto& core_code = machine.machine_state.code;
-    while (std::dynamic_pointer_cast<RunningCode>(core_code).get() != nullptr) {
-        core_code =
-            std::dynamic_pointer_cast<RunningCode>(core_code)->getParent();
-    }
-    machine.machine_state.code = std::make_shared<RunningCode>(core_code);
+    saveCodeToCore(machine, machine_save_res.second);
+    machine.machine_state.code = std::make_shared<RunningCode>(
+        std::make_shared<EphemeralBarrier>(machine.machine_state.code));
 
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),
