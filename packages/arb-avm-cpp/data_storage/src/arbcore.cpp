@@ -1454,7 +1454,7 @@ bool ArbCore::reorgIfInvalidMachine(uint32_t& thread_failure_count,
     bool isMachineValid;
     if (core_machine->status() == MachineThread::MACHINE_ERROR) {
         std::cerr << "Attempting to recover from AVM machine error: "
-                  << core_error_string << "\n";
+                  << core_machine->getErrorString() << "\n";
         isMachineValid = false;
         core_machine->clearError();
     } else {
