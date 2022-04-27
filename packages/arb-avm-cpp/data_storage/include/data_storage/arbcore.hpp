@@ -231,6 +231,7 @@ class ArbCore {
         ReadTransaction& tx,
         const uint256_t& total_gas);
     rocksdb::Status reorgToLastCheckpoint(ValueCache& cache);
+    rocksdb::Status reorgToPenultimateCheckpoint(ValueCache& cache);
     rocksdb::Status reorgToL1Block(const uint256_t& l1_block_number,
                                    bool initial_start,
                                    ValueCache& cache);
