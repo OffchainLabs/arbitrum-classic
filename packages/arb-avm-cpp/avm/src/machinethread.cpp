@@ -66,14 +66,13 @@ bool MachineThread::continueRunningMachine(bool asynchronous) {
     return true;
 }
 
-void MachineThread::abortMachine() {
+void MachineThread::abort() {
     if (machine_thread) {
-        machine_abort = true;
+        Machine::abort();
         machine_thread->join();
         machine_thread = nullptr;
         machine_status = MACHINE_ABORTED;
     }
-    machine_abort = false;
 }
 
 Assertion MachineThread::nextAssertion() {
@@ -93,7 +92,7 @@ std::string MachineThread::getErrorString() {
 }
 
 void MachineThread::clearError() {
-    abortMachine();
+    abort();
     machine_status = MACHINE_NONE;
     machine_error_string.clear();
 }
