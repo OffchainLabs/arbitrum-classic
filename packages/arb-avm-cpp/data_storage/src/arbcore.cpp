@@ -808,7 +808,7 @@ rocksdb::Status ArbCore::reorgDatabaseToMachineOutput(
 // target
 rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
                                              bool cache_sideloads,
-                                             ValueCache cache) {
+                                             ValueCache& cache) {
     uint32_t thread_failure_count = 0;
     // next_checkpoint_gas is ignored because not saving checkpoints
     uint256_t next_checkpoint_gas;
