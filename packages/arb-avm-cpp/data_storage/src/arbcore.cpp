@@ -667,11 +667,9 @@ rocksdb::Status ArbCore::reorgToPenultimateCheckpoint(ValueCache& cache) {
     std::cerr << "Reloading chain to the penultimate checkpoint saved"
               << "\n";
 
-    return reorgCheckpoints([&](const MachineOutput&) { return true; }, true,
-                            cache);
+    auto count = 0;
     return reorgCheckpoints(
         [&](const MachineOutput& output) {
-            static int count = 0;
             count++;
             // Skip first entry
             return count > 1;
@@ -1241,6 +1239,9 @@ rocksdb::Status ArbCore::reorgCheckpoints(
 
     // Remove any extra messages left in machine from reorg
     core_machine->machine_state.context.clearInboxMessages();
+    // Call continueRunningMachine after clearing inbox messages to finish up
+    // any processing
+    core_machine->continueRunningMachine(true);
 
     return rocksdb::Status::OK();
 }
@@ -1457,29 +1458,29 @@ bool ArbCore::reorgIfInvalidMachine(uint32_t& thread_failure_count,
         isMachineValid = false;
         core_machine->clearError();
     } else {
-        ReadTransaction tx(data_storage);
-        isMachineValid = isValid(tx, core_machine->getReorgData());
+        isMachineValid = true;
     }
     if (!isMachineValid) {
-        if (coreConfig.thread_max_failure_count != 0 &&
-            thread_failure_count > coreConfig.thread_max_failure_count) {
+        thread_failure_count++;
+        if (thread_failure_count > coreConfig.thread_max_failure_count) {
             std::cerr << "Core thread had too many errors, aborting"
                       << std::endl;
             return false;
         }
         rocksdb::Status status;
-        if (thread_failure_count == 0) {
+        if (thread_failure_count == 1) {
+            // First error, reorg to last saved checkpoint
             std::cerr << "Core thread operating on invalid machine, "
                          "loading last saved checkpoint"
                       << std::endl;
             status = reorgToLastCheckpoint(cache);
         } else {
+            // Last loaded checkpoint failed, so reorg to before last checkpoint
             std::cerr << "Core thread operating on invalid machine, "
                          "loading penultimate saved checkpoint, failure_count: "
                       << thread_failure_count << std::endl;
             status = reorgToPenultimateCheckpoint(cache);
         }
-        thread_failure_count++;
         if (!status.ok()) {
             std::cerr << "Error in core thread calling "
                          "reorgToMessageCountOrBefore: "
