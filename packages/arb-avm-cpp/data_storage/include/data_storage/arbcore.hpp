@@ -255,7 +255,8 @@ class ArbCore {
     rocksdb::Status reorgDatabaseToMachineOutput(const MachineOutput& output,
                                                  ValueCache& value_cache);
     rocksdb::Status advanceCoreToTarget(const MachineOutput& target_output,
-                                        bool cache_sideloads);
+                                        bool cache_sideloads,
+                                        ValueCache cache);
     std::variant<CheckpointVariant, rocksdb::Status>
     reorgToLastMatchingCheckpoint(
         const std::function<bool(const MachineOutput&)>& check_output,
@@ -532,6 +533,9 @@ class ArbCore {
                                ReadTransaction& tx);
     void setCoreError(const std::string& message);
     bool threadBody(ThreadDataStruct& thread_data);
+    bool reorgIfInvalidMachine(uint32_t& thread_failure_count,
+                               uint256_t& next_checkpoint_gas,
+                               ValueCache& cache);
 };
 
 uint64_t seconds_since_epoch();

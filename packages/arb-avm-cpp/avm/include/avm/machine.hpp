@@ -85,7 +85,7 @@ class Machine {
         return Machine{MachineState::loadFromFile(executable_filename)};
     }
 
-    void abort();
+    virtual void abort();
 
     Assertion run();
 
