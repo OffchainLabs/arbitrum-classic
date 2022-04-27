@@ -851,7 +851,7 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 
 	f.Int("core.add-messages-max-failure-count", 10, "number of add messages failures before exiting program")
-	f.Int("core.thread-max-failure-count", 2, "number of core thread failures before exiting program, 0 to ignore errors")
+	f.Int("core.thread-max-failure-count", 2, "number of core thread failures before exiting program")
 	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
 	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
 	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")
