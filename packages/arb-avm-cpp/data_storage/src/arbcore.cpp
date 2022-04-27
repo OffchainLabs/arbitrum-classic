@@ -597,7 +597,8 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     }
 
     saveCodeToCore(*core_machine, save_res.second);
-    core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
+    core_machine->machine_state.code = std::make_shared<RunningCode>(
+        std::make_shared<EphemeralBarrier>(core_machine->machine_state.code));
 
     std::vector<unsigned char> key;
     marshal_uint256_t(state.output.arb_gas_used, key);
