@@ -255,7 +255,7 @@ class ArbCore {
                                                  ValueCache& value_cache);
     rocksdb::Status advanceCoreToTarget(const MachineOutput& target_output,
                                         bool cache_sideloads,
-                                        ValueCache cache);
+                                        ValueCache& cache);
     std::variant<CheckpointVariant, rocksdb::Status>
     reorgToLastMatchingCheckpoint(
         const std::function<bool(const MachineOutput&)>& check_output,
