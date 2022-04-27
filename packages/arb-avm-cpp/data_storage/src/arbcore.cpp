@@ -1458,7 +1458,8 @@ bool ArbCore::reorgIfInvalidMachine(uint32_t& thread_failure_count,
         isMachineValid = false;
         core_machine->clearError();
     } else {
-        isMachineValid = true;
+        ReadTransaction tx(data_storage);
+        isMachineValid = isValid(tx, core_machine->getReorgData());
     }
     if (!isMachineValid) {
         thread_failure_count++;
