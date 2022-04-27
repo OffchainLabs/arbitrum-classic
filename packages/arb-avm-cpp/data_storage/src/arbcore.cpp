@@ -663,6 +663,22 @@ rocksdb::Status ArbCore::reorgToLastCheckpoint(ValueCache& cache) {
                             cache);
 }
 
+rocksdb::Status ArbCore::reorgToPenultimateCheckpoint(ValueCache& cache) {
+    std::cerr << "Reloading chain to the penultimate checkpoint saved"
+              << "\n";
+
+    return reorgCheckpoints([&](const MachineOutput&) { return true; }, true,
+                            cache);
+    return reorgCheckpoints(
+        [&](const MachineOutput& output) {
+            static int count = 0;
+            count++;
+            // Skip first entry
+            return count > 1;
+        },
+        false, cache);
+}
+
 rocksdb::Status ArbCore::reorgToL1Block(const uint256_t& l1_block_number,
                                         bool initial_start,
                                         ValueCache& cache) {
@@ -1452,10 +1468,17 @@ bool ArbCore::reorgIfInvalidMachine(uint32_t& thread_failure_count,
             return false;
         }
         rocksdb::Status status;
-        std::cerr << "Core thread operating on invalid machine, "
-                     "loading last saved checkpoint"
-                  << std::endl;
-        status = reorgToLastCheckpoint(cache);
+        if (thread_failure_count == 0) {
+            std::cerr << "Core thread operating on invalid machine, "
+                         "loading last saved checkpoint"
+                      << std::endl;
+            status = reorgToLastCheckpoint(cache);
+        } else {
+            std::cerr << "Core thread operating on invalid machine, "
+                         "loading penultimate saved checkpoint, failure_count: "
+                      << thread_failure_count << std::endl;
+            status = reorgToPenultimateCheckpoint(cache);
+        }
         thread_failure_count++;
         if (!status.ok()) {
             std::cerr << "Error in core thread calling "
