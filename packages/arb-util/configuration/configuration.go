@@ -747,6 +747,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	if out.Node.Type() == SequencerNodeType && !out.Core.Cache.Last {
 		logger.Info().Msg("enabling last machine cache for sequencer")
 		out.Core.Cache.Last = true
+	} else if out.Node.Type() == ValidatorNodeType && out.Validator.OnlyCreateWalletContract && out.Validator.Strategy() == WatchtowerStrategy {
+		return nil, nil, nil, nil, errors.New("can't create validator wallet contract with watchtower validator strategy")
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil

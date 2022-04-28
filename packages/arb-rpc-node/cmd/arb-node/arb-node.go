@@ -124,7 +124,7 @@ func startup() error {
 		((len(config.Node.Sequencer.Lockout.Redis) == 0) != (len(config.Node.Sequencer.Lockout.SelfRPCURL) == 0)) {
 		printSampleUsage()
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
-			fmt.Printf("%s\n", err.Error())
+			fmt.Printf("\n%s\n", err.Error())
 		}
 
 		return nil
