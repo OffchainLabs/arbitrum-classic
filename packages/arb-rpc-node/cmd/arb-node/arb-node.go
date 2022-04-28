@@ -24,6 +24,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 	"io/ioutil"
@@ -283,6 +284,8 @@ func startup() error {
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	if len(config.Feed.Input.URLs) == 0 {
 		logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
+	} else if config.Node.Type() == configuration.ValidatorNodeType {
+		logger.Info().Msg("Ignoring feed because running as validator")
 	} else {
 		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 4096)
 		for _, url := range config.Feed.Input.URLs {
@@ -644,6 +647,18 @@ func startValidator(
 		log.Info().Str("address", chainState.ValidatorWallet).Msg("validator using smart contract wallet")
 		addr := ethcommon.HexToAddress(chainState.ValidatorWallet)
 		validatorAddress = &addr
+
+		valWallet, err := ethbridgecontracts.NewValidator(addr, l1Client)
+		if err != nil {
+			return nil, err
+		}
+		owner, err := valWallet.Owner(&bind.CallOpts{Context: ctx})
+		if err != nil {
+			return nil, err
+		}
+		if owner != valAuth.From() {
+			return nil, fmt.Errorf("validator smart contract wallet owner %v doesn't match validator wallet %v", owner, valAuth.From())
+		}
 	} else if config.Validator.OnlyCreateWalletContract {
 		log.Info().Msg("only creating validator smart contract and exiting")
 	} else {
