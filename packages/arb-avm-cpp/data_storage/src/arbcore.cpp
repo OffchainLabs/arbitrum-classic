@@ -1632,6 +1632,8 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
 
             // Add to cache after database changes are committed
             machine_to_cache = std::make_unique<Machine>(*core_machine);
+            machine_to_cache->machine_state.code =
+                std::make_shared<RunningCode>(core_code);
 
             auto current_timepoint = std::chrono::steady_clock::now();
             if (coreConfig.database_save_interval != 0 &&
