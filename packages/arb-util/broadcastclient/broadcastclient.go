@@ -160,6 +160,8 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				}
 				if strings.Contains(err.Error(), "i/o timeout") {
 					logger.Error().Str("feed", bc.websocketUrl).Msg("Server connection timed out without receiving data")
+				} else if strings.Contains(err.Error(), "EOF") {
+					logger.Warn().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("readData returned EOF")
 				} else {
 					logger.Error().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("error calling readData")
 				}
