@@ -200,7 +200,7 @@ func (cm *ClientManager) verifyClients() {
 	for client := range cm.clientPtrMap {
 		err := client.Ping()
 		if err != nil {
-			logError(err, "error pinging client")
+			logWarn(err, "error pinging client")
 		}
 	}
 }
