@@ -85,7 +85,7 @@ Assertion Machine::run() {
             delayAbortCheckCounter = 0;
 
             // Allow other threads to run
-            std::this_thread::sleep_for(std::chrono::seconds(0));
+            std::this_thread::yield();
         }
         delayAbortCheckCounter++;
         if (has_gas_limit) {
