@@ -15,6 +15,7 @@
  */
 
 #include <iostream>
+#include <thread>
 
 #include <avm/inboxmessage.hpp>
 #include <avm/machine.hpp>
@@ -77,11 +78,14 @@ Assertion Machine::run() {
     uint256_t initialConsumed = machine_state.getTotalMessagesRead();
     uint32_t delayAbortCheckCounter = 0;
     while (true) {
-        if (delayAbortCheckCounter >= 100) {
+        if (delayAbortCheckCounter >= 1000000) {
             if (is_aborted.load(std::memory_order_relaxed)) {
                 break;
             }
             delayAbortCheckCounter = 0;
+
+            // Allow other threads to run
+            std::this_thread::sleep_for(std::chrono::seconds(0));
         }
         delayAbortCheckCounter++;
         if (has_gas_limit) {
