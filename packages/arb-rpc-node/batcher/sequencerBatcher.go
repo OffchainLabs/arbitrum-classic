@@ -927,6 +927,26 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 		b.consecutiveShouldReorgGaps = 0
 	}
 
+	var prevAcc common.Hash
+	if prevMsgCount.Sign() > 0 {
+		prevAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(prevMsgCount, big.NewInt(1)))
+		if err != nil {
+			return false, err
+		}
+	}
+	recreatedBatch := ethbridge.SequencerBatch{
+		BeforeCount: prevMsgCount,
+		BeforeAcc:   prevAcc,
+		AfterCount:  new(big.Int).Add(lastSeqNum, big.NewInt(1)),
+		AfterAcc:    lastAcc,
+		Sequencer:   b.fromAddress,
+	}
+	// This verifies the batch accumulator
+	_, _, err = recreatedBatch.GetItems()
+	if err != nil {
+		return false, err
+	}
+
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
 	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Int("items", len(batchItems)).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
 	arbTx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc, b.gasRefunderAddress, b.config.Node.Sequencer.GasRefunderExtraGas)
