@@ -18,7 +18,6 @@ package staker
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"runtime"
 	"strings"
@@ -26,15 +25,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
-	"github.com/pkg/errors"
 )
 
 var logger = arblog.Logger.With().Str("component", "staker").Logger()
@@ -131,7 +133,7 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			}
 			delay := time.After(stakerDelay)
 			// Prune any stale database entries while we wait
-			err = s.pruneDatabase(ctx)
+			err = cmdhelp.UpdatePrunePoint(ctx, s.rollup.RollupWatcher, s.lookup)
 			if err != nil {
 				logger.Error().Err(err).Msg("error pruning database")
 			}
@@ -338,25 +340,6 @@ func (s *Staker) Act(ctx context.Context) (*arbtransaction.ArbTransaction, error
 		logger.Info().Msg("staking to execute transactions")
 	}
 	return s.wallet.ExecuteTransactions(ctx, s.builder)
-}
-
-func (s *Staker) pruneDatabase(ctx context.Context) error {
-	latestNode, err := s.rollup.LatestConfirmedNode(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Prune checkpoints up to confirmed node before last confirmed node
-	previousConfirmedNode := new(big.Int).Sub(latestNode, big.NewInt(1))
-	previousNodeInfo, err := s.rollup.LookupNode(ctx, previousConfirmedNode)
-	if err != nil {
-		return err
-	}
-
-	confirmedGas := previousNodeInfo.AfterState().TotalGasConsumed
-	s.lookup.UpdateCheckpointPruningGas(confirmedGas)
-
-	return nil
 }
 
 func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo) error {
