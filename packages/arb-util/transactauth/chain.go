@@ -204,7 +204,7 @@ func WaitForReceiptWithResultsAndReplaceByFee(
 				return nil, err
 			}
 
-			newTx, err := transactAuth.SendTransaction(ctx, signedTx, arbTx.Hash().String())
+			newTx, err := transactAuth.SendTransaction(ctx, signedTx, arbTx.HashForRbf().String())
 			if err != nil {
 				return nil, err
 			}

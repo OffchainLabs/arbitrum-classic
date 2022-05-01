@@ -19,24 +19,28 @@ package arbtransaction
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"math/big"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type ArbTransaction struct {
-	tx   *types.Transaction
-	hash ethcommon.Hash
-	id   string
+	tx         *types.Transaction
+	hash       ethcommon.Hash
+	hashForRbf ethcommon.Hash
+	id         string
 }
 
 func NewArbTransaction(tx *types.Transaction) *ArbTransaction {
+	hash := tx.Hash()
 	return &ArbTransaction{
-		tx:   tx,
-		hash: tx.Hash(),
+		tx:         tx,
+		hash:       hash,
+		hashForRbf: hash,
 	}
 }
 
@@ -55,16 +59,27 @@ func NewFireblocksArbTransaction(tx *types.Transaction, details *fireblocks.Tran
 	if len(hashString) != 64 {
 		return nil, errors.New("txHash wrong size")
 	}
-	txHash, err := hex.DecodeString(hashString)
+	txHashBytes, err := hex.DecodeString(hashString)
 	if err != nil {
 		return nil, err
 	}
 
+	txHash := ethcommon.BytesToHash(txHashBytes)
 	return &ArbTransaction{
-		tx:   tx,
-		hash: ethcommon.BytesToHash(txHash),
-		id:   details.Id,
+		tx:         tx,
+		hash:       txHash,
+		hashForRbf: txHash,
+		id:         details.Id,
 	}, nil
+}
+
+func (t *ArbTransaction) OverrideHash(hash ethcommon.Hash) {
+	t.hash = hash
+}
+
+func (t *ArbTransaction) InheritFireblocksFieldsFrom(other *ArbTransaction) {
+	t.hashForRbf = other.hash
+	t.id = other.id
 }
 
 func (t *ArbTransaction) Id() string {
@@ -73,6 +88,10 @@ func (t *ArbTransaction) Id() string {
 
 func (t *ArbTransaction) Hash() ethcommon.Hash {
 	return t.hash
+}
+
+func (t *ArbTransaction) HashForRbf() ethcommon.Hash {
+	return t.hashForRbf
 }
 
 func (t *ArbTransaction) To() *ethcommon.Address {

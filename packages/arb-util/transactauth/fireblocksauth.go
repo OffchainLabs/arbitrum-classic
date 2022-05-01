@@ -187,7 +187,8 @@ func waitForPendingTransactions(
 		}
 	}
 }
-func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
+
+func (ta *FireblocksTransactAuth) checkIfFailed(tx *arbtransaction.ArbTransaction) error {
 	details, err := ta.fb.GetTransaction(tx.Id())
 	if err != nil {
 		logger.
@@ -195,7 +196,7 @@ func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *ar
 			Err(err).
 			Str("hash", tx.Hash().String()).
 			Msg("error getting fireblocks transaction for receipt")
-		return nil, errors.Wrapf(err, "error getting fireblocks transaction for receipt: %s", details.Status)
+		return errors.Wrapf(err, "error getting fireblocks transaction for receipt: %s", details.Status)
 	}
 	if ta.fb.IsTransactionStatusFailed(details.Status) {
 		logger.
@@ -206,7 +207,15 @@ func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *ar
 			Str("status", details.Status).
 			Str("txhash", details.TxHash).
 			Msg("fireblocks transaction failed when getting receipt")
-		return nil, errors.Wrapf(err, "fireblocks transaction failed when getting receipt: %s", details.Status)
+		return errors.Wrapf(err, "fireblocks transaction failed when getting receipt: %s", details.Status)
+	}
+	return nil
+}
+
+func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *arbtransaction.ArbTransaction) (*types.Receipt, error) {
+	err := ta.checkIfFailed(tx)
+	if err != nil {
+		return nil, err
 	}
 
 	return ta.client.TransactionReceipt(ctx, tx.Hash())
