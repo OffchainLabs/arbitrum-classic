@@ -33,10 +33,10 @@ DataStorage::DataStorage(const std::string& db_path,
     auto lock = tryLockShared();
 
     rocksdb::TransactionDBOptions txn_options{};
-    rocksdb::Options options{};
-    rocksdb::ColumnFamilyOptions cf_options{};
-    rocksdb::ColumnFamilyOptions small_cf_options{};
-    rocksdb::ColumnFamilyOptions hashkey_cf_options{};
+    rocksdb::Options options;
+    rocksdb::ColumnFamilyOptions cf_options;
+    rocksdb::ColumnFamilyOptions small_cf_options;
+    rocksdb::ColumnFamilyOptions hashkey_cf_options;
     rocksdb::BlockBasedTableOptions table_options{};
     options.create_if_missing = true;
     options.create_missing_column_families = true;
