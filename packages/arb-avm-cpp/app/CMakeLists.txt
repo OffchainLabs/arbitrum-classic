@@ -24,3 +24,7 @@ target_code_coverage(avm_runner AUTO ALL EXCLUDE external/* tests/*)
 add_executable(arbcore_runner arbcorerunner.cpp)
 target_link_libraries(arbcore_runner PRIVATE avm data_storage Boost::filesystem)
 target_code_coverage(arbcore_runner AUTO ALL EXCLUDE external/* tests/*)
+
+add_executable(dump_arbos dumparbos.cpp)
+target_link_libraries(dump_arbos PRIVATE avm data_storage Boost::filesystem)
+target_code_coverage(dump_arbos AUTO ALL EXCLUDE external/* tests/*)

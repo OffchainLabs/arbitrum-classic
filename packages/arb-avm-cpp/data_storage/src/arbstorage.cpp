@@ -74,6 +74,10 @@ std::shared_ptr<ArbCore> ArbStorage::getArbCore() {
     return arb_core;
 }
 
+std::shared_ptr<DataStorage> ArbStorage::getDataStorage() {
+    return datastorage;
+}
+
 std::unique_ptr<Machine> ArbStorage::getInitialMachine() {
     auto cursor = arb_core->getExecutionCursor(0, true);
     if (!cursor.status.ok()) {
