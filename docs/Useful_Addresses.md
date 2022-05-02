@@ -4,7 +4,8 @@ title: Contract Addresses Of Note
 sidebar_label: Useful Addresses
 ---
 
-Here's some contract addreses that may be useful and/or of interest to those exploring the Arbitrum protcol:
+Here's some contract addreses that may be useful and/or of interest to
+those exploring the Arbitrum protocol:
 
 ### Protocol (L1)
 
