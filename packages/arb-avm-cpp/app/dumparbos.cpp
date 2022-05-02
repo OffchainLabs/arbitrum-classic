@@ -27,7 +27,7 @@ constexpr size_t parallelKvsLayers = 2;  // 8**x is the total parallelism
 // Warning: doesn't restore code segments or cache values
 class SimpleValueLoader : public AbstractValueLoader {
    public:
-    SimpleValueLoader(std::shared_ptr<DataStorage> data_storage_)
+    explicit SimpleValueLoader(std::shared_ptr<DataStorage> data_storage_)
         : data_storage(data_storage_) {}
 
     Value loadValue(const uint256_t& hash) override {
@@ -241,7 +241,7 @@ nlohmann::json serializeAccount(ValueLoader loader, Value account) {
 template <typename F>
 void writeKvsToFile(ValueLoader loader,
                     Tuple kvs,
-                    std::string name,
+                    const std::string& name,
                     F&& serialize) {
     std::cerr << "Serializing " << name << "..." << std::endl;
     std::mutex mutex;
