@@ -32,7 +32,7 @@ Now let’s suppose the sequencer, for whatever reason, is entirely failing to c
 
 First, they submit their L2 message via L1 into the delayed Inbox as described above: note that although atomic cross-chain messages are the common case for using the delayed Inbox, it can in principle be used to submit any L2 message. 
 
-Once in the delayed Inbox, we obviously can’t rely on the sequencer to include the translation in a batch. Instead, we can use **SequencerInbox**’s **forceInclusion** method. Once a message has been in the delayed Inbox for a sufficient amount of time **forceInclusion** can be called to move it from the delayed Inbox into the core Inbox, at which point it’s finalized. Crucially, any address can call **forceInclusion**. 
+Once in the delayed Inbox, we obviously can’t rely on the sequencer to include the transaction in a batch. Instead, we can use **SequencerInbox**’s **forceInclusion** method. Once a message has been in the delayed Inbox for a sufficient amount of time **forceInclusion** can be called to move it from the delayed Inbox into the core Inbox, at which point it’s finalized. Crucially, any address can call **forceInclusion**. 
 
 Currently, on Arbitrum One, this delay time between submission and force inclusion is roughly 24 hours, as specified by the **maxDelayBlocks** and **maxDelaySeconds** variables. A force inclusion from L1 would directly affect the state for any unconfirmed L2 transactions; keeping conservatively high value ensures it should only be used under extraordinary circumstances.
 
