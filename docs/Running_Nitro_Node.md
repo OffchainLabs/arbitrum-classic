@@ -6,7 +6,7 @@ sidebar_label: Running a Nitro Node
 
 ### Required Artifacts
 
-- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-alpha.2`
+- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-alpha.3`
 
 ### Required parameter
 
@@ -25,7 +25,7 @@ sidebar_label: Running a Nitro Node
 - Here is an example of how to run nitro-node for goerli:
 
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-goerli/:/home/user/.arbitrum/goerli -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-alpha.2 --l1.url https://l1-goerli-node:8545
+  docker run --rm -it  -v /some/local/dir/arbitrum-goerli/:/home/user/.arbitrum/goerli -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-alpha.3 --l1.url https://l1-goerli-node:8545
   ```
 
   - Note that if you are running L1 node on localhost, you may need to add `--network host` right after `docker run` to use docker host-based networking
@@ -66,9 +66,9 @@ sidebar_label: Running a Nitro Node
   The arb-relay is in the same docker image.
 - Here is an example of how to run nitro-relay for goerli:
   ```
-  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-alpha.2 --node.feed.input.url wss://nitro-devnet.arbitrum.io/feed
+  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-alpha.3 --node.feed.input.url wss://nitro-devnet.arbitrum.io/feed
   ```
 - Here is an example of how to run nitro-node for goerli with custom relay:
   ```
-  docker run --rm -it  -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-alpha.2 --l1.url https://l1-goeri-node:8545 --feed.input.url ws://local-relay-address:9642
+  docker run --rm -it  -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-alpha.3 --l1.url https://l1-goeri-node:8545 --feed.input.url ws://local-relay-address:9642
   ```
