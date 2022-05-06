@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package batcher
 
 import (
 	"container/list"
+	"context"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -36,8 +37,8 @@ type statefulBatch struct {
 	txCounts map[common.Address]uint64
 }
 
-func newStatefulBatch(db *txdb.TxDB, maxSize common.StorageSize, signer types.Signer) (*statefulBatch, error) {
-	snap, err := db.LatestSnapshot()
+func newStatefulBatch(ctx context.Context, db *txdb.TxDB, maxSize common.StorageSize, signer types.Signer) (*statefulBatch, error) {
+	snap, err := db.LatestSnapshot(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -56,10 +57,10 @@ func (p *statefulBatch) newFromExisting() batch {
 	}
 }
 
-func (p *statefulBatch) getTxCount(account common.Address) (uint64, error) {
+func (p *statefulBatch) getTxCount(ctx context.Context, account common.Address) (uint64, error) {
 	count, ok := p.txCounts[account]
 	if !ok {
-		txCount, err := p.snap.GetTransactionCount(arbcommon.NewAddressFromEth(account))
+		txCount, err := p.snap.GetTransactionCount(ctx, arbcommon.NewAddressFromEth(account))
 		if err != nil {
 			return 0, err
 		}
@@ -69,12 +70,12 @@ func (p *statefulBatch) getTxCount(account common.Address) (uint64, error) {
 	return count, nil
 }
 
-func (p *statefulBatch) validateTx(tx *types.Transaction) (txResponse, error) {
+func (p *statefulBatch) validateTx(ctx context.Context, tx *types.Transaction) (txResponse, error) {
 	sender, err := types.Sender(p.signer, tx)
 	if err != nil {
 		return REMOVE, errors.New("invalid signature")
 	}
-	nextValidNonce, err := p.getTxCount(sender)
+	nextValidNonce, err := p.getTxCount(ctx, sender)
 	if err != nil {
 		return SKIP, err
 	}
@@ -86,7 +87,7 @@ func (p *statefulBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 		return REMOVE, errors.WithStack(core.ErrNonceTooLow)
 	}
 
-	amount, err := p.snap.GetBalance(arbcommon.NewAddressFromEth(sender))
+	amount, err := p.snap.GetBalance(ctx, arbcommon.NewAddressFromEth(sender))
 	if err != nil {
 		return REMOVE, err
 	}
@@ -101,10 +102,10 @@ func (p *statefulBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 		return REMOVE, errors.WithStack(core.ErrInsufficientFunds)
 	}
 
-	return p.statelessBatch.validateTx(tx)
+	return p.statelessBatch.validateTx(ctx, tx)
 }
 
-func snapWithTx(snap *snapshot.Snapshot, tx *types.Transaction, signer types.Signer) (*snapshot.Snapshot, error) {
+func snapWithTx(ctx context.Context, snap *snapshot.Snapshot, tx *types.Transaction, signer types.Signer) (*snapshot.Snapshot, error) {
 	msg, err := message.NewL2Message(message.SignedTransaction{Tx: tx})
 	if err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func snapWithTx(snap *snapshot.Snapshot, tx *types.Transaction, signer types.Sig
 		return nil, err
 	}
 
-	_, err = snap.AddMessage(msg, arbcommon.NewAddressFromEth(sender), arbcommon.NewHashFromEth(tx.Hash()))
+	_, err = snap.AddMessage(ctx, msg, arbcommon.NewAddressFromEth(sender), arbcommon.NewHashFromEth(tx.Hash()))
 	return snap, err
 }
 
@@ -123,9 +124,9 @@ func (p *statefulBatch) getLatestSnap() *snapshot.Snapshot {
 	return p.snap
 }
 
-func (p *statefulBatch) addIncludedTx(tx *types.Transaction) error {
+func (p *statefulBatch) addIncludedTx(ctx context.Context, tx *types.Transaction) error {
 	newSnap := p.snap.Clone()
-	newSnap, err := snapWithTx(newSnap, tx, p.signer)
+	newSnap, err := snapWithTx(ctx, newSnap, tx, p.signer)
 	if err != nil {
 		return err
 	}
@@ -135,7 +136,7 @@ func (p *statefulBatch) addIncludedTx(tx *types.Transaction) error {
 		return err
 	}
 
-	if err := p.statelessBatch.addIncludedTx(tx); err != nil {
+	if err := p.statelessBatch.addIncludedTx(ctx, tx); err != nil {
 		return err
 	}
 
@@ -144,8 +145,8 @@ func (p *statefulBatch) addIncludedTx(tx *types.Transaction) error {
 	return nil
 }
 
-func (p *statefulBatch) updateCurrentSnap(pendingSentBatches *list.List) error {
-	snap, err := p.db.LatestSnapshot()
+func (p *statefulBatch) updateCurrentSnap(ctx context.Context, pendingSentBatches *list.List) error {
+	snap, err := p.db.LatestSnapshot(ctx)
 	if err != nil {
 		return err
 	}
@@ -158,7 +159,7 @@ func (p *statefulBatch) updateCurrentSnap(pendingSentBatches *list.List) error {
 			item := n.Value.(*pendingSentBatch)
 			for _, tx := range item.txes {
 				var err error
-				newSnap, err := snapWithTx(snap, tx, p.signer)
+				newSnap, err := snapWithTx(ctx, snap, tx, p.signer)
 				if err != nil {
 					continue
 				}
@@ -168,7 +169,7 @@ func (p *statefulBatch) updateCurrentSnap(pendingSentBatches *list.List) error {
 		}
 		for _, tx := range p.appliedTxes {
 			var err error
-			newSnap, err := snapWithTx(snap, tx, p.signer)
+			newSnap, err := snapWithTx(ctx, snap, tx, p.signer)
 			if err != nil {
 				continue
 			}

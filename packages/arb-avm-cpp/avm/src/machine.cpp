@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,8 @@ MachineExecutionConfig::MachineExecutionConfig()
       go_over_gas(false),
       inbox_messages(),
       sideloads(),
-      stop_on_sideload(false) {}
+      stop_on_sideload(false),
+      stop_on_breakpoint(false) {}
 
 void MachineExecutionConfig::setInboxMessagesFromBytes(
     const std::vector<std::vector<unsigned char>>& bytes) {
@@ -63,6 +64,10 @@ void MachineExecutionConfig::setSideloadsFromBytes(
     }
 }
 
+void Machine::abort() {
+    is_aborted = true;
+}
+
 Assertion Machine::run() {
     uint256_t start_steps = machine_state.output.total_steps;
     uint256_t start_gas = machine_state.output.arb_gas_used;
@@ -70,7 +75,15 @@ Assertion Machine::run() {
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
     uint256_t initialConsumed = machine_state.getTotalMessagesRead();
+    uint32_t delayAbortCheckCounter = 0;
     while (true) {
+        if (delayAbortCheckCounter >= 100) {
+            if (is_aborted.load(std::memory_order_relaxed)) {
+                break;
+            }
+            delayAbortCheckCounter = 0;
+        }
+        delayAbortCheckCounter++;
         if (has_gas_limit) {
             if (!machine_state.context.go_over_gas) {
                 if (machine_state.nextGasCost() +
@@ -84,6 +97,12 @@ Assertion Machine::run() {
                 // Last step reached or went over gas limit
                 break;
             }
+        }
+
+        if (machine_state.context.stop_after_log_count &&
+            machine_state.output.log_count >=
+                *machine_state.context.stop_after_log_count) {
+            break;
         }
 
         block_reason = machine_state.runOne();

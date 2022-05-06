@@ -1,5 +1,5 @@
 /*
-* Copyright 2020, Offchain Labs, Inc.
+* Copyright 2020-2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import (
 )
 
 func TestCreate2(t *testing.T) {
+	ctx := context.Background()
 	backend, auths := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := auths[0]
@@ -124,7 +125,7 @@ func TestCreate2(t *testing.T) {
 		t.Fatal("wrong exists clone output")
 	}
 
-	cloneCode, err := snap.GetCode(common.NewAddressFromEth(cloneConnAddress))
+	cloneCode, err := snap.GetCode(ctx, common.NewAddressFromEth(cloneConnAddress))
 	failIfError(t, err)
 	if len(cloneCode) != 45 {
 		t.Fatal("wrong clone code length")

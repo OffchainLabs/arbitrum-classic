@@ -29,6 +29,7 @@
 TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
     ValueCache value_cache{1, 0};
+    ArbCoreConfig coreConfig{};
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
@@ -47,12 +48,12 @@ TEST_CASE("ARBOS test vectors") {
             for (auto& json_message : j.at("inbox")) {
                 messages.emplace_back(
                     InboxMessage::fromTuple(
-                        std::get<Tuple>(simple_value_from_json(json_message))),
+                        get<Tuple>(simple_value_from_json(json_message))),
                     0);
             }
 
             auto logs_json = j.at("logs");
-            std::vector<value> logs;
+            std::vector<Value> logs;
             for (auto& log_json : logs_json) {
                 logs.push_back(simple_value_from_json(log_json));
             }
@@ -64,24 +65,23 @@ TEST_CASE("ARBOS test vectors") {
             }
             auto total_gas_target = j.at("total_gas").get<uint64_t>();
 
-            ArbCoreConfig coreConfig{};
             ArbStorage storage(dbpath, coreConfig);
-            REQUIRE(storage.initialize(arb_os_path).ok());
+            REQUIRE(storage.initialize(arb_os_path).status.ok());
             auto mach = storage.getInitialMachine();
             MachineExecutionConfig config;
             config.inbox_messages = messages;
             mach->machine_state.context = AssertionContext(config);
             auto assertion = mach->run();
-            INFO("Machine ran for " << assertion.gasCount << " gas with target "
-                                    << total_gas_target);
+            INFO("Machine ran for " << assertion.gas_count
+                                    << " gas with target " << total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
             uint64_t block_log_count = 0;
             uint64_t tx_log_count = 0;
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
-                auto typecode = std::get<Tuple>(logs[k]).get_element(0);
-                if (typecode == value{uint256_t{0}}) {
+                auto typecode = get<Tuple>(logs[k]).get_element(0);
+                if (values_equal(typecode, Value{uint256_t{0}})) {
                     tx_log_count++;
-                } else if (typecode == value{uint256_t{1}}) {
+                } else if (values_equal(typecode, Value{uint256_t{1}})) {
                     block_log_count++;
                 }
             }
@@ -89,9 +89,9 @@ TEST_CASE("ARBOS test vectors") {
                                 << block_log_count << " block logs");
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
                 INFO("Checking log " << k);
-                CHECK(assertion.logs[k] == logs[k]);
-                if (std::get<Tuple>(logs[k]).get_element(0) ==
-                    value{uint256_t{1}}) {
+                CHECK(values_equal(assertion.logs[k].val, logs[k]));
+                if (values_equal(get<Tuple>(logs[k]).get_element(0),
+                                 Value{uint256_t{1}})) {
                     block_log_count++;
                 }
             }
@@ -99,12 +99,12 @@ TEST_CASE("ARBOS test vectors") {
             REQUIRE(assertion.sends.size() == sends.size());
             for (size_t k = 0; k < assertion.sends.size(); ++k) {
                 INFO("Checking send " << k);
-                CHECK(assertion.sends[k] == sends[k]);
+                CHECK(assertion.sends[k].val == sends[k]);
             }
-            CHECK(assertion.gasCount == total_gas_target);
+            CHECK(assertion.gas_count == total_gas_target);
             {
                 auto tx = storage.makeReadWriteTransaction();
-                saveMachine(*tx, *mach);
+                saveTestMachine(*tx, *mach);
                 tx->commit();
             }
 

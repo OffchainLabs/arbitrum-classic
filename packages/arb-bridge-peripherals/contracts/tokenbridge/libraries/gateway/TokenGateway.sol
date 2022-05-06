@@ -71,6 +71,16 @@ abstract contract TokenGateway is ITokenGateway {
         bytes calldata _data
     ) external payable virtual override returns (bytes memory);
 
+    function outboundTransferCustomRefund(
+        address _token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) external payable virtual override returns (bytes memory);
+
     function getOutboundCalldata(
         address _token,
         address _from,

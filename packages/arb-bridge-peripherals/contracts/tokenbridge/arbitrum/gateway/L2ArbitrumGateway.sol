@@ -55,8 +55,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
 
     modifier onlyCounterpartGateway() override {
         require(
-            msg.sender == counterpartGateway ||
-                AddressAliasHelper.undoL1ToL2Alias(msg.sender) == counterpartGateway,
+            msg.sender == AddressAliasHelper.applyL1ToL2Alias(counterpartGateway),
             "ONLY_COUNTERPART_GATEWAY"
         );
         _;
@@ -121,6 +120,18 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         uint256 _amount,
         bytes calldata _data
     ) public payable virtual returns (bytes memory) {
+        return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
+    }
+
+    function outboundTransferCustomRefund(
+        address _l1Token,
+        address _to,
+        address, /* _refundTo */
+        uint256 _amount,
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
+        bytes calldata _data
+    ) public payable virtual override returns (bytes memory res) {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 

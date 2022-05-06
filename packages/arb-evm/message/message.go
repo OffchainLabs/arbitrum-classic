@@ -18,19 +18,18 @@ package message
 
 import (
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "message").Logger()
+var logger = arblog.Logger.With().Str("component", "message").Logger()
 
 const (
 	L2Type            inbox.Type = 3

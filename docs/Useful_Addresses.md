@@ -13,7 +13,7 @@ Here's some contract addreses that may be useful and/or of interest to those exp
 | Rollup              | [0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A](https://etherscan.io/address/0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A) | [0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c](https://rinkeby.etherscan.io/address/0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c) |
 | Delayed Inbox       | [0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f](https://etherscan.io/address/0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f) | [0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e](https://rinkeby.etherscan.io/address/0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e) |
 | Sequencer Inbox     | [0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef](https://etherscan.io/address/0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef) | [0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8](https://rinkeby.etherscan.io/address/0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8) |
-| Bridge              | [0x9a28e783c47bbeb813f32b861a431d0776681e95](https://etherscan.io/address/0x9a28e783c47bbeb813f32b861a431d0776681e95) | [0x9a28e783c47bbeb813f32b861a431d0776681e95](https://rinkeby.etherscan.io/address/0x9a28e783c47bbeb813f32b861a431d0776681e95) |
+| Bridge              | [0x011B6E24FfB0B5f5fCc564cf4183C5BBBc96D515](https://etherscan.io/address/0x011B6E24FfB0B5f5fCc564cf4183C5BBBc96D515) | [0x9a28e783c47bbeb813f32b861a431d0776681e95](https://rinkeby.etherscan.io/address/0x9a28e783c47bbeb813f32b861a431d0776681e95) |
 | Outbox              | [0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40](https://etherscan.io/address/0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40) | [0x2360A33905dc1c72b12d975d975F42BaBdcef9F3](https://rinkeby.etherscan.io/address/0x2360A33905dc1c72b12d975d975F42BaBdcef9F3) |
 | One Step Proof      | [0x4812be53be02b9f38063cf55fef0a19d2ba8bb3a](https://etherscan.io/address/0x4812be53be02b9f38063cf55fef0a19d2ba8bb3a) | [0x6210a4eD13A487a5925EBe956b7a6E0b83325DA4](https://rinkeby.etherscan.io/address/0x6210a4eD13A487a5925EBe956b7a6E0b83325DA4) |
 | One Step Proof 2    | [0x2df287a3b2fd0916c0b3d4882201ff360acd6ec3](https://etherscan.io/address/0x2df287a3b2fd0916c0b3d4882201ff360acd6ec3) | [0xb1F17484b93037d898b86E760fFA4B1E62445B8e](https://rinkeby.etherscan.io/address/0xb1F17484b93037d898b86E760fFA4B1E62445B8e) |
@@ -22,18 +22,33 @@ Here's some contract addreses that may be useful and/or of interest to those exp
 
 ### Token Bridge
 
+**IMPORTANT**: _Do **not** simply transfer tokens or Ether to any of the addresses below; it will result in loss of funds._
+
+_Users should only interact with the token bridge via dapp interfaces like https://bridge.arbitrum.io_.
+
 |                       | Mainnet                                                                                                               | Rinkeby                                                                                                                               |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | L1 Gateway Router     | [0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef](https://etherscan.io/address/0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef) | [0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380](https://rinkeby.etherscan.io/address/0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380)         |
-| L2 Gateway Router     | [0x5288c571Fd7aD117beA99bF60FE0846C4E84F933](https://arbiscan.io/address/0x5288c571Fd7aD117beA99bF60FE0846C4E84F933)  | [0x9413AD42910c1eA60c737dB5f58d1C504498a3cD](https://rinkeby-explorer.arbitrum.io/address/0x9413AD42910c1eA60c737dB5f58d1C504498a3cD) |
+| L2 Gateway Router     | [0x5288c571Fd7aD117beA99bF60FE0846C4E84F933](https://arbiscan.io/address/0x5288c571Fd7aD117beA99bF60FE0846C4E84F933)  | [0x9413AD42910c1eA60c737dB5f58d1C504498a3cD](https://testnet.arbiscan.io/address/0x9413AD42910c1eA60c737dB5f58d1C504498a3cD)          |
 | L1 ERC20 Gateway      | [0xa3A7B6F88361F48403514059F1F16C8E78d60EeC](https://etherscan.io/address/0xa3A7B6F88361F48403514059F1F16C8E78d60EeC) | [0x91169Dbb45e6804743F94609De50D511C437572E](https://rinkeby.etherscan.io/address/0x91169Dbb45e6804743F94609De50D511C437572E)         |
-| L2 ERC20 Gateway      | [0x09e9222E96E7B4AE2a407B98d48e330053351EEe](https://arbiscan.io/address/0x09e9222E96E7B4AE2a407B98d48e330053351EEe)  | [0x195C107F3F75c4C93Eba7d9a1312F19305d6375f](https://rinkeby-explorer.arbitrum.io/address/0x195C107F3F75c4C93Eba7d9a1312F19305d6375f) |
+| L2 ERC20 Gateway      | [0x09e9222E96E7B4AE2a407B98d48e330053351EEe](https://arbiscan.io/address/0x09e9222E96E7B4AE2a407B98d48e330053351EEe)  | [0x195C107F3F75c4C93Eba7d9a1312F19305d6375f](https://testnet.arbiscan.io/address/0x195C107F3F75c4C93Eba7d9a1312F19305d6375f)          |
 | L1 Arb-Custom Gateway | [0xcEe284F754E854890e311e3280b767F80797180d](https://etherscan.io/address/0xcEe284F754E854890e311e3280b767F80797180d) | [0x917dc9a69F65dC3082D518192cd3725E1Fa96cA2](https://rinkeby.etherscan.io/address/0x917dc9a69F65dC3082D518192cd3725E1Fa96cA2)         |
 | L2 Arb-Custom Gateway | [0x096760F208390250649E3e8763348E783AEF5562](https://arbiscan.io/address/0x096760F208390250649E3e8763348E783AEF5562)  | [0x9b014455AcC2Fe90c52803849d0002aeEC184a06](https://arbiscan.io/address/0x9b014455AcC2Fe90c52803849d0002aeEC184a06)                  |
 | L1 Weth Gateway       | [0xd92023E9d9911199a6711321D1277285e6d4e2db](https://etherscan.io/address/0xd92023E9d9911199a6711321D1277285e6d4e2db) | [0x81d1a19cf7071732D4313c75dE8DD5b8CF697eFD](https://rinkeby.etherscan.io/address/0x81d1a19cf7071732D4313c75dE8DD5b8CF697eFD)         |
-| L2 Weth Gateway       | [0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B](https://arbiscan.io/address/0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B)  | [0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9](https://arbiscan.io/address/0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9)                  |
+| L2 Weth Gateway       | [0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B](https://arbiscan.io/address/0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B)  | [0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9](https://testnet.arbiscan.io/address/0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9)          |
 | L1 Weth               | [0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2](https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2) | [0xc778417E063141139Fce010982780140Aa0cD5Ab](https://rinkeby.etherscan.io/address/0xc778417E063141139Fce010982780140Aa0cD5Ab)         |
 | L2 Weth               | [0x82aF49447D8a07e3bd95BD0d56f35241523fBab1](https://arbiscan.io/address/0x82aF49447D8a07e3bd95BD0d56f35241523fBab1)  | [0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681](https://arbiscan.io/address/0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681)                  |
+
+#### Third party gateways
+
+These are the addresses of some other gateways that have been deployed and integrated with the token bridge
+
+|                     | Mainnet                                                                                                               | Rinkeby                                                                                                                       |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| L1 Dai Gateway      | [0xD3B5b60020504bc3489D6949d545893982BA3011](https://etherscan.io/address/0xD3B5b60020504bc3489D6949d545893982BA3011) | [0x10E6593CDda8c58a1d0f14C5164B376352a55f2F](https://rinkeby.etherscan.io/address/0x10E6593CDda8c58a1d0f14C5164B376352a55f2F) |
+| L2 Dai Gateway      | [0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65](https://arbiscan.io/address/0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65)  | [0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65](https://testnet.arbiscan.io/address/0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65)  |
+| L1 Livepeer Gateway | [0x6142f1C8bBF02E6A6bd074E8d564c9A5420a0676](https://etherscan.io/address/0x6142f1C8bBF02E6A6bd074E8d564c9A5420a0676) | [0x831C51Cd8A38C3E42D98Acd77F06BF537D29800e](https://rinkeby.etherscan.io/address/0x831C51Cd8A38C3E42D98Acd77F06BF537D29800e) |
+| L2 Livepeer Gateway | [0x6d2457a4ad276000a615295f7a80f79e48ccd318](https://arbiscan.io/address/0x6D2457a4ad276000A615295f7A80F79E48CcD318)  | [0x7e0ba3791b23d0d577cf8d09c4fdd5821222208c](https://testnet.arbiscan.io/address/0x7e0ba3791b23d0d577cf8d09c4fdd5821222208c)  |
 
 ### Arbitrum Precompiles (L2, same on all Arb-chains)
 
@@ -54,4 +69,4 @@ Here's some contract addreses that may be useful and/or of interest to those exp
 
 |              | Mainnet                                                                                                              | Rinkeby                                                                                                                               |
 | ------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| L2 Multicall | [0x842eC2c7D803033Edf55E478F461FC547Bc54EB2](https://arbiscan.io/address/0x842eC2c7D803033Edf55E478F461FC547Bc54EB2) | [0x5D6e06d3E154C5DBEC91317f0d04AE03AB49A273](https://rinkeby-explorer.arbitrum.io/address/0x5D6e06d3E154C5DBEC91317f0d04AE03AB49A273) |
+| L2 Multicall | [0x842eC2c7D803033Edf55E478F461FC547Bc54EB2](https://arbiscan.io/address/0x842eC2c7D803033Edf55E478F461FC547Bc54EB2) | [0x5D6e06d3E154C5DBEC91317f0d04AE03AB49A273](https://testnet.arbiscan.io/address/0x5D6e06d3E154C5DBEC91317f0d04AE03AB49A273)          |

@@ -108,7 +108,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             l1TokenToGateway[_token[i]] = _gateway[i];
             emit GatewaySet(_token[i], _gateway[i]);
             // overwrite memory so the L2 router receives the L2 address of each gateway
-            if (_gateway[i] != address(0)) {
+            if (_gateway[i] != address(0) && _gateway[i] != DISABLED) {
                 // if we are assigning a gateway to the token, the address oracle of the gateway
                 // must return something other than the 0 address
                 // this check helps avoid misconfiguring gateways
@@ -170,23 +170,21 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
      * return Retryable ticket ID
      */
     function setGateway(
-        address, /* _gateway */
-        uint256, /* _maxGas */
-        uint256, /* _gasPriceBid */
-        uint256, /* _maxSubmissionCost */
-        address /* _creditBackAddress */
+        address _gateway,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
     ) public payable returns (uint256) {
-        revert("SELF_REGISTRATION_DISABLED");
-        /*
         require(
             ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
             "NOT_ARB_ENABLED"
         );
         require(_gateway.isContract(), "NOT_TO_CONTRACT");
 
-        address currGateway = l1TokenToGateway[msg.sender];
-        if (currGateway != address(0)) {
-            // if gateway is already set, don't allow it to set a different gateway
+        address currGateway = getGateway(msg.sender);
+        if (currGateway != address(0) && currGateway != defaultGateway) {
+            // if gateway is already set to a non-default gateway, don't allow it to set a different gateway
             require(currGateway == _gateway, "NO_UPDATE_TO_DIFFERENT_ADDR");
         }
 
@@ -205,7 +203,6 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
                 _maxSubmissionCost,
                 _creditBackAddress
             );
-        */
     }
 
     function setGateways(
@@ -221,6 +218,27 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             _setGateways(_token, _gateway, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
+    function _outboundTransferChecks(
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes memory _data
+    ) internal view {
+        // when sending a L1 to L2 transaction, we expect the user to send
+        // eth in flight in order to pay for L2 gas costs
+        // this check prevents users from misconfiguring the msg.value
+        uint256 _maxSubmissionCost;
+        // assembly code block below is the gas optimized version of
+        // _maxSubmissionCost = abi.decode(_data, (uint256, bytes));
+        assembly {
+            _maxSubmissionCost := mload(add(_data, 0x20))
+        }
+
+        // here we don't use SafeMath since this validation is to prevent users
+        // from shooting themselves on the foot.
+        require(_maxSubmissionCost != 0, "NO_SUBMISSION_COST");
+        require(msg.value == _maxSubmissionCost + (_maxGas * _gasPriceBid), "WRONG_ETH_VALUE");
+    }
+
     function outboundTransfer(
         address _token,
         address _to,
@@ -228,20 +246,40 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable override onlyWhitelisted returns (bytes memory) {
-        // when sending a L1 to L2 transaction, we expect the user to send
-        // eth in flight in order to pay for L2 gas costs
-        // this check prevents users from misconfiguring the msg.value
-        (uint256 _maxSubmissionCost, ) = abi.decode(_data, (uint256, bytes));
-
-        // here we don't use SafeMath since this validation is to prevent users
-        // from shooting themselves on the foot.
-        uint256 expectedEth = _maxSubmissionCost + (_maxGas * _gasPriceBid);
-        require(_maxSubmissionCost > 0, "NO_SUBMISSION_COST");
-        require(msg.value == expectedEth, "WRONG_ETH_VALUE");
+    ) public payable override returns (bytes memory) {
+        _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
         // will revert if msg.sender is not whitelisted
         return super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
+    }
+
+    /**
+     * @notice Deposit ERC20 token from Ethereum into Arbitrum using the registered or otherwise default gateway
+     * @dev Some legacy gateway might not have the outboundTransferCustomRefund method and will revert, in such case use outboundTransfer instead
+     * @param _token L1 address of ERC20
+     * @param _refundTo account to be credited with the excess gas refund in the L2, subject to L2 alias rewrite if its a L1 contract
+     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param _amount Token Amount
+     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param _gasPriceBid Gas price for L2 execution
+     * @param _data encoded data from router and user
+     * @return res abi encoded inbox sequence number
+     */
+    function outboundTransferCustomRefund(
+        address _token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable override returns (bytes memory) {
+        // _refundTo is subject to L2 alias rewrite
+        require(_refundTo != address(0), "INVALID_REFUND_ADDR");
+        _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
+
+        // will revert if msg.sender is not whitelisted
+        return super.outboundTransferCustomRefund(_token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     modifier onlyCounterpartGateway() override {

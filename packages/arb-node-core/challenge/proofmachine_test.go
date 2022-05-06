@@ -35,11 +35,11 @@ import (
 
 func generateProofCases(t *testing.T, arbCore *monitor.Monitor) ([]*proofmachine.ProofData, []string) {
 	var cursors []core.ExecutionCursor
-	cursor, err := arbCore.Core.GetExecutionCursor(big.NewInt(0))
+	cursor, err := arbCore.Core.GetExecutionCursor(big.NewInt(0), true)
 	test.FailIfError(t, err)
 	cursors = append(cursors, cursor.Clone())
 	for {
-		err = arbCore.Core.AdvanceExecutionCursor(cursor, big.NewInt(1), true)
+		err = arbCore.Core.AdvanceExecutionCursor(cursor, big.NewInt(1), true, true)
 		test.FailIfError(t, err)
 		if cursor.TotalGasConsumed().Cmp(cursors[len(cursors)-1].TotalGasConsumed()) == 0 {
 			break
@@ -111,9 +111,10 @@ func TestValidateProof(t *testing.T) {
 				errors := proofChecker.CheckProof(proof)
 				if len(errors) > 0 {
 					t.Logf("error checking proof for opcode 0x%x", proof.Proof[0])
-				}
-				for _, err := range proofChecker.CheckProof(proof) {
-					t.Error(err)
+
+					for _, err := range errors {
+						t.Error(err)
+					}
 				}
 			}
 		})

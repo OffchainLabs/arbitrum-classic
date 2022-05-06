@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ auto execution_path = boost::filesystem::current_path();
 
 void checkpointState(ArbStorage& storage, Machine& machine) {
     auto transaction = storage.makeReadWriteTransaction();
-    auto results = saveMachine(*transaction, machine);
+    auto results = saveTestMachine(*transaction, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
     REQUIRE(transaction->commit().ok());
@@ -41,13 +41,13 @@ void checkpointState(ArbStorage& storage, Machine& machine) {
 
 void checkpointStateTwice(ArbStorage& storage, Machine& machine) {
     auto transaction1 = storage.makeReadWriteTransaction();
-    auto results = saveMachine(*transaction1, machine);
+    auto results = saveTestMachine(*transaction1, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
     REQUIRE(transaction1->commit().ok());
 
     auto transaction2 = storage.makeReadWriteTransaction();
-    auto results2 = saveMachine(*transaction2, machine);
+    auto results2 = saveTestMachine(*transaction2, machine);
     REQUIRE(results2.status.ok());
     REQUIRE(results2.reference_count == 2);
     REQUIRE(transaction2->commit().ok());
@@ -70,7 +70,7 @@ TEST_CASE("Checkpoint State") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    REQUIRE(storage.initialize(test_contract_path).ok());
+    REQUIRE(storage.initialize(test_contract_path).status.ok());
     ValueCache value_cache{1, 0};
 
     auto machine = storage.getInitialMachine();
@@ -83,7 +83,7 @@ TEST_CASE("Checkpoint State") {
     SECTION("save twice") { checkpointStateTwice(storage, *machine); }
     SECTION("assert machine hash") {
         auto transaction = storage.makeReadWriteTransaction();
-        auto results = saveMachine(*transaction, *machine);
+        auto results = saveTestMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
         auto machine2 = storage.getMachine(machine->hash(), value_cache);
@@ -95,7 +95,7 @@ TEST_CASE("Delete machine checkpoint") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    REQUIRE(storage.initialize(test_contract_path).ok());
+    REQUIRE(storage.initialize(test_contract_path).status.ok());
 
     SECTION("default") {
         auto machine = storage.getInitialMachine();
@@ -104,11 +104,11 @@ TEST_CASE("Delete machine checkpoint") {
         machine->machine_state.context = AssertionContext(execConfig);
         machine->run();
         auto transaction = storage.makeReadWriteTransaction();
-        saveMachine(*transaction, *machine);
+        saveTestMachine(*transaction, *machine);
         execConfig.max_gas = 0;
         machine->machine_state.context = AssertionContext(execConfig);
         machine->run();
-        saveMachine(*transaction, *machine);
+        saveTestMachine(*transaction, *machine);
         deleteCheckpoint(*transaction, *machine);
         REQUIRE(transaction->commit().ok());
     }
@@ -118,13 +118,13 @@ TEST_CASE("Restore checkpoint") {
     DBDeleter deleter;
     ArbCoreConfig coreConfig{};
     ArbStorage storage(dbpath, coreConfig);
-    REQUIRE(storage.initialize(test_contract_path).ok());
+    REQUIRE(storage.initialize(test_contract_path).status.ok());
     ValueCache value_cache{1, 0};
 
     SECTION("default") {
         auto machine = storage.getInitialMachine();
         auto transaction = storage.makeReadWriteTransaction();
-        auto results = saveMachine(*transaction, *machine);
+        auto results = saveTestMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
         restoreCheckpoint(storage, *machine, value_cache);
@@ -139,7 +139,7 @@ TEST_CASE("Proof") {
         machine.machine_state.context = AssertionContext(execConfig);
         auto assertion = machine.run();
         machine.marshalForProof();
-        if (assertion.stepCount == 0) {
+        if (assertion.step_count == 0) {
             break;
         }
     }
@@ -222,50 +222,52 @@ TEST_CASE("Stopping on sideload") {
     MachineExecutionConfig execConfig;
 
     // First, test running straight past the sideload
-    Machine machine = orig_machine;
+    Machine machine{orig_machine};
     machine.machine_state.context = AssertionContext(execConfig);
     auto assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Error);
-    REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 13);
+    REQUIRE(!assertion.sideload_block_number);
+    REQUIRE(assertion.gas_count == 13);
 
     // Next, test running past the sideload with a value specified
     machine = orig_machine;
     execConfig.sideloads.emplace_back(InboxMessage());
     execConfig.stop_on_sideload = true;  // Shouldn't matter
+    execConfig.stop_on_breakpoint = false;
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Halted);
-    REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 23);
+    REQUIRE(!assertion.sideload_block_number);
+    REQUIRE(assertion.gas_count == 23);
 
     // Next, test stopping on the sideload but continuing
     machine = orig_machine;
     execConfig.sideloads.clear();
     execConfig.stop_on_sideload = true;
+    execConfig.stop_on_breakpoint = false;
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Extensive);
-    REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
-    REQUIRE(assertion.gasCount == 1);
+    REQUIRE(assertion.sideload_block_number == uint256_t(0x321));
+    REQUIRE(assertion.gas_count == 1);
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Error);
-    REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 12);
+    REQUIRE(!assertion.sideload_block_number);
+    REQUIRE(assertion.gas_count == 12);
 
     // Next, test stopping on the sideload and adding a value
     machine = orig_machine;
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Extensive);
-    REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
-    REQUIRE(assertion.gasCount == 1);
+    REQUIRE(assertion.sideload_block_number == uint256_t(0x321));
+    REQUIRE(assertion.gas_count == 1);
 
     execConfig.sideloads.emplace_back(InboxMessage());
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Halted);
-    REQUIRE(!assertion.sideloadBlockNumber);
-    REQUIRE(assertion.gasCount == 22);
+    REQUIRE(!assertion.sideload_block_number);
+    REQUIRE(assertion.gas_count == 22);
 }

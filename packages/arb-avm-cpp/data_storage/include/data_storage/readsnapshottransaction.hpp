@@ -24,9 +24,15 @@ class ReadSnapshotTransaction : public ReadConsistentTransaction {
     ReadSnapshotTransaction() = delete;
     explicit ReadSnapshotTransaction(std::shared_ptr<DataStorage> store)
         : ReadConsistentTransaction(std::move(store)) {
+        // Make sure database isn't closed while it is being used
+        auto counter = transaction->datastorage->tryLockShared();
+
         read_options.snapshot = transaction->datastorage->txn_db->GetSnapshot();
     }
     ~ReadSnapshotTransaction() {
+        // Make sure database isn't closed while it is being used
+        auto counter = transaction->datastorage->tryLockShared();
+
         transaction->datastorage->txn_db->ReleaseSnapshot(
             read_options.snapshot);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,15 +62,23 @@ int main(int argc, char* argv[]) {
             ops.emplace_back(static_cast<OpCode>(op));
         }
 
-        auto code = std::make_shared<CodeSegment>(0, ops);
-        auto status =
+        auto code = std::make_shared<UnsafeCodeSegment>(0, ops);
+        auto result =
             storage.initialize(LoadedExecutable{std::move(code), Tuple()});
-        if (!status.ok()) {
+        if (result.finished) {
+            // Nothing more to do
+            return 0;
+        }
+        if (!result.status.ok()) {
             throw std::runtime_error("Error initializing storage");
         }
     } else {
-        auto status = storage.initialize(filename);
-        if (!status.ok()) {
+        auto result = storage.initialize(filename);
+        if (result.finished) {
+            // Nothing left to do
+            return 0;
+        }
+        if (!result.status.ok()) {
             throw std::runtime_error("Error initializing storage");
         }
     }
@@ -89,14 +97,12 @@ int main(int argc, char* argv[]) {
                 (std::istreambuf_iterator<char>(file)),
                 std::istreambuf_iterator<char>());
             auto data = reinterpret_cast<const char*>(raw_inbox.data());
-            auto inbox_val = std::get<Tuple>(deserialize_value(data));
+            auto inbox_val = get<Tuple>(deserialize_value(data));
             while (inbox_val != Tuple{}) {
-                inbox_messages.emplace_back(
-                    InboxMessage::fromTuple(
-                        std::get<Tuple>(inbox_val.get_element(1))),
-                    0);
-                inbox_val =
-                    std::get<Tuple>(std::move(inbox_val.get_element(0)));
+                inbox_messages.emplace_back(InboxMessage::fromTuple(get<Tuple>(
+                                                inbox_val.get_element(1))),
+                                            0);
+                inbox_val = get<Tuple>(std::move(inbox_val.get_element(0)));
             }
             std::reverse(inbox_messages.begin(), inbox_messages.end());
         } else if (std::string(argv[3]) == "--json-inbox") {
@@ -105,10 +111,9 @@ int main(int argc, char* argv[]) {
             file >> j;
 
             for (auto& val : j["inbox"]) {
-                inbox_messages.emplace_back(
-                    InboxMessage::fromTuple(
-                        std::get<Tuple>(simple_value_from_json(val))),
-                    0);
+                inbox_messages.emplace_back(InboxMessage::fromTuple(get<Tuple>(
+                                                simple_value_from_json(val))),
+                                            0);
             }
         }
     }
@@ -120,15 +125,19 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
-    std::cout << "Ran " << assertion.stepCount << " steps in "
-              << assertion.gasCount << " gas ending in state "
+    std::cout << "Ran " << assertion.step_count << " steps in "
+              << assertion.gas_count << " gas ending in state "
               << static_cast<int>(mach->currentStatus()) << "\n";
 
     auto tx = storage.makeReadWriteTransaction();
-    saveMachine(*tx, *mach);
+    saveTestMachine(*tx, *mach);
     tx->commit();
 
     auto mach2 = storage.getMachine(mach->hash(), value_cache);
+    if (!mach2) {
+        std::cerr << "Error loading machine: " << hex(mach->hash());
+        throw std::runtime_error("Error loading machine");
+    }
     execConfig.inbox_messages = std::vector<MachineMessage>();
     mach2->machine_state.context = AssertionContext{execConfig};
     mach2->run();

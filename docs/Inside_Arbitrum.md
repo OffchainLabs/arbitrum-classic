@@ -159,7 +159,7 @@ First, _if you’re an Arbitrum user or developer, you don’t need to understan
 
 You’re welcome to study, observe, and even participate in the rollup protocol, but you don’t need to, and most people won’t. So if you’re a typical train passenger who just wants to read or talk to your neighbor, you can skip right to the [next section](#validators) of this document. If not, read on!
 
-The second thing to understand about the rollup protocol is _that the protocol doesn’t decide the results of transactions, it only confirms the results_. The results are uniquely determined by the sequence of messages in the chain’s inbox. So once your transaction message is in the chain’s inbox, its result is knowable--and Arbitrum nodes will report your transaction to be done. The role of the rollup protocol is to confirm transaction results that, as far as Arbitrum users are concerned, have already occurred. (This is why Arbitrum users can effectively ignore the rollup protocol.)
+The second thing to understand about the rollup protocol is that *the protocol doesn’t decide the results of transactions, it only confirms the results*. The results are uniquely determined by the sequence of messages in the chain’s inbox. So once your transaction message is in the chain’s inbox, its result is knowable--and Arbitrum nodes will report that your transaction is done. The role of the rollup protocol is to confirm transaction results that, as far as Arbitrum users are concerned, have already occurred. (This is why Arbitrum users can effectively ignore the rollup protocol.)
 
 You might wonder why we need the rollup protocol. If everyone knows the results of transactions already, why bother confirming them? The protocol exists for two reasons. First, somebody might lie about a result, and we need a definitive, trustless way to tell who is lying. Second, Ethereum doesn’t know the results. The whole point of a Layer 2 scaling system is to run transactions without Ethereum needing to do all of the work--and indeed Arbitrum can go fast enough that Ethereum couldn’t hope to monitor every Arbitrum transaction. But once a result is confirmed, Ethereum knows about it and can rely on it.
 
@@ -182,7 +182,7 @@ Each rollup block contains:
 - the amount of computation the chain has done in its history (measured in ArbGas)
 - the number of inbox messages have been consumed in the chain’s history
 - a hash of the outputs produced over the chain’s history
-- a hash of the chain state.
+- a hash of the AVM state.
 
 Except for the rollup block number, the contents of the block are all just claims by the block’s proposer. Arbitrum doesn’t know at first whether any of these fields are correct. If all of these fields are correct, the protocol should eventually confirm the block. If one or more of these fields are incorrect, the protocol should eventually reject the block.
 
@@ -217,7 +217,7 @@ There’s a lot going on here, so let’s unpack it.
 - Block 110 claims to follow 109. It is unresolved. If 109 is rejected, 110 will be automatically rejected too.
 - Block 111 claims to follow 105. 111 will inevitably be rejected because its predecessor has already been rejected. But it hasn’t been rejected yet, because the protocol resolves blocks in block number order, so the protocol will have to resolve 106 through 110, in order, before it can resolve 111. After 110 has been resolved, 111 can be rejected immediately.
 
-Again: this sort of thing is very unlikely in practice. In this diagram, at least four parties must have staked on wrong nodes, and when the dust settles at least four parties will have lost their stakes. The protocol handles these cases correctly, of course, but they’re rare corner cases. This diagram is designed to illustrate the variety of situations that are possible in principle, and how the protocol would deal with them.
+Again: this sort of thing is very unlikely in practice. In this diagram, at least four parties must have staked on wrong rollup blocks, and when the dust settles at least four parties will have lost their stakes. The protocol handles these cases correctly, of course, but they’re rare corner cases. This diagram is designed to illustrate the variety of situations that are possible in principle, and how the protocol would deal with them.
 
 ### Staking
 
@@ -320,7 +320,7 @@ It should be clear that these changes don’t affect the basic correctness of th
 
 ### Efficiency
 
-The challenge protocol is designed so that the dispute can be resolved with a minimum of work required by the EthBridge in its role as referee. When it is Alice’s move, the EthBridge only needs to keep track of the time Alice uses, and ensure that her move does include 99 intermediate points as required. The EthBridge doesn’t need to pay attention to whether those claims are correct in any way; it only needs to know whether Alice’s move “has the right shape”.
+The challenge protocol is designed so that the dispute can be resolved with a minimum of work required by the EthBridge in its role as referee. When it is Alice’s move, the EthBridge only needs to keep track of the time Alice uses, and ensure that her move does include K-1 intermediate points as required. The EthBridge doesn’t need to pay attention to whether those claims are correct in any way; it only needs to know whether Alice’s move “has the right shape”.
 
 The only point where the EthBridge needs to evaluate a move “on the merits” is at the one-step proof, where it needs to look at Alice’s proof and determine whether the proof that was provided does indeed establish that the virtual machine moves from the before state to the claimed after state after one step of computation. We’ll discuss the details of one-step proofs below in the [Arbitrum Virtual Machine](#avm) section.
 
@@ -334,15 +334,15 @@ Being a validator is permissionless--anyone can do it. Offchain Labs provides op
 
 Every validator can choose their own approach, but we expect validators to follow three common strategies.
 
-- The _active validator_ strategy tries to advance the state of the chain by proposing new rollup blocks. An active validator is always staked, because creating a rollup block requires being staked. A chain really only needs one honest active validator; any more is an inefficient use of resources. For the flagship Arbitrum chain, Offchain Labs will run an active validator.
-- The _defensive validator_ strategy watches the rollup protocol operate. If only correct rollup blocks are proposed, this strategy does nothing. But if an incorrect block is proposed, this strategy intervenes by posting a correct block or staking on a correct block that another party has posted. This strategy avoids staking when things are going well, but if someone is dishonest it stakes in order to defend the correct outcome.
+- The _active validator_ strategy tries to advance the state of the chain by proposing new rollup blocks. An active validator is always staked, because creating a rollup block requires being staked. A chain really only needs one honest active validator; any more is an inefficient use of resources. For the Arbitrum One chain, Offchain Labs runs an active validator.
+- The _defensive validator_ strategy watches the rollup protocol operate. If only correct rollup blocks are proposed, this strategy doesn't stake. But if an incorrect block is proposed, this strategy intervenes by posting a correct block or staking on a correct block that another party has posted. This strategy avoids staking when things are going well, but if someone is dishonest it stakes in order to defend the correct outcome.
 - The _watchtower validator_ strategy never stakes. It simply watches the rollup protocol and if an incorrect block is proposed, it raises the alarm (by whatever means it chooses) so that others can intervene. This strategy assumes that other parties who are willing to stake will be willing to intervene in order to take some of the dishonest proposer’s stake, and that that can happen before the dishonest block’s deadline expires. (In practice this will allow several days for a response.)
 
 Under normal conditions, validators using the defensive and watchtower strategies won’t do anything except observe. A malicious actor who is considering whether to try cheating won’t be able to tell how many defensive and watchtower validators are operating incognito. Perhaps some defensive validators will announce themselves, but others probably won’t, so a would-be attacker will always have to worry that defenders are waiting to emerge.
 
 Who will be validators? Anyone can do it, but most people will choose not to. In practice we expect people to validate a chain for several reasons.
 
-- Some validators will be paid, by the party that created the chain or someone else. On the flagship Arbitrum chain, Offchain Labs will hire some validators.
+- Some validators will be paid, by the party that created the chain or someone else. On the Arbitrum One chain, Offchain Labs will hire some validators.
 - Parties who have significant assets at stake on a chain, such as dapp developers, exchanges, power-users, and liquidity providers, may choose to validate in order to protect their investment.
 - Anyone who chooses to validate can do so. Some users will probably choose to validate in order to protect their own interests or just to be good citizens. But ordinary users don’t need to validate, and we expect that the vast majority of users won’t.
 
@@ -404,34 +404,36 @@ Second, the AVM has three instructions to create new CodePoints: one that makes 
 
 #### Getting messages from the Inbox
 
-The _inbox_ instruction consumes the next message from the VM’s inbox and pushes it onto the Data Stack. If all messages in the inbox have been consumed already, the inbox instruction blocks--the VM cannot complete the inbox instruction, nor can it do anything else, until a message arrives and the inbox instruction can complete. If the inbox has been completely consumed, any purported one-step proof of executing the inbox instruction will be rejected.The _inboxpeek_ instruction does not consume a message from the inbox but simply reports whether or not the first unconsumed message in the inbox is at a specified block number. If there are no unconsumed messages in the inbox, _inboxpeek_ blocks until there is one.
+The _inbox_ instruction consumes the next message from the VM’s inbox and pushes it onto the AVM's Stack. If all messages in the inbox have been consumed already, the inbox instruction blocks--the VM cannot complete the inbox instruction, nor can it do anything else, until a message arrives and the inbox instruction can complete. If the inbox has been completely consumed, any purported one-step proof of executing the inbox instruction will be rejected.
 
 #### Producing outputs
 
-The AVM has two instructions that can produce outputs: _send_ and _log_. Both are hashed into the output hash accumulator that records the (hash of) the VM’s outputs, but _send_ causes its value to be recorded as calldata on the L1 chain, while _log_ does not. This means that outputs produced with send will be visible to L1 contracts, while those produced with log will not. Of course, sends are more expensive than logs.
+The AVM has two instructions that can produce outputs: _send_ and _log_. Both are hashed into the output hash accumulator that records the (hash of) the VM’s outputs, but _send_ causes its value to be recorded as calldata on the L1 chain, while _log_ does not. This means that outputs produced with send will be visible to L1 contracts, while those produced with *log* will not. Of course, sends are more expensive than logs.
 A useful design pattern is for a sequence of values to be produced as logs, and then a Merkle hash of those values to be produced as a single send. That allows an L1 contract to see the Merkle hash of the full sequence of outputs, so that it can verify the individual values when it sees them. ArbOS uses this design pattern, as described below.
 
 #### ArbGas and gas tracking
 
-The AVM has a notion of ArbGas, which is like gas on Ethereum. ArbGas measures the cost of executing an instruction, based on how long it will take a validator to execute it. Every AVM instruction has an ArbGas cost.
+The AVM has a notion of AVM gas, which is like gas on Ethereum. AVM gas measures the cost of executing an instruction, based on how long it will take a validator to execute it. Every AVM instruction has an AVM gas cost.
 
-Arbitrum instructions have different gas costs than their Ethereum counterparts, for two reasons. First, the relative costs of executing Instruction A versus Instruction B can be different on a Layer 2 system versus on Ethereum. For example, storage accesses can be cheaper on Arbitrum relative to add instructions. ArbGas costs are based on the relative cost on Arbitrum.
+Arbitrum instructions have different gas costs than their Ethereum counterparts, for two reasons. First, the relative costs of executing Instruction A versus Instruction B can be different on a Layer 2 system versus on Ethereum. For example, storage accesses can be cheaper on Arbitrum relative to add instructions. AVM gas costs are based on the relative cost on Arbitrum.
 
-The AVM architecture has a machine register called ArbGas Remaining. Before executing any instruction, the ArbGas cost of that instruction is deducted from ArbGas Remaining. If this would underflow the register (indicating that the execution is “out of ArbGas”) a hard error is generated and the ArbGasRemaining register is set to MaxUint256.
+The AVM architecture has a machine register called AVM Gas Remaining. Before executing any instruction, the AVM gas cost of that instruction is deducted from AVM Gas Remaining. If this would underflow the register (indicating that the execution is “out of AVM gas”) a hard error is generated and the AVM Gas Remaining register is set to MaxUint256.
 
-The AVM has instructions to get and set the ArbGasRemaining register, which ArbOS uses to limit and count the ArbGas used by user contracts.
+The AVM has instructions to get and set the AVM Gas Remaining register, which ArbOS uses to limit and count the AVM gas used by user contracts.
+
+(For usability reasons, the Arbitrum API exposes "ArbGas" rather than "AVM gas", where 1 ArbGas is defined to be equal to 100 AVM gas.  This makes gas amounts and gas prices more intuitive and more consistent with legacy user interfaces from tools like wallets.)
 
 For information on ArbGas prices and other fee-related matters, see the Fees section.
 
 #### Error handling
 
-Error conditions can arise in AVM execution in several ways, including stack underflows, ArbGas exhaustion, and type errors such as trying to jump to a value that is not a CodePoint.
+Error conditions can arise in AVM execution in several ways, including stack underflows, AVM gas exhaustion, and type errors such as trying to jump to a value that is not a CodePoint.
 
 The AVM architecture has an Error CodePoint register that can be read and written by special instructions. When an error occurs, the Next CodePoint register is set equal to the Error CodePoint register, essentially jumping to the specified error handler.
 
 ## ArbOS
 
-ArbOS is a trusted "operating system” at Layer 2 that isolates untrusted contracts from each other, tracks and limits their resource usage, and manages the economic model that collects fees from users to fund the operation of a chain's validators. When an Arbitrum chain is started, ArbOS is pre-loaded into the chain’s AVM instance, and ready to run. After some initialization work, ArbOS sits in its main run loop, reading a message from the inbox, doing work based on that message including possibly producing outputs, then circling back to get the next message.
+ArbOS is a trusted "operating system” at Layer 2 that isolates untrusted contracts from each other, tracks and limits their resource usage, and manages the economic model that collects fees from users to fund the operation of a chain. When an Arbitrum chain is started, ArbOS is pre-loaded into the chain’s AVM instance, and ready to run. After some initialization work, ArbOS sits in its main run loop, reading a message from the inbox, doing work based on that message including possibly producing outputs, then circling back to get the next message.
 
 ### Why ArbOS?
 
@@ -463,11 +465,11 @@ To deploy a new contract, ArbOS takes the submitted EVM constructor code, transl
 
 ### More EVM emulation details
 
-When an EVM transaction is running, ArbOS keeps an EVM Call Strack, a stack of EVM Call Frames which represent the nested calls inside of the transaction. Each EVM Call Frame records the data for one level of call. When an inner call returns or reverts, ArbOS cleans up its call frame, and either propagates the effects of the call (if the call returned) or discards them (if the call reverted).
+When an EVM transaction is running, ArbOS keeps an EVM Call Stack, a stack of EVM Call Frames which represent the nested calls inside of the transaction. Each EVM Call Frame records the data for one level of call. When an inner call returns or reverts, ArbOS cleans up its call frame, and either propagates the effects of the call (if the call returned) or discards them (if the call reverted).
 
 The EVM call family of instructions (call, delegatecall, etc.) invoke ArbOS library functions that create new EVM Call Frames according to the EVM-specified behavior of the call type that was made, including propagation of calldata and gas. Any gas left over after a call is returned to the caller, as on Ethereum.
 
-Certain errors in executing EVM, such as stack underflows, will trigger a corresponding error during AVM emulation. ArbOS’s error handler detects that the error occurred while emulating a certain EVM call, and reverts that call accordingly, returning control to its caller or providing a transaction receipt as appropriate. ArbOS distinguishes out-of-gas errors from other errors by looking at the ArbGasRemaining register, which is automatically set to MaxUint256 if an out-of-gas error occurred.
+Certain errors in executing EVM, such as stack underflows, will trigger a corresponding error during AVM emulation. ArbOS’s error handler detects that the error occurred while emulating a certain EVM call, and reverts that call accordingly, returning control to its caller or providing a transaction receipt as appropriate. ArbOS distinguishes out-of-gas errors from other errors by looking at the AVM Gas Remaining register, which is automatically set to MaxUint256 if an out-of-gas error occurred.
 
 The result of these mechanisms is that EVM code can run compatibly on Arbitrum.
 
@@ -511,13 +513,13 @@ An aggregator that submits transactions on behalf of users will have costs due t
 
 ## Sequencer Mode
 
-Sequencer mode is an optional feature of Arbitrum chains, which can be turned on or off for each chain. On mainnet launch, the flagship chain will use a sequencer that is operated by Offchain Labs.
+Sequencer mode is an optional feature of Arbitrum chains, which can be turned on or off for each chain.  We expect it to be enabled for most chains. Arbitrum One uses a sequencer that is operated by Offchain Labs.
 
 The sequencer is a specially designated full node, which is given limited power to control the ordering of transactions. This allows the sequencer to guarantee the results of user transactions immediately, without needing to wait for anything to happen on Ethereum. So no need to wait five minutes or so for block confirmations--and no need to even wait 15 seconds for Ethereum to make a block.
 
 Clients interact with the sequencer in exactly the same way they would interact with any full node, for example by giving their wallet software a network URL that happens to point to the sequencer.
 
-### Instant finality
+### Instant confirmation
 
 Without a sequencer, a node can predict what the results of a client transaction will be, but the node can't be sure, because it can't know or control how the transactions it submits will be ordered in the inbox, relative to transactions submitted by other nodes.
 
@@ -525,48 +527,48 @@ The sequencer is given more control over ordering, so it has the power to assign
 
 ### Inboxes, fast and slow
 
-When we add a sequencer, we take the chain's inbox and split it into two inboxes.
+When we add a sequencer, the operation of the inbox changes.
 
-- The regular inbox works as it always has. Anyone can put a message into the regular inbox at any time. Messages will be tagged with the Ethereum block number and timestamp when they were inserted into the regular inbox.
-- The sequencer inbox is "owned" by the sequencer. Only the sequencer can put messages into it. When inserting a message, the sequencer can "backdate" that message by assigning it a block number that is in the past--but no more than _delta_blocks_ blocks in the past. (_delta_blocks_ will typically correspond to roughly ten minutes of wall-clock time.). Similarly, the sequencer can assign the message a timestamp that is in the past, but only by up to a limit _delta_seconds_. Additionally, when using the sequencer inbox, the sequencer must assign block numbers and timestamps in non-decreasing fashion.
-
-Now when ArbOS goes to get the next message, it will receive the message at the head of one inbox or the other, whichever has the lowest block number. This ensures that messages are consumed in non-decreasing block number order, which keeps everything sane. (ArbOS also adjusts message timestamps upward, if this is necessary to make timestamps non-decreasing.)
+* Only the sequencer can put new messages directly into the inbox. The sequencer tags the messages it is submitting with an Ethereum block number and timestamp. (ArbOS ensures that these are non-decreasing, adjusting them upward if necessary to avoid decreases.)
+* Anyone else can submit a message, but messages submitted by non-sequencer nodes will be put into the "delayed inbox" queue, which is managed by an L1 Ethereum contract.  
+  * Messages in the delayed inbox queue will wait there until the sequencer chooses to "release" them into the main inbox, where they will be added to the end of the inbox.  A well-behaved sequencer will typically release delayed messages after about ten minutes, for reasons explained below.
+  * Alternatively, if a message has been in the delayed inbox queue for longer than a maximum delay interval (currently 24 hours) then anyone can force it to be promoted into the main inbox. (This ensures that the sequencer can only delay messages but can't censor them.)
 
 ### If the sequencer is well-behaved...
 
 A well-behaved sequencer will accept transactions from all requesters and treat them fairly, giving each one a promised transaction result as quickly as it can.
 
-It will also minimize the delay it imposes on non-sequencer transactions by minimizing how far it backdates transactions, consistent with the goal of providing strong promises of transaction results. Specifically, if the sequencer believes that 20 confirmation blocks are needed to have finality on Ethereum, then it will backdate transactions by 20 blocks. This is enough to ensure that the sequencer knows exactly which transactions will precede its current transaction, because those preceding transactions have finality. There is no need for a benign sequencer to backdate more than that, so it won't.
+It will also minimize the delay it imposes on non-sequencer transactions by releasing delayed messages promptly, consistent with the goal of providing strong promises of transaction results. Specifically, if the sequencer believes that 40 confirmation blocks are needed to have good confidence of finality on Ethereum, then it will release delayed messages after 40 blocks. This is enough to ensure that the sequencer knows exactly which transactions will precede its current transaction, because those preceding transactions have finality. There is no need for a benign sequencer to delay non-sequencer messages more than that, so it won't.
 
-This does mean that transactions that go through the regular inbox will take longer to get finality. Their time to finality will roughly double: if finality requires C confirmation blocks, then a regular-inbox tranasaction at block B be processed after sequencer transactions that are inserted at time B+C-1 (but labeled with block B-1), and those sequencer transactions won't have finality until time B+2C-1.
+This does mean that transactions that go through the delayed inbox will take longer to get finality. Their time to finality will roughly double, because they will have to wait one finality period for promotion, then another finality period for the Ethereum transaction that promoted them to achieve finality.
 
-This is the basic tradeoff of having a sequencer: if you use the sequencer, finality is C blocks faster; but if you don't use the sequencer, finality is C blocks slower. This is usually a good tradeoff, because most transactions will use the sequencer; and because the practical difference between instant and 5-minute finality is bigger than the difference between 5-minute and 10-minute finality.
+This is the basic tradeoff of having a sequencer: if your message uses the sequencer, finality is C blocks faster; but if your message doesn't use the sequencer, finality is C blocks slower. This is usually a good tradeoff, because most transactions will use the sequencer; and because the practical difference between instant and 10-minute finality is bigger than the difference between 10-minute and 20-minute finality.
 
 So a sequencer is generally a win, if the sequencer is well behaved.
 
 ### If the sequencer is malicious...
 
-A malicious sequencer, on the other hand, could cause some pain. If it refuses to handle your transactions, you're forced to go through the regular inbox, with longer delay. And a malicious sequencer has great power to front-run everyone's transactions, so it could profit greatly at users' expense.
+A malicious sequencer, on the other hand, could cause some pain. If it refuses to handle your transactions, you're forced to go through the delayed inbox, with longer delay. And a malicious sequencer has great power to front-run everyone's transactions, so it could profit greatly at users' expense.
 
-At mainnet launch, Offchain Labs will run a sequencer which will be well-behaved. This will be useful but it's not decentralized. Over time, we'll switch to decentralized, fair sequencing, as described below.
+On Arbitrum One, Offchain Labs runs a sequencer which is well-behaved--we promise!. This will be useful but it's not decentralized. Over time, we'll switch to decentralized, fair sequencing, as described below.
 
 Because the sequencer will be run by a trusted party at first, and will be decentralized later, we haven't built in a mechanism to directly punish a misbehaving sequencer. We're asking users to trust the centralized sequencer at first, until we switch to decentralized fair sequencing later.
 
 ### Decentralized fair sequencing
 
-Viewed from 30,000 feet, decentralized fair sequencing isn't too complicated. Instead of being a single centralized server, the sequencer is a committee of servers, and as long as a quorum of more than two-thirds of the committee is honest, the sequencer will establish a fair ordering over transactions.
+Viewed from 30,000 feet, decentralized fair sequencing isn't too complicated. Instead of being a single centralized server, the sequencer is a committee of servers, and as long as a large enough supermajority of the committee is honest, the sequencer will establish a fair ordering over transactions.
 
 How to achieve this is more complicated. Research by a team at Cornell Tech, including Offchain Labs CEO and Co-founder Steven Goldfeder, developed the first-ever decentralized fair sequencing algorithm. With some improvements that are under development, these concepts will form the basis for our longer-term solution, of a fair decentralized sequencer.
 
 ## Bridging
 
-We have already covered how users interact with L2 contracts--they submit transactions by putting messages into the chain’s inbox, or having a full node aggregator do so on their behalf. Let’s talk about how contract interact between L1 and L2--how an L1 contract calls an L2 contract, and vice versa.
+We have already covered how users interact with L2 contracts--they submit transactions by putting messages into the chain’s inbox, or having a full node sequencer or aggregator do so on their behalf. Let’s talk about how contracts interact between L1 and L2--how an L1 contract calls an L2 contract, and vice versa.
 
 The L1 and L2 chains run asynchronously from each other, so it is not possible to make a cross-chain call that produces a result within the same transaction as the caller. Instead, cross-chain calls must be asynchronous, meaning that the caller submits the call at some point in time, and the call runs later. As a consequence, a cross-chain contract-to-contract call can never produce a result that is available to the calling contract (except for acknowledgement that the call was successfully submitted for later execution).
 
 ### L1 contracts can submit L2 transactions
 
-An L1 contract can submit an L2 transaction, just like a user would, by calling the EthBridge. This L2 transaction will run later, producing results that will not be available to the L1 caller. The transaction will execute at L2, at the same Ethereum block number and timestamp as the L1 caller, but the L1 caller won’t be able to see any results from the L2 transaction.
+An L1 contract can submit an L2 transaction, just like a user would, by calling the EthBridge. This L2 transaction will run later, producing results that will not be available to the L1 caller. The transaction will execute at L2, but the L1 caller won’t be able to see any results from the L2 transaction.
 
 The advantage of this method is that it is simple and has relatively low latency. The disadvantage, compared to the other method we’ll describe soon, is that the L2 transaction might revert if the L1 caller doesn’t get the L2 gas price and max gas amount right. Because the L1 caller can’t see the result of its L2 transaction, it can’t be absolutely sure that its L2 transaction will succeed.
 
@@ -580,25 +582,27 @@ The pre-packaged transaction includes the sender’s address, a destination addr
 
 If the redemption succeeds, the transaction is done, a receipt is issued for it, and the ticketID is canceled and can’t be used again. If the redemption fails, for example because the packaged transaction fails, the redemption reports failure and the ticketID remains available for redemption.
 
-As an option (and what we expect to be the default), the original submitter can try to redeem their submitted transaction immediately, at the time of its submission, in the hope that this redemption will succeed. Thus, i.e., our "token deposit" example above should, in the happy, common case, still only require a single signature from the user. If this instant redemption fails, the ticketID will still exist which others can redeem later.
+As an option (and by default), the original submitter can try to redeem their submitted transaction immediately, at the time of its submission, in the hope that this redemption will succeed. As an example, our "token deposit" use case above should, in the happy, common case, still only require a single signature from the user. If this instant redemption fails, the ticketID will still exist as a backstop which others can redeem later.
 
-Submitting a transaction in this way carries a price in ETH which the submitter must pay, which varies based on the calldata size of the transaction. Once submitted, the ticket is valid for about a week. It will remain valid, as long as someone pays weekly rent to keep it alive. If the rent goes unpaid and the ticket has not been redeemed, it is deleted.
+Submitting a transaction in this way carries a price in ETH which the submitter must pay, which varies based on the calldata size of the transaction. Once submitted, the ticket is valid for about a week. It will remain valid after that, as long as someone pays weekly rent to keep it alive. If the rent goes unpaid and the ticket has not been redeemed, it is deleted.
 
-When the ticket is redeemed, it runs with sender and origin equal to the original submitter, and with the destination, callvalue, and calldata the submitter provided at the time of submission. (The submitter can specify an address to which the callvalue will be refunded if the transaction is dropped for lack of rent without ever being redeemed.)
+When the ticket is redeemed, the pre-packaged transaction runs with sender and origin equal to the original submitter, and with the destination, callvalue, and calldata the submitter provided at the time of submission. (The submitter can specify an address to which the callvalue will be refunded if the transaction is dropped for lack of rent without ever being redeemed.)
 
 This rent-based mechanism is a bit more cumbersome than direct L1 to L2 transactions, but it has the advantage that the submission cost is predictable and the ticket will always be available for redemption if the submission cost is paid. As long as there is some user who is willing to redeem the ticket (and pay rent if needed), the L2 transaction will eventually be able to execute and will not be silently dropped.
 
 ### L2 to L1 ticket-based calls
 
-Calls from L2 to L1 operate in a similar way, with a ticket-based system. An L2 contract can call a method of the precompiled ArbSys contract, to send a transaction to L1. When the execution of the L2 transaction containing the submission is confirmed at L1 (some days later), a ticket is created in the EthBridge. That ticket can be triggered by anyone who calls a certain EthBridge method and submits the ticketID. The ticket is only marked as redeemed if the L1 transaction does not revert.
+Calls from L2 to L1 operate in a similar way, with a ticket-based system. An L2 contract can call a method of the precompiled ArbSys contract, to send a transaction to L1. When the execution of the L2 transaction containing the submission is confirmed at L1 (some days later), a ticket is created in the EthBridge. That ticket can be triggered by anyone who calls a certain L1 EthBridge method and submits the ticketID. The ticket is only marked as redeemed if the L1 transaction does not revert.
 
-These tickets have unlimited lifetime, until they’re successfully redeemed. No rent is required, as the costs are covered by network fees that are collected elsewhere in Arbitrum.
+These L2-to-L1 tickets have unlimited lifetime, until they’re successfully redeemed. No rent is required, as the costs are covered by network fees that are collected elsewhere in Arbitrum.
 
-## ArbGas and Fees
+## Gas and Fees
 
 ArbGas is used by Arbitrum to track the cost of execution on an Arbitrum chain. It is similar in concept to Ethereum gas, in the sense that every Arbitrum Virtual Machine instruction has an ArbGas cost, and the cost of a computation is the sum of the ArbGas costs of the instructions in it.
 
-ArbGas is not directly comparable to Ethereum gas. Arbitrum does not have a hard ArbGas limit, and in general an Arbitrum chain can consume many more ArbGas units per second of computation, compared to the number of Ethereum gas units in Ethereum's gas limit. Developers and users should think of ArbGas as much more plentiful and much cheaper per unit than Ethereum gas.
+ArbGas is not directly comparable to Ethereum gas. In general an Arbitrum chain can consume many more ArbGas units per second of computation, compared to the number of Ethereum gas units in Ethereum's gas limit. Developers and users should think of ArbGas as much more plentiful and much cheaper per unit than Ethereum gas.
+
+[A note on terminology: In reality, there are two related notions of gas in Arbitrum: AVM gas which is tracked by the virtual machine execution, and ArbGas which is used in the the API. The two are strictly related because 1 ArbGas = 100 AVM gas.  To simplify the discussion, this section uses the single term ArbGas and ignores the factor-of-100 conversions that are done correctly by the Arbitrum code.]
 
 ### Why ArbGas?
 
@@ -620,16 +624,16 @@ Eventually the dispute will get down to a single AVM instruction, with a claim a
 
 ### ArbGas accounting in the AVM
 
-The AVM architecture also does ArbGas accounting internally, using a machine register called ArbGasRemaining, which is a 256-bit unsigned integer that behaves as follows:
+The AVM architecture also does ArbGas accounting internally, using a machine register called AVM Gas Remaining, which is a 256-bit unsigned integer that behaves as follows:
 
 - The register is initially set to MaxUint256.
-- Immediately before any instruction executes, that instruction's ArbGas cost is subtracted from the register. If this would make the register's value less than zero, an error is generated and the register's value is set to MaxUint256. (The error causes a control transfer as specified in the AVM specification.)
+- Immediately before any instruction executes, that instruction's AVM gas cost is subtracted from the register. If this would make the register's value less than zero, an error is generated and the register's value is set to MaxUint256. (The error causes a control transfer as specified in the AVM specification.)
 - A special instruction can be used to read the register's value.
 - Another special instruction can be used to set the register to any desired value.
 
-This mechanism allows ArbOS to control and account for the ArbGas usage of application code. ArbOS can limit an application call's use of ArbGas to N units by setting the register to N before calling the application, then catching the out-of-ArbGas error if it is generated. At the beginning of the runtime's error-handler, ArbOS would read the ArbGasRemaining register, then set the register to MaxUint256 to ensure that the error-handler could not run out of ArbGas. If the read of the register gave a value close to MaxInt256, then it must be the case that the application generated an out-of-ArbGas error. (It could be the case that the application generates a different error while a small amount of ArbGas remains, then an out-of-ArbGas error occurs at the very beginning of the error-handler. In this case, the second error would set the ArbGasRemaining to MaxInt256 and throw control back to the beginning of the error-handler, causing the error-handler to conclude that an out-of-ArbGas error was caused by the application. This is a reasonable behavior which we will consider to be correct.)
+This mechanism allows ArbOS to control and account for the ArbGas usage of application code. ArbOS can limit an application call's use of ArbGas to N units by setting the register to N before calling the application, then catching the out-of-ArbGas error if it is generated. At the beginning of the runtime's error-handler, ArbOS would read the AVM Gas Remaining register, then set the register to MaxUint256 to ensure that the error-handler could not run out of ArbGas. If the read of the register gave a value close to MaxInt256, then it must be the case that the application generated an out-of-ArbGas error. (It could be the case that the application generates a different error while a small amount of ArbGas remains, then an out-of-ArbGas error occurs at the very beginning of the error-handler. In this case, the second error would set the AVM Gas Remaining register to MaxInt256 and throw control back to the beginning of the error-handler, causing the error-handler to conclude that an out-of-ArbGas error was caused by the application. This is a reasonable behavior which we will consider to be correct.)
 
-If the application code returns control to the runtime without generating an out-of-ArbGas error, the runtime can read the ArbGasRemaining register and subtract to determine how much ArbGas the application call used. This can be charged to the application's account.
+If the application code returns control to the runtime without generating an out-of-ArbGas error, the runtime can read the AVM Gas Remaining register and subtract to determine how much ArbGas the application call used. This can be charged to the application's account.
 
 The runtime can safely ignore the ArbGas accounting mechanism. If the special instructions are never used, the register will be set to MaxInt256, and will decrease but in practice will never get to zero, so no error will ever be generated.
 
@@ -650,20 +654,18 @@ User transactions pay fees, to cover the cost of operating the chain. These fees
 Fees are charged for four resources that a transaction can use:
 
 - _L2 tx_: a base fee for each L2 transaction, to cover the cost of servicing a transaction
-- _L1 calldata_: a fee per units of L1 calldata directly attributable to the transaction (each non-zero byte of calldata is 16 units, and each zero byte of calldata is 4 units)
+- _L1 calldata_: a fee per units of L1 calldata directly attributable to the transaction (as on Ethereum, each non-zero byte of calldata is 16 units, and each zero byte of calldata is 4 units)
 - _computation_: a fee per unit of ArbGas used by the transaction
-- _storage_: a fee per location of EVM contract storage, based on the net increase in EVM storage due to the transaction
+- _storage_: a fee per location of EVM contract storage, based change in EVM storage usage due to the transaction
 
 Each of these four resources has a price, which may vary over time. The resource prices, which are denominated in ETH (more precisely, in wei), are set as follows:
 
 #### Prices for L2 tx and L1 calldata
 
-The prices of the first two resources, L2 tx and L1 calldata, depend on the L1 gas price. ArbOS can’t directly see the L1 gas price, so it estimates the L1 gas prices, as a weighted average of recent gas prices actually paid by aggregators on a specific list of addresses. ArbOS also keeps a running average of (1 / batchSize) for recent transaction batches.
+The prices of the first two resources, L2 tx and L1 calldata, depend on the L1 gas price. ArbOS can’t directly see the L1 gas price, so it estimates the L1 gas prices, based on the L1 Ethereum base fee paid by certain recent EthBridge transactions. 
 
-- The base price of an L2 tx is CP/B, where C is the L1 cost required for an aggregator to submit an empty batch, P is the estimated L1 gas price, and (1/B) is the average (1/batchSize).
+- The base price of an L2 transaction is set by each aggregator, using an Arbitrum precompile, subject to a system-wide maximum.
 - The base price of a unit of L1 calldata is just the estimated L1 gas price.
-
-These base prices ensure that the amount collected is equal to the aggregator’s cost of submitting the transaction in a batch, assuming a typical batch size.
 
 If the transaction was submitted by an aggregator, ArbOS collects these base fees for L2 tx and L1 calldata, and credits that amount immediately to the aggregator. ArbOS also adds a 15% markup and deposits those funds into the network fee account, to help cover overhead and other chain costs. If the transaction was not submitted by an aggregator, ArbOS collects only the 15% portion and credits that to the network fee account.
 
@@ -671,25 +673,29 @@ In order for an aggregator to be reimbursed for submitting a transaction, three 
 
 1. The transaction’s nonce is correct. [This prevents an aggregator from resubmitting a transaction to collect multiple reimbursements for it.]
 2. The transaction’s sender has ETH in its L2 account to pay the fees.
-3. The aggregator is listed as the sender’s “preferred aggregator”. (ArbOS records a preferred aggregator for each account, with the default being a specific aggregator address, which is operated by Offchain Labs on the flagship Arbitrum chain.) [This prevents an aggregator from front-running another aggregator’s batches to steal its reimbursements.]
+3. The aggregator is listed as the sender’s “preferred aggregator”. (ArbOS records a preferred aggregator for each account, with the default being a specific aggregator address. On Arbitrum One, the default aggregator is the sequencer run by Offchain Labs.) [The preferred aggregator mechanism prevents an aggregator from front-running another aggregator’s batches to steal its reimbursements.]
 
 If these conditions are not all met, the transaction is treated as not submitted by an aggregator so only the network fee portion of the fee is collected.
 
 #### Price for storage
 
-Transactions are charged based on the net increase they cause in the total amount of EVM contract storage that exists. Decreases in contract storage do not receive a credit. Each storage location costs 2000 times the estimated L1 gas price. This means that storage costs about 10% as much as it does on the L1 chain.
+Transactions are charged a storage fee for allocating an EVM storage cell. (Here, "allocating" means changing the value in a cell from zero to a non-zero value, and "deallocating" means changing a cell from a non-zero to a zero value.)  If a cell was allocated within a transaction, and is later deallocated *within the same transaction*, the allocation fee will be refunded when the transaction completes. 
+
+Contract creation is charged one storage fee for every 32 bytes of code in the contract. However, if a newly created contract has the same deployed code as an already existing contract, ArbOS will usually detect this and keep only a single copy of the code, thereby saving the second contract from having to pay for code storage.
+
+Each storage allocation costs 2000 times the estimated L1 gas price. This means that storage costs about 10% as much as it does on the L1 chain.
 
 #### Price for ArbGas
 
 ArbGas pricing depends on a minimum price, and a congestion pricing mechanism.
 
-The minimum ArbGas price is set equal to the estimated L1 gas price divided by 10,000. The price of ArbGas will never go lower than this.
+The minimum ArbGas price is set equal to the estimated L1 gas price divided by 100. The price of ArbGas will never go lower than this.
 
-The price will rise above the minimum if the chain is starting to get congested. The idea is similar to Ethereum, to deal with a risk of overload by raising the price of gas enough that demand will meet supply. The mechanism is inspired by Ethereum’s proposed EIP-1559, which uses a base price that, at the beginning of each block, is multiplied by a factor between 7/8 and 9/8, depending on how busy the chain seems to be. When the demand seems to be exceeding supply, the factor will be more than 1; when supply exceeds demand, the factor will be less than 1. (But the price never goes below the minimum.)
+The price will rise above the minimum if the chain is starting to get congested. The idea is similar to Ethereum, to deal with a risk of overload by raising the price of gas enough that demand will meet supply. The mechanism is inspired by Ethereum’s EIP-1559, which uses a base price that, at the beginning of each block, is multiplied by a factor between 7/8 and 9/8, depending on how busy the chain seems to be. When the demand seems to be exceeding supply, the factor will be more than 1; when supply exceeds demand, the factor will be less than 1. (But the price never goes below the minimum.)
 
-The automatic adjustment mechanism depends on an “ArbGas pool” that is tracked by ArbOS. The ArbGas pool has a maximum capacity that is equal to 60 seconds of full-speed computation at the chain’s speed limit. ArbGas used by transactions is subtracted from the gas pool, and at the beginning of each new Ethereum block, ArbGas is added to the pool corresponding to full-speed execution for the number of timestamp seconds since the last block (subject to the maximum pool capacity).
+The automatic adjustment mechanism depends on an “ArbGas pool” that is tracked by ArbOS. The ArbGas pool has a maximum capacity that is equal to 12 minutes of full-speed computation at the chain’s speed limit. ArbGas used by transactions is subtracted from the gas pool, and at the beginning of each new Ethereum block, ArbGas is added to the pool corresponding to full-speed execution for the number of timestamp seconds since the last block (subject to the maximum pool capacity).
 
-After adding the new gas to the pool, if the new gas pool size is G, the current ArbGas price is multiplied by (1350S - G) / (1200S) where S is the ArbGas speed limit of the chain. This quantity will be 7/8 when G = 60S (the maximum gas pool size) and it will be 9/8 when G = 0.
+After adding the new gas to the pool, if the new gas pool size is G, the current ArbGas price is multiplied by (16200S - G) / (14400S) where S is the ArbGas speed limit of the chain. This quantity will be 7/8 when G = 720S (the maximum gas pool size) and it will be 9/8 when G = 0.
 
 ### The congestion limit
 

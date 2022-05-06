@@ -18,54 +18,87 @@ package monitor
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "monitor").Logger()
+var logger = arblog.Logger.With().Str("component", "monitor").Logger()
 
 type Monitor struct {
-	Storage machine.ArbStorage
-	Core    core.ArbCore
-	Reader  *InboxReader
+	Storage    machine.ArbStorage
+	Core       core.ArbCore
+	Reader     *InboxReader
+	CoreConfig *configuration.Core
 }
 
-func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
+func NewInitializedMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
+	m, err := NewMonitor(dbDir, coreConfig)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.Initialize(contractFile); err != nil {
+		return nil, err
+	}
+	if err := m.Start(); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func NewMonitor(dbDir string, coreConfig *configuration.Core) (*Monitor, error) {
 	storage, err := cmachine.NewArbStorage(dbDir, coreConfig)
 	if err != nil {
 		return nil, err
 	}
-
-	err = storage.Initialize(contractFile)
-	if err != nil {
-		return nil, err
-	}
-
-	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		return nil, errors.New("error starting ArbCore thread")
-	}
-
+	logger.Info().Str("directory", dbDir).Msg("database opened")
 	return &Monitor{
-		Storage: storage,
-		Core:    arbCore,
+		Storage:    storage,
+		Core:       storage.GetArbCore(),
+		CoreConfig: coreConfig,
 	}, nil
+}
+
+func (m *Monitor) Initialize(contractFile string) error {
+	err := m.Storage.Initialize(contractFile)
+	if err != nil {
+		return err
+	}
+	logger.Info().Msg("storage initialized")
+	return nil
+}
+
+func (m *Monitor) ApplyConfig() error {
+	err := m.Storage.ApplyConfig()
+	if err != nil {
+		return err
+	}
+	logger.Info().Msg("storage initialized")
+	return nil
+}
+
+func (m *Monitor) Start() error {
+	started := m.Core.StartThread()
+	if !started {
+		return errors.New("error starting ArbCore thread")
+	}
+	return nil
 }
 
 func (m *Monitor) Close() {
@@ -84,6 +117,7 @@ func (m *Monitor) StartInboxReader(
 	bridgeUtilsAddress common.Address,
 	healthChan chan nodehealth.Log,
 	sequencerFeed chan broadcaster.BroadcastFeedMessage,
+	inboxReaderConfig configuration.InboxReader,
 ) (*InboxReader, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), fromBlock, ethClient, bind.CallOpts{})
 	if err != nil {
@@ -93,7 +127,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking initial chain state")
 	}
-	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0))
+	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
 		return nil, errors.Wrap(err, "error loading initial ArbCore machine")
 	}
@@ -122,11 +156,43 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, bridgeUtils, m.Core, healthChan, sequencerFeed)
+	reader, err := NewInboxReader(
+		ctx,
+		delayedBridgeWatcher,
+		sequencerInboxWatcher,
+		bridgeUtils,
+		m.Core,
+		healthChan,
+		sequencerFeed,
+		inboxReaderConfig,
+	)
 	if err != nil {
 		return nil, err
 	}
-	reader.Start(ctx)
+	reader.Start(ctx, inboxReaderConfig.DelayBlocks)
 	m.Reader = reader
+	m.listenForSignal(ctx)
 	return reader, nil
+}
+
+func (m *Monitor) listenForSignal(ctx context.Context) {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGUSR1)
+	go func() {
+		defer close(signalChan)
+		for {
+			select {
+			case <-ctx.Done():
+				break
+			case sig := <-signalChan:
+				switch sig {
+				case syscall.SIGUSR1:
+					logger.Info().Msg("triggering save of rocksdb checkpoint")
+					m.Core.SaveRocksdbCheckpoint()
+				default:
+					logger.Info().Str("signal", sig.String()).Msg("caught unexpected signal")
+				}
+			}
+		}
+	}()
 }

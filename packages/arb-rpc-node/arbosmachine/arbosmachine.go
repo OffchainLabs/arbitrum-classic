@@ -17,16 +17,16 @@
 package arbosmachine
 
 import (
-	"github.com/rs/zerolog/log"
-
+	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Stack().Str("component", "arbosmachine").Logger()
+var logger = arblog.Logger.With().Str("component", "arbosmachine").Logger()
 
 type Machine struct {
 	machine.Machine
@@ -41,11 +41,12 @@ func (m *Machine) Clone() machine.Machine {
 }
 
 func (m *Machine) ExecuteAssertion(
+	ctx context.Context,
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
-	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages)
+	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(ctx, maxGas, goOverGas, messages)
 	if err != nil {
 		return nil, nil, 0, err
 	}

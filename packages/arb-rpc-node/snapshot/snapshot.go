@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,14 @@
 package snapshot
 
 import (
-	"fmt"
+	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
@@ -34,6 +37,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+var logger = arblog.Logger.With().Str("component", "snapshot").Logger()
+
 type Snapshot struct {
 	mach                  machine.Machine
 	time                  inbox.ChainTime
@@ -43,20 +48,20 @@ type Snapshot struct {
 	arbosRemappingEnabled bool
 }
 
-func NewSnapshot(mach machine.Machine, time inbox.ChainTime, lastInboxSeq *big.Int) (*Snapshot, error) {
+func NewSnapshot(ctx context.Context, mach machine.Machine, time inbox.ChainTime, lastInboxSeq *big.Int) (*Snapshot, error) {
 	snap := &Snapshot{
 		mach:            mach,
 		time:            time,
 		nextInboxSeqNum: new(big.Int).Add(lastInboxSeq, big.NewInt(1)),
 	}
 
-	ver, err := snap.ArbOSVersion()
+	ver, err := snap.ArbOSVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
 	snap.arbosVersion = ver.Uint64()
 	if snap.arbosVersion >= 27 {
-		chainId, err := snap.ChainId()
+		chainId, err := snap.ChainId(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +80,7 @@ func NewSnapshot(mach machine.Machine, time inbox.ChainTime, lastInboxSeq *big.I
 		}
 		// Note: this .Call actually uses arbosRemappingEnabled which isn't set yet,
 		// but that's fine because the zero address is never rewritten regardless.
-		arbOwnerRes, _, err := snap.Call(arbOwnerMsg, common.Address{})
+		arbOwnerRes, _, err := snap.Call(ctx, arbOwnerMsg, common.Address{}, math.MaxUint64)
 		if err != nil {
 			return nil, err
 		}
@@ -102,23 +107,35 @@ func (s *Snapshot) MaxGasPriceBid() *big.Int {
 
 // AddMessage can only be called if the snapshot is uniquely owned
 // If an error is returned, s is unmodified
-func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
+func (s *Snapshot) AddMessage(ctx context.Context, msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
 	mach := s.mach.Clone()
+	res, _, err := s.addMessage(ctx, msg, sender, targetHash, addMessageMaxAVMGas)
+	if err != nil {
+		// Revert the machine
+		s.mach = mach
+	}
+	return res, err
+}
+
+const addMessageMaxAVMGas = 100000000000
+
+// addMessage can only be called if the snapshot is uniquely owned
+// leaves the machine in an undefined state on error
+func (s *Snapshot) addMessage(ctx context.Context, msg message.Message, sender common.Address, targetHash common.Hash, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), chainTime)
-	res, _, err := runTx(mach, inboxMsg, 100000000000)
+	res, debugPrints, err := runTxUnchecked(ctx, s.mach, inboxMsg, maxAVMGas)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if res.IncomingRequest.MessageID != targetHash {
-		return nil, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
+		return nil, nil, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}
-	s.mach = mach
 	s.nextInboxSeqNum = new(big.Int).Add(s.nextInboxSeqNum, big.NewInt(1))
-	return res, nil
+	return res, debugPrints, nil
 }
 
 // AdvanceTime can only be called if the snapshot is uniquely owned
@@ -132,13 +149,14 @@ func (s *Snapshot) Clone() *Snapshot {
 		chainId = new(big.Int).Set(s.chainId)
 	}
 	return &Snapshot{
-		mach: s.mach,
+		mach: s.mach.Clone(),
 		time: inbox.ChainTime{
 			BlockNum:  s.time.BlockNum.Clone(),
 			Timestamp: new(big.Int).Set(s.time.Timestamp),
 		},
-		nextInboxSeqNum: new(big.Int).Set(s.nextInboxSeqNum),
-		chainId:         chainId,
+		nextInboxSeqNum:       new(big.Int).Set(s.nextInboxSeqNum),
+		chainId:               chainId,
+		arbosRemappingEnabled: s.arbosRemappingEnabled,
 	}
 }
 
@@ -146,9 +164,8 @@ func (s *Snapshot) Height() *common.TimeBlocks {
 	return s.time.BlockNum
 }
 
-func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) EstimateGas(ctx context.Context, tx *types.Transaction, aggregator, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
 	if s.arbosVersion < 3 {
-
 		var dest common.Address
 		if tx.To() != nil {
 			copy(dest[:], tx.To().Bytes())
@@ -162,7 +179,7 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 				Data:        tx.Data(),
 			},
 		}
-		return s.Call(msg, sender)
+		return s.Call(ctx, msg, sender, maxAVMGas)
 	} else {
 		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, big.NewInt(0), message.NewCompressedECDSAFromEth(tx))
 		if err != nil {
@@ -173,11 +190,12 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 			targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
 			targetHash = hashing.SoliditySHA3(hashing.Bytes32(targetHash), hashing.Uint256(big.NewInt(0)))
 		}
-		return s.tryTx(gasEstimationMessage, sender, targetHash, maxAVMGas)
+		inboxMsg := s.makeInboxMessage(gasEstimationMessage, sender)
+		return runTx(ctx, s.mach.Clone(), inboxMsg, targetHash, maxAVMGas)
 	}
 }
 
-func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) EstimateRetryableGas(ctx context.Context, msg message.RetryableTx, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
 	redeemGas := new(big.Int).Set(msg.MaxGas)
 	redeemGasPriceBid := new(big.Int).Set(msg.GasPriceBid)
 	msg.MaxGas = msg.MaxGas.SetUint64(0)
@@ -216,11 +234,13 @@ func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.A
 
 	mach := s.mach.Clone()
 	assertion, debugPrints, _, err := mach.ExecuteAssertionAdvanced(
+		ctx,
 		maxAVMGas,
 		false,
 		nil,
 		[]inbox.InboxMessage{inboxMsg2, inboxMsg1},
 		true,
+		false,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -268,7 +288,7 @@ func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.A
 	return res2, debugPrints, err
 }
 
-func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) Call(ctx context.Context, msg message.ContractTransaction, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
 	var targetHash common.Hash
 	if s.chainId != nil {
 		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
@@ -276,12 +296,81 @@ func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) 
 	if s.arbosRemappingEnabled {
 		sender = message.L1RemapAccount(sender)
 	}
-	return s.tryTx(message.NewSafeL2Message(msg), sender, targetHash, 100000000000)
+	inboxMsg := s.makeInboxMessage(message.NewSafeL2Message(msg), sender)
+	return runTx(ctx, s.mach.Clone(), inboxMsg, targetHash, maxAVMGas)
 }
 
-func (s *Snapshot) tryTx(msg message.Message, sender common.Address, targetHash common.Hash, maxGas uint64) (*evm.TxResult, []value.Value, error) {
-	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
-	res, debugPrints, err := runTx(s.mach.Clone(), inboxMsg, maxGas)
+type EthCallOverride struct {
+	Nonce     *hexutil.Uint64                    `json:"nonce"`
+	Code      *hexutil.Bytes                     `json:"code"`
+	Balance   *hexutil.Big                       `json:"balance"`
+	State     *map[ethcommon.Hash]ethcommon.Hash `json:"state"`
+	StateDiff *map[ethcommon.Hash]ethcommon.Hash `json:"stateDiff"`
+}
+
+func (s *Snapshot) CallWithOverrides(ctx context.Context, msg message.ContractTransaction, sender common.Address, overrides *map[ethcommon.Address]EthCallOverride, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+	snap := s.Clone()
+	snap.mach = snap.mach.Clone()
+	if overrides != nil {
+		// We'll be mutating this scapshot so we need to make a copy
+		for address, override := range *overrides {
+			account := common.NewAddressFromEth(address)
+			if override.Nonce != nil {
+				err := snap.setNonce(ctx, account, uint64(*override.Nonce))
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			if override.Balance != nil {
+				err := snap.setBalance(ctx, account, override.Balance.ToInt())
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			if override.Code != nil {
+				err := snap.setCode(ctx, account, *override.Code)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			if override.State != nil {
+				storage := make(map[common.Hash]common.Hash)
+				for key, val := range *override.State {
+					storage[common.NewHashFromEth(key)] = common.NewHashFromEth(val)
+				}
+				err := snap.setState(ctx, account, storage)
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			if override.StateDiff != nil {
+				for key, val := range *override.StateDiff {
+					err := snap.store(ctx, account, common.NewHashFromEth(key), common.NewHashFromEth(val))
+					if err != nil {
+						return nil, nil, err
+					}
+				}
+			}
+		}
+	}
+
+	var targetHash common.Hash
+	if snap.chainId != nil {
+		targetHash = hashing.SoliditySHA3(hashing.Uint256(snap.chainId), hashing.Uint256(snap.nextInboxSeqNum))
+	}
+	if snap.arbosRemappingEnabled {
+		sender = message.L1RemapAccount(sender)
+	}
+	inboxMsg := snap.makeInboxMessage(message.NewSafeL2Message(msg), sender)
+	return runTx(ctx, snap.mach, inboxMsg, targetHash, maxAVMGas)
+}
+
+func (s *Snapshot) makeInboxMessage(msg message.Message, sender common.Address) inbox.InboxMessage {
+	return message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
+}
+
+func runTx(ctx context.Context, mach machine.Machine, inboxMsg inbox.InboxMessage, targetHash common.Hash, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+	res, debugPrints, err := runTxUnchecked(ctx, mach, inboxMsg, maxAVMGas)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -292,7 +381,7 @@ func (s *Snapshot) tryTx(msg message.Message, sender common.Address, targetHash 
 	return res, debugPrints, nil
 }
 
-func (s *Snapshot) basicCallUnsafe(data []byte, dest common.Address) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) basicCallUnsafe(ctx context.Context, data []byte, dest common.Address) (*evm.TxResult, []value.Value, error) {
 	msg := message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
@@ -303,10 +392,10 @@ func (s *Snapshot) basicCallUnsafe(data []byte, dest common.Address) (*evm.TxRes
 		},
 	}
 	inboxMsg := message.NewInboxMessage(message.NewSafeL2Message(msg), common.Address{}, s.nextInboxSeqNum, big.NewInt(0), s.time)
-	return runTx(s.mach.Clone(), inboxMsg, 1000000000)
+	return runTxUnchecked(ctx, s.mach.Clone(), inboxMsg, 1000000000)
 }
 
-func (s *Snapshot) basicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
+func (s *Snapshot) basicCall(ctx context.Context, data []byte, dest common.Address) (*evm.TxResult, error) {
 	msg := message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
@@ -316,8 +405,44 @@ func (s *Snapshot) basicCall(data []byte, dest common.Address) (*evm.TxResult, e
 			Data:        data,
 		},
 	}
-	res, _, err := s.Call(msg, common.Address{})
+	res, _, err := s.Call(ctx, msg, common.Address{}, math.MaxUint64)
 	return res, err
+}
+
+func (s *Snapshot) basicAddMessage(ctx context.Context, data []byte, dest common.Address) (*evm.TxResult, error) {
+	msg := message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(1000000000),
+			GasPriceBid: s.MaxGasPriceBid(),
+			DestAddress: dest,
+			Payment:     big.NewInt(0),
+			Data:        data,
+		},
+	}
+	res, _, err := s.AddContractMessage(ctx, msg, common.Address{}, addMessageMaxAVMGas)
+	return res, err
+}
+
+func (s *Snapshot) AddContractMessage(ctx context.Context, msg message.ContractTransaction, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+	if s.arbosRemappingEnabled && sender != (common.Address{}) {
+		sender = message.L1RemapAccount(sender)
+	}
+	var targetHash common.Hash
+	if s.chainId != nil {
+		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+	}
+	return s.addMessage(ctx, message.NewSafeL2Message(msg), sender, targetHash, maxAVMGas)
+}
+
+func (s *Snapshot) addArbosTestMessage(ctx context.Context, data []byte) error {
+	res, err := s.basicAddMessage(ctx, (data), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	if err != nil {
+		return err
+	}
+	if err := checkValidResult(res); err != nil {
+		return err
+	}
+	return nil
 }
 
 func checkValidResult(res *evm.TxResult) error {
@@ -327,8 +452,8 @@ func checkValidResult(res *evm.TxResult) error {
 	return errors.Errorf("error processing call %v", res.ResultCode)
 }
 
-func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
-	res, err := s.basicCall(arbos.GetBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
+func (s *Snapshot) GetBalance(ctx context.Context, account common.Address) (*big.Int, error) {
+	res, err := s.basicCall(ctx, arbos.GetBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -338,8 +463,8 @@ func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
 	return arbos.ParseBalanceResult(res.ReturnData)
 }
 
-func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error) {
-	res, err := s.basicCall(arbos.TransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+func (s *Snapshot) GetTransactionCount(ctx context.Context, account common.Address) (*big.Int, error) {
+	res, err := s.basicCall(ctx, arbos.TransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -349,8 +474,8 @@ func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error)
 	return arbos.ParseTransactionCountResult(res.ReturnData)
 }
 
-func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
-	res, err := s.basicCall(arbos.GetCodeData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
+func (s *Snapshot) GetCode(ctx context.Context, account common.Address) ([]byte, error) {
+	res, err := s.basicCall(ctx, arbos.GetCodeData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -360,8 +485,8 @@ func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
 	return arbos.ParseCodeResult(res.ReturnData)
 }
 
-func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
-	res, err := s.basicCall(arbos.StorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+func (s *Snapshot) GetStorageAt(ctx context.Context, account common.Address, index *big.Int) (*big.Int, error) {
+	res, err := s.basicCall(ctx, arbos.StorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -371,8 +496,28 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 	return arbos.ParseGetStorageAtResult(res.ReturnData)
 }
 
-func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
-	res, _, err := s.basicCallUnsafe(arbos.ArbOSVersionData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+func (s *Snapshot) setNonce(ctx context.Context, account common.Address, nonce uint64) error {
+	return s.addArbosTestMessage(ctx, arbos.SetNonceData(account, nonce))
+}
+
+func (s *Snapshot) setBalance(ctx context.Context, account common.Address, balance *big.Int) error {
+	return s.addArbosTestMessage(ctx, arbos.SetBalanceData(account, balance))
+}
+
+func (s *Snapshot) setState(ctx context.Context, account common.Address, storage map[common.Hash]common.Hash) error {
+	return s.addArbosTestMessage(ctx, arbos.SetStateData(account, storage))
+}
+
+func (s *Snapshot) setCode(ctx context.Context, account common.Address, code []byte) error {
+	return s.addArbosTestMessage(ctx, arbos.SetCodeData(account, code))
+}
+
+func (s *Snapshot) store(ctx context.Context, account common.Address, key, val common.Hash) error {
+	return s.addArbosTestMessage(ctx, arbos.StoreData(account, key, val))
+}
+
+func (s *Snapshot) ArbOSVersion(ctx context.Context) (*big.Int, error) {
+	res, _, err := s.basicCallUnsafe(ctx, arbos.ArbOSVersionData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -382,8 +527,8 @@ func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
 	return arbos.ParseArbOSVersionResult(res.ReturnData)
 }
 
-func (s *Snapshot) ChainId() (*big.Int, error) {
-	res, _, err := s.basicCallUnsafe(arbos.ChainIdData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+func (s *Snapshot) ChainId(ctx context.Context) (*big.Int, error) {
+	res, _, err := s.basicCallUnsafe(ctx, arbos.ChainIdData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -393,8 +538,8 @@ func (s *Snapshot) ChainId() (*big.Int, error) {
 	return arbos.ParseChainIdResult(res.ReturnData)
 }
 
-func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
-	res, err := s.basicCall(arbos.GetPricesInWeiData(), common.NewAddressFromEth(arbos.ARB_GAS_INFO_ADDRESS))
+func (s *Snapshot) GetPricesInWei(ctx context.Context) ([6]*big.Int, error) {
+	res, err := s.basicCall(ctx, arbos.GetPricesInWeiData(), common.NewAddressFromEth(arbos.ARB_GAS_INFO_ADDRESS))
 	if err != nil {
 		return [6]*big.Int{}, err
 	}
@@ -404,8 +549,8 @@ func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
 	return arbos.ParseGetPricesInWeiResult(res.ReturnData)
 }
 
-func runTx(mach machine.Machine, msg inbox.InboxMessage, maxGas uint64) (*evm.TxResult, []value.Value, error) {
-	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(maxGas, false, nil, []inbox.InboxMessage{msg}, true)
+func runTxUnchecked(ctx context.Context, mach machine.Machine, msg inbox.InboxMessage, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(ctx, maxAVMGas, false, nil, []inbox.InboxMessage{msg}, true, false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -419,10 +564,8 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, maxGas uint64) (*evm.Tx
 
 	avmLogs := assertion.Logs
 	if len(avmLogs) == 0 {
-		fmt.Println("Running message didn't produce log")
-		fmt.Println("Gas used", assertion.NumGas)
-		fmt.Println("mach state after", mach)
-		return nil, debugPrints, errors.New("no logs produced by tx")
+		logger.Info().Uint64("gasused", assertion.NumGas).Msg("Running message didn't produce log")
+		return nil, debugPrints, errors.New("transaction ran out of gas")
 	}
 
 	res, err := evm.NewTxResultFromValue(avmLogs[len(avmLogs)-1])

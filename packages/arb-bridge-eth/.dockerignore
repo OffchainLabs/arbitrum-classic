@@ -1,4 +1,4 @@
-arb-validator.Dockerfile
+**/arb-node.Dockerfile
 **/arb-avm-cpp/cmachine/flags.go
 **/arb-avm-cpp/cmachine/flags.go.in2
 **/arb-avm-cpp/rocksdb

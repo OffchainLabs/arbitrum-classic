@@ -181,15 +181,9 @@ func TestSequencerBatcher(t *testing.T) {
 	test.FailIfError(t, err)
 
 	config := configuration.Config{
-		Node: configuration.Node{
-			Sequencer: configuration.Sequencer{
-				CreateBatchBlockInterval:   40,
-				DelayedMessagesTargetDelay: 1,
-				MaxBatchGasCost:            2_000_000,
-				GasRefunderAddress:         gasRefunderAddr.String(),
-			},
-		},
+		Node: *configuration.DefaultNodeSettings(),
 	}
+	config.Node.Sequencer.GasRefunderAddress = gasRefunderAddr.String()
 
 	bridgeUtilsAddr, _, _, err := ethbridgecontracts.DeployBridgeUtils(auth, client)
 	test.FailIfError(t, err)
@@ -234,6 +228,7 @@ func TestSequencerBatcher(t *testing.T) {
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		nil,
 		dummySequencerFeed,
+		config.Node.InboxReader,
 	)
 	test.FailIfError(t, err)
 
@@ -245,6 +240,7 @@ func TestSequencerBatcher(t *testing.T) {
 		common.NewAddressFromEth(bridgeUtilsAddr),
 		nil,
 		dummySequencerFeed,
+		config.Node.InboxReader,
 	)
 	test.FailIfError(t, err)
 
@@ -303,8 +299,28 @@ func TestSequencerBatcher(t *testing.T) {
 	txs := generateTxs(t, 10, 10, l2ChainId)
 	totalDelayedCount := big.NewInt(1)
 	for i, tx := range txs {
-		if err := batcher.SendTransaction(ctx, tx); err != nil {
-			t.Fatal(err)
+		dupTxCount := 1 + i%4
+		results := make(chan error)
+		for j := 0; j < dupTxCount; j++ {
+			go (func() {
+				results <- batcher.SendTransaction(ctx, tx)
+			})()
+		}
+		errors := 0
+		for j := 0; j < dupTxCount; j++ {
+			err = <-results
+			if err != nil {
+				if err.Error() != "already known" && err.Error() != "invalid transaction nonce" {
+					t.Fatal("unexpected error from sequencer:", err)
+				}
+				errors++
+				if errors == dupTxCount {
+					t.Fatal("all dup txs errored", err)
+				}
+			}
+		}
+		if errors+1 != dupTxCount {
+			t.Fatal("dup txs succeeded: error count", errors, "vs dup tx count", dupTxCount)
 		}
 		delayedCount := 0
 		if i%4 == 0 {

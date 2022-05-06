@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,15 +27,20 @@
 #include <utility>
 
 class ExecutionCursor {
+   private:
+    std::atomic<bool> is_aborted{false};
+
    public:
     std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
    public:
-    explicit ExecutionCursor(MachineStateKeys machine_)
-        : machine(std::move(machine_)) {}
+    explicit ExecutionCursor(MachineStateKeys machine_) : machine(machine_) {}
 
     explicit ExecutionCursor(std::unique_ptr<Machine> machine_)
         : machine(std::move(machine_)) {}
+
+    ExecutionCursor(ExecutionCursor&& rhs) noexcept
+        : machine{std::move(rhs.machine)} {}
 
     ~ExecutionCursor() = default;
 
@@ -59,7 +64,21 @@ class ExecutionCursor {
         return *this;
     }
 
+    ExecutionCursor& operator=(ExecutionCursor&& rhs) noexcept {
+        machine = std::move(rhs.machine);
+        return *this;
+    }
+
     ExecutionCursor* clone();
+
+    void abort() {
+        is_aborted = true;
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            std::get<std::unique_ptr<Machine>>(machine)->abort();
+        }
+    }
+
+    bool isAborted() { return is_aborted.load(); }
 
     [[nodiscard]] std::optional<uint256_t> machineHash() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {

@@ -2,14 +2,12 @@ package core
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "core").Logger()
+var logger = arblog.Logger.With().Str("component", "core").Logger()
 
 type LogReader struct {
 	consumer    LogConsumer
@@ -67,20 +65,14 @@ func bigIntAsString(val *big.Int) string {
 
 func (lr *LogReader) getLogs(ctx context.Context) error {
 	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
-
 		err := lr.cursor.LogsCursorRequest(lr.cursorIndex, lr.maxCount)
 		if err != nil {
 			return err
 		}
 
 		var firstIndex *big.Int
-		var logs []value.Value
-		var deletedLogs []value.Value
+		var logs []ValueAndInbox
+		var deletedLogs []ValueAndInbox
 		for {
 			select {
 			case <-ctx.Done():
@@ -99,13 +91,16 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 				break
 			}
 
-			err = lr.cursor.LogsCursorCheckError(lr.cursorIndex)
-			if err != nil {
+			if err := lr.cursor.CheckError(); err != nil {
 				return err
 			}
 
 			// No new logs or errors so give some time for new logs to be added
-			time.Sleep(lr.sleepTime)
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(lr.sleepTime):
+			}
 		}
 
 		logger.Debug().
@@ -129,12 +124,6 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 		}
 
 		for {
-			select {
-			case <-ctx.Done():
-				return nil
-			default:
-			}
-
 			status, err := lr.cursor.LogsCursorConfirmReceived(lr.cursorIndex)
 			if err != nil {
 				return err
@@ -160,10 +149,23 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 				}
 			}
 
-			err = lr.cursor.LogsCursorCheckError(lr.cursorIndex)
+			err = lr.cursor.CheckError()
 			if err != nil {
 				return err
 			}
+
+			// No new logs or errors so give some time for new logs to be added
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(lr.sleepTime):
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(lr.sleepTime):
 		}
 	}
 }

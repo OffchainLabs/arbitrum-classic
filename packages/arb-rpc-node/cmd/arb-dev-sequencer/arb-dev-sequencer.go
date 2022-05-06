@@ -19,18 +19,21 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io/ioutil"
 	golog "log"
 	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -74,7 +77,7 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
+	logger = arblog.Logger.With().Str("component", "arb-dev-sequencer").Logger()
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running node")
@@ -94,14 +97,26 @@ func startup() error {
 	privKeyString := fs.String("privkey", "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76", "funded private key")
 	//fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
-	//go http.ListenAndServe("localhost:6060", nil)
 
-	nodeCacheConfig := configuration.NodeCache{
-		AllowSlowLookup: true,
-		LRUSize:         1000,
-		TimedExpire:     20 * time.Minute,
+	config := configuration.Config{
+		Core: *configuration.DefaultCoreSettingsMaxExecution(),
+		Feed: configuration.Feed{
+			Output: configuration.FeedOutput{
+				Addr:          "127.0.0.1",
+				IOTimeout:     2 * time.Second,
+				Port:          "9642",
+				Ping:          5 * time.Second,
+				ClientTimeout: 15 * time.Second,
+				Queue:         1,
+				Workers:       2,
+			},
+		},
+		Node: *configuration.DefaultNodeSettings(),
 	}
-	coreConfig := configuration.DefaultCoreSettings()
+	config.Node.Sequencer.CreateBatchBlockInterval = *createBatchBlockInterval
+	config.Node.Sequencer.DelayedMessagesTargetDelay = *delayedMessagesTargetDelay
+
+	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
@@ -113,7 +128,7 @@ func startup() error {
 		return errors.New("invalid arguments")
 	}
 
-	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))); err != nil {
 		return err
 	}
 
@@ -229,7 +244,7 @@ func startup() error {
 		}
 	}()
 
-	mon, err := monitor.NewMonitor(dbPath, arbosPath, coreConfig)
+	mon, err := monitor.NewInitializedMonitor(dbPath, arbosPath, &config.Core)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
@@ -238,8 +253,21 @@ func startup() error {
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, 0, bridgeUtilsAddress, nil, dummySequencerFeed)
+		inboxReader, err = mon.StartInboxReader(
+			ctx,
+			ethclint,
+			rollupAddress,
+			0,
+			bridgeUtilsAddress,
+			nil,
+			dummySequencerFeed,
+			config.Node.InboxReader,
+		)
 		if err == nil {
+			break
+		}
+		if strings.Contains(err.Error(), "arbcore thread aborted") {
+			logger.Error().Err(err).Msg("aborting inbox reader start")
 			break
 		}
 		logger.Warn().Err(err).
@@ -290,27 +318,8 @@ func startup() error {
 		Core:        mon.Core,
 		InboxReader: inboxReader,
 	}
-	config := configuration.Config{
-		Feed: configuration.Feed{
-			Output: configuration.FeedOutput{
-				Addr:          "127.0.0.1",
-				IOTimeout:     2 * time.Second,
-				Port:          "9642",
-				Ping:          5 * time.Second,
-				ClientTimeout: 15 * time.Second,
-				Queue:         1,
-				Workers:       2,
-			},
-		},
-		Node: configuration.Node{
-			Sequencer: configuration.Sequencer{
-				CreateBatchBlockInterval:   *createBatchBlockInterval,
-				DelayedMessagesTargetDelay: *delayedMessagesTargetDelay,
-			},
-		},
-	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond, &nodeCacheConfig)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), &config.Node)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
@@ -336,7 +345,7 @@ func startup() error {
 		return err
 	}
 
-	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
+	srv := aggregator.NewServer(batch, l2ChainId, db)
 
 	// TODO: Add back in funding of fundedAccount
 	// Note: The dev sequencer isn't being used anywhere currently
@@ -362,7 +371,7 @@ func startup() error {
 		return err
 	}
 
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.NormalMode, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, web3.DefaultConfig, mon.CoreConfig, nil, inboxReader)
 	if err != nil {
 		return err
 	}

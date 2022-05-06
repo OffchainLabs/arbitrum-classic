@@ -41,15 +41,12 @@ class AggregatorStore {
                    const uint64_t* log_indexes,
                    const std::vector<char>& data);
     [[nodiscard]] std::vector<char> getBlock(uint64_t height) const;
-
     [[nodiscard]] std::optional<uint64_t> getPossibleRequestInfo(
         const uint256_t& request_id) const;
     [[nodiscard]] std::optional<uint64_t> getPossibleBlock(
         const uint256_t& block_hash) const;
 
     void reorg(uint64_t block_height);
-    [[nodiscard]] ValueResult<uint256_t> logsProcessedCount() const;
-    void updateLogsProcessedCount(const uint256_t& count);
     void saveMessageBatch(const uint256_t& batchNum, const uint64_t& logIndex);
     std::optional<uint64_t> getMessageBatch(const uint256_t& batchNum);
 };

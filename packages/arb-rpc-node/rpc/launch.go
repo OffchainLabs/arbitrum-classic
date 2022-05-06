@@ -71,6 +71,12 @@ type SequencerBatcherMode struct {
 
 func (b SequencerBatcherMode) isBatcherMode() {}
 
+type ErrorBatcherMode struct {
+	Error error
+}
+
+func (b ErrorBatcherMode) isBatcherMode() {}
+
 func SetupBatcher(
 	ctx context.Context,
 	client ethutils.EthClient,
@@ -86,6 +92,8 @@ func SetupBatcher(
 	switch batcherMode := batcherMode.(type) {
 	case ForwarderBatcherMode:
 		return batcher.NewForwarder(ctx, batcherMode.Config)
+	case ErrorBatcherMode:
+		return &ErrorBatcher{err: batcherMode.Error}, nil
 	case StatelessBatcherMode:
 		var auth transactauth.TransactAuth
 		var err error

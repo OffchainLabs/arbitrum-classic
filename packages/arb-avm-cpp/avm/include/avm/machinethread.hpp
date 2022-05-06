@@ -49,16 +49,13 @@ class MachineThread : public Machine {
     Assertion last_assertion;
 
    public:
-    MachineThread() = default;
     ~MachineThread() { abortMachine(); }
     explicit MachineThread(MachineState machine_state_)
         : Machine(std::move(machine_state_)),
           reorg_check_data(machine_state.output.fully_processed_inbox) {}
-    MachineThread(std::shared_ptr<Code> code, value static_val)
-        : Machine(std::move(code), std::move(static_val)) {}
 
-    bool runMachine(MachineExecutionConfig config);
-    bool continueRunningMachine();
+    bool runMachine(MachineExecutionConfig config, bool asynchronous);
+    bool continueRunningMachine(bool asynchronous);
     void abortMachine();
     machine_status_enum status();
     std::string getErrorString();

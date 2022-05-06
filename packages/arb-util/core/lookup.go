@@ -17,6 +17,7 @@
 package core
 
 import (
+	"context"
 	"math/big"
 	"time"
 
@@ -38,6 +39,11 @@ const (
 	MessagesSuccess
 	MessagesError
 )
+
+type MachineEmission struct {
+	Value    value.Value
+	LogCount *big.Int
+}
 
 type ExecutionCursor interface {
 	Clone() ExecutionCursor
@@ -72,15 +78,25 @@ type ArbCoreLookup interface {
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
-	GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
+	GetExecutionCursor(totalGasUsed *big.Int, allowSlowLookup bool) (ExecutionCursor, error)
 
-	// Advance executes as much as it can without going over maxGas or
+	// AdvanceExecutionCursor executes as much as it can without going over maxGas or
 	// optionally until it reaches or goes over maxGas
-	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
+	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool) error
+
+	// AdvanceExecutionCursorWithTracing executes machine to get tracing debugprint for given log number
+	AdvanceExecutionCursorWithTracing(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool, allowSlowLookup bool, logNumberStart, logNumberEnd *big.Int) ([]MachineEmission, error)
 
 	// TakeMachine takes ownership of machine such that ExecutionCursor will
 	// no longer be able to advance.
 	TakeMachine(executionCursor ExecutionCursor) (machine.Machine, error)
+
+	// UpdateCheckpointPruningGas updates the gas value such that all checkpoints with less gas
+	// will be pruned
+	UpdateCheckpointPruningGas(gas *big.Int)
+
+	// SaveRocksdbCheckpoint tells rocksdb to save a copy of the current database state
+	SaveRocksdbCheckpoint()
 }
 
 type ArbCoreInbox interface {
@@ -89,11 +105,11 @@ type ArbCoreInbox interface {
 	PrintCoreThreadBacktrace()
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
+func DeliverMessagesAndWait(ctx context.Context, db ArbCoreInbox, previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
 	if !db.DeliverMessages(previousMessageCount, previousSeqBatchAcc, seqBatchItems, delayedMessages, reorgSeqBatchItemCount) {
 		return errors.New("unable to deliver messages")
 	}
-	status, err := waitForMessages(db)
+	status, err := waitForMessages(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -103,11 +119,11 @@ func DeliverMessagesAndWait(db ArbCoreInbox, previousMessageCount *big.Int, prev
 	return nil
 }
 
-func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
+func ReorgAndWait(ctx context.Context, db ArbCoreInbox, reorgMessageCount *big.Int) error {
 	if !db.DeliverMessages(big.NewInt(0), common.Hash{}, nil, nil, reorgMessageCount) {
 		return errors.New("unable to deliver messages")
 	}
-	status, err := waitForMessages(db)
+	status, err := waitForMessages(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -127,7 +143,7 @@ func WaitForMachineIdle(db ArbCore) {
 	}
 }
 
-func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
+func waitForMessages(ctx context.Context, db ArbCoreInbox) (MessageStatus, error) {
 	start := time.Now()
 	nextLog := time.Second * 30
 	var status MessageStatus
@@ -150,7 +166,13 @@ func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 			db.PrintCoreThreadBacktrace()
 			nextLog += time.Second * 30
 		}
-		<-time.After(time.Millisecond * 50)
+		timer := time.NewTimer(time.Millisecond * 1)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return 0, errors.New("context cancelled in waitForMessages")
+		case <-timer.C:
+		}
 	}
 	return status, nil
 }
@@ -160,7 +182,6 @@ type ArbCore interface {
 	ArbCoreInbox
 	LogsCursor
 	StartThread() bool
-	StopThread()
 	MachineIdle() bool
 }
 
@@ -192,16 +213,16 @@ func GetSingleSend(lookup ArbOutputLookup, index *big.Int) ([]byte, error) {
 	return sends[0], nil
 }
 
-func GetZeroOrOneLog(lookup ArbOutputLookup, index *big.Int) (value.Value, error) {
+func GetZeroOrOneLog(lookup ArbOutputLookup, index *big.Int) (ValueAndInbox, error) {
 	logs, err := lookup.GetLogs(index, big.NewInt(1))
 	if err != nil {
-		return nil, err
+		return ValueAndInbox{}, err
 	}
 	if len(logs) == 0 {
-		return nil, nil
+		return ValueAndInbox{}, nil
 	}
 	if len(logs) > 1 {
-		return nil, errors.New("too many logs")
+		return ValueAndInbox{}, errors.New("too many logs")
 	}
 	return logs[0], nil
 }
@@ -255,15 +276,25 @@ func (e *ExecutionState) CutHash() common.Hash {
 	)
 }
 
+type InboxState struct {
+	Count       *big.Int
+	Accumulator common.Hash
+}
+
+type ValueAndInbox struct {
+	Value value.Value
+	Inbox InboxState
+}
+
 type LogConsumer interface {
-	AddLogs(initialIndex *big.Int, avmLogs []value.Value) error
-	DeleteLogs(avmLogs []value.Value) error
+	AddLogs(initialIndex *big.Int, avmLogs []ValueAndInbox) error
+	DeleteLogs(avmLogs []ValueAndInbox) error
 }
 
 type LogsCursor interface {
+	CheckError() error
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
-	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, []value.Value, error)
-	LogsCursorCheckError(cursorIndex *big.Int) error
+	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []ValueAndInbox, []ValueAndInbox, error)
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error)
 }

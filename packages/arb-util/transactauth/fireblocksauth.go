@@ -91,20 +91,37 @@ func waitForPendingTransactions(
 	fb *fireblocks.Fireblocks,
 ) error {
 	for {
-		pendingTx, err := fb.ListPendingTransactions()
+		pendingTxRaw, err := fb.ListPendingTransactions()
 		if err != nil {
 			logger.Error().Err(err).Msg("error listing pending transactions")
 			return err
 		}
 
-		if len(*pendingTx) == 0 {
+		pendingTx := make([]fireblocks.TransactionDetails, 0, len(pendingTxRaw))
+		for _, details := range pendingTxRaw {
+			creationTime := time.Unix(details.CreatedAt, 0)
+			if time.Unix(details.CreatedAt, 0).Add(time.Hour * 48).After(time.Now()) {
+				// Tx is less than 48 hours old
+				pendingTx = append(pendingTx, details)
+			} else {
+				logger.
+					Info().
+					Str("id", details.Id).
+					Str("status", details.Status).
+					Str("destination", details.DestinationAddress).
+					Time("creationTime", creationTime).
+					Msg("ignoring old fireblocks transaction")
+			}
+		}
+
+		if len(pendingTx) == 0 {
 			logger.Info().Msg("no pending fireblocks transactions to take care of")
 			return nil
 		}
 
-		logger.Info().Int("count", len(*pendingTx)).Msg("pending fireblocks transactions need to be handled")
+		logger.Info().Int("count", len(pendingTx)).Msg("pending fireblocks transactions need to be handled")
 		failed := false
-		for _, details := range *pendingTx {
+		for _, details := range pendingTx {
 			if details.Status == fireblocks.Broadcasting {
 				logger.
 					Info().

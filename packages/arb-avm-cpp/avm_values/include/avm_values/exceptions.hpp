@@ -19,24 +19,26 @@
 
 #include <exception>
 
-class bad_tuple_index : public std::exception {
+class avm_exception : public std::exception {};
+
+class bad_tuple_index : public avm_exception {
    public:
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 };
 
-class bad_pop_type : public std::exception {
+class bad_pop_type : public avm_exception {
    public:
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 };
 
-class int_out_of_bounds : public std::exception {
+class int_out_of_bounds : public avm_exception {
    public:
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 };
 
-class stack_too_small : public std::exception {
+class stack_too_small : public avm_exception {
    public:
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 };
 
 #endif /* exceptions_hpp */

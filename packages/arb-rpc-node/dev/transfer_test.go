@@ -19,6 +19,7 @@ package dev
 import (
 	"context"
 	"errors"
+	"math"
 	"math/big"
 	"testing"
 
@@ -105,6 +106,7 @@ func getEVMTrace(debugPrints []value.Value) (*evm.EVMTrace, error) {
 }
 
 func TestTransfer(t *testing.T) {
+	ctx := context.Background()
 	skipBelowVersion(t, 42)
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
@@ -114,22 +116,22 @@ func TestTransfer(t *testing.T) {
 	ownerKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 
-	auth, owner := OwnerAuthPair(t, ownerKey)
+	auth, owner := OptsAddressPair(t, ownerKey)
 
 	ethBackend, ethAuths := test.SimulatedBackend(t)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, owner, nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, owner)
 	defer cancelDevNode()
 
 	senderAuth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
 	test.FailIfError(t, err)
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, auth)
+		UpgradeTestDevNode(t, ctx, backend, srv, auth)
 	}
 
 	deposit := makeDepositMessage(common.NewAddressFromEth(senderAuth.From))
-	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
+	_, err = backend.AddInboxMessage(ctx, deposit, common.RandAddress())
 	test.FailIfError(t, err)
 
 	client := web3.NewEthClient(srv, true)
@@ -140,9 +142,9 @@ func TestTransfer(t *testing.T) {
 	// Figure out gas required in stipend
 	arbTx, err := arbTransferCon.Send4(senderAuth, big.NewInt(10000))
 	test.FailIfError(t, err)
-	snap, err := srv.PendingSnapshot()
+	snap, err := srv.PendingSnapshot(ctx)
 	test.FailIfError(t, err)
-	_, debugPrints, err := snap.EstimateGas(arbTx, common.Address{}, common.NewAddressFromEth(senderAuth.From), 100000000)
+	_, debugPrints, err := snap.EstimateGas(ctx, arbTx, common.Address{}, common.NewAddressFromEth(senderAuth.From), 100000000)
 	test.FailIfError(t, err)
 	trace, err := getEVMTrace(debugPrints)
 	test.FailIfError(t, err)
@@ -160,7 +162,7 @@ func TestTransfer(t *testing.T) {
 	if err != nil {
 		transferABI, err := arbostestcontracts.TransferMetaData.GetAbi()
 		test.FailIfError(t, err)
-		_, debugPrints, err := snap.Call(message.ContractTransaction{
+		_, debugPrints, err := snap.Call(ctx, message.ContractTransaction{
 			BasicTx: message.BasicTx{
 				MaxGas:      big.NewInt(1000000),
 				GasPriceBid: big.NewInt(0),
@@ -168,7 +170,7 @@ func TestTransfer(t *testing.T) {
 				Payment:     big.NewInt(0),
 				Data:        transferABI.Methods["send3"].ID,
 			},
-		}, common.NewAddressFromEth(senderAuth.From))
+		}, common.NewAddressFromEth(senderAuth.From), math.MaxUint64)
 		test.FailIfError(t, err)
 		trace, err := getEVMTrace(debugPrints)
 		test.FailIfError(t, err)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,13 +28,13 @@
 #include <vector>
 
 struct Assertion {
-    uint64_t stepCount;
-    uint64_t gasCount;
+    uint64_t step_count;
+    uint64_t gas_count;
     uint64_t inbox_messages_consumed;
-    std::vector<std::vector<uint8_t>> sends;
-    std::vector<value> logs;
-    std::vector<value> debugPrints;
-    std::optional<uint256_t> sideloadBlockNumber;
+    std::vector<MachineEmission<std::vector<uint8_t>>> sends;
+    std::vector<MachineEmission<Value>> logs;
+    std::vector<MachineEmission<Value>> debug_prints;
+    std::optional<uint256_t> sideload_block_number;
 };
 
 class MachineExecutionConfig {
@@ -44,6 +44,8 @@ class MachineExecutionConfig {
     std::vector<MachineMessage> inbox_messages;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload;
+    bool stop_on_breakpoint;
+    std::optional<uint256_t> stop_after_log_count;
 
     MachineExecutionConfig();
 
@@ -55,20 +57,35 @@ class MachineExecutionConfig {
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
-    Assertion runImpl();
+   private:
+    std::atomic<bool> is_aborted{false};
 
    public:
     MachineState machine_state;
 
-    Machine() = default;
     explicit Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
-    Machine(std::shared_ptr<Code> code, value static_val)
-        : machine_state(std::move(code), std::move(static_val)) {}
+    explicit Machine(const Machine& machine)
+        : is_aborted(machine.is_aborted.load()),
+          machine_state(machine.machine_state) {}
+    explicit Machine(Machine&& machine) noexcept
+        : is_aborted(machine.is_aborted.load()),
+          machine_state(std::move(machine.machine_state)) {}
+    Machine& operator=(const Machine& machine) {
+        return *this = Machine(machine);
+    }
+    Machine& operator=(Machine&& machine) noexcept {
+        is_aborted = machine.is_aborted.load();
+        machine_state = std::move(machine.machine_state);
+        return *this;
+    }
+    ~Machine() = default;
 
     static Machine loadFromFile(const std::string& executable_filename) {
         return Machine{MachineState::loadFromFile(executable_filename)};
     }
+
+    void abort();
 
     Assertion run();
 

@@ -153,16 +153,16 @@ InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
     if (tup.tuple_size() != 8) {
         throw std::runtime_error("wrong tup size");
     }
-    auto kind = intx::narrow_cast<uint8_t>(
-        std::get<uint256_t>(tup.get_element_unsafe(0)));
-    auto block_number = std::get<uint256_t>(tup.get_element_unsafe(1));
-    auto timestamp = std::get<uint256_t>(tup.get_element_unsafe(2));
-    auto sender_int = std::get<uint256_t>(tup.get_element_unsafe(3));
-    auto inbox_sequence_number = std::get<uint256_t>(tup.get_element_unsafe(4));
-    auto gas_price_l1 = std::get<uint256_t>(tup.get_element_unsafe(5));
-    auto data_size = intx::narrow_cast<uint64_t>(
-        std::get<uint256_t>(tup.get_element_unsafe(6)));
-    auto data_buf = std::get<Buffer>(tup.get_element_unsafe(7));
+    auto kind =
+        intx::narrow_cast<uint8_t>(get<uint256_t>(tup.get_element_unsafe(0)));
+    auto block_number = get<uint256_t>(tup.get_element_unsafe(1));
+    auto timestamp = get<uint256_t>(tup.get_element_unsafe(2));
+    auto sender_int = get<uint256_t>(tup.get_element_unsafe(3));
+    auto inbox_sequence_number = get<uint256_t>(tup.get_element_unsafe(4));
+    auto gas_price_l1 = get<uint256_t>(tup.get_element_unsafe(5));
+    auto data_size =
+        intx::narrow_cast<uint64_t>(get<uint256_t>(tup.get_element_unsafe(6)));
+    auto data_buf = get<Buffer>(tup.get_element_unsafe(7));
 
     uint8_t raw_sender[32];
     intx::be::store(raw_sender, sender_int);
@@ -190,6 +190,5 @@ MachineMessage extractMachineMessageImpl(
     std::vector<unsigned char>::const_iterator current_iter,
     const std::vector<unsigned char>::const_iterator end) {
     uint256_t accumulator = extractUint256(current_iter);
-    InboxMessage message = extractInboxMessageImpl(current_iter, end);
-    return {message, accumulator};
+    return {extractInboxMessageImpl(current_iter, end), accumulator};
 }

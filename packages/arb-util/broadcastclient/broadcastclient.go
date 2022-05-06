@@ -19,6 +19,8 @@ package broadcastclient
 import (
 	"context"
 	"encoding/json"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+	"io"
 	"math/big"
 	"net"
 	"strings"
@@ -28,10 +30,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gobwas/ws"
-	"github.com/rs/zerolog/log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/wsbroadcastserver"
 )
 
 type BroadcastClient struct {
@@ -50,7 +51,7 @@ type BroadcastClient struct {
 	idleTimeout                  time.Duration
 }
 
-var logger = log.With().Caller().Str("component", "broadcaster").Logger()
+var logger = arblog.Logger.With().Str("component", "broadcaster").Logger()
 
 func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int, idleTimeout time.Duration) *BroadcastClient {
 	var seqNum *big.Int
@@ -76,12 +77,12 @@ func (bc *BroadcastClient) Connect(ctx context.Context) (chan broadcaster.Broadc
 }
 
 func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) error {
-	_, err := bc.connect(ctx, messageReceiver)
+	earlyFrameData, _, err := bc.connect(ctx, messageReceiver)
 	if err != nil {
 		return err
 	}
 
-	bc.startBackgroundReader(ctx, messageReceiver)
+	bc.startBackgroundReader(ctx, messageReceiver, earlyFrameData)
 
 	return nil
 }
@@ -104,11 +105,11 @@ func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageRecei
 	})()
 }
 
-func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {
+func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (io.Reader, chan broadcaster.BroadcastFeedMessage, error) {
 
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
@@ -116,10 +117,22 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 		Timeout: 10 * time.Second,
 	}
 
-	conn, _, _, err := timeoutDialer.Dial(ctx, bc.websocketUrl)
+	conn, br, _, err := timeoutDialer.Dial(ctx, bc.websocketUrl)
 	if err != nil {
 		logger.Warn().Err(err).Msg("broadcast client unable to connect")
-		return nil, errors.Wrap(err, "broadcast client unable to connect")
+		return nil, nil, errors.Wrap(err, "broadcast client unable to connect")
+	}
+
+	var earlyFrameData io.Reader
+	if br != nil {
+		// Depending on how long the client takes to read the response, there may be
+		// data after the WebSocket upgrade response in a single read from the socket,
+		// ie WebSocket frames sent by the server. If this happens, Dial returns
+		// a non-nil bufio.Reader so that data isn't lost. But beware, this buffered
+		// reader is still hooked up to the socket; trying to read past what had already
+		// been buffered will do a blocking read on the socket, so we have to wrap it
+		// in a LimitedReader.
+		earlyFrameData = io.LimitReader(br, int64(br.Buffered()))
 	}
 
 	bc.connMutex.Lock()
@@ -128,10 +141,10 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 
 	logger.Info().Msg("Connected")
 
-	return messageReceiver, nil
+	return earlyFrameData, messageReceiver, nil
 }
 
-func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
+func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, earlyFrameData io.Reader) {
 	go func() {
 		for {
 			select {
@@ -140,7 +153,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 			default:
 			}
 
-			msg, op, err := broadcaster.ReadData(ctx, bc.conn, bc.idleTimeout, ws.StateClientSide)
+			msg, op, err := wsbroadcastserver.ReadData(ctx, bc.conn, earlyFrameData, bc.idleTimeout, ws.StateClientSide)
 			if err != nil {
 				if bc.shuttingDown {
 					return
@@ -151,7 +164,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 					logger.Error().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("error calling readData")
 				}
 				_ = bc.conn.Close()
-				bc.RetryConnect(ctx, messageReceiver)
+				earlyFrameData = bc.RetryConnect(ctx, messageReceiver)
 				continue
 			}
 
@@ -192,7 +205,7 @@ func (bc *BroadcastClient) GetRetryCount() int {
 	return bc.retryCount
 }
 
-func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
+func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) io.Reader {
 	bc.retryMutex.Lock()
 	defer bc.retryMutex.Unlock()
 
@@ -202,21 +215,23 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 	for !bc.shuttingDown {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case <-time.After(waitDuration):
 		}
 
 		bc.retryCount++
-		_, err := bc.connect(ctx, messageReceiver)
+		earlyFrameData, _, err := bc.connect(ctx, messageReceiver)
 		if err == nil {
 			bc.retrying = false
-			return
+			return earlyFrameData
 		}
 
 		if waitDuration < maxWaitDuration {
 			waitDuration += 500 * time.Millisecond
 		}
 	}
+
+	return nil
 }
 
 func (bc *BroadcastClient) Close() {

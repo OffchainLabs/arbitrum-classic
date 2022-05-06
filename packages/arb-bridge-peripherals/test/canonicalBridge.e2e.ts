@@ -212,6 +212,7 @@ describe('Bridge peripherals end-to-end', () => {
     await l2TestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](token.address, accounts[0].address, tokenAmount, '0x')
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
 
@@ -250,6 +251,7 @@ describe('Bridge peripherals end-to-end', () => {
     await l2RouterTestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](token.address, accounts[0].address, tokenAmount, '0x')
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
 
@@ -291,6 +293,7 @@ describe('Bridge peripherals end-to-end', () => {
       data,
       { value: maxSubmissionCost + maxGas * gasPrice }
     )
+    await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
     const postAllowance = await token.allowance(
@@ -317,5 +320,90 @@ describe('Bridge peripherals end-to-end', () => {
     const l2Balance = await l2Token.balanceOf(accounts[0].address)
 
     assert.equal(l2Balance.toNumber(), 0, 'User has tokens in L2')
+
+    // reset stub return in test case
+    await l2TestBridge.setStubAddressOracleReturn(ethers.constants.AddressZero)
+  })
+
+  it('should deposit tokens with bytes32 field correctly', async function () {
+    const Token = await ethers.getContractFactory('Bytes32ERC20WithMetadata')
+    const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await token.mint()
+    await token.approve(l1TestBridge.address, tokenAmount)
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    await l1RouterTestBridge.outboundTransfer(
+      token.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
+    )
+
+    const l2TokenAddress = await l2RouterTestBridge.calculateL2TokenAddress(
+      token.address
+    )
+
+    const l2Code = await ethers.provider.getCode(l2TokenAddress)
+    assert.notEqual(l2Code, '0x', 'No code at L2 token address')
+
+    const l2Token = await ethers.getContractAt(
+      'StandardArbERC20',
+      l2TokenAddress
+    )
+
+    const name = await l2Token.name()
+    const symbol = await l2Token.symbol()
+
+    assert.equal(name, 'Maker')
+    assert.equal(symbol, 'MKR')
+  })
+
+  it('should not have L2 getters for unavailable fields', async function () {
+    const Token = await ethers.getContractFactory('Bytes32ERC20')
+    const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await token.mint()
+    await token.approve(l1TestBridge.address, tokenAmount)
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    await l1RouterTestBridge.outboundTransfer(
+      token.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data,
+      { value: maxSubmissionCost + maxGas * gasPrice }
+    )
+
+    const l2TokenAddress = await l2RouterTestBridge.calculateL2TokenAddress(
+      token.address
+    )
+
+    const l2Code = await ethers.provider.getCode(l2TokenAddress)
+    assert.notEqual(l2Code, '0x', 'No code at L2 token address')
+
+    const l2Token = await ethers.getContractAt(
+      'StandardArbERC20',
+      l2TokenAddress
+    )
+
+    await expect(l2Token.name()).to.be.revertedWith('')
+    await expect(l2Token.symbol()).to.be.revertedWith('')
+    await expect(l2Token.decimals()).to.be.revertedWith('')
   })
 })

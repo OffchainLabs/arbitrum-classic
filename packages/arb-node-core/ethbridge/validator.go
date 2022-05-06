@@ -53,29 +53,51 @@ func init() {
 }
 
 type ValidatorWallet struct {
-	con           *ethbridgecontracts.Validator
-	address       ethcommon.Address
-	client        ethutils.EthClient
-	auth          transactauth.TransactAuth
-	rollupAddress ethcommon.Address
+	con               *ethbridgecontracts.Validator
+	address           *ethcommon.Address
+	onWalletCreated   func(ethcommon.Address)
+	client            ethutils.EthClient
+	auth              transactauth.TransactAuth
+	rollupAddress     ethcommon.Address
+	walletFactoryAddr ethcommon.Address
+	rollupFromBlock   int64
+	blockSearchSize   int64
 }
 
-func NewValidator(address, rollupAddress ethcommon.Address, client ethutils.EthClient, auth transactauth.TransactAuth) (*ValidatorWallet, error) {
-	con, err := ethbridgecontracts.NewValidator(address, client)
-	if err != nil {
-		return nil, err
+func NewValidator(
+	address *ethcommon.Address,
+	walletFactoryAddr,
+	rollupAddress ethcommon.Address,
+	client ethutils.EthClient,
+	auth transactauth.TransactAuth,
+	rollupFromBlock int64,
+	blockSearchSize int64,
+	onWalletCreated func(ethcommon.Address),
+) (*ValidatorWallet, error) {
+	var con *ethbridgecontracts.Validator
+	if address != nil {
+		var err error
+		con, err = ethbridgecontracts.NewValidator(*address, client)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &ValidatorWallet{
-		con:           con,
-		address:       address,
-		client:        client,
-		auth:          auth,
-		rollupAddress: rollupAddress,
+		con:               con,
+		address:           address,
+		onWalletCreated:   onWalletCreated,
+		client:            client,
+		auth:              auth,
+		rollupAddress:     rollupAddress,
+		walletFactoryAddr: walletFactoryAddr,
+		rollupFromBlock:   rollupFromBlock,
+		blockSearchSize:   blockSearchSize,
 	}, nil
 }
 
-func (v *ValidatorWallet) Address() common.Address {
-	return common.NewAddressFromEth(v.address)
+// May be the nil if the wallet hasn't been deployed yet
+func (v *ValidatorWallet) Address() *ethcommon.Address {
+	return v.address
 }
 
 func (v *ValidatorWallet) From() common.Address {
@@ -93,6 +115,28 @@ func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Tran
 	})
 }
 
+func (v *ValidatorWallet) CreateWalletIfNeeded(ctx context.Context) error {
+	if v.con != nil {
+		return nil
+	}
+	if v.address == nil {
+		addr, err := CreateValidatorWallet(ctx, v.walletFactoryAddr, v.rollupFromBlock, v.blockSearchSize, v.auth, v.client)
+		if err != nil {
+			return err
+		}
+		v.address = &addr
+		if v.onWalletCreated != nil {
+			v.onWalletCreated(addr)
+		}
+	}
+	con, err := ethbridgecontracts.NewValidator(*v.address, v.client)
+	if err != nil {
+		return err
+	}
+	v.con = con
+	return nil
+}
+
 func combineTxes(txes []*types.Transaction) ([][]byte, []ethcommon.Address, []*big.Int, *big.Int) {
 	totalAmount := big.NewInt(0)
 	data := make([][]byte, 0, len(txes))
@@ -108,6 +152,7 @@ func combineTxes(txes []*types.Transaction) ([][]byte, []ethcommon.Address, []*b
 	return data, dest, amount, totalAmount
 }
 
+// Not thread safe! Don't call this from multiple threads at the same time.
 func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *BuilderBackend) (*arbtransaction.ArbTransaction, error) {
 	txes := builder.transactions
 	if len(txes) == 0 {
@@ -133,6 +178,11 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 		dest = append(dest, *tx.To())
 		amount = append(amount, tx.Value())
 		totalAmount = totalAmount.Add(totalAmount, tx.Value())
+	}
+
+	err := v.CreateWalletIfNeeded(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	arbTx, err := transactauth.MakeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -161,7 +211,8 @@ func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []co
 func CreateValidatorWallet(
 	ctx context.Context,
 	validatorWalletFactoryAddr ethcommon.Address,
-	fromBlock int64,
+	initialFromBlock int64,
+	blockSearchSize int64,
 	transactAuth transactauth.TransactAuth,
 	client ethutils.EthClient,
 ) (ethcommon.Address, error) {
@@ -170,16 +221,35 @@ func CreateValidatorWallet(
 		return ethcommon.Address{}, errors.WithStack(err)
 	}
 
-	query := ethereum.FilterQuery{
-		BlockHash: nil,
-		FromBlock: big.NewInt(fromBlock),
-		ToBlock:   nil,
-		Addresses: []ethcommon.Address{validatorWalletFactoryAddr},
-		Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {transactAuth.From().Hash()}},
-	}
-	logs, err := client.FilterLogs(ctx, query)
+	latestHeader, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return ethcommon.Address{}, errors.WithStack(err)
+	}
+	latestBlockHeight := latestHeader.Number.Int64()
+	currentFromBlock := initialFromBlock
+	var currentToBlock int64
+	if blockSearchSize > 0 {
+		currentToBlock = initialFromBlock + blockSearchSize
+	} else {
+		// Search all blocks at once, must use log caching better than go-ethereum for large block searches
+		currentToBlock = latestBlockHeight
+	}
+	var logs []types.Log
+	for len(logs) == 0 && currentFromBlock <= latestBlockHeight {
+		logger.Debug().Int64("fromBlock", currentFromBlock).Int64("toBlock", currentToBlock).Msg("searching for validator smart contract")
+		query := ethereum.FilterQuery{
+			BlockHash: nil,
+			FromBlock: big.NewInt(currentFromBlock),
+			ToBlock:   big.NewInt(currentToBlock),
+			Addresses: []ethcommon.Address{validatorWalletFactoryAddr},
+			Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {transactAuth.From().Hash()}},
+		}
+		logs, err = client.FilterLogs(ctx, query)
+		if err != nil {
+			return ethcommon.Address{}, errors.WithStack(err)
+		}
+		currentFromBlock = currentToBlock + 1
+		currentToBlock = currentFromBlock + blockSearchSize
 	}
 	if len(logs) > 1 {
 		return ethcommon.Address{}, errors.New("more than one validator wallet created for address")

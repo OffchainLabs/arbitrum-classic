@@ -20,34 +20,56 @@
 
 #include <stdint.h>
 
+#include <data_storage/pruningmode.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct {
     int32_t message_process_count;
+    int32_t add_messages_max_failure_count;
     int32_t checkpoint_load_gas_cost;
-    int32_t min_gas_checkpoint_frequency;
-    int32_t cache_expiration_seconds;
+    int32_t checkpoint_load_gas_factor;
+    int32_t checkpoint_max_execution_gas;
+    int32_t checkpoint_gas_frequency;
+    int32_t last_cache;
+    int32_t basic_cache_interval;
+    int32_t basic_cache_size;
     int32_t lru_cache_size;
+    int32_t cache_expiration_seconds;
+    int32_t idle_sleep_milliseconds;
+    int32_t seed_cache_on_startup;
     int32_t debug;
-    int32_t save_rocksdb_interval;
-    const char* save_rocksdb_path;
+    int32_t debug_timing;
     int32_t lazy_load_core_machine;
     int32_t lazy_load_archive_queries;
-    int32_t profile_reorg_to;
-    int32_t profile_run_until;
-    int32_t profile_load_count;
-    int32_t profile_reset_db_except_inbox;
-    int32_t profile_just_metadata;
+    int32_t checkpoint_prune_on_startup;
+    PruningMode checkpoint_pruning_mode;
+    int32_t checkpoint_max_to_prune;
+    int32_t database_compact;
+    int32_t database_save_interval;
+    const char* database_save_path;
+    int32_t database_save_on_startup;
+    int32_t database_exit_after;
+    int32_t test_reorg_to_l1_block;
+    int32_t test_reorg_to_l2_block;
+    int32_t test_reorg_to_log;
+    int32_t test_reorg_to_message;
+    int32_t test_run_until;
+    int32_t test_load_count;
+    int32_t test_reset_db_except_inbox;
 } CArbCoreConfig;
 
 CArbStorage* createArbStorage(const char* db_path,
                               CArbCoreConfig arb_core_config);
+void printDatabaseMetadata(CArbStorage* storage_ptr);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
+int applyArbStorageConfig(CArbStorage* storage_ptr);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);
 int closeArbStorage(CArbStorage* storage_ptr);
+int cleanupValidator(CArbStorage* storage_ptr);
 
 CArbCore* createArbCore(CArbStorage* storage_ptr);
 CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr);

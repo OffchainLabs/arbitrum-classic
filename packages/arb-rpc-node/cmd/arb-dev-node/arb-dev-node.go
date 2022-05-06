@@ -21,6 +21,8 @@ import (
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/cmd/internal"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -28,14 +30,13 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"syscall"
 
-	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
-	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -75,10 +76,8 @@ func init() {
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
-
 	// Print line number that log was created on
-	logger = log.With().Caller().Stack().Str("component", "arb-dev-node").Logger()
+	logger = arblog.Logger.With().Str("component", "arb-dev-node").Logger()
 }
 
 func main() {
@@ -88,6 +87,9 @@ func main() {
 }
 
 func startup() error {
+	ctx, cancelFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancelFunc()
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
@@ -96,11 +98,11 @@ func startup() error {
 	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
 	arbosPath := fs.String("arbos", "", "ArbOS version")
 	enableFees := fs.Bool("with-fees", false, "Run arbos with fees on")
-	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use tempory if empty")
+	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use temporary if empty")
 	aggStr := fs.String("aggregator", "", "aggregator to use as the sender from this node")
 	initialL1Height := fs.Uint64("l1height", 0, "initial l1 height")
-	rollupStr := fs.String("rollup", "", "address of rollup contract")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
+	tracingNamespace := fs.String("node.rpc.tracing.namespace", "arbtrace", "rpc namespace for tracing api")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -113,7 +115,7 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))); err != nil {
 		return err
 	}
 
@@ -126,19 +128,9 @@ func startup() error {
 
 	chainId := new(big.Int).SetUint64(*chainId64)
 
-	wallet, err := hdwallet.NewFromMnemonic(*mnemonic)
+	wallet, accounts, err := internal.InitializeWallet(*mnemonic, *walletcount)
 	if err != nil {
 		return err
-	}
-
-	accounts := make([]accounts2.Account, 0)
-	for i := 0; i < *walletcount; i++ {
-		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
-		account, err := wallet.Derive(path, false)
-		if err != nil {
-			return err
-		}
-		accounts = append(accounts, account)
 	}
 
 	if *arbosPath == "" {
@@ -159,13 +151,6 @@ func startup() error {
 		deleteDir = true
 	}
 
-	ctx := context.Background()
-
-	rollupAddress := common.RandAddress()
-	if *rollupStr != "" {
-		rollupAddress = common.HexToAddress(*rollupStr)
-	}
-
 	var agg common.Address
 	if *aggStr != "" {
 		agg = common.HexToAddress(*aggStr)
@@ -175,13 +160,14 @@ func startup() error {
 		}
 		agg = common.NewAddressFromEth(accounts[1].Address)
 	}
-	backend, db, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
+	backend, db, mon, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
 		ctx,
 		*dbDir,
 		*arbosPath,
 		chainId,
 		agg,
 		*initialL1Height,
+		true,
 	)
 	if err != nil {
 		return err
@@ -235,15 +221,10 @@ func startup() error {
 		if err != nil {
 			return err
 		}
-		if _, err := backend.AddInboxMessage(initMsg, common.Address{}); err != nil {
+		if _, err := backend.AddInboxMessage(ctx, initMsg, common.Address{}); err != nil {
 			return errors.Wrap(err, "error adding init message to inbox")
 		}
 	}
-
-	errChan := make(chan error, 10)
-	go func() {
-		errChan <- <-devNodeErrChan
-	}()
 
 	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
 	if !ok {
@@ -262,7 +243,7 @@ func startup() error {
 				},
 			}),
 		}
-		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+		if _, err := backend.AddInboxMessage(ctx, deposit, common.RandAddress()); err != nil {
 			return err
 		}
 	}
@@ -282,7 +263,7 @@ func startup() error {
 	}
 	signer := types.NewEIP155Signer(chainId)
 
-	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
+	srv := aggregator.NewServer(backend, chainId, db)
 
 	if deleteDir {
 		client := web3.NewEthClient(srv, true)
@@ -309,58 +290,44 @@ func startup() error {
 			if err := dev.EnableFees(srv, ownerAuth, agg.ToEthAddress()); err != nil {
 				return err
 			}
-			if _, err := backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
+			if _, err := backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
 				return err
 			}
 		}
 	}
 
-	fmt.Println("Arbitrum Dev Chain")
-	fmt.Println("")
-	fmt.Println("Available Accounts")
-	fmt.Println("==================")
-	for i, account := range accounts {
-		fmt.Printf("(%v) %v (100 ETH)\n", i, account.Address.Hex())
+	if err := internal.PrintAccountInfo(wallet, accounts); err != nil {
+		return err
 	}
 
-	fmt.Println("\nPrivate Keys")
-	fmt.Println("==================")
-	for i, account := range accounts {
-		privKey, err := wallet.PrivateKeyHex(account)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("(%v) 0x%v\n", i, privKey)
-	}
-	fmt.Println("")
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
+	defer func() {
 		if *saveMessages != "" {
 			data, err := backend.ExportData()
 			if err != nil {
-				errChan <- errors.Wrap(err, "error exporting data from backend")
+				log.Error().Err(err).Msg("error exporting data from backend")
 				return
 			}
 
-			if err := ioutil.WriteFile(*saveMessages, data, 777); err != nil {
-				errChan <- errors.Wrap(err, "error saving exported data")
-				return
+			if err := ioutil.WriteFile(*saveMessages, data, 0777); err != nil {
+				log.Error().Err(err).Msg("error saving exported data")
 			}
 		}
-		errChan <- nil
 	}()
 
 	plugins := make(map[string]interface{})
 	plugins["evm"] = dev.NewEVM(backend)
 
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, web3.GanacheMode, plugins)
+	rpcConfig := web3.DefaultConfig
+	rpcConfig.Mode = web3.GanacheMode
+	rpcConfig.Tracing.Enable = true
+	rpcConfig.Tracing.Namespace = *tracingNamespace
+
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, rpcConfig, mon.CoreConfig, plugins, nil)
 	if err != nil {
 		return err
 	}
 
+	errChan := make(chan error, 10)
 	go func() {
 		rpcConfig := configuration.RPC{
 			Addr: "0.0.0.0",
@@ -374,7 +341,15 @@ func startup() error {
 		}
 		errChan <- rpc.LaunchPublicServer(ctx, web3Server, rpcConfig, wsConfig)
 	}()
-
-	err = <-errChan
-	return err
+	select {
+	case err := <-errChan:
+		fmt.Println("Exit from err")
+		return err
+	case err := <-devNodeErrChan:
+		fmt.Println("Exit from dev err")
+		return err
+	case <-ctx.Done():
+		fmt.Println("Exit from done")
+		return nil
+	}
 }
