@@ -292,7 +292,10 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     const L1CustomToken = await ethers.getContractFactory(
       'MintableTestCustomTokenL1'
     )
-    const l1CustomToken = await L1CustomToken.deploy(l1TestBridge.address)
+    const l1CustomToken = await L1CustomToken.deploy(
+      l1TestBridge.address,
+      l1RouterTestBridge.address
+    )
 
     const L2Token = await ethers.getContractFactory(
       'MintableTestArbCustomToken'

@@ -87,7 +87,7 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
 }
 
 contract MintableTestCustomTokenL1 is L1MintableToken, TestCustomTokenL1 {
-    constructor(address _bridge) public TestCustomTokenL1(_bridge) {}
+    constructor(address _bridge, address _router) public TestCustomTokenL1(_bridge, _router) {}
 
     function bridgeMint(address account, uint256 amount) public override(L1MintableToken) {
         _mint(account, amount);
