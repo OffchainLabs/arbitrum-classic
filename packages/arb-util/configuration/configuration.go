@@ -69,6 +69,7 @@ type Database struct {
 
 type Core struct {
 	AddMessagesMaxFailureCount int           `koanf:"add-messages-max-failure-count"`
+	ThreadMaxFailureCount      int           `koanf:"thread-max-failure-count"`
 	Cache                      CoreCache     `koanf:"cache"`
 	CheckpointGasFrequency     int           `koanf:"checkpoint-gas-frequency"`
 	CheckpointLoadGasCost      int           `koanf:"checkpoint-load-gas-cost"`
@@ -519,7 +520,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("validator.only-create-wallet-contract", false, "only create smart contract wallet contract, then exit")
 	f.String("validator.contract-wallet-address-filename", "chainState.json", "json file that validator smart contract wallet address is stored in")
 	f.String("validator.contract-wallet-address", "", "validator smart contract wallet public address")
-	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
+	f.String("validator.strategy", "", "strategy for validator to use")
 	f.String("validator.utils-address", "", "validator utilities address")
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
@@ -571,7 +572,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.dangerous.disable-delayed-message-sequencing", false, "disable sequencing delayed messages (DANGEROUS)")
 	f.Bool("node.sequencer.debug-timing", false, "log elapsed time throughout core sequencing loop")
 
-	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
+	f.String("node.type", "forwarder", "forwarder, aggregator, sequencer or validator")
 
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
@@ -743,15 +744,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		out.Core.CheckpointPruningMode = "off"
 	}
 
-	if (out.Core.CheckpointPruningMode != "on") &&
-		(out.Core.CheckpointPruningMode != "default") {
-		return nil, nil, nil, nil,
-			fmt.Errorf("value '%v' for core.checkpoint-pruning-mode is not 'on', 'off', or 'default'", out.Core.CheckpointPruningMode)
-	}
-
 	if out.Node.Type() == SequencerNodeType && !out.Core.Cache.Last {
 		logger.Info().Msg("enabling last machine cache for sequencer")
 		out.Core.Cache.Last = true
+	} else if out.Node.Type() == ValidatorNodeType && out.Validator.OnlyCreateWalletContract && out.Validator.Strategy() == WatchtowerStrategy {
+		return nil, nil, nil, nil, errors.New("can't create validator wallet contract with watchtower validator strategy")
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil
@@ -856,6 +853,7 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 
 	f.Int("core.add-messages-max-failure-count", 10, "number of add messages failures before exiting program")
+	f.Int("core.thread-max-failure-count", 2, "number of core thread failures before exiting program")
 	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
 	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
 	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")

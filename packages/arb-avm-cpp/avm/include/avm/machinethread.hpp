@@ -43,20 +43,19 @@ class MachineThread : public Machine {
     InboxState reorg_check_data;
 
     // Machine thread communication
-    std::atomic<bool> machine_abort{false};
     std::atomic<machine_status_enum> machine_status{MACHINE_NONE};
     std::string machine_error_string;
     Assertion last_assertion;
 
    public:
-    ~MachineThread() { abortMachine(); }
+    ~MachineThread() { abort(); }
     explicit MachineThread(MachineState machine_state_)
         : Machine(std::move(machine_state_)),
           reorg_check_data(machine_state.output.fully_processed_inbox) {}
 
     bool runMachine(MachineExecutionConfig config, bool asynchronous);
     bool continueRunningMachine(bool asynchronous);
-    void abortMachine();
+    virtual void abort();
     machine_status_enum status();
     std::string getErrorString();
     void clearError();
