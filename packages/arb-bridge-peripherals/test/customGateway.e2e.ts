@@ -287,7 +287,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     )
   })
 
-  it('should withdraw tokens when minted in L2', async function () {
+  it.only('should withdraw tokens when minted in L2', async function () {
     // custom token setup
     const L1CustomToken = await ethers.getContractFactory(
       'MintableTestCustomTokenL1'
@@ -308,6 +308,13 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     await l1TestBridge.forceRegisterTokenToL2(
       [l1CustomToken.address],
       [l2Token.address],
+      0,
+      0,
+      0
+    )
+    await l1RouterTestBridge.setGateways(
+      [l1CustomToken.address],
+      [l1TestBridge.address],
       0,
       0,
       0
@@ -351,6 +358,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     await l2TestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](l1CustomToken.address, accounts[0].address, smallWithdrawal, '0x')
+    await l2TestBridge.triggerTxToL1()
 
     const midUserBalance = await l1CustomToken.balanceOf(accounts[0].address)
     const midEscrow = await l1CustomToken.balanceOf(l1TestBridge.address)
@@ -366,14 +374,13 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       'Wrong escrow balance in initial withdrawal'
     )
 
-    await expect(
-      l2TestBridge.functions['outboundTransfer(address,address,uint256,bytes)'](
-        l1CustomToken.address,
-        accounts[0].address,
-        l2Balance.sub(smallWithdrawal),
-        '0x'
-      )
+    await l2TestBridge.functions['outboundTransfer(address,address,uint256,bytes)'](
+      l1CustomToken.address,
+      accounts[0].address,
+      l2Balance.sub(smallWithdrawal),
+      '0x'
     )
+    await expect(l2TestBridge.triggerTxToL1())
       .to.emit(l1CustomToken, 'Transfer(address,address,uint256)')
       .withArgs(ethers.constants.AddressZero, l1TestBridge.address, tokenAmount) // this is the mint
 
