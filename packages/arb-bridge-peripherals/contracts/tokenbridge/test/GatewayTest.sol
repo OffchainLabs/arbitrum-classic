@@ -174,12 +174,10 @@ contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
 
 contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
     modifier onlyCounterpartGateway() override {
-        require(
-            msg.sender == counterpartGateway,
-            "ONLY_COUNTERPART_GATEWAY"
-        );
+        require(msg.sender == counterpartGateway, "ONLY_COUNTERPART_GATEWAY");
         _;
     }
+
     function sendTxToL1(
         uint256 _l1CallValue,
         address _from,
@@ -263,12 +261,10 @@ contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
 
 contract L2CustomGatewayTester is L2ArbitrumTestMessenger, L2CustomGateway {
     modifier onlyCounterpartGateway() override {
-        require(
-            msg.sender == counterpartGateway,
-            "ONLY_COUNTERPART_GATEWAY"
-        );
+        require(msg.sender == counterpartGateway, "ONLY_COUNTERPART_GATEWAY");
         _;
     }
+
     function sendTxToL1(
         uint256 _l1CallValue,
         address _from,
@@ -330,12 +326,10 @@ contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
 
 contract L2WethGatewayTester is L2ArbitrumTestMessenger, L2WethGateway {
     modifier onlyCounterpartGateway() override {
-        require(
-            msg.sender == counterpartGateway,
-            "ONLY_COUNTERPART_GATEWAY"
-        );
+        require(msg.sender == counterpartGateway, "ONLY_COUNTERPART_GATEWAY");
         _;
     }
+
     function sendTxToL1(
         uint256 _l1CallValue,
         address _from,
