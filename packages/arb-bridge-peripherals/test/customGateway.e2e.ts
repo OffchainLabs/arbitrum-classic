@@ -41,7 +41,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     accounts = await ethers.getSigners()
 
     // l1 side deploy
-    const L1RouterTestBridge: ContractFactory = await ethers.getContractFactory(
+    const L1RouterTestBridge = await ethers.getContractFactory(
       'L1GatewayRouterTester'
     )
     l1RouterTestBridge = await L1RouterTestBridge.deploy()
@@ -58,7 +58,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     )
     l2TestBridge = await L2TestBridge.deploy()
 
-    const L2RouterTestBridge: ContractFactory = await ethers.getContractFactory(
+    const L2RouterTestBridge = await ethers.getContractFactory(
       'L2GatewayRouterTester'
     )
     l2RouterTestBridge = await L2RouterTestBridge.deploy()
@@ -92,7 +92,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
 
   it('should deposit tokens', async function () {
     // custom token setup
-    const L1CustomToken: ContractFactory = await ethers.getContractFactory(
+    const L1CustomToken = await ethers.getContractFactory(
       'TestCustomTokenL1'
     )
     const l1CustomToken = await L1CustomToken.deploy(
@@ -151,7 +151,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
 
   it('should withdraw tokens', async function () {
     // custom token setup
-    const L1CustomToken: ContractFactory = await ethers.getContractFactory(
+    const L1CustomToken = await ethers.getContractFactory(
       'TestCustomTokenL1'
     )
     const l1CustomToken = await L1CustomToken.deploy(
@@ -217,7 +217,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
   })
   it('should force withdraw tokens if no token is deployed in L2', async function () {
     // custom token setup
-    const L1CustomToken: ContractFactory = await ethers.getContractFactory(
+    const L1CustomToken = await ethers.getContractFactory(
       'TestCustomTokenL1'
     )
     const l1CustomToken = await L1CustomToken.deploy(
