@@ -1,6 +1,6 @@
 {
   "name": "arb-bridge-eth",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "description": "",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -12,9 +12,12 @@
     "url": "https://github.com/offchainlabs/arbitrum/issues"
   },
   "homepage": "https://offchainlabs.com/",
-  "directories": {
-    "test": "test"
-  },
+  "files": [
+    "contracts",
+    "scripts/build.bash",
+    "hardhat.prod-config.js",
+    "hardhat.base-config.json"
+  ],
   "scripts": {
     "build": "./scripts/build.bash",
     "test": "yarn run hardhat test test/*.spec.ts",
