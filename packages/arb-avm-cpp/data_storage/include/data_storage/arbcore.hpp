@@ -29,7 +29,6 @@
 #include <data_storage/readsnapshottransaction.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/util.hpp>
-#include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
 
 #include <map>
@@ -160,7 +159,6 @@ class ArbCore {
     std::shared_ptr<DataStorage> data_storage;
 
     std::unique_ptr<MachineThread> core_machine;
-    std::shared_ptr<CoreCode> core_code{};
 
     // Machine caches
     CombinedMachineCache combined_machine_cache;

@@ -55,7 +55,7 @@ class MachineThread : public Machine {
 
     bool runMachine(MachineExecutionConfig config, bool asynchronous);
     bool continueRunningMachine(bool asynchronous);
-    virtual void abort();
+    void abort();
     machine_status_enum status();
     std::string getErrorString();
     void clearError();

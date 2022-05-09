@@ -106,7 +106,7 @@ class Datastack {
     }
 
     DataStackProof marshalForProof(const std::vector<size_t>& stackInfo,
-                                   const Code& code) const;
+                                   ValueLoader* loader) const;
 
     Value& peek() {
         if (values.empty()) {

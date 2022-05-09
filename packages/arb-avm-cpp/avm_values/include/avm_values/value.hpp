@@ -20,10 +20,13 @@
 #include <avm_values/bigint.hpp>
 #include <avm_values/buffer.hpp>
 #include <avm_values/codepoint.hpp>
+#include <avm_values/codesegment.hpp>
 #include <avm_values/opcodes.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/unloadedvalue.hpp>
 #include <avm_values/valuetype.hpp>
+
+#include <boost/smart_ptr/intrusive_ptr.hpp>
 
 #include <variant>
 
@@ -44,6 +47,7 @@ constexpr uint64_t value_num_tag = value_tagged_bit | 0;
 constexpr uint64_t value_tuple_tag = value_tagged_bit | 1;
 constexpr uint64_t value_hash_pre_image_tag = value_tagged_bit | 2;
 constexpr uint64_t value_buffer_tag = value_tagged_bit | 3;
+constexpr uint64_t value_code_segment_tag = value_tagged_bit | 4;
 
 class ValueLoader;
 
@@ -52,6 +56,7 @@ union TaggedValueContents {
     Tuple tuple;
     std::shared_ptr<HashPreImage> hash_pre_image;
     Buffer buffer;
+    boost::intrusive_ptr<CodeSegment> code_segment;
     ~TaggedValueContents() {}
 };
 
@@ -106,6 +111,7 @@ class Value {
     Value(const CodePointStub&);
     explicit Value(std::shared_ptr<HashPreImage>);
     Value(Buffer);
+    Value(boost::intrusive_ptr<CodeSegment>);
     Value(UnloadedValue);
 
     ~Value() { destroy(); }
@@ -151,6 +157,10 @@ inline bool holds_alternative<std::shared_ptr<HashPreImage>>(const Value& val) {
 template <>
 inline bool holds_alternative<Buffer>(const Value& val) {
     return val.inner.tagged.tag == value_buffer_tag;
+}
+template <>
+inline bool holds_alternative<CodeSegment>(const Value& val) {
+    return val.inner.tagged.tag == value_code_segment_tag;
 }
 template <>
 inline bool holds_alternative<UnloadedValue>(const Value& val) {
@@ -320,6 +330,9 @@ decltype(auto) visit(T&& visitor, const Value& val) {
                     val.inner.tagged.inner.hash_pre_image);
             case value_buffer_tag:
                 return std::forward<T>(visitor)(val.inner.tagged.inner.buffer);
+            case value_code_segment_tag:
+                return std::forward<T>(visitor)(
+                    val.inner.tagged.inner.code_segment);
             default:
                 assert(0);
                 __builtin_unreachable();
@@ -345,6 +358,9 @@ decltype(auto) visit(T&& visitor, Value& val) {
                     val.inner.tagged.inner.hash_pre_image);
             case value_buffer_tag:
                 return std::forward<T>(visitor)(val.inner.tagged.inner.buffer);
+            case value_code_segment_tag:
+                return std::forward<T>(visitor)(
+                    val.inner.tagged.inner.code_segment);
             default:
                 assert(0);
                 __builtin_unreachable();
@@ -368,7 +384,6 @@ bool values_equal(const Value& a, const Value& b);
 
 uint64_t deserialize_uint64_t(const char*& bufptr);
 CodePointRef deserializeCodePointRef(const char*& bufptr);
-CodePointStub deserializeCodePointStub(const char*& bufptr);
 uint256_t deserializeUint256t(const char*& srccode);
 Value deserialize_value(const char*& srccode);
 
@@ -378,12 +393,10 @@ void marshal_value(const Value& val,
                    std::vector<unsigned char>& buf,
                    ValueLoader* value_loader);
 
-class Code;
-
 void marshalForProof(const Value& val,
                      size_t marshal_level,
                      std::vector<unsigned char>& buf,
-                     const Code& code);
+                     ValueLoader* code);
 
 uint256_t getSize(const Value& val);
 

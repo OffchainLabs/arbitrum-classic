@@ -29,12 +29,18 @@
 #include <vector>
 
 struct ValueBeingParsed {
+    ParsedSerializedVal parsed_val;
     Value val;
     uint32_t reference_count;
     std::vector<ParsedTupVal> raw_vals;
 
-    ValueBeingParsed(Value&& v, uint32_t count)
-        : val{std::move(v)}, reference_count{count}, raw_vals{} {}
+    ValueBeingParsed(ParsedSerializedVal&& parsed_val_,
+                     Value&& v,
+                     uint32_t count)
+        : parsed_val{std::move(parsed_val_)},
+          val{std::move(v)},
+          reference_count{count},
+          raw_vals{} {}
 
     void setTupleElement(uint64_t pos, Value&& newval) {
         if (holds_alternative<Tuple>(val)) {
@@ -51,8 +57,7 @@ bool shouldInlineValue(const Value& val,
         auto hash = tuple->getHashPreImage().secretHash(secret_hash_seed);
         return tuple->tuple_size() == 0 ||
                (hash % tupleInlineDenominator) < tupleInlineNumerator;
-    } else if (holds_alternative<CodePointStub>(val) ||
-               holds_alternative<UnloadedValue>(val)) {
+    } else if (holds_alternative<UnloadedValue>(val)) {
         return false;
     } else {
         return true;
@@ -80,6 +85,13 @@ T parseBuffer(const char* buf, int& len) {
         len += 32;
     }
     return ParsedBuffer{depth, res};
+}
+
+ParsedCodePointStub deserializeCodePointStub(const char*& buf) {
+    auto root_hash = deserializeUint256t(buf);
+    auto pc = deserialize_uint64_t(buf);
+    auto hash = deserializeUint256t(buf);
+    return {root_hash, pc, hash};
 }
 
 ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
@@ -146,27 +158,25 @@ ParsedTupValVector parseTupleData(const char*& buf, uint8_t count) {
 
 std::vector<Value> serializeValue(const std::vector<unsigned char>&,
                                   const uint256_t& val,
-                                  std::vector<unsigned char>& value_vector,
-                                  std::map<uint64_t, uint64_t>&) {
+                                  std::vector<unsigned char>& value_vector) {
     value_vector.push_back(NUM);
     marshal_uint256_t(val, value_vector);
     return {};
 }
-std::vector<Value> serializeValue(
-    const std::vector<unsigned char>&,
-    const CodePointStub& val,
-    std::vector<unsigned char>& value_vector,
-    std::map<uint64_t, uint64_t>& segment_counts) {
+std::vector<Value> serializeValue(const std::vector<unsigned char>&,
+                                  const CodePointStub& val,
+                                  std::vector<unsigned char>& value_vector) {
     value_vector.push_back(CODE_POINT_STUB);
-    val.marshal(value_vector);
-    ++segment_counts[val.pc.segment];
-    return {};
+    val.pc.root->freeze();
+    marshal_uint256_t(val.pc.root->getHash(), value_vector);
+    marshal_uint64_t(val.pc.pc, value_vector);
+    marshal_uint256_t(val.hash, value_vector);
+    return {1, val.pc.root};
 }
 std::vector<Value> serializeValue(
     const std::vector<unsigned char>& secret_hash_seed,
     const Tuple& root,
-    std::vector<unsigned char>& value_vector,
-    std::map<uint64_t, uint64_t>& segment_counts) {
+    std::vector<unsigned char>& value_vector) {
     std::vector<Value> ret{};
     value_vector.push_back(TUPLE + root.tuple_size());
     // `to_serialize` is a stack, so we populate it in reverse order
@@ -183,8 +193,8 @@ std::vector<Value> serializeValue(
                 to_serialize.insert(to_serialize.end(), nested_tup->rbegin(),
                                     nested_tup->rend());
             } else {
-                auto new_ret = serializeValue(secret_hash_seed, nested,
-                                              value_vector, segment_counts);
+                auto new_ret =
+                    serializeValue(secret_hash_seed, nested, value_vector);
                 ret.insert(ret.end(), new_ret.begin(), new_ret.end());
             }
         } else {
@@ -202,20 +212,17 @@ std::vector<Value> serializeValue(
 }
 std::vector<Value> serializeValue(const std::vector<unsigned char>&,
                                   const std::shared_ptr<HashPreImage>&,
-                                  std::vector<unsigned char>&,
-                                  std::map<uint64_t, uint64_t>&) {
+                                  std::vector<unsigned char>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
 }
 std::vector<Value> serializeValue(const std::vector<unsigned char>&,
                                   const UnloadedValue&,
-                                  std::vector<unsigned char>&,
-                                  std::map<uint64_t, uint64_t>&) {
+                                  std::vector<unsigned char>&) {
     throw std::runtime_error("Can't serialize unloaded value in db");
 }
 std::vector<Value> serializeValue(const std::vector<unsigned char>&,
                                   const Buffer& b,
-                                  std::vector<unsigned char>& value_vector,
-                                  std::map<uint64_t, uint64_t>&) {
+                                  std::vector<unsigned char>& value_vector) {
     value_vector.push_back(BUFFER);
     std::vector<Buffer> res = b.serialize(value_vector);
     std::vector<Value> ret{};
@@ -225,29 +232,48 @@ std::vector<Value> serializeValue(const std::vector<unsigned char>&,
     }
     return ret;
 }
+std::vector<Value> serializeValue(
+    const std::vector<unsigned char>& secret_hash_seed,
+    const boost::intrusive_ptr<CodeSegment>& code_segment,
+    std::vector<unsigned char>& value_vector) {
+    std::vector<Value> ret{};
+    value_vector.push_back(CODE_SEGMENT);
+    auto data = code_segment->getDataHandle();
+    if (data.cached_hashes->size() != data.operations->size() / 10) {
+        throw std::runtime_error(
+            "Unexpected number of cached hashes compared to operations");
+    }
+    marshal_uint64_t(data.operations->size(), value_vector);
+    for (auto& hash : *data.cached_hashes) {
+        marshal_uint256_t(hash, value_vector);
+    }
+    for (auto& op : *data.operations) {
+        value_vector.push_back(op.immediate ? 1 : 0);
+        value_vector.push_back(static_cast<unsigned char>(op.opcode));
+        if (op.immediate) {
+            auto new_ret =
+                serializeValue(secret_hash_seed, code_segment, value_vector);
+            ret.insert(ret.end(), new_ret.begin(), new_ret.end());
+        }
+    }
+    return ret;
+}
 
 // Returns a list of value hashes to be deleted
-void deleteParsedValue(const uint256_t&,
-                       std::vector<uint256_t>&,
-                       std::map<uint64_t, uint64_t>&) {}
-void deleteParsedValue(const Buffer&,
-                       std::vector<uint256_t>&,
-                       std::map<uint64_t, uint64_t>&) {}
+void deleteParsedValue(const uint256_t&, std::vector<uint256_t>&) {}
+void deleteParsedValue(const Buffer&, std::vector<uint256_t>&) {}
 void deleteParsedValue(const ParsedBuffer& parsed,
-                       std::vector<uint256_t>& vals_to_delete,
-                       std::map<uint64_t, uint64_t>&) {
+                       std::vector<uint256_t>& vals_to_delete) {
     for (const auto& val : parsed.nodes) {
         vals_to_delete.push_back(val);
     }
 }
-void deleteParsedValue(const CodePointStub& cp,
-                       std::vector<uint256_t>&,
-                       std::map<uint64_t, uint64_t>& segment_counts) {
-    segment_counts[cp.pc.segment]++;
+void deleteParsedValue(const ParsedCodePointStub& cp,
+                       std::vector<uint256_t>& vals_to_delete) {
+    vals_to_delete.push_back(cp.root_hash);
 }
 void deleteParsedValue(std::vector<ParsedTupVal> tup,
-                       std::vector<uint256_t>& vals_to_delete,
-                       std::map<uint64_t, uint64_t>&) {
+                       std::vector<uint256_t>& vals_to_delete) {
     while (!tup.empty()) {
         ParsedTupVal val = std::move(tup.back());
         tup.pop_back();
@@ -268,6 +294,13 @@ void deleteParsedValue(std::vector<ParsedTupVal> tup,
             const auto& inner = std::get<ParsedTupValVector>(val);
             tup.insert(tup.end(), inner.begin(), inner.end());
         }
+    }
+}
+void deleteParsedValue(ParsedCodeSegment segment,
+                       std::vector<uint256_t>& vals_to_delete) {
+    for (auto& immediate : segment.immediate_values) {
+        visit([&](const auto& val) { deleteParsedValue(val, vals_to_delete); },
+              immediate.second);
     }
 }
 }  // namespace
@@ -292,6 +325,28 @@ ParsedSerializedVal parseRecord(const char*& buf) {
             buf += len;
             return res;
         }
+        case CODE_SEGMENT: {
+            auto size = deserialize_uint64_t(buf);
+            std::vector<uint256_t> cached_hashes;
+            for (uint64_t i = 0; i < size; i++) {
+                cached_hashes.push_back(deserializeUint256t(buf));
+            }
+            std::vector<Operation> operations_without_immediates;
+            std::vector<std::pair<uint64_t, ParsedSerializedVal>>
+                immediate_values;
+            for (uint64_t i = 0; i < size; i++) {
+                auto immediate = static_cast<bool>(*buf);
+                buf++;
+                operations_without_immediates.emplace_back(
+                    static_cast<OpCode>(*buf));
+                buf++;
+                if (immediate) {
+                    immediate_values.emplace_back(i, parseRecord(buf));
+                }
+            }
+            return ParsedCodeSegment{operations_without_immediates,
+                                     immediate_values, cached_hashes};
+        }
         default: {
             if (value_type - TUPLE > 8) {
                 throw std::runtime_error("can't get value with invalid type");
@@ -304,12 +359,10 @@ ParsedSerializedVal parseRecord(const char*& buf) {
 std::vector<Value> serializeValue(
     const std::vector<unsigned char>& secret_hash_seed,
     const Value& val,
-    std::vector<unsigned char>& value_vector,
-    std::map<uint64_t, uint64_t>& segment_counts) {
+    std::vector<unsigned char>& value_vector) {
     return visit(
         [&](const auto& val) {
-            return serializeValue(secret_hash_seed, val, value_vector,
-                                  segment_counts);
+            return serializeValue(secret_hash_seed, val, value_vector);
         },
         val);
 }
@@ -318,23 +371,31 @@ GetResults applyValue(Value&& val,
                       const uint32_t reference_count,
                       std::vector<ValueBeingParsed>& val_stack) {
     auto& current = val_stack.back();
+    if (holds_alternative<Tuple>(current.val)) {
+        auto tuple_size = get<Tuple>(current.val).tuple_size();
+        uint64_t tuple_index = tuple_size - current.raw_vals.size() - 1;
+        if (tuple_index >= tuple_size) {
+            throw std::runtime_error("Tuple and raw_vals size mismatch");
+        }
 
-    // This function is only called when populating an existing tuple
-    auto tuple_size = get<Tuple>(current.val).tuple_size();
-    uint64_t tuple_index = tuple_size - current.raw_vals.size() - 1;
-    if (tuple_index >= tuple_size) {
-        throw std::runtime_error("Tuple and raw_vals size mismatch");
+        //  Add value to Tuple that is currently being populated
+        current.setTupleElement(tuple_index, std::move(val));
+    } else if (auto stub = get_if<CodePointStub>(&current.val)) {
+        stub->pc.root = get<boost::intrusive_ptr<CodeSegment>>(val);
+    } else if (auto segment = get_if<CodeSegment>(&current.val)) {
+        auto parsed = get<ParsedCodeSegment>(current.parsed_val);
+        uint64_t immediate_index =
+            parsed.immediate_values.size() - current.raw_vals.size() - 1;
+        uint64_t immediate_pos = parsed.immediate_values[immediate_index].first;
+        segment->loadOperationUnsafe(immediate_pos).immediate =
+            std::make_unique<Value>(val);
     }
-
-    //  Add value to Tuple that is currently being populated
-    current.setTupleElement(tuple_index, std::move(val));
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
 GetResults processVal(const ReadTransaction& tx,
                       const BigUnloadedValue& val_info,
                       std::vector<ValueBeingParsed>& val_stack,
-                      std::set<uint64_t>& segment_ids,
                       uint32_t,
                       ValueCache& val_cache,
                       bool lazy_load);
@@ -342,7 +403,6 @@ GetResults processVal(const ReadTransaction& tx,
 GetResults processVal(const ReadTransaction& tx,
                       const ParsedBuffer& val,
                       std::vector<ValueBeingParsed>& val_stack,
-                      std::set<uint64_t>&,
                       uint32_t reference_count,
                       ValueCache& val_cache,
                       bool lazy_load);
@@ -359,7 +419,6 @@ GetResults getStoredValue(const ReadTransaction& tx,
 GetResults processVal(const ReadTransaction&,
                       const uint256_t& val,
                       std::vector<ValueBeingParsed>& val_stack,
-                      std::set<uint64_t>&,
                       const uint32_t reference_count,
                       ValueCache&,
                       bool) {
@@ -369,11 +428,10 @@ GetResults processVal(const ReadTransaction&,
 GetResults processFirstVal(const ReadTransaction&,
                            const uint256_t& val,
                            std::vector<ValueBeingParsed>& val_stack,
-                           std::set<uint64_t>&,
                            const uint32_t reference_count,
                            ValueCache&) {
     // Single number requested
-    val_stack.emplace_back(val, reference_count);
+    val_stack.emplace_back(val, val, reference_count);
 
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
@@ -381,7 +439,6 @@ GetResults processFirstVal(const ReadTransaction&,
 GetResults processVal(const ReadTransaction&,
                       const Buffer& val,
                       std::vector<ValueBeingParsed>& val_stack,
-                      std::set<uint64_t>&,
                       const uint32_t reference_count,
                       ValueCache&,
                       bool) {
@@ -391,11 +448,10 @@ GetResults processVal(const ReadTransaction&,
 GetResults processFirstVal(const ReadTransaction&,
                            const Buffer& val,
                            std::vector<ValueBeingParsed>& val_stack,
-                           std::set<uint64_t>&,
                            const uint32_t reference_count,
                            ValueCache&) {
     // Single number requested
-    val_stack.emplace_back(val, reference_count);
+    val_stack.emplace_back(val, val, reference_count);
 
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
@@ -443,7 +499,6 @@ Buffer processBuffer(const ReadTransaction& tx,
 GetResults processVal(const ReadTransaction& tx,
                       const ParsedBuffer& val,
                       std::vector<ValueBeingParsed>& val_stack,
-                      std::set<uint64_t>&,
                       const uint32_t reference_count,
                       ValueCache& val_cache,
                       bool) {
@@ -454,48 +509,43 @@ GetResults processVal(const ReadTransaction& tx,
 GetResults processFirstVal(const ReadTransaction& tx,
                            const ParsedBuffer& val,
                            std::vector<ValueBeingParsed>& val_stack,
-                           std::set<uint64_t>&,
                            const uint32_t reference_count,
                            ValueCache& val_cache) {
-    val_stack.emplace_back(processBuffer(tx, val, val_cache), reference_count);
+    val_stack.emplace_back(val, processBuffer(tx, val, val_cache),
+                           reference_count);
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
 GetResults processVal(const ReadTransaction&,
-                      const CodePointStub& val,
+                      const ParsedCodePointStub& val,
                       std::vector<ValueBeingParsed>& val_stack,
-                      std::set<uint64_t>& segment_ids,
                       const uint32_t reference_count,
                       ValueCache&,
                       bool) {
-    segment_ids.insert(val.pc.segment);
-
-    return applyValue(val, reference_count, val_stack);
-}
-
-GetResults processFirstVal(const ReadTransaction&,
-                           const CodePointStub& val,
-                           std::vector<ValueBeingParsed>& val_stack,
-                           std::set<uint64_t>& segment_ids,
-                           const uint32_t reference_count,
-                           ValueCache&) {
-    // Single segment requested
-    segment_ids.insert(val.pc.segment);
-
-    val_stack.emplace_back(val, reference_count);
+    val_stack.emplace_back(val,
+                           CodePointStub{CodePointRef{{}, val.pc}, val.hash},
+                           reference_count);
+    val_stack.back().raw_vals.push_back(val.root_hash);
 
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
+}
+
+GetResults processFirstVal(const ReadTransaction& tx,
+                           const ParsedCodePointStub& val,
+                           std::vector<ValueBeingParsed>& val_stack,
+                           const uint32_t reference_count,
+                           ValueCache& value_cache) {
+    return processVal(tx, val, val_stack, reference_count, value_cache, false);
 }
 
 GetResults processVal(const ReadTransaction&,
                       const std::vector<ParsedTupVal>& val,
                       std::vector<ValueBeingParsed>& val_stack,
-                      std::set<uint64_t>&,
                       const uint32_t reference_count,
                       ValueCache&,
                       bool) {
     // Add empty tuple to stack, will be filled in as values are processed
-    val_stack.emplace_back(Tuple::createSizedTuple(val.size()),
+    val_stack.emplace_back(val, Tuple::createSizedTuple(val.size()),
                            reference_count);
 
     // Fill new vector with list of elements that will populate tuple
@@ -508,17 +558,48 @@ GetResults processVal(const ReadTransaction&,
 GetResults processFirstVal(const ReadTransaction& tx,
                            const std::vector<ParsedTupVal>& val,
                            std::vector<ValueBeingParsed>& val_stack,
-                           std::set<uint64_t>& segment_ids,
                            const uint32_t reference_count,
                            ValueCache& value_cache) {
-    return processVal(tx, val, val_stack, segment_ids, reference_count,
-                      value_cache, false);
+    return processVal(tx, val, val_stack, reference_count, value_cache, false);
+}
+
+GetResults processVal(const ReadTransaction& tx,
+                      const ParsedCodeSegment& val,
+                      std::vector<ValueBeingParsed>& val_stack,
+                      const uint32_t reference_count,
+                      ValueCache& value_cache,
+                      bool lazy_load) {
+    val_stack.emplace_back(
+        val,
+        boost::intrusive_ptr<CodeSegment>(new CodeSegment(
+            val.operations_without_immediates, val.cached_hashes)),
+        reference_count);
+    for (auto& immediate : val.immediate_values) {
+        auto res = visit(
+            [&](const auto& inner) {
+                return processVal(tx, inner, val_stack, reference_count,
+                                  value_cache, lazy_load);
+            },
+            immediate.second);
+        if (!res.status.ok()) {
+            return GetResults{0, res.status, {}};
+        }
+    }
+
+    return GetResults{reference_count, rocksdb::Status::OK(), {}};
+}
+
+GetResults processFirstVal(const ReadTransaction& tx,
+                           const ParsedCodeSegment& val,
+                           std::vector<ValueBeingParsed>& val_stack,
+                           const uint32_t reference_count,
+                           ValueCache& value_cache) {
+    return processVal(tx, val, val_stack, reference_count, value_cache, false);
 }
 
 GetResults processVal(const ReadTransaction& tx,
                       const BigUnloadedValue& val_info,
                       std::vector<ValueBeingParsed>& val_stack,
-                      std::set<uint64_t>& segment_ids,
                       const uint32_t,
                       ValueCache& val_cache,
                       bool lazy_load) {
@@ -543,8 +624,8 @@ GetResults processVal(const ReadTransaction& tx,
 
     return visit(
         [&](const auto& val) {
-            return processVal(tx, val, val_stack, segment_ids,
-                              results.reference_count, val_cache, lazy_load);
+            return processVal(tx, val, val_stack, results.reference_count,
+                              val_cache, lazy_load);
         },
         record);
 }
@@ -552,12 +633,11 @@ GetResults processVal(const ReadTransaction& tx,
 GetResults processFirstVal(const ReadTransaction& tx,
                            const BigUnloadedValue& val_info,
                            std::vector<ValueBeingParsed>& val_stack,
-                           std::set<uint64_t>& segment_ids,
                            const uint32_t,
                            ValueCache& val_cache) {
     if (auto val = val_cache.loadIfExists(val_info.hash)) {
         // Use cached value
-        val_stack.emplace_back(std::move(*val), 0);
+        val_stack.emplace_back(0, std::move(*val), 0);
         return GetResults{0, rocksdb::Status::OK(), {}};
     }
 
@@ -571,15 +651,14 @@ GetResults processFirstVal(const ReadTransaction& tx,
 
     return visit(
         [&](const auto& val) {
-            return processFirstVal(tx, val, val_stack, segment_ids,
-                                   results.reference_count, val_cache);
+            return processFirstVal(tx, val, val_stack, results.reference_count,
+                                   val_cache);
         },
         record);
 }
 
 DbResult<Value> getValueInternal(const ReadTransaction& tx,
                                  std::vector<ValueBeingParsed> val_stack,
-                                 std::set<uint64_t>& segment_ids,
                                  ValueCache& value_cache,
                                  bool lazy_load) {
     if (val_stack[0].raw_vals.empty()) {
@@ -599,8 +678,8 @@ DbResult<Value> getValueInternal(const ReadTransaction& tx,
 
             auto results = visit(
                 [&](const auto& val) {
-                    return processVal(tx, val, val_stack, segment_ids, 0,
-                                      value_cache, lazy_load);
+                    return processVal(tx, val, val_stack, 0, value_cache,
+                                      lazy_load);
                 },
                 next);
             if (!results.status.ok()) {
@@ -631,37 +710,33 @@ DbResult<Value> getValueInternal(const ReadTransaction& tx,
 
 DbResult<Value> getValueRecord(const ReadTransaction& tx,
                                const ParsedSerializedVal& record,
-                               std::set<uint64_t>& segment_ids,
                                ValueCache& value_cache,
                                bool lazy_load) {
     std::vector<ValueBeingParsed> val_stack{};
     visit(
         [&](const auto& val) {
-            return processFirstVal(tx, val, val_stack, segment_ids, 1,
-                                   value_cache);
+            return processFirstVal(tx, val, val_stack, 1, value_cache);
         },
         record);
-    return getValueInternal(tx, std::move(val_stack), segment_ids, value_cache,
-                            lazy_load);
+    return getValueInternal(tx, std::move(val_stack), value_cache, lazy_load);
 }
 
-DbResult<Value> getValueImpl(const ReadTransaction& tx,
-                             const uint256_t value_hash,
-                             std::set<uint64_t>& segment_ids,
-                             ValueCache& value_cache,
-                             bool lazy_load) {
+DbResult<Value> getValue(const ReadTransaction& tx,
+                         const uint256_t value_hash,
+                         ValueCache& value_cache,
+                         bool lazy_load) {
     std::vector<ValueBeingParsed> val_stack{};
 
     // Initialize val_stack with first value from database
     // Note: only the hash field of this UnloadedValue is relevant
     auto result =
         processFirstVal(tx, BigUnloadedValue{HASH_PRE_IMAGE, value_hash, 1},
-                        val_stack, segment_ids, 0, value_cache);
+                        val_stack, 0, value_cache);
     if (!result.status.ok()) {
         return result.status;
     }
-    auto res = getValueInternal(tx, std::move(val_stack), segment_ids,
-                                value_cache, lazy_load);
+    auto res =
+        getValueInternal(tx, std::move(val_stack), value_cache, lazy_load);
     if (std::holds_alternative<rocksdb::Status>(res)) {
         return res;
     }
@@ -674,17 +749,7 @@ DbResult<Value> getValueImpl(const ReadTransaction& tx,
     return res;
 }
 
-DbResult<Value> getValue(const ReadTransaction& tx,
-                         const uint256_t value_hash,
-                         ValueCache& value_cache,
-                         bool lazy_load) {
-    std::set<uint64_t> segment_ids{};
-    return getValueImpl(tx, value_hash, segment_ids, value_cache, lazy_load);
-}
-
-SaveResults saveValueImpl(ReadWriteTransaction& tx,
-                          const Value& val,
-                          std::map<uint64_t, uint64_t>& segment_counts) {
+SaveResults saveValue(ReadWriteTransaction& tx, const Value& val) {
     bool first = true;
     SaveResults ret{};
     std::vector<Value> items_to_save{val};
@@ -703,8 +768,7 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
             }
             std::vector<unsigned char> value_vector{};
             auto new_items_to_save =
-                serializeValue(tx.getSecretHashSeed(), next_item, value_vector,
-                               segment_counts);
+                serializeValue(tx.getSecretHashSeed(), next_item, value_vector);
             items_to_save.insert(items_to_save.end(), new_items_to_save.begin(),
                                  new_items_to_save.end());
             save_ret = saveValueWithRefCount(tx, 1, key, value_vector);
@@ -720,14 +784,8 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
     return ret;
 }
 
-SaveResults saveValue(ReadWriteTransaction& tx, const Value& val) {
-    std::map<uint64_t, uint64_t> segment_counts{};
-    return saveValueImpl(tx, val, segment_counts);
-}
-
 DeleteResults deleteValues(ReadWriteTransaction& tx,
-                           std::vector<uint256_t> items_to_delete,
-                           std::map<uint64_t, uint64_t>& segment_counts) {
+                           std::vector<uint256_t> items_to_delete) {
     bool first = true;
     DeleteResults ret{};
     while (!items_to_delete.empty()) {
@@ -742,7 +800,7 @@ DeleteResults deleteValues(ReadWriteTransaction& tx,
                 reinterpret_cast<const char*>(results.stored_value.data());
             visit(
                 [&](const auto& val) {
-                    deleteParsedValue(val, items_to_delete, segment_counts);
+                    deleteParsedValue(val, items_to_delete);
                 },
                 parseRecord(buf));
         }
@@ -754,26 +812,10 @@ DeleteResults deleteValues(ReadWriteTransaction& tx,
     return ret;
 }
 
-DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
-                              const uint256_t& value_hash,
-                              std::map<uint64_t, uint64_t>& segment_counts) {
-    std::vector<uint256_t> items_to_delete{value_hash};
-    return deleteValues(tx, std::move(items_to_delete), segment_counts);
-}
-
 DeleteResults deleteValueRecord(ReadWriteTransaction& tx,
-                                const ParsedSerializedVal& val,
-                                std::map<uint64_t, uint64_t>& segment_counts) {
+                                const ParsedSerializedVal& val) {
     std::vector<uint256_t> items_to_delete{};
-    visit(
-        [&](const auto& val) {
-            deleteParsedValue(val, items_to_delete, segment_counts);
-        },
-        val);
-    return deleteValues(tx, std::move(items_to_delete), segment_counts);
-}
-
-DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash) {
-    std::map<uint64_t, uint64_t> segment_counts{};
-    return deleteValueImpl(tx, value_hash, segment_counts);
+    visit([&](const auto& val) { deleteParsedValue(val, items_to_delete); },
+          val);
+    return deleteValues(tx, std::move(items_to_delete));
 }

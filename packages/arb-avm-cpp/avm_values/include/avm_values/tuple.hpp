@@ -172,6 +172,9 @@ struct ValueTypeVisitor {
     }
     ValueTypes operator()(const Buffer&) const { return BUFFER; }
     ValueTypes operator()(const UnloadedValue& val) const { return val.type(); }
+    ValueTypes operator()(const boost::intrusive_ptr<CodeSegment>&) const {
+        throw std::runtime_error("Attempted to get type of code segment");
+    }
 };
 
 #endif /* tuple_hpp */

@@ -122,33 +122,33 @@ struct MachineOutput {
 
 struct MachineStateKeys {
     MachineOutput output;
-    CodePointStub pc;
+    uint256_t pc_hash;
     uint256_t static_hash;
     uint256_t register_hash;
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
     uint256_t arb_gas_remaining;
     Status state;
-    CodePointStub err_pc;
+    uint256_t err_pc_hash;
 
     MachineStateKeys(MachineOutput output_,
-                     CodePointStub pc_,
+                     uint256_t pc_hash_,
                      uint256_t static_hash_,
                      uint256_t register_hash_,
                      uint256_t datastack_hash_,
                      uint256_t auxstack_hash_,
                      uint256_t arb_gas_remaining_,
                      Status state_,
-                     CodePointStub err_pc_)
+                     uint256_t err_pc_hash_)
         : output(output_),
-          pc(pc_),
+          pc_hash(pc_hash_),
           static_hash(static_hash_),
           register_hash(register_hash_),
           datastack_hash(datastack_hash_),
           auxstack_hash(auxstack_hash_),
           arb_gas_remaining(arb_gas_remaining_),
           state(state_),
-          err_pc(err_pc_) {}
+          err_pc_hash(err_pc_hash_) {}
 
     explicit MachineStateKeys(const MachineState& machine);
 
@@ -161,9 +161,8 @@ struct MachineState {
     MachineOutput output;
 
     CodePointRef pc{0, 0};
-    std::shared_ptr<Code> code;
     ValueLoader value_loader;
-    mutable std::optional<CodeSegmentSnapshot> loaded_segment;
+    std::optional<boost::intrusive_ptr<CodeSegment>> loaded_segment;
     Value registerVal;
     Value static_val;
     Datastack stack;
@@ -177,11 +176,11 @@ struct MachineState {
 
     static MachineState loadFromFile(const std::string& executable_filename);
 
-    MachineState(std::shared_ptr<CoreCode> code_, Value static_val);
+    MachineState(boost::intrusive_ptr<CodeSegment> code_segment,
+                 Value static_val);
 
     MachineState(MachineOutput output_,
                  CodePointRef pc_,
-                 std::shared_ptr<Code> code_,
                  ValueLoader value_loader_,
                  Value register_val_,
                  Value static_val,
@@ -193,15 +192,16 @@ struct MachineState {
                  bool lazy_loaded_);
 
     uint256_t getMachineSize() const;
-    OneStepProof marshalForProof() const;
-    std::vector<unsigned char> marshalState() const;
+    OneStepProof marshalForProof();
+    std::vector<unsigned char> marshalState();
     BlockReason runOp(OpCode opcode);
     BlockReason runOne();
     uint256_t hash() const { return MachineStateKeys(*this).machineHash(); }
-    BlockReason isBlocked(bool newMessages) const;
+    BlockReason isBlocked(bool newMessages);
 
-    CodePoint loadCurrentInstruction() const;
-    const Operation& loadCurrentOperation() const;
+    CodePoint loadCurrentInstruction();
+    CodePoint loadCurrentInstructionConst() const;
+    const Operation& loadCurrentOperation();
     uint256_t nextGasCost();
 
     uint256_t getTotalMessagesRead() const;
@@ -211,7 +211,7 @@ struct MachineState {
     void addProcessedLog(Value log_val);
 
    private:
-    void marshalBufferProof(OneStepProof& proof) const;
+    void marshalBufferProof(OneStepProof& proof);
     uint256_t gasCost(const Operation& op);
 };
 

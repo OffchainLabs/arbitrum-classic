@@ -29,18 +29,6 @@ struct DeleteResults;
 struct SaveResults;
 class Transaction;
 
-SaveResults saveValueImpl(ReadWriteTransaction& transaction,
-                          const Value& val,
-                          std::map<uint64_t, uint64_t>& segment_counts);
-DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
-                              const uint256_t& value_hash,
-                              std::map<uint64_t, uint64_t>& segment_counts);
-DbResult<Value> getValueImpl(const ReadTransaction& tx,
-                             uint256_t value_hash,
-                             std::set<uint64_t>& segment_ids,
-                             ValueCache& value_cache,
-                             bool lazy_load);
-
 DbResult<Value> getValue(const ReadTransaction& tx,
                          uint256_t value_hash,
                          ValueCache& value_cache,
@@ -53,10 +41,16 @@ struct ParsedBuffer {
     std::vector<uint256_t> nodes;
 };
 
+struct ParsedCodePointStub {
+    uint256_t root_hash;
+    uint64_t pc;
+    uint256_t hash;
+};
+
 class ParsedTupValVector;
 using ParsedTupVal = std::variant<ParsedTupValVector,
                                   uint256_t,
-                                  CodePointStub,
+                                  ParsedCodePointStub,
                                   Buffer,
                                   BigUnloadedValue,
                                   ParsedBuffer>;
@@ -65,11 +59,19 @@ class ParsedTupValVector : public std::vector<ParsedTupVal> {};
 
 using ParsedBufVal = std::variant<Buffer, ParsedBuffer>;
 
+struct ParsedCodeSegment;
 using ParsedSerializedVal = std::variant<std::vector<ParsedTupVal>,
                                          uint256_t,
-                                         CodePointStub,
+                                         ParsedCodePointStub,
                                          Buffer,
-                                         ParsedBuffer>;
+                                         ParsedBuffer,
+                                         ParsedCodeSegment>;
+
+struct ParsedCodeSegment {
+    std::vector<Operation> operations_without_immediates;
+    std::vector<std::pair<uint64_t, ParsedSerializedVal>> immediate_values;
+    std::vector<uint256_t> cached_hashes;
+};
 
 bool shouldInlineValue(const Value& tuple,
                        const std::vector<unsigned char>& seed);
@@ -82,10 +84,8 @@ DbResult<Value> getValueRecord(const ReadTransaction& tx,
 ParsedSerializedVal parseRecord(const char*& buf);
 std::vector<Value> serializeValue(const std::vector<unsigned char>& seed,
                                   const Value& val,
-                                  std::vector<unsigned char>& value_vector,
-                                  std::map<uint64_t, uint64_t>& segment_counts);
+                                  std::vector<unsigned char>& value_vector);
 DeleteResults deleteValueRecord(ReadWriteTransaction& tx,
-                                const ParsedSerializedVal& val,
-                                std::map<uint64_t, uint64_t>& segment_counts);
+                                const ParsedSerializedVal& val);
 
 #endif /* value_hpp */

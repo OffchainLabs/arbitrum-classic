@@ -42,14 +42,15 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
 
 MachineStateKeys::MachineStateKeys(const MachineState& machine)
     : output(machine.output),
-      pc(machine.pc, machine.loadCurrentInstruction()),
+      pc_hash(CodePointStub{machine.pc, machine.loadCurrentInstructionConst()}
+                  .hash),
       static_hash(hash_value(machine.static_val)),
       register_hash(hash_value(machine.registerVal)),
       datastack_hash(machine.stack.hash()),
       auxstack_hash(machine.auxstack.hash()),
       arb_gas_remaining(machine.arb_gas_remaining),
       state(machine.state),
-      err_pc(machine.errpc) {}
+      err_pc_hash(machine.errpc.hash) {}
 
 uint256_t MachineStateKeys::machineHash() const {
     if (state == Status::Halted)
@@ -59,19 +60,13 @@ uint256_t MachineStateKeys::machineHash() const {
 
     std::array<unsigned char, 32 * 7> data{};
     auto oit = data.begin();
-    {
-        auto val = ::hash(pc);
-        oit = to_big_endian(val, oit);
-    }
+    { oit = to_big_endian(pc_hash, oit); }
     { oit = to_big_endian(datastack_hash, oit); }
     { oit = to_big_endian(auxstack_hash, oit); }
     { oit = to_big_endian(register_hash, oit); }
     { oit = to_big_endian(static_hash, oit); }
     { oit = to_big_endian(arb_gas_remaining, oit); }
-    {
-        auto val = ::hash_value(err_pc);
-        oit = to_big_endian(val, oit);
-    }
+    { oit = to_big_endian(err_pc_hash, oit); }
     assert(oit == data.end());
 
     auto hash_val = ethash::keccak256(data.data(), data.size());
@@ -96,16 +91,15 @@ void MachineState::addProcessedLog(Value log_val) {
         std::move(log_val), output.fully_processed_inbox, output.log_count});
 }
 
-MachineState::MachineState(std::shared_ptr<CoreCode> code_, Value static_val_)
-    : pc(code_->initialCodePointRef()),
-      code(std::move(code_)),
+MachineState::MachineState(boost::intrusive_ptr<CodeSegment> code_segment,
+                           Value static_val_)
+    : pc{code_segment, code_segment->size() - 1},
       static_val(std::move(static_val_)),
       arb_gas_remaining(max_arb_gas_remaining),
       lazy_loaded(false) {}
 
 MachineState::MachineState(MachineOutput output_,
                            CodePointRef pc_,
-                           std::shared_ptr<Code> code_,
                            ValueLoader value_loader_,
                            Value register_val_,
                            Value static_val_,
@@ -117,7 +111,6 @@ MachineState::MachineState(MachineOutput output_,
                            bool lazy_loaded_)
     : output(output_),
       pc(pc_),
-      code(std::move(code_)),
       value_loader(std::move(value_loader_)),
       registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
@@ -131,9 +124,8 @@ MachineState::MachineState(MachineOutput output_,
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
     auto executable = loadExecutable(executable_filename);
-    auto code = std::make_shared<CoreCode>(0);
-    code->addSegment(std::move(executable.code));
-    return MachineState{std::move(code), std::move(executable.static_val)};
+    return MachineState{std::move(executable.code),
+                        std::move(executable.static_val)};
 }
 
 uint256_t MachineState::getMachineSize() const {
@@ -149,7 +141,7 @@ uint256_t MachineState::getMachineSize() const {
 
 namespace {
 void marshalState(std::vector<unsigned char>& buf,
-                  const Code& code,
+                  ValueLoader* loader,
                   uint256_t next_codepoint_hash,
                   HashPreImage stackPreImage,
                   HashPreImage auxStackPreImage,
@@ -162,21 +154,21 @@ void marshalState(std::vector<unsigned char>& buf,
     stackPreImage.marshal(buf);
     auxStackPreImage.marshal(buf);
 
-    ::marshalForProof(registerVal, 0, buf, code);
-    ::marshalForProof(staticVal, 0, buf, code);
+    ::marshalForProof(registerVal, 0, buf, loader);
+    ::marshalForProof(staticVal, 0, buf, loader);
     marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
 }
 }  // namespace
 
-std::vector<unsigned char> MachineState::marshalState() const {
+std::vector<unsigned char> MachineState::marshalState() {
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
     std::vector<unsigned char> buf;
 
-    ::marshalState(buf, *code, ::hash(loadCurrentInstruction()), stackPreImage,
-                   auxStackPreImage, registerVal, static_val, arb_gas_remaining,
-                   errpc);
+    ::marshalState(buf, &value_loader, ::hash(loadCurrentInstruction()),
+                   stackPreImage, auxStackPreImage, registerVal, static_val,
+                   arb_gas_remaining, errpc);
     return buf;
 }
 
@@ -237,7 +229,7 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
     }
 }
 
-void MachineState::marshalBufferProof(OneStepProof& proof) const {
+void MachineState::marshalBufferProof(OneStepProof& proof) {
     auto& op = loadCurrentOperation();
     auto opcode = op.opcode;
     if ((opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) &&
@@ -362,7 +354,7 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
     }
 }
 
-OneStepProof MachineState::marshalForProof() const {
+OneStepProof MachineState::marshalForProof() {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
     auto opcode = current_op.opcode;
@@ -391,8 +383,8 @@ OneStepProof MachineState::marshalForProof() const {
 
     OneStepProof proof;
 
-    auto stackProof = stack.marshalForProof(stackPops, *code);
-    auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
+    auto stackProof = stack.marshalForProof(stackPops, &value_loader);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops, &value_loader);
 
     bool underflowed = stackProof.count < stackPops.size() ||
                        auxStackProof.count < auxStackPops.size();
@@ -407,14 +399,15 @@ OneStepProof MachineState::marshalForProof() const {
                                 stackProof.data.begin(), stackProof.data.end());
     if (current_op.immediate) {
         ::marshalForProof(*current_op.immediate, immediateMarshalLevel,
-                          proof.standard_proof, *code);
+                          proof.standard_proof, &value_loader);
     }
     proof.standard_proof.insert(proof.standard_proof.cend(),
                                 auxStackProof.data.begin(),
                                 auxStackProof.data.end());
-    ::marshalState(proof.standard_proof, *code, currentInstruction.nextHash,
-                   stackProof.bottom, auxStackProof.bottom, registerVal,
-                   static_val, arb_gas_remaining, errpc);
+    ::marshalState(proof.standard_proof, &value_loader,
+                   currentInstruction.nextHash, stackProof.bottom,
+                   auxStackProof.bottom, registerVal, static_val,
+                   arb_gas_remaining, errpc);
 
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
 
@@ -425,7 +418,7 @@ OneStepProof MachineState::marshalForProof() const {
     return proof;
 }
 
-BlockReason MachineState::isBlocked(bool newMessages) const {
+BlockReason MachineState::isBlocked(bool newMessages) {
     if (state == Status::Error) {
         return ErrorBlocked();
     } else if (state == Status::Halted) {
@@ -442,18 +435,32 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
     }
 }
 
-CodePoint MachineState::loadCurrentInstruction() const {
-    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
-        loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
+CodePoint MachineState::loadCurrentInstruction() {
+    if (!loaded_segment || (*loaded_segment)->getHash() != pc.root->getHash()) {
+        loaded_segment =
+            std::make_optional(value_loader.loadCodeSegment(pc.root));
     }
-    return loaded_segment->loadCodePoint(pc.pc);
+    return (*loaded_segment)->loadCodePoint(pc.pc);
 }
 
-const Operation& MachineState::loadCurrentOperation() const {
-    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
-        loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
+CodePoint MachineState::loadCurrentInstructionConst() const {
+    boost::intrusive_ptr<CodeSegment> segment;
+    if (loaded_segment && (*loaded_segment)->getHash() == pc.root->getHash()) {
+        segment = *loaded_segment;
+    } else if (pc.root->isLoaded()) {
+        segment = pc.root;
+    } else {
+        segment = value_loader.clone()->loadCodeSegment(pc.root);
     }
-    return loaded_segment->loadOperation(pc.pc);
+    return segment->loadCodePoint(pc.pc);
+}
+
+const Operation& MachineState::loadCurrentOperation() {
+    if (!loaded_segment || (*loaded_segment)->getHash() != pc.root->getHash()) {
+        loaded_segment =
+            std::make_optional(value_loader.loadCodeSegment(pc.root));
+    }
+    return (*loaded_segment)->loadOperation(pc.pc);
 }
 
 uint256_t MachineState::nextGasCost() {
@@ -868,10 +875,10 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
     os << "data stack: " << val.stack << "\n";
-    auto current_code_point = val.code->loadCodePoint(val.pc);
-    os << "operation " << current_code_point.op << "\n";
-    os << "codePointHash " << intx::to_string(hash(current_code_point), 16)
-       << "\n";
+    auto current_instruction = val.loadCurrentInstructionConst();
+    os << "operation " << current_instruction.op << "\n";
+    os << "nextCodePointHash "
+       << intx::to_string(hash(current_instruction.nextHash), 16) << "\n";
     os << "stackHash " << intx::to_string(val.stack.hash(), 16) << "\n";
     os << "auxStackHash " << intx::to_string(val.auxstack.hash(), 16) << "\n";
     os << "registerHash " << intx::to_string(hash_value(val.registerVal), 16)
@@ -880,9 +887,7 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
        << "\n";
     os << "arb_gas_remaining " << val.arb_gas_remaining << "\n";
     os << "err handler " << val.errpc.pc << "\n";
-    auto err_code_point = val.code->loadCodePoint(val.errpc.pc);
-    os << "errHandlerHash " << intx::to_string(hash(err_code_point), 16)
-       << "\n";
+    os << "errHandlerHash " << intx::to_string(val.errpc.hash, 16) << "\n";
     return os;
 }
 

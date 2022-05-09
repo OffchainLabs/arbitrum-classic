@@ -17,7 +17,6 @@
 #ifndef valuecache_hpp
 #define valuecache_hpp
 
-#include <avm_values/code.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
