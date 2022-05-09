@@ -24,6 +24,7 @@ MachineThread::machine_status_enum MachineThread::status() {
 
 bool MachineThread::runMachine(MachineExecutionConfig config,
                                bool asynchronous) {
+    finishThread();
     if (machine_status != MACHINE_NONE) {
         return false;
     }
@@ -48,6 +49,7 @@ bool MachineThread::runMachine(MachineExecutionConfig config,
 }
 
 bool MachineThread::continueRunningMachine(bool asynchronous) {
+    finishThread();
     if (machine_status != MACHINE_NONE) {
         return false;
     }
@@ -66,11 +68,18 @@ bool MachineThread::continueRunningMachine(bool asynchronous) {
     return true;
 }
 
+void MachineThread::finishThread() {
+    if (machine_status == MACHINE_RUNNING) {
+        machine_thread->join();
+        machine_thread = nullptr;
+        machine_status = MACHINE_NONE;
+    }
+}
+
 void MachineThread::abort() {
     if (machine_thread) {
         Machine::abort();
-        machine_thread->join();
-        machine_thread = nullptr;
+        finishThread();
         machine_status = MACHINE_ABORTED;
     }
 }
@@ -101,6 +110,7 @@ void MachineThread::operator()() {
     try {
         last_assertion = run();
     } catch (const std::exception& e) {
+        std::cerr << "machine thread exception: " << e.what() << std::endl;
         machine_error_string = e.what();
         machine_status = MACHINE_ERROR;
         return;

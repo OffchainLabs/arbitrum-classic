@@ -48,13 +48,14 @@ class MachineThread : public Machine {
     Assertion last_assertion;
 
    public:
-    ~MachineThread() { abort(); }
+    virtual ~MachineThread() { abort(); }
     explicit MachineThread(MachineState machine_state_)
         : Machine(std::move(machine_state_)),
           reorg_check_data(machine_state.output.fully_processed_inbox) {}
 
     bool runMachine(MachineExecutionConfig config, bool asynchronous);
     bool continueRunningMachine(bool asynchronous);
+    void finishThread();
     virtual void abort();
     machine_status_enum status();
     std::string getErrorString();
