@@ -79,7 +79,7 @@ class Machine {
         machine_state = std::move(machine.machine_state);
         return *this;
     }
-    ~Machine() = default;
+    virtual ~Machine() { abort(); };
 
     static Machine loadFromFile(const std::string& executable_filename) {
         return Machine{MachineState::loadFromFile(executable_filename)};

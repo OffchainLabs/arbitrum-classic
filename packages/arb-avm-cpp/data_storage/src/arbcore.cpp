@@ -670,7 +670,7 @@ rocksdb::Status ArbCore::reorgToPenultimateCheckpoint(ValueCache& cache) {
 
     auto count = 0;
     return reorgCheckpoints(
-        [&](const MachineOutput& output) {
+        [&](const MachineOutput&) {
             count++;
             // Skip first entry
             return count > 1;
@@ -1242,7 +1242,13 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     core_machine->machine_state.context.clearInboxMessages();
     // Call continueRunningMachine after clearing inbox messages to finish up
     // any processing
-    core_machine->continueRunningMachine(true);
+    auto success = core_machine->continueRunningMachine(false);
+    if (!success) {
+        std::cerr
+            << "Error running machine after reorg to finish any processing"
+            << std::endl;
+        return rocksdb::Status::Aborted();
+    }
 
     return rocksdb::Status::OK();
 }
@@ -1452,6 +1458,11 @@ void ArbCore::printCoreThreadBacktrace() {
 bool ArbCore::reorgIfInvalidMachine(uint32_t& thread_failure_count,
                                     uint256_t& next_checkpoint_gas,
                                     ValueCache& cache) {
+    if (core_machine->status() == MachineThread::MACHINE_RUNNING) {
+        // Just continue
+        return true;
+    }
+
     bool isMachineValid;
     if (core_machine->status() == MachineThread::MACHINE_ERROR) {
         std::cerr << "Attempting to recover from AVM machine error: "
