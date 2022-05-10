@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 pragma experimental ABIEncoderV2;
 
+import "./IGasRefunder.sol";
 import "../rollup/facets/IRollupFacets.sol";
 import "../challenge/IChallenge.sol";
 import "../libraries/Cloneable.sol";
@@ -33,11 +34,32 @@ contract Validator is OwnableUpgradeable, Cloneable {
         __Ownable_init();
     }
 
+    modifier refundsGas(IGasRefunder gasRefunder) {
+        uint256 startGasLeft = gasleft();
+        _;
+        if (gasRefunder != IGasRefunder(0)) {
+            uint256 calldataSize;
+            assembly {
+                calldataSize := calldatasize()
+            }
+            gasRefunder.onGasSpent(msg.sender, startGasLeft - gasleft(), calldataSize);
+        }
+    }
+
     function executeTransactions(
         bytes[] calldata data,
         address[] calldata destination,
         uint256[] calldata amount
     ) external payable onlyOwner {
+        executeTransactionsWithGasRefunder(data, destination, amount, IGasRefunder(address(0)));
+    }
+
+    function executeTransactionsWithGasRefunder(
+        bytes[] calldata data,
+        address[] calldata destination,
+        uint256[] calldata amount,
+        IGasRefunder refunder
+    ) public payable onlyOwner refundsGas(refunder) {
         uint256 numTxes = data.length;
         for (uint256 i = 0; i < numTxes; i++) {
             if (data[i].length > 0) require(destination[i].isContract(), "NO_CODE_AT_ADDR");
@@ -58,6 +80,15 @@ contract Validator is OwnableUpgradeable, Cloneable {
         address destination,
         uint256 amount
     ) external payable onlyOwner {
+        executeTransactionWithGasRefunder(data, destination, amount, IGasRefunder(address(0)));
+    }
+
+    function executeTransactionWithGasRefunder(
+        bytes calldata data,
+        address destination,
+        uint256 amount,
+        IGasRefunder refunder
+    ) public payable onlyOwner refundsGas(refunder) {
         if (data.length > 0) require(destination.isContract(), "NO_CODE_AT_ADDR");
         (bool success, ) = destination.call{ value: amount }(data);
         if (!success) {
@@ -74,6 +105,14 @@ contract Validator is OwnableUpgradeable, Cloneable {
         external
         onlyOwner
     {
+        return returnOldDepositsWithGasRefunder(rollup, stakers, IGasRefunder(address(0)));
+    }
+
+    function returnOldDepositsWithGasRefunder(
+        IRollupUser rollup,
+        address payable[] calldata stakers,
+        IGasRefunder refunder
+    ) public onlyOwner refundsGas(refunder) {
         uint256 stakerCount = stakers.length;
         for (uint256 i = 0; i < stakerCount; i++) {
             try rollup.returnOldDeposit(stakers[i]) {} catch (bytes memory error) {
@@ -87,6 +126,13 @@ contract Validator is OwnableUpgradeable, Cloneable {
     }
 
     function timeoutChallenges(IChallenge[] calldata challenges) external onlyOwner {
+        return timeoutChallengesWithGasRefunder(challenges, IGasRefunder(address(0)));
+    }
+
+    function timeoutChallengesWithGasRefunder(
+        IChallenge[] calldata challenges,
+        IGasRefunder refunder
+    ) public onlyOwner refundsGas(refunder) {
         uint256 challengesCount = challenges.length;
         for (uint256 i = 0; i < challengesCount; i++) {
             try challenges[i].timeout() {} catch (bytes memory error) {

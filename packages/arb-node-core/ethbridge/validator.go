@@ -60,6 +60,7 @@ type ValidatorWallet struct {
 	auth              transactauth.TransactAuth
 	rollupAddress     ethcommon.Address
 	walletFactoryAddr ethcommon.Address
+	gasRefunder       ethcommon.Address
 	rollupFromBlock   int64
 	blockSearchSize   int64
 }
@@ -111,7 +112,7 @@ func (v *ValidatorWallet) RollupAddress() common.Address {
 func (v *ValidatorWallet) executeTransaction(ctx context.Context, tx *types.Transaction) (*arbtransaction.ArbTransaction, error) {
 	return transactauth.MakeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = tx.Value()
-		return v.con.ExecuteTransaction(auth, tx.Data(), *tx.To(), tx.Value())
+		return v.con.ExecuteTransactionWithGasRefunder(auth, tx.Data(), *tx.To(), tx.Value(), v.gasRefunder)
 	})
 }
 
@@ -187,7 +188,7 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 
 	arbTx, err := transactauth.MakeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		auth.Value = totalAmount
-		return v.con.ExecuteTransactions(auth, data, dest, amount)
+		return v.con.ExecuteTransactionsWithGasRefunder(auth, data, dest, amount, v.gasRefunder)
 	})
 	if err != nil {
 		return nil, err
@@ -198,13 +199,13 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 
 func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*arbtransaction.ArbTransaction, error) {
 	return transactauth.MakeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return v.con.ReturnOldDeposits(auth, v.rollupAddress, common.AddressArrayToEth(stakers))
+		return v.con.ReturnOldDepositsWithGasRefunder(auth, v.rollupAddress, common.AddressArrayToEth(stakers), v.gasRefunder)
 	})
 }
 
 func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []common.Address) (*arbtransaction.ArbTransaction, error) {
 	return transactauth.MakeTx(ctx, v.auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return v.con.TimeoutChallenges(auth, common.AddressArrayToEth(challenges))
+		return v.con.TimeoutChallengesWithGasRefunder(auth, common.AddressArrayToEth(challenges), v.gasRefunder)
 	})
 }
 
