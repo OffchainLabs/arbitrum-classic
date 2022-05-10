@@ -256,8 +256,11 @@ func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types
 			partial := logger.
 				Warn().
 				Err(err).
-				Str("id", txResponse.Id).
-				Str("status", details.Status)
+				Str("id", txResponse.Id)
+
+			if details != nil {
+				partial.Str("status", details.Status)
+			}
 
 			if tx.To() != nil {
 				partial.Hex("to", tx.To().Bytes())
