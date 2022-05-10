@@ -68,7 +68,7 @@
     "arb-upgrades": "0.0.1",
     "audit-ci": "^5.1.2",
     "chai": "^4.2.0",
-    "dotenv": "^10.0.0",
+    "dotenv": "^16.0.0",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-mocha": "^9.0.0",
