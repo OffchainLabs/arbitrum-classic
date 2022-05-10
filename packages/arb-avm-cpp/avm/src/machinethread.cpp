@@ -24,7 +24,14 @@ MachineThread::machine_status_enum MachineThread::status() {
 
 bool MachineThread::runMachine(MachineExecutionConfig config,
                                bool asynchronous) {
-    finishThread();
+    if (machine_status == MACHINE_RUNNING) {
+        if (asynchronous) {
+            // Core machine already running
+            return true;
+        }
+
+        finishThread();
+    }
     if (machine_status != MACHINE_NONE) {
         return false;
     }
