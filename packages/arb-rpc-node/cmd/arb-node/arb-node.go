@@ -20,12 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -34,6 +28,13 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -581,6 +582,7 @@ func startValidator(
 	rollupAddr := ethcommon.HexToAddress(config.Rollup.Address)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
+	gasRefunderAddr := ethcommon.HexToAddress(config.Validator.GasRefunderAddress)
 
 	chainState := ChainState{}
 	if config.Validator.ContractWalletAddress != "" {
@@ -663,7 +665,7 @@ func startValidator(
 		}
 	}
 
-	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, l1Client, valAuth, config.Rollup.FromBlock, config.Rollup.BlockSearchSize, onValidatorWalletCreated)
+	val, err := ethbridge.NewValidator(validatorAddress, validatorWalletFactoryAddr, rollupAddr, gasRefunderAddr, l1Client, valAuth, config.Rollup.FromBlock, config.Rollup.BlockSearchSize, onValidatorWalletCreated)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating validator")
 	}

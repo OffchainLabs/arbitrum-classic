@@ -216,9 +216,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
-	val, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, client, valAuth, 0, 1000, nil)
+	val, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, ethcommon.Address{}, client, valAuth, 0, 1000, nil)
 	test.FailIfError(t, err)
-	val2, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, client, val2Auth, 0, 1000, nil)
+	val2, err := ethbridge.NewValidator(nil, validatorWalletFactory, rollupAddr, ethcommon.Address{}, client, val2Auth, 0, 1000, nil)
 	test.FailIfError(t, err)
 
 	staker, _, err := NewStaker(ctx, mon.Core, client, val, rollupBlock.Int64(), common.NewAddressFromEth(validatorUtilsAddr), configuration.MakeNodesStrategy, bind.CallOpts{}, valAuth, configuration.Validator{})

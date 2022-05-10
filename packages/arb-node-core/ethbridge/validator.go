@@ -68,7 +68,8 @@ type ValidatorWallet struct {
 func NewValidator(
 	address *ethcommon.Address,
 	walletFactoryAddr,
-	rollupAddress ethcommon.Address,
+	rollupAddress,
+	gasRefunderAddress ethcommon.Address,
 	client ethutils.EthClient,
 	auth transactauth.TransactAuth,
 	rollupFromBlock int64,
@@ -91,6 +92,7 @@ func NewValidator(
 		auth:              auth,
 		rollupAddress:     rollupAddress,
 		walletFactoryAddr: walletFactoryAddr,
+		gasRefunder:       gasRefunderAddress,
 		rollupFromBlock:   rollupFromBlock,
 		blockSearchSize:   blockSearchSize,
 	}, nil

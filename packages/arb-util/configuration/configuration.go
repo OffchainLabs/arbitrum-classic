@@ -19,7 +19,6 @@ package configuration
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io"
 	"math/big"
 	"net/http"
@@ -28,6 +27,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/json"
@@ -289,6 +290,7 @@ type Validator struct {
 	UtilsAddress                  string            `koanf:"utils-address"`
 	StakerDelay                   time.Duration     `koanf:"staker-delay"`
 	WalletFactoryAddress          string            `koanf:"wallet-factory-address"`
+	GasRefunderAddress            string            `koanf:"gas-refunder-address"`
 	L1PostingStrategy             L1PostingStrategy `koanf:"l1-posting-strategy"`
 	DontChallenge                 bool              `koanf:"dont-challenge"`
 	WithdrawDestination           string            `koanf:"withdraw-destination"`
@@ -524,6 +526,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("validator.utils-address", "", "validator utilities address")
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
+	f.String("validator.gas-refunder-address", "", "address of gas refunder contract (can be empty to disable gas refunder)")
 	f.Bool("validator.dont-challenge", false, "don't challenge any other validators' assertions")
 	f.String("validator.withdraw-destination", "", "the address to withdraw funds to (defaults to the wallet address)")
 
