@@ -84,8 +84,10 @@ class ExecutionCursor {
     bool isAborted() { return is_aborted.load(); }
 
     [[nodiscard]] std::optional<uint256_t> machineHash() const {
-        if (std::holds_alternative<std::unique_ptr<Machine>>(machine) &&
-            std::get<std::unique_ptr<Machine>>(machine) != nullptr) {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            if (std::get<std::unique_ptr<Machine>>(machine) == nullptr) {
+                throw std::runtime_error("machine unique_ptr is null");
+            }
             return std::get<std::unique_ptr<Machine>>(machine)->hash();
         } else {
             return std::get<MachineStateKeys>(machine).machineHash();
@@ -93,8 +95,10 @@ class ExecutionCursor {
     }
 
     [[nodiscard]] const MachineOutput& getOutput() const {
-        if (std::holds_alternative<std::unique_ptr<Machine>>(machine) &&
-            std::get<std::unique_ptr<Machine>>(machine) != nullptr) {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            if (std::get<std::unique_ptr<Machine>>(machine) == nullptr) {
+                throw std::runtime_error("machine unique_ptr is null");
+            }
             return std::get<std::unique_ptr<Machine>>(machine)
                 ->machine_state.output;
         } else {
