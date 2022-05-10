@@ -17,17 +17,16 @@
 #ifndef vmValueParser_hpp
 #define vmValueParser_hpp
 
-#include <avm_values/code.hpp>
 #include <avm_values/tuple.hpp>
+#include <avm_values/value.hpp>
 
 #include <nlohmann/json.hpp>
 
 struct LoadedExecutable {
-    std::shared_ptr<UnsafeCodeSegment> code;
+    boost::intrusive_ptr<CodeSegment> code;
     Value static_val;
 
-    LoadedExecutable(std::shared_ptr<UnsafeCodeSegment> code_,
-                     Value static_val_)
+    LoadedExecutable(boost::intrusive_ptr<CodeSegment> code_, Value static_val_)
         : code(std::move(code_)), static_val(std::move(static_val_)) {}
 };
 

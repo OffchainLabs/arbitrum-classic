@@ -29,11 +29,11 @@ Operation::Operation(OpCode opcode_, Value immediate_)
 
 void Operation::marshalForProof(std::vector<unsigned char>& buf,
                                 size_t marshal_level,
-                                const Code& code) const {
+                                ValueLoader* loader) const {
     if (immediate) {
         buf.push_back(1);
         buf.push_back(static_cast<uint8_t>(opcode));
-        ::marshalForProof(*immediate, marshal_level, buf, code);
+        ::marshalForProof(*immediate, marshal_level, buf, loader);
     } else {
         buf.push_back(0);
         buf.push_back(static_cast<uint8_t>(opcode));

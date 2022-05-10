@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include <avm_values/code.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
@@ -47,6 +46,11 @@ Value::Value(std::shared_ptr<HashPreImage> hash_pre_image) : Value(0) {
 Value::Value(Buffer buffer) : Value(0) {
     inner.tagged.tag = value_buffer_tag;
     new (&inner.tagged.inner.buffer) Buffer{std::move(buffer)};
+}
+Value::Value(boost::intrusive_ptr<CodeSegment> code_segment) : Value(0) {
+    inner.tagged.tag = value_code_segment_tag;
+    new (&inner.tagged.inner.code_segment)
+        boost::intrusive_ptr<CodeSegment>{std::move(code_segment)};
 }
 Value::Value(UnloadedValue uv) : Value(0) {
     new (&inner.unloaded) UnloadedValue{std::move(uv)};
@@ -149,18 +153,6 @@ uint64_t deserialize_uint64_t(const char*& bufptr) {
     return val;
 }
 
-CodePointRef deserializeCodePointRef(const char*& bufptr) {
-    uint64_t segment = deserialize_uint64_t(bufptr);
-    uint64_t pc = deserialize_uint64_t(bufptr);
-    return {segment, pc};
-}
-
-CodePointStub deserializeCodePointStub(const char*& bufptr) {
-    auto ref = deserializeCodePointRef(bufptr);
-    auto hash_val = deserializeUint256t(bufptr);
-    return {ref, hash_val};
-}
-
 uint256_t deserializeUint256t(const char*& bufptr) {
     auto ret = intx::be::unsafe::load<uint256_t>(
         reinterpret_cast<const unsigned char*>(bufptr));
@@ -183,8 +175,8 @@ Value deserialize_value(const char*& bufptr) {
                 break;
             }
             case CODEPT: {
-                values.push_back(Value{deserializeCodePointStub(bufptr)});
-                break;
+                throw std::runtime_error(
+                    "Deserializing pure codepoints is not supported");
             }
             default: {
                 if (valType >= TUPLE && valType <= TUPLE + 8) {
@@ -264,9 +256,12 @@ struct Marshaller {
         marshal_uint256_t(val, buf);
     }
 
-    void operator()(const CodePointStub& val) const {
-        buf.push_back(CODE_POINT_STUB);
-        val.marshal(buf);
+    void operator()(const CodePointStub&) const {
+        throw std::runtime_error("Cannot marshal codepoint");
+    }
+
+    void operator()(const boost::intrusive_ptr<CodeSegment>&) const {
+        throw std::runtime_error("Cannot marshal code segment");
     }
 
     void operator()(const UnloadedValue& uv) const {
@@ -294,7 +289,7 @@ namespace {
 void marshalForProof(const HashPreImage& val,
                      size_t,
                      std::vector<unsigned char>& buf,
-                     const Code&) {
+                     ValueLoader*) {
     buf.push_back(HASH_PRE_IMAGE);
     val.marshal(buf);
 }
@@ -302,7 +297,7 @@ void marshalForProof(const HashPreImage& val,
 void marshalForProof(const std::shared_ptr<HashPreImage>& val,
                      size_t,
                      std::vector<unsigned char>& buf,
-                     const Code&) {
+                     ValueLoader*) {
     buf.push_back(HASH_PRE_IMAGE);
     val->marshal(buf);
 }
@@ -318,15 +313,15 @@ size_t childNestLevel(size_t level) {
 void marshalForProof(const Tuple& val,
                      size_t marshal_level,
                      std::vector<unsigned char>& buf,
-                     const Code& code) {
+                     ValueLoader* loader) {
     if (marshal_level == 0) {
-        marshalForProof(val.getHashPreImage(), marshal_level, buf, code);
+        marshalForProof(val.getHashPreImage(), marshal_level, buf, loader);
     } else {
         buf.push_back(TUPLE + val.tuple_size());
         size_t nested_level = childNestLevel(marshal_level);
         for (uint64_t i = 0; i < val.tuple_size(); i++) {
             auto itemval = val.get_element(i);
-            marshalForProof(itemval, nested_level, buf, code);
+            marshalForProof(itemval, nested_level, buf, loader);
         }
     }
 }
@@ -334,17 +329,18 @@ void marshalForProof(const Tuple& val,
 void marshalForProof(const CodePointStub& val,
                      size_t marshal_level,
                      std::vector<unsigned char>& buf,
-                     const Code& code) {
-    auto cp = code.loadCodePoint(val.pc);
+                     ValueLoader* loader) {
+    auto root = loader->loadCodeSegment(val.pc.root);
+    auto cp = root->loadCodePoint(val.pc.pc);
     buf.push_back(CODEPT);
-    cp.op.marshalForProof(buf, childNestLevel(marshal_level), code);
+    cp.op.marshalForProof(buf, childNestLevel(marshal_level), loader);
     marshal_uint256_t(cp.nextHash, buf);
 }
 
 void marshalForProof(const uint256_t& val,
                      size_t,
                      std::vector<unsigned char>& buf,
-                     const Code&) {
+                     ValueLoader*) {
     buf.push_back(NUM);
     marshal_uint256_t(val, buf);
 }
@@ -352,9 +348,16 @@ void marshalForProof(const uint256_t& val,
 void marshalForProof(const Buffer& val,
                      size_t,
                      std::vector<unsigned char>& buf,
-                     const Code&) {
+                     ValueLoader*) {
     buf.push_back(BUFFER);
     marshal_uint256_t(val.hash(), buf);
+}
+
+void marshalForProof(const boost::intrusive_ptr<CodeSegment>&,
+                     size_t,
+                     std::vector<unsigned char>&,
+                     ValueLoader*) {
+    throw std::runtime_error("Cannot marshal code segment for proof");
 }
 
 }  // namespace
@@ -362,10 +365,10 @@ void marshalForProof(const Buffer& val,
 void marshalForProof(const Value& val,
                      size_t marshal_level,
                      std::vector<unsigned char>& buf,
-                     const Code& code) {
+                     ValueLoader* loader) {
     return visit(
         [&](const auto& v) {
-            return marshalForProof(v, marshal_level, buf, code);
+            return marshalForProof(v, marshal_level, buf, loader);
         },
         val);
 }
@@ -416,6 +419,10 @@ struct GetSize {
 
     uint256_t operator()(const UnloadedValue& val) const {
         return val.value_size();
+    }
+
+    uint256_t operator()(const boost::intrusive_ptr<CodeSegment>&) const {
+        throw std::runtime_error("Attempted to get size of code segment");
     }
 };
 
@@ -468,6 +475,12 @@ struct ValuePrinter {
     std::ostream* operator()(const UnloadedValue& val) const {
         os << "UnloadedValue(type " << val.type() << ", hash " << ::hash(val)
            << ")";
+        return &os;
+    }
+
+    std::ostream* operator()(
+        const boost::intrusive_ptr<CodeSegment>& val) const {
+        os << "CodeSegment(" << val->getHash() << ")";
         return &os;
     }
 };

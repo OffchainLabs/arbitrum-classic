@@ -48,12 +48,8 @@ void serializeMachineOutput(const MachineOutput& output_data,
                             std::vector<unsigned char>& state_data_vector);
 void serializeMachineStateKeys(const MachineStateKeys& state_data,
                                std::vector<unsigned char>& state_data_vector);
-std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
-    ReadWriteTransaction& transaction,
-    const Machine& machine);
-void saveCodeToCore(Machine& machine,
-                    const std::map<uint64_t, uint64_t>& segment_counts,
-                    const std::shared_ptr<CoreCode>& core_code);
+rocksdb::Status saveMachineState(ReadWriteTransaction& transaction,
+                                 const Machine& machine);
 SaveResults saveTestMachine(ReadWriteTransaction& transaction,
                             Machine& machine);
 void deleteMachineState(ReadWriteTransaction& transaction,

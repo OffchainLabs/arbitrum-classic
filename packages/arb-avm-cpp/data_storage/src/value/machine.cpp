@@ -20,31 +20,12 @@
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/code.hpp>
 #include <data_storage/value/utils.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
 
 #include <iostream>
-
-namespace {
-using iterator = std::vector<unsigned char>::const_iterator;
-
-CodePointRef extractCodePointRef(iterator& iter) {
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto segment_val = deserialize_uint64_t(ptr);
-    auto pc_val = deserialize_uint64_t(ptr);
-    iter += sizeof(pc_val) + sizeof(segment_val);
-    return {segment_val, pc_val};
-}
-
-CodePointStub extractCodePointStub(iterator& iter) {
-    auto ref = extractCodePointRef(iter);
-    auto next_hash = extractUint256(iter);
-    return {ref, next_hash};
-}
-}  // namespace
 
 void serializeMachineOutput(const MachineOutput& output_data,
                             std::vector<unsigned char>& state_data_vector) {
@@ -73,14 +54,14 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
                                std::vector<unsigned char>& state_data_vector) {
     serializeMachineOutput(state_data.output, state_data_vector);
 
-    state_data.pc.marshal(state_data_vector);
+    marshal_uint256_t(state_data.pc_hash, state_data_vector);
     marshal_uint256_t(state_data.static_hash, state_data_vector);
     marshal_uint256_t(state_data.register_hash, state_data_vector);
     marshal_uint256_t(state_data.datastack_hash, state_data_vector);
     marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
     marshal_uint256_t(state_data.arb_gas_remaining, state_data_vector);
     state_data_vector.push_back(static_cast<unsigned char>(state_data.state));
-    state_data.err_pc.marshal(state_data_vector);
+    marshal_uint256_t(state_data.err_pc_hash, state_data_vector);
 }
 
 MachineOutput extractMachineOutput(
@@ -136,7 +117,7 @@ CheckpointVariant extractMachineStateKeys(
         return output;
     }
 
-    auto pc = extractCodePointStub(iter);
+    auto pc = extractUint256(iter);
     auto static_hash = extractUint256(iter);
     auto register_hash = extractUint256(iter);
     auto datastack_hash = extractUint256(iter);
@@ -144,7 +125,7 @@ CheckpointVariant extractMachineStateKeys(
     auto arb_gas_remaining = extractUint256(iter);
     auto state = static_cast<Status>(*iter);
     ++iter;
-    auto err_pc = extractCodePointStub(iter);
+    auto err_pc = extractUint256(iter);
 
     return MachineStateKeys{
         output,
@@ -161,20 +142,17 @@ CheckpointVariant extractMachineStateKeys(
 
 void deleteMachineState(ReadWriteTransaction& tx,
                         MachineStateKeys& parsed_state) {
-    std::map<uint64_t, uint64_t> segment_counts;
-    auto delete_static_res =
-        deleteValueImpl(tx, parsed_state.static_hash, segment_counts);
-    auto delete_register_res =
-        deleteValueImpl(tx, parsed_state.register_hash, segment_counts);
-    auto delete_datastack_res =
-        deleteValueImpl(tx, parsed_state.datastack_hash, segment_counts);
-    auto delete_auxstack_res =
-        deleteValueImpl(tx, parsed_state.auxstack_hash, segment_counts);
+    auto delete_pc_res = deleteValue(tx, parsed_state.pc_hash);
+    auto delete_static_res = deleteValue(tx, parsed_state.static_hash);
+    auto delete_register_res = deleteValue(tx, parsed_state.register_hash);
+    auto delete_datastack_res = deleteValue(tx, parsed_state.datastack_hash);
+    auto delete_auxstack_res = deleteValue(tx, parsed_state.auxstack_hash);
+    auto delete_err_pc_res = deleteValue(tx, parsed_state.err_pc_hash);
 
-    ++segment_counts[parsed_state.pc.pc.segment];
-    ++segment_counts[parsed_state.err_pc.pc.segment];
-
-    auto delete_code_status = deleteCode(tx, segment_counts);
+    if (!delete_pc_res.status.ok()) {
+        std::cerr << "error deleting pc in checkpoint: "
+                  << delete_static_res.status.ToString() << std::endl;
+    }
 
     if (!delete_static_res.status.ok()) {
         std::cerr << "error deleting static in checkpoint: "
@@ -196,14 +174,13 @@ void deleteMachineState(ReadWriteTransaction& tx,
                   << delete_auxstack_res.status.ToString() << std::endl;
     }
 
-    if (!delete_code_status.ok()) {
-        std::cerr << "error deleting auxstack in checkpoint: "
-                  << delete_code_status.ToString() << std::endl;
+    if (!delete_err_pc_res.status.ok()) {
+        std::cerr << "error deleting err_pc in checkpoint: "
+                  << delete_static_res.status.ToString() << std::endl;
     }
 }
 
 DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash) {
-    std::map<uint64_t, uint64_t> segment_counts;
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
@@ -240,52 +217,44 @@ DbResult<CheckpointVariant> getMachineStateKeys(
                                           parsed_state};
 }
 
-std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
-    ReadWriteTransaction& tx,
-    const Machine& machine) {
-    std::map<uint64_t, uint64_t> segment_counts;
-
+rocksdb::Status saveMachineState(ReadWriteTransaction& tx,
+                                 const Machine& machine) {
     auto& machinestate = machine.machine_state;
-    auto static_val_results =
-        saveValueImpl(tx, machinestate.static_val, segment_counts);
+    auto pc_val_results = saveValue(
+        tx, CodePointStub{machinestate.pc,
+                          machinestate.loadCurrentInstructionConst()});
+    if (!pc_val_results.status.ok()) {
+        return {pc_val_results.status, {}};
+    }
+
+    auto static_val_results = saveValue(tx, machinestate.static_val);
     if (!static_val_results.status.ok()) {
         return {static_val_results.status, {}};
     }
 
-    auto register_val_results =
-        saveValueImpl(tx, machinestate.registerVal, segment_counts);
+    auto register_val_results = saveValue(tx, machinestate.registerVal);
     if (!register_val_results.status.ok()) {
         return {register_val_results.status, {}};
     }
 
     auto datastack_tup = machinestate.stack.getTupleRepresentation();
-    auto datastack_results = saveValueImpl(tx, datastack_tup, segment_counts);
+    auto datastack_results = saveValue(tx, datastack_tup);
     if (!datastack_results.status.ok()) {
         return {datastack_results.status, {}};
     }
 
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
-    auto auxstack_results = saveValueImpl(tx, auxstack_tup, segment_counts);
+    auto auxstack_results = saveValue(tx, auxstack_tup);
     if (!auxstack_results.status.ok()) {
         return {auxstack_results.status, {}};
     }
 
-    ++segment_counts[machinestate.pc.segment];
-    ++segment_counts[machinestate.errpc.pc.segment];
-
-    auto code_status =
-        saveCode(tx, *machine.machine_state.code, segment_counts);
-    if (!code_status.ok()) {
-        return {code_status, {}};
+    auto err_pc_val_results = saveValue(tx, machinestate.errpc);
+    if (!err_pc_val_results.status.ok()) {
+        return {err_pc_val_results.status, {}};
     }
 
-    return {rocksdb::Status::OK(), std::move(segment_counts)};
-}
-
-void saveCodeToCore(Machine& machine,
-                    const std::map<uint64_t, uint64_t>& segment_counts,
-                    const std::shared_ptr<CoreCode>& core_code) {
-    machine.machine_state.code->commitCodeToCore(segment_counts, core_code);
+    return rocksdb::Status::OK();
 }
 
 SaveResults saveTestMachine(ReadWriteTransaction& transaction,
@@ -304,32 +273,9 @@ SaveResults saveTestMachine(ReadWriteTransaction& transaction,
     }
 
     auto machine_save_res = saveMachineState(transaction, machine);
-    if (!machine_save_res.first.ok()) {
-        return {0, machine_save_res.first};
+    if (!machine_save_res.ok()) {
+        return {0, machine_save_res};
     }
-
-    auto root_code = machine.machine_state.code;
-    while (true) {
-        auto running = dynamic_cast<RunningCode*>(root_code.get());
-        if (running != nullptr) {
-            root_code = running->getParent();
-            continue;
-        }
-        auto ephemeral = dynamic_cast<EphemeralBarrier*>(root_code.get());
-        if (ephemeral != nullptr) {
-            root_code = ephemeral->parent;
-            continue;
-        }
-        break;
-    }
-    auto core_code = std::dynamic_pointer_cast<CoreCode>(root_code);
-    if (!core_code) {
-        throw std::runtime_error("Could not trace code down to CoreCode");
-    }
-
-    saveCodeToCore(machine, machine_save_res.second, core_code);
-    machine.machine_state.code = std::make_shared<RunningCode>(
-        std::make_shared<EphemeralBarrier>(machine.machine_state.code));
 
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),

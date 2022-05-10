@@ -85,20 +85,18 @@ class Machine {
         return Machine{MachineState::loadFromFile(executable_filename)};
     }
 
-    virtual void abort();
+    void abort();
 
     Assertion run();
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }
-    BlockReason isBlocked(bool newMessages) const {
+    BlockReason isBlocked(bool newMessages) {
         return machine_state.isBlocked(newMessages);
     }
-    OneStepProof marshalForProof() const {
-        return machine_state.marshalForProof();
-    }
+    OneStepProof marshalForProof() { return machine_state.marshalForProof(); }
 
-    std::vector<unsigned char> marshalState() const {
+    std::vector<unsigned char> marshalState() {
         return machine_state.marshalState();
     }
 };

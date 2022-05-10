@@ -26,9 +26,9 @@ set(LIB_HEADERS
   include/avm_values/unloadedvalue.hpp
   include/avm_values/bigint.hpp
   include/avm_values/buffer.hpp
-  include/avm_values/code.hpp
   include/avm_values/codepoint.hpp
   include/avm_values/codepointstub.hpp
+  include/avm_values/codesegment.hpp
   include/avm_values/pool.hpp
   include/avm_values/opcodes.hpp
   include/avm_values/value.hpp
@@ -40,7 +40,6 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   src/bigint.cpp
   src/buffer.cpp
-  src/code.cpp
   src/codepoint.cpp
   src/codepointstub.cpp
   src/exceptions.cpp

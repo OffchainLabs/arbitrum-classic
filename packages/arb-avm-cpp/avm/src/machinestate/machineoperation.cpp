@@ -56,14 +56,10 @@ const uint256_t& assumeInt(const Value& val) {
     return *aNum;
 }
 
-CodePointStub assumeCodePoint(MachineState& m, Value& val) {
+CodePointStub assumeCodePoint(Value& val) {
     auto cp = get_if<CodePointStub>(&val);
     if (!cp) {
         throw bad_pop_type{};
-    }
-    auto segment = cp->pc.segment;
-    if (segment != m.pc.segment && !m.code->containsSegment(segment)) {
-        return get<CodePointStub>(m.value_loader.loadValue(hash_value(*cp)));
     }
     return *cp;
 }
@@ -544,14 +540,14 @@ void rset(MachineState& m) {
 
 void jump(MachineState& m) {
     m.stack.prepForMod(1);
-    auto target = assumeCodePoint(m, m.stack[0]);
+    auto target = assumeCodePoint(m.stack[0]);
     m.pc = target.pc;
     m.stack.popClear();
 }
 
 void cjump(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = assumeCodePoint(m, m.stack[0]);
+    auto target = assumeCodePoint(m.stack[0]);
     auto& cond = assumeInt(m.stack[1]);
     if (cond != 0) {
         m.pc = target.pc;
@@ -949,28 +945,46 @@ void pushgas(MachineState& m) {
 }
 
 void errcodept(MachineState& m) {
-    m.stack.push(m.code->addSegment());
+    m.stack.push(CodeSegment::errCodePt());
     ++m.pc;
 }
 
 void pushinsn(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = assumeCodePoint(m, m.stack[1]);
+    auto target = assumeCodePoint(m.stack[1]);
+    auto target_root = target.pc.root;
+    if (!target_root->isLoaded()) {
+        target_root = m.value_loader.loadCodeSegment(target_root);
+    }
     auto& op_int = assumeInt(m.stack[0]);
-    auto op = static_cast<uint8_t>(op_int);
-    m.stack[1] =
-        m.code->addOperation(target.pc, Operation{static_cast<OpCode>(op)});
+    auto opcode = static_cast<uint8_t>(op_int);
+    auto op = Operation{static_cast<OpCode>(opcode)};
+    if (!target_root->tryAddOperation(op, target.pc.pc)) {
+        target_root = target_root->fullClone(target.pc.pc);
+        target_root->addOperation(op);
+    }
+    m.stack[1] = CodePointStub{CodePointRef{target_root, target.pc.pc},
+                               hash(CodePoint(op, target.hash))};
     m.stack.popClear();
     ++m.pc;
 }
 
 void pushinsnimm(MachineState& m) {
     m.stack.prepForMod(3);
-    auto target = assumeCodePoint(m, m.stack[2]);
+    auto target = assumeCodePoint(m.stack[2]);
+    auto target_root = target.pc.root;
+    if (!target_root->isLoaded()) {
+        target_root = m.value_loader.loadCodeSegment(target_root);
+    }
     auto& op_int = assumeInt(m.stack[0]);
-    auto op = static_cast<uint8_t>(op_int);
-    m.stack[2] = m.code->addOperation(
-        target.pc, {static_cast<OpCode>(op), std::move(m.stack[1])});
+    auto opcode = static_cast<uint8_t>(op_int);
+    Operation op = {static_cast<OpCode>(opcode), std::move(m.stack[1])};
+    if (!target_root->tryAddOperation(op, target.pc.pc)) {
+        target_root = target_root->fullClone(target.pc.pc);
+        target_root->addOperation(op);
+    }
+    m.stack[2] = CodePointStub{CodePointRef{target_root, target.pc.pc},
+                               hash(CodePoint(op, target.hash))};
     m.stack.popClear();
     m.stack.popClear();
     ++m.pc;

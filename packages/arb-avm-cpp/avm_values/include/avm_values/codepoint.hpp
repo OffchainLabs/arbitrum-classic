@@ -24,7 +24,7 @@
 #include <optional>
 
 class Value;
-class Code;
+class ValueLoader;
 
 struct Operation {
     OpCode opcode;
@@ -39,11 +39,21 @@ struct Operation {
         }
     }
 
+    Operation& operator=(const Operation& other) {
+        if (this != &other) {
+            opcode = other.opcode;
+            if (other.immediate) {
+                immediate = std::make_unique<Value>(*other.immediate);
+            }
+        }
+        return *this;
+    }
+
     Operation(Operation&& op) = default;
 
     void marshalForProof(std::vector<unsigned char>& buf,
                          size_t marshal_level,
-                         const Code& code) const;
+                         ValueLoader* loader) const;
 };
 
 bool operator==(const Operation& val1, const Operation& val2);

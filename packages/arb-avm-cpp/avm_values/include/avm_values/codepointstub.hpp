@@ -20,16 +20,24 @@
 #include <avm_values/bigint.hpp>
 #include <avm_values/opcodes.hpp>
 
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+
 #include <cassert>
+#include <shared_mutex>
 
 struct CodePoint;
+class Value;
+class CodeSegment;
 
 struct CodePointRef {
-    uint64_t segment;
+    // Must go first for Value union repr
     uint64_t pc;
+    // either a CodeSegment or an unloaded value of such
+    boost::intrusive_ptr<CodeSegment> root;
 
-    CodePointRef(uint64_t segment_, uint64_t pc_) : segment(segment_), pc(pc_) {
-        assert(segment < (uint64_t(1) << 62));
+    CodePointRef(boost::intrusive_ptr<CodeSegment> root_, uint64_t pc_)
+        : pc(pc_), root(root_) {
+        assert(pc < (uint64_t(1) << 62));
     }
 
     CodePointRef& operator++() {
@@ -37,15 +45,8 @@ struct CodePointRef {
         return *this;
     }
 
-    CodePointRef operator+(uint64_t i) const { return {segment, pc - i}; }
-    CodePointRef operator-(uint64_t i) const { return {segment, pc + i}; }
-
-    friend bool operator==(CodePointRef val1, CodePointRef val2) {
-        return std::tie(val1.segment, val1.pc) ==
-               std::tie(val2.segment, val2.pc);
-    }
-
-    void marshal(std::vector<unsigned char>& buf) const;
+    CodePointRef operator+(uint64_t i) const { return {root, pc - i}; }
+    CodePointRef operator-(uint64_t i) const { return {root, pc + i}; }
 };
 
 std::ostream& operator<<(std::ostream& os, const CodePointRef& code);
@@ -66,8 +67,6 @@ struct CodePointStub {
                            const CodePointStub& val2) {
         return val1.hash != val2.hash;
     }
-
-    void marshal(std::vector<unsigned char>& buf) const;
 
     [[nodiscard]] bool is_error() const;
 };

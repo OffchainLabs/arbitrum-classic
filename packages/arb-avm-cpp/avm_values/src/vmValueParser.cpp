@@ -54,7 +54,7 @@ Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
 
 Value value_from_json(const nlohmann::json& full_value_json,
                       size_t op_count,
-                      const UnsafeCodeSegment& code) {
+                      const boost::intrusive_ptr<CodeSegment>& code) {
     std::vector<DeserializedValue> values;
     std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
         full_value_json};
@@ -89,8 +89,8 @@ Value value_from_json(const nlohmann::json& full_value_json,
             if (internal_offset != std::numeric_limits<uint64_t>::max()) {
                 pc = op_count - internal_offset;
             }
-            values.push_back(Value{
-                CodePointStub({code.segmentID(), pc}, code.loadCodePoint(pc))});
+            values.push_back(
+                Value{CodePointStub({code, pc}, code->loadCodePoint(pc))});
         } else if (value_json.get().contains(BUF_LABEL)) {
             values.emplace_back(
                 Buffer{buffer_value_from_json(value_json.get()[BUF_LABEL])});
@@ -103,7 +103,7 @@ Value value_from_json(const nlohmann::json& full_value_json,
 
 Operation operation_from_json(const nlohmann::json& op_json,
                               size_t op_count,
-                              const UnsafeCodeSegment& code) {
+                              const boost::intrusive_ptr<CodeSegment>& code) {
     auto opcode_json = op_json.at(OPCODE_LABEL);
     if (opcode_json.contains(OPCODE_SUB_LABEL)) {
         opcode_json = opcode_json.at(OPCODE_SUB_LABEL);
@@ -177,11 +177,12 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
         throw std::runtime_error("expected code to be array");
     }
     auto op_count = json_code.size();
-    auto segment = std::make_shared<UnsafeCodeSegment>(0);
+    boost::intrusive_ptr<CodeSegment> segment =
+        new CodeSegment(std::vector<Operation>());
     for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
-        segment->addOperation(operation_from_json(*it, op_count, *segment));
+        segment->addOperation(operation_from_json(*it, op_count, segment));
     }
     Value static_val =
-        value_from_json(executable_json.at(STATIC_LABEL), op_count, *segment);
+        value_from_json(executable_json.at(STATIC_LABEL), op_count, segment);
     return {std::move(segment), std::move(static_val)};
 }

@@ -92,7 +92,6 @@ ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
                  ArbCoreConfig coreConfig_)
     : coreConfig(std::move(coreConfig_)),
       data_storage(std::move(data_storage_)),
-      core_code(std::make_shared<CoreCode>(getNextSegmentID(data_storage))),
       combined_machine_cache(coreConfig) {
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
@@ -195,8 +194,8 @@ bool ArbCore::deliverMessages(
 }
 
 ValueLoader ArbCore::makeValueLoader() const {
-    return ValueLoader{std::make_unique<CoreValueLoader>(
-        data_storage, core_code, ValueCache{1, 0})};
+    return ValueLoader{
+        std::make_unique<CoreValueLoader>(data_storage, ValueCache{1, 0})};
 }
 
 void ArbCore::printDatabaseMetadata() {
@@ -278,7 +277,6 @@ InitializeResult ArbCore::applyConfig() {
         // For testing, delete everything from database except inbox
         {
             ReadWriteTransaction tx(data_storage);
-            saveNextSegmentID(tx, 0);
             auto s = tx.commit();
             if (!s.ok()) {
                 std::cerr << "Error resetting segment: " << s.ToString()
@@ -400,11 +398,9 @@ InitializeResult ArbCore::initialize(const LoadedExecutable& executable) {
     }
 
     // Need to initialize database from scratch
-    core_code->addSegment(executable.code);
     core_machine = std::make_unique<MachineThread>(
-        MachineState{core_code, executable.static_val});
+        MachineState{executable.code, executable.static_val});
     core_machine->machine_state.value_loader = makeValueLoader();
-    core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
 
     last_machine = std::make_unique<Machine>(*core_machine);
 
@@ -592,13 +588,9 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     }
 
     auto save_res = saveMachineState(tx, *core_machine);
-    if (!save_res.first.ok()) {
-        return save_res.first;
+    if (!save_res.ok()) {
+        return save_res;
     }
-
-    saveCodeToCore(*core_machine, save_res.second, core_code);
-    core_machine->machine_state.code = std::make_shared<RunningCode>(
-        std::make_shared<EphemeralBarrier>(core_machine->machine_state.code));
 
     std::vector<unsigned char> key;
     marshal_uint256_t(state.output.arb_gas_used, key);
@@ -670,7 +662,7 @@ rocksdb::Status ArbCore::reorgToPenultimateCheckpoint(ValueCache& cache) {
 
     auto count = 0;
     return reorgCheckpoints(
-        [&](const MachineOutput& output) {
+        [&](const MachineOutput&) {
             count++;
             // Skip first entry
             return count > 1;
@@ -1089,10 +1081,6 @@ std::unique_ptr<MachineThread> ArbCore::getMachineThreadFromCheckpoint(
     if (mach.machine != nullptr) {
         // Found machine in cache
         auto& state = mach.machine->machine_state;
-        state.code->cleanupAfterReorg();
-        auto nextSegment = std::max(state.code->initialSegmentForChildCode(),
-                                    core_code->initialSegmentForChildCode());
-        state.code = std::make_shared<RunningCode>(state.code, nextSegment);
         return std::make_unique<MachineThread>(state);
     }
 
@@ -1344,33 +1332,41 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     const MachineStateKeys& state_data,
     ValueCache& value_cache,
     bool lazy_load) const {
-    std::set<uint64_t> segment_ids;
+    auto pc_results =
+        ::getValue(transaction, state_data.pc_hash, value_cache, false);
 
-    auto static_results = ::getValueImpl(transaction, state_data.static_hash,
-                                         segment_ids, value_cache, false);
+    if (std::holds_alternative<rocksdb::Status>(pc_results)) {
+        std::stringstream ss;
+        ss << "failed loaded core machine pc: "
+           << std::get<rocksdb::Status>(pc_results).ToString();
+        std::cerr << "getValue error: " << ss.str() << std::endl;
+        throw std::runtime_error(ss.str());
+    }
+
+    auto static_results =
+        ::getValue(transaction, state_data.static_hash, value_cache, false);
 
     if (std::holds_alternative<rocksdb::Status>(static_results)) {
         std::stringstream ss;
         ss << "failed loaded core machine static: "
            << std::get<rocksdb::Status>(static_results).ToString();
-        std::cerr << "getValueImpl error: " << ss.str() << std::endl;
+        std::cerr << "getValue error: " << ss.str() << std::endl;
         throw std::runtime_error(ss.str());
     }
 
-    auto register_results =
-        ::getValueImpl(transaction, state_data.register_hash, segment_ids,
-                       value_cache, lazy_load);
+    auto register_results = ::getValue(transaction, state_data.register_hash,
+                                       value_cache, lazy_load);
     if (std::holds_alternative<rocksdb::Status>(register_results)) {
         std::stringstream ss;
         ss << "failed loaded core machine register with hash "
            << state_data.register_hash << ": "
            << std::get<rocksdb::Status>(register_results).ToString();
-        std::cerr << "getValueImpl error: " << ss.str() << std::endl;
+        std::cerr << "getValue error: " << ss.str() << std::endl;
         throw std::runtime_error(ss.str());
     }
 
-    auto stack_results = ::getValueImpl(transaction, state_data.datastack_hash,
-                                        segment_ids, value_cache, false);
+    auto stack_results =
+        ::getValue(transaction, state_data.datastack_hash, value_cache, false);
     if (std::holds_alternative<rocksdb::Status>(stack_results) ||
         !holds_alternative<Tuple>(
             std::get<CountedData<Value>>(stack_results).data)) {
@@ -1378,8 +1374,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         throw std::runtime_error("failed to load machine stack");
     }
 
-    auto auxstack_results = ::getValueImpl(
-        transaction, state_data.auxstack_hash, segment_ids, value_cache, false);
+    auto auxstack_results =
+        ::getValue(transaction, state_data.auxstack_hash, value_cache, false);
     if (std::holds_alternative<rocksdb::Status>(auxstack_results)) {
         std::cerr << "failed to load machine auxstack" << std::endl;
         throw std::runtime_error("failed to load machine auxstack");
@@ -1392,16 +1388,22 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             "failed to load machine auxstack because of format error");
     }
 
-    segment_ids.insert(state_data.pc.pc.segment);
-    segment_ids.insert(state_data.err_pc.pc.segment);
+    auto err_pc_results =
+        ::getValue(transaction, state_data.err_pc_hash, value_cache, false);
 
-    restoreCodeSegments(transaction, core_code, value_cache, segment_ids,
-                        lazy_load);
+    if (std::holds_alternative<rocksdb::Status>(err_pc_results)) {
+        std::stringstream ss;
+        ss << "failed loaded core machine err_pc: "
+           << std::get<rocksdb::Status>(err_pc_results).ToString();
+        std::cerr << "getValue error: " << ss.str() << std::endl;
+        throw std::runtime_error(ss.str());
+    }
 
     auto state = MachineState{
         state_data.output,
-        state_data.pc.pc,
-        std::make_shared<RunningCode>(core_code),
+        get<CodePointStub>(
+            std::move(std::get<CountedData<Value>>(pc_results).data))
+            .pc,
         makeValueLoader(),
         std::move(std::get<CountedData<Value>>(register_results).data),
         std::move(std::get<CountedData<Value>>(static_results).data),
@@ -1410,7 +1412,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             get<Tuple>(std::get<CountedData<Value>>(auxstack_results).data)),
         state_data.arb_gas_remaining,
         state_data.state,
-        state_data.err_pc,
+        get<CodePointStub>(
+            std::move(std::get<CountedData<Value>>(err_pc_results).data)),
         lazy_load};
 
     return std::make_unique<T>(state);
@@ -2925,8 +2928,6 @@ ArbCore::findCloserExecutionCursor(
 
     switch (mach.status) {
         case CombinedMachineCache::Success:
-            mach.machine->machine_state.code =
-                std::make_shared<RunningCode>(mach.machine->machine_state.code);
             return ExecutionCursor(std::move(mach.machine));
         case CombinedMachineCache::UseDatabase:
             return ExecutionCursor(database_machine_state_keys.value());

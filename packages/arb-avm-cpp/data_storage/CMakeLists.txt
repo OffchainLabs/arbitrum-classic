@@ -36,7 +36,6 @@ set(LIB_HEADERS
   include/data_storage/timedmachinecache.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
-  include/data_storage/value/code.hpp
   include/data_storage/value/machine.hpp
   include/data_storage/value/value.hpp
   include/data_storage/value/valuecache.hpp
@@ -62,7 +61,6 @@ set(LIB_SOURCES
   src/readtransaction.cpp
   src/readwritetransaction.cpp
   src/timedmachinecache.cpp
-  src/value/code.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp
   src/value/value.cpp

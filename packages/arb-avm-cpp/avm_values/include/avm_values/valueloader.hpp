@@ -27,6 +27,15 @@ class AbstractValueLoader {
     // Throws an exception if the tuple cannot be loaded
     virtual Value loadValue(const uint256_t& hash) = 0;
 
+    boost::intrusive_ptr<CodeSegment> loadCodeSegment(
+        const boost::intrusive_ptr<CodeSegment>& segment) {
+        if (segment->isLoaded()) {
+            return segment;
+        }
+        return get<boost::intrusive_ptr<CodeSegment>>(
+            loadValue(segment->getHash()));
+    }
+
     [[nodiscard]] virtual std::unique_ptr<AbstractValueLoader> clone()
         const = 0;
 };
