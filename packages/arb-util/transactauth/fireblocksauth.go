@@ -259,7 +259,7 @@ func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types
 				Str("id", txResponse.Id).
 				Str("status", details.Status)
 
-			if tx.To().Bytes() != nil {
+			if tx.To() != nil {
 				partial.Hex("to", tx.To().Bytes())
 			}
 
