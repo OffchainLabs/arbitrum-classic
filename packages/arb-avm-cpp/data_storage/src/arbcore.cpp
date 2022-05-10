@@ -1458,8 +1458,6 @@ void ArbCore::printCoreThreadBacktrace() {
 bool ArbCore::reorgIfInvalidMachine(uint32_t& thread_failure_count,
                                     uint256_t& next_checkpoint_gas,
                                     ValueCache& cache) {
-    core_machine->finishThread();
-
     bool isMachineValid;
     if (core_machine->status() == MachineThread::MACHINE_ERROR) {
         std::cerr << "Attempting to recover from AVM machine error: "
