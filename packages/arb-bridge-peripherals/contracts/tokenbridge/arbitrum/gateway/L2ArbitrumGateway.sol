@@ -53,7 +53,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         uint256 _amount
     );
 
-    modifier onlyCounterpartGateway() virtual override {
+    modifier onlyCounterpartGateway() override {
         require(
             msg.sender == AddressAliasHelper.applyL1ToL2Alias(counterpartGateway),
             "ONLY_COUNTERPART_GATEWAY"
