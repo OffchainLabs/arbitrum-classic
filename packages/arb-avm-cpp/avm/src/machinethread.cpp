@@ -24,15 +24,11 @@ MachineThread::machine_status_enum MachineThread::status() {
 
 bool MachineThread::runMachine(MachineExecutionConfig config,
                                bool asynchronous) {
-    if (machine_status == MACHINE_RUNNING) {
-        if (asynchronous) {
-            // Core machine already running
-            return true;
-        }
-
-        finishThread();
-    }
     if (machine_status != MACHINE_NONE) {
+        if (machine_status == MACHINE_RUNNING) {
+            throw std::runtime_error(
+                "runMachine called when machine already running");
+        }
         return false;
     }
 
@@ -56,8 +52,11 @@ bool MachineThread::runMachine(MachineExecutionConfig config,
 }
 
 bool MachineThread::continueRunningMachine(bool asynchronous) {
-    finishThread();
     if (machine_status != MACHINE_NONE) {
+        if (machine_status == MACHINE_RUNNING) {
+            throw std::runtime_error(
+                "continueRunningMachine called when machine already running");
+        }
         return false;
     }
 
