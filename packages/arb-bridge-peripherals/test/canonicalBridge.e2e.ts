@@ -15,18 +15,24 @@
  */
 
 /* eslint-env node, mocha */
-import { ethers } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { Contract, ContractFactory } from 'ethers'
+import { Contract, ContractTransaction } from 'ethers'
+import {
+  L1ERC20Gateway,
+  L1GatewayRouter,
+  L2ERC20Gateway,
+  L2GatewayRouter,
+} from '../build/types'
 
 describe('Bridge peripherals end-to-end', () => {
   let accounts: SignerWithAddress[]
 
-  let l1RouterTestBridge: Contract
-  let l2RouterTestBridge: Contract
-  let l1TestBridge: Contract
-  let l2TestBridge: Contract
+  let l1RouterTestBridge: L1GatewayRouter
+  let l2RouterTestBridge: L2GatewayRouter
+  let l1TestBridge: L1ERC20Gateway
+  let l2TestBridge: L2ERC20Gateway
 
   const maxSubmissionCost = 1
   const maxGas = 1000000000
@@ -35,15 +41,16 @@ describe('Bridge peripherals end-to-end', () => {
   before(async function () {
     accounts = await ethers.getSigners()
 
+    const InboxMock = await ethers.getContractFactory('InboxMock')
+    const inboxMock = await InboxMock.deploy()
+
     // l1 side deploy
-    const L1RouterTestBridge: ContractFactory = await ethers.getContractFactory(
+    const L1RouterTestBridge = await ethers.getContractFactory(
       'L1GatewayRouter'
     )
     l1RouterTestBridge = await L1RouterTestBridge.deploy()
 
-    const L1TestBridge: ContractFactory = await ethers.getContractFactory(
-      'L1GatewayTester'
-    )
+    const L1TestBridge = await ethers.getContractFactory('L1ERC20Gateway')
     l1TestBridge = await L1TestBridge.deploy()
 
     // l2 side deploy
@@ -63,12 +70,10 @@ describe('Bridge peripherals end-to-end', () => {
 
     await beaconProxyFactory.initialize(beacon.address)
 
-    const L2TestBridge: ContractFactory = await ethers.getContractFactory(
-      'L2GatewayTester'
-    )
+    const L2TestBridge = await ethers.getContractFactory('L2ERC20Gateway')
     l2TestBridge = await L2TestBridge.deploy()
 
-    const L2RouterTestBridge: ContractFactory = await ethers.getContractFactory(
+    const L2RouterTestBridge = await ethers.getContractFactory(
       'L2GatewayRouter'
     )
     l2RouterTestBridge = await L2RouterTestBridge.deploy()
@@ -76,7 +81,7 @@ describe('Bridge peripherals end-to-end', () => {
     await l1TestBridge.functions.initialize(
       l2TestBridge.address,
       l1RouterTestBridge.address,
-      accounts[0].address, // inbox
+      inboxMock.address, // inbox
       cloneableProxyHash,
       beaconProxyFactory.address
     )
@@ -92,7 +97,7 @@ describe('Bridge peripherals end-to-end', () => {
       l1TestBridge.address, // defaultGateway
       '0x0000000000000000000000000000000000000000', // no whitelist
       l2RouterTestBridge.address, // counterparty
-      accounts[0].address // inbox
+      inboxMock.address // inbox
     )
 
     const l2DefaultGateway = await l1TestBridge.counterpartGateway()
@@ -108,7 +113,7 @@ describe('Bridge peripherals end-to-end', () => {
     )
   })
 
-  it('should deposit tokens', async function () {
+  it.only('should deposit tokens', async function () {
     const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
     // send escrowed tokens to bridge
@@ -155,7 +160,39 @@ describe('Bridge peripherals end-to-end', () => {
       )
     ).to.be.revertedWith('WRONG_ETH_VALUE')
 
-    await l1RouterTestBridge.outboundTransfer(
+    const processL1ToL2Tx = async (
+      tx: Promise<ContractTransaction> | ContractTransaction
+    ) => {
+      const receipt = await (await tx).wait()
+      if (!receipt.events) throw new Error('No L1 to L2 txs')
+      const l1ToL2Txs = receipt.events
+        .filter(event => event.event === 'TxToL2')
+        .filter(event => event.args)
+        .map(event => {
+          const to = event.args!._to
+          const data = event.args!._data
+          const from = event.args!._from
+          // TODO: apply alias
+          const fromAliased = from
+
+          return network.provider
+            .request({
+              method: 'hardhat_impersonateAccount',
+              params: [fromAliased],
+            })
+            .then(() => ethers.getSigner(fromAliased))
+            .then(signer =>
+              signer.sendTransaction({
+                to: to,
+                data: data,
+              })
+            )
+        })
+
+      return Promise.all(l1ToL2Txs)
+    }
+
+    const tx = await l1RouterTestBridge.outboundTransfer(
       token.address,
       accounts[0].address,
       tokenAmount,
@@ -164,6 +201,7 @@ describe('Bridge peripherals end-to-end', () => {
       data,
       { value: maxSubmissionCost + maxGas * gasPrice }
     )
+    await processL1ToL2Tx(tx)
 
     const escrowedTokens = await token.balanceOf(l1TestBridge.address)
     assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
@@ -212,7 +250,7 @@ describe('Bridge peripherals end-to-end', () => {
     await l2TestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](token.address, accounts[0].address, tokenAmount, '0x')
-    await l2TestBridge.triggerTxToL1()
+    // await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
 
@@ -251,7 +289,7 @@ describe('Bridge peripherals end-to-end', () => {
     await l2RouterTestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](token.address, accounts[0].address, tokenAmount, '0x')
-    await l2TestBridge.triggerTxToL1()
+    // await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
 
@@ -282,7 +320,7 @@ describe('Bridge peripherals end-to-end', () => {
     )
 
     // here we set the L2 router to recover in case of a bad BeaconProxyFactory deploy
-    await l2TestBridge.setStubAddressOracleReturn(accounts[0].address)
+    // await l2TestBridge.setStubAddressOracleReturn(accounts[0].address)
 
     await l1RouterTestBridge.outboundTransfer(
       token.address,
@@ -293,7 +331,7 @@ describe('Bridge peripherals end-to-end', () => {
       data,
       { value: maxSubmissionCost + maxGas * gasPrice }
     )
-    await l2TestBridge.triggerTxToL1()
+    // await l2TestBridge.triggerTxToL1()
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
     const postAllowance = await token.allowance(
@@ -322,7 +360,7 @@ describe('Bridge peripherals end-to-end', () => {
     assert.equal(l2Balance.toNumber(), 0, 'User has tokens in L2')
 
     // reset stub return in test case
-    await l2TestBridge.setStubAddressOracleReturn(ethers.constants.AddressZero)
+    // await l2TestBridge.setStubAddressOracleReturn(ethers.constants.AddressZero)
   })
 
   it('should deposit tokens with bytes32 field correctly', async function () {
