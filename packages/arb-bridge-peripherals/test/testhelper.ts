@@ -63,6 +63,7 @@ export const processL1ToL2Tx = async (
         signer.sendTransaction({
           to: to,
           data: data,
+          value: value,
         })
       )
   })
