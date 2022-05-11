@@ -63,7 +63,16 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override nonReentrant returns (bytes memory res) {
-        return super.outboundTransferCustomRefund(_l1Token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
+        return
+            super.outboundTransferCustomRefund(
+                _l1Token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
     function finalizeInboundTransfer(
@@ -84,7 +93,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         bytes32 _cloneableProxyHash,
         address _l2BeaconProxyFactory
     ) public {
-        L1ArbitrumExtendedGateway._initialize(_l2Counterpart, _router, _inbox);
+        L1ArbitrumGateway._initialize(_l2Counterpart, _router, _inbox);
         require(_cloneableProxyHash != bytes32(0), "INVALID_PROXYHASH");
         require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
         cloneableProxyHash = _cloneableProxyHash;

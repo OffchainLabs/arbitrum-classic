@@ -38,7 +38,7 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         address _l1Weth,
         address _l2Weth
     ) public {
-        L1ArbitrumExtendedGateway._initialize(_l1Counterpart, _l1Router, _inbox);
+        L1ArbitrumGateway._initialize(_l1Counterpart, _l1Router, _inbox);
         require(_l1Weth != address(0), "INVALID_L1WETH");
         require(_l2Weth != address(0), "INVALID_L2WETH");
         l1Weth = _l1Weth;

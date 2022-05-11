@@ -66,7 +66,16 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override nonReentrant returns (bytes memory res) {
-        return super.outboundTransferCustomRefund(_l1Token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
+        return
+            super.outboundTransferCustomRefund(
+                _l1Token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
     function finalizeInboundTransfer(
@@ -86,7 +95,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         address _inbox,
         address _owner
     ) public {
-        L1ArbitrumExtendedGateway._initialize(_l1Counterpart, _l1Router, _inbox);
+        L1ArbitrumGateway._initialize(_l1Counterpart, _l1Router, _inbox);
         owner = _owner;
         // disable whitelist by default
         whitelist = address(0);
