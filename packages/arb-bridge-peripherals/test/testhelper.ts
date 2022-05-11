@@ -38,14 +38,8 @@ export const processL1ToL2Tx = async (
     const data = event.args.data
     const from = event.args.from
     const value = event.args.value
-    const fromAliased =
-      '0x' +
-      BigInt.asUintN(
-        160,
-        BigInt(from) + BigInt('0x1111000000000000000000000000000000001111')
-      )
-        .toString(16)
-        .padStart(40, '0')
+    const fromAliased = applyAlias(from)
+
     return network.provider
       .request({
         // Fund fromAliased to send transaction
@@ -70,6 +64,30 @@ export const processL1ToL2Tx = async (
   return Promise.all(l1ToL2Logs)
 }
 
+export const impersonateAccount = (address: string) =>
+  network.provider
+    .request({
+      // Fund inboxMock to send transaction
+      method: 'hardhat_setBalance',
+      params: [address, '0xffffffffffffffffffff'],
+    })
+    .then(() =>
+      network.provider.request({
+        method: 'hardhat_impersonateAccount',
+        params: [address],
+      })
+    )
+    .then(() => ethers.getSigner(address))
+
+export const applyAlias = (address: string) =>
+  '0x' +
+  BigInt.asUintN(
+    160,
+    BigInt(address) + BigInt('0x1111000000000000000000000000000000001111')
+  )
+    .toString(16)
+    .padStart(40, '0')
+
 export const processL2ToL1Tx = async (
   tx: Promise<ContractTransaction> | ContractTransaction,
   inboxMock: InboxMock
@@ -86,20 +104,9 @@ export const processL2ToL1Tx = async (
     const data = event.args.data
     const from = event.args.from
     const value = event.args.value
-    return network.provider
-      .request({
-        // Fund inboxMock to send transaction
-        method: 'hardhat_setBalance',
-        params: [inboxMock.address, '0xffffffffffffffffffff'],
-      })
-      .then(() =>
-        network.provider.request({
-          method: 'hardhat_impersonateAccount',
-          params: [inboxMock.address],
-        })
-      )
-      .then(() => inboxMock.setL2ToL1Sender(from, { gasLimit: 5000000 }))
-      .then(() => ethers.getSigner(inboxMock.address))
+    return inboxMock
+      .setL2ToL1Sender(from, { gasLimit: 5000000 })
+      .then(() => impersonateAccount(inboxMock.address))
       .then(signer =>
         signer.sendTransaction({
           to: to,

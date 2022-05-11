@@ -6,7 +6,7 @@
     "build": "./scripts/build.bash",
     "test:e2e": "hardhat test test/*.e2e.ts",
     "test:l1": "hardhat test test/*.l1.ts",
-    "test:l2": "hardhat test test/*.l2.ts --network arbitrum",
+    "test:l2": "hardhat test test/*.l2.ts",
     "typechain": "hardhat typechain",
     "deploy:tokenbridge": "hardhat run scripts/deploy_token_bridge_l1.ts --network mainnet",
     "gen:uml": "sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/ethereum,./contracts/tokenbridge/libraries -o ./gatewayUML.svg",
