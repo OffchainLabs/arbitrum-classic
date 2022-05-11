@@ -96,9 +96,10 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     )
 
     const ArbSysMock = await ethers.getContractFactory('ArbSysMock')
+    const arbsysmock = await ArbSysMock.deploy()
     await network.provider.send('hardhat_setCode', [
       '0x0000000000000000000000000000000000000064',
-      ArbSysMock.bytecode,
+      await network.provider.send('eth_getCode', [arbsysmock.address]),
     ])
   })
 

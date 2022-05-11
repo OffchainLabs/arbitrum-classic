@@ -18,7 +18,6 @@
 import { ethers, network } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { Contract, ContractTransaction } from 'ethers'
 import {
   InboxMock,
   L1ERC20Gateway,
@@ -116,9 +115,10 @@ describe('Bridge peripherals end-to-end', () => {
     )
 
     const ArbSysMock = await ethers.getContractFactory('ArbSysMock')
+    const arbsysmock = await ArbSysMock.deploy()
     await network.provider.send('hardhat_setCode', [
       '0x0000000000000000000000000000000000000064',
-      ArbSysMock.bytecode,
+      await network.provider.send('eth_getCode', [arbsysmock.address]),
     ])
   })
 

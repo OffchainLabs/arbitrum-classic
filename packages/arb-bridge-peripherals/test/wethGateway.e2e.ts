@@ -28,7 +28,7 @@ import {
 import { processL1ToL2Tx, processL2ToL1Tx } from './testhelper'
 import { Contract } from 'ethers'
 
-describe.only('Bridge peripherals end-to-end weth gateway', () => {
+describe('Bridge peripherals end-to-end weth gateway', () => {
   let accounts: SignerWithAddress[]
 
   let l1RouterTestBridge: L1GatewayRouter
