@@ -119,7 +119,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) public payable virtual returns (bytes memory) {
+    ) public payable returns (bytes memory) {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
@@ -131,7 +131,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         uint256, /* _maxGas */
         uint256, /* _gasPriceBid */
         bytes calldata _data
-    ) public payable virtual override returns (bytes memory res) {
+    ) public payable override returns (bytes memory res) {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
@@ -149,7 +149,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         uint256, /* _maxGas */
         uint256, /* _gasPriceBid */
         bytes calldata _data
-    ) public payable virtual override returns (bytes memory res) {
+    ) public payable override returns (bytes memory res) {
         // This function is set as public and virtual so that subclasses can override
         // it and add custom validation for callers (ie only whitelisted users)
 
