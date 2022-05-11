@@ -34,37 +34,37 @@ export const processL1ToL2Tx = async (
   )
   if (logs.length === 0) throw new Error('No L1 to L2 txs')
   const l1ToL2Logs = logs.map(log => {
-      const event = iface.parseLog(log)
-      const to = event.args!._to
-      const data = event.args!._data
-      const from = log.address
-      const fromAliased =
-        '0x' +
-        BigInt.asUintN(
-          160,
-          BigInt(from) + BigInt('0x1111000000000000000000000000000000001111')
-        )
-          .toString(16)
-          .padStart(40, '0')
-      return network.provider
-        .request({
-          method: 'hardhat_setBalance',
-          params: [fromAliased, '0xffffffffffffffffffff'],
+    const event = iface.parseLog(log)
+    const to = event.args!._to
+    const data = event.args!._data
+    const from = log.address
+    const fromAliased =
+      '0x' +
+      BigInt.asUintN(
+        160,
+        BigInt(from) + BigInt('0x1111000000000000000000000000000000001111')
+      )
+        .toString(16)
+        .padStart(40, '0')
+    return network.provider
+      .request({
+        method: 'hardhat_setBalance',
+        params: [fromAliased, '0xffffffffffffffffffff'],
+      })
+      .then(() =>
+        network.provider.request({
+          method: 'hardhat_impersonateAccount',
+          params: [fromAliased],
         })
-        .then(() =>
-          network.provider.request({
-            method: 'hardhat_impersonateAccount',
-            params: [fromAliased],
-          })
-        )
-        .then(() => ethers.getSigner(fromAliased))
-        .then(signer =>
-          signer.sendTransaction({
-            to: to,
-            data: data,
-          })
-        )
-    })
+      )
+      .then(() => ethers.getSigner(fromAliased))
+      .then(signer =>
+        signer.sendTransaction({
+          to: to,
+          data: data,
+        })
+      )
+  })
   return Promise.all(l1ToL2Logs)
 }
 
@@ -88,7 +88,8 @@ export const processL2ToL1Tx = async (
         method: 'hardhat_setBalance',
         params: [inboxMock.address, '0xffffffffffffffffffff'],
       })
-      .then(() => // Also fund to address (which can be wethgateway)
+      .then(() =>
+        // Also fund to address (which can be wethgateway)
         network.provider.request({
           method: 'hardhat_setBalance',
           params: [to, '0xffffffffffffffffffff'],

@@ -49,9 +49,7 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
     const InboxMock = await ethers.getContractFactory('InboxMock')
     inboxMock = await InboxMock.deploy()
 
-    const TestWETH9 = await ethers.getContractFactory(
-      'TestWETH9'
-    )
+    const TestWETH9 = await ethers.getContractFactory('TestWETH9')
 
     // l1 side deploy
     const L1RouterTestBridge = await ethers.getContractFactory(
@@ -59,19 +57,14 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
     )
     l1RouterTestBridge = await L1RouterTestBridge.deploy()
 
-    const L1TestBridge = await ethers.getContractFactory(
-      'L1WethGateway'
-    )
+    const L1TestBridge = await ethers.getContractFactory('L1WethGateway')
     l1TestBridge = await L1TestBridge.deploy()
 
     l1Weth = await TestWETH9.deploy('wethl1', 'wl1')
     l1Weth = await l1Weth.deployed()
 
     // l2 side deploy
-
-    const L2TestBridge = await ethers.getContractFactory(
-      'L2WethGateway'
-    )
+    const L2TestBridge = await ethers.getContractFactory('L2WethGateway')
     l2TestBridge = await L2TestBridge.deploy()
 
     const L2RouterTestBridge = await ethers.getContractFactory(
@@ -94,9 +87,7 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       )
     ).to.be.revertedWith('Initializable: contract is already initialized')
 
-    const Proxy = await ethers.getContractFactory(
-      'TransparentUpgradeableProxy'
-    )
+    const Proxy = await ethers.getContractFactory('TransparentUpgradeableProxy')
     l2Weth = await Proxy.deploy(l2Weth.address, accounts[1].address, '0x')
     l2Weth = await L2Weth.attach(l2Weth.address)
     await l2Weth.initialize(
@@ -143,11 +134,10 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       await network.provider.send('eth_getCode', [arbsysmock.address]),
     ])
 
-    network.provider
-        .request({
-          method: 'hardhat_setBalance',
-          params: [l2TestBridge.address, '0xffffffffffffffffffff'],
-        })
+    network.provider.request({
+      method: 'hardhat_setBalance',
+      params: [l2TestBridge.address, '0xffffffffffffffffffff'],
+    })
   })
 
   it('should deposit tokens', async function () {
@@ -181,16 +171,17 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       'Not expected l2 weth address'
     )
 
-    const tx = await l1RouterTestBridge.outboundTransfer(
-      l1Weth.address,
-      accounts[0].address,
-      tokenAmount,
-      maxGas,
-      gasPrice,
-      data,
-      { value: maxSubmissionCost + maxGas * gasPrice }
+    await processL1ToL2Tx(
+      await l1RouterTestBridge.outboundTransfer(
+        l1Weth.address,
+        accounts[0].address,
+        tokenAmount,
+        maxGas,
+        gasPrice,
+        data,
+        { value: maxSubmissionCost + maxGas * gasPrice }
+      )
     )
-    await processL1ToL2Tx(tx)
 
     const escrowedTokens = await l1Weth.balanceOf(l1TestBridge.address)
     assert.equal(escrowedTokens, 0, 'Tokens should not be escrowed')
@@ -233,25 +224,28 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       'Not expected l2 weth address'
     )
 
-    const tx = await l1RouterTestBridge.outboundTransfer(
-      l1Weth.address,
-      accounts[0].address,
-      tokenAmount,
-      maxGas,
-      gasPrice,
-      data,
-      { value: maxSubmissionCost + maxGas * gasPrice }
+    await processL1ToL2Tx(
+      await l1RouterTestBridge.outboundTransfer(
+        l1Weth.address,
+        accounts[0].address,
+        tokenAmount,
+        maxGas,
+        gasPrice,
+        data,
+        { value: maxSubmissionCost + maxGas * gasPrice }
+      )
     )
-    await processL1ToL2Tx(tx)
 
     const prevUserBalance = await l1Weth.balanceOf(accounts[0].address)
 
     await l2Weth.approve(l2TestBridge.address, tokenAmount)
 
-    await processL2ToL1Tx(await l2TestBridge.functions[
-      'outboundTransfer(address,address,uint256,bytes)'
-    ](l1Weth.address, accounts[0].address, tokenAmount, '0x'), inboxMock)
-    // await l2TestBridge.triggerTxToL1()
+    await processL2ToL1Tx(
+      await l2TestBridge.functions[
+        'outboundTransfer(address,address,uint256,bytes)'
+      ](l1Weth.address, accounts[0].address, tokenAmount, '0x'),
+      inboxMock
+    )
 
     const postUserBalance = await l1Weth.balanceOf(accounts[0].address)
 
@@ -263,11 +257,6 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
   })
 
   it('should withdraw tokens if no token is deployed', async function () {
-    const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
-    // set L2 weth to address zero to test if force withdraw is triggered when
-    // no contract is deployed
-    // await l2TestBridge.setL2WethAddress(ZERO_ADDR)
-
     // send escrowed tokens to bridge
     const tokenAmount = 100
     await l1Weth.deposit({ value: tokenAmount })
@@ -293,12 +282,15 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       data,
       { value: maxSubmissionCost + maxGas * gasPrice }
     )
-    await network.provider.send('hardhat_setCode', [
-      l2Weth.address,
-      '0x69',
-    ])
+    const original_code = await accounts[0].provider?.getCode(l2Weth.address)
+    // Set l2Weth to invalid code to trigger force withdraw
+    await network.provider.send('hardhat_setCode', [l2Weth.address, '0x00'])
     await processL2ToL1Tx((await processL1ToL2Tx(tx))[0], inboxMock)
-    // await l2TestBridge.triggerTxToL1()
+    // Revert previous setCode
+    await network.provider.send('hardhat_setCode', [
+      await l2TestBridge.calculateL2TokenAddress(l2Weth.address),
+      original_code,
+    ])
 
     const postUserBalance = await l1Weth.balanceOf(accounts[0].address)
     const postAllowance = await l1Weth.allowance(
@@ -317,7 +309,5 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       postAllowance.toNumber(),
       'Tokens not spent in allowance'
     )
-    // unset the custom l2 address as to not affect other tests
-    // await l2TestBridge.setL2WethAddress(l2Weth.address)
   })
 })
