@@ -19,24 +19,25 @@ import { ethers, network } from 'hardhat'
 import { ContractTransaction } from 'ethers'
 import {
   InboxMock,
-  L1ArbitrumMessenger__factory,
-  L2ArbitrumMessenger__factory,
+  InboxMock__factory,
+  ArbSysMock__factory,
 } from '../build/types'
 
 export const processL1ToL2Tx = async (
   tx: Promise<ContractTransaction> | ContractTransaction
 ) => {
   const receipt = await (await tx).wait()
-  const iface = L1ArbitrumMessenger__factory.createInterface()
+  const iface = InboxMock__factory.createInterface()
   const logs = receipt.logs.filter(
-    log => log.topics[0] === iface.getEventTopic('TxToL2')
+    log => log.topics[0] === iface.getEventTopic('InboxRetryableTicket')
   )
   if (logs.length === 0) throw new Error('No L1 to L2 txs')
   const l1ToL2Logs = logs.map(log => {
     const event = iface.parseLog(log)
-    const to = event.args!._to
-    const data = event.args!._data
-    const from = log.address
+    const to = event.args.to
+    const data = event.args.data
+    const from = event.args.from
+    const value = event.args.value
     const fromAliased =
       '0x' +
       BigInt.asUintN(
@@ -73,29 +74,23 @@ export const processL2ToL1Tx = async (
   inboxMock: InboxMock
 ) => {
   const receipt = await (await tx).wait()
-  const iface = L2ArbitrumMessenger__factory.createInterface()
+  const iface = ArbSysMock__factory.createInterface()
   const logs = receipt.logs.filter(
-    log => log.topics[0] === iface.getEventTopic('TxToL1')
+    log => log.topics[0] === iface.getEventTopic('ArbSysL2ToL1Tx')
   )
   if (logs.length === 0) throw new Error('No L2 to L1 txs')
   const l2ToL1Logs = logs.map(log => {
     const event = iface.parseLog(log)
-    const to = event.args._to
-    const data = event.args._data
-    const from = log.address
+    const to = event.args.to
+    const data = event.args.data
+    const from = event.args.from
+    const value = event.args.value
     return network.provider
       .request({
         // Fund inboxMock to send transaction
         method: 'hardhat_setBalance',
         params: [inboxMock.address, '0xffffffffffffffffffff'],
       })
-      .then(() =>
-        // Also fund to address (which can be wethgateway)
-        network.provider.request({
-          method: 'hardhat_setBalance',
-          params: [to, '0xffffffffffffffffffff'],
-        })
-      )
       .then(() =>
         network.provider.request({
           method: 'hardhat_impersonateAccount',
@@ -108,6 +103,7 @@ export const processL2ToL1Tx = async (
         signer.sendTransaction({
           to: to,
           data: data,
+          value: value,
         })
       )
   })
