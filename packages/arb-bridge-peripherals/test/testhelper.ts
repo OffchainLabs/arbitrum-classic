@@ -22,7 +22,6 @@ import {
   L1ArbitrumMessenger__factory,
   L2ArbitrumMessenger__factory,
 } from '../build/types'
-import { TxToL1Event } from '../build/types/L2ArbitrumMessenger'
 
 export const processL1ToL2Tx = async (
   tx: Promise<ContractTransaction> | ContractTransaction
@@ -48,6 +47,7 @@ export const processL1ToL2Tx = async (
         .padStart(40, '0')
     return network.provider
       .request({
+        // Fund fromAliased to send transaction
         method: 'hardhat_setBalance',
         params: [fromAliased, '0xffffffffffffffffffff'],
       })
@@ -85,6 +85,7 @@ export const processL2ToL1Tx = async (
     const from = log.address
     return network.provider
       .request({
+        // Fund inboxMock to send transaction
         method: 'hardhat_setBalance',
         params: [inboxMock.address, '0xffffffffffffffffffff'],
       })
