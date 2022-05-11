@@ -88,6 +88,12 @@ export const processL2ToL1Tx = async (
         method: 'hardhat_setBalance',
         params: [inboxMock.address, '0xffffffffffffffffffff'],
       })
+      .then(() => // Also fund to address (which can be wethgateway)
+        network.provider.request({
+          method: 'hardhat_setBalance',
+          params: [to, '0xffffffffffffffffffff'],
+        })
+      )
       .then(() =>
         network.provider.request({
           method: 'hardhat_impersonateAccount',
