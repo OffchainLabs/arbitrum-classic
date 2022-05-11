@@ -103,7 +103,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         bytes memory _data
     ) public view override returns (bytes memory outboundCalldata) {
         outboundCalldata = abi.encodeWithSelector(
-            TokenGateway.finalizeInboundTransfer.selector,
+            ITokenGateway.finalizeInboundTransfer.selector,
             _token,
             _from,
             _to,

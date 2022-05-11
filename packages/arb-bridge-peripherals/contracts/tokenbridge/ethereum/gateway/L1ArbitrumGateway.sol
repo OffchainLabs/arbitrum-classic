@@ -187,7 +187,16 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         uint256 _maxSubmissionCost,
         bytes memory _outboundCalldata
     ) internal returns (uint256) {
-        return createOutboundTxCustomRefund(_from, _from, _tokenAmount, _maxGas, _gasPriceBid, _maxSubmissionCost, _outboundCalldata);
+        return
+            createOutboundTxCustomRefund(
+                _from,
+                _from,
+                _tokenAmount,
+                _maxGas,
+                _gasPriceBid,
+                _maxSubmissionCost,
+                _outboundCalldata
+            );
     }
 
     /**
@@ -201,15 +210,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override returns (bytes memory res) {
-        return outboundTransferCustomRefund(
-            _l1Token,
-            _to,
-            _to,
-            _amount,
-            _maxGas,
-            _gasPriceBid,
-            _data
-        );
+        return
+            outboundTransferCustomRefund(_l1Token, _to, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     /**
@@ -303,7 +305,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         bytes memory emptyBytes = "";
 
         outboundCalldata = abi.encodeWithSelector(
-            TokenGateway.finalizeInboundTransfer.selector,
+            ITokenGateway.finalizeInboundTransfer.selector,
             _l1Token,
             _from,
             _to,

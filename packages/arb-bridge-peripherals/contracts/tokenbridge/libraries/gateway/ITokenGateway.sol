@@ -74,4 +74,12 @@ interface ITokenGateway {
      * @return L2 address of a bridged ERC20 token
      */
     function calculateL2TokenAddress(address l1ERC20) external view returns (address);
+
+    function getOutboundCalldata(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) external view returns (bytes memory);
 }
