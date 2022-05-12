@@ -165,7 +165,7 @@ func (cm *ClientManager) doBroadcast(bm interface{}) ([]*ClientConnection, error
 	for client := range cm.clientPtrMap {
 		if len(client.out) >= cm.maxSendQueue {
 			// Queue for client too backed up, disconnect instead of blocking on channel send
-			logger.Error().Str("client", client.Name).Int("sendQueue", len(client.out)).Msg("disconnecting because sendQueue too large")
+			logger.Info().Str("client", client.Name).Int("sendQueue", len(client.out)).Msg("disconnecting because sendQueue too large")
 			clientDeleteList = append(clientDeleteList, client)
 		} else {
 			client.out <- buf.Bytes()
@@ -192,7 +192,7 @@ func (cm *ClientManager) verifyClients() []*ClientConnection {
 		} else {
 			err := client.Ping()
 			if err != nil {
-				logger.Warn().Str("client", client.Name).Msg("disconnecting because error pinging client")
+				logger.Info().Str("client", client.Name).Msg("disconnecting because error pinging client")
 				clientDeleteList = append(clientDeleteList, client)
 			}
 		}
