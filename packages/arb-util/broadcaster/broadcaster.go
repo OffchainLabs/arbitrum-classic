@@ -38,7 +38,7 @@ type Broadcaster struct {
 	prevConfirmedAcc common.Hash
 }
 
-func NewBroadcaster(settings configuration.FeedOutput) *Broadcaster {
+func NewBroadcaster(settings *configuration.FeedOutput) *Broadcaster {
 	catchupBuffer := NewConfirmedAccumulatorCatchupBuffer()
 	return &Broadcaster{
 		server:        wsbroadcastserver.NewWSBroadcastServer(settings, catchupBuffer),
