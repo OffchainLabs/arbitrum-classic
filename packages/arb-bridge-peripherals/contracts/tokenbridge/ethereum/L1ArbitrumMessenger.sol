@@ -41,7 +41,7 @@ abstract contract L1ArbitrumMessenger {
         uint256 _l2CallValue,
         L2GasParams memory _l2GasParams,
         bytes memory _data
-    ) internal virtual returns (uint256) {
+    ) internal returns (uint256) {
         // alternative function entry point when struggling with the stack size
         return
             sendTxToL2CustomRefund(
@@ -66,7 +66,7 @@ abstract contract L1ArbitrumMessenger {
         uint256 _l2CallValue,
         L2GasParams memory _l2GasParams,
         bytes memory _data
-    ) internal virtual returns (uint256) {
+    ) internal returns (uint256) {
         // alternative function entry point when struggling with the stack size
         return
             sendTxToL2(
@@ -93,7 +93,7 @@ abstract contract L1ArbitrumMessenger {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal virtual returns (uint256) {
+    ) internal returns (uint256) {
         uint256 seqNum = IInbox(_inbox).createRetryableTicket{ value: _l1CallValue }(
             _to,
             _l2CallValue,
@@ -118,16 +118,28 @@ abstract contract L1ArbitrumMessenger {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal virtual returns (uint256) {
-        return sendTxToL2CustomRefund(_inbox, _to, _user, _user, _l1CallValue, _l2CallValue, _maxSubmissionCost, _maxGas, _gasPriceBid,_data);
+    ) internal returns (uint256) {
+        return
+            sendTxToL2CustomRefund(
+                _inbox,
+                _to,
+                _user,
+                _user,
+                _l1CallValue,
+                _l2CallValue,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
-    function getBridge(address _inbox) internal view virtual returns (IBridge) {
+    function getBridge(address _inbox) internal view returns (IBridge) {
         return IInbox(_inbox).bridge();
     }
 
     /// @dev the l2ToL1Sender behaves as the tx.origin, the msg.sender should be validated to protect against reentrancies
-    function getL2ToL1Sender(address _inbox) internal view virtual returns (address) {
+    function getL2ToL1Sender(address _inbox) internal view returns (address) {
         IOutbox outbox = IOutbox(getBridge(_inbox).activeOutbox());
         address l2ToL1Sender = outbox.l2ToL1Sender();
 

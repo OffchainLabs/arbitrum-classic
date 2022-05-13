@@ -18,14 +18,18 @@
 import { ethers, waffle } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { Contract, ContractFactory } from 'ethers'
+import {
+  InboxMock,
+  L1WethGateway,
+  L1WethGateway__factory,
+} from '../build/types'
 
 describe('Bridge peripherals layer 1', () => {
   let accounts: SignerWithAddress[]
-  let TestBridge: ContractFactory
-  let testBridge: Contract
+  let TestBridge: L1WethGateway__factory
+  let testBridge: L1WethGateway
 
-  let inbox: Contract
+  let inbox: InboxMock
   const maxSubmissionCost = 1
   const maxGas = 1000000000
   const gasPrice = 0
@@ -34,7 +38,7 @@ describe('Bridge peripherals layer 1', () => {
     accounts = await ethers.getSigners()
     l2Address = accounts[1].address
 
-    TestBridge = await ethers.getContractFactory('L1WethGatewayTester')
+    TestBridge = await ethers.getContractFactory('L1WethGateway')
 
     const Inbox = await ethers.getContractFactory('InboxMock')
     inbox = await Inbox.deploy()
@@ -67,8 +71,8 @@ describe('Bridge peripherals layer 1', () => {
       ['address', 'bytes'],
       [accounts[0].address, data]
     )
-    const escrowPrevBalance = await waffle.provider.getBalance(l2Address)
-    await testBridge.outboundTransfer(
+    const escrowPrevBalance = await waffle.provider.getBalance(inbox.address)
+    const tx = await testBridge.outboundTransfer(
       weth.address,
       accounts[0].address,
       wethAmount,
@@ -78,7 +82,7 @@ describe('Bridge peripherals layer 1', () => {
     )
     const escrowedWeth = await weth.balanceOf(testBridge.address)
     assert.equal(escrowedWeth.toNumber(), 0, 'Weth should not be escrowed')
-    const escrowedETH = await waffle.provider.getBalance(l2Address)
+    const escrowedETH = await waffle.provider.getBalance(inbox.address)
     assert.equal(
       escrowedETH.sub(escrowPrevBalance).toNumber(),
       wethAmount,
@@ -113,7 +117,7 @@ describe('Bridge peripherals layer 1', () => {
       ['address', 'bytes'],
       [accounts[0].address, data]
     )
-    const escrowPrevBalance = await waffle.provider.getBalance(l2Address)
+    const escrowPrevBalance = await waffle.provider.getBalance(inbox.address)
     await testBridge.outboundTransferCustomRefund(
       weth.address,
       accounts[0].address,
@@ -125,7 +129,7 @@ describe('Bridge peripherals layer 1', () => {
     )
     const escrowedWeth = await weth.balanceOf(testBridge.address)
     assert.equal(escrowedWeth.toNumber(), 0, 'Weth should not be escrowed')
-    const escrowedETH = await waffle.provider.getBalance(l2Address)
+    const escrowedETH = await waffle.provider.getBalance(inbox.address)
     assert.equal(
       escrowedETH.sub(escrowPrevBalance).toNumber(),
       wethAmount,

@@ -15,20 +15,29 @@
  */
 
 /* eslint-env node, mocha */
-import { ethers } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { Contract, ContractFactory } from 'ethers'
+import {
+  InboxMock,
+  L1WethGateway,
+  L1GatewayRouter,
+  L2WethGateway,
+  L2GatewayRouter,
+} from '../build/types'
+import { processL1ToL2Tx, processL2ToL1Tx } from './testhelper'
+import { Contract } from 'ethers'
 
 describe('Bridge peripherals end-to-end weth gateway', () => {
   let accounts: SignerWithAddress[]
 
-  let l1RouterTestBridge: Contract
-  let l2RouterTestBridge: Contract
-  let l1TestBridge: Contract
-  let l2TestBridge: Contract
+  let l1RouterTestBridge: L1GatewayRouter
+  let l2RouterTestBridge: L2GatewayRouter
+  let l1TestBridge: L1WethGateway
+  let l2TestBridge: L2WethGateway
   let l1Weth: Contract
   let l2Weth: Contract
+  let inboxMock: InboxMock
 
   const maxSubmissionCost = 1
   const maxGas = 1000000000
@@ -37,37 +46,33 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
   before(async function () {
     accounts = await ethers.getSigners()
 
-    const TestWETH9: ContractFactory = await ethers.getContractFactory(
-      'TestWETH9'
-    )
+    const InboxMock = await ethers.getContractFactory('InboxMock')
+    inboxMock = await InboxMock.deploy()
+
+    const TestWETH9 = await ethers.getContractFactory('TestWETH9')
 
     // l1 side deploy
-    const L1RouterTestBridge: ContractFactory = await ethers.getContractFactory(
+    const L1RouterTestBridge = await ethers.getContractFactory(
       'L1GatewayRouter'
     )
     l1RouterTestBridge = await L1RouterTestBridge.deploy()
 
-    const L1TestBridge: ContractFactory = await ethers.getContractFactory(
-      'L1WethGatewayTester'
-    )
+    const L1TestBridge = await ethers.getContractFactory('L1WethGateway')
     l1TestBridge = await L1TestBridge.deploy()
 
     l1Weth = await TestWETH9.deploy('wethl1', 'wl1')
     l1Weth = await l1Weth.deployed()
 
     // l2 side deploy
-
-    const L2TestBridge: ContractFactory = await ethers.getContractFactory(
-      'L2WethGatewayTester'
-    )
+    const L2TestBridge = await ethers.getContractFactory('L2WethGateway')
     l2TestBridge = await L2TestBridge.deploy()
 
-    const L2RouterTestBridge: ContractFactory = await ethers.getContractFactory(
+    const L2RouterTestBridge = await ethers.getContractFactory(
       'L2GatewayRouter'
     )
     l2RouterTestBridge = await L2RouterTestBridge.deploy()
 
-    const L2Weth: ContractFactory = await ethers.getContractFactory('aeWETH')
+    const L2Weth = await ethers.getContractFactory('aeWETH')
     l2Weth = await L2Weth.deploy()
     await l2Weth.deployed()
     // initialize contracts
@@ -82,9 +87,7 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       )
     ).to.be.revertedWith('Initializable: contract is already initialized')
 
-    const Proxy: ContractFactory = await ethers.getContractFactory(
-      'TransparentUpgradeableProxy'
-    )
+    const Proxy = await ethers.getContractFactory('TransparentUpgradeableProxy')
     l2Weth = await Proxy.deploy(l2Weth.address, accounts[1].address, '0x')
     l2Weth = await L2Weth.attach(l2Weth.address)
     await l2Weth.initialize(
@@ -98,7 +101,7 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
     await l1TestBridge.functions.initialize(
       l2TestBridge.address,
       l1RouterTestBridge.address,
-      accounts[0].address, // inbox
+      inboxMock.address, // inbox
       l1Weth.address,
       l2Weth.address
     )
@@ -115,7 +118,7 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       l1TestBridge.address, // defaultGateway
       '0x0000000000000000000000000000000000000000', // no whitelist
       l2RouterTestBridge.address, // counterparty
-      accounts[0].address // inbox
+      inboxMock.address // inbox
     )
 
     const l2DefaultGateway = await l1TestBridge.counterpartGateway()
@@ -123,6 +126,18 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       l1RouterTestBridge.address,
       l2DefaultGateway
     )
+
+    const ArbSysMock = await ethers.getContractFactory('ArbSysMock')
+    const arbsysmock = await ArbSysMock.deploy()
+    await network.provider.send('hardhat_setCode', [
+      '0x0000000000000000000000000000000000000064',
+      await network.provider.send('eth_getCode', [arbsysmock.address]),
+    ])
+
+    network.provider.request({
+      method: 'hardhat_setBalance',
+      params: [l2TestBridge.address, '0xffffffffffffffffffff'],
+    })
   })
 
   it('should deposit tokens', async function () {
@@ -156,14 +171,16 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       'Not expected l2 weth address'
     )
 
-    const tx = await l1RouterTestBridge.outboundTransfer(
-      l1Weth.address,
-      accounts[0].address,
-      tokenAmount,
-      maxGas,
-      gasPrice,
-      data,
-      { value: maxSubmissionCost + maxGas * gasPrice }
+    await processL1ToL2Tx(
+      await l1RouterTestBridge.outboundTransfer(
+        l1Weth.address,
+        accounts[0].address,
+        tokenAmount,
+        maxGas,
+        gasPrice,
+        data,
+        { value: maxSubmissionCost + maxGas * gasPrice }
+      )
     )
 
     const escrowedTokens = await l1Weth.balanceOf(l1TestBridge.address)
@@ -207,24 +224,28 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       'Not expected l2 weth address'
     )
 
-    const tx = await l1RouterTestBridge.outboundTransfer(
-      l1Weth.address,
-      accounts[0].address,
-      tokenAmount,
-      maxGas,
-      gasPrice,
-      data,
-      { value: maxSubmissionCost + maxGas * gasPrice }
+    await processL1ToL2Tx(
+      await l1RouterTestBridge.outboundTransfer(
+        l1Weth.address,
+        accounts[0].address,
+        tokenAmount,
+        maxGas,
+        gasPrice,
+        data,
+        { value: maxSubmissionCost + maxGas * gasPrice }
+      )
     )
 
     const prevUserBalance = await l1Weth.balanceOf(accounts[0].address)
 
     await l2Weth.approve(l2TestBridge.address, tokenAmount)
 
-    const withdrawTx = await l2TestBridge.functions[
-      'outboundTransfer(address,address,uint256,bytes)'
-    ](l1Weth.address, accounts[0].address, tokenAmount, '0x')
-    await l2TestBridge.triggerTxToL1()
+    await processL2ToL1Tx(
+      await l2TestBridge.functions[
+        'outboundTransfer(address,address,uint256,bytes)'
+      ](l1Weth.address, accounts[0].address, tokenAmount, '0x'),
+      inboxMock
+    )
 
     const postUserBalance = await l1Weth.balanceOf(accounts[0].address)
 
@@ -236,11 +257,6 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
   })
 
   it('should withdraw tokens if no token is deployed', async function () {
-    const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
-    // set L2 weth to address zero to test if force withdraw is triggered when
-    // no contract is deployed
-    await l2TestBridge.setL2WethAddress(ZERO_ADDR)
-
     // send escrowed tokens to bridge
     const tokenAmount = 100
     await l1Weth.deposit({ value: tokenAmount })
@@ -257,7 +273,7 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       [maxSubmissionCost, '0x']
     )
 
-    await l1RouterTestBridge.outboundTransfer(
+    const tx = await l1RouterTestBridge.outboundTransfer(
       l1Weth.address,
       accounts[0].address,
       tokenAmount,
@@ -266,7 +282,15 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       data,
       { value: maxSubmissionCost + maxGas * gasPrice }
     )
-    await l2TestBridge.triggerTxToL1()
+    const original_code = await accounts[0].provider?.getCode(l2Weth.address)
+    // Set l2Weth to invalid code to trigger force withdraw
+    await network.provider.send('hardhat_setCode', [l2Weth.address, '0x00'])
+    await processL2ToL1Tx((await processL1ToL2Tx(tx))[0], inboxMock)
+    // Revert previous setCode
+    await network.provider.send('hardhat_setCode', [
+      await l2TestBridge.calculateL2TokenAddress(l2Weth.address),
+      original_code,
+    ])
 
     const postUserBalance = await l1Weth.balanceOf(accounts[0].address)
     const postAllowance = await l1Weth.allowance(
@@ -285,7 +309,5 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       postAllowance.toNumber(),
       'Tokens not spent in allowance'
     )
-    // unset the custom l2 address as to not affect other tests
-    await l2TestBridge.setL2WethAddress(l2Weth.address)
   })
 })
