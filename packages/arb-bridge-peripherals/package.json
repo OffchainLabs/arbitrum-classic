@@ -36,7 +36,7 @@
     "@typechain/hardhat": "^2.3.0",
     "@types/chai": "^4.2.15",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^14.14.28",
+    "@types/node": "^17.0.33",
     "arb-upgrades": "0.0.1",
     "chai": "^4.2.0",
     "dotenv": "^10.0.0",
