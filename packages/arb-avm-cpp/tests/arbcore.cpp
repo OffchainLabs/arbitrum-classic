@@ -21,6 +21,7 @@
 #include <data_storage/storageresult.hpp>
 
 #include <avm/inboxmessage.hpp>
+#include <avm/machine.hpp>
 
 #include <avm_values/vmValueParser.hpp>
 
@@ -219,18 +220,20 @@ TEST_CASE("ArbCore tests") {
         }
         REQUIRE(logs_count == logs.size());
 
-        auto cursor = arbCore1->getExecutionCursor(0, true);
+        auto cursor = arbCore1->getExecutionCursor(
+            0, true, TESTING_YIELD_INSTRUCTION_COUNT);
         REQUIRE(cursor.status.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used == 0);
 
-        auto advanceStatus =
-            arbCore1->advanceExecutionCursor(*cursor.data, 100, false, true);
+        auto advanceStatus = arbCore1->advanceExecutionCursor(
+            *cursor.data, 100, false, true, TESTING_YIELD_INSTRUCTION_COUNT);
         REQUIRE(advanceStatus.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
 
         uint32_t log_number = 3;
         auto advanceResult = arbCore1->advanceExecutionCursorWithTracing(
-            *cursor.data, 30000000, true, true, {log_number, log_number + 1});
+            *cursor.data, 30000000, true, true, {log_number, log_number + 1},
+            TESTING_YIELD_INSTRUCTION_COUNT);
         REQUIRE(advanceResult.status.ok());
         if (logs.size() > log_number) {
             REQUIRE(!advanceResult.data.empty());
@@ -330,7 +333,8 @@ TEST_CASE("ArbCore inbox") {
     auto position = arbCore->getGasAtBlock(*tx, 1);
     REQUIRE(position.status.ok());
 
-    auto cursor = arbCore->getExecutionCursor(position.data, true);
+    auto cursor = arbCore->getExecutionCursor(position.data, true,
+                                              TESTING_YIELD_INSTRUCTION_COUNT);
     REQUIRE(cursor.status.ok());
     REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
     REQUIRE(cursor.data->getOutput().arb_gas_used <= position.data);
@@ -362,7 +366,8 @@ TEST_CASE("ArbCore backwards reorg") {
     REQUIRE(arbCore->messageEntryInsertedCount().data == 0);
 
     auto maxGas = 1'000'000'000;
-    auto initialState = arbCore->getExecutionCursor(maxGas, true);
+    auto initialState = arbCore->getExecutionCursor(
+        maxGas, true, TESTING_YIELD_INSTRUCTION_COUNT);
     REQUIRE(initialState.status.ok());
     REQUIRE(initialState.data->getTotalMessagesRead() == 0);
 
@@ -378,7 +383,8 @@ TEST_CASE("ArbCore backwards reorg") {
                                      std::nullopt));
     waitForDelivery(arbCore);
 
-    auto newState = arbCore->getExecutionCursor(maxGas, true);
+    auto newState = arbCore->getExecutionCursor(
+        maxGas, true, TESTING_YIELD_INSTRUCTION_COUNT);
     REQUIRE(newState.status.ok());
     REQUIRE(newState.data->getTotalMessagesRead() == 1);
 
@@ -387,7 +393,8 @@ TEST_CASE("ArbCore backwards reorg") {
         std::vector<std::vector<unsigned char>>(), 0));
     waitForDelivery(arbCore);
 
-    auto reorgState = arbCore->getExecutionCursor(maxGas, true);
+    auto reorgState = arbCore->getExecutionCursor(
+        maxGas, true, TESTING_YIELD_INSTRUCTION_COUNT);
     REQUIRE(reorgState.status.ok());
     REQUIRE(reorgState.data->getTotalMessagesRead() == 0);
     REQUIRE(reorgState.data->machineHash() == initialState.data->machineHash());
@@ -451,7 +458,8 @@ TEST_CASE("ArbCore duplicate code segments") {
         }
     }
 
-    auto cursor = arbCore->getExecutionCursor(1'000'000'000, true);
+    auto cursor = arbCore->getExecutionCursor(1'000'000'000, true,
+                                              TESTING_YIELD_INSTRUCTION_COUNT);
     REQUIRE(cursor.status.ok());
     REQUIRE(std::get<std::unique_ptr<Machine>>(cursor.data->machine)
                 ->currentStatus() == Status::Halted);
@@ -539,7 +547,7 @@ TEST_CASE("ArbCore wild code segments") {
     DBDeleter deleter;
 
     ArbCoreConfig coreConfig{};
-    coreConfig.checkpoint_gas_frequency = 1000000;
+    coreConfig.checkpoint_gas_frequency = 1'000'000;
     ArbStorage storage(dbpath, coreConfig);
     REQUIRE(storage
                 .initialize(std::string{machine_test_cases_path} +
@@ -560,8 +568,8 @@ TEST_CASE("ArbCore wild code segments") {
                     continue;
                 }
                 auto block_num = rand() % block_count;
-                auto res =
-                    arbCore->getExecutionCursorAtEndOfBlock(block_num, false);
+                auto res = arbCore->getExecutionCursorAtEndOfBlock(
+                    block_num, false, TESTING_YIELD_INSTRUCTION_COUNT);
                 if (auto status = std::get_if<rocksdb::Status>(&res)) {
                     throw new std::runtime_error(
                         std::string("Failed to get cursor: ") +
@@ -574,7 +582,8 @@ TEST_CASE("ArbCore wild code segments") {
                 MachineExecutionConfig config;
                 config.sideloads.push_back(msg);
                 machine->machine_state.context = AssertionContext(config);
-                machine->run();
+                machine->run(TESTING_YIELD_INSTRUCTION_COUNT);
+                REQUIRE(!machine->isAborted());
             }
         }).detach();
     }

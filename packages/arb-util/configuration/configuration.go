@@ -86,6 +86,7 @@ type Core struct {
 	LazyLoadArchiveQueries     bool          `koanf:"lazy-load-archive-queries"`
 	MessageProcessCount        int           `koanf:"message-process-count"`
 	Test                       CoreTest      `koanf:"test"`
+	YieldInstructionCount      int           `koanf:"yield-instruction-count"`
 }
 
 type CoreCache struct {
@@ -441,6 +442,7 @@ func DefaultCoreSettingsNoMaxExecution() *Core {
 		CheckpointMaxExecutionGas: 0,
 		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
+		YieldInstructionCount:     1_000_000,
 	}
 }
 
@@ -459,6 +461,7 @@ func DefaultCoreSettingsMaxExecution() *Core {
 		CheckpointMaxExecutionGas: 1_000_000_000,
 		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
+		YieldInstructionCount:     1_000_000,
 	}
 }
 
@@ -900,6 +903,8 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Int("core.test.reorg-to.message", 0, "reorg to snapshot with given message or before, zero to disable")
 	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
 	f.Int("core.test.run-until", 0, "run until gas is reached for profile test, zero to disable")
+
+	f.Int("core.yield-instruction-count", 50_000_000, "number of instructions to for core thread to run between calling yield")
 
 }
 

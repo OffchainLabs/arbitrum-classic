@@ -75,7 +75,8 @@ std::shared_ptr<ArbCore> ArbStorage::getArbCore() {
 }
 
 std::unique_ptr<Machine> ArbStorage::getInitialMachine() {
-    auto cursor = arb_core->getExecutionCursor(0, true);
+    auto cursor =
+        arb_core->getExecutionCursor(0, true, BASE_YIELD_INSTRUCTION_COUNT);
     if (!cursor.status.ok()) {
         throw std::runtime_error(
             "failed to get initial machine. Database not initialized of "

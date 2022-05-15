@@ -71,7 +71,8 @@ TEST_CASE("ARBOS test vectors") {
             MachineExecutionConfig config;
             config.inbox_messages = messages;
             mach->machine_state.context = AssertionContext(config);
-            auto assertion = mach->run();
+            auto assertion = mach->run(TESTING_YIELD_INSTRUCTION_COUNT);
+            REQUIRE(!mach->isAborted());
             INFO("Machine ran for " << assertion.gas_count
                                     << " gas with target " << total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
