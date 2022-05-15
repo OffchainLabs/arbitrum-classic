@@ -56,6 +56,8 @@ CArbStorage* createArbStorage(const char* db_path,
         arb_core_config.cache_expiration_seconds;
     coreConfig.idle_sleep_milliseconds =
         arb_core_config.idle_sleep_milliseconds;
+    coreConfig.yield_instruction_count =
+        arb_core_config.yield_instruction_count;
     coreConfig.seed_cache_on_startup = arb_core_config.seed_cache_on_startup;
     coreConfig.debug = arb_core_config.debug;
     coreConfig.debug_timing = arb_core_config.debug_timing;

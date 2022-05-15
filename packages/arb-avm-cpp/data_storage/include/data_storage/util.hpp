@@ -62,6 +62,9 @@ struct ArbCoreConfig {
     // Number of milliseconds to sleep when idle
     uint32_t idle_sleep_milliseconds{5};
 
+    // Number of instructions to execute between calling yield
+    uint32_t yield_instruction_count{BASE_YIELD_INSTRUCTION_COUNT};
+
     // Seed cache on startup by forcing re-execution from timed_cache_expiration
     bool seed_cache_on_startup{false};
 

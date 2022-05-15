@@ -362,18 +362,21 @@ class ArbCore {
     // Execution Cursor interaction
     ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
         uint256_t total_gas_used,
-        bool allow_slow_lookup);
+        bool allow_slow_lookup,
+        uint32_t yield_instruction_count);
     rocksdb::Status advanceExecutionCursor(ExecutionCursor& execution_cursor,
                                            uint256_t max_gas,
                                            bool go_over_gas,
-                                           bool allow_slow_lookup);
+                                           bool allow_slow_lookup,
+                                           uint32_t yield_instruction_count);
     ValueResult<std::vector<MachineEmission<Value>>>
     advanceExecutionCursorWithTracing(
         ExecutionCursor& execution_cursor,
         uint256_t max_gas,
         bool go_over_gas,
         bool allow_slow_lookup,
-        const DebugPrintCollectionOptions& collectionOptions);
+        const DebugPrintCollectionOptions& options,
+        uint32_t yield_instruction_count);
 
     std::unique_ptr<Machine> takeExecutionCursorMachine(
         ExecutionCursor& execution_cursor);
@@ -386,7 +389,8 @@ class ArbCore {
         bool go_over_gas,
         size_t message_group_size,
         bool allow_slow_lookup,
-        const std::optional<DebugPrintCollectionOptions>& collectionOptions);
+        const std::optional<DebugPrintCollectionOptions>& collectionOptions,
+        uint32_t yield_instruction_count);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,
@@ -490,15 +494,16 @@ class ArbCore {
                                            const uint256_t& log_index);
     rocksdb::Status updateSendInsertedCount(ReadWriteTransaction& tx,
                                             const uint256_t& send_index);
-    bool runMachineWithMessages(MachineExecutionConfig& execConfig,
-                                size_t max_message_batch_size,
-                                bool asynchronous);
+    bool runCoreMachineWithMessages(MachineExecutionConfig& execConfig,
+                                    size_t max_message_batch_size,
+                                    bool asynchronous);
 
    public:
     // Public sideload interaction
     std::variant<rocksdb::Status, ExecutionCursor>
     getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
-                                   bool allow_slow_lookup);
+                                   bool allow_slow_lookup,
+                                   uint32_t yield_instruction_count);
 
     ValueResult<uint256_t> getGasAtBlock(ReadTransaction& tx,
                                          const uint256_t& block_number);

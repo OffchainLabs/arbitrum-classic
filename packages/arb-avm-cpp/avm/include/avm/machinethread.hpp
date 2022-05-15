@@ -53,8 +53,11 @@ class MachineThread : public Machine {
         : Machine(std::move(machine_state_)),
           reorg_check_data(machine_state.output.fully_processed_inbox) {}
 
-    bool runMachine(MachineExecutionConfig config, bool asynchronous);
-    bool continueRunningMachine(bool asynchronous);
+    bool runMachine(MachineExecutionConfig config,
+                    bool asynchronous,
+                    uint32_t yield_instruction_count);
+    bool continueRunningMachine(bool asynchronous,
+                                uint32_t yield_instruction_count);
     void finishThread();
     virtual void abort();
     machine_status_enum status();
@@ -63,7 +66,7 @@ class MachineThread : public Machine {
     Assertion nextAssertion();
     InboxState getReorgData() const { return reorg_check_data; }
 
-    void operator()();
+    void operator()(uint32_t yield_instruction_count);
 };
 
 #endif /* machine_hpp */

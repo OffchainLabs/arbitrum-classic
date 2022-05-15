@@ -481,8 +481,8 @@ CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
     auto total_gas_used = receiveUint256(total_gas_used_ptr);
 
     try {
-        auto executionCursor =
-            arbcore->getExecutionCursor(total_gas_used, allow_slow_lookups);
+        auto executionCursor = arbcore->getExecutionCursor(
+            total_gas_used, allow_slow_lookups, BASE_YIELD_INSTRUCTION_COUNT);
         if (!executionCursor.status.ok()) {
             std::cerr << "Failed to load execution cursor "
                       << executionCursor.status.ToString() << std::endl;
@@ -510,7 +510,8 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     auto max_gas = receiveUint256(max_gas_ptr);
     try {
         auto status = arbCore->advanceExecutionCursor(
-            *executionCursor, max_gas, go_over_gas, allow_slow_lookup);
+            *executionCursor, max_gas, go_over_gas, allow_slow_lookup,
+            BASE_YIELD_INSTRUCTION_COUNT);
         if (!status.ok()) {
             return false;
         }
@@ -522,9 +523,6 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
         return false;
     }
 }
-
-uint256_t log_number_begin;
-uint256_t log_number_end;
 
 ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     CArbCore* arbcore_ptr,
@@ -543,7 +541,7 @@ ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     try {
         auto result = arbCore->advanceExecutionCursorWithTracing(
             *executionCursor, max_gas, go_over_gas, allow_slow_lookup,
-            {log_number_begin, log_number_end});
+            {log_number_begin, log_number_end}, BASE_YIELD_INSTRUCTION_COUNT);
         if (!result.status.ok()) {
             return {{}, false};
         }
@@ -603,7 +601,7 @@ CExecutionCursorResult arbCoreGetExecutionCursorAtEndOfBlock(
 
     try {
         auto cursor = arbcore->getExecutionCursorAtEndOfBlock(
-            block_number, allow_slow_lookup);
+            block_number, allow_slow_lookup, BASE_YIELD_INSTRUCTION_COUNT);
         if (std::holds_alternative<rocksdb::Status>(cursor)) {
             auto status = std::get<rocksdb::Status>(cursor);
             if (status.IsNotFound() && !allow_slow_lookup) {

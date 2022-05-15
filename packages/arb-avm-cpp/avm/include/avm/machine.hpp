@@ -27,6 +27,9 @@
 #include <memory>
 #include <vector>
 
+static constexpr uint32_t TESTING_YIELD_INSTRUCTION_COUNT = 1'000;
+static constexpr uint32_t BASE_YIELD_INSTRUCTION_COUNT = 1'000'000;
+
 struct Assertion {
     uint64_t step_count;
     uint64_t gas_count;
@@ -86,8 +89,9 @@ class Machine {
     }
 
     virtual void abort();
+    virtual bool isAborted();
 
-    Assertion run();
+    Assertion run(uint32_t yield_instrunction_count);
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }
