@@ -890,13 +890,6 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
                 std::cerr << "Error catching up: " << core_error_string << "\n";
                 return rocksdb::Status::Aborted();
             }
-            if (core_machine->isAborted()) {
-                if (coreConfig.debug) {
-                    std::cerr << "core machine aborted"
-                              << "\n";
-                }
-                return {rocksdb::Status::Aborted(), {}};
-            }
 
             if (last_sideload_gas_used ==
                 core_machine->machine_state.output.arb_gas_used) {
@@ -1261,13 +1254,6 @@ rocksdb::Status ArbCore::reorgCheckpoints(
             << "Error running machine after reorg to finish any processing"
             << std::endl;
         return rocksdb::Status::Aborted();
-    }
-    if (core_machine->isAborted()) {
-        if (coreConfig.debug) {
-            std::cerr << "core machine aborted"
-                      << "\n";
-        }
-        return {rocksdb::Status::Aborted(), {}};
     }
 
     return rocksdb::Status::OK();
@@ -1960,13 +1946,6 @@ bool ArbCore::runCoreMachineWithMessages(MachineExecutionConfig& execConfig,
         if (!success) {
             setCoreError("Error starting machine thread");
             std::cerr << "ArbCore error: " << core_error_string << "\n";
-            return false;
-        }
-        if (!asynchronous && core_machine->isAborted()) {
-            if (coreConfig.debug) {
-                std::cerr << "core machine aborted"
-                          << "\n";
-            }
             return false;
         }
     } else {
