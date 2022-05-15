@@ -91,7 +91,8 @@ class Machine {
     virtual void abort();
     virtual bool isAborted();
 
-    Assertion run(uint32_t yield_instrunction_count);
+    Assertion run(
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

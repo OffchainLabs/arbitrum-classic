@@ -582,7 +582,7 @@ TEST_CASE("ArbCore wild code segments") {
                 MachineExecutionConfig config;
                 config.sideloads.push_back(msg);
                 machine->machine_state.context = AssertionContext(config);
-                machine->run(TESTING_YIELD_INSTRUCTION_COUNT);
+                machine->run();
                 REQUIRE(!machine->isAborted());
             }
         }).detach();
