@@ -125,7 +125,7 @@ func NewArbRelay(settings configuration.Feed) *ArbRelay {
 		broadcastClients = append(broadcastClients, client)
 	}
 	return &ArbRelay{
-		broadcaster:              broadcaster.NewBroadcaster(settings.Output),
+		broadcaster:              broadcaster.NewBroadcaster(&settings.Output),
 		broadcastClients:         broadcastClients,
 		confirmedAccumulatorChan: confirmedAccumulatorChan,
 	}

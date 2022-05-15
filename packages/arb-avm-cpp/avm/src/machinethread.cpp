@@ -23,8 +23,13 @@ MachineThread::machine_status_enum MachineThread::status() {
 }
 
 bool MachineThread::runMachine(MachineExecutionConfig config,
-                               bool asynchronous) {
+                               bool asynchronous,
+                               uint32_t yield_instruction_count) {
     if (machine_status != MACHINE_NONE) {
+        if (machine_status == MACHINE_RUNNING) {
+            throw std::runtime_error(
+                "runMachine called when machine already running");
+        }
         return false;
     }
 
@@ -39,16 +44,26 @@ bool MachineThread::runMachine(MachineExecutionConfig config,
 
     if (asynchronous) {
         machine_thread = std::make_unique<std::thread>(
-            (std::reference_wrapper<MachineThread>(*this)));
+            (std::reference_wrapper<MachineThread>(*this)),
+            yield_instruction_count);
     } else {
-        this->operator()();
+        this->operator()(yield_instruction_count);
+
+        if (isAborted()) {
+            return false;
+        }
     }
 
     return true;
 }
 
-bool MachineThread::continueRunningMachine(bool asynchronous) {
+bool MachineThread::continueRunningMachine(bool asynchronous,
+                                           uint32_t yield_instruction_count) {
     if (machine_status != MACHINE_NONE) {
+        if (machine_status == MACHINE_RUNNING) {
+            throw std::runtime_error(
+                "continueRunningMachine called when machine already running");
+        }
         return false;
     }
 
@@ -58,19 +73,31 @@ bool MachineThread::continueRunningMachine(bool asynchronous) {
 
     if (asynchronous) {
         machine_thread = std::make_unique<std::thread>(
-            (std::reference_wrapper<MachineThread>(*this)));
+            (std::reference_wrapper<MachineThread>(*this)),
+            yield_instruction_count);
     } else {
-        this->operator()();
+        this->operator()(yield_instruction_count);
+
+        if (isAborted()) {
+            return false;
+        }
     }
 
     return true;
 }
 
-void MachineThread::abort() {
-    if (machine_thread) {
-        Machine::abort();
+void MachineThread::finishThread() {
+    if (machine_status == MACHINE_RUNNING) {
         machine_thread->join();
         machine_thread = nullptr;
+        machine_status = MACHINE_NONE;
+    }
+}
+
+void MachineThread::abort() {
+    Machine::abort();
+    if (machine_thread) {
+        finishThread();
         machine_status = MACHINE_ABORTED;
     }
 }
@@ -97,11 +124,18 @@ void MachineThread::clearError() {
     machine_error_string.clear();
 }
 
-void MachineThread::operator()() {
+void MachineThread::operator()(uint32_t yield_instruction_count) {
     try {
-        last_assertion = run();
+        last_assertion = run(yield_instruction_count);
     } catch (const std::exception& e) {
+        std::cerr << "machine thread exception: " << e.what() << std::endl;
         machine_error_string = e.what();
+        machine_status = MACHINE_ERROR;
+        return;
+    }
+
+    if (isAborted()) {
+        machine_error_string = "machine thread aborted";
         machine_status = MACHINE_ERROR;
         return;
     }

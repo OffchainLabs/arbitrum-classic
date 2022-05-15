@@ -43,10 +43,10 @@ type WSBroadcastServer struct {
 	catchupBuffer CatchupBuffer
 }
 
-func NewWSBroadcastServer(settings configuration.FeedOutput, catchupBuffer CatchupBuffer) *WSBroadcastServer {
+func NewWSBroadcastServer(settings *configuration.FeedOutput, catchupBuffer CatchupBuffer) *WSBroadcastServer {
 	return &WSBroadcastServer{
 		startMutex:    &sync.Mutex{},
-		settings:      settings,
+		settings:      *settings,
 		started:       false,
 		catchupBuffer: catchupBuffer,
 	}

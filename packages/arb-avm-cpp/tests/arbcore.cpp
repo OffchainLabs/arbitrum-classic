@@ -21,6 +21,7 @@
 #include <data_storage/storageresult.hpp>
 
 #include <avm/inboxmessage.hpp>
+#include <avm/machine.hpp>
 
 #include <avm_values/vmValueParser.hpp>
 
@@ -539,7 +540,7 @@ TEST_CASE("ArbCore wild code segments") {
     DBDeleter deleter;
 
     ArbCoreConfig coreConfig{};
-    coreConfig.checkpoint_gas_frequency = 1000000;
+    coreConfig.checkpoint_gas_frequency = 1'000'000;
     ArbStorage storage(dbpath, coreConfig);
     REQUIRE(storage
                 .initialize(std::string{machine_test_cases_path} +
@@ -575,6 +576,7 @@ TEST_CASE("ArbCore wild code segments") {
                 config.sideloads.push_back(msg);
                 machine->machine_state.context = AssertionContext(config);
                 machine->run();
+                REQUIRE(!machine->isAborted());
             }
         }).detach();
     }

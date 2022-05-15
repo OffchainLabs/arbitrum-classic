@@ -101,20 +101,13 @@ func startup() error {
 	config := configuration.Config{
 		Core: *configuration.DefaultCoreSettingsMaxExecution(),
 		Feed: configuration.Feed{
-			Output: configuration.FeedOutput{
-				Addr:          "127.0.0.1",
-				IOTimeout:     2 * time.Second,
-				Port:          "9642",
-				Ping:          5 * time.Second,
-				ClientTimeout: 15 * time.Second,
-				Queue:         1,
-				Workers:       2,
-			},
+			Output: *configuration.DefaultFeedOutput(),
 		},
 		Node: *configuration.DefaultNodeSettings(),
 	}
 	config.Node.Sequencer.CreateBatchBlockInterval = *createBatchBlockInterval
 	config.Node.Sequencer.DelayedMessagesTargetDelay = *delayedMessagesTargetDelay
+	config.Feed.Output.Workers = 2
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -188,6 +181,9 @@ func startup() error {
 	}
 
 	ownerPrivKey, err := crypto.GenerateKey()
+	if err != nil {
+		return err
+	}
 	l1OwnerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, l1ChainId)
 	if err != nil {
 		return err

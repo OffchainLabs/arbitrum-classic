@@ -523,9 +523,6 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     }
 }
 
-uint256_t log_number_begin;
-uint256_t log_number_end;
-
 ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     CArbCore* arbcore_ptr,
     CExecutionCursor* execution_cursor_ptr,

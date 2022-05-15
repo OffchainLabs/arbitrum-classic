@@ -51,6 +51,12 @@ struct Slice;
 class ColumnFamilyHandle;
 }  // namespace rocksdb
 
+namespace boost {
+namespace filesystem {
+class path;
+}  // namespace filesystem
+}  // namespace boost
+
 struct InitializeResult {
     rocksdb::Status status;
     bool finished;
@@ -356,18 +362,22 @@ class ArbCore {
     // Execution Cursor interaction
     ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
         uint256_t total_gas_used,
-        bool allow_slow_lookup);
-    rocksdb::Status advanceExecutionCursor(ExecutionCursor& execution_cursor,
-                                           uint256_t max_gas,
-                                           bool go_over_gas,
-                                           bool allow_slow_lookup);
+        bool allow_slow_lookup,
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
+    rocksdb::Status advanceExecutionCursor(
+        ExecutionCursor& execution_cursor,
+        uint256_t max_gas,
+        bool go_over_gas,
+        bool allow_slow_lookup,
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
     ValueResult<std::vector<MachineEmission<Value>>>
     advanceExecutionCursorWithTracing(
         ExecutionCursor& execution_cursor,
         uint256_t max_gas,
         bool go_over_gas,
         bool allow_slow_lookup,
-        const DebugPrintCollectionOptions& collectionOptions);
+        const DebugPrintCollectionOptions& options,
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
 
     std::unique_ptr<Machine> takeExecutionCursorMachine(
         ExecutionCursor& execution_cursor);
@@ -380,7 +390,8 @@ class ArbCore {
         bool go_over_gas,
         size_t message_group_size,
         bool allow_slow_lookup,
-        const std::optional<DebugPrintCollectionOptions>& collectionOptions);
+        const std::optional<DebugPrintCollectionOptions>& collectionOptions,
+        uint32_t yield_instruction_count);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,
@@ -484,15 +495,17 @@ class ArbCore {
                                            const uint256_t& log_index);
     rocksdb::Status updateSendInsertedCount(ReadWriteTransaction& tx,
                                             const uint256_t& send_index);
-    bool runMachineWithMessages(MachineExecutionConfig& execConfig,
-                                size_t max_message_batch_size,
-                                bool asynchronous);
+    bool runCoreMachineWithMessages(MachineExecutionConfig& execConfig,
+                                    size_t max_message_batch_size,
+                                    bool asynchronous);
 
    public:
     // Public sideload interaction
     std::variant<rocksdb::Status, ExecutionCursor>
-    getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
-                                   bool allow_slow_lookup);
+    getExecutionCursorAtEndOfBlock(
+        const uint256_t& block_number,
+        bool allow_slow_lookup,
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
 
     ValueResult<uint256_t> getGasAtBlock(ReadTransaction& tx,
                                          const uint256_t& block_number);
@@ -529,7 +542,7 @@ class ArbCore {
         uint256_t& number);
     std::variant<rocksdb::Status, CheckpointVariant> getLastCheckpoint(
         ReadTransaction& tx);
-    void saveRocksdbCheckpoint(const std::filesystem::path& save_rocksdb_path,
+    void saveRocksdbCheckpoint(const boost::filesystem::path& save_rocksdb_path,
                                ReadTransaction& tx);
     void setCoreError(const std::string& message);
     bool threadBody(ThreadDataStruct& thread_data);

@@ -253,13 +253,21 @@ func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types
 
 		details, err := ta.fb.GetTransaction(txResponse.Id)
 		if err != nil {
-			logger.
+			partial := logger.
 				Warn().
 				Err(err).
-				Hex("to", tx.To().Bytes()).
-				Str("id", txResponse.Id).
-				Str("status", details.Status).
-				Msg("error getting fireblocks transaction")
+				Str("id", txResponse.Id)
+
+			if details != nil {
+				partial.Str("status", details.Status)
+			}
+
+			if tx.To() != nil {
+				partial.Hex("to", tx.To().Bytes())
+			}
+
+			partial.Msg("error getting fireblocks transaction")
+
 			return nil, errors.Wrapf(err, "error getting fireblocks transaction: %s", details.Status)
 		}
 

@@ -1,6 +1,6 @@
 {
   "name": "arb-bridge-peripherals",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "license": "Apache-2.0",
   "scripts": {
     "build": "./scripts/build.bash",
@@ -17,10 +17,15 @@
     "hardhat": "hardhat --config hardhat.config.ts",
     "hardhat:prod": "hardhat --config hardhat.prod-config.js"
   },
+  "files": [
+    "contracts",
+    "scripts/build.bash",
+    "hardhat.prod-config.js"
+  ],
   "dependencies": {
     "@openzeppelin/contracts": "3.4.2",
     "@openzeppelin/contracts-upgradeable": "3.4.2",
-    "arb-bridge-eth": "0.7.6",
+    "arb-bridge-eth": "0.7.7",
     "arbos-precompiles": "^1.0.2",
     "hardhat": "^2.6.1"
   },
