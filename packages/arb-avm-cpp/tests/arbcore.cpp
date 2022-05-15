@@ -331,8 +331,7 @@ TEST_CASE("ArbCore inbox") {
     auto position = arbCore->getGasAtBlock(*tx, 1);
     REQUIRE(position.status.ok());
 
-    auto cursor = arbCore->getExecutionCursor(position.data, true,
-                                              TESTING_YIELD_INSTRUCTION_COUNT);
+    auto cursor = arbCore->getExecutionCursor(position.data, true);
     REQUIRE(cursor.status.ok());
     REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
     REQUIRE(cursor.data->getOutput().arb_gas_used <= position.data);
@@ -453,8 +452,7 @@ TEST_CASE("ArbCore duplicate code segments") {
         }
     }
 
-    auto cursor = arbCore->getExecutionCursor(1'000'000'000, true,
-                                              TESTING_YIELD_INSTRUCTION_COUNT);
+    auto cursor = arbCore->getExecutionCursor(1'000'000'000, true);
     REQUIRE(cursor.status.ok());
     REQUIRE(std::get<std::unique_ptr<Machine>>(cursor.data->machine)
                 ->currentStatus() == Status::Halted);

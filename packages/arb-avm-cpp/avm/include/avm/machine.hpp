@@ -27,7 +27,6 @@
 #include <memory>
 #include <vector>
 
-static constexpr uint32_t TESTING_YIELD_INSTRUCTION_COUNT = 1'000;
 static constexpr uint32_t BASE_YIELD_INSTRUCTION_COUNT = 1'000'000;
 
 struct Assertion {
