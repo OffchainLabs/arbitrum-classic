@@ -363,12 +363,13 @@ class ArbCore {
     ValueResult<std::unique_ptr<ExecutionCursor>> getExecutionCursor(
         uint256_t total_gas_used,
         bool allow_slow_lookup,
-        uint32_t yield_instruction_count);
-    rocksdb::Status advanceExecutionCursor(ExecutionCursor& execution_cursor,
-                                           uint256_t max_gas,
-                                           bool go_over_gas,
-                                           bool allow_slow_lookup,
-                                           uint32_t yield_instruction_count);
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
+    rocksdb::Status advanceExecutionCursor(
+        ExecutionCursor& execution_cursor,
+        uint256_t max_gas,
+        bool go_over_gas,
+        bool allow_slow_lookup,
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
     ValueResult<std::vector<MachineEmission<Value>>>
     advanceExecutionCursorWithTracing(
         ExecutionCursor& execution_cursor,
@@ -376,7 +377,7 @@ class ArbCore {
         bool go_over_gas,
         bool allow_slow_lookup,
         const DebugPrintCollectionOptions& options,
-        uint32_t yield_instruction_count);
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
 
     std::unique_ptr<Machine> takeExecutionCursorMachine(
         ExecutionCursor& execution_cursor);
@@ -501,9 +502,10 @@ class ArbCore {
    public:
     // Public sideload interaction
     std::variant<rocksdb::Status, ExecutionCursor>
-    getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
-                                   bool allow_slow_lookup,
-                                   uint32_t yield_instruction_count);
+    getExecutionCursorAtEndOfBlock(
+        const uint256_t& block_number,
+        bool allow_slow_lookup,
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
 
     ValueResult<uint256_t> getGasAtBlock(ReadTransaction& tx,
                                          const uint256_t& block_number);
