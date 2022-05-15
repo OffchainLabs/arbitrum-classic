@@ -241,7 +241,7 @@ TEST_CASE("Abort machine") {
     machine_state.context = AssertionContext(execConfig);
     auto machine_thread = MachineThread(machine_state);
     machine_thread.abort();
-    machine_thread();
+    machine_thread(BASE_YIELD_INSTRUCTION_COUNT);
     REQUIRE(machine_thread.isAborted());
     REQUIRE(machine_thread.currentStatus() == Status::Error);
     REQUIRE(!assertion.sideload_block_number);
