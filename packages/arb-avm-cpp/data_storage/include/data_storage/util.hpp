@@ -19,6 +19,8 @@
 
 #include "pruningmode.h"
 
+#include "avm/machine.hpp"
+
 struct ArbCoreConfig {
     // Maximum number of messages to process at a time
     uint32_t message_process_count{10};
