@@ -48,6 +48,10 @@ bool MachineThread::runMachine(MachineExecutionConfig config,
             yield_instruction_count);
     } else {
         this->operator()(yield_instruction_count);
+
+        if (isAborted()) {
+            return false;
+        }
     }
 
     return true;
@@ -73,6 +77,10 @@ bool MachineThread::continueRunningMachine(bool asynchronous,
             yield_instruction_count);
     } else {
         this->operator()(yield_instruction_count);
+
+        if (isAborted()) {
+            return false;
+        }
     }
 
     return true;
