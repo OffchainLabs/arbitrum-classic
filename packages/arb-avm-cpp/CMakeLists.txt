@@ -156,6 +156,7 @@ endif()
 
 find_package(OpenSSL REQUIRED)
 
+set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.65 COMPONENTS filesystem system REQUIRED)
 if(NOT TARGET Boost::boost)
     add_library(Boost::boost IMPORTED INTERFACE)
