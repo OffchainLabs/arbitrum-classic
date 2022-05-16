@@ -130,7 +130,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
                 require(_gasleft > gasReserveIfCallRevert(), "Insufficient gas for call revert");
                 require(_gasleft - gasReserveIfCallRevert() > callHookGas, "Insufficient gas for call hook");
             }
-            try this.inboundEscrowAndCall(_token, _amount, _from, _to, callHookGas, callHookData) {
+            try this.inboundEscrowAndCall{gas: callHookGas}(_token, _from, _to, _amount, callHookData) {
                 success = true;
             } catch {
                 // if reverted, then credit _from's account

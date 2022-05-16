@@ -35,10 +35,9 @@ abstract contract EscrowAndCallGateway {
 
     function inboundEscrowAndCall(
         address _l2Address,
-        uint256 _amount,
         address _from,
         address _to,
-        uint256 _gas,
+        uint256 _amount,
         bytes memory _data
     ) external virtual {
         require(msg.sender == address(this), "Mint can only be called by self");
@@ -46,7 +45,7 @@ abstract contract EscrowAndCallGateway {
 
         inboundEscrowTransfer(_l2Address, _to, _amount);
 
-        ITransferAndCallReceiver(_to).onTokenTransfer{ gas: _gas }(_from, _amount, _data);
+        ITransferAndCallReceiver(_to).onTokenTransfer(_from, _amount, _data);
     }
 
     function inboundEscrowTransfer(
