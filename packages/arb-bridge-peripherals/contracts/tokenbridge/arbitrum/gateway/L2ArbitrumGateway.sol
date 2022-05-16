@@ -79,6 +79,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
     function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
         // amount of arbgas necessary to send user tokens in case
         // of the "onTokenTransfer" call consumes all available gas
+        // plus amount of arbgas necessary for inboundEscrowTransfer
+        // TODO: make sure the constant below is correct
         return 2500;
     }
 
