@@ -299,11 +299,11 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
 
         if (callHookData.length > 0) {
             bool success;
-            // Prevent underflow
             {
                 uint256 _gasleft = gasleft();
-                require(_gasleft > gasReserveIfCallRevert(), "Insufficient gas for call revert");
-                require(_gasleft - gasReserveIfCallRevert() > callHookGas, "Insufficient gas for call hook");
+                // Prevent underflow
+                require(_gasleft > callHookGas, "Insufficient gas for call hook");
+                require(_gasleft - callHookGas > gasReserveIfCallRevert(), "Insufficient gas for call revert");
             }
             try this.inboundEscrowAndCall{gas: callHookGas}(expectedAddress, _from, _to, _amount, callHookData) {
                 success = true;
