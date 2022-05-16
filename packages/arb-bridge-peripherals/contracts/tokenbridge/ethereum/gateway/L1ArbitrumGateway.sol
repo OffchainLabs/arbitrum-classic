@@ -107,19 +107,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         bytes calldata _data
     ) public payable virtual override onlyCounterpartGateway {
         // this function is marked as virtual so superclasses can override it to add modifiers
-        uint256 exitNum;
-        uint256 callHookGas;
-        bytes memory callHookData;
-        // workaround stack-too-deep error
-        {
-            bytes memory extraData;
-            (exitNum, extraData) = GatewayMessageHandler.parseToL1GatewayMsg(
-                _data
-            );
-            // user encoded
-            (callHookGas, callHookData) = abi.decode(extraData, (uint256, bytes));
-        }
-
+        (uint256 exitNum, uint256 callHookGas, bytes memory callHookData) = GatewayMessageHandler
+            .parseToL1GatewayMsg(_data);
         (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
         if (callHookData.length > 0) {

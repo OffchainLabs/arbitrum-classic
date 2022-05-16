@@ -243,10 +243,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway {
-        (bytes memory gatewayData, bytes memory extraData) = GatewayMessageHandler
+        (bytes memory gatewayData, uint256 callHookGas, bytes memory callHookData) = GatewayMessageHandler
             .parseFromL1GatewayMsg(_data);
-        // user encoded
-        (uint256 callHookGas, bytes memory callHookData) = abi.decode(extraData, (uint256, bytes));
         address expectedAddress = calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
