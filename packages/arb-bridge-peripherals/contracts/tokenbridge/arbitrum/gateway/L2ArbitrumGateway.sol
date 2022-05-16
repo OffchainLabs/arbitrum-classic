@@ -27,12 +27,13 @@ import "../IArbToken.sol";
 
 import "../L2ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
+import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 
 /**
  * @title Common interface for gatways on Arbitrum messaging to L1.
  */
-abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
+abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, EscrowAndCallGateway {
     using Address for address;
 
     uint256 public exitNum;
@@ -73,6 +74,12 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         TokenGateway._initialize(_l1Counterpart, _router);
         // L1 gateway must have a router
         require(_router != address(0), "BAD_ROUTER");
+    }
+
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
+        // amount of arbgas necessary to send user tokens in case
+        // of the "onTokenTransfer" call consumes all available gas
+        return 2500;
     }
 
     function createOutboundTx(
@@ -168,8 +175,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
                 _extraData = _data;
             }
         }
-        // the inboundEscrowAndCall functionality has been disabled, so no data is allowed
-        require(_extraData.length == 0, "EXTRA_DATA_DISABLED");
 
         uint256 id;
         {
@@ -220,7 +225,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         address _l2Address,
         address _dest,
         uint256 _amount
-    ) internal virtual {
+    ) internal virtual override {
         // this method is virtual since different subclasses can handle escrow differently
         IArbToken(_l2Address).bridgeMint(_dest, _amount);
     }
@@ -245,11 +250,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
     ) external payable override onlyCounterpartGateway {
         (bytes memory gatewayData, bytes memory callHookData) = GatewayMessageHandler
             .parseFromL1GatewayMsg(_data);
-
-        if (callHookData.length != 0) {
-            // callHookData should always be 0 since inboundEscrowAndCall is disabled
-            callHookData = bytes("");
-        }
 
         address expectedAddress = calculateL2TokenAddress(_token);
 
@@ -293,7 +293,20 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
             }
         }
 
-        inboundEscrowTransfer(expectedAddress, _to, _amount);
+        if (callHookData.length > 0) {
+            bool success;
+            try this.inboundEscrowAndCall(expectedAddress, _amount, _from, _to, callHookData) {
+                success = true;
+            } catch {
+                // if reverted, then credit _from's account
+                inboundEscrowTransfer(expectedAddress, _from, _amount);
+                // success default value is false
+            }
+            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
+        } else {
+            inboundEscrowTransfer(expectedAddress, _to, _amount);
+        }
+
         emit DepositFinalized(_token, _from, _to, _amount);
 
         return;
