@@ -53,6 +53,4 @@ abstract contract EscrowAndCallGateway {
         address _dest,
         uint256 _amount
     ) internal virtual;
-
-    function gasReserveIfCallRevert() public pure virtual returns (uint256);
 }

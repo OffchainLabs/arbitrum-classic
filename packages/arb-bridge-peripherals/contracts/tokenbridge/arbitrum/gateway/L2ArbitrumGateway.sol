@@ -76,14 +76,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         require(_router != address(0), "BAD_ROUTER");
     }
 
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        // amount of arbgas necessary to send user tokens in case
-        // of the "onTokenTransfer" call consumes all available gas
-        // plus amount of arbgas necessary for inboundEscrowTransfer
-        // TODO: make sure the constant below is correct
-        return 2500;
-    }
-
     function createOutboundTx(
         address _from,
         uint256, /* _tokenAmount */
@@ -299,12 +291,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
 
         if (callHookData.length > 0) {
             bool success;
-            {
-                uint256 _gasleft = gasleft();
-                // Prevent underflow
-                require(_gasleft > callHookGas, "Insufficient gas for call hook");
-                require(_gasleft - callHookGas > gasReserveIfCallRevert(), "Insufficient gas for call revert");
-            }
             try this.inboundEscrowAndCall{gas: callHookGas}(expectedAddress, _from, _to, _amount, callHookData) {
                 success = true;
             } catch {

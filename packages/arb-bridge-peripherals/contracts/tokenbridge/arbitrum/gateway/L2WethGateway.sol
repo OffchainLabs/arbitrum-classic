@@ -101,13 +101,5 @@ contract L2WethGateway is L2ArbitrumGateway {
             );
     }
 
-    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
-        // amount of arbgas necessary to send user tokens in case
-        // of the "onTokenTransfer" call consumes all available gas
-        // plus amount of arbgas necessary for inboundEscrowTransfer
-        // TODO: make sure the constant below is correct
-        return 5000;
-    }
-
     receive() external payable {}
 }
