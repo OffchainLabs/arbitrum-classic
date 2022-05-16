@@ -147,6 +147,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
      * @param _l1Token l1 address of token
      * @param _to destination address
      * @param _amount amount of tokens withdrawn
+     * @param _data encoded data from router and user (uint256 callHookGas, uint256 callHookData)
      * @return res encoded unique identifier for withdrawal
      */
     function outboundTransfer(
@@ -248,9 +249,10 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway {
-        (bytes memory gatewayData, bytes memory callHookData) = GatewayMessageHandler
+        (bytes memory gatewayData, bytes memory extraData) = GatewayMessageHandler
             .parseFromL1GatewayMsg(_data);
-
+        // user encoded
+        (uint256 callHookGas, bytes memory callHookData) = abi.decode(extraData, (uint256, bytes));
         address expectedAddress = calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
@@ -295,7 +297,10 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
 
         if (callHookData.length > 0) {
             bool success;
-            try this.inboundEscrowAndCall(expectedAddress, _amount, _from, _to, callHookData) {
+            // Prevent underflow
+            require(gasleft() > gasReserveIfCallRevert(), "Insufficient gas for call revert");
+            require(gasleft() - gasReserveIfCallRevert() > callHookGas, "Insufficient gas for call hook");
+            try this.inboundEscrowAndCall(expectedAddress, _amount, _from, _to, callHookGas, callHookData) {
                 success = true;
             } catch {
                 // if reverted, then credit _from's account

@@ -107,15 +107,27 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         bytes calldata _data
     ) public payable virtual override onlyCounterpartGateway {
         // this function is marked as virtual so superclasses can override it to add modifiers
-        (uint256 exitNum, bytes memory callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(
-            _data
-        );
+        uint256 exitNum;
+        uint256 callHookGas;
+        bytes memory callHookData;
+        // workaround stack-too-deep error
+        {
+            bytes memory extraData;
+            (exitNum, extraData) = GatewayMessageHandler.parseToL1GatewayMsg(
+                _data
+            );
+            // user encoded
+            (callHookGas, callHookData) = abi.decode(extraData, (uint256, bytes));
+        }
 
         (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
         if (callHookData.length > 0) {
             bool success;
-            try this.inboundEscrowAndCall(_token, _amount, _from, _to, callHookData) {
+            // Prevent underflow
+            require(gasleft() > gasReserveIfCallRevert(), "Insufficient gas for call revert");
+            require(gasleft() - gasReserveIfCallRevert() > callHookGas, "Insufficient gas for call hook");
+            try this.inboundEscrowAndCall(_token, _amount, _from, _to, callHookGas, callHookData) {
                 success = true;
             } catch {
                 // if reverted, then credit _from's account
@@ -234,7 +246,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
      * @param _amount Token Amount
      * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
      * @param _gasPriceBid Gas price for L2 execution
-     * @param _data encoded data from router and user
+     * @param _data encoded data from router and user (uint256 callHookGas, uint256 callHookData)
      * @return res abi encoded inbox sequence number
      */
     //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee

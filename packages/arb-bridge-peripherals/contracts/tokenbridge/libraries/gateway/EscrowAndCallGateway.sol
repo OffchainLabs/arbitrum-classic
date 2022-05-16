@@ -38,6 +38,7 @@ abstract contract EscrowAndCallGateway {
         uint256 _amount,
         address _from,
         address _to,
+        uint256 _gas,
         bytes memory _data
     ) external virtual {
         require(msg.sender == address(this), "Mint can only be called by self");
@@ -45,11 +46,7 @@ abstract contract EscrowAndCallGateway {
 
         inboundEscrowTransfer(_l2Address, _to, _amount);
 
-        // ~73 000 arbgas used to get here
-        uint256 gasAvailable = gasleft() - gasReserveIfCallRevert();
-        require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
-
-        ITransferAndCallReceiver(_to).onTokenTransfer{ gas: gasAvailable }(_from, _amount, _data);
+        ITransferAndCallReceiver(_to).onTokenTransfer{ gas: _gas }(_from, _amount, _data);
     }
 
     function inboundEscrowTransfer(
